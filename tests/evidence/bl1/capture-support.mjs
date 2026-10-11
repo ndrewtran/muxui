@@ -4,6 +4,7 @@
 // - `assertDurableSource` refuses a source revision that is not in main's history.
 // - `retainReview` retains an independent review record as an input, with its own
 //   reviewed revision and tree, and compares them with the source revision.
+// - `reviewVerdict` and `assertExitReviewPasses` read a review's verdict section and refuse an exit review that does not state a pass.
 // - `archiveSupersededCapture` and `supersededFiles` keep an earlier capture in the tree
 //   when a later one replaces it, so replacing records never deletes the only copy.
 // - `retainedCaptures` and `assertGrowthSource` find the retained close-out capture a growth capture
@@ -64,6 +65,21 @@ function compareWithSource({ cwd, reviewedRevision, sourceRevision, sourceTree, 
   };
 }
 
+/** The text under a review's `## Overall verdict` or `## Verdict` heading, or undefined when it has none. */
+export const reviewVerdict = (text) => /^##+ (?:Overall verdict|Verdict)[ \t]*\n([\s\S]*?)(?=\n##+ |(?![\s\S]))/mu.exec(text)?.[1]?.trim();
+
+/**
+ * The close-out's exit review (every retained capture reuses it) states its verdict in prose, "ready to merge as step 1", and was retained
+ * before verdicts were checked. It is accepted at this digest, as the review that was read; any other exit review must open its verdict with `**Pass.**`.
+ */
+export const proseVerdictExitReviews = new Set(['sha256:c58bfc1b8543e5bfe119b20f0d3bcb78ec7b2232724056711c052fd6c0c27dc1']);
+
+/** Throws unless an exit review, as `retainReview` returns it, states a pass: a verdict section opening with `**Pass.**`, or the pinned close-out review. */
+export function assertExitReviewPasses({ artifact, verdictText }) {
+  if (proseVerdictExitReviews.has(artifact.sha256) || /^(?:[-*]\s+)?\*\*Pass\.\*\*/u.test(verdictText ?? '')) return;
+  throw new Error('E-BL1-09: the exit review does not open its verdict with **Pass.**, so it does not state an overall pass');
+}
+
 /**
  * Retains one independent review record as an input, or reuses the one already retained, or returns
  * null when there is none and it is optional. A new record needs the full 40-character revision the
@@ -111,7 +127,7 @@ export async function retainReview({
   const reviewer = /\*\*Reviewer:\*\*\s*(.+)/u.exec(text)?.[1]?.trim();
   if (!reviewer) throw new Error(`${id}: the review record does not name its reviewer`);
   const { reviewedTree, comparison } = compareWithSource({ cwd, reviewedRevision: record.reviewedRevision, sourceRevision, sourceTree, proofToolPaths });
-  const verdict = /^##+ (?:Overall verdict|Verdict)[ \t]*\n([\s\S]*?)(?=\n##+ |(?![\s\S]))/mu.exec(text)?.[1]?.trim();
+  const verdict = reviewVerdict(text);
   return {
     artifact: { path: artifactPath, sha256: sha256(text) },
     raw: record.raw,

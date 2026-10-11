@@ -1349,6 +1349,44 @@ test('a BL1 review is retained with its own revision and tree, compared with the
   }
 });
 
+test('a BL1 exit review is retained only when its verdict opens with a pass, or it is the pinned close-out review', async () => {
+  const { assertExitReviewPasses, proseVerdictExitReviews, retainReview, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const { cwd, source, sourceTree } = await reviewRepository();
+  const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-exit-verdict-'));
+  const root = 'tests/evidence/bl1';
+  const base = { cwd, outputRoot, root, id: 'E-BL1-09', artifactPath: `${root}/artifacts/E-BL1-09-exit-review.md`, previousKey: 'exitReview', required: true, sourceRevision: source, sourceTree, reviewedRevision: source };
+  const retain = async (verdict) => {
+    const input = join(outputRoot, 'review.md');
+    await writeFile(input, `# Review\n\n**Reviewer:** an independent reviewer, not the author.\n**Revision:** \`${source.slice(0, 8)}\`\n\n${verdict}`);
+    return retainReview({ ...base, input });
+  };
+  try {
+    for (const verdict of ['## Verdict\n\n**Pass.** The audit and the exit claim hold.\n', '## Verdict\n\n- **Pass.** The audit holds.\n- Follow-ups are advisory.\n']) {
+      assertExitReviewPasses(await retain(verdict));
+    }
+    // Anything else is refused: a failing, hedged, or buried verdict, a pass outside the verdict section, and a review with no verdict section.
+    for (const verdict of [
+      '## Verdict\n\n**Fail.** The boundary audit misses a leg.\n',
+      '## Verdict\n\nNot ready to merge. The exit claim does not hold.\n',
+      '## Verdict\n\nBlocked until the audit is fixed. **Pass.** once it is.\n',
+      '## Verdict\n\nThe audit holds.\n',
+      '## Method\n\n**Pass.** is written here, not under a verdict heading.\n',
+      '',
+    ]) {
+      const review = await retain(verdict);
+      assert.throws(() => assertExitReviewPasses(review), /does not open its verdict with \*\*Pass\.\*\*/u, verdict);
+    }
+    // The close-out's retained exit review states its verdict in prose and is accepted only at its pinned digest.
+    const closeoutReview = await readFile(join(repositoryRoot, root, 'artifacts/E-BL1-09-exit-review.md'), 'utf8');
+    assert.deepEqual([...proseVerdictExitReviews], [digest(closeoutReview)]);
+    assertExitReviewPasses({ artifact: { sha256: digest(closeoutReview) }, verdictText: reviewVerdict(closeoutReview) });
+    assert.throws(() => assertExitReviewPasses({ artifact: { sha256: digest(`${closeoutReview}edited`) }, verdictText: reviewVerdict(`${closeoutReview}edited`) }), /does not open its verdict/u);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+    await rm(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('a BL1 capture that replaces an earlier one keeps it in the tree and names it, and a rerun carries the reference forward', async () => {
   const { archiveSupersededCapture, supersededFiles } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
   const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-supersede-'));
@@ -1701,8 +1739,23 @@ function browserTestTitles(revision, file) {
   return titles;
 }
 
-/** Maps a path a capture cites into the directory that holds the capture; archived copies keep the layout of the root. */
+/**
+ * Where the file a capture cites is, given the directory that holds the capture. An archived capture is a byte-for-byte copy under
+ * `superseded/<revision>/`, so its records and index keep the `artifact.path` and `validation.path` they had at the retained root
+ * (`tests/evidence/bl1/...`), which now name the replaced files. Those paths resolve under the archive; a path already under
+ * `superseded/` is a real location (a `supersedes.path`) and is read as written. For the retained root the mapping is the identity.
+ */
 const capturePath = (directory) => (path) => (path.startsWith(`${bl1}/superseded/`) ? path : path.replace(`${bl1}/`, `${directory}/`));
+
+/** Every `artifact` and `validation` reference of a capture's records resolves in the capture's own directory at the digest the record names. */
+async function assertRecordReferencesResolve({ repo = repositoryRoot, directory, records }) {
+  const into = capturePath(directory);
+  for (const [id, record] of Object.entries(records)) {
+    for (const [name, reference] of [['artifact', record.artifact], ['validation', record.validation]]) {
+      assert.equal(digest(await readFile(join(repo, into(reference.path)))), reference.sha256, `${directory}: ${id} ${name} ${reference.path} resolves in the capture's own directory`);
+    }
+  }
+}
 
 /** Reads the capture in `directory` of the tree `repo`: its index, validation summary, records, and artifacts. */
 async function loadCapture({ repo = repositoryRoot, directory = bl1 } = {}) {
@@ -2015,6 +2068,13 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
     assert.equal(review.comparison.equalTrees, review.reviewedTree === sourceTree, 'the recorded tree comparison agrees with the recorded trees');
     assert.deepEqual(Object.keys(review.sanitization.replacements).sort(), ['home', 'repositoryRoot', 'temporary']);
   }
+  if (exitReview !== null) {
+    // The exit review is read from the capture's own directory, and its verdict must state a pass (or be the pinned close-out review).
+    const { assertExitReviewPasses, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+    const reviewText = await readFile(join(repo, capturePath(directory)(exitReview.artifact.path)), 'utf8');
+    assert.equal(digest(reviewText), exitReview.artifact.sha256, `${directory}: the exit review is retained at its recorded digest`);
+    assertExitReviewPasses({ artifact: exitReview.artifact, verdictText: reviewVerdict(reviewText) });
+  }
 
   // E-BL1-11: the thresholds are the ones committed at the source revision, and the expectations revised and the known weaknesses stay on the record.
   const baseline = artifacts['E-BL1-11'].observations;
@@ -2146,6 +2206,7 @@ async function assertLegacyCapture({ repo, summaryRevision }) {
     assert.equal(record.sourceRevision, sourceRevision, `${path}: the older record names its revision`);
     assert.equal(digest(await readFile(join(repo, into(record.artifact.path)))), record.artifact.sha256, `${path}: the older record names its artifact`);
   }
+  await assertRecordReferencesResolve({ repo, directory, records: Object.fromEntries(await Promise.all(index.records.map(async ({ assertionId, path }) => [assertionId, JSON.parse(await readFile(join(repo, into(path)), 'utf8'))]))) });
 }
 
 /**
@@ -2167,6 +2228,7 @@ async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
     const capture = await loadCapture({ repo, directory });
     if (directory !== bl1) await assertCopyMatchesIndex({ repo, ...capture });
     await assertCapture(capture, { closeoutRevision: closeout.sourceRevision });
+    await assertRecordReferencesResolve(capture);
   }
   return captures;
 }
@@ -2464,6 +2526,16 @@ test('a BL1 archived capture is read from its own directory and must match its i
     const archived = await loadCapture({ repo: outputRoot, directory: archive });
     await assertCopyMatchesIndex({ repo: outputRoot, ...archived });
     assert.deepEqual(await assertCapture(archived), await assertCapture(capture));
+    // The archived records keep the paths they had at the retained root; they resolve under the archive, and only a path already under superseded/ is read as written.
+    const into = capturePath(archive);
+    assert.equal(into(`${bl1}/artifacts/E-BL1-08.json`), `${archive}/artifacts/E-BL1-08.json`);
+    assert.equal(into(`${bl1}/verification.json`), `${archive}/verification.json`);
+    assert.equal(into(`${bl1}/superseded/${'a'.repeat(12)}/records/E-BL1-08.json`), `${bl1}/superseded/${'a'.repeat(12)}/records/E-BL1-08.json`);
+    assert.equal(capturePath(bl1)(`${bl1}/artifacts/E-BL1-08.json`), `${bl1}/artifacts/E-BL1-08.json`);
+    assert.equal(archived.records['E-BL1-08'].validation.path, `${bl1}/verification.json`, 'the archive keeps the path the record had');
+    await assertRecordReferencesResolve({ repo: outputRoot, ...archived });
+    const stale = { ...archived.records, 'E-BL1-08': { ...archived.records['E-BL1-08'], validation: { ...archived.records['E-BL1-08'].validation, sha256: digest('another summary') } } };
+    await assert.rejects(assertRecordReferencesResolve({ repo: outputRoot, directory: archive, records: stale }), /E-BL1-08 validation tests\/evidence\/bl1\/verification\.json resolves in the capture's own directory/u);
     await writeFile(join(outputRoot, archive, 'artifacts/E-BL1-05.json'), '{}');
     await assert.rejects(assertCopyMatchesIndex({ repo: outputRoot, ...archived }), /E-BL1-05\.json is archived at the digest its index names/u);
   } finally {
