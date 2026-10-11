@@ -983,17 +983,31 @@ const blockBrowserTest = (slug) => patternBrowserTest(resolve(repositoryRoot, 'p
 
 // The retained-evidence tests (`check:evidence`, about 4 minutes) run when a
 // change reaches something they load or read, not for every policy-routed path.
-// `pullRequestImpact.evidenceInputs` lists those paths and
-// `evidencePresenceInputs` the files the tests only look up by name, where
-// adding or removing one counts and editing it does not. Entries are path
-// prefixes (a directory ends in a slash). Changes to the packages policy
-// depends on reach the tests through the dependent routes instead.
+// `pullRequestImpact` names those inputs three ways:
+// - `evidenceInputs`: path prefixes (a directory ends in a slash);
+// - `evidenceInputPatterns`: regular expressions for path classes a prefix
+//   cannot name, such as every package manifest;
+// - `evidencePresenceInputs`: files the tests only look up by name, where adding
+//   or removing one counts and editing it does not.
+// Changes to the packages policy depends on reach the tests through the
+// dependent routes instead.
 const startsWithAny = (path, prefixes) => prefixes.some((prefix) => path.startsWith(prefix));
 
+export function isEvidenceInput(path, config) {
+  return startsWithAny(path, config.evidenceInputs) || config.evidenceInputPatterns.some((source) => new RegExp(source, 'u').test(path));
+}
+
 function assertEvidenceInputs(config) {
-  for (const key of ['evidenceInputs', 'evidencePresenceInputs']) {
+  for (const key of ['evidenceInputs', 'evidenceInputPatterns', 'evidencePresenceInputs']) {
     if (!Array.isArray(config[key]) || config[key].some((entry) => typeof entry !== 'string' || entry === '')) {
-      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.${key} must list the path prefixes of the retained-evidence test inputs`);
+      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.${key} must list the retained-evidence test inputs as non-empty strings`);
+    }
+  }
+  for (const source of config.evidenceInputPatterns) {
+    try {
+      new RegExp(source, 'u');
+    } catch (error) {
+      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.evidenceInputPatterns entry ${JSON.stringify(source)} is not a regular expression (${error.message})`);
     }
   }
 }
@@ -1457,7 +1471,7 @@ export async function buildPullRequestImpact({
     widen(`${missing.join(', ')} ${missing.length === 1 ? 'has' : 'have'} no owner route; running the repository policy check (add an owner route to pullRequestImpact to narrow this)`);
   }
   for (const path of changed) {
-    const input = startsWithAny(path, config.evidenceInputs);
+    const input = isEvidenceInput(path, config);
     const lookup = !input && startsWithAny(path, config.evidencePresenceInputs)
       && (await readHeadText(path) === null || await readBaseText(path) === null);
     if (!input && !lookup) continue;

@@ -2155,6 +2155,8 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
  * `base` has neither, `first` adds the first, `second` adds the other. `variant(change)` branches from `first`, adds the other
  * pattern back, and applies `change`, as a growth commit that also changes something else. Its growth commits are squash merges
  * (their subjects end with a pull request number), as growth commits must be; `rebased()` builds the pull request that is not one.
+ * Every commit adds its files with `git add -f`, so what HEAD's `.gitignore` ignores (a hosting file the fixture writes as a negative control)
+ * cannot drop one of the fixture's own changes.
  */
 async function growthRepository() {
   const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-repo-'));
@@ -2173,7 +2175,7 @@ async function growthRepository() {
   // The manifest without the entries under the two directories, except those under `kept`.
   const listing = (...kept) => JSON.stringify({ ...manifest, records: manifest.records.filter(({ path }) => ![directoryA, directoryB].some((directory) => path.startsWith(`${directory}/`)) || kept.some((directory) => path.startsWith(`${directory}/`))) }, null, 2);
   const commitAll = (message) => {
-    gitIn(cwd, 'add', '-A');
+    gitIn(cwd, 'add', '-A', '-f');
     gitIn(cwd, 'commit', '-q', '-m', message);
     return gitIn(cwd, 'rev-parse', 'HEAD');
   };
@@ -2237,7 +2239,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     // Blocks that arrived in two commits are found one commit at a time, from a head that is later than both.
     gitIn(cwd, 'checkout', '-q', '--detach', second);
     await repo.edit('README.md', (text) => `${text}\nMore.\n`);
-    gitIn(cwd, 'add', '-A');
+    gitIn(cwd, 'add', '-A', '-f');
     gitIn(cwd, 'commit', '-q', '-m', 'an unrelated change after the growth');
     const later = gitIn(cwd, 'rev-parse', 'HEAD');
     const found = derive(later);
@@ -2290,7 +2292,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     // A growth commit that also changes @muxui/react source, its package.json, the lockfile, or a component record fails the check that reads it.
     const withSource = await repo.variant((edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`));
     assert.deepEqual(failed([first, withSource]), ['react-source-files']);
-    const withManifest = await repo.variant((edit) => edit('packages/react/package.json', jsonEdit((manifest) => ({ ...manifest, version: '9.9.9' }))));
+    const withManifest = await repo.variant((edit) => edit('packages/react/package.json', jsonEdit((manifest) => ({ ...manifest, version: `${manifest.version}+bumped` }))));
     assert.deepEqual(failed([first, withManifest]), ['react-package-manifest', 'react-source-files', 'versions-follow-decision-0026']);
     const withLockfile = await repo.variant((edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`));
     assert.deepEqual(failed([first, withLockfile]), ['no-dependency-change']);
@@ -2340,7 +2342,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     const manifestEdit = (change) => jsonEdit((manifest) => ({ ...manifest, ...change }));
     const legacy = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ authorityDecisionPath: 'decisions/0017-text-family-admission.md' })));
     await repo.edit('README.md', (text) => `${text}\nLegacy.\n`);
-    gitIn(cwd, 'add', '-A');
+    gitIn(cwd, 'add', '-A', '-f');
     gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree with the legacy manifest key (#105)');
     const legacyChild = gitIn(cwd, 'rev-parse', 'HEAD');
     const acrossLegacy = await catalogAcrossCommit({ cwd, commit: legacyChild, parent: legacy, excludedDirectories: [], digestAffectingPathsChanged: [] });
@@ -2353,7 +2355,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
       await rm(join(root, 'catalog/patterns/categories.json'));
     });
     await repo.edit('README.md', (text) => `${text}\nUnregistered.\n`);
-    gitIn(cwd, 'add', '-A');
+    gitIn(cwd, 'add', '-A', '-f');
     gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree without a category registry (#106)');
     const unregisteredChild = gitIn(cwd, 'rev-parse', 'HEAD');
     const acrossUnregistered = await catalogAcrossCommit({ cwd, commit: unregisteredChild, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] });
@@ -2667,7 +2669,8 @@ test('an informational growth gate records what a growth commit changed in @muxu
     assert.deepEqual(growthInformationalLegs['no-new-component-token-capability-or-platform'], ['catalogRecordsUnchanged'], 'web.react-only stays a gate');
     for (const gate of ['no-workflow-or-hosting-config', 'versions-follow-decision-0026']) assert.equal(growthInformationalLegs[gate], undefined, `${gate} gates every leg`);
 
-    const bumpVersion = jsonEdit((manifest) => ({ ...manifest, version: '0.1.0-rc.2' }));
+    // Computed from the checkout's own version, so the bump changes it whatever release candidate HEAD is at.
+    const bumpVersion = jsonEdit((manifest) => ({ ...manifest, version: `${manifest.version}+bumped` }));
     for (const [label, change, checks] of [
       ['@muxui/react source', (edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`), ['react-source-files']],
       ['the lockfile', (edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`), ['no-dependency-change']],

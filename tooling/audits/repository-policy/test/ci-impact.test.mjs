@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -19,6 +19,7 @@ import {
   groupBrowserEngines,
   groupMatrix,
   groupPackageDirectories,
+  isEvidenceInput,
   isPolicyOnlyLockfileChange,
   isWorkspaceWideChange,
   needsStorybookGeneration,
@@ -497,7 +498,7 @@ test('Scale, Starlight docs, and CI policy edits stay in their independent owner
   assert.equal(docs.scale || docs.reactPackageFull || docs.tailwind || docs.storyTooling, false);
   assert.deepEqual(docs.storyRuns, []);
 
-  const policy = await plan(['.github/workflows/ci.yml'], edited('.github/workflows/ci.yml'));
+  const policy = await plan(['.github/CODEOWNERS']);
   assert.equal(policy.policy, true);
   assert.equal(policy.full, false);
   assert.equal(policy.docs || policy.scale || policy.reactPackageFull || policy.storyTooling, false);
@@ -547,11 +548,13 @@ test('policy-run fixture tests and retained evidence route to the repository-pol
 // (catalog, schema, tokens, tooling), which reach policy through the workspace links.
 const evidenceInputs = [
   '.gitattributes',
+  '.github/workflows/',
+  '.gitignore',
   'apps/docs/src/lib/block-presets.ts',
   'decisions/0022-rc1-assistive-technology-non-claim.md',
   'packages/react/src/r1-deferred-evidence.mjs',
+  'strategy/platform-safety-contract.json',
   'tests/evidence/',
-  'tooling/audits/repository-policy/package.json',
   'tooling/audits/repository-policy/src/canonical-json.mjs',
   'tooling/audits/repository-policy/src/evidence-verify.mjs',
   'tooling/audits/repository-policy/src/npm-publication.mjs',
@@ -561,9 +564,15 @@ const evidenceInputs = [
   'tooling/audits/repository-policy/src/workspace-packages.mjs',
   'tooling/audits/repository-policy/test/evidence-integrity.test.mjs',
 ];
+// Path classes a prefix cannot name: every package manifest (the auditor reads each one's version, publish configuration,
+// and dependencies, and the fixture edits several), the hosting and deployment names the auditor flags (the auditor's own
+// pattern, workflows included), and Astro's site settings.
+const hostingPaths = String.raw`(?:^|\/)(?:netlify\.toml|vercel\.json|wrangler\.(?:toml|jsonc?)|firebase\.json|fly\.toml|render\.yaml|Procfile|app\.yaml|serverless\.ya?ml|staticwebapp\.config\.json|CNAME|_headers|_redirects|Dockerfile[^/]*|docker-compose[^/]*\.ya?ml|\.vercel\/.*|\.netlify\/.*|\.github\/workflows\/.*)$`;
+const evidenceInputPatterns = [String.raw`(?:^|/)package\.json$`, hostingPaths, String.raw`^apps/[^/]+/astro\.config\.[^/]+$`];
 // Files the tests only look up by name, so adding or removing one matters: the growth fixture edits the README and the
-// workflow in an archive of HEAD, and every shipped `pattern-<slug>` browser test must belong to an enabled pattern.
-const evidencePresenceInputs = ['.github/workflows/ci.yml', 'README.md', 'packages/react/test/browser/pattern-'];
+// lockfile in an archive of HEAD, the stylesheet check shows the React stylesheet at both revisions, and every shipped
+// `pattern-<slug>` browser test must belong to an enabled pattern.
+const evidencePresenceInputs = ['README.md', 'packages/react/src/supplemental/styles.css', 'packages/react/test/browser/pattern-', 'pnpm-lock.yaml'];
 const policyCommand = ['--filter', '@muxui/repository-policy', 'run', 'check'];
 const evidenceCommand = ['--filter', '@muxui/repository-policy', 'run', 'check:evidence'];
 
@@ -574,9 +583,13 @@ const policyGroupArgs = async (paths, options = {}) => {
 
 test('the evidence trigger set is the one the route test names, and planning refuses a policy without it', async () => {
   assert.deepEqual(config.evidenceInputs, evidenceInputs);
+  assert.deepEqual(config.evidenceInputPatterns, evidenceInputPatterns);
   assert.deepEqual(config.evidencePresenceInputs, evidencePresenceInputs);
-  await assert.rejects(plan(['AGENTS.md'], { config: { ...config, evidenceInputs: undefined } }), /MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact\.evidenceInputs/u);
-  await assert.rejects(plan(['AGENTS.md'], { config: { ...config, evidencePresenceInputs: [''] } }), /MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact\.evidencePresenceInputs/u);
+  for (const key of ['evidenceInputs', 'evidenceInputPatterns', 'evidencePresenceInputs']) {
+    await assert.rejects(plan(['AGENTS.md'], { config: { ...config, [key]: undefined } }), new RegExp(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact\\.${key}`, 'u'));
+    await assert.rejects(plan(['AGENTS.md'], { config: { ...config, [key]: [''] } }), new RegExp(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact\\.${key}`, 'u'));
+  }
+  await assert.rejects(plan(['AGENTS.md'], { config: { ...config, evidenceInputPatterns: ['('] } }), /evidenceInputPatterns entry "\(" is not a regular expression/u);
 });
 
 // Everything the evidence tests import, statically or by a literal `import()`, and everything those modules import.
@@ -629,9 +642,114 @@ test('every module the evidence tests load plans check:evidence when it changes'
   assert.ok(config.evidenceInputs.includes('apps/docs/src/lib/block-presets.ts'));
 });
 
+// The closure test above follows imports only. The growth auditor and the fixture that archives HEAD also read data: what
+// the catalog compiler is told to read, every package manifest, hosting and workflow files, the ignore and attribute files,
+// and the files the fixture edits. Each of those must plan check:evidence when it changes, or (for a file only looked up
+// by name) when it is added or removed. The cases come from the sources, so a new read shows up here.
+test('the data the growth auditor and its fixture read, not only the modules they import, plans check:evidence', async () => {
+  const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+  const read = (path) => readFileSync(resolve(repositoryRoot, path), 'utf8');
+  // The file as it is (so manifests and the source manifest parse), edited by a trailing newline or removed.
+  const planned = async (path, removed) => {
+    const text = existsSync(resolve(repositoryRoot, path)) ? read(path) : '{}\n';
+    return plan([path], {
+      packages: workspacePackages,
+      reactPackageBefore: read('packages/react/package.json'),
+      reactPackageAfter: read('packages/react/package.json'),
+      textSnapshots: { [path]: { before: text, after: removed ? null : `${text}\n` } },
+    });
+  };
+  // Edited, the path plans the evidence tests (or the full workspace, which always runs them).
+  const editReaches = async (path) => {
+    const result = await planned(path, false);
+    return result.evidence || result.full;
+  };
+  // Looked up by name only: editing it may skip them, but removing it must not.
+  const reaches = async (path) => await editReaches(path) || (await planned(path, true)).evidence;
+
+  // What the compiler reads from the archived tree: every path the source manifest names, and each directory its records live in.
+  const manifest = JSON.parse(read('packages/catalog/catalog-sources.json'));
+  const named = Object.entries(manifest).filter(([key, value]) => key.endsWith('Path') && typeof value === 'string').map(([, value]) => value);
+  assert.ok(named.includes('strategy/platform-safety-contract.json') && named.includes('packages/tooling/command-registry.json'), named.join(', '));
+  const recordDirectories = new Map();
+  for (const { path } of manifest.records.filter(({ path: candidate }) => !candidate.includes('/examples/'))) {
+    const directory = path.split('/').slice(0, 2).join('/');
+    if (!recordDirectories.has(directory)) recordDirectories.set(directory, path);
+  }
+  assert.ok(recordDirectories.size >= 5, [...recordDirectories.keys()].join(', '));
+  for (const path of [...named, ...recordDirectories.values()]) assert.equal(await editReaches(path), true, `${path} is read by the catalog compile`);
+  assert.equal(await editReaches('packages/catalog/package.json'), true, 'the compiler reads the catalog manifest');
+
+  // Every package manifest: the auditor reads each one's version, privacy, publish configuration and dependencies.
+  const manifests = execFileSync('git', ['ls-files', '-z', '*package.json'], { cwd: repositoryRoot, encoding: 'utf8' }).split('\0').filter(Boolean);
+  assert.ok(manifests.length >= 14 && manifests.includes('package.json') && manifests.includes('packages/react/package.json'), manifests.join(', '));
+  for (const path of manifests) assert.equal(await editReaches(path), true, `${path} is a package manifest`);
+
+  // The auditor's hosting names (workflows among them) are one pattern, copied here from its source; its other reads are named files.
+  const auditor = read('tests/evidence/bl1/boundary-audit.mjs');
+  const auditorHosting = auditor.match(/^const hostingPaths = \/(.*)\/u;$/mu)?.[1];
+  assert.ok(config.evidenceInputPatterns.includes(auditorHosting), 'the planner names the auditor\'s hostingPaths pattern as written');
+  for (const path of [
+    'netlify.toml', 'vercel.json', 'wrangler.toml', 'wrangler.jsonc', 'firebase.json', 'fly.toml', 'render.yaml', 'Procfile', 'app.yaml', 'serverless.yml',
+    'staticwebapp.config.json', 'CNAME', '_headers', '_redirects', 'Dockerfile', 'Dockerfile.prod', 'docker-compose.yml', '.vercel/project.json',
+    '.netlify/state.json', '.github/workflows/ci.yml', '.github/workflows/npm-publish.yml', 'apps/docs/public/_redirects', 'apps/docs/netlify.toml',
+  ]) {
+    assert.ok(new RegExp(auditorHosting, 'u').test(path), `${path} is a hosting or workflow name to the auditor`);
+    assert.equal(isEvidenceInput(path, config), true, `${path} is a hosting or workflow name`);
+  }
+  for (const path of ['apps/docs/astro.config.mjs', 'apps/scale/astro.config.ts']) assert.equal(isEvidenceInput(path, config), true, path);
+  assert.match(auditor, /exists\(headRevision, 'apps\/docs\/astro\.config\.mjs'\)/u, 'the auditor reads this Astro configuration');
+  for (const path of ['pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.node-version']) {
+    assert.match(auditor, new RegExp(`'${path.replaceAll('.', '\\.')}'`, 'u'), `${path} is one the auditor compares`);
+    assert.equal(await reaches(path), true, path);
+  }
+  assert.equal(await reaches('packages/react/src/supplemental/styles.css'), true, 'the stylesheet check shows it at both revisions');
+
+  // What git itself reads while the fixture builds its repository: the archive honors attributes, and `git add` honors ignore rules.
+  for (const path of ['.gitignore', '.gitattributes']) assert.equal(await editReaches(path), true, path);
+
+  // Every file the fixture edits by a literal path, whichever way it is reached.
+  const fixture = read('tooling/audits/repository-policy/test/evidence-integrity.test.mjs');
+  const edits = [...new Set([...fixture.matchAll(/\bedit\(\s*'([^'$`]+)'/gu)].map(([, path]) => path))];
+  for (const path of ['README.md', '.github/workflows/ci.yml', 'pnpm-lock.yaml', 'catalog/components/button/artifact.json', 'packages/react/package.json',
+    'packages/schema/src/index.mjs', 'packages/catalog/src/pattern-content.mjs', 'packages/catalog/catalog-sources.json']) {
+    assert.ok(edits.includes(path), `${path} is expected among the files the fixture edits`);
+  }
+  for (const path of edits) assert.equal(await reaches(path), true, `${path} is edited in the growth fixture`);
+});
+
+test('growth-fixture state the old trigger set skipped now plans check:evidence', async () => {
+  const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+  const version = (value) => JSON.stringify({ name: '@muxui/react', version: value, exports: { '.': './x.mjs' } });
+  const cases = [
+    // `git add -A` in the fixture honors this: ignoring netlify.toml would drop its hosting negative control.
+    ['.gitignore', { textSnapshots: { '.gitignore': { before: 'dist\n', after: 'dist\nnetlify.toml\n' } } }],
+    // The fixture bumps this version; HEAD already at the bumped value would make the bump a no-op.
+    ['packages/react/package.json', {
+      reactPackageBefore: version('0.1.0-rc.1'),
+      reactPackageAfter: version('0.1.0-rc.2'),
+      textSnapshots: { 'packages/react/package.json': { before: version('0.1.0-rc.1'), after: version('0.1.0-rc.2') } },
+    }],
+    // A manifest no route sends to policy: a development dependency of a package policy does not depend on.
+    ['apps/react-playground/package.json', { textSnapshots: { 'apps/react-playground/package.json': { before: '{"devDependencies":{"vite":"1"}}', after: '{"devDependencies":{"vite":"2"}}' } } }],
+    // The compiler reads the contract from the archived tree.
+    ['strategy/platform-safety-contract.json', { textSnapshots: { 'strategy/platform-safety-contract.json': { before: '{}', after: '{ }' } } }],
+    ['.github/workflows/npm-publish.yml', { textSnapshots: { '.github/workflows/npm-publish.yml': { before: 'a', after: 'b' } } }],
+    ['netlify.toml', { textSnapshots: { 'netlify.toml': { before: null, after: '[build]\n' } } }],
+    ['apps/docs/astro.config.mjs', { textSnapshots: { 'apps/docs/astro.config.mjs': { before: 'a', after: 'b' } } }],
+  ];
+  for (const [path, options] of cases) {
+    const result = await plan([path], { packages: workspacePackages, ...options });
+    assert.equal(result.evidence, true, path);
+    const groups = executionGroups(result, { packages: workspacePackages, environment: {}, pageIndex });
+    const commands = groups.find(({ id }) => id === 'checks-policy')?.commands.map(({ args }) => args.at(-1));
+    assert.ok(commands?.includes('check:evidence'), `${path}: ${commands}`);
+  }
+});
+
 test('policy-run paths that no evidence test reads skip check:evidence', async () => {
   for (const path of [
-    'decisions/0028-release-proof.md', 'strategy/milestone-roadmap.md', '.github/workflows/npm-publish.yml', '.github/CODEOWNERS',
+    'decisions/0028-release-proof.md', 'strategy/milestone-roadmap.md', '.github/CODEOWNERS', '.github/pull_request_template.md',
     'AGENTS.md', 'docs/agents/domain.md', '.agents/skills/muxui-delivery/SKILL.md', 'catalog/AGENTS.md',
     'tooling/audits/repository-policy/README.md', 'tooling/audits/repository-policy/src/ci-impact.mjs',
     'tooling/audits/repository-policy/test/ci-impact.test.mjs', 'tooling/audits/repository-policy/repository-policy.json',
@@ -642,8 +760,8 @@ test('policy-run paths that no evidence test reads skip check:evidence', async (
     assert.equal(result.evidence, false, path);
     assert.deepEqual(await policyGroupArgs([path]), [policyCommand], path);
   }
-  // A workflow, the README, or a pattern browser test that is edited, not added or removed, is not a lookup change.
-  const editedLookups = ['.github/workflows/ci.yml', 'README.md', 'packages/react/test/browser/pattern-poster-grid.test.mjs'];
+  // The README, the lockfile, the React stylesheet, or a pattern browser test that is edited, not added or removed, is not a lookup change.
+  const editedLookups = ['README.md', 'pnpm-lock.yaml', 'packages/react/src/supplemental/styles.css', 'packages/react/test/browser/pattern-poster-grid.test.mjs'];
   for (const path of editedLookups) {
     assert.equal((await plan([path], edited(path))).evidence, false, path);
   }
@@ -655,7 +773,7 @@ test('policy-run paths that no evidence test reads skip check:evidence', async (
 
 test('the evidence tests run beside the policy check when a change reaches their inputs', async () => {
   const policyAndEvidence = [policyCommand, evidenceCommand];
-  const named = evidenceInputs.map((path) => (path.endsWith('/') ? `${path}bl1/index.json` : path));
+  const named = evidenceInputs.map((path) => (path.endsWith('/') ? `${path}${path.startsWith('tests/') ? 'bl1/index.json' : 'ci.yml'}` : path));
   for (const path of named) {
     const result = await plan([path]);
     assert.equal(result.evidence, true, path);
@@ -695,7 +813,7 @@ test('adding or removing a looked-up file plans the evidence tests; editing it d
   const added = (path) => ({ textSnapshots: { [path]: { before: null, after: 'new\n' } } });
   const removed = (path) => ({ textSnapshots: { [path]: { before: 'old\n', after: null } } });
   const patternTest = 'packages/react/test/browser/pattern-new-block.test.mjs';
-  for (const path of ['.github/workflows/ci.yml', 'README.md', patternTest]) {
+  for (const path of ['README.md', 'pnpm-lock.yaml', 'packages/react/src/supplemental/styles.css', patternTest]) {
     for (const options of [added(path), removed(path)]) {
       const result = await plan([path], options);
       assert.equal(result.evidence, true, path);
@@ -736,7 +854,7 @@ test('Scale and docs changes run the Scale docs browser test as one ordinary che
     assert.notEqual(command.prerequisite, true, path);
     assert.ok(!browser.commands.some(({ args }) => args.includes('build')), path);
   }
-  const policy = executionGroups(await plan(['.github/workflows/ci.yml'], edited('.github/workflows/ci.yml')), { packages, environment: {}, pageIndex });
+  const policy = executionGroups(await plan(['.github/CODEOWNERS']), { packages, environment: {}, pageIndex });
   assert.ok(!policy.some(({ kind }) => kind === 'browser'));
 });
 
@@ -1009,7 +1127,7 @@ test('clean owner checks schedule only their generation dependencies before chec
   assert.equal(catalog.reactPackageFull, false);
   assert.deepEqual(catalog.storyRuns, []);
 
-  const policy = await plan(['.github/workflows/ci.yml'], edited('.github/workflows/ci.yml'));
+  const policy = await plan(['.github/CODEOWNERS']);
   const policyCommands = executionCommands(policy, { packages });
   assert.ok(policyCommands[0].args.includes('--filter'));
   assert.ok(policyCommands[0].args.includes('@muxui/react'));
@@ -1222,10 +1340,7 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
 });
 
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
-  const result = await plan([collectionsPath, '.github/workflows/ci.yml'], {
-    ...treeRuntimeChange,
-    textSnapshots: { ...treeRuntimeChange.textSnapshots, ...edited('.github/workflows/ci.yml').textSnapshots },
-  });
+  const result = await plan([collectionsPath, '.github/CODEOWNERS'], treeRuntimeChange);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
   // Docs, Scale, Figma, and the playground depend on React at runtime, so they
   // run whole (with the browser checks) while React and Storybook keep the Tree family scope.
@@ -1233,7 +1348,7 @@ test('scoped plans split into independent groups that each repeat the generation
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
   for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
-  // The workflow is policy machinery, not an input of the evidence tests.
+  // Ownership rules are policy machinery, not an input of the evidence tests.
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
   ]);

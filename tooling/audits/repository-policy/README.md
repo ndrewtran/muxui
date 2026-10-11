@@ -89,24 +89,36 @@ repository audit, `evidence-verify.mjs`, and every test file except that one.
 `check:evidence` runs `evidence-verify.mjs` and that file.
 
 A pull request's `checks-policy` group runs `check:evidence` only when the change
-reaches what the tests load or read:
+reaches what the tests load or read, through imports or as data:
 
 - `pullRequestImpact.evidenceInputs` lists paths (a trailing slash is a
   directory): `tests/evidence/`, the policy modules and test the suite imports,
   `apps/docs/src/lib/block-presets.ts`, `packages/react/src/r1-deferred-evidence.mjs`,
-  Decision 0022, which the R1 exit capture reads, and `.gitattributes`, which
-  the archive of HEAD honors.
+  Decision 0022, which the R1 exit capture reads, and the data the growth audit
+  and its fixture read from the archive of HEAD: `.gitattributes`, `.gitignore`
+  (the fixture stages files with `git add`, so ignore rules decide what the
+  audited commits contain), `.github/workflows/`, and
+  `strategy/platform-safety-contract.json` (the compiler reads it).
+- `evidenceInputPatterns` lists regular expressions for path classes:
+  every `package.json` (the audit checks each workspace package's version and
+  publish configuration), the hosting and deployment file names the audit
+  rejects (copied from `hostingPaths` in `tests/evidence/bl1/boundary-audit.mjs`),
+  and `apps/*/astro.config.*` (the audit checks Astro site settings).
 - `evidencePresenceInputs` lists files the tests only look up by name
-  (`README.md`, the CI workflow, and the `pattern-<slug>` browser tests): adding
-  or removing one runs the tests, editing it does not.
+  (`README.md`, `pnpm-lock.yaml`, the React stylesheet, and the `pattern-<slug>`
+  browser tests): adding or removing one runs the tests, editing it does not.
 - The packages this package depends on (catalog, schema, tokens, tooling) are
   loaded by the tests, so a change to one runs them through the workspace links,
   as it ran policy before.
 - A policy lockfile importer change, and a path no route owns, run them too.
 
-Decisions, strategy, workflows, guidance, and the planner and its tests skip it.
-The route tests pin this list and fail when a module the suite imports is not
-planned by it. Main, scheduled runs, `pnpm check`, `pnpm check:all`, and
+Decisions, strategy other than the safety contract, guidance, and the planner and
+its tests skip it. The route tests pin these lists, fail when a module the suite
+imports is not planned by them, and fail when a path class the audit or fixture
+reads as data does not plan `check:evidence`. The growth fixture does not depend
+on incidental HEAD state: it stages with `git add -f`, so an ignore rule cannot
+drop its own negative controls, and computes its version bumps from the current
+version. Main, scheduled runs, `pnpm check`, `pnpm check:all`, and
 `pnpm release:prepare` always run both scripts: the workspace runner adds
 `check:evidence` beside any run that includes this package.
 
