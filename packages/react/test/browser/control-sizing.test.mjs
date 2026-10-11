@@ -292,12 +292,37 @@ async function measureAutocompleteOptions(page, size) {
   }, size);
 }
 
+/**
+ * Reads the compact remove targets once no transform acts on them or their ancestors. Tag chips enter
+ * through a JS-driven translate that `getAnimations()` cannot see, and a translated box reads back through
+ * float32 quad math, so a 24px target can measure 23.99994px mid-entrance.
+ */
 async function measureCompactInteractiveTargets(page, size) {
-  return page.evaluate(({ targetSize, selectors }) => Object.fromEntries(Object.entries(selectors).map(([id, selector]) => {
+  return page.evaluate(async ({ targetSize, selectors }) => {
     const row = document.querySelector(`[data-size-row="${targetSize}"]`);
-    const controlCase = row?.querySelector(`[data-control-id="${id}"]`);
-    const nodes = controlCase ? [...controlCase.querySelectorAll(selector)] : [];
-    return [id, nodes.map((node) => {
+    const found = Object.entries(selectors).map(([id, selector]) => {
+      const controlCase = row?.querySelector(`[data-control-id="${id}"]`);
+      return [id, controlCase ? [...controlCase.querySelectorAll(selector)] : []];
+    });
+    const transformProperties = ['transform', 'translate', 'rotate', 'scale'];
+    const findTransformed = () => {
+      for (const [, nodes] of found) {
+        for (const node of nodes) {
+          for (let element = node; element; element = element.parentElement) {
+            const style = getComputedStyle(element);
+            const active = transformProperties.filter((property) => style[property] !== 'none');
+            if (active.length > 0) return `${element.className || element.localName} (${active.map((property) => `${property}: ${style[property]}`).join(', ')})`;
+          }
+        }
+      }
+      return null;
+    };
+    const deadline = performance.now() + 5_000;
+    for (let transformed = findTransformed(); transformed; transformed = findTransformed()) {
+      if (performance.now() > deadline) throw new Error(`compact/${targetSize} targets still transformed after 5s: ${transformed}`);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    return Object.fromEntries(found.map(([id, nodes]) => [id, nodes.map((node) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       return {
@@ -305,8 +330,8 @@ async function measureCompactInteractiveTargets(page, size) {
         minBlockSize: style.minBlockSize,
         width: rect.width,
       };
-    })];
-  })), { targetSize: size, selectors: compactInteractiveTargets });
+    })]));
+  }, { targetSize: size, selectors: compactInteractiveTargets });
 }
 
 async function measureTableCells(page) {
