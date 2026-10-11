@@ -10,17 +10,17 @@ const items = [
   { id: 'review', label: 'Review records', status: 'failed', details: 'The selected file could not be read.', actions: [{ id: 'cancel', label: 'Cancel request', onAction: () => {} }, { id: 'disabled', label: 'Unavailable action', disabled: true, onAction: () => {} }] },
   { id: 'write', label: 'Draft notes', status: 'queued', meta: '7 items' },
 ];
-const entry = `import React from 'react';import { hydrateRoot } from 'react-dom/client';import { flushSync } from 'react-dom';import { Activity } from '/src/supplemental/activity.mjs';
-window.events=[];window.errors=[];window.items=${JSON.stringify(items)};window.items[1].actions.forEach(action=>action.onAction=()=>window.events.push(action.id));
+const entryFor = (list) => `import React from 'react';import { hydrateRoot } from 'react-dom/client';import { flushSync } from 'react-dom';import { Activity } from '/src/supplemental/activity.mjs';
+window.events=[];window.errors=[];window.items=${JSON.stringify(list)};window.items[1].actions.forEach(action=>action.onAction=()=>window.events.push(action.id));
 const content=(props={})=>React.createElement(Activity,{label:'Workspace checks',onExpandedChange:value=>window.events.push(value),items:window.items,...props});
 const root=hydrateRoot(document.querySelector('#root'),content(),{onRecoverableError:error=>window.errors.push(error.message)});
 window.mount=(props={})=>flushSync(()=>root.render(content(props)));window.unmount=()=>flushSync(()=>root.unmount());window.flush=fn=>flushSync(fn);
 window.addMetadata=()=>{window.items[0].meta=React.createElement(React.Fragment,null,React.createElement('a',{href:'#record',onClick:()=>window.events.push('link')},'View record'),React.createElement('button',{type:'button',onClick:()=>window.events.push('metadata')},'Metadata action'),React.createElement('span',{onClick:event=>{event.preventDefault();window.events.push('prevented');}},'Prevented metadata'));window.mount();};window.ready=true;`;
-const fixture = pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css">', bodyAttributes: 'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"', body: `<main id="scope"><div id="root">${renderToString(React.createElement(Activity, { label: 'Workspace checks', items }))}</div></main>`, entry: '/activity-entry.mjs' });
+const fixtureFor = (list) => pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css">', bodyAttributes: 'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"', body: `<main id="scope"><div id="root">${renderToString(React.createElement(Activity, { label: 'Workspace checks', items: list }))}</div></main>`, entry: '/activity-entry.mjs' });
 const outer = '.muxui-activity-items-host > .muxui-activity-motion-panel';
 const itemPanel = '.muxui-activity-details-host > .muxui-activity-motion-panel';
-async function setup() {
-  const server = await startServer({ entries: ['src/supplemental/activity.mjs'], pages: { '/activity.html': fixture }, modules: { '/activity-entry.mjs': entry } });
+async function setup(list = items) {
+  const server = await startServer({ entries: ['src/supplemental/activity.mjs'], pages: { '/activity.html': fixtureFor(list) }, modules: { '/activity-entry.mjs': entryFor(list) } });
   const browser = await launchBrowser(); const page = await browser.newPage({ viewport: { width: 390, height: 700 } }); const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
@@ -172,5 +172,26 @@ test('Activity keeps its 300px preference but never overflows a narrower contain
     await page.locator('#scope').evaluate(node => { node.style.inlineSize = '600px'; node.style.display = 'flex'; node.style.alignItems = 'flex-start'; node.firstElementChild.style.display = 'contents'; });
     assert.deepEqual((await widths()).map(width => Math.round(width)), [300, 300, 300, 300]);
     assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+test('Activity item defaultExpanded starts a row open, closes by pointer and keyboard, is ignored without a disclosure, and stays hidden with a collapsed aggregate', { timeout: 120_000 }, async () => {
+  // The first row opens at mount; the third has no details, so its flag has nothing to open.
+  const context = await setup(items.map((item, index) => (index === 1 ? item : { ...item, defaultExpanded: true }))); const { page, errors } = context;
+  const rowPanel = index => `.muxui-activity-item:nth-child(${index}) ${itemPanel}`;
+  const summary = page.locator('.muxui-activity-item').first().locator('summary'); const details = page.locator('.muxui-activity-item').first().locator('details');
+  try {
+    assert.equal(await page.evaluate(() => window.starts.length), 0, 'an open row does not replay its entry'); assert.deepEqual(await page.evaluate(() => window.errors), []);
+    assert.equal(await details.getAttribute('open'), '', 'native details is open from the first render'); assert.equal(await summary.getAttribute('aria-expanded'), 'true');
+    assert.equal(await page.getByText('Local notes supplied.').isVisible(), true); await settle(page, rowPanel(1), true);
+    assert.equal(await page.locator('.muxui-activity-item:nth-child(2) details').getAttribute('open'), null); assert.equal(await page.locator('.muxui-activity-item:nth-child(2) summary').getAttribute('aria-expanded'), 'false');
+    assert.equal(await page.locator('.muxui-activity-item:nth-child(3)').locator('details, summary, [aria-expanded]').count(), 0, 'a row without details ignores the flag');
+    await summary.click(); assert.equal(await summary.getAttribute('aria-expanded'), 'false'); await settle(page, rowPanel(1), false); assert.equal(await details.getAttribute('open'), null);
+    await summary.focus(); await page.keyboard.press('Space'); assert.equal(await summary.getAttribute('aria-expanded'), 'true'); await settle(page, rowPanel(1), true);
+    await page.keyboard.press('Enter'); assert.equal(await summary.getAttribute('aria-expanded'), 'false'); await settle(page, rowPanel(1), false); assert.equal(await details.getAttribute('open'), null);
+    // A row left open keeps its state under a collapsed aggregate, which hides it until the aggregate opens again.
+    await summary.press('Space'); await settle(page, rowPanel(1), true);
+    await page.locator('.muxui-activity-trigger').click(); await settle(page, outer, false); assert.equal(await summary.isVisible(), false); assert.equal(await summary.getAttribute('aria-expanded'), 'true'); assert.equal(await details.getAttribute('open'), '');
+    await page.locator('.muxui-activity-trigger').click(); await settle(page, outer, true); assert.equal(await page.getByText('Local notes supplied.').isVisible(), true); assert.deepEqual(errors, []);
   } finally { await context.close(); }
 });

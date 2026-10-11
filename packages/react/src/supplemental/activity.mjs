@@ -18,10 +18,10 @@ function statusOf(items) {
 function actionsOf(actions, key) {
   return actions?.length > 0 && e('div', { className: 'muxui-activity-actions', key, role: 'group', 'aria-label': 'Activity actions' }, actions.map((action) => e('button', { key: action.id, 'data-size': 'sm', 'data-variant': 'neutral', className: 'muxui-button', type: 'button', disabled: action.disabled, 'data-disabled': action.disabled || undefined, onClick: action.onAction }, action.label)));
 }
-// Retain native details during exit; the requested state owns accessibility.
+// Retain native details during exit; the requested state owns accessibility. defaultExpanded seeds both states at mount only.
 function ActivityDetails({ item, summary }) {
-  const [detailsOpen, setDetailsOpen] = React.useState(false);
-  const [physicalOpen, setPhysicalOpen] = React.useState(false);
+  const [detailsOpen, setDetailsOpen] = React.useState(item.defaultExpanded ?? false);
+  const [physicalOpen, setPhysicalOpen] = React.useState(detailsOpen);
   const chevron = React.useRef(null);
   const summaryRef = React.useRef(null);
   const detailsHost = React.useRef(null);
