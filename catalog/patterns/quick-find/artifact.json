@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:quick-find",
+  "kind": "pattern",
+  "name": "Quick find",
+  "summary": "Find a plan, issue, or action by typing: grouped results in an overlay opened from a button, or in a card beside the field.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "find",
+    "quick",
+    "jump",
+    "results",
+    "groups",
+    "palette"
+  ],
+  "platforms": ["web.react"],
+  "category": "navigation",
+  "intent": {
+    "useWhen": [
+      "Jumping to a place or running an action by typing a few letters",
+      "Grouping results under short headings"
+    ],
+    "avoidWhen": [
+      "The results come from a server search",
+      "The results are a page of their own that needs filters and paging"
+    ]
+  },
+  "participants": [
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "palette",
+      "component": "muxui:component:command-palette",
+      "requirement": "optional"
+    },
+    {
+      "role": "container",
+      "component": "muxui:component:card",
+      "requirement": "optional"
+    },
+    {
+      "role": "search",
+      "component": "muxui:component:search-field",
+      "requirement": "optional"
+    },
+    {
+      "role": "results",
+      "component": "muxui:component:list-box",
+      "requirement": "optional"
+    }
+  ],
+  "variants": [
+    { "example": "muxui:example:quick-find-overlay" },
+    { "example": "muxui:example:quick-find-inline" }
+  ],
+  "accessibility": [
+    "In Overlay, the trigger opens a dialog named Quick find: focus moves to the Find field, arrow keys move through the results, Enter runs one, and Escape closes the overlay and returns focus to the trigger.",
+    "In Inline, the SearchField is named Find and the ListBox is named Results: the list is one Tab stop, and arrow keys move between results.",
+    "The inline result count, and the item you chose, are a role=status element.",
+    "Group headings name their results, and an empty search shows a plain message."
+  ],
+  "unsupported": [
+    "Searching a server or ranking results: both variants filter five placeholder items by title",
+    "Running the chosen action: choosing only reports its title",
+    "Recent searches or shortcut hints"
+  ],
+  "workflowValue": "Replaces wiring a find box by hand: one query filters grouped items and one status line reports the count or the choice, so you swap the items and pick the overlay or the inline card."
+}

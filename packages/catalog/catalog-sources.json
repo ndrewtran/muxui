@@ -1160,6 +1160,18 @@
     {
       "family": "example",
       "path": "catalog/patterns/property-inspector/examples/react/adjust-panel.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/quick-find/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/quick-find/examples/react/inline.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/quick-find/examples/react/overlay.example.json"
     }
   ]
 }

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:quick-find-inline",
+  "kind": "example",
+  "name": "Inline",
+  "summary": "A search field above grouped results in a card.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/quick-find/examples/react/inline.tsx"
+}
