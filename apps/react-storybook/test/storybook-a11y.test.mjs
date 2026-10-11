@@ -19,7 +19,7 @@ const serverTimeoutMs = 90_000;
 const storyTimeoutMs = 15_000;
 const testTimeoutMs = 420_000;
 // The full gate covers every family in both schemes plus interaction, lifecycle,
-// platform-mode, and Button-matrix proofs on a single CI worker.
+// platform-mode, and Button-matrix proofs, with one browser context per scheme.
 const fullAuditTimeoutMs = 600_000;
 
 // CI shards large page selections by family (ci-impact storyShardPageBudget),
@@ -30,8 +30,9 @@ function pageScopedAuditTimeout() {
   return Math.min(fullAuditTimeoutMs, 120_000 + pages.length * 6_000);
 }
 
+// Two workers run the light and dark schemes in parallel browser contexts; 1 runs both serially.
 function workerCount(variable) {
-  const value = process.env[variable] ?? '1';
+  const value = process.env[variable] ?? '2';
   assert.ok(value === '1' || value === '2', `${variable} must be 1 or 2, got ${value}`);
   return Number(value);
 }

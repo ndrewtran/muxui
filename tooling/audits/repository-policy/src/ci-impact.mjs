@@ -1755,7 +1755,7 @@ function storyProofEnvironment(storyRun, environment) {
     MUXUI_STORYBOOK_AUDIT_PROOF: storyRun.proof,
     ...(storyRun.families.length ? { MUXUI_STORYBOOK_FAMILIES: storyRun.families.join(',') } : {}),
     ...(storyRun.storyIds.length ? { MUXUI_STORYBOOK_STORY_IDS: storyRun.storyIds.join(',') } : {}),
-    MUXUI_STORYBOOK_A11Y_WORKERS: '1',
+    MUXUI_STORYBOOK_A11Y_WORKERS: '2',
     MUXUI_STORYBOOK_COLORS_WORKERS: '2',
     ...(environment.RUNNER_TEMP ? { MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: `${environment.RUNNER_TEMP}/storybook-colour-audit` } : {}),
   };
@@ -2054,7 +2054,7 @@ function fullPlannedCommands(environment, testSources, packages) {
   const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
   const storybookEnv = {
     ...fullStorybookEnvironment,
-    MUXUI_STORYBOOK_A11Y_WORKERS: '1',
+    MUXUI_STORYBOOK_A11Y_WORKERS: '2',
     MUXUI_STORYBOOK_COLORS_WORKERS: '2',
     ...(environment.RUNNER_TEMP ? { MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: `${environment.RUNNER_TEMP}/storybook-colour-audit` } : {}),
   };
