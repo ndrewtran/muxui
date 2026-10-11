@@ -7,9 +7,11 @@ import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import {
   checkStages,
   generationArgs,
+  inheritedFullStorybookSelection,
   loadReactFamilyRecords,
   parseTaskArguments,
   planScopedTask,
+  storybookPackage,
 } from './scoped-verification.mjs';
 
 const repositoryRoot = resolve(
@@ -30,14 +32,15 @@ function gitLines(args) {
   };
 }
 
+const baseRef = process.env.MUXUI_BASE_REF || 'origin/main';
+
 function collectChangedPaths() {
-  const base = process.env.MUXUI_BASE_REF || 'origin/main';
-  const verified = gitLines(['rev-parse', '--verify', `${base}^{commit}`]);
+  const verified = gitLines(['rev-parse', '--verify', `${baseRef}^{commit}`]);
   if (verified.error) {
-    throw new Error(`MUXUI_BASE_REF_UNAVAILABLE: ${base} could not be resolved (${verified.error})`);
+    throw new Error(`MUXUI_BASE_REF_UNAVAILABLE: ${baseRef} could not be resolved (${verified.error})`);
   }
   const commands = [
-    ['diff', '--name-only', '--no-renames', `${base}...HEAD`],
+    ['diff', '--name-only', '--no-renames', `${baseRef}...HEAD`],
     ['diff', '--name-only', '--no-renames'],
     ['diff', '--cached', '--name-only', '--no-renames'],
     ['diff', '--name-only', 'HEAD'],
@@ -93,6 +96,40 @@ function environmentFor(plan, options) {
     environment.MUXUI_STORYBOOK_AUDIT_PROOF ??= 'component';
   }
   return environment;
+}
+
+const notice = (message) => console.log(`[workspace-task] notice: ${message}`);
+
+// Storybook's lane runs the story selection CI plans for the paths this check
+// covers instead of the full audit. Returns the commands to run, or undefined
+// to keep the full audit; the cause is always printed, never silent.
+async function storybookCommandsFor(plan, task) {
+  if (task !== 'check' || plan.full || plan.focusedComponent) return undefined;
+  if (plan.scope !== 'files' && plan.scope !== 'affected') return undefined;
+  if (!plan.checkPackages.some(({ name }) => name === storybookPackage)) return undefined;
+  if (inheritedFullStorybookSelection()) {
+    notice('running the full Storybook audit: a forced-full Storybook event is active');
+    return undefined;
+  }
+  let selection;
+  try {
+    // Loaded on demand: the planner imports its own heavy dependencies and
+    // reads the pullRequestImpact policy, which only Storybook selection needs.
+    const { planStorybookCommands } = await import('./ci-impact.mjs');
+    selection = await planStorybookCommands({ changedPaths: plan.selectionPaths, baseRef });
+  } catch (error) {
+    selection = { full: true, reason: `the CI planner could not load (${error.message})` };
+  }
+  if (selection.full) {
+    notice(`running the full Storybook audit: ${selection.reason}`);
+    return undefined;
+  }
+  if (selection.commands.length === 0) {
+    notice(`CI plans no Storybook proof for these paths against the merge base with ${baseRef} (an unchanged path plans nothing), so the Storybook audit is skipped`);
+  } else {
+    console.log(`[workspace-task] Storybook: CI's selection of ${selection.pages} pages in ${selection.commands.length} command(s)`);
+  }
+  return selection.commands;
 }
 
 function focusedCheckCommands(plan) {
@@ -185,17 +222,37 @@ function runConcurrently(command, args, env) {
   });
 }
 
-const stages = checkStages(plan, { task: options.task, workspaceRootName: rootManifest.name });
-stages.forEach((commands, index) => {
-  for (const args of commands) console.log(`[workspace-task] check stage ${index + 1}: ${commandText('pnpm', args)}`);
+// Planned after generation: the selection reads the page index it produces.
+const storybookCommands = await storybookCommandsFor(plan, options.task);
+const stages = checkStages(plan, { task: options.task, workspaceRootName: rootManifest.name, storybookCommands });
+stages.forEach((lanes, index) => {
+  for (const { args, env } of lanes.flat()) {
+    console.log(`[workspace-task] check stage ${index + 1}: ${commandText('pnpm', args)}`);
+    if (env && Object.keys(env).length > 0) console.log(`[workspace-task] check stage ${index + 1} env: ${JSON.stringify(env)}`);
+  }
 });
 if (options.preview) {
   console.log('[workspace-task] preview complete; no commands executed');
   process.exit(0);
 }
+
+// A step starts from the runner environment, clears what it unsets, then sets its own.
+function stepEnvironment({ env = {}, unsetEnv = [] }) {
+  const stepEnv = { ...environment };
+  for (const key of unsetEnv) delete stepEnv[key];
+  return Object.assign(stepEnv, env);
+}
+
+// Runs a lane's steps in order and reports every step, like --no-bail.
+async function runLane(steps) {
+  const laneStatuses = [];
+  for (const step of steps) laneStatuses.push(await runConcurrently('pnpm', step.args, stepEnvironment(step)));
+  return laneStatuses;
+}
+
 // Run every stage, even after a failure, then exit with the first failure.
 const statuses = [];
-for (const commands of stages) {
-  statuses.push(...await Promise.all(commands.map((args) => runConcurrently('pnpm', args, environment))));
+for (const lanes of stages) {
+  statuses.push(...(await Promise.all(lanes.map(runLane))).flat());
 }
 process.exit(statuses.find((status) => status !== 0) ?? 0);

@@ -194,7 +194,7 @@ function ownerPackagesForPath(path, packages, policy) {
 
 const FULL_STORYBOOK_EVENTS = new Set(['schedule', 'workflow_dispatch', 'check:all', 'release']);
 
-function inheritedFullStorybookSelection() {
+export function inheritedFullStorybookSelection() {
   const event = process.env.MUXUI_STORYBOOK_AUDIT_EVENT ?? process.env.GITHUB_EVENT_NAME;
   return process.env.MUXUI_STORYBOOK_AUDIT_FORCE === '1'
     || FULL_STORYBOOK_EVENTS.has(event);
@@ -280,6 +280,8 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
   let familySelection = [];
   let storybookFamilySelection = [];
   let focusedComponent = false;
+  // The paths whose Storybook proof CI's planner can select locally.
+  let selectionPaths = [];
 
   if (options.full) {
     scope = 'full';
@@ -313,12 +315,14 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
       directPackages = packages.filter(({ name }) => owners.includes(name));
       scope = 'files';
       reason = `file scope: ${normalizedFiles.join(', ')}`;
+      selectionPaths = [...new Set(normalizedFiles)].sort();
     }
   } else if (options.affected && !hasExplicitScope) {
     const affected = changedPackageSelection({ changedPaths, packages, policy });
     scope = affected.mode;
     reason = affected.reason;
     directPackages = affected.directPackages;
+    selectionPaths = affected.changedPaths;
   }
 
   const full = scope === 'full';
@@ -348,6 +352,7 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
     checkPackages,
     generationPackages,
     changedPaths,
+    selectionPaths,
   };
 }
 
@@ -372,24 +377,34 @@ export function generationArgs(plan) {
 // Checks use --no-bail so one run reports every failing package; pnpm still
 // exits non-zero. Generation stays fail-fast because checks depend on it.
 export const isolatedCheckPackages = ['@muxui/react'];
-export const laneCheckPackages = ['@muxui/react-storybook'];
+export const storybookPackage = '@muxui/react-storybook';
+export const laneCheckPackages = [storybookPackage];
 export const checkConcurrency = 2;
 
 function checkCommand(concurrency, filters, task) {
   return ['--recursive', '--sort', `--workspace-concurrency=${concurrency}`, '--if-present', '--no-bail', ...filters, 'run', task];
 }
 
-// Returns stages of pnpm argument lists: stages run in order, and the commands
-// in one stage run at the same time. Dependent filters (`...name`) and
-// exclusion filters also select the workspace root when it depends on a
-// changed package; its `check` script is this runner, so exclude it.
-export function checkStages(plan, { task, workspaceRootName }) {
+// Returns stages of lanes: stages run in order, the lanes in one stage run at
+// the same time, and a lane's steps run one after another. A step is a pnpm
+// argument list plus the environment it changes (`env` is set, `unsetEnv` is
+// cleared first). Dependent filters (`...name`) and exclusion filters also
+// select the workspace root when it depends on a changed package; its `check`
+// script is this runner, so exclude it.
+// `storybookCommands` replaces Storybook's single full check with those
+// planned CI commands (see ci-impact.mjs planStorybookCommands); an empty list
+// drops the Storybook lane.
+export function checkStages(plan, { task, workspaceRootName, storybookCommands }) {
   const selected = (names) => names.filter((name) => plan.checkPackages.some((item) => item.name === name));
   const isolated = selected(isolatedCheckPackages);
   const lanes = selected(laneCheckPackages);
   const separate = [...isolated, ...lanes];
-  const stages = isolated.map((name) => [checkCommand(1, ['--filter', name], task)]);
-  const shared = lanes.map((name) => checkCommand(1, ['--filter', name], task));
+  const stages = isolated.map((name) => [[{ args: checkCommand(1, ['--filter', name], task) }]]);
+  const shared = lanes
+    .map((name) => name === storybookPackage && storybookCommands
+      ? storybookCommands.map(({ args, env = {}, unsetEnv = [] }) => ({ args, env, unsetEnv }))
+      : [{ args: checkCommand(1, ['--filter', name], task) }])
+    .filter((lane) => lane.length > 0);
   const remaining = plan.checkPackages.filter(({ name }) => !separate.includes(name));
   if (plan.full || remaining.length > 0) {
     const filters = [];
@@ -399,10 +414,10 @@ export function checkStages(plan, { task, workspaceRootName }) {
       for (const name of separate) filters.push('--filter', `!${name}`);
       if (workspaceRootName) filters.push('--filter', `!${workspaceRootName}`);
     }
-    shared.push(checkCommand(checkConcurrency, filters, task));
+    shared.push([{ args: checkCommand(checkConcurrency, filters, task) }]);
   }
   // Parallel lanes interleave output, so pnpm prefixes each line with its package.
-  if (shared.length > 1) stages.push(shared.map((args) => ['--stream', ...args]));
+  if (shared.length > 1) stages.push(shared.map((lane) => lane.map((step) => ({ ...step, args: ['--stream', ...step.args] }))));
   else if (shared.length > 0) stages.push(shared);
   return stages;
 }
