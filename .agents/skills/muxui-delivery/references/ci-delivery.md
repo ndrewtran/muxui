@@ -6,12 +6,21 @@ are in root `AGENTS.md` (Verification).
 
 ## Before every push
 
-Run `node tooling/audits/repository-policy/src/ci-impact.mjs --preview`. It
-runs the CI planner's ownership and routing checks locally in seconds, and
-most fast CI failures come from there. For React or Storybook changes, run the
-scoped generation it asks for first.
+1. Run `node tooling/audits/repository-policy/src/ci-impact.mjs --preview`. It
+   runs the CI planner's ownership and routing checks locally in seconds, and
+   most fast CI failures come from there. For React or Storybook changes, run
+   the scoped generation it asks for first.
+2. Run at most one scoped check for what changed: the focused test files you
+   edited, or `pnpm check --component <family>`. CI runs the planned groups on
+   every browser engine and reuses groups that already passed, so do not
+   repeat that locally: no `pnpm check:all`, package-wide checks, repeated
+   browser runs, or stress loops by habit.
+3. Push. Widen local proof only to reproduce a CI failure, with a bounded
+   reproduction and a stated exit condition.
 
-Done when: the preview exits cleanly and its planned groups match the change.
+Done when: the preview exits cleanly, its planned groups match the change, and
+the one scoped check passes. Root `AGENTS.md` still asks for the full graph for
+shared workspace configuration, dependency changes, and release work.
 
 ## Classifying a CI failure
 
