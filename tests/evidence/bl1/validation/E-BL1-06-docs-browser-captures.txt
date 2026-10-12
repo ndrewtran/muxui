@@ -22,204 +22,235 @@ Scope: 5 of 15 workspace projects
 ../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog-package.json
 ../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog-package.json.provenance
 ../../packages/catalog generate: Done
-../../packages/tooling generate$ node src/generate.mjs
 ../../packages/react generate$ node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs
+../../packages/tooling generate$ node src/generate.mjs
 ../../packages/tooling generate: [tooling] generated packages/tooling/generated/command-surface.mjs
 ../../packages/tooling generate: [tooling] generated packages/tooling/generated/response-types.d.ts
 ../../packages/tooling generate: Done
 ../../packages/react generate: [react] generated current R1.6 union projection with the retained R1.5 family closure
 ../../packages/react generate: Done
-11:37:30 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-11:37:30 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [content] Syncing content
-11:37:30 [content] Synced content
-11:37:30 [types] Generated 229ms
-11:37:30 [build] output: "static"
-11:37:30 [build] mode: "static"
-11:37:30 [build] directory: <repo>/apps/docs/dist/
-11:37:30 [build] Collecting build info...
-11:37:30 [build] ✓ Completed in 298ms.
-11:37:30 [build] Building static entrypoints...
-11:37:30 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-11:37:30 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-11:37:30 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-11:37:30 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-11:37:30 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-11:37:30 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-11:37:30 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-11:37:31 [vite] ✓ built in 973ms
-11:37:32 [WARN] [vite] [plugin builtin:vite-reporter]
+02:03:35 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+02:03:35 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [content] Syncing content
+02:03:35 [content] Synced content
+02:03:35 [types] Generated 240ms
+02:03:35 [build] output: "static"
+02:03:35 [build] mode: "static"
+02:03:35 [build] directory: <repo>/apps/docs/dist/
+02:03:35 [build] Collecting build info...
+02:03:35 [build] ✓ Completed in 307ms.
+02:03:35 [build] Building static entrypoints...
+02:03:35 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+02:03:35 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+02:03:35 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+02:03:35 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+02:03:35 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+02:03:35 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+02:03:35 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+02:03:36 [vite] ✓ built in 892ms
+02:03:36 [WARN] [vite] [plugin builtin:vite-reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-11:37:32 [vite] ✓ built in 394ms
-11:37:32 [build] Rearranging server assets...
+02:03:36 [vite] ✓ built in 436ms
+02:03:36 [build] Rearranging server assets...
 
  generating static routes
-11:37:32 [WARN] [content] The collection "i18n" does not exist or is empty. Please check your content config file for errors.
-11:37:32   ├─ /404.html11:37:32 [WARN] [content] Entry docs → 404 was not found.
+02:03:36 [WARN] [content] The collection "i18n" does not exist or is empty. Please check your content config file for errors.
+02:03:37   ├─ /404.html02:03:37 [WARN] [content] Entry docs → 404 was not found.
  (+9ms)
-11:37:32   ├─ /blocks/filter-index.json (+10ms)
-11:37:32   ├─ /blocks/company-records/sortable/preview/index.html (+36ms)
-11:37:32   ├─ /blocks/poster-grid/css-grid/preview/index.html (+6ms)
-11:37:32   ├─ /blocks/poster-grid/virtualized/preview/index.html (+7ms)
-11:37:32   ├─ /blocks/task-filters/status-buttons/preview/index.html (+5ms)
-11:37:32   ├─ /blocks/task-filters/filter-bar/preview/index.html (+7ms)
-11:37:32   ├─ /blocks/account-settings/sections/preview/index.html (+6ms)
-11:37:32   ├─ /blocks/workspace-navigation/foldable/preview/index.html (+5ms)
-11:37:32   ├─ /blocks/marketing-hero/split/preview/index.html (+1ms)
-11:37:32   ├─ /blocks/pricing-plans/columns/preview/index.html (+2ms)
-11:37:32   ├─ /blocks/company-records/sortable/index.html (+142ms)
-11:37:32   ├─ /blocks/poster-grid/css-grid/index.html (+117ms)
-11:37:32   ├─ /blocks/poster-grid/virtualized/index.html (+38ms)
-11:37:32   ├─ /blocks/task-filters/status-buttons/index.html (+7ms)
-11:37:32   ├─ /blocks/task-filters/filter-bar/index.html (+7ms)
-11:37:32   ├─ /blocks/account-settings/sections/index.html (+17ms)
-11:37:32   ├─ /blocks/workspace-navigation/foldable/index.html (+5ms)
-11:37:32   ├─ /blocks/marketing-hero/split/index.html (+2ms)
-11:37:32   ├─ /blocks/pricing-plans/columns/index.html (+6ms)
-11:37:32   ├─ /blocks/company-records/index.html (+13ms)
-11:37:32   ├─ /blocks/poster-grid/index.html (+4ms)
-11:37:32   ├─ /blocks/task-filters/index.html (+4ms)
-11:37:32   ├─ /blocks/account-settings/index.html (+6ms)
-11:37:32   ├─ /blocks/workspace-navigation/index.html (+6ms)
-11:37:32   ├─ /blocks/marketing-hero/index.html (+2ms)
-11:37:32   ├─ /blocks/pricing-plans/index.html (+6ms)
-11:37:32   ├─ /blocks/index.html (+1ms)
-11:37:32   ├─ /components/activity/index.html (+10ms)
-11:37:32   ├─ /components/alert-dialog/index.html (+5ms)
-11:37:32   ├─ /components/autocomplete/index.html (+8ms)
-11:37:32   ├─ /components/avatar/index.html (+4ms)
-11:37:32   ├─ /components/breadcrumbs/index.html (+4ms)
-11:37:32   ├─ /components/button/index.html (+9ms)
-11:37:32   ├─ /components/button-group/index.html (+4ms)
-11:37:32   ├─ /components/calendar/index.html (+7ms)
-11:37:32   ├─ /components/card/index.html (+5ms)
-11:37:32   ├─ /components/checkbox/index.html (+4ms)
-11:37:32   ├─ /components/checkbox-field/index.html (+4ms)
-11:37:32   ├─ /components/checkbox-group/index.html (+4ms)
-11:37:32   ├─ /components/code-block/index.html (+5ms)
-11:37:32   ├─ /components/color-area/index.html (+5ms)
-11:37:32   ├─ /components/color-field/index.html (+4ms)
-11:37:32   ├─ /components/color-mode-toggle/index.html (+3ms)
-11:37:32   ├─ /components/color-picker/index.html (+3ms)
-11:37:32   ├─ /components/color-slider/index.html (+5ms)
-11:37:32   ├─ /components/color-swatch/index.html (+6ms)
-11:37:32   ├─ /components/color-swatch-picker/index.html (+7ms)
-11:37:32   ├─ /components/color-wheel/index.html (+4ms)
-11:37:32   ├─ /components/combo-box/index.html (+5ms)
-11:37:32   ├─ /components/command-palette/index.html (+8ms)
-11:37:32   ├─ /components/data-diff/index.html (+8ms)
-11:37:32   ├─ /components/date-field/index.html (+6ms)
-11:37:32   ├─ /components/date-picker/index.html (+6ms)
-11:37:33   ├─ /components/date-range-picker/index.html (+6ms)
-11:37:33   ├─ /components/dialog/index.html (+4ms)
-11:37:33   ├─ /components/disclosure/index.html (+5ms)
-11:37:33   ├─ /components/disclosure-group/index.html (+6ms)
-11:37:33   ├─ /components/drop-zone/index.html (+4ms)
-11:37:33   ├─ /components/file-trigger/index.html (+3ms)
-11:37:33   ├─ /components/form/index.html (+3ms)
-11:37:33   ├─ /components/grid-list/index.html (+6ms)
-11:37:33   ├─ /components/group/index.html (+3ms)
-11:37:33   ├─ /components/header-nav/index.html (+3ms)
-11:37:33   ├─ /components/icon-button/index.html (+6ms)
-11:37:33   ├─ /components/image/index.html (+3ms)
-11:37:33   ├─ /components/input/index.html (+3ms)
-11:37:33   ├─ /components/input-tags/index.html (+6ms)
-11:37:33   ├─ /components/lightbox/index.html (+4ms)
-11:37:33   ├─ /components/link/index.html (+4ms)
-11:37:33   ├─ /components/list-box/index.html (+5ms)
-11:37:33   ├─ /components/markdown/index.html (+7ms)
-11:37:33   ├─ /components/menu/index.html (+5ms)
-11:37:33   ├─ /components/message/index.html (+10ms)
-11:37:33   ├─ /components/meter/index.html (+3ms)
-11:37:33   ├─ /components/multi-select/index.html (+3ms)
-11:37:33   ├─ /components/number-field/index.html (+7ms)
-11:37:33   ├─ /components/payment-input/index.html (+4ms)
-11:37:33   ├─ /components/popover/index.html (+4ms)
-11:37:33   ├─ /components/preview-trigger/index.html (+4ms)
-11:37:33   ├─ /components/progress-bar/index.html (+3ms)
-11:37:33   ├─ /components/progress-circle/index.html (+3ms)
-11:37:33   ├─ /components/prompt-composer/index.html (+7ms)
-11:37:33   ├─ /components/radio-field/index.html (+4ms)
-11:37:33   ├─ /components/radio-group/index.html (+3ms)
-11:37:33   ├─ /components/range-calendar/index.html (+4ms)
-11:37:33   ├─ /components/resizable/index.html (+4ms)
-11:37:33   ├─ /components/search-field/index.html (+4ms)
-11:37:33   ├─ /components/select/index.html (+5ms)
-11:37:33   ├─ /components/select-native/index.html (+3ms)
-11:37:33   ├─ /components/separator/index.html (+3ms)
-11:37:33   ├─ /components/sidebar/index.html (+5ms)
-11:37:33   ├─ /components/slider/index.html (+4ms)
-11:37:33   ├─ /components/switch/index.html (+3ms)
-11:37:33   ├─ /components/switch-field/index.html (+3ms)
-11:37:33   ├─ /components/table/index.html (+4ms)
-11:37:33   ├─ /components/tabs/index.html (+7ms)
-11:37:33   ├─ /components/tag-group/index.html (+3ms)
-11:37:33   ├─ /components/tag-select/index.html (+5ms)
-11:37:33   ├─ /components/text/index.html (+3ms)
-11:37:33   ├─ /components/text-area/index.html (+3ms)
-11:37:33   ├─ /components/text-editor/index.html (+12ms)
-11:37:33   ├─ /components/text-field/index.html (+4ms)
-11:37:33   ├─ /components/time-field/index.html (+2ms)
-11:37:33   ├─ /components/toast/index.html (+4ms)
-11:37:33   ├─ /components/toggle-button/index.html (+3ms)
-11:37:33   ├─ /components/toggle-button-group/index.html (+3ms)
-11:37:33   ├─ /components/token-field/index.html (+4ms)
-11:37:33   ├─ /components/toolbar/index.html (+3ms)
-11:37:33   ├─ /components/tooltip/index.html (+4ms)
-11:37:33   ├─ /components/tree/index.html (+5ms)
-11:37:33   ├─ /components/virtualizer/index.html (+6ms)
-11:37:33   ├─ /foundations/reference-tokens/index.html (+54ms)
-11:37:33   ├─ /foundations/semantic-tokens/index.html (+127ms)
-11:37:33   ├─ /foundations/colour/index.html (+55ms)
-11:37:33   ├─ /foundations/typography/index.html (+36ms)
-11:37:33   ├─ /foundations/spacing/index.html (+36ms)
-11:37:33   ├─ /foundations/shape/index.html (+30ms)
-11:37:33   ├─ /foundations/elevation/index.html (+31ms)
-11:37:33   ├─ /foundations/motion/index.html (+33ms)
-11:37:33   ├─ /foundations/component-tokens/index.html (+33ms)
-11:37:33   ├─ /foundations/index.html (+28ms)
-11:37:33   ├─ /scale/index.html (+2ms)
-11:37:33   ├─ /accessibility/index.html (+1ms)
-11:37:33   ├─ /contribution/index.html (+2ms)
-11:37:33   ├─ /discovery/index.html (+1ms)
-11:37:33   ├─ /installation/index.html (+4ms)
-11:37:33   ├─ /lifecycle/index.html (+1ms)
-11:37:33   ├─ /themes/index.html (+2ms)
-11:37:33   ├─ /token-migration/index.html (+8ms)
-11:37:33   ├─ /index.html (+74ms)
-11:37:33 ✓ Completed in 1.55s.
+02:03:37   ├─ /blocks/filter-index.json (+13ms)
+02:03:37   ├─ /blocks/company-records/sortable/preview/index.html (+21ms)
+02:03:37   ├─ /blocks/context-sources/excerpts/preview/index.html (+3ms)
+02:03:37   ├─ /blocks/poster-grid/css-grid/preview/index.html (+6ms)
+02:03:37   ├─ /blocks/poster-grid/virtualized/preview/index.html (+6ms)
+02:03:37   ├─ /blocks/task-filters/status-buttons/preview/index.html (+5ms)
+02:03:37   ├─ /blocks/task-filters/filter-bar/preview/index.html (+7ms)
+02:03:37   ├─ /blocks/account-settings/sections/preview/index.html (+4ms)
+02:03:37   ├─ /blocks/approval-request/question-stepper/preview/index.html (+4ms)
+02:03:37   ├─ /blocks/property-inspector/adjust-panel/preview/index.html (+6ms)
+02:03:37   ├─ /blocks/agent-trace/thinking/preview/index.html (+6ms)
+02:03:37   ├─ /blocks/agent-trace/tool-calls/preview/index.html (+2ms)
+02:03:37   ├─ /blocks/agent-trace/task-rows/preview/index.html (+1ms)
+02:03:37   ├─ /blocks/chat-panel/tabbed-thread/preview/index.html (+8ms)
+02:03:37   ├─ /blocks/recommendation/compact/preview/index.html (+2ms)
+02:03:37   ├─ /blocks/recommendation/ranked/preview/index.html (+2ms)
+02:03:37   ├─ /blocks/quick-find/overlay/preview/index.html (+1ms)
+02:03:37   ├─ /blocks/quick-find/inline/preview/index.html (+3ms)
+02:03:37   ├─ /blocks/workspace-navigation/foldable/preview/index.html (+4ms)
+02:03:37   ├─ /blocks/marketing-hero/split/preview/index.html (+1ms)
+02:03:37   ├─ /blocks/pricing-plans/columns/preview/index.html (+2ms)
+02:03:37   ├─ /blocks/company-records/sortable/index.html (+146ms)
+02:03:37   ├─ /blocks/context-sources/excerpts/index.html (+107ms)
+02:03:37   ├─ /blocks/poster-grid/css-grid/index.html (+10ms)
+02:03:37   ├─ /blocks/poster-grid/virtualized/index.html (+41ms)
+02:03:37   ├─ /blocks/task-filters/status-buttons/index.html (+8ms)
+02:03:37   ├─ /blocks/task-filters/filter-bar/index.html (+10ms)
+02:03:37   ├─ /blocks/account-settings/sections/index.html (+19ms)
+02:03:37   ├─ /blocks/approval-request/question-stepper/index.html (+14ms)
+02:03:37   ├─ /blocks/property-inspector/adjust-panel/index.html (+11ms)
+02:03:37   ├─ /blocks/agent-trace/thinking/index.html (+15ms)
+02:03:37   ├─ /blocks/agent-trace/tool-calls/index.html (+9ms)
+02:03:37   ├─ /blocks/agent-trace/task-rows/index.html (+6ms)
+02:03:37   ├─ /blocks/chat-panel/tabbed-thread/index.html (+8ms)
+02:03:37   ├─ /blocks/recommendation/compact/index.html (+9ms)
+02:03:37   ├─ /blocks/recommendation/ranked/index.html (+7ms)
+02:03:37   ├─ /blocks/quick-find/overlay/index.html (+6ms)
+02:03:37   ├─ /blocks/quick-find/inline/index.html (+8ms)
+02:03:37   ├─ /blocks/workspace-navigation/foldable/index.html (+7ms)
+02:03:37   ├─ /blocks/marketing-hero/split/index.html (+4ms)
+02:03:37   ├─ /blocks/pricing-plans/columns/index.html (+10ms)
+02:03:37   ├─ /blocks/company-records/index.html (+11ms)
+02:03:37   ├─ /blocks/context-sources/index.html (+6ms)
+02:03:37   ├─ /blocks/poster-grid/index.html (+5ms)
+02:03:37   ├─ /blocks/task-filters/index.html (+7ms)
+02:03:37   ├─ /blocks/account-settings/index.html (+8ms)
+02:03:37   ├─ /blocks/approval-request/index.html (+11ms)
+02:03:37   ├─ /blocks/property-inspector/index.html (+7ms)
+02:03:37   ├─ /blocks/agent-trace/index.html (+7ms)
+02:03:37   ├─ /blocks/chat-panel/index.html (+8ms)
+02:03:37   ├─ /blocks/recommendation/index.html (+7ms)
+02:03:37   ├─ /blocks/quick-find/index.html (+7ms)
+02:03:37   ├─ /blocks/workspace-navigation/index.html (+7ms)
+02:03:37   ├─ /blocks/marketing-hero/index.html (+4ms)
+02:03:37   ├─ /blocks/pricing-plans/index.html (+8ms)
+02:03:37   ├─ /blocks/index.html (+3ms)
+02:03:37   ├─ /components/activity/index.html (+9ms)
+02:03:37   ├─ /components/alert-dialog/index.html (+4ms)
+02:03:37   ├─ /components/autocomplete/index.html (+7ms)
+02:03:37   ├─ /components/avatar/index.html (+5ms)
+02:03:37   ├─ /components/breadcrumbs/index.html (+4ms)
+02:03:37   ├─ /components/button/index.html (+8ms)
+02:03:37   ├─ /components/button-group/index.html (+3ms)
+02:03:37   ├─ /components/calendar/index.html (+6ms)
+02:03:37   ├─ /components/card/index.html (+3ms)
+02:03:37   ├─ /components/checkbox/index.html (+3ms)
+02:03:37   ├─ /components/checkbox-field/index.html (+3ms)
+02:03:37   ├─ /components/checkbox-group/index.html (+4ms)
+02:03:37   ├─ /components/code-block/index.html (+5ms)
+02:03:37   ├─ /components/color-area/index.html (+4ms)
+02:03:37   ├─ /components/color-field/index.html (+5ms)
+02:03:37   ├─ /components/color-mode-toggle/index.html (+3ms)
+02:03:37   ├─ /components/color-picker/index.html (+3ms)
+02:03:37   ├─ /components/color-slider/index.html (+4ms)
+02:03:37   ├─ /components/color-swatch/index.html (+5ms)
+02:03:37   ├─ /components/color-swatch-picker/index.html (+4ms)
+02:03:37   ├─ /components/color-wheel/index.html (+4ms)
+02:03:37   ├─ /components/combo-box/index.html (+4ms)
+02:03:37   ├─ /components/command-palette/index.html (+7ms)
+02:03:37   ├─ /components/data-diff/index.html (+7ms)
+02:03:37   ├─ /components/date-field/index.html (+7ms)
+02:03:37   ├─ /components/date-picker/index.html (+5ms)
+02:03:37   ├─ /components/date-range-picker/index.html (+5ms)
+02:03:37   ├─ /components/dialog/index.html (+4ms)
+02:03:37   ├─ /components/disclosure/index.html (+3ms)
+02:03:37   ├─ /components/disclosure-group/index.html (+5ms)
+02:03:37   ├─ /components/drop-zone/index.html (+3ms)
+02:03:37   ├─ /components/file-trigger/index.html (+3ms)
+02:03:37   ├─ /components/form/index.html (+3ms)
+02:03:37   ├─ /components/grid-list/index.html (+6ms)
+02:03:37   ├─ /components/group/index.html (+5ms)
+02:03:37   ├─ /components/header-nav/index.html (+3ms)
+02:03:37   ├─ /components/icon-button/index.html (+6ms)
+02:03:37   ├─ /components/image/index.html (+3ms)
+02:03:37   ├─ /components/input/index.html (+3ms)
+02:03:37   ├─ /components/input-tags/index.html (+3ms)
+02:03:37   ├─ /components/lightbox/index.html (+3ms)
+02:03:37   ├─ /components/link/index.html (+4ms)
+02:03:37   ├─ /components/list-box/index.html (+5ms)
+02:03:37   ├─ /components/markdown/index.html (+3ms)
+02:03:37   ├─ /components/menu/index.html (+5ms)
+02:03:37   ├─ /components/message/index.html (+8ms)
+02:03:37   ├─ /components/meter/index.html (+3ms)
+02:03:37   ├─ /components/multi-select/index.html (+3ms)
+02:03:37   ├─ /components/number-field/index.html (+5ms)
+02:03:37   ├─ /components/payment-input/index.html (+3ms)
+02:03:37   ├─ /components/popover/index.html (+4ms)
+02:03:37   ├─ /components/preview-trigger/index.html (+3ms)
+02:03:37   ├─ /components/progress-bar/index.html (+3ms)
+02:03:37   ├─ /components/progress-circle/index.html (+3ms)
+02:03:37   ├─ /components/prompt-composer/index.html (+7ms)
+02:03:37   ├─ /components/radio-field/index.html (+4ms)
+02:03:37   ├─ /components/radio-group/index.html (+5ms)
+02:03:37   ├─ /components/range-calendar/index.html (+5ms)
+02:03:37   ├─ /components/resizable/index.html (+4ms)
+02:03:37   ├─ /components/search-field/index.html (+4ms)
+02:03:37   ├─ /components/select/index.html (+4ms)
+02:03:37   ├─ /components/select-native/index.html (+3ms)
+02:03:37   ├─ /components/separator/index.html (+3ms)
+02:03:37   ├─ /components/sidebar/index.html (+5ms)
+02:03:37   ├─ /components/slider/index.html (+4ms)
+02:03:37   ├─ /components/switch/index.html (+3ms)
+02:03:37   ├─ /components/switch-field/index.html (+3ms)
+02:03:37   ├─ /components/table/index.html (+6ms)
+02:03:37   ├─ /components/tabs/index.html (+6ms)
+02:03:37   ├─ /components/tag-group/index.html (+3ms)
+02:03:37   ├─ /components/tag-select/index.html (+3ms)
+02:03:37   ├─ /components/text/index.html (+3ms)
+02:03:37   ├─ /components/text-area/index.html (+3ms)
+02:03:37   ├─ /components/text-editor/index.html (+19ms)
+02:03:38   ├─ /components/text-field/index.html (+4ms)
+02:03:38   ├─ /components/time-field/index.html (+2ms)
+02:03:38   ├─ /components/toast/index.html (+5ms)
+02:03:38   ├─ /components/toggle-button/index.html (+3ms)
+02:03:38   ├─ /components/toggle-button-group/index.html (+3ms)
+02:03:38   ├─ /components/token-field/index.html (+11ms)
+02:03:38   ├─ /components/toolbar/index.html (+6ms)
+02:03:38   ├─ /components/tooltip/index.html (+5ms)
+02:03:38   ├─ /components/tree/index.html (+5ms)
+02:03:38   ├─ /components/virtualizer/index.html (+6ms)
+02:03:38   ├─ /foundations/reference-tokens/index.html (+55ms)
+02:03:38   ├─ /foundations/semantic-tokens/index.html (+137ms)
+02:03:38   ├─ /foundations/colour/index.html (+58ms)
+02:03:38   ├─ /foundations/typography/index.html (+36ms)
+02:03:38   ├─ /foundations/spacing/index.html (+37ms)
+02:03:38   ├─ /foundations/shape/index.html (+34ms)
+02:03:38   ├─ /foundations/elevation/index.html (+32ms)
+02:03:38   ├─ /foundations/motion/index.html (+34ms)
+02:03:38   ├─ /foundations/component-tokens/index.html (+36ms)
+02:03:38   ├─ /foundations/index.html (+32ms)
+02:03:38   ├─ /scale/index.html (+2ms)
+02:03:38   ├─ /accessibility/index.html (+2ms)
+02:03:38   ├─ /contribution/index.html (+2ms)
+02:03:38   ├─ /discovery/index.html (+2ms)
+02:03:38   ├─ /installation/index.html (+4ms)
+02:03:38   ├─ /lifecycle/index.html (+1ms)
+02:03:38   ├─ /themes/index.html (+2ms)
+02:03:38   ├─ /token-migration/index.html (+7ms)
+02:03:38   ├─ /index.html (+76ms)
+02:03:38 ✓ Completed in 1.81s.
 
-11:37:33 [build] ✓ Completed in 2.97s.
-11:37:33 [starlight:pagefind] Building search index with Pagefind...
-11:37:33 [starlight:pagefind] Found 130 HTML files.
-11:37:33 [starlight:pagefind] Finished building search index in 151ms.
-11:37:33 [WARN] [@astrojs/sitemap] The Sitemap integration requires the `site` astro.config option. Skipping.
-11:37:33 [build] 130 page(s) built in 3.47s
-11:37:33 [build] Complete!
-✔ the Blocks section: rail, filters, presets, handle, theme, views, and copy (5961.180875ms)
-✔ Copy returns to its label after clicks inside the confirmation (6826.064ms)
-✔ a filter index that fails to load shows a status, and the next change retries (3087.484875ms)
-✔ the Blocks header keeps its actions at the end, with search shown or hidden (3148.565ms)
-✔ the site header fits a phone on Starlight docs pages and Blocks pages (3191.036833ms)
-✔ E-BL1-06: every variant fits every width preset, light and dark, and marketing variants fit every page width (17510.50075ms)
-✔ docs Scale applies one validated theme across shell, islands and portals (9889.454708ms)
-ℹ tests 7
+02:03:38 [build] ✓ Completed in 3.19s.
+02:03:38 [starlight:pagefind] Building search index with Pagefind...
+02:03:38 [starlight:pagefind] Found 159 HTML files.
+02:03:38 [starlight:pagefind] Finished building search index in 171ms.
+02:03:38 [WARN] [@astrojs/sitemap] The Sitemap integration requires the `site` astro.config option. Skipping.
+02:03:38 [build] 159 page(s) built in 3.67s
+02:03:38 [build] Complete!
+✔ the Blocks section: rail, filters, presets, handle, theme, views, and copy (8958.001333ms)
+✔ Copy returns to its label after clicks inside the confirmation (6133.053708ms)
+✔ history steps restore the filters in the URL, the search field, the Uses select, and the blocks shown (4205.72425ms)
+✔ pane swaps leave no document listener behind for the islands they remove (5336.067042ms)
+✔ a filter index that fails to load shows a status, and the next change retries (3912.477042ms)
+✔ the Blocks header keeps its actions at the end, with search shown or hidden (3907.214583ms)
+✔ the site header fits a phone on Starlight docs pages and Blocks pages (3979.148792ms)
+✔ E-BL1-06: every variant fits every width preset, light and dark, and marketing variants fit every page width (36891.622334ms)
+✔ docs Scale applies one validated theme across shell, islands and portals (10414.643125ms)
+ℹ tests 9
 ℹ suites 0
-ℹ pass 7
+ℹ pass 9
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 39898.587916
+ℹ duration_ms 73494.49675
