@@ -107,12 +107,6 @@ export function WorkspaceNavigationFoldableExample() {
           background-color: var(--muxui-semantic-surface-hover);
         }
 
-        /* Forced colors drop the shadow ring; the outline stays. */
-        .workspace-switcher:focus-visible {
-          outline: 2px solid transparent;
-          box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
-        }
-
         .workspace-switcher .muxui-avatar {
           border-radius: var(--muxui-semantic-control-radius);
           background: var(--muxui-semantic-surface-track);

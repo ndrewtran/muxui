@@ -71,7 +71,7 @@ export function QuickFindOverlayExample() {
               </CommandPalette.ListBox>
               {palette.filteredCommands.length === 0 && (
                 <CommandPalette.Empty>
-                  <div className="find-empty"><span className="find-empty-icon"><SearchX /></span><Text variant="label">No results found</Text><Text size="sm" color="muted">Adjust your search to try again</Text></div>
+                  <div className="find-empty"><span className="find-empty-icon"><SearchX /></span><Text variant="label">Nothing matches</Text><Text size="sm" color="muted">Try a different word</Text></div>
                 </CommandPalette.Empty>
               )}
             </CommandPalette.Content>

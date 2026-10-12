@@ -81,7 +81,7 @@ export function QuickFindInlineExample() {
             ))}
           </ListBox>
         ) : (
-          <div className="find-empty"><span className="find-empty-icon"><SearchX /></span><Text variant="label">No results found</Text><Text size="sm" color="muted">Adjust your search to try again</Text></div>
+          <div className="find-empty"><span className="find-empty-icon"><SearchX /></span><Text variant="label">Nothing matches</Text><Text size="sm" color="muted">Try a different word</Text></div>
         )}
         <Text className="find-status" size="sm" color="muted" role="status">{chosen ? `Chose ${chosen}` : `${count} ${count === 1 ? 'result' : 'results'}`}</Text>
       </Card.Root>

@@ -109,13 +109,6 @@ export function CompanyRecordsSortableExample() {
         .records-menu:hover {
           background-color: var(--muxui-semantic-action-neutral-background-hover);
         }
-
-        /* A transparent outline stays visible in forced colors, where the box-shadow ring is dropped. */
-        .records-menu:focus-visible {
-          outline: 2px solid transparent;
-          outline-offset: 2px;
-          box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
-        }
       `}</style>
       <div className="records-bar">
         <Text as="h2" id={titleId} variant="heading" size="md">Companies</Text>

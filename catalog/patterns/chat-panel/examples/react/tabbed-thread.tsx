@@ -141,7 +141,7 @@ export function ChatPanelTabbedThreadExample() {
             <IconButton aria-label="History" variant="ghost" size="sm"><History /></IconButton>
             <Menu.Root>
               <Menu.Trigger className="chat-menu" aria-label="More actions"><More /></Menu.Trigger>
-              <Menu.Popup><Menu.List aria-label="Chat actions" items={['Rename chat', 'Clear thread']} /></Menu.Popup>
+              <Menu.Popup><Menu.List items={['Rename chat', 'Clear thread']} /></Menu.Popup>
             </Menu.Root>
           </div>
         </div>
@@ -149,7 +149,7 @@ export function ChatPanelTabbedThreadExample() {
           <PromptComposer
             value={draft}
             onValueChange={setDraft}
-            inputProps={{ name: 'message', placeholder: 'Ask or tag a note with @' }}
+            inputProps={{ name: 'message', placeholder: 'Write a follow-up' }}
             onSend={(text) => {
               setSent({ ...sent, [tab]: [...(sent[tab] ?? []), text] });
               setDraft('');

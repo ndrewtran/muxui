@@ -8,7 +8,7 @@ const Check = () => (
 );
 
 const choices = [
-  { value: 'lodge', label: 'Hold the lakeside lodge', confidence: 0.86 },
+  { value: 'lodge', label: 'Hold Sample Lodge', confidence: 0.86 },
   { value: 'loft', label: 'Switch to the harbor loft', confidence: 0.54 },
   { value: 'wait', label: 'Wait for more RSVPs', confidence: 0.21 },
 ];
@@ -76,7 +76,7 @@ export function RecommendationRankedExample() {
         }
       `}</style>
       <Card.Root variant="elevated" padding="md">
-        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
+        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Suggested venue for the team offsite</Text></Card.Header>
         <Card.Body>
           <RadioGroup
             aria-label="Options, best match first"

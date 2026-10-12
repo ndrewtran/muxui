@@ -26,8 +26,8 @@ async function compactTests(t, browser, url) {
     try {
       const toggle = tab.getByRole('button', { name: 'Alternatives' });
       await toggle.waitFor();
-      assert.equal(await tab.getByRole('region').getAttribute('aria-labelledby') !== null, true, 'the section is named by its question');
-      assert.equal(await tab.getByRole('heading', { level: 2 }).textContent(), 'Want me to book the team offsite?');
+      assert.equal(await tab.getByRole('region').getAttribute('aria-labelledby') !== null, true, 'the section is named by its heading');
+      assert.equal(await tab.getByRole('heading', { level: 2 }).textContent(), 'Suggested venue for the team offsite');
       assert.equal(await meterText(tab), '86%');
       assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
       assert.equal(await tab.getByRole('list', { name: 'Alternatives' }).count(), 0, 'the alternatives start hidden');
@@ -61,7 +61,7 @@ async function compactTests(t, browser, url) {
       await accept(tab).focus();
       await tab.keyboard.press('Enter');
       await tab.getByRole('button', { name: 'Accepted' }).waitFor();
-      assert.equal(await stopOf(tab), 'heading Want me to book the team offsite?', 'focus is on the heading, not lost to the page');
+      assert.equal(await stopOf(tab), 'heading Suggested venue for the team offsite', 'focus is on the heading, not lost to the page');
       await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted. Nothing was booked.', undefined, { message: 'the status announces the accepted state', report: () => document.querySelector('[role="status"]').textContent });
       assert.deepEqual(errors, []);
     } finally {
@@ -112,7 +112,7 @@ async function rankedTests(t, browser, url) {
       const option = (name) => group.getByRole('radio', { name: new RegExp(name, 'u') });
       await group.waitFor();
       assert.equal(await group.getByRole('radio').count(), 3);
-      assert.equal(await option('Hold the lakeside lodge').isChecked(), true);
+      assert.equal(await option('Hold Sample Lodge').isChecked(), true);
       assert.equal(await meterText(tab), '86%');
 
       // A pointer press and the arrow keys both move the selection, and the meter follows it.
@@ -129,7 +129,7 @@ async function rankedTests(t, browser, url) {
       await accept(tab).click();
       await tab.getByRole('button', { name: 'Accepted' }).waitFor();
       assert.equal(await tab.getByRole('button', { name: 'Accepted' }).isDisabled(), true);
-      assert.equal(await option('Hold the lakeside lodge').isDisabled(), true);
+      assert.equal(await option('Hold Sample Lodge').isDisabled(), true);
       assert.equal(await option('Switch to the harbor loft').isChecked(), true);
       await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted Switch to the harbor loft. Nothing was booked.', undefined, { message: 'the status names the accepted option', report: () => document.querySelector('[role="status"]').textContent });
       assert.deepEqual(errors, []);
@@ -141,12 +141,12 @@ async function rankedTests(t, browser, url) {
   await t.test('ranked: accepting by keyboard moves focus to the heading and locks the choice', async () => {
     const { context, tab, errors } = await openBlock(browser, url);
     try {
-      await tab.getByRole('radio', { name: /Hold the lakeside lodge/u }).focus();
+      await tab.getByRole('radio', { name: /Hold Sample Lodge/u }).focus();
       await tab.keyboard.press('ArrowDown');
       await accept(tab).focus();
       await tab.keyboard.press('Enter');
       await tab.getByRole('button', { name: 'Accepted' }).waitFor();
-      assert.equal(await stopOf(tab), 'heading Want me to book the team offsite?', 'focus is on the heading, not lost to the page');
+      assert.equal(await stopOf(tab), 'heading Suggested venue for the team offsite', 'focus is on the heading, not lost to the page');
       await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted Switch to the harbor loft. Nothing was booked.', undefined, { message: 'the status names the accepted option', report: () => document.querySelector('[role="status"]').textContent });
       assert.deepEqual(errors, []);
     } finally {
@@ -158,7 +158,7 @@ async function rankedTests(t, browser, url) {
     for (const scheme of ['light', 'dark']) {
       const { context, tab } = await openBlock(browser, url, { scheme });
       try {
-        assert.deepEqual(await tabWalk(tab, ringWalk(tab), `ranked ${scheme}`), ['radio Hold the lakeside lodge Recommended 86%', 'button Accept'], `${scheme}: Tab visits the controls in this order`);
+        assert.deepEqual(await tabWalk(tab, ringWalk(tab), `ranked ${scheme}`), ['radio Hold Sample Lodge Recommended 86%', 'button Accept'], `${scheme}: Tab visits the controls in this order`);
       } finally {
         await context.close();
       }

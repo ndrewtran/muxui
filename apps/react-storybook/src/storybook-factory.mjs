@@ -596,7 +596,7 @@ function PromptComposerPreview(args) {
   return e('div', null, e(MuxUI.PromptComposer, {
     ...args, inputLabel: args.inputLabel ?? 'Message',
     inputProps: { placeholder: 'Write a message, @ source, / command…', name: 'message', required: true, ...args.inputProps },
-    sources: args.sources ?? [{ id: 'notes', label: 'Workspace notes', description: 'Selected local notes', insertText: '@notes ' }, { id: 'records', label: 'Supplier records', description: 'Selected workspace records', insertText: '@records ' }],
+    sources: args.sources ?? [{ id: 'notes', label: 'Workspace notes', description: 'Selected local notes', insertText: '@notes ' }, { id: 'records', label: 'Project records', description: 'Selected workspace records', insertText: '@records ' }],
     commands: args.commands ?? [{ id: 'summarize', label: 'Summarize', description: 'Insert a summary prompt', insertText: 'Summarize these notes: ' }],
     attachments: args.attachments ?? attachments,
     onFilesSelected: (files) => { args.onFilesSelected?.(files); setAttachments((previous) => [...previous, ...files.map((file, index) => ({ id: `${previous.length + index}-${file.name}`, label: file.name }))]); },
@@ -621,24 +621,24 @@ function MessagePreview(args) {
 }
 
 const ACTIVITY_ITEMS = [
-  { id: 'records', label: 'Verified vendor records', status: 'completed', meta: '12 suppliers', time: '4s', details: 'Matched tax and contact IDs: 12/12. No stale records.' },
-  { id: 'read', label: 'Read selected export', status: 'running', meta: '3 files', details: 'Status supplied by the host application. No task executes in this preview.' },
-  { id: 'draft', label: 'Prepare reorder notes', status: 'queued', meta: '7 items', details: 'Waiting for the host application.' },
+  { id: 'tokens', label: 'Checked the theme tokens', status: 'completed', meta: '24 tokens', time: '5s', details: 'All 24 tokens resolved. None are missing.' },
+  { id: 'report', label: 'Open the selected report', status: 'running', meta: '4 pages', details: 'Status supplied by the host application. No task executes in this preview.' },
+  { id: 'notes', label: 'Prepare the release notes', status: 'queued', meta: '6 sections', details: 'Waiting for the host application.' },
 ];
 function ActivityPreview(args) {
   return e(MuxUI.Activity, { ...args, label: args.label ?? 'Workspace activity', items: args.items ?? ACTIVITY_ITEMS });
 }
 
-const DATA_DIFF_COLUMNS = [{ id: 'flavor', label: 'Flavor' }, { id: 'category', label: 'Category' }, { id: 'supplier', label: 'Supplier' }];
+const DATA_DIFF_COLUMNS = [{ id: 'token', label: 'Token' }, { id: 'group', label: 'Group' }, { id: 'owner', label: 'Owner' }];
 const DATA_DIFF_ROWS = [
-  { id: 'unchanged', label: 'Vanilla', kind: 'unchanged', values: { flavor: 'Vanilla', category: 'Classic', supplier: 'Local dairy' } },
-  { id: 'removed', label: 'Bubblegum', kind: 'removed', values: { flavor: 'Bubblegum', category: 'Retro', supplier: 'City creamery' } },
-  { id: 'updated', label: 'Mint chip', kind: 'updated', before: { flavor: 'Mint chip', category: 'Classic', supplier: 'Local dairy' }, after: { flavor: 'Mint chip', category: 'Seasonal', supplier: 'Local dairy' } },
-  { id: 'added', label: 'Pistachio', kind: 'added', values: { flavor: 'Pistachio', category: 'Seasonal', supplier: 'Valley creamery' } },
+  { id: 'unchanged', label: 'Border', kind: 'unchanged', values: { token: 'Border', group: 'Surface', owner: 'Core team' } },
+  { id: 'removed', label: 'Gutter', kind: 'removed', values: { token: 'Gutter', group: 'Legacy', owner: 'Design team' } },
+  { id: 'updated', label: 'Spacing', kind: 'updated', before: { token: 'Spacing', group: 'Layout', owner: 'Core team' }, after: { token: 'Spacing', group: 'Space', owner: 'Core team' } },
+  { id: 'added', label: 'Outline', kind: 'added', values: { token: 'Outline', group: 'Focus', owner: 'Platform team' } },
 ];
 function DataDiffPreview(args) {
   const [result, setResult] = React.useState('');
-  return e('div', null, e(MuxUI.DataDiff, { ...args, label: args.label ?? 'Proposed menu cleanup', columns: args.columns ?? DATA_DIFF_COLUMNS, rows: args.rows ?? DATA_DIFF_ROWS,
+  return e('div', null, e(MuxUI.DataDiff, { ...args, label: args.label ?? 'Proposed token cleanup', columns: args.columns ?? DATA_DIFF_COLUMNS, rows: args.rows ?? DATA_DIFF_ROWS,
     onApply: (ids) => { args.onApply?.(ids); setResult(`Requested locally: ${ids.join(', ')}`); },
   }), result && e('p', { role: 'status' }, result));
 }
@@ -1195,7 +1195,7 @@ function StateVariant({ family, state, args, available }) {
   }, [family, state]);
 
   const variantArgs = { ...args };
-  if (family === 'DataDiff') variantArgs.label = `${args.label ?? 'Proposed menu cleanup'} ${state}`;
+  if (family === 'DataDiff') variantArgs.label = `${args.label ?? 'Proposed token cleanup'} ${state}`;
   if (family === 'Activity') {
     if (state === 'running' || state === 'failed') variantArgs.status = state;
   }

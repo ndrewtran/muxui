@@ -96,8 +96,8 @@
     "The Edit chip is a Button with aria-expanded and aria-controls for the diff it shows or hides.",
     "Search results are a list of Links, each with a decorative Avatar mark and its host as text.",
     "In Tool calls, each chip is a Button inside a PreviewTrigger named for its call: the preview opens on hover or keyboard focus, and Escape returns focus to the chip.",
-    "In Task rows, Activity reports its aggregate status in a status region, and a row with details opens from its summary with Enter or Space.",
-    "Statuses, counts, and times are text, and each status mark is hidden from assistive technology."
+    "In Task rows, the Activity aggregate status is a role=status element that reads the label and the status, and a row with details opens from its summary with Enter or Space.",
+    "Statuses, counts, and times are text, and each status mark is marked aria-hidden."
   ],
   "unsupported": [
     "Running, streaming, or stopping a task: the steps, tools, counts, and times are placeholders",
