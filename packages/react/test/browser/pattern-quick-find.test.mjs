@@ -53,9 +53,9 @@ async function overlayTests(t, browser, url) {
       await pollUntil(tab, () => document.querySelectorAll('[role="dialog"] [role="option"]').length === 1, undefined, { message: 'a keyword filters to one command' });
       await dialog.getByRole('option', { name: 'Open launch plan Plans' }).waitFor();
       await tab.getByRole('textbox', { name: 'Find' }).fill('zzz');
-      await dialog.getByText('No results found').waitFor();
+      await dialog.getByText('Nothing matches').waitFor();
       await dialog.locator('.find-empty-icon svg').waitFor();
-      await dialog.getByText('Adjust your search to try again').waitFor();
+      await dialog.getByText('Try a different word').waitFor();
       assert.equal(await dialog.getByRole('option').count(), 0);
       await tab.getByRole('textbox', { name: 'Find' }).fill('export');
 
@@ -161,7 +161,7 @@ async function inlineTests(t, browser, url) {
       assert.equal(await results.getByRole('option').textContent(), 'Draft release notes');
       await field.fill('zzz');
       await expectStatus(tab, '0 results');
-      await tab.getByText('No results found').waitFor();
+      await tab.getByText('Nothing matches').waitFor();
       await tab.locator('.find-empty-icon svg').waitFor();
       assert.equal(await results.count(), 0, 'the list gives way to the empty message');
 
@@ -212,7 +212,7 @@ async function inlineTests(t, browser, url) {
       const { context, tab } = await openBlock(browser, url, { width: 360, scheme });
       try {
         await tab.getByRole('searchbox', { name: 'Find' }).fill('zzz');
-        await tab.getByText('No results found').waitFor();
+        await tab.getByText('Nothing matches').waitFor();
         assert.ok(await tab.evaluate(() => document.scrollingElement.scrollWidth <= window.innerWidth), `${scheme}: the empty message adds no horizontal scroll`);
       } finally {
         await context.close();

@@ -63,7 +63,7 @@
     "Group headings name their results, and an empty search shows a plain message."
   ],
   "unsupported": [
-    "Searching a server or ranking results: both variants filter five placeholder items by title",
+    "Searching a server or ranking results of your own: Overlay filters five placeholder commands by title, subtitle, group, and keywords through useCommandPalette, and Inline filters five placeholder items by title",
     "Running the chosen action: choosing only reports its title",
     "Recent searches or shortcut hints"
   ],
