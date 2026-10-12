@@ -18,7 +18,7 @@ const toolCalls = await patternVariant('agent-trace', 'tool-calls');
 const taskRows = await patternVariant('agent-trace', 'task-rows');
 
 // Activity's trigger is a native button without a tabindex, which WebKit on macOS does not Tab to.
-const nativeButtons = ['button Thinking Running 2 items', 'button Supplier follow-up Running 3 items'];
+const nativeButtons = ['button Thinking Running 2 items', 'button Release prep Running 3 items'];
 
 const expanded = (locator) => locator.getAttribute('aria-expanded');
 
@@ -132,7 +132,7 @@ async function toolCallsTests(t, browser, url) {
   await t.test('tool calls: folds the list and opens a preview from each chip on focus and hover', async () => {
     const { context, tab, errors } = await openBlock(browser, url);
     try {
-      const header = tab.getByRole('button', { name: '4 tool calls, 2 messages' });
+      const header = tab.getByRole('button', { name: '4 steps' });
       const chip = (name) => tab.getByRole('button', { name, exact: true });
       await chip('rollout.tsx').waitFor();
       assert.equal(await expanded(header), 'true');
@@ -147,17 +147,17 @@ async function toolCallsTests(t, browser, url) {
 
       // Hover opens a preview after its delay and leaving closes it. React Aria ignores hover until the page has seen a pointer press.
       await tab.mouse.click(1000, 700);
-      await chip('npm run build').hover();
-      const build = tab.getByRole('dialog', { name: 'Rebuild and verify preview' });
+      await chip('run-checks release').hover();
+      const build = tab.getByRole('dialog', { name: 'Check the release preview' });
       await build.waitFor({ state: 'visible', timeout: 4000 });
-      assert.match(await build.textContent(), /Build finished with 0 errors/u);
+      assert.match(await build.textContent(), /All checks passed/u);
       await tab.mouse.move(2, 2);
       await build.waitFor({ state: 'hidden', timeout: 4000 });
 
       // Keyboard focus opens the preview and Escape closes it, leaving focus on the chip.
-      await chip('Planning the rollout order').focus();
+      await chip('Ordering the rollout steps').focus();
       await tab.keyboard.press('Tab');
-      const preview = tab.getByRole('dialog', { name: 'Write 120 lines preview' });
+      const preview = tab.getByRole('dialog', { name: 'Update the page preview' });
       await preview.waitFor({ state: 'visible' });
       assert.match(await preview.textContent(), /export function Rollout/u);
       await tab.keyboard.press('Escape');
@@ -172,10 +172,10 @@ async function toolCallsTests(t, browser, url) {
 
   await t.test('tool calls: walks every control in order in light and dark', async () => {
     await walkBothSchemes(browser, url, [
-      'button 4 tool calls, 2 messages',
-      'button Planning the rollout order',
+      'button 4 steps',
+      'button Ordering the rollout steps',
       'button rollout.tsx',
-      'button npm run build',
+      'button run-checks release',
       'button timeline.png',
     ], 'tool calls');
   });
@@ -188,8 +188,8 @@ async function toolCallsTests(t, browser, url) {
     await assertFits(browser, url, '.calls', 'tool calls');
     const { context, tab } = await openBlock(browser, url, { width: 360 });
     try {
-      await tab.getByRole('button', { name: 'Planning the rollout order' }).focus();
-      await tab.getByRole('dialog', { name: 'Thinking preview' }).waitFor();
+      await tab.getByRole('button', { name: 'Ordering the rollout steps' }).focus();
+      await tab.getByRole('dialog', { name: 'Sketch a plan preview' }).waitFor();
       const { scrollWidth, innerWidth } = await tab.evaluate(measurePageFit);
       assert.ok(scrollWidth <= innerWidth, `360px with a preview open: the page scrolls horizontally (${scrollWidth} > ${innerWidth})`);
     } finally {
@@ -202,43 +202,43 @@ async function taskRowsTests(t, browser, url) {
   await t.test('task rows: folds the rows and opens a row in place by pointer and keyboard', async () => {
     const { context, tab, errors } = await openBlock(browser, url);
     try {
-      const header = tab.getByRole('button', { name: 'Supplier follow-up Running 3 items' });
+      const header = tab.getByRole('button', { name: 'Release prep Running 3 items' });
       const row = (label) => tab.locator('summary', { hasText: label });
       await header.waitFor();
       assert.equal(await expanded(header), 'true');
-      assert.equal(await tab.getByRole('status').textContent(), 'Supplier follow-up: Running.');
+      assert.equal(await tab.getByRole('status').textContent(), 'Release prep: Running.');
 
       // The running row starts open, native details and aria-expanded agreeing, and its progress shows; the other rows start closed.
-      const progress = tab.getByRole('progressbar', { name: 'Scoring stock risk' });
+      const progress = tab.getByRole('progressbar', { name: 'Grouping entries' });
       const open = (label) => tab.locator('details', { has: row(label) }).getAttribute('open');
-      assert.equal(await expanded(row('Build reorder list')), 'true');
-      assert.equal(await open('Build reorder list'), '');
+      assert.equal(await expanded(row('Draft the changelog')), 'true');
+      assert.equal(await open('Draft the changelog'), '');
       await expectRendered(progress, true);
-      assert.equal(await progress.getAttribute('aria-valuenow'), '68');
-      await expectRendered(tab.getByText('3 files'), true);
-      assert.equal(await expanded(row('Verified vendor records')), 'false');
-      assert.equal(await open('Verified vendor records'), null);
-      await expectRendered(tab.getByText('Matched contact records'), false);
+      assert.equal(await progress.getAttribute('aria-valuenow'), '40');
+      await expectRendered(tab.getByText('Areas found'), true);
+      assert.equal(await expanded(row('Checked export settings')), 'false');
+      assert.equal(await open('Checked export settings'), null);
+      await expectRendered(tab.getByText('Settings updated'), false);
 
       // A row with details opens from its summary by pointer and by keyboard, and its details show in place.
-      await row('Verified vendor records').click();
-      await expectRendered(tab.getByText('Matched contact records'), true);
-      assert.equal(await expanded(row('Verified vendor records')), 'true');
-      await row('Build reorder list').focus();
+      await row('Checked export settings').click();
+      await expectRendered(tab.getByText('Settings updated'), true);
+      assert.equal(await expanded(row('Checked export settings')), 'true');
+      await row('Draft the changelog').focus();
       await tab.keyboard.press('Enter');
       // A folded row leaves the accessibility tree, so its progress bar is read by its text.
-      await expectRendered(tab.getByText('3 files'), false);
-      assert.equal(await expanded(row('Build reorder list')), 'false');
+      await expectRendered(tab.getByText('Areas found'), false);
+      assert.equal(await expanded(row('Draft the changelog')), 'false');
       await tab.keyboard.press('Space');
       await expectRendered(progress, true);
-      assert.equal(await expanded(row('Build reorder list')), 'true');
-      await row('Verified vendor records').press('Space');
-      await expectRendered(tab.getByText('Matched contact records'), false);
+      assert.equal(await expanded(row('Draft the changelog')), 'true');
+      await row('Checked export settings').press('Space');
+      await expectRendered(tab.getByText('Settings updated'), false);
 
       // The queued row has no details, so it is not a control.
-      assert.equal(await tab.locator('summary', { hasText: 'Draft vendor emails' }).count(), 0);
+      assert.equal(await tab.locator('summary', { hasText: 'Prepare the announcement' }).count(), 0);
       await header.click();
-      await expectRendered(tab.getByText('Draft vendor emails'), false);
+      await expectRendered(tab.getByText('Prepare the announcement'), false);
       assert.equal(await expanded(header), 'false');
       assert.deepEqual(errors, []);
     } finally {
@@ -248,9 +248,9 @@ async function taskRowsTests(t, browser, url) {
 
   await t.test('task rows: walks every control in order in light and dark', async () => {
     await walkBothSchemes(browser, url, [
-      'button Supplier follow-up Running 3 items',
-      'summary Verified vendor records',
-      'summary Build reorder list',
+      'button Release prep Running 3 items',
+      'summary Checked export settings',
+      'summary Draft the changelog',
     ], 'task rows');
   });
 
@@ -264,8 +264,8 @@ async function taskRowsTests(t, browser, url) {
       const { context, tab } = await openBlock(browser, url, { width: 360, scheme });
       try {
         // The running row is already open; opening the completed one leaves every row open.
-        await tab.locator('summary', { hasText: 'Verified vendor records' }).click();
-        await tab.getByRole('progressbar', { name: 'Scoring stock risk' }).waitFor({ state: 'visible' });
+        await tab.locator('summary', { hasText: 'Checked export settings' }).click();
+        await tab.getByRole('progressbar', { name: 'Grouping entries' }).waitFor({ state: 'visible' });
         const { scrollWidth, innerWidth } = await tab.evaluate(measurePageFit);
         assert.ok(scrollWidth <= innerWidth, `${scheme} 360px with the rows open: the page scrolls horizontally (${scrollWidth} > ${innerWidth})`);
       } finally {

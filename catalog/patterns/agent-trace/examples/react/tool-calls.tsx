@@ -14,10 +14,10 @@ const Run = icon('M4 7l5 5-5 5M12 18h8');
 const File = icon('M6 3h8l4 4v14H6zM14 3v4h4');
 
 const calls = [
-  { id: 'c1', icon: Think, verb: 'Thinking', target: 'Planning the rollout order', preview: 'Order: billing copy, export fix, announcement.' },
-  { id: 'c2', icon: Write, verb: 'Write 120 lines', target: 'rollout.tsx', mono: true, preview: 'export function Rollout() { return null; }' },
-  { id: 'c3', icon: Run, verb: 'Rebuild and verify', target: 'npm run build', mono: true, preview: 'Build finished with 0 errors.' },
-  { id: 'c4', icon: File, verb: 'Read image', target: 'timeline.png', mono: true, preview: 'Timeline with four milestones.' },
+  { id: 'c1', icon: Think, verb: 'Sketch a plan', target: 'Ordering the rollout steps', preview: 'Order: billing copy, export fix, announcement.' },
+  { id: 'c2', icon: Write, verb: 'Update the page', target: 'rollout.tsx', mono: true, preview: 'export function Rollout() { return null; }' },
+  { id: 'c3', icon: Run, verb: 'Check the release', target: 'run-checks release', mono: true, preview: 'All checks passed.' },
+  { id: 'c4', icon: File, verb: 'Open the timeline', target: 'timeline.png', mono: true, preview: 'Timeline with four milestones.' },
 ];
 
 export function AgentTraceToolCallsExample() {
@@ -77,7 +77,7 @@ export function AgentTraceToolCallsExample() {
         className="calls-disclosure"
         expanded={open}
         onExpandedChange={setOpen}
-        title={<span className="calls-title" data-open={open}><Chevron className="calls-icon" />4 tool calls, 2 messages</span>}
+        title={<span className="calls-title" data-open={open}><Chevron className="calls-icon" />4 steps</span>}
       >
         <ul className="calls-list">
           {calls.map(({ id, icon: Icon, verb, target, mono, preview }) => (

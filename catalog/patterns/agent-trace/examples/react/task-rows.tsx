@@ -36,11 +36,11 @@ export function AgentTraceTaskRowsExample() {
         }
       `}</style>
       <Activity
-        label="Supplier follow-up"
+        label="Release prep"
         items={[
-          { id: 'a', label: 'Verified vendor records', status: 'completed', meta: '12 vendors', time: '4s', details: facts([['Matched contact records', '12/12'], ['Flagged stale records', '0']]) },
-          { id: 'b', label: 'Build reorder list', status: 'running', meta: '7 items', defaultExpanded: true, details: <><ProgressBar label="Scoring stock risk" value={68} />{facts([['Reading the export', '3 files']])}</> },
-          { id: 'c', label: 'Draft vendor emails', status: 'queued', meta: '2 messages' },
+          { id: 'a', label: 'Checked export settings', status: 'completed', meta: '9 settings', time: '6s', details: facts([['Settings updated', '4'], ['Settings kept', '5']]) },
+          { id: 'b', label: 'Draft the changelog', status: 'running', meta: '10 entries', defaultExpanded: true, details: <><ProgressBar label="Grouping entries" value={40} />{facts([['Areas found', '6']])}</> },
+          { id: 'c', label: 'Prepare the announcement', status: 'queued', meta: '1 post' },
         ]}
       />
     </section>
