@@ -1206,8 +1206,8 @@ createRoot(document.getElementById('root')).render(h(React.Fragment, null,
   h('div', { className: 'rails' }, rail('implicit', {}), rail('default', { density: 'default' }), rail('compact', { density: 'compact' }))));
 `;
 
-const densityPage = () => pageShell({
-  attributes: 'data-muxui-color-scheme="light"',
+const densityPage = (url) => pageShell({
+  attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}"`,
   head: '<link rel="stylesheet" href="/generated/styles.css"><style>.rails { display: flex; align-items: flex-start; gap: 16px; } .rails > aside { inline-size: 16rem; block-size: auto; }</style>',
   bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
   body: '<div id="root"></div>',
@@ -1336,6 +1336,26 @@ for (const engine of browserEngines()) {
   });
 }
 
+/** The Mux scheme the page declares and the luminance of what it paints behind and in the rail; runs in the page. */
+function densityScheme() {
+  const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const luminance = (css) => {
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = css;
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue] = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((value) => {
+      const channel = value / 255;
+      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  return {
+    attribute: document.documentElement.getAttribute('data-muxui-color-scheme'),
+    page: luminance(getComputedStyle(document.body).backgroundColor),
+    rail: luminance(getComputedStyle(document.querySelector('aside')).backgroundColor),
+  };
+}
+
 /**
  * Whether the focus ring is painted on each side of a box, read from a screenshot; runs in the page, where the image decodes
  * on a canvas. The ring sits 2px outside the box and is 2px wide, so each probe is the middle of that band, 3px out.
@@ -1378,16 +1398,22 @@ for (const engine of browserEngines()) {
     try {
       browser = await launchBrowser(engine);
       await warmUpServer(browser, `${url}/sidebar-density.html`, 'aside');
+      const rings = {};
       for (const scheme of ['light', 'dark']) {
-        const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2, colorScheme: scheme, locale: 'en-US' });
+        // The device scale factor is pinned to 2 for ringSides: its probes assume two device pixels per CSS pixel and miss a side at 1.
+        const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2, locale: 'en-US' });
         try {
           const tab = await context.newPage();
           await tab.goto(`${url}/sidebar-density.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
           await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+          // The page really is in the scheme asked for, painting its light or dark background, before any pixel is read.
+          const painted = await tab.evaluate(densityScheme);
+          assert.equal(painted.attribute, scheme, `${engine}: the page declares the ${scheme} Mux scheme`);
+          const [page, rail] = scheme === 'dark' ? [painted.page < 0.05, painted.rail < 0.05] : [painted.page > 0.8, painted.rail > 0.8];
+          assert.ok(page && rail, `${engine}: the ${scheme} scheme paints a ${scheme} page and rail (${JSON.stringify(painted)})`);
           // The Button group's link and toggle are followed, with no gap in compact, by the current row's fill.
           await tab.locator('#before').focus();
           await tab.keyboard.press('Tab');
-          const rings = {};
           for (const name of ['implicit', 'compact']) {
             for (const [part, selector] of [['link', `a[href="#button-${name}"]`], ['toggle', `.muxui-sidebar__nav-row:has(a[href="#button-${name}"]) button`]]) {
               const control = tab.locator(`aside[aria-label="${name}"] ${selector}`);
@@ -1398,15 +1424,16 @@ for (const engine of browserEngines()) {
               });
               const clip = { x: Math.max(0, box.left - 8), y: Math.max(0, box.top - 8), width: box.width + 16, height: box.height + 16 };
               const png = (await tab.screenshot({ clip, type: 'png' })).toString('base64');
-              rings[`${name} ${part}`] = await tab.evaluate(ringSides, { png, clip, box, scale: 2, ring });
+              rings[`${scheme} ${name} ${part}`] = await tab.evaluate(ringSides, { png, clip, box, scale: 2, ring });
             }
           }
-          const whole = { top: true, bottom: true, left: true, right: true };
-          assert.deepEqual(rings, { 'implicit link': whole, 'implicit toggle': whole, 'compact link': whole, 'compact toggle': whole }, `${engine} ${scheme}: the Button group's link and toggle rings are painted on every side`);
         } finally {
           await context.close();
         }
       }
+      const whole = { top: true, bottom: true, left: true, right: true };
+      const expected = Object.fromEntries(['light', 'dark'].flatMap((scheme) => ['implicit', 'compact'].flatMap((name) => ['link', 'toggle'].map((part) => [`${scheme} ${name} ${part}`, whole]))));
+      assert.deepEqual(rings, expected, `${engine}: the Button group's link and toggle rings are painted on every side, in both schemes`);
     } finally {
       await browser?.close();
       await close();
