@@ -741,6 +741,7 @@ for (const engine of browserEngines()) {
 const nestedEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { Sidebar } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
@@ -757,7 +758,8 @@ function Shell() {
       if (params.get('reject') !== '1') setOpen((previous) => ({ ...previous, [id]: next }));
     },
   });
-  window.__setOpen = (id, next) => setOpen((previous) => ({ ...previous, [id]: next }));
+  // A caller changing a group from outside React: flushSync commits it before this returns, so no test waits on React's scheduler.
+  window.__setOpen = (id, next) => flushSync(() => setOpen((previous) => ({ ...previous, [id]: next })));
   return h(React.Fragment, null,
     h('button', { id: 'before', type: 'button' }, 'Before'),
     h(Sidebar.Provider, { defaultCollapsed: params.get('folded') === '1', shortcut: 'b' },
@@ -867,7 +869,7 @@ for (const engine of browserEngines()) {
           await tab.locator('summary', { hasText: 'Controlled' }).click();
           assert.equal(await visible(tab, 'a[href="#alpha"]'), true, label('a controlled details group follows its caller'));
           assert.deepEqual(await tab.evaluate(() => window.__changes), [['details', true]], label('and reports the request'));
-          await tab.evaluate(() => { window.__setOpen('details', false); return new Promise((resolve) => requestAnimationFrame(() => resolve())); });
+          await tab.evaluate(() => window.__setOpen('details', false));
           assert.equal(await visible(tab, 'a[href="#alpha"]'), false, label('the caller can close it'));
 
           // Link groups: the link is a plain link, and a separate toggle owns the state.
