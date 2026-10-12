@@ -225,10 +225,12 @@ export async function assertFits(browser, url, root, label) {
 /**
  * The stops a Tab walk reaches in this browser. WebKit on macOS does not Tab to a native button that has no
  * tabindex (React Aria's buttons carry one; Activity's trigger and the composer's Send do not), so the
- * `nativeButtons` stops are left out of the expected walk there and keyboard-reachable everywhere else.
+ * `nativeButtons` stops are left out of the expected walk there and keyboard-reachable everywhere else,
+ * including WebKit on Linux.
  */
 export function reachableStops(browser, stops, nativeButtons) {
-  return browser.browserType().name() === 'webkit' ? stops.filter((stop) => !nativeButtons.includes(stop)) : stops;
+  const skipsNativeButtons = browser.browserType().name() === 'webkit' && process.platform === 'darwin';
+  return skipsNativeButtons ? stops.filter((stop) => !nativeButtons.includes(stop)) : stops;
 }
 
 /**
