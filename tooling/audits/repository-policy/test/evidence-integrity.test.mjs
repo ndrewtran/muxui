@@ -1227,6 +1227,36 @@ test('the BL1 close-out scope check is skipped only for a growth capture', async
   assert.deepEqual(auditBoundary({ offline: true, only, closeoutBase: null }).checks.map(({ id }) => id), ['react-package-manifest']);
 });
 
+// The stylesheet check lists the commits that changed the stylesheet. Git abbreviates a hash to a length that follows the clone's object count
+// (7 to 9 characters on the clones seen so far), so the record keeps a fixed 8-character prefix and reads the same on every clone.
+test('the BL1 stylesheet check records an 8-character commit prefix whatever length the clone abbreviates to', async () => {
+  const { auditBoundary } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const stylesheetGrowth = 'cb69bb1eba3978d509cb633204068da5f866d0f6'; // #286, a growth commit that changes packages/react/src/supplemental/styles.css
+  const commitsRecorded = () => {
+    const audit = auditBoundary({ head: stylesheetGrowth, growthCommits: [stylesheetGrowth], growthGate: 'informational', offline: true, only: ['react-stylesheet-names'], closeoutBase: null });
+    return audit.checks[0].observations.commits[0].observations.commits;
+  };
+  const forced = { GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'core.abbrev', GIT_CONFIG_VALUE_0: '12' };
+  const saved = Object.fromEntries(Object.keys(forced).map((name) => [name, process.env[name]]));
+  const recorded = commitsRecorded();
+  Object.assign(process.env, forced);
+  let abbreviatedLonger;
+  let forcedRecorded;
+  try {
+    abbreviatedLonger = execFileSync('git', ['log', '-1', '--format=%h', stylesheetGrowth], { cwd: repositoryRoot, encoding: 'utf8' }).trim();
+    forcedRecorded = commitsRecorded();
+  } finally {
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+  assert.equal(abbreviatedLonger.length, 12, 'the forced core.abbrev reaches git, so %h would have recorded a longer hash');
+  assert.equal(recorded.length, 1, 'the growth commit changes the stylesheet');
+  assert.match(recorded[0], /^cb69bb1e feat\(catalog\): /u);
+  assert.deepEqual(forcedRecorded, recorded, 'a clone that abbreviates longer records the same commits');
+});
+
 // The page widths live only in code (Decision 0029): the capture imports apps/docs/src/lib/block-presets.ts, and a retained capture
 // is held to the list that file has at the capture's own source revision. No decision text is read.
 const pageWidthsSource = 'apps/docs/src/lib/block-presets.ts';

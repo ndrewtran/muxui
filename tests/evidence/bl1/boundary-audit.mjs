@@ -386,7 +386,8 @@ const checks = [
         stylesheetBytesChanged: changed,
         classNames: classNames(headCss).length,
         declaredCustomProperties: declaredProperties(headCss).length,
-        commits: lines(git('log', '--format=%h %s', `${baseRevision}..${headRevision}`, '--', path)),
+        // A fixed 8-character prefix of the full hash: `%h` follows the clone's object count, so a larger clone would record a longer one.
+        commits: lines(git('log', '--format=%H %s', `${baseRevision}..${headRevision}`, '--', path)).map((line) => line.replace(/^([0-9a-f]{8})[0-9a-f]* /u, '$1 ')),
       };
       if (changed) {
         const [added, removed] = git('diff', '--numstat', baseRevision, headRevision, '--', path).trim().split('\t');
