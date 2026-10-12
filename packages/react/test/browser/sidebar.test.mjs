@@ -1334,3 +1334,81 @@ for (const engine of browserEngines()) {
     }
   });
 }
+
+/**
+ * Whether the focus ring is painted on each side of a box, read from a screenshot; runs in the page, where the image decodes
+ * on a canvas. The ring sits 2px outside the box and is 2px wide, so each probe is the middle of that band, 3px out.
+ */
+async function ringSides({ png, clip, box, scale, ring }) {
+  const image = new Image();
+  image.src = `data:image/png;base64,${png}`;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(image, 0, 0);
+  const pixel = (x, y) => [...context.getImageData(Math.round((x - clip.x) * scale), Math.round((y - clip.y) * scale), 1, 1).data];
+  // Canvas resolves any CSS colour, so the ring's computed colour becomes the RGB the page paints.
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = ring;
+  context.fillRect(0, 0, 1, 1);
+  const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  const painted = (x, y) => pixel(x, y).slice(0, 3).every((value, index) => Math.abs(value - [red, green, blue][index]) <= 24);
+  const { left, top, width, height } = box;
+  return {
+    top: painted(left + width / 2, top - 3),
+    bottom: painted(left + width / 2, top + height + 3),
+    left: painted(left - 3, top + height / 2),
+    right: painted(left + width + 3, top + height / 2),
+  };
+}
+
+for (const engine of browserEngines()) {
+  test(`Sidebar compact paints a focused control's whole ring over the next row in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-density.html': densityPage },
+      modules: { '/sidebar-density-entry.mjs': densityEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-density.html`, 'aside');
+      for (const scheme of ['light', 'dark']) {
+        const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2, colorScheme: scheme, locale: 'en-US' });
+        try {
+          const tab = await context.newPage();
+          await tab.goto(`${url}/sidebar-density.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+          // The Button group's link and toggle are followed, with no gap in compact, by the current row's fill.
+          await tab.locator('#before').focus();
+          await tab.keyboard.press('Tab');
+          const rings = {};
+          for (const name of ['implicit', 'compact']) {
+            for (const [part, selector] of [['link', `a[href="#button-${name}"]`], ['toggle', `.muxui-sidebar__nav-row:has(a[href="#button-${name}"]) button`]]) {
+              const control = tab.locator(`aside[aria-label="${name}"] ${selector}`);
+              await control.focus();
+              const { box, ring } = await control.evaluate((node) => {
+                const { left, top, width, height } = node.getBoundingClientRect();
+                return { box: { left, top, width, height }, ring: getComputedStyle(node).outlineColor };
+              });
+              const clip = { x: Math.max(0, box.left - 8), y: Math.max(0, box.top - 8), width: box.width + 16, height: box.height + 16 };
+              const png = (await tab.screenshot({ clip, type: 'png' })).toString('base64');
+              rings[`${name} ${part}`] = await tab.evaluate(ringSides, { png, clip, box, scale: 2, ring });
+            }
+          }
+          const whole = { top: true, bottom: true, left: true, right: true };
+          assert.deepEqual(rings, { 'implicit link': whole, 'implicit toggle': whole, 'compact link': whole, 'compact toggle': whole }, `${engine} ${scheme}: the Button group's link and toggle rings are painted on every side`);
+        } finally {
+          await context.close();
+        }
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
