@@ -208,16 +208,30 @@ async function taskRowsTests(t, browser, url) {
       assert.equal(await expanded(header), 'true');
       assert.equal(await tab.getByRole('status').textContent(), 'Supplier follow-up: Running.');
 
+      // The running row starts open, native details and aria-expanded agreeing, and its progress shows; the other rows start closed.
+      const progress = tab.getByRole('progressbar', { name: 'Scoring stock risk' });
+      const open = (label) => tab.locator('details', { has: row(label) }).getAttribute('open');
+      assert.equal(await expanded(row('Build reorder list')), 'true');
+      assert.equal(await open('Build reorder list'), '');
+      await expectRendered(progress, true);
+      assert.equal(await progress.getAttribute('aria-valuenow'), '68');
+      await expectRendered(tab.getByText('3 files'), true);
+      assert.equal(await expanded(row('Verified vendor records')), 'false');
+      assert.equal(await open('Verified vendor records'), null);
+      await expectRendered(tab.getByText('Matched contact records'), false);
+
       // A row with details opens from its summary by pointer and by keyboard, and its details show in place.
       await row('Verified vendor records').click();
       await expectRendered(tab.getByText('Matched contact records'), true);
       assert.equal(await expanded(row('Verified vendor records')), 'true');
       await row('Build reorder list').focus();
       await tab.keyboard.press('Enter');
-      const progress = tab.getByRole('progressbar', { name: 'Scoring stock risk' });
+      // A folded row leaves the accessibility tree, so its progress bar is read by its text.
+      await expectRendered(tab.getByText('3 files'), false);
+      assert.equal(await expanded(row('Build reorder list')), 'false');
+      await tab.keyboard.press('Space');
       await expectRendered(progress, true);
-      assert.equal(await progress.getAttribute('aria-valuenow'), '68');
-      await expectRendered(tab.getByText('3 files'), true);
+      assert.equal(await expanded(row('Build reorder list')), 'true');
       await row('Verified vendor records').press('Space');
       await expectRendered(tab.getByText('Matched contact records'), false);
 
@@ -249,8 +263,8 @@ async function taskRowsTests(t, browser, url) {
     for (const scheme of ['light', 'dark']) {
       const { context, tab } = await openBlock(browser, url, { width: 360, scheme });
       try {
+        // The running row is already open; opening the completed one leaves every row open.
         await tab.locator('summary', { hasText: 'Verified vendor records' }).click();
-        await tab.locator('summary', { hasText: 'Build reorder list' }).click();
         await tab.getByRole('progressbar', { name: 'Scoring stock risk' }).waitFor({ state: 'visible' });
         const { scrollWidth, innerWidth } = await tab.evaluate(measurePageFit);
         assert.ok(scrollWidth <= innerWidth, `${scheme} 360px with the rows open: the page scrolls horizontally (${scrollWidth} > ${innerWidth})`);
