@@ -8,6 +8,8 @@
 // (`npm view`), and GitHub deployments and Pages (`gh api`). The last two are read-only
 // observations at the time they run. `--offline` skips them and the report says so; a
 // deployment that cannot be observed narrows the claim to "no deployment configuration added".
+// Deployments in the `npm-publish` environment are release runs (Decision 0023), not a published docs site (Decision 0026): the
+// deployment check lists them and does not count them.
 //
 // A growth capture (`growthCommits`) scopes the checks that read @muxui/react, the catalog records, workflow and hosting files, and
 // package versions to the commits that added or changed the blocks, each against its first parent, because other pull requests change
@@ -150,11 +152,24 @@ export function cliSurfaceProblems({ commands, capabilities }) {
   return problems;
 }
 
-/** Problems in a GitHub deployments and Pages observation, each on one leg. An unobserved site is not a problem, and not a pass either. */
+// `npm-publish` is the environment of the publish job in .github/workflows/npm-publish.yml, so GitHub records one deployment per release
+// candidate publish. Releases are governed by Decision 0023 and the registry is checked by `registry-unchanged`; a change to that
+// workflow still fails `no-workflow-or-hosting-config` in a growth commit. These runs are therefore listed, never counted.
+const releaseEnvironment = 'npm-publish';
+
+/** The release runs (deployments in `npm-publish`) created after the base, which `deploymentProblems` does not count. */
+export function releaseRuns(observation, since) {
+  return observation.deployments.items.filter(({ environment, createdAt }) => environment === releaseEnvironment && Date.parse(createdAt) > Date.parse(since));
+}
+
+/**
+ * Problems in a GitHub deployments and Pages observation, each on one leg. An unobserved site is not a problem, and not a pass either.
+ * A deployment in any environment but `npm-publish` created after the base is a problem.
+ */
 export function deploymentProblems(observation, since) {
   if (!observation.observed) return [];
   const problems = [];
-  const recent = observation.deployments.items.filter(({ createdAt }) => Date.parse(createdAt) > Date.parse(since));
+  const recent = observation.deployments.items.filter(({ environment, createdAt }) => environment !== releaseEnvironment && Date.parse(createdAt) > Date.parse(since));
   if (recent.length > 0) problems.push({ leg: 'noRecentDeployments', message: `${recent.length} deployments were created after ${since}` });
   if (observation.pages.configured) problems.push({ leg: 'noPagesSite', message: 'GitHub Pages is configured for the repository' });
   return problems;
@@ -460,7 +475,7 @@ const checks = [
   {
     id: 'no-deployment',
     legs: ['noRecentDeployments', 'noPagesSite'],
-    claim: 'GitHub lists no deployment created since the pre-BL1 base and no Pages site (observed read-only). Where this cannot be observed the claim is only that no deployment configuration was added, which no-workflow-or-hosting-config checks.',
+    claim: 'GitHub lists no deployment created since the pre-BL1 base other than npm-publish release runs, and no Pages site (observed read-only). Where this cannot be observed the claim is only that no deployment configuration was added, which no-workflow-or-hosting-config checks.',
     run({ baseRevision, offline, deployments }) {
       const since = git('log', '-1', '--format=%cI', baseRevision).trim();
       const unobserved = { noRecentDeployments: null, noPagesSite: null };
@@ -470,10 +485,11 @@ const checks = [
         return { legs: unobserved, claim: 'No deployment configuration was added (deployments could not be observed).', observations: { ...observation, since } };
       }
       const problems = deploymentProblems(observation, since);
+      const releases = releaseRuns(observation, since).map(({ id, sha, createdAt }) => ({ id, sha, createdAt }));
       return {
         legs: { noRecentDeployments: !problems.some(({ leg }) => leg === 'noRecentDeployments'), noPagesSite: !problems.some(({ leg }) => leg === 'noPagesSite') },
-        claim: `GitHub lists no deployment created since the pre-BL1 base and no Pages site (observed read-only at ${observation.observedAt}; ${observation.deployments.total} deployments listed in total, all earlier).`,
-        observations: { ...observation, since, problems },
+        claim: `GitHub lists no deployment created since the pre-BL1 base other than npm-publish release runs, and no Pages site (observed read-only at ${observation.observedAt}; ${observation.deployments.total} deployments listed in total, ${releases.length} of them npm-publish release runs after the base, listed and not claimed).`,
+        observations: { ...observation, since, releaseRuns: releases, problems },
       };
     },
   },
@@ -750,6 +766,7 @@ const readOnlyCapability = { id: 'muxui:capability:query-baseline', availability
 const emptyObservation = { observed: true, deployments: { items: [] }, pages: { configured: false } };
 const since = '2026-10-07T00:00:00+11:00';
 const afterBase = { id: 1, environment: 'production', sha: 'a', createdAt: '2026-10-08T00:00:00Z' };
+const releaseRun = { id: 2, environment: 'npm-publish', sha: 'b', createdAt: '2026-10-09T00:00:00Z' };
 const legsOf = (problems) => sorted(new Set(problems.map(({ leg }) => leg)));
 const claimSamples = {
   claimVerbBeforeTerm: ['Tested with NVDA and VoiceOver.', 'Supports assistive technology.'],
@@ -819,7 +836,8 @@ export const negativeControls = [
     reject: () => registryProblems({ ...oldRegistry, [leg]: changedRegistryField[leg] }, oldRegistry),
     accepts: () => registryProblems(oldRegistry, oldRegistry).length === 0 && registryProblems(laterCandidate, oldRegistry).length === 0,
   })),
-  { id: 'deployment-after-base', kind: 'function', check: 'no-deployment', failingLegs: ['noRecentDeployments'], description: 'a deployment created after the base is rejected, an empty observation is accepted', reject: () => legsOf(deploymentProblems({ ...emptyObservation, deployments: { items: [afterBase] } }, since)), accepts: () => deploymentProblems(emptyObservation, since).length === 0 },
+  { id: 'deployment-after-base', kind: 'function', check: 'no-deployment', failingLegs: ['noRecentDeployments'], description: 'a deployment in a non-release environment created after the base is rejected, an empty observation is accepted', reject: () => legsOf(deploymentProblems({ ...emptyObservation, deployments: { items: [afterBase] } }, since)), accepts: () => deploymentProblems(emptyObservation, since).length === 0 },
+  { id: 'release-run-after-base', kind: 'function', check: 'no-deployment', failingLegs: ['noRecentDeployments'], description: 'an npm-publish release run after the base is listed and not counted, and a deployment in another environment beside it is still rejected', reject: () => legsOf(deploymentProblems({ ...emptyObservation, deployments: { items: [releaseRun, afterBase] } }, since)), accepts: () => deploymentProblems({ ...emptyObservation, deployments: { items: [releaseRun] } }, since).length === 0 && releaseRuns({ ...emptyObservation, deployments: { items: [releaseRun, afterBase] } }, since).length === 1 },
   { id: 'pages-configured', kind: 'function', check: 'no-deployment', failingLegs: ['noPagesSite'], description: 'a configured Pages site is rejected', reject: () => legsOf(deploymentProblems({ ...emptyObservation, pages: { configured: true } }, since)), accepts: () => deploymentProblems(emptyObservation, since).length === 0 },
   ...Object.entries(claimSamples).map(([leg, samples]) => ({
     id: `claim-${leg}`,

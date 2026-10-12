@@ -225,7 +225,9 @@ the claim to "no deployment configuration added", and the record says which.
   version is not deprecated (the read-back records no deprecation); a later release candidate and a moved
   `next` are listed and not claimed (Decision 0023 amendment 01). Neither fails a growth capture because a
   release candidate was published. A Decision 0023 rollback that deprecates the recorded version, or
-  re-points `latest`, does fail it, and needs a reviewed edit of the check.
+  re-points `latest`, does fail it, and needs a reviewed edit of the check. `no-deployment` likewise lists
+  the deployments GitHub records in the `npm-publish` environment after the base, one per release candidate
+  publish, and does not count them; a deployment in any other environment, or a Pages site, still fails it.
 - **Heuristics.** The assistive-technology claim scan reads added lines in catalog
   records, docs and Storybook sources, package sources and readmes, and the root
   readme, and flags claim-shaped wording. It is a heuristic and cannot prove a claim
@@ -380,8 +382,8 @@ growth itself, found from git:
   class name or custom property, a dependency field of any `package.json`, a lockfile, workspace, `.npmrc`, or
   `.node-version` file, or a component, token, capability, or React family record. The claim text names the
   audited commits and says that it claims nothing about the recorded changes. The publish, deployment,
-  registry, assistive-technology, and CLI checks run as before, and the registry check tolerates a later
-  release candidate.
+  registry, assistive-technology, and CLI checks run as before, and the registry and deployment checks
+  tolerate a later release candidate.
 - The records state what they do not claim: the changes other pull requests made since the close-out, and
   the changes a growth commit makes to `@muxui/react`, dependencies, and component records. Both
   `E-BL1-08` and `E-BL1-09` carry the non-claim "A growth commit may change `@muxui/react`, dependencies,
