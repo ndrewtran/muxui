@@ -63,7 +63,7 @@
     "A folded rail keeps every link's full name and shows it in a tooltip on hover and keyboard focus.",
     "Nested groups are native disclosures, and the current link carries aria-current.",
     "Below 40rem of container width the navigation opens from a header button as a dialog named Navigation that holds focus and returns it to the button on close.",
-    "The workspace menu button keeps a transparent outline beside its focus ring, so the outline still shows where forced colors drop the shadow."
+    "The workspace menu button is a Menu trigger, and its focus ring is the component's: a box-shadow plus a transparent outline, so an outline still shows where forced colors drop the shadow."
   ],
   "unsupported": [
     "Routing: every link is a #fragment and the current link is fixed in the source",
