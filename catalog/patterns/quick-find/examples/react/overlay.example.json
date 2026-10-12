@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:quick-find-overlay",
+  "kind": "example",
+  "name": "Overlay",
+  "summary": "A palette opened from a button with grouped results.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/quick-find/examples/react/overlay.tsx"
+}

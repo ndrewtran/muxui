@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:chat-panel-tabbed-thread",
+  "kind": "example",
+  "name": "Tabbed thread",
+  "summary": "Tabs, header actions, a thread of messages, and a prompt composer in one card.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/chat-panel/examples/react/tabbed-thread.tsx"
+}

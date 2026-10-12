@@ -3,8 +3,9 @@ import test from 'node:test';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // React Aria makes a tab panel a focus stop only when it has no tabbable content.
-// That stop draws the Tabs focus ring for keyboard focus, never for pointer focus,
-// and a panel that wraps tabbable content draws none. Runs in every engine named
+// That stop draws the Tabs focus ring for keyboard focus, never for pointer focus
+// (including the first click on a fresh page), and a panel that wraps tabbable content
+// draws none. Runs in every engine named
 // by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -91,6 +92,32 @@ for (const engine of browserEngines()) {
         assert.equal(pressed.focused, true, 'a click focuses the panel');
         assert.equal(pressed.focusVisible, false);
         assert.equal(pressed.outlineStyle, 'none');
+      });
+
+      // On a fresh page no element has been focused yet, where a browser's own :focus-visible can match a first pointer click.
+      await t.test('the first pointer click on a fresh page draws no ring, and the keyboard then does', async () => {
+        const fresh = await browser.newPage({ viewport: { width: 800, height: 600 }, locale: 'en-US' });
+        const freshErrors = [];
+        fresh.on('pageerror', (error) => freshErrors.push(error.message));
+        await fresh.goto(`${url}/tabs.html`, { waitUntil: 'networkidle' });
+        const freshPanel = fresh.locator('[role="tabpanel"]');
+        await freshPanel.waitFor();
+        const read = () => freshPanel.evaluate((node) => ({ focused: node === document.activeElement, outlineStyle: getComputedStyle(node).outlineStyle }));
+        const box = await freshPanel.boundingBox();
+        await fresh.mouse.move(box.x + 4, box.y + 4);
+        await fresh.mouse.down();
+        await fresh.mouse.up();
+        const pressed = await read();
+        assert.equal(pressed.focused, true, 'the click focuses the panel');
+        assert.equal(pressed.outlineStyle, 'none', 'pointer focus draws no ring');
+
+        await fresh.getByRole('tab', { name: 'Plain' }).focus();
+        await fresh.keyboard.press('Tab');
+        const keyed = await read();
+        assert.equal(keyed.focused, true, 'Tab from the tab reaches the panel');
+        assert.equal(keyed.outlineStyle, 'solid', 'keyboard focus then draws the ring');
+        assert.deepEqual(freshErrors, []);
+        await fresh.close();
       });
 
       await t.test('a panel that wraps tabbable content is not a focus stop and draws no ring', async () => {

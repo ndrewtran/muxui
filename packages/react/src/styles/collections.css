@@ -878,6 +878,19 @@
   display: inline-block;
 }
 
+/* The trigger draws the same keyboard ring as Button, from React Aria's modality-aware data-focus-visible alone: native :focus-visible also matches the first pointer click on a trigger that stays closed, so the browser's own outline is cleared. The transparent outline stays visible in forced colors. */
+.muxui-menu-trigger {
+  outline: none;
+}
+
+.muxui-menu-trigger[data-focus-visible] {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-ring);
+}
+
 .muxui-menu-popup {
   outline: none;
   max-block-size: var(--available-height);

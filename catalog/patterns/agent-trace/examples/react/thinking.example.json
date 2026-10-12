@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:agent-trace-thinking",
+  "kind": "example",
+  "name": "Thinking",
+  "summary": "Steps, reasoning, search, and coding traces under one kind switcher.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/agent-trace/examples/react/thinking.tsx"
+}

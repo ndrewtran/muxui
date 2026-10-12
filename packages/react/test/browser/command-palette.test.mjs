@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
-// CommandPalette.Trigger draws Button's keyboard focus ring, and the focused
-// CommandPalette.Input draws the field focus border, both from the focus tokens.
+// CommandPalette.Trigger draws Button's keyboard focus ring, never for the first pointer
+// click on a fresh page, and the focused CommandPalette.Input draws the field focus
+// border, both from the focus tokens.
 // Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -13,9 +14,11 @@ import { Button } from '/src/button.mjs';
 import { CommandPalette } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
+// ?closed keeps the palette closed whatever is clicked, so a pointer click only focuses the Trigger.
+const closed = new URLSearchParams(location.search).has('closed');
 createRoot(document.getElementById('root')).render(h(React.Fragment, null,
   h('button', { id: 'before', tabIndex: 0 }, 'Before'),
-  h(CommandPalette.Root, null,
+  h(CommandPalette.Root, closed ? { open: false, onOpenChange: () => {} } : null,
     // WebKit on macOS skips plain buttons in sequential navigation; an explicit tabindex keeps them focusable.
     h(CommandPalette.Trigger, { id: 'palette-trigger', tabIndex: 0 }, 'Commands'),
     h(CommandPalette.Backdrop, null, h(CommandPalette.Popup, null,
@@ -102,6 +105,30 @@ for (const engine of browserEngines()) {
         const resting = await read();
         assert.equal(resting.focused, false);
         assert.notEqual(resting.outline, focused.outline, 'a resting Input keeps the field border');
+      });
+
+      // On a fresh page no element has been focused yet, where a browser's own :focus-visible can match a first pointer click.
+      await t.test('the first pointer click on a fresh page draws no ring, and the keyboard then does', async () => {
+        const fresh = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+        const freshErrors = [];
+        fresh.on('pageerror', (error) => freshErrors.push(error.message));
+        await fresh.goto(`${url}/command-palette.html?closed`, { waitUntil: 'networkidle' });
+        const freshTrigger = fresh.locator('#palette-trigger');
+        await freshTrigger.waitFor();
+        const box = await freshTrigger.boundingBox();
+        await fresh.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await fresh.mouse.down();
+        await fresh.mouse.up();
+        assert.ok(await freshTrigger.evaluate((node) => node === document.activeElement), 'the click focuses the Trigger');
+        assert.equal(await fresh.getByRole('dialog').count(), 0, 'the palette stays closed');
+        assert.equal(await shadow(freshTrigger), 'none', 'pointer focus draws no ring');
+
+        await fresh.keyboard.press('Tab');
+        await fresh.keyboard.press('Shift+Tab');
+        assert.ok(await freshTrigger.evaluate((node) => node === document.activeElement), 'the keyboard returns to the Trigger');
+        assert.notEqual(await shadow(freshTrigger), 'none', 'keyboard focus then draws the ring');
+        assert.deepEqual(freshErrors, []);
+        await fresh.close();
       });
       assert.deepEqual(errors, []);
     } finally {

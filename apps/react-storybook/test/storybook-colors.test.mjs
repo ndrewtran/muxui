@@ -1306,6 +1306,9 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await page.evaluate(() => document.getSelection().removeAllRanges());
       const row = page.locator('.sidebar-item[data-item-id="mux-ui-react-components-calendar"]');
       const trigger = row.locator('[data-testid="context-menu"]');
+      // Each block adds a row above this one, so a row can land at the bottom edge of the sidebar, where the hover ends before the focus check.
+      const centreRow = (element) => element.closest('.sidebar-item').scrollIntoView({ block: 'center' });
+      await trigger.evaluate(centreRow);
       await row.hover();
       await trigger.hover();
       await page.getByRole('tooltip', { name: 'Open context menu' }).waitFor();
@@ -1323,6 +1326,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await hoverAndFocus(scheme, 'context-menu/item', contextMenu.locator('.sb-list button').first());
       await page.keyboard.press('Escape');
       const selectedTrigger = page.locator('.sidebar-item[data-selected="true"] [data-testid="context-menu"]').first();
+      await selectedTrigger.evaluate(centreRow);
       await selectedTrigger.locator('..').hover();
       await hoverAndFocus(scheme, 'context-trigger/selected', selectedTrigger);
       await tokenPaint(scheme, selectedTrigger, 'backgroundColor', 'semantic.action.background');

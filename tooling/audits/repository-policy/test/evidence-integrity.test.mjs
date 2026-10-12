@@ -2714,6 +2714,8 @@ test('a BL1 threshold change is refused unless it is logged, and no expectation 
   assert.deepEqual(thresholdRevisionProblems(await loadThresholds(current), now), [], 'every change since the last retained capture is logged');
 
   const limit = 'denseBudgets.examplesSection.variantSourceLexemes';
+  // The values the working tree holds now, which a threshold change moves, so the transitions below are read from them.
+  const lexemes = now.denseBudgets.examplesSection.variantSourceLexemes;
   const problems = (change, before = now) => {
     const after = structuredClone(before);
     change(after);
@@ -2724,6 +2726,7 @@ test('a BL1 threshold change is refused unless it is logged, and no expectation 
   const query = (thresholds, name) => thresholds.discovery.queries.find((candidate) => candidate.query === name);
   const collections = (thresholds) => query(thresholds, 'collections');
   const component = (thresholds) => thresholds.discovery.queries.find(({ firstWithoutPatterns }) => firstWithoutPatterns);
+  const within = collections(now).expectedWithin;
   const raise = (after, from, to) => {
     collections(after).expectedWithin = to;
     after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from, to, afterFirstMeasurement: true }));
@@ -2731,25 +2734,25 @@ test('a BL1 threshold change is refused unless it is logged, and no expectation 
 
   // A revised expectation, a changed list, a changed limit or budget, and a changed metric each need a new entry that names the exact transition.
   assert.deepEqual(problems(() => {}), []);
-  assert.match(problems((after) => { collections(after).expectedWithin += 1; })[0], /the query "collections" field expectedWithin changed from 4 to 5 with no new entry in provenance\.revisions that continues it/u);
+  assert.match(problems((after) => { collections(after).expectedWithin += 1; })[0], new RegExp(`the query "collections" field expectedWithin changed from ${within} to ${within + 1} with no new entry in provenance\\.revisions that continues it`, 'u'));
   assert.match(problems((after) => { component(after).relevant.push('muxui:pattern:x'); })[0], /field relevant changed \(added \[muxui:pattern:x\]; removed \[\]\) with no new entry/u);
   assert.match(problems((after) => { component(after).relevant.pop(); })[0], /field relevant changed \(added \[\]; removed \[.+\]\) with no new entry/u);
   assert.match(problems((after) => { collections(after).knownWeakness = 'something else'; })[0], /field knownWeakness changed from .* to "something else"/u);
   assert.match(problems((after) => { collections(after).extra = true; })[0], /field extra changed from null to true/u);
-  assert.match(problems((after) => { after.denseBudgets.examplesSection.variantSourceLexemes += 100; })[0], new RegExp(`${limit} changed from 700 to 800 with no new entry`, 'u'));
+  assert.match(problems((after) => { after.denseBudgets.examplesSection.variantSourceLexemes += 100; })[0], new RegExp(`${limit} changed from ${lexemes} to ${lexemes + 100} with no new entry`, 'u'));
   assert.match(problems((after) => { after.discovery.minimumMeanPrecisionAt3 = 0.1; })[0], /discovery\.minimumMeanPrecisionAt3 changed from 0\.5 to 0\.1 with no new entry/u);
   assert.match(problems((after) => { after.search.maximumDisplacedComponentQueries = 3; })[0], /search\.maximumDisplacedComponentQueries changed from 0 to 3 with no new entry/u);
 
-  // An entry covers exactly the transition it states. The backfilled 3 -> 4 entry for `collections` does not cover 4 -> 999, and neither does an
+  // An entry covers exactly the transition it states. The logged entries for `collections` end at its current value and do not cover that value -> 999, and neither does an
   // entry for the wrong field, the wrong starting value, the wrong end value, or another query.
-  assert.match(problems((after) => { collections(after).expectedWithin = 999; })[0], /changed from 4 to 999/u);
-  const wrong = (extra) => problems((after) => { collections(after).expectedWithin = 999; after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from: 4, to: 999, ...extra })); });
+  assert.match(problems((after) => { collections(after).expectedWithin = 999; })[0], new RegExp(`changed from ${within} to 999`, 'u'));
+  const wrong = (extra) => problems((after) => { collections(after).expectedWithin = 999; after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from: within, to: 999, ...extra })); });
   assert.deepEqual(wrong({}), [], 'the exact transition is covered');
   assert.deepEqual(wrong({ afterFirstMeasurement: true }), [], 'and so is one disclosed as made after a first measurement, as collections is already listed');
-  assert.match(wrong({ from: 3 })[0], /changed from 4 to 999/u);
-  assert.match(wrong({ to: 998 })[0], /changed from 4 to 999/u);
-  assert.match(wrong({ field: 'expectedId' })[0], /changed from 4 to 999/u);
-  assert.match(wrong({ query: 'poster grid' })[0], /changed from 4 to 999/u);
+  assert.match(wrong({ from: 3 })[0], new RegExp(`changed from ${within} to 999`, 'u'));
+  assert.match(wrong({ to: 998 })[0], new RegExp(`changed from ${within} to 999`, 'u'));
+  assert.match(wrong({ field: 'expectedId' })[0], new RegExp(`changed from ${within} to 999`, 'u'));
+  assert.match(wrong({ query: 'poster grid' })[0], new RegExp(`changed from ${within} to 999`, 'u'));
   // The same holds for a list and for a limit, and a chain of entries is followed in order.
   assert.deepEqual(problems((after) => {
     component(after).relevant.push('muxui:pattern:x');
@@ -2761,20 +2764,20 @@ test('a BL1 threshold change is refused unless it is logged, and no expectation 
   })[0], /added \[muxui:pattern:x\]/u);
   assert.deepEqual(problems((after) => {
     after.denseBudgets.examplesSection.variantSourceLexemes += 100;
-    after.provenance.revisions.push(entry({ limit, from: 700, to: 800 }));
+    after.provenance.revisions.push(entry({ limit, from: lexemes, to: lexemes + 100 }));
   }), []);
   assert.match(problems((after) => {
     after.denseBudgets.examplesSection.variantSourceLexemes += 100;
-    after.provenance.revisions.push(entry({ limit, from: 700, to: 900 }));
-  })[0], new RegExp(`${limit} changed from 700 to 800`, 'u'));
+    after.provenance.revisions.push(entry({ limit, from: lexemes, to: lexemes + 200 }));
+  })[0], new RegExp(`${limit} changed from ${lexemes} to ${lexemes + 100}`, 'u'));
   assert.deepEqual(problems((after) => {
     after.denseBudgets.examplesSection.variantSourceLexemes += 200;
-    after.provenance.revisions.push(entry({ limit, from: 700, to: 800 }), entry({ limit, from: 800, to: 900 }));
+    after.provenance.revisions.push(entry({ limit, from: lexemes, to: lexemes + 100 }), entry({ limit, from: lexemes + 100, to: lexemes + 200 }));
   }), [], 'two entries that chain from the base value to the current one');
   assert.match(problems((after) => {
     after.denseBudgets.examplesSection.variantSourceLexemes += 200;
-    after.provenance.revisions.push(entry({ limit, from: 800, to: 900 }));
-  })[0], /changed from 700 to 900/u, 'an entry that does not start at the base value is history, not a cover');
+    after.provenance.revisions.push(entry({ limit, from: lexemes + 100, to: lexemes + 200 }));
+  })[0], new RegExp(`changed from ${lexemes} to ${lexemes + 200}`, 'u'), 'an entry that does not start at the base value is history, not a cover');
 
   // An expectation is never removed: not the query, not its expectation fields, not the flag that makes them bind.
   assert.match(problems((after) => { after.discovery.queries = after.discovery.queries.slice(1); })[0], /was removed; an expectation is never removed/u);
@@ -2785,8 +2788,8 @@ test('a BL1 threshold change is refused unless it is logged, and no expectation 
   assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', limit, field: 'expectedWithin', from: 1, to: 2 })); })[0], /names exactly one of a query or a limit/u);
   assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'no such query', field: 'relevant', added: [], removed: [] })); })[0], /names the query "no such query", which is not in the thresholds/u);
   assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit: 'denseBudgets.nothing', from: 1, to: 2 })); })[0], /names the value denseBudgets\.nothing/u);
-  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from: 4, to: 4, reason: ' ' })); })[0], /does not say its reason/u);
-  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', from: 4, to: 4 })); })[0], /does not name the field of "collections"/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from: within, to: within, reason: ' ' })); })[0], /does not say its reason/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', from: within, to: within })); })[0], /does not name the field of "collections"/u);
   assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin' })); })[0], /does not state its transition: from and to, or added and removed/u);
   assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit, added: [], removed: [] })); })[0], /does not state its transition: from and to$/u);
   assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'poster grid', field: 'expectedFirst', from: 'a', to: 'a', afterFirstMeasurement: true })); })[0], /must be listed in provenance\.revisedAfterFirstMeasurement/u);
@@ -2794,25 +2797,27 @@ test('a BL1 threshold change is refused unless it is logged, and no expectation 
     after.provenance.revisions.push(entry({ query: 'poster grid', field: 'expectedFirst', from: 'a', to: 'a', afterFirstMeasurement: true }));
     after.provenance.revisedAfterFirstMeasurement.push('poster grid');
   }), []);
-  assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit, from: 700, to: 700, afterFirstMeasurement: true })); })[0], /never fitted to a result/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit, from: lexemes, to: lexemes, afterFirstMeasurement: true })); })[0], /never fitted to a result/u);
 
   // The log and the list of expectations revised after a first measurement only grow, and a dropped entry leaves its own revision unlogged.
-  assert.match(problems((after) => { after.provenance.revisions.pop(); })[0], /dropped or changed an earlier entry for menu; the log only grows/u);
+  const last = now.provenance.revisions.at(-1);
+  assert.match(problems((after) => { after.provenance.revisions.pop(); })[0], new RegExp(`dropped or changed an earlier entry for ${last.query ?? last.limit}; the log only grows`, 'u'));
   const withoutFirstEntry = structuredClone(now);
   withoutFirstEntry.provenance.revisions.shift();
-  assert.match(thresholdRevisionProblems(await loadThresholds(closeout.sourceRevision), withoutFirstEntry)[0], /"collections" field expectedWithin changed from 3 to 4 with no new entry/u);
+  assert.match(thresholdRevisionProblems(await loadThresholds(closeout.sourceRevision), withoutFirstEntry)[0], new RegExp(`"collections" field expectedWithin changed from 3 to ${within} with no new entry`, 'u'));
   assert.ok(problems((after) => { after.provenance.revisedAfterFirstMeasurement.pop(); }).some((problem) => /the list only grows/u.test(problem)));
 
-  // The refusal the capture makes, against the real revisions. The same 4 -> 999 is refused against the close-out (3 -> 4 is followed, 999 is not
-  // reached) and against the last retained capture (which has 4, and for which the backfilled entry is history); logged, it is accepted against both.
+  // The refusal the capture makes, against the real revisions. The same change to 999 is refused against the close-out (its logged entries are followed,
+  // 999 is not reached) and against the last retained capture (whose own value is the base, so entries before it are history); logged, it is accepted against both.
+  const retained = collections(await loadThresholds(current)).expectedWithin;
   assert.deepEqual(await assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: now }), []);
   const unlogged = structuredClone(now);
   collections(unlogged).expectedWithin = 999;
   await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, thresholds: unlogged }), /BL1_THRESHOLDS_UNLOGGED: .*field expectedWithin changed from 3 to 999/su);
-  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: unlogged }), /BL1_THRESHOLDS_UNLOGGED: .*since the capture at [0-9a-f]{8}: the query "collections" field expectedWithin changed from 4 to 999/su);
-  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: 'HEAD', thresholds: unlogged }), /BL1_THRESHOLDS_UNLOGGED: .*since the capture at HEAD: the query "collections" field expectedWithin changed from 4 to 999/su);
+  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: unlogged }), new RegExp(`BL1_THRESHOLDS_UNLOGGED: .*since the capture at [0-9a-f]{8}: the query "collections" field expectedWithin changed from ${retained} to 999`, 'su'));
+  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: 'HEAD', thresholds: unlogged }), new RegExp(`BL1_THRESHOLDS_UNLOGGED: .*since the capture at HEAD: the query "collections" field expectedWithin changed from ${within} to 999`, 'su'));
   const logged = structuredClone(now);
-  raise(logged, 4, 999);
+  raise(logged, within, 999);
   assert.deepEqual(await assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: logged }), []);
   await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, thresholds: { ...now, discovery: { ...now.discovery, queries: now.discovery.queries.slice(1) } } }), /BL1_THRESHOLDS_UNLOGGED: .*an expectation is never removed/su);
 });

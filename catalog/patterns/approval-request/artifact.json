@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:approval-request",
+  "kind": "pattern",
+  "name": "Approval request",
+  "summary": "A card that asks one question at a time with choices or a free answer, a pager, Skip, and a Continue button that stays off until there is an answer.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "questions",
+    "stepper",
+    "choices",
+    "pager",
+    "answer",
+    "confirm"
+  ],
+  "platforms": ["web.react"],
+  "category": "forms",
+  "intent": {
+    "useWhen": [
+      "Asking a person to answer or approve a few questions before an agent goes on",
+      "Mixing single choice, multiple choice, and a free answer"
+    ],
+    "avoidWhen": [
+      "The answers must be submitted, which needs your own handler",
+      "The form has many fields or needs validation"
+    ]
+  },
+  "participants": [
+    {
+      "role": "container",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    },
+    {
+      "role": "pager",
+      "component": "muxui:component:icon-button",
+      "requirement": "required"
+    },
+    {
+      "role": "single",
+      "component": "muxui:component:radio-group",
+      "requirement": "required"
+    },
+    {
+      "role": "multiple",
+      "component": "muxui:component:checkbox-group",
+      "requirement": "required"
+    },
+    {
+      "role": "option",
+      "component": "muxui:component:checkbox",
+      "requirement": "required"
+    },
+    {
+      "role": "answer",
+      "component": "muxui:component:text-field",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:approval-request-question-stepper" }],
+  "accessibility": [
+    "Each question is an h2 and names its group: single choice is a RadioGroup and multiple choice a CheckboxGroup, both named by the question.",
+    "The free answer is a TextField named Something else.",
+    "Continue is disabled until a choice or a free answer is entered, and Skip moves on without one.",
+    "The pager count is a role=status element, and Previous question and Next question are IconButtons that disable at each end.",
+    "Dismissing, or answering the last question, replaces the controls with a message, and focus moves to that message."
+  ],
+  "unsupported": [
+    "Submitting or storing answers: they stay in component state and nothing is sent",
+    "Required questions or validation",
+    "Branching between questions",
+    "Keeping answers after Start over"
+  ],
+  "workflowValue": "Replaces wiring a question flow by hand: one step index and one answers map drive the group, the pager, and the disabled Continue, so you swap the questions and keep the card."
+}

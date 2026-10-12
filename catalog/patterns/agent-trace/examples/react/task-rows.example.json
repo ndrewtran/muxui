@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:agent-trace-task-rows",
+  "kind": "example",
+  "name": "Task rows",
+  "summary": "Task rows with a status, a count, and a time, and details that open in place.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/agent-trace/examples/react/task-rows.tsx"
+}

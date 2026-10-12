@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:property-inspector",
+  "kind": "pattern",
+  "name": "Property inspector",
+  "summary": "A card of editable properties: a layout toggle, number fields for size, radius, and opacity, a type select, and an Adjust action that marks the panel edited.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "properties",
+    "adjust",
+    "layout",
+    "numeric",
+    "fields",
+    "edited",
+    "reset"
+  ],
+  "platforms": ["web.react"],
+  "category": "forms",
+  "intent": {
+    "useWhen": [
+      "Editing a few properties of one selected object in a side panel",
+      "Showing that a panel holds edits, with a Reset beside the status"
+    ],
+    "avoidWhen": [
+      "The values must be saved or checked by a server",
+      "The panel needs many property groups or a tree of objects"
+    ]
+  },
+  "participants": [
+    {
+      "role": "container",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    },
+    {
+      "role": "rule",
+      "component": "muxui:component:separator",
+      "requirement": "required"
+    },
+    {
+      "role": "layout",
+      "component": "muxui:component:toggle-button-group",
+      "requirement": "required"
+    },
+    {
+      "role": "option",
+      "component": "muxui:component:toggle-button",
+      "requirement": "required"
+    },
+    {
+      "role": "field",
+      "component": "muxui:component:number-field",
+      "requirement": "required"
+    },
+    {
+      "role": "choice",
+      "component": "muxui:component:select",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:property-inspector-adjust-panel" }],
+  "accessibility": [
+    "The section is named by its Promo banner heading, and the Layout group has its own heading.",
+    "The layout options are a ToggleButtonGroup named Layout whose options are named Row, Column, and Grid by aria-label, and one option always stays selected.",
+    "Each NumberField has a visible label and Increase and Decrease buttons, and Opacity reads as a percent from 0 to 100.",
+    "The Type Select is named by its visible Type label.",
+    "Adjust becomes Reset in the same button, so focus stays on it, and the Edited text is a role=status element."
+  ],
+  "unsupported": [
+    "Saving: the values are placeholders, and Reset restores the first ones",
+    "Applying the layout, size, radius, opacity, or type to anything",
+    "Dragging a field to change its value",
+    "Labels inside the number fields"
+  ],
+  "workflowValue": "Replaces wiring a property panel by hand: one values object drives the toggle, the number fields, and the select, and one edited flag swaps Adjust for Reset, so you swap the properties and keep the card."
+}

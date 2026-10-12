@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:context-sources-excerpts",
+  "kind": "example",
+  "name": "Excerpts",
+  "summary": "A count and cards of excerpts, each with a size and a source chip.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/context-sources/examples/react/excerpts.tsx"
+}

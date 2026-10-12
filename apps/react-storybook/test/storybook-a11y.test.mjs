@@ -246,6 +246,8 @@ const INTERACTION_OPEN_LOCATORS = Object.freeze({
   DateRangePicker: { trigger: '.muxui-date-trigger', overlay: '.muxui-date-popover' },
   ComboBox: { trigger: '.muxui-combo-box-trigger', overlay: '.muxui-combo-box-popover' },
   Select: { trigger: '.muxui-select-trigger', overlay: '.muxui-select-popover' },
+  // Its trigger does not announce expansion, so the open state waits for the popup alone.
+  CommandPalette: { trigger: '.muxui-command-palette__trigger', overlay: '.muxui-command-palette__popup', announcesExpanded: false },
 });
 
 function formatViolations(violations) {
@@ -323,15 +325,15 @@ async function runAxe(page, contextSelector, options) {
 async function waitForInteractionOpen(page, family) {
   const locators = INTERACTION_OPEN_LOCATORS[family];
   assert.ok(locators, `missing interaction-open locators for ${family}`);
-  await page.waitForFunction(({ triggerSelector, overlaySelector }) => {
+  await page.waitForFunction(({ triggerSelector, overlaySelector, announcesExpanded }) => {
     const section = [...document.querySelectorAll('.muxui-storybook-state')]
       .find((candidate) => candidate.querySelector('h3')?.textContent === 'open');
     const trigger = section?.querySelector(triggerSelector);
     const overlay = document.querySelector(`${overlaySelector}:not([hidden])`);
-    if (!trigger || trigger.getAttribute('aria-expanded') !== 'true' || !overlay) return false;
+    if (!trigger || (announcesExpanded && trigger.getAttribute('aria-expanded') !== 'true') || !overlay) return false;
     const style = getComputedStyle(overlay);
     return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-  }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay }, { timeout: storyTimeoutMs });
+  }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay, announcesExpanded: locators.announcesExpanded !== false }, { timeout: storyTimeoutMs });
 }
 
 async function waitForInteractionClosed(page, family) {
