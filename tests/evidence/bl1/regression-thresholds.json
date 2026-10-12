@@ -134,7 +134,9 @@
         "removed": [],
         "change": "the Context sources and Excerpts ids added to relevant",
         "reason": "Context sources is a collections block. Its ids were written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "collections",
@@ -143,7 +145,9 @@
         "to": 5,
         "change": "expectedWithin 4 -> 5",
         "reason": "Context sources is a Collections block, so it scores the same 20 for the category-name query, and ties sort by id: the id muxui:pattern:context-sources sorts before muxui:pattern:poster-grid, so the Poster grid, which ranks fourth, ranks fifth. Stated from the scoring rule and the current order before the block exists; the expectation is kept and the weakness stays recorded.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "collections",
@@ -152,7 +156,9 @@
         "to": "A category term scores 20 points against the several fields of the components that mention collections, so the pattern ranks third alone. Every collections block scores the same 20 and ties sort by id, so the Poster grid ranks fourth once Company records, whose id sorts before it, joins the category. Context sources joins the category at the same 20 and its id sorts before the Poster grid, so the Poster grid ranks fifth.",
         "change": "knownWeakness extended to say the Poster grid ranks fifth once Context sources joins the category",
         "reason": "The remaining weakness of the category-name query is stated, not passed as a first-ranked result.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "navigation",
@@ -165,7 +171,9 @@
         "removed": [],
         "change": "the Quick find, Overlay, and Inline ids added to relevant",
         "reason": "Quick find is a navigation block. Its ids were written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "button",
@@ -178,7 +186,9 @@
         "removed": [],
         "change": "the Agent trace, Approval request, and Property inspector ids added to relevant",
         "reason": "Agent trace, Approval request, and Property inspector use Button as a participant. Their ids were written into the relevant list before any of the blocks was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "text",
@@ -194,7 +204,9 @@
         "removed": [],
         "change": "the ids of the six agent composition blocks added to relevant",
         "reason": "All six agent composition blocks use Text as a participant. Their ids were written into the relevant list before any of them was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "card",
@@ -209,7 +221,9 @@
         "removed": [],
         "change": "the Chat panel, Context sources, Approval request, Property inspector, and Quick find ids added to relevant",
         "reason": "Those five blocks use Card as a participant. Their ids were written into the relevant list before any of them was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "link",
@@ -221,7 +235,9 @@
         "removed": [],
         "change": "the Agent trace and Context sources ids added to relevant",
         "reason": "Agent trace and Context sources use Link as a participant. Their ids were written into the relevant list before either block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "avatar",
@@ -233,7 +249,9 @@
         "removed": [],
         "change": "the Agent trace and Context sources ids added to relevant",
         "reason": "Agent trace and Context sources use Avatar as a participant. Their ids were written into the relevant list before either block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "menu",
@@ -244,7 +262,9 @@
         "removed": [],
         "change": "the Chat panel id added to relevant",
         "reason": "Chat panel uses Menu as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "select",
@@ -255,7 +275,9 @@
         "removed": [],
         "change": "the Property inspector id added to relevant",
         "reason": "Property inspector uses Select as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "search field",
@@ -266,7 +288,9 @@
         "removed": [],
         "change": "the Quick find id added to relevant",
         "reason": "Quick find uses SearchField as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "toggle button group",
@@ -277,7 +301,9 @@
         "removed": [],
         "change": "the Property inspector id added to relevant",
         "reason": "Property inspector uses ToggleButtonGroup as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "limit": "denseBudgets.examplesSection.variantSourceLexemes",
@@ -285,7 +311,9 @@
         "to": 1000,
         "change": "variantSourceLexemes 700 -> 1000",
         "reason": "The conversation and agent blocks carry sample message and trace content. The chat draft measures about 570 lexemes as a skeleton and is expected to grow 30 to 40 percent once it uses real components, and 1000 keeps a variant reviewable as one copyable file.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "button",
@@ -296,7 +324,9 @@
         "removed": [],
         "change": "the Recommendation id added to relevant",
         "reason": "Recommendation uses Button as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "text",
@@ -307,7 +337,9 @@
         "removed": [],
         "change": "the Recommendation id added to relevant",
         "reason": "Recommendation uses Text as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "card",
@@ -318,7 +350,9 @@
         "removed": [],
         "change": "the Recommendation id added to relevant",
         "reason": "Recommendation uses Card as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "avatar",
@@ -329,7 +363,9 @@
         "removed": [],
         "change": "the Recommendation id added to relevant",
         "reason": "The Compact variant of Recommendation uses Avatar as a participant. Its id was written into the relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "radio group",
@@ -340,7 +376,9 @@
         "removed": [],
         "change": "the Recommendation id added to relevant",
         "reason": "The Ranked variant of Recommendation uses RadioGroup as a participant. The query was added earlier in this pull request; the block id was written into its relevant list before the block was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          286
+        ]
       },
       {
         "query": "task rows",
@@ -349,7 +387,9 @@
         "to": 5,
         "change": "expectedWithin 3 -> 5",
         "reason": "A first measurement showed the expectation was wrong: the existing Task filters block carries the word task in its id and name, which no keyword of Agent trace can outscore, so the pattern ranks fifth for task rows. Agent trace cannot change its approved name or its variant name to fix that, so the expectation is revised, kept, and recorded as revised after its first measurement.",
-        "pullRequests": [],
+        "pullRequests": [
+          286
+        ],
         "afterFirstMeasurement": true
       },
       {
@@ -359,7 +399,9 @@
         "to": "The Task filters pattern and its two examples carry the word task in their ids and names, so they outrank the pattern, whose keywords and summary can score only 20 a field: the Agent trace example ranks first, then Task filters and its two examples, and the pattern ranks fifth.",
         "change": "knownWeakness added to say the Task filters block outranks Agent trace for task rows",
         "reason": "The remaining weakness of the query is stated, not passed as a first-ranked result.",
-        "pullRequests": [],
+        "pullRequests": [
+          286
+        ],
         "afterFirstMeasurement": true
       },
       {
@@ -369,7 +411,9 @@
         "to": "muxui:example:agent-trace-task-rows",
         "change": "expectedId muxui:pattern:agent-trace -> muxui:example:agent-trace-task-rows",
         "reason": "Approved by Andrew on 2026-10-12 after measurement. The original target, the Agent trace pattern within the top three, was an imprecise expectation, not a failing result being turned into a pass: the query names a variant, and the variant's example, which carries both words in its id and name, measured first at score 4130. The query is retargeted to that example, expected first. The pattern still ranks fifth behind the Task filters block, which the knownWeakness on the query keeps on the record.",
-        "pullRequests": [],
+        "pullRequests": [
+          286
+        ],
         "afterFirstMeasurement": true
       },
       {
@@ -379,7 +423,9 @@
         "to": 1,
         "change": "expectedWithin 5 -> 1",
         "reason": "Approved by Andrew on 2026-10-12 after measurement. The original target, the Agent trace pattern within the top three, was an imprecise expectation, not a failing result being turned into a pass: the query names a variant, and the variant's example, which carries both words in its id and name, measured first at score 4130. The query is retargeted to that example, expected first. The pattern still ranks fifth behind the Task filters block, which the knownWeakness on the query keeps on the record.",
-        "pullRequests": [],
+        "pullRequests": [
+          286
+        ],
         "afterFirstMeasurement": true
       }
     ]
