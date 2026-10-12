@@ -10,11 +10,11 @@ import { installDom } from './support/dom.mjs';
 
 const columns = [{ id: 'name', label: 'Name' }, { id: 'stock', label: 'Stock' }];
 const rows = [
-  { id: 'old', label: 'Old flavor', kind: 'removed', values: { name: 'Rocky Road', stock: 0 } },
-  { id: 'context', label: 'Mint flavor', kind: 'unchanged', values: { name: 'Mint Chip', stock: false } },
-  { id: 'new', label: 'New flavor', kind: 'added', values: { name: 'Pistachio', stock: null } },
-  { id: 'update', label: 'Vanilla flavor', kind: 'updated', before: { name: 'Vanilla', stock: 4 }, after: { name: 'Vanilla', stock: 8 } },
-  { id: 'locked', label: 'Unavailable flavor', kind: 'added', disabled: true, values: { name: 'Locked', stock: 2 } },
+  { id: 'old', label: 'Old token', kind: 'removed', values: { name: 'Gutter', stock: 0 } },
+  { id: 'context', label: 'Kept token', kind: 'unchanged', values: { name: 'Border', stock: false } },
+  { id: 'new', label: 'New token', kind: 'added', values: { name: 'Outline', stock: null } },
+  { id: 'update', label: 'Changed token', kind: 'updated', before: { name: 'Spacing', stock: 4 }, after: { name: 'Spacing', stock: 8 } },
+  { id: 'locked', label: 'Unavailable token', kind: 'added', disabled: true, values: { name: 'Locked', stock: 2 } },
 ];
 const element = (props = {}) => React.createElement(DataDiff, { label: 'Proposed changes', columns, rows, ...props });
 const markup = (props) => renderToStaticMarkup(element(props));

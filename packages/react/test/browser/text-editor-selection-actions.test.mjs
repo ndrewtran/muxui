@@ -24,7 +24,7 @@ import { TextEditor } from '/src/text-editor/index.mjs';
 
 const h = React.createElement;
 const { hold = false, spacer = 0, tail = 0, scope = '' } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
-const sentence = 'Pistachio holds the top slot all weekend. Churn it first thing Saturday so the batch has time to firm up before the afternoon rush.';
+const sentence = 'Checklist holds the top slot all weekend. Review it first thing Monday so the team has time to sign off before the afternoon call.';
 const actions = [
   { id: 'explain', label: 'Explain' },
   { id: 'improve', label: 'Improve', pendingLabel: 'Improving…' },
@@ -354,7 +354,7 @@ for (const engine of browserEngines()) {
 
       await t.test('the bar flips above the selection near the bottom edge and stays in view', async () => {
         const probe = await open();
-        const first = await probe.word('Pistachio');
+        const first = await probe.word('Checklist');
         await probe.context.close();
         const { tab, bar, selectWord, context } = await open({ config: { spacer: 700 - 70 - Math.round(first.top) } });
         const word = await selectWord('weekend');

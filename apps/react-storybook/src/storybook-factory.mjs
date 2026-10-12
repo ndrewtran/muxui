@@ -596,7 +596,7 @@ function PromptComposerPreview(args) {
   return e('div', null, e(MuxUI.PromptComposer, {
     ...args, inputLabel: args.inputLabel ?? 'Message',
     inputProps: { placeholder: 'Write a message, @ source, / command…', name: 'message', required: true, ...args.inputProps },
-    sources: args.sources ?? [{ id: 'notes', label: 'Workspace notes', description: 'Selected local notes', insertText: '@notes ' }, { id: 'records', label: 'Supplier records', description: 'Selected workspace records', insertText: '@records ' }],
+    sources: args.sources ?? [{ id: 'notes', label: 'Workspace notes', description: 'Selected local notes', insertText: '@notes ' }, { id: 'records', label: 'Project records', description: 'Selected workspace records', insertText: '@records ' }],
     commands: args.commands ?? [{ id: 'summarize', label: 'Summarize', description: 'Insert a summary prompt', insertText: 'Summarize these notes: ' }],
     attachments: args.attachments ?? attachments,
     onFilesSelected: (files) => { args.onFilesSelected?.(files); setAttachments((previous) => [...previous, ...files.map((file, index) => ({ id: `${previous.length + index}-${file.name}`, label: file.name }))]); },
