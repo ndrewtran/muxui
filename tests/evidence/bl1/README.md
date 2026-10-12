@@ -1,20 +1,33 @@
 # BL1 retained evidence
 
 The Roadmap "BL1 Blocks showcase" slice requires `E-BL1-01` through
-`E-BL1-11`. This root retains all eleven for the seven shipped blocks, captured in
+`E-BL1-11`. This root retains all eleven for the fourteen shipped blocks, captured in
 one run of `tests/evidence/capture-bl1.mjs` in growth scope at main commit
-`1899324c8aed2d94a6324c4656d2149af5571f39` (the squash of #266, tree
-`415c23b15a5740fb1bce2bc5f3b90000acb9c6db`), which is in `origin/main`'s history.
+`b4bdc0dbaf20dfa5e8e60cd25f76a9d4bdcbb584` (the squash of #291, tree
+`5512582965032f6abc0d0200cc5841ca46a1e0ce`), which is in `origin/main`'s history.
 The growth commits it audits are `bb6097269c3a2683e8680d0d7be9a83b4f069958` (#238), which
 added the company records and task filters blocks,
 `e9a470c26afec974dba93a2daa5b1c95b7071b00` (#247), which added the workspace navigation
 block, `c1e5c437c385af91b38f72e04597571bb28be5b2` (#261), which applied the previous
 content review's copy advisories to five blocks (poster grid, marketing hero, pricing plans,
-account settings, and workspace navigation), and `1899324c8aed2d94a6324c4656d2149af5571f39`
+account settings, and workspace navigation), `1899324c8aed2d94a6324c4656d2149af5571f39`
 (#266), which applied that review's two new copy advisories (the virtualized poster grid's
-disabled titles and the company records' aria-sort wording). The earlier growth capture, at
-`82873337a4f9551240bf89af7f6978841c3e4d1a` (the squash of #264), is archived under
-`superseded/82873337a4f9/`, the growth capture before it, at
+disabled titles and the company records' aria-sort wording),
+`cb69bb1eba3978d509cb633204068da5f866d0f6` (#286), which added seven agent composition
+blocks (agent trace, approval request, chat panel, context sources, property inspector, quick find,
+and recommendation), `1873d105c31aa80955a22d29fbb6f1b424546106` (#287), which added a compact
+Sidebar density and let an Activity item start open, and set the agent trace's running Task row to
+start open, and `c9ae806796ab0eaa1e6c477d92adab43da7ed9f3` (#288), which wrote fresh sample copy
+for the agent trace block and replaced source-demo data in seven blocks (agent trace, chat panel,
+company records, context sources, quick find, recommendation, and workspace navigation). The source
+revision is not a growth commit, and neither is #289 before it. #289 changed only the boundary audit
+and this file, so that the `no-deployment` check lists the `npm-publish` release runs GitHub records
+after the base and does not count them. #291 changed only the boundary audit and the integrity test,
+so that the `react-stylesheet-names` check records a fixed 8-character prefix of each commit hash,
+which does not depend on the length git abbreviates to in a clone. The earlier growth capture, at `1899324c8aed2d94a6324c4656d2149af5571f39` (the
+squash of #266), is archived under `superseded/1899324c8aed/`, the growth capture before it, at
+`82873337a4f9551240bf89af7f6978841c3e4d1a` (the squash of #264), under
+`superseded/82873337a4f9/`, the growth capture before that, at
 `a7237f58d8706ec54d21b88e0363241a936695f0` (the squash of #253), under
 `superseded/a7237f58d870/`, the growth capture before that, at
 `0c3cf6626ffde8c15c970018733672d3731cdaf3` (the squash of #239), under
@@ -33,7 +46,7 @@ not from this file.
   (`E-BL1-10-content-review.md` and `E-BL1-09-exit-review.md`).
 - `validation/`: the sanitized output of every proof command; the digest of the raw
   output is in the artifact and the raw output is not retained.
-- `captures/`: the 92 `E-BL1-06` images.
+- `captures/`: the 180 `E-BL1-06` images.
 - `verification.json` and `index.json`: the validation summary and the index
   `evidence-verify` checks, including every file above and under `superseded/`.
 - `regression-thresholds.json`, `regression.mjs`, and the other tools listed below. The
@@ -61,11 +74,12 @@ forward; a later capture archives the capture it replaces the same way, so the c
 stays walkable. The growth capture at `0c3cf662` archived the close-out capture at
 `c8f3e7cb` the same way, under `superseded/c8f3e7cbc18b/`, the growth capture at
 `a7237f58` archived that growth capture under `superseded/0c3cf6626ffd/`, the growth
-capture at `82873337` archived the capture at `a7237f58` under `superseded/a7237f58d870/`, and
-the growth capture at `1899324c` archived the capture at `82873337` under
-`superseded/82873337a4f9/` (131 files, byte for byte). Every new record carries `supersedes`
-naming its predecessor at `82873337`, whose own records keep the `supersedes` that name
-`a7237f58`, and so on back to the close-out. The index's `supersessions` list is not used.
+capture at `82873337` archived the capture at `a7237f58` under `superseded/a7237f58d870/`, the
+growth capture at `1899324c` archived the capture at `82873337` under
+`superseded/82873337a4f9/`, and the growth capture at `b4bdc0db` archived the capture at
+`1899324c` under `superseded/1899324c8aed/` (131 files, byte for byte). Every new record carries
+`supersedes` naming its predecessor at `1899324c`, whose own records keep the `supersedes` that
+name `82873337`, and so on back to the close-out. The index's `supersessions` list is not used.
 That reasoning is historical wording: Architecture once defined the list as an
 `EvidenceApplicabilitySupersession` certificate that closed an applicability chain after an
 accepted authority change, and no longer does (Decision 0027, #248, removed that machinery).
@@ -74,25 +88,40 @@ accepted authority change, and no longer does (Decision 0027, #248, removed that
 ## Independent reviews retained
 
 - **Content review (`E-BL1-10`).** Read the block sources at
-  `1899324c8aed2d94a6324c4656d2149af5571f39` (#266), by an independent reviewer
+  `c9ae806796ab0eaa1e6c477d92adab43da7ed9f3` (#288), by an independent reviewer
   (Claude Opus 5.5) that authored none of the blocks (Sonnet agents did) and did not review
-  their code (GPT-6.1-Sol did). Verdict: pass for all seven blocks, with advisories the
-  capture lists and does not fix, because changing a block source would invalidate the
-  reviewed revision. The reviewed revision is the source revision: it is in main's history,
-  its tree (`415c23b15a5740fb1bce2bc5f3b90000acb9c6db`) equals the source tree, no path differs,
-  and no proof tool differs, so the review covers all seven blocks (`reviewCoverage` in the
-  `E-BL1-10` artifact has seven rows, each citing this review). The review confirms that #266
-  resolved the two advisories the `c1e5c437` review added: the "Disabled A ..." title prefix and
-  differing disabled-title phrasing in the virtualized poster grid, and "report ... through
-  aria-sort" in the company records. It adds no new advisory and carries forward, not fixed, the
-  unmarked pricing offer copy, the "Card.Root has none" note, the forced-colours notes of the
-  company records and workspace navigation (backed by emulated tests, not a real forced-colours
-  run), the generic-word echoes "Generic Supply" and "Review the draft outline", the
-  Lucide-identical `Switch` chevron glyph, the shared Cmd or Ctrl plus B fold shortcut, and that
-  workspace navigation is the block closest to a page shell. The `c1e5c437` content review is
-  archived with its capture under `superseded/82873337a4f9/`, the `e9a470c2` content review under
-  `superseded/a7237f58d870/`, and the close-out content review of `670cb188` and the earlier
-  growth content review of `bb609726` with theirs.
+  their code (GPT-6.1-Sol did). Verdict: pass for all fourteen blocks, with advisories the
+  review lists and the capture does not fix, because changing a block source would invalidate the
+  reviewed revision. The reviewed revision is a main commit, in main's history, but not the source
+  revision: the source revision is `b4bdc0dbaf20dfa5e8e60cd25f76a9d4bdcbb584` (#291), two commits
+  after it, with #289 between. The reviewed tree (`107253259ba270f8331fe872fca56d79ea46c025`)
+  differs from the source tree (`5512582965032f6abc0d0200cc5841ca46a1e0ce`) by three paths,
+  `tests/evidence/bl1/README.md` and `tests/evidence/bl1/boundary-audit.mjs` (both changed by #289,
+  and the audit again by #291) and `tooling/audits/repository-policy/test/evidence-integrity.test.mjs`
+  (#291). `boundary-audit.mjs` is the one proof tool that differs between the two revisions. Every block's coverage key is the same at
+  both revisions, so the review covers all fourteen blocks (`reviewCoverage` in the `E-BL1-10`
+  artifact has fourteen rows, each citing this review). The review confirms that #288 resolved
+  the failure and the advisories of an unretained review at `1873d105`: the agent trace's Task rows
+  had reused source-demo data and now have fresh sample copy, and the same pull request replaced
+  the Tool calls header and verbs, the chat panel's placeholder and unused menu label, the
+  assistive-technology and announcement wording in the agent trace, context sources, and
+  recommendation records, the quick find's empty state and filter-field statement, the
+  recommendation's frame, venue name, and chip naming, the block-owned `Menu.Trigger` rings in the
+  company records and workspace navigation, and the demo-derived data in the Activity and DataDiff
+  examples and the Storybook fixtures. It carries forward, not fixed, the unmarked pricing offer
+  copy, the "Card.Root has none" note, the forced-colours notes of the company records and
+  workspace navigation (backed by emulated tests, not a real forced-colours run), the generic-word
+  echoes "Generic Supply" and "Review the draft outline", the Lucide-identical `Switch` chevron
+  glyph and six further inline glyphs with Lucide geometry (plus, chevron-up, chevron-down, x,
+  check, and search-x, elementary strokes, with Lucide's licence listed in `packages/react/NOTICE`),
+  the shared Cmd or Ctrl plus B fold shortcut, that workspace navigation is the block closest to a
+  page shell, and, with no change needed, the agent trace's generic Thinking labels and the context
+  sources' "All chunks" heading and count. The artifact's `advisoryLines` is empty, because that scan
+  keys on the word "advisory" and this review marks them "Carried"; the retained review and
+  `verdictText` hold the list. The `1899324c` content review is archived with its capture under
+  `superseded/1899324c8aed/`, the `c1e5c437` content review under `superseded/82873337a4f9/`, the
+  `e9a470c2` content review under `superseded/a7237f58d870/`, and the close-out content review of
+  `670cb188` and the earlier growth content review of `bb609726` with theirs.
 - **Exit review (`E-BL1-09`).** A growth capture takes no new exit review and reuses
   the close-out's: the final review of the step 1 tooling at
   `509d870216ea00a0afbca717fa39188afffbd21a`, tree
@@ -101,9 +130,9 @@ accepted authority change, and no longer does (Decision 0027, #248, removed that
   differs, and no proof tool differs: the squash commit is the tree the reviewer read.
   The record carries its own limits and verdict. Five proof tools differ at the growth
   capture's source revision, so the `E-BL1-09` record states that the exit review is not
-  a review of them as they ran; #233, #239, #252, #258, #259, and #260, which changed them, each
-  had their own independent review, and #253 is covered by the integrity test and a growth
-  rehearsal.
+  a review of them as they ran; #233, #239, #252, #258, #259, #260, #282, #285, #289, and #291, which
+  changed them, each had their own independent review, and #253 is covered by the integrity test
+  and a growth rehearsal.
 
 Two earlier reviews of the step 1 tooling, of `82aa2576` and of `c4770e2d`, found
 defects that the step 1 fixup resolved. They are not retained: the `509d8702` review
@@ -258,8 +287,8 @@ publish guard). A participant's default copy, such as a placeholder or an access
 and its runtime module; no per-component source mapping exists for every participant, so the runtime part is
 the whole of `packages/react/src`, which is conservative: any runtime change asks for a new review. That
 includes `generate.mjs`, which projects the runtime that blocks import and could transform its copy, and
-`supplemental-mapping.mjs`, which selects the runtime sources and exports. The retained content review (`1899324c`)
-read the blocks after #256 changed `generate.mjs`, so it covers all seven blocks at the capture's source
+`supplemental-mapping.mjs`, which selects the runtime sources and exports. The retained content review (`c9ae8067`)
+read the blocks after #256 changed `generate.mjs`, so it covers all fourteen blocks at the capture's source
 revision; a later change to a block, to a participant's record, or to a rendering file under
 `packages/react/src` asks for a new independent content review (`--content-review`) for the blocks it
 touches. Reviews retained by earlier captures, current or archived, are candidates, so `--content-review` is

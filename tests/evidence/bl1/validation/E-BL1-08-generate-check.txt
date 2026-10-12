@@ -7,15 +7,16 @@ Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +1001
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 1001, reused 1001, downloaded 0, added 381
-Progress: resolved 1001, reused 1001, downloaded 0, added 817
+Progress: resolved 1001, reused 1001, downloaded 0, added 248
+Progress: resolved 1001, reused 1001, downloaded 0, added 670
 Progress: resolved 1001, reused 1001, downloaded 0, added 998
+Progress: resolved 1001, reused 1001, downloaded 0, added 1000
 Progress: resolved 1001, reused 1001, downloaded 0, added 1001, done
 
 devDependencies:
 + @muxui/catalog 2.1.0 <- packages/catalog
 
-Done in 3.9s using pnpm v10.33.0
+Done in 4.5s using pnpm v10.33.0
 [workspace-task] generate: full graph
 [workspace-task] reason: generate requested full workspace coverage
 [workspace-task] generation packages: @muxui/docs, @muxui/react-playground, @muxui/react-storybook, @muxui/scale, @muxui/catalog, @muxui/foundation, @muxui/react, @muxui/react-native, @muxui/schema, @muxui/tokens, @muxui/tooling, @muxui/web, @muxui/repository-policy, @muxui/figma
@@ -28,7 +29,7 @@ Scope: 14 of 15 workspace projects
 
 [foundation] no generated package-owned outputs
 
-> @muxui/schema@0.5.0 generate <tmp>
+> @muxui/schema@0.6.0 generate <tmp>
 > node src/generate.mjs
 
 [schema] generated packages/schema/generated/types.d.ts
@@ -74,7 +75,7 @@ Scope: 14 of 15 workspace projects
 > node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/generate-stories.mjs
 
 [prerequisites] @muxui/react...: already generated for this run
-React Storybook projection: 84 families, 84 stories, 9 block variants in 7 block pages
+React Storybook projection: 84 families, 84 stories, 20 block variants in 14 block pages
 
 > @muxui/repository-policy@0.0.0 generate <tmp>
 > node src/generate.mjs
@@ -85,15 +86,15 @@ Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +1001
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 1001, reused 1001, downloaded 0, added 338
-Progress: resolved 1001, reused 1001, downloaded 0, added 660
+Progress: resolved 1001, reused 1001, downloaded 0, added 269
+Progress: resolved 1001, reused 1001, downloaded 0, added 895
 Progress: resolved 1001, reused 1001, downloaded 0, added 998
 Progress: resolved 1001, reused 1001, downloaded 0, added 1001, done
 
 devDependencies:
 + @muxui/catalog 2.1.0 <- packages/catalog
 
-Done in 3.9s using pnpm v10.33.0
+Done in 4.3s using pnpm v10.33.0
 [workspace-task] generate: full graph
 [workspace-task] reason: generate requested full workspace coverage
 [workspace-task] generation packages: @muxui/docs, @muxui/react-playground, @muxui/react-storybook, @muxui/scale, @muxui/catalog, @muxui/foundation, @muxui/react, @muxui/react-native, @muxui/schema, @muxui/tokens, @muxui/tooling, @muxui/web, @muxui/repository-policy, @muxui/figma
@@ -106,7 +107,7 @@ Scope: 14 of 15 workspace projects
 
 [foundation] no generated package-owned outputs
 
-> @muxui/schema@0.5.0 generate <tmp>
+> @muxui/schema@0.6.0 generate <tmp>
 > node src/generate.mjs
 
 [schema] generated packages/schema/generated/types.d.ts
@@ -152,10 +153,10 @@ Scope: 14 of 15 workspace projects
 > node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/generate-stories.mjs
 
 [prerequisites] @muxui/react...: already generated for this run
-React Storybook projection: 84 families, 84 stories, 9 block variants in 7 block pages
+React Storybook projection: 84 families, 84 stories, 20 block variants in 14 block pages
 
 > @muxui/repository-policy@0.0.0 generate <tmp>
 > node src/generate.mjs
 
 Repository-policy package owns no projections; generation is a deterministic no-op.
-[E-G0.0-04] independent clean checkouts 1899324c8aed2d94a6324c4656d2149af5571f39 generated identical projections with clean worktrees (sha256:aedbb7fb70875e528ae6d488d87eee1d1ef2149074284976073323b03b4963a9)
+[E-G0.0-04] independent clean checkouts b4bdc0dbaf20dfa5e8e60cd25f76a9d4bdcbb584 generated identical projections with clean worktrees (sha256:2dca5d5704383e06be0aafea2f634cfa5b0805844968c9eb2590e0e6e69e4818)
