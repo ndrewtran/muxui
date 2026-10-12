@@ -60,7 +60,7 @@
   "accessibility": [
     "The section is named by its All chunks heading, and each excerpt is a list item with its own h3.",
     "The source chip is a Link inside a PreviewTrigger named for its file: the preview opens on hover or keyboard focus and holds the location.",
-    "The file type mark is decorative and hidden from assistive technology, and the file name is the link text.",
+    "The file type mark is decorative and marked aria-hidden, and the file name is the link text.",
     "The count is plain text beside the heading."
   ],
   "unsupported": [
