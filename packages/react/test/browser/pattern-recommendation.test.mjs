@@ -112,7 +112,7 @@ async function rankedTests(t, browser, url) {
       const option = (name) => group.getByRole('radio', { name: new RegExp(name, 'u') });
       await group.waitFor();
       assert.equal(await group.getByRole('radio').count(), 3);
-      assert.equal(await option('Hold the lakeside lodge').isChecked(), true);
+      assert.equal(await option('Hold Sample Lodge').isChecked(), true);
       assert.equal(await meterText(tab), '86%');
 
       // A pointer press and the arrow keys both move the selection, and the meter follows it.
@@ -129,7 +129,7 @@ async function rankedTests(t, browser, url) {
       await accept(tab).click();
       await tab.getByRole('button', { name: 'Accepted' }).waitFor();
       assert.equal(await tab.getByRole('button', { name: 'Accepted' }).isDisabled(), true);
-      assert.equal(await option('Hold the lakeside lodge').isDisabled(), true);
+      assert.equal(await option('Hold Sample Lodge').isDisabled(), true);
       assert.equal(await option('Switch to the harbor loft').isChecked(), true);
       await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted Switch to the harbor loft. Nothing was booked.', undefined, { message: 'the status names the accepted option', report: () => document.querySelector('[role="status"]').textContent });
       assert.deepEqual(errors, []);
@@ -141,7 +141,7 @@ async function rankedTests(t, browser, url) {
   await t.test('ranked: accepting by keyboard moves focus to the heading and locks the choice', async () => {
     const { context, tab, errors } = await openBlock(browser, url);
     try {
-      await tab.getByRole('radio', { name: /Hold the lakeside lodge/u }).focus();
+      await tab.getByRole('radio', { name: /Hold Sample Lodge/u }).focus();
       await tab.keyboard.press('ArrowDown');
       await accept(tab).focus();
       await tab.keyboard.press('Enter');
@@ -158,7 +158,7 @@ async function rankedTests(t, browser, url) {
     for (const scheme of ['light', 'dark']) {
       const { context, tab } = await openBlock(browser, url, { scheme });
       try {
-        assert.deepEqual(await tabWalk(tab, ringWalk(tab), `ranked ${scheme}`), ['radio Hold the lakeside lodge Recommended 86%', 'button Accept'], `${scheme}: Tab visits the controls in this order`);
+        assert.deepEqual(await tabWalk(tab, ringWalk(tab), `ranked ${scheme}`), ['radio Hold Sample Lodge Recommended 86%', 'button Accept'], `${scheme}: Tab visits the controls in this order`);
       } finally {
         await context.close();
       }

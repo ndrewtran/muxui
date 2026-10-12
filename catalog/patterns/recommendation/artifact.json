@@ -3,7 +3,7 @@
   "id": "muxui:pattern:recommendation",
   "kind": "pattern",
   "name": "Recommendation",
-  "summary": "A card that suggests one action in a sentence with a source chip and a value chip, a confidence meter, an Alternatives reveal, and Accept, or a ranked choice of options.",
+  "summary": "A card that suggests one action in a sentence with a name chip and a value chip, a confidence meter, an Alternatives reveal, and Accept, or a ranked choice of options.",
   "lifecycle": "experimental",
   "keywords": [
     "suggestion",
@@ -67,7 +67,7 @@
     "In Compact, Alternatives is a Button with aria-expanded and aria-controls for the list it reveals, and the list is named Alternatives.",
     "In Ranked, the options are a RadioGroup named Options, best match first, and the Meter follows the selected option.",
     "Accept ends disabled with a check, and a role=status element reads that nothing was booked.",
-    "The source and value chips are plain text, not controls, and the value chip border colour is decoration beside its text."
+    "The name and value chips are plain text, not controls, and the value chip border colour is decoration beside its text."
   ],
   "unsupported": [
     "Booking or placing anything: Accept only marks the card",

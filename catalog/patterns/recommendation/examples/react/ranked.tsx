@@ -8,7 +8,7 @@ const Check = () => (
 );
 
 const choices = [
-  { value: 'lodge', label: 'Hold the lakeside lodge', confidence: 0.86 },
+  { value: 'lodge', label: 'Hold Sample Lodge', confidence: 0.86 },
   { value: 'loft', label: 'Switch to the harbor loft', confidence: 0.54 },
   { value: 'wait', label: 'Wait for more RSVPs', confidence: 0.21 },
 ];
