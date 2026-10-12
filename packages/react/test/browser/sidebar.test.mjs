@@ -987,6 +987,7 @@ for (const engine of browserEngines()) {
 const groupsEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { Sidebar } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
@@ -996,7 +997,8 @@ const ProfileLabel = () => h('em', null, 'Profile');
 
 function Shell() {
   const [open, setOpen] = React.useState({ settings: true, profile: true, tools: true });
-  window.__setOpen = (id, next) => setOpen((previous) => ({ ...previous, [id]: next }));
+  // A caller changing a group from outside React: flushSync commits it before this returns, so no test waits on React's scheduler.
+  window.__setOpen = (id, next) => flushSync(() => setOpen((previous) => ({ ...previous, [id]: next })));
   const control = (id) => ({ expanded: open[id], onExpandedChange: (next) => setOpen((previous) => ({ ...previous, [id]: next })) });
   return h(React.Fragment, null,
     h('button', { id: 'before', type: 'button' }, 'Before'),
@@ -1086,11 +1088,8 @@ for (const engine of browserEngines()) {
           const labelled = node.getAttribute('aria-labelledby');
           return node === document.body ? 'body' : `${node.tagName.toLowerCase()} ${(labelled && document.getElementById(labelled).textContent) || node.querySelector('.muxui-sidebar__nav-label')?.textContent || node.textContent.trim()}`;
         });
-        // The caller changes `expanded` from outside, as a route change or a filter would, and focus is read once React has committed.
-        const setOpen = (id, next) => tab.evaluate(([group, value]) => {
-          window.__setOpen(group, value);
-          return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        }, [id, next]);
+        // The caller changes `expanded` from outside, as a route change or a filter would; the fixture commits it before this returns.
+        const setOpen = (id, next) => tab.evaluate(([group, value]) => window.__setOpen(group, value), [id, next]);
         const reopen = async () => { for (const id of ['settings', 'profile', 'tools']) await setOpen(id, true); };
 
         await tab.locator('a[href="#avatar"]').focus();
