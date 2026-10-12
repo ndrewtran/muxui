@@ -76,7 +76,7 @@ export function RecommendationRankedExample() {
         }
       `}</style>
       <Card.Root variant="elevated" padding="md">
-        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
+        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Suggested venue for the team offsite</Text></Card.Header>
         <Card.Body>
           <RadioGroup
             aria-label="Options, best match first"

@@ -62,11 +62,11 @@
     { "example": "muxui:example:recommendation-ranked" }
   ],
   "accessibility": [
-    "The section is named by its question heading.",
+    "The section is named by its heading.",
     "Confidence is a Meter named Confidence that reads as a percent.",
     "In Compact, Alternatives is a Button with aria-expanded and aria-controls for the list it reveals, and the list is named Alternatives.",
     "In Ranked, the options are a RadioGroup named Options, best match first, and the Meter follows the selected option.",
-    "Accept ends disabled with a check, and a status region announces that nothing was booked.",
+    "Accept ends disabled with a check, and a role=status element reads that nothing was booked.",
     "The source and value chips are plain text, not controls, and the value chip border colour is decoration beside its text."
   ],
   "unsupported": [
@@ -74,5 +74,5 @@
     "Updating the confidence or the options from a model",
     "Undoing an accepted recommendation: reload to start again"
   ],
-  "workflowValue": "Replaces wiring a suggestion card by hand: one list of options drives the alternatives, the ranked choice, and the confidence meter, and one accepted flag ends the card, so you swap the question and the options and keep the layout."
+  "workflowValue": "Replaces wiring a suggestion card by hand: one list of options drives the alternatives, the ranked choice, and the confidence meter, and one accepted flag ends the card, so you swap the heading and the options and keep the layout."
 }

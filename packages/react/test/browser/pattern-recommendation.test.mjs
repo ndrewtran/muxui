@@ -26,8 +26,8 @@ async function compactTests(t, browser, url) {
     try {
       const toggle = tab.getByRole('button', { name: 'Alternatives' });
       await toggle.waitFor();
-      assert.equal(await tab.getByRole('region').getAttribute('aria-labelledby') !== null, true, 'the section is named by its question');
-      assert.equal(await tab.getByRole('heading', { level: 2 }).textContent(), 'Want me to book the team offsite?');
+      assert.equal(await tab.getByRole('region').getAttribute('aria-labelledby') !== null, true, 'the section is named by its heading');
+      assert.equal(await tab.getByRole('heading', { level: 2 }).textContent(), 'Suggested venue for the team offsite');
       assert.equal(await meterText(tab), '86%');
       assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
       assert.equal(await tab.getByRole('list', { name: 'Alternatives' }).count(), 0, 'the alternatives start hidden');
@@ -61,7 +61,7 @@ async function compactTests(t, browser, url) {
       await accept(tab).focus();
       await tab.keyboard.press('Enter');
       await tab.getByRole('button', { name: 'Accepted' }).waitFor();
-      assert.equal(await stopOf(tab), 'heading Want me to book the team offsite?', 'focus is on the heading, not lost to the page');
+      assert.equal(await stopOf(tab), 'heading Suggested venue for the team offsite', 'focus is on the heading, not lost to the page');
       await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted. Nothing was booked.', undefined, { message: 'the status announces the accepted state', report: () => document.querySelector('[role="status"]').textContent });
       assert.deepEqual(errors, []);
     } finally {
@@ -146,7 +146,7 @@ async function rankedTests(t, browser, url) {
       await accept(tab).focus();
       await tab.keyboard.press('Enter');
       await tab.getByRole('button', { name: 'Accepted' }).waitFor();
-      assert.equal(await stopOf(tab), 'heading Want me to book the team offsite?', 'focus is on the heading, not lost to the page');
+      assert.equal(await stopOf(tab), 'heading Suggested venue for the team offsite', 'focus is on the heading, not lost to the page');
       await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted Switch to the harbor loft. Nothing was booked.', undefined, { message: 'the status names the accepted option', report: () => document.querySelector('[role="status"]').textContent });
       assert.deepEqual(errors, []);
     } finally {

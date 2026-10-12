@@ -107,10 +107,10 @@ export function RecommendationCompactExample() {
         }
       `}</style>
       <Card.Root variant="elevated" padding="md">
-        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
+        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Suggested venue for the team offsite</Text></Card.Header>
         <Card.Body>
           <Text color="muted">
-            Hold the lakeside lodge from <span className="reco-source"><Avatar.Root size="sm" aria-hidden="true"><Avatar.Fallback>L</Avatar.Fallback></Avatar.Root>Larch Lodge</span> with a deposit due in <span className="reco-value">5 days</span>
+            <span className="reco-source"><Avatar.Root size="sm" aria-hidden="true"><Avatar.Fallback>S</Avatar.Fallback></Avatar.Root>Sample Lodge</span> is the best match, and its deposit is due in <span className="reco-value">5 days</span>
           </Text>
           {open && (
             <ul className="reco-more" id={`${id}-more`} aria-label="Alternatives">
