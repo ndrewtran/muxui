@@ -48,6 +48,13 @@ test('Sidebar Section labels its nested list and a Root outside a Provider rende
   assert.doesNotMatch(plain, /data-foldable|data-collapsed|search-button/u);
 });
 
+test('Sidebar density marks only a compact Root and leaves the default markup alone', () => {
+  const plain = renderToString(tree());
+  assert.doesNotMatch(plain, /data-density/u);
+  assert.equal(renderToString(tree({}, { density: 'default' })), plain);
+  assert.match(renderToString(tree({}, { density: 'compact' })), /<aside[^>]* data-density="compact"/u);
+});
+
 test('Sidebar Toggle requires a Provider', () => {
   assert.throws(() => renderToString(h(Sidebar.Toggle, null)), /Sidebar\.Toggle must be used inside Sidebar\.Provider/u);
 });

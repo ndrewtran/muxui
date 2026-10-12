@@ -96,7 +96,7 @@ export default function BlocksRailIsland({ groups, usesOptions, allHref, current
 	});
 
 	return (
-		<Sidebar.Root className="blocks-rail" aria-label="Block browser" hideBorder data-blocks-rail>
+		<Sidebar.Root className="blocks-rail" aria-label="Block browser" density="compact" hideBorder data-blocks-rail>
 			<Sidebar.Header className="blocks-filters" role="search">
 				<SearchField aria-label="Search blocks" placeholder="Search blocks" value={filter.query} onChange={(query) => setFilter({ query })} />
 				<SelectNative label="Uses component" value={filter.uses} onChange={(event) => setFilter({ uses: event.target.value })}>

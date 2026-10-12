@@ -544,6 +544,10 @@ test('control inference and composition adapters preserve canonical values', () 
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Group')).role.options.includes('textbox'),
     false,
   );
+  assert.deepEqual(
+    argTypesForBinding(descriptorSource.bindings.find(({ export: name }) => name === 'Sidebar')).density.options,
+    ['default', 'compact'],
+  );
   const group = renderFamily('Group', storyArgsForBinding(
     descriptor.bindings.find(({ export: name }) => name === 'Group'),
     'default',

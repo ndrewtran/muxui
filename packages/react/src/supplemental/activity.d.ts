@@ -2,7 +2,18 @@ import type * as React from 'react';
 
 export type ActivityStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 export type ActivityAction = { id: string; label: string; onAction: () => void; disabled?: boolean };
-export type ActivityItem = { id: string; label: string; status: ActivityStatus; details?: React.ReactNode; context?: React.ReactNode; meta?: React.ReactNode; time?: string; actions?: readonly ActivityAction[] };
+export type ActivityItem = {
+  id: string;
+  label: string;
+  status: ActivityStatus;
+  details?: React.ReactNode;
+  context?: React.ReactNode;
+  meta?: React.ReactNode;
+  time?: string;
+  actions?: readonly ActivityAction[];
+  /** Starts the item's disclosure open. Read at mount, so later changes do not open or close it; an item without details, context, or actions ignores it. */
+  defaultExpanded?: boolean;
+};
 export type ActivityProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'dangerouslySetInnerHTML'> & {
   label: string;
   items: readonly ActivityItem[];

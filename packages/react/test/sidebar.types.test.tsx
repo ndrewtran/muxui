@@ -47,3 +47,9 @@ const leafWithoutHref = <Sidebar.NavItem items={[{ label: 'Nowhere' }]}>Group</S
 const wrongExpanded = <Sidebar.NavItem onExpandedChange={(expanded: string) => void expanded}>Group</Sidebar.NavItem>;
 void leafWithoutHref;
 void wrongExpanded;
+
+const compact = <Sidebar.Root aria-label="Workspace" density="compact" />;
+// @ts-expect-error Density is default or compact.
+const wrongDensity = <Sidebar.Root aria-label="Workspace" density="dense" />;
+void compact;
+void wrongDensity;

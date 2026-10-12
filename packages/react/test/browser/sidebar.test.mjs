@@ -741,6 +741,7 @@ for (const engine of browserEngines()) {
 const nestedEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { Sidebar } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
@@ -757,7 +758,8 @@ function Shell() {
       if (params.get('reject') !== '1') setOpen((previous) => ({ ...previous, [id]: next }));
     },
   });
-  window.__setOpen = (id, next) => setOpen((previous) => ({ ...previous, [id]: next }));
+  // A caller changing a group from outside React: flushSync commits it before this returns, so no test waits on React's scheduler.
+  window.__setOpen = (id, next) => flushSync(() => setOpen((previous) => ({ ...previous, [id]: next })));
   return h(React.Fragment, null,
     h('button', { id: 'before', type: 'button' }, 'Before'),
     h(Sidebar.Provider, { defaultCollapsed: params.get('folded') === '1', shortcut: 'b' },
@@ -867,7 +869,7 @@ for (const engine of browserEngines()) {
           await tab.locator('summary', { hasText: 'Controlled' }).click();
           assert.equal(await visible(tab, 'a[href="#alpha"]'), true, label('a controlled details group follows its caller'));
           assert.deepEqual(await tab.evaluate(() => window.__changes), [['details', true]], label('and reports the request'));
-          await tab.evaluate(() => { window.__setOpen('details', false); return new Promise((resolve) => requestAnimationFrame(() => resolve())); });
+          await tab.evaluate(() => window.__setOpen('details', false));
           assert.equal(await visible(tab, 'a[href="#alpha"]'), false, label('the caller can close it'));
 
           // Link groups: the link is a plain link, and a separate toggle owns the state.
@@ -985,6 +987,7 @@ for (const engine of browserEngines()) {
 const groupsEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { Sidebar } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
@@ -994,7 +997,8 @@ const ProfileLabel = () => h('em', null, 'Profile');
 
 function Shell() {
   const [open, setOpen] = React.useState({ settings: true, profile: true, tools: true });
-  window.__setOpen = (id, next) => setOpen((previous) => ({ ...previous, [id]: next }));
+  // A caller changing a group from outside React: flushSync commits it before this returns, so no test waits on React's scheduler.
+  window.__setOpen = (id, next) => flushSync(() => setOpen((previous) => ({ ...previous, [id]: next })));
   const control = (id) => ({ expanded: open[id], onExpandedChange: (next) => setOpen((previous) => ({ ...previous, [id]: next })) });
   return h(React.Fragment, null,
     h('button', { id: 'before', type: 'button' }, 'Before'),
@@ -1084,11 +1088,8 @@ for (const engine of browserEngines()) {
           const labelled = node.getAttribute('aria-labelledby');
           return node === document.body ? 'body' : `${node.tagName.toLowerCase()} ${(labelled && document.getElementById(labelled).textContent) || node.querySelector('.muxui-sidebar__nav-label')?.textContent || node.textContent.trim()}`;
         });
-        // The caller changes `expanded` from outside, as a route change or a filter would, and focus is read once React has committed.
-        const setOpen = (id, next) => tab.evaluate(([group, value]) => {
-          window.__setOpen(group, value);
-          return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        }, [id, next]);
+        // The caller changes `expanded` from outside, as a route change or a filter would; the fixture commits it before this returns.
+        const setOpen = (id, next) => tab.evaluate(([group, value]) => window.__setOpen(group, value), [id, next]);
         const reopen = async () => { for (const id of ['settings', 'profile', 'tools']) await setOpen(id, true); };
 
         await tab.locator('a[href="#avatar"]').focus();
@@ -1172,6 +1173,267 @@ for (const engine of browserEngines()) {
       assert.ok(steps.ltr[0] > steps.ltr[1] && steps.ltr[1] > 0, `${engine}: each level indents, the nested step smaller (${steps.ltr})`);
       assert.deepEqual(steps.rtl.map((step) => Math.round(step * 100)), steps.ltr.map((step) => Math.round(step * 100)), `${engine}: right-to-left indents from the right by the same steps`);
       assert.ok(rtl.category.right > rtl.block.right && rtl.block.right > rtl.variant.right, `${engine}: right-to-left nests toward the left`);
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+// Cross-engine proof for Sidebar density. A Root without density and one with density="default" compute exactly the
+// spacing the Sidebar always had, each from its own token; compact tightens rows, gaps, section labels, and nesting from
+// other existing tokens, keeps every interactive row above the 24px target minimum, and leaves text, icons, and focus rings alone.
+// Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+
+const densityEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Sidebar } from '/src/supplemental/index.mjs';
+
+const h = React.createElement;
+const Icon = ({ className }) => h('svg', { className, viewBox: '0 0 24 24', 'aria-hidden': true }, h('rect', { x: 4, y: 4, width: 16, height: 16 }));
+// The same navigation under each density: a link, then a section holding a link group of link groups and a details group.
+const rail = (name, props) => h(Sidebar.Root, { 'aria-label': name, ...props },
+  h(Sidebar.NavList, { 'aria-label': name + ' pages' },
+    h(Sidebar.Section, { label: 'Pages' }, h(Sidebar.NavItem, { href: '#home-' + name, icon: Icon }, 'Home')),
+    h(Sidebar.Section, { label: 'Library' },
+      h(Sidebar.NavItem, { href: '#catalog-' + name, defaultExpanded: true, items: [
+        { id: 'button', label: 'Button', href: '#button-' + name, defaultExpanded: true, items: [{ label: 'Primary', href: '#primary-' + name, current: true }] },
+      ] }, 'Catalog'),
+      h(Sidebar.NavItem, { defaultExpanded: true, items: [{ label: 'Alpha', href: '#alpha-' + name }] }, 'Group'))));
+createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  h('button', { id: 'before', type: 'button' }, 'Before'),
+  h('div', { className: 'rails' }, rail('implicit', {}), rail('default', { density: 'default' }), rail('compact', { density: 'compact' }))));
+`;
+
+const densityPage = (url) => pageShell({
+  attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}"`,
+  head: '<link rel="stylesheet" href="/generated/styles.css"><style>.rails { display: flex; align-items: flex-start; gap: 16px; } .rails > aside { inline-size: 16rem; block-size: auto; }</style>',
+  bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<div id="root"></div>',
+  entry: '/sidebar-density-entry.mjs',
+});
+
+/** Spacing, sizes, and focus ring of one rail, and the tokens that spacing comes from, in px; runs in the page. */
+function densityMetrics(name) {
+  const root = document.querySelector(`aside[aria-label="${name}"]`);
+  const px = (value) => Number.parseFloat(value);
+  const style = (selector, context = root) => getComputedStyle(context.querySelector(selector));
+  const token = (id) => {
+    const probe = document.createElement('div');
+    probe.style.inlineSize = `var(--muxui-${id})`;
+    root.append(probe);
+    const { width } = probe.getBoundingClientRect();
+    probe.remove();
+    return width;
+  };
+  const blockGroup = root.querySelector('.muxui-sidebar__nav-children');
+  const link = style('.muxui-sidebar__nav-link');
+  const children = getComputedStyle(blockGroup);
+  const nested = style('.muxui-sidebar__nav-children', blockGroup);
+  const sections = root.querySelectorAll('.muxui-sidebar__section');
+  const label = style('.muxui-sidebar__section-label');
+  const toggle = style('.muxui-sidebar__nav-toggle');
+  const rows = [...root.querySelectorAll('a[href], summary, button')].filter((node) => node.getClientRects().length > 0).map((node) => node.getBoundingClientRect().height);
+  return {
+    density: root.getAttribute('data-density'),
+    tokens: {
+      insetTiny: token('semantic-layout-inset-tiny'), insetTight: token('semantic-layout-inset-tight'), insetSmall: token('semantic-layout-inset-small'),
+      insetMedium: token('semantic-layout-inset-medium'), insetLarge: token('semantic-layout-inset-large'), insetXlarge: token('semantic-layout-inset-xlarge'),
+      denseGap: token('semantic-layout-dense-gap'), groupGap: token('semantic-layout-group-gap'), controlGap: token('semantic-layout-control-gap'),
+      sizeSm: token('control-size-sm'), sizeMd: token('control-size-md'),
+    },
+    spacing: {
+      linkPaddingBlock: px(link.paddingTop), linkMinBlock: px(link.minBlockSize), navListGap: px(style('.muxui-sidebar__nav-list').rowGap),
+      childrenGap: px(children.rowGap), childrenPaddingBlockStart: px(children.paddingTop), childrenMarginBlockStart: px(children.marginTop), childrenIndent: px(children.paddingLeft),
+      nestedIndent: px(nested.paddingLeft), sectionMarginBlockStart: px(getComputedStyle(sections[1]).marginTop),
+      labelPaddingBlockStart: px(label.paddingTop), labelPaddingBlockEnd: px(label.paddingBottom), toggleBlock: px(toggle.height),
+    },
+    // What density must not change: sizes, the inline padding, and the toggle's width.
+    kept: {
+      linkPaddingInline: px(link.paddingLeft), linkFontSize: px(link.fontSize), childFontSize: px(style('.muxui-sidebar__nav-child-link').fontSize), labelFontSize: px(label.fontSize),
+      iconSize: px(style('.muxui-sidebar__nav-icon').width), toggleInline: px(toggle.width), navListPaddingInline: px(style('.muxui-sidebar__nav-list').paddingLeft),
+    },
+    shortestRow: Math.min(...rows),
+    tallestRow: Math.max(...rows),
+  };
+}
+
+/** The ring of the focused element; runs in the page. */
+function densityFocusRing() {
+  const { outlineStyle, outlineWidth, outlineOffset, outlineColor } = getComputedStyle(document.activeElement);
+  return { outlineStyle, outlineWidth, outlineOffset, outlineColor };
+}
+
+// Layout snaps lengths to 1/64px, so a token read from a probe box can differ from the computed value by a hair.
+const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 0.05, `${message} (${actual} vs ${expected})`);
+
+for (const engine of browserEngines()) {
+  test(`Sidebar density compacts rows without touching the default in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-density.html': densityPage },
+      modules: { '/sidebar-density-entry.mjs': densityEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-density.html`, 'aside');
+      const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, locale: 'en-US' });
+      try {
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        await tab.goto(`${url}/sidebar-density.html`, { waitUntil: 'networkidle' });
+        await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+        const [implicit, explicit, compact] = await Promise.all(['implicit', 'default', 'compact'].map((name) => tab.evaluate(densityMetrics, name)));
+
+        assert.equal(implicit.density, null, `${engine}: a Root without density has no data-density`);
+        assert.equal(explicit.density, null, `${engine}: density="default" has no data-density`);
+        assert.equal(compact.density, 'compact', `${engine}: a compact Root says so`);
+        assert.deepEqual(explicit.spacing, implicit.spacing, `${engine}: density="default" computes the spacing of no density`);
+        assert.deepEqual(explicit.kept, implicit.kept, `${engine}: density="default" keeps the sizes of no density`);
+
+        // The default spacing is the one the Sidebar has always drawn, each value from its own token.
+        const { tokens: t } = implicit;
+        const defaults = {
+          linkPaddingBlock: t.insetTiny, linkMinBlock: t.sizeMd, navListGap: t.denseGap, childrenGap: t.denseGap, childrenPaddingBlockStart: t.insetTiny,
+          childrenMarginBlockStart: t.denseGap, childrenIndent: t.insetXlarge, nestedIndent: t.insetLarge, sectionMarginBlockStart: t.groupGap,
+          labelPaddingBlockStart: t.insetSmall, labelPaddingBlockEnd: t.insetTight, toggleBlock: t.sizeMd,
+        };
+        for (const [property, expected] of Object.entries(defaults)) near(implicit.spacing[property], expected, `${engine}: default ${property}`);
+
+        // Compact steps down to other existing tokens: the small control height, the tight inset, and smaller nesting steps.
+        const compacted = {
+          linkPaddingBlock: t.insetTight, linkMinBlock: t.sizeSm, navListGap: 0, childrenGap: 0, childrenPaddingBlockStart: 0,
+          childrenMarginBlockStart: 0, childrenIndent: t.insetLarge, nestedIndent: t.insetMedium, sectionMarginBlockStart: t.controlGap,
+          labelPaddingBlockStart: t.insetTight, labelPaddingBlockEnd: t.insetTight, toggleBlock: t.sizeSm,
+        };
+        for (const [property, expected] of Object.entries(compacted)) near(compact.spacing[property], expected, `${engine}: compact ${property}`);
+        assert.deepEqual(compact.kept, implicit.kept, `${engine}: compact keeps text and icon sizes, inline padding, and the toggle's width`);
+        assert.ok(compact.tallestRow < implicit.shortestRow, `${engine}: every compact row is shorter than a default row (${compact.tallestRow} vs ${implicit.shortestRow})`);
+        assert.ok(compact.shortestRow >= 24, `${engine}: every compact row stays at least 24px tall (${compact.shortestRow})`);
+        assert.ok(implicit.shortestRow >= 24, `${engine}: every default row is at least 24px tall (${implicit.shortestRow})`);
+
+        // Keyboard focus draws the same ring either way.
+        await tab.locator('#before').focus();
+        await tab.keyboard.press('Tab');
+        const rings = [];
+        for (const name of ['implicit', 'compact']) {
+          await tab.locator(`aside[aria-label="${name}"] a[href="#home-${name}"]`).focus();
+          rings.push(await tab.evaluate(densityFocusRing));
+        }
+        assert.equal(rings[0].outlineStyle, 'solid', `${engine}: the focus ring shows`);
+        assert.deepEqual(rings[1], rings[0], `${engine}: compact keeps the focus ring`);
+        assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+      } finally {
+        await context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+/** The Mux scheme the page declares and the luminance of what it paints behind and in the rail; runs in the page. */
+function densityScheme() {
+  const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const luminance = (css) => {
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = css;
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue] = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((value) => {
+      const channel = value / 255;
+      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  return {
+    attribute: document.documentElement.getAttribute('data-muxui-color-scheme'),
+    page: luminance(getComputedStyle(document.body).backgroundColor),
+    rail: luminance(getComputedStyle(document.querySelector('aside')).backgroundColor),
+  };
+}
+
+/**
+ * Whether the focus ring is painted on each side of a box, read from a screenshot; runs in the page, where the image decodes
+ * on a canvas. The ring sits 2px outside the box and is 2px wide, so each probe is the middle of that band, 3px out.
+ */
+async function ringSides({ png, clip, box, scale, ring }) {
+  const image = new Image();
+  image.src = `data:image/png;base64,${png}`;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(image, 0, 0);
+  const pixel = (x, y) => [...context.getImageData(Math.round((x - clip.x) * scale), Math.round((y - clip.y) * scale), 1, 1).data];
+  // Canvas resolves any CSS colour, so the ring's computed colour becomes the RGB the page paints.
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = ring;
+  context.fillRect(0, 0, 1, 1);
+  const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  const painted = (x, y) => pixel(x, y).slice(0, 3).every((value, index) => Math.abs(value - [red, green, blue][index]) <= 24);
+  const { left, top, width, height } = box;
+  return {
+    top: painted(left + width / 2, top - 3),
+    bottom: painted(left + width / 2, top + height + 3),
+    left: painted(left - 3, top + height / 2),
+    right: painted(left + width + 3, top + height / 2),
+  };
+}
+
+for (const engine of browserEngines()) {
+  test(`Sidebar compact paints a focused control's whole ring over the next row in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-density.html': densityPage },
+      modules: { '/sidebar-density-entry.mjs': densityEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-density.html`, 'aside');
+      const rings = {};
+      for (const scheme of ['light', 'dark']) {
+        // The device scale factor is pinned to 2 for ringSides: its probes assume two device pixels per CSS pixel and miss a side at 1.
+        const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2, locale: 'en-US' });
+        try {
+          const tab = await context.newPage();
+          await tab.goto(`${url}/sidebar-density.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+          // The page really is in the scheme asked for, painting its light or dark background, before any pixel is read.
+          const painted = await tab.evaluate(densityScheme);
+          assert.equal(painted.attribute, scheme, `${engine}: the page declares the ${scheme} Mux scheme`);
+          const [page, rail] = scheme === 'dark' ? [painted.page < 0.05, painted.rail < 0.05] : [painted.page > 0.8, painted.rail > 0.8];
+          assert.ok(page && rail, `${engine}: the ${scheme} scheme paints a ${scheme} page and rail (${JSON.stringify(painted)})`);
+          // The Button group's link and toggle are followed, with no gap in compact, by the current row's fill.
+          await tab.locator('#before').focus();
+          await tab.keyboard.press('Tab');
+          for (const name of ['implicit', 'compact']) {
+            for (const [part, selector] of [['link', `a[href="#button-${name}"]`], ['toggle', `.muxui-sidebar__nav-row:has(a[href="#button-${name}"]) button`]]) {
+              const control = tab.locator(`aside[aria-label="${name}"] ${selector}`);
+              await control.focus();
+              const { box, ring } = await control.evaluate((node) => {
+                const { left, top, width, height } = node.getBoundingClientRect();
+                return { box: { left, top, width, height }, ring: getComputedStyle(node).outlineColor };
+              });
+              const clip = { x: Math.max(0, box.left - 8), y: Math.max(0, box.top - 8), width: box.width + 16, height: box.height + 16 };
+              const png = (await tab.screenshot({ clip, type: 'png' })).toString('base64');
+              rings[`${scheme} ${name} ${part}`] = await tab.evaluate(ringSides, { png, clip, box, scale: 2, ring });
+            }
+          }
+        } finally {
+          await context.close();
+        }
+      }
+      const whole = { top: true, bottom: true, left: true, right: true };
+      const expected = Object.fromEntries(['light', 'dark'].flatMap((scheme) => ['implicit', 'compact'].flatMap((name) => ['link', 'toggle'].map((part) => [`${scheme} ${name} ${part}`, whole]))));
+      assert.deepEqual(rings, expected, `${engine}: the Button group's link and toggle rings are painted on every side, in both schemes`);
     } finally {
       await browser?.close();
       await close();

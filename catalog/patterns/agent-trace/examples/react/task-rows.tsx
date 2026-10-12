@@ -39,7 +39,7 @@ export function AgentTraceTaskRowsExample() {
         label="Supplier follow-up"
         items={[
           { id: 'a', label: 'Verified vendor records', status: 'completed', meta: '12 vendors', time: '4s', details: facts([['Matched contact records', '12/12'], ['Flagged stale records', '0']]) },
-          { id: 'b', label: 'Build reorder list', status: 'running', meta: '7 items', details: <><ProgressBar label="Scoring stock risk" value={68} />{facts([['Reading the export', '3 files']])}</> },
+          { id: 'b', label: 'Build reorder list', status: 'running', meta: '7 items', defaultExpanded: true, details: <><ProgressBar label="Scoring stock risk" value={68} />{facts([['Reading the export', '3 files']])}</> },
           { id: 'c', label: 'Draft vendor emails', status: 'queued', meta: '2 messages' },
         ]}
       />

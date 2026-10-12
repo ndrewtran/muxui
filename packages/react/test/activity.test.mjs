@@ -43,3 +43,36 @@ test('Activity initially closed SSR retains content behind native and inert disc
   assert.equal(document.querySelector('summary').getAttribute('aria-expanded'), 'false');
   assert.equal(document.querySelector('.muxui-activity-details').textContent, 'Supplied detail');
 });
+
+test('Activity item defaultExpanded opens a disclosure row at mount, hydrates cleanly, and is read once', async () => {
+  const items = [
+    { id: 'open', label: 'Read', status: 'queued', details: 'Supplied detail', defaultExpanded: true },
+    { id: 'closed', label: 'Write', status: 'queued', details: 'Other detail' },
+    { id: 'plain', label: 'Plan', status: 'queued', defaultExpanded: true },
+  ];
+  const [open, closed, plain] = new JSDOM(renderToString(e({ items }))).window.document.querySelectorAll('.muxui-activity-item');
+  assert.equal(open.querySelector('details').open, true);
+  assert.equal(open.querySelector('summary').getAttribute('aria-expanded'), 'true');
+  assert.equal(open.querySelector('.muxui-activity-motion-panel').hasAttribute('inert'), false);
+  assert.equal(closed.querySelector('details').open, false);
+  assert.equal(closed.querySelector('summary').getAttribute('aria-expanded'), 'false');
+  assert.equal(plain.querySelector('details, summary'), null);
+  // An open row inside a closed aggregate stays open and hidden with it.
+  const collapsed = new JSDOM(renderToString(e({ defaultExpanded: false, items }))).window.document;
+  assert.equal(collapsed.querySelector('.muxui-activity-items-host').hasAttribute('hidden'), true);
+  assert.equal(collapsed.querySelector('details').open, true);
+
+  const { restore } = createDom(`<div id="root">${renderToString(e({ items }))}</div>`); let root;
+  try {
+    const errors = [];
+    await act(async () => { root = hydrateRoot(document.querySelector('#root'), e({ items }), { onRecoverableError: (error) => errors.push(error) }); });
+    assert.deepEqual(errors, []);
+    await act(async () => root.render(e({ items: items.map((item) => ({ ...item, defaultExpanded: !item.defaultExpanded })) })));
+    const [first, second] = document.querySelectorAll('details');
+    assert.equal(first.open, true);
+    assert.equal(first.querySelector('summary').getAttribute('aria-expanded'), 'true');
+    assert.equal(second.open, false);
+    assert.equal(second.querySelector('summary').getAttribute('aria-expanded'), 'false');
+    await act(async () => root.unmount());
+  } finally { restore(); }
+});
