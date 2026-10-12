@@ -1,0 +1,23 @@
+✔ E-BL1-10: content.remote-reference rejects each negative fixture (2.191458ms)
+✔ E-BL1-10: content.colour-literal rejects each negative fixture (0.984792ms)
+✔ E-BL1-10: accepted forms pass every source rule (0.491167ms)
+✔ E-BL1-10: a violation reports its line and each rule once per line (0.092416ms)
+✔ E-BL1-10: the shipped poster grid variants pass every source rule (2.202542ms)
+✔ E-BL1-10 mutation: the real seed compiles, and each injected violation fails the compile with its rule and source line (918.308083ms)
+✔ E-BL1-10 asset licenses: an asset with a valid license record and clean content compiles (614.27175ms)
+✔ E-BL1-10 asset licenses: each negative fixture fails with the asset-license rule at its file (379.546166ms)
+✔ E-BL1-10 asset licenses: a licensed text asset still passes the colour and remote rules (45.863625ms)
+✔ E-BL1-10 asset licenses: files the compiler already reads, and dotfiles, are not assets (300.299625ms)
+✔ E-BL1-10: a local reference must resolve to a licensed asset inside the pattern directory (0.494417ms)
+✔ E-BL1-10 local references: a variant resolves them against the licensed assets of its pattern (706.785959ms)
+✔ E-BL1-10 asset licenses: a text asset resolves its own local references, and a dot-named asset needs a license (733.707708ms)
+✔ E-BL1-10: the issue helper links each variant source and names the variants owner (0.209458ms)
+✔ E-BL1-10: a content-rule failure is diagnosed at the variants owner with its file and line, not as an import (4.468792ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3752.689625

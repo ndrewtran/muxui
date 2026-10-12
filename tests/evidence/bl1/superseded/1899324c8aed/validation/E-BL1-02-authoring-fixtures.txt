@@ -1,0 +1,28 @@
+✔ E-BL1-02: a scaffold emits only canonical inputs under catalog/patterns and previews the manifest (6.402541ms)
+✔ E-BL1-02: a scaffold round-trips through schema validation, compile, and get (2990.593166ms)
+✔ E-BL1-02 negative: a scaffold refuses missing decisions, unowned fields, and non-canonical sources (39.137292ms)
+✔ E-BL1-02: semantic diff separates editorial, compatible, and incompatible pattern edits (9.908833ms)
+✔ E-BL1-02: change intent previews a pattern edit with its variants and checks (5.888083ms)
+✔ E-BL1-02: a variant source edit moves only patternRevision and that example's contentRevision (220.574292ms)
+✔ E-BL1-02: affected closure reaches a pattern from a variant source, its schema, and its components (30.943959ms)
+✔ E-BL1-02: an orphan example is diagnosed at its owner, now resolvable (51.242916ms)
+✔ E-BL1-02: an undeclared import is diagnosed with its file, line, and the canonical form (151.173459ms)
+✔ E-BL1-02: an unknown participant is diagnosed at the participant component (51.156083ms)
+✔ E-BL1-02: an undeclared category is diagnosed at the pattern category with the registry named (50.154666ms)
+✔ E-BL1-02: a duplicate variant is diagnosed through the manifest entry the compiler stopped at (12.15875ms)
+✔ E-BL1-02: a colliding variant id is attributed to the later declaration and references the earlier one (126.309875ms)
+✔ E-BL1-02: a hand-edited CRLF variant is diagnosed at its example record and source file (49.720458ms)
+✔ E-BL1-02: pattern records diagnose at their field owners through canonical source diagnosis (1.599541ms)
+✔ E-BL1-01: an unknown pattern field is diagnosed at the pattern contract through the family fallback (0.802041ms)
+✔ E-BL1-02: an authored derived field is diagnosed at its reserved owner, not the family contract (16.555959ms)
+✔ E-BL1-02: every pattern and example path reports its own revision members, never the generic fallback (9.807917ms)
+✔ E-BL1-02: an injected stable pattern field must couple scaffold, diff, diagnostics, and closure (9.375875ms)
+✔ E-BL1-02: an injected required example field must couple variant decisions to the example schema (9.195292ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4006.096416

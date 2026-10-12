@@ -1,5 +1,5 @@
 {
-  "tsc": "Version 6.0.3",
+  "tsc": "Version 7.0.2",
   "strict": true,
   "skipLibCheck": false,
   "variants": [
@@ -70,6 +70,94 @@
     {
       "id": "muxui:example:workspace-navigation-foldable",
       "source": "catalog/patterns/workspace-navigation/examples/react/foldable.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:agent-trace-thinking",
+      "source": "catalog/patterns/agent-trace/examples/react/thinking.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:agent-trace-tool-calls",
+      "source": "catalog/patterns/agent-trace/examples/react/tool-calls.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:agent-trace-task-rows",
+      "source": "catalog/patterns/agent-trace/examples/react/task-rows.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:context-sources-excerpts",
+      "source": "catalog/patterns/context-sources/examples/react/excerpts.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:approval-request-question-stepper",
+      "source": "catalog/patterns/approval-request/examples/react/question-stepper.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:property-inspector-adjust-panel",
+      "source": "catalog/patterns/property-inspector/examples/react/adjust-panel.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:quick-find-overlay",
+      "source": "catalog/patterns/quick-find/examples/react/overlay.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:quick-find-inline",
+      "source": "catalog/patterns/quick-find/examples/react/inline.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:chat-panel-tabbed-thread",
+      "source": "catalog/patterns/chat-panel/examples/react/tabbed-thread.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:recommendation-compact",
+      "source": "catalog/patterns/recommendation/examples/react/compact.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:recommendation-ranked",
+      "source": "catalog/patterns/recommendation/examples/react/ranked.tsx",
       "exitCode": 0,
       "diagnostics": 0,
       "packedDeclarations": true,
