@@ -7,7 +7,7 @@ import { ToggleButtonGroupMotionFixture } from '../fixtures/toggle-button-group-
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/components.css"><style>
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><style>
     :root { --muxui-semantic-motion-state-duration: 1200ms; --muxui-semantic-motion-state-transition-duration: 1200ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 1200ms; }
     body { margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); font-family: system-ui, sans-serif; }
     main { display: grid; gap: 20px; max-width: 760px; }

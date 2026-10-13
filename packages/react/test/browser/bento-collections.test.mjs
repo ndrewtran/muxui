@@ -83,7 +83,6 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     import { hydrateRoot } from 'react-dom/client';
     import { ListBox, Menu, Select } from '/src/collections.mjs';
     import '/generated/styles.css';
-    import '/src/styles/collections.css';
     ${CollectionsFixture.toString()}
     hydrateRoot(document.getElementById('root'), React.createElement(CollectionsFixture));`;
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(CollectionsFixture))}</div>`, entry: '/bento-collections-entry.mjs' });

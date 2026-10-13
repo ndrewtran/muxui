@@ -90,6 +90,8 @@ const pageTitleId = '_top';
 )}
 
 <style>
+	/* Mux UI's component layer keeps these rules competing with Mux UI by specificity, as they did before layers; see mux-docs.css. */
+	@layer muxui.components {
 	.mux-page-title {
 		padding-block: var(--muxui-reference-dimension-space-m) var(--muxui-reference-dimension-space-l);
 	}
@@ -171,5 +173,6 @@ const pageTitleId = '_top';
 		.mux-page-title-actions {
 			justify-content: start;
 		}
+	}
 	}
 </style>

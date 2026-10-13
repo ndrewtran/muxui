@@ -26,6 +26,8 @@ const { search = false, titleHref } = Astro.props;
 </div>
 
 <style>
+	/* Mux UI's component layer keeps these rules competing with Mux UI by specificity, as they did before layers; see mux-docs.css. */
+	@layer muxui.components {
 	.mux-header {
 		display: flex;
 		align-items: center;
@@ -116,5 +118,6 @@ const { search = false, titleHref } = Astro.props;
 		:global([data-has-sidebar]) .mux-header-actions :global(starlight-theme-select) {
 			display: none;
 		}
+	}
 	}
 </style>

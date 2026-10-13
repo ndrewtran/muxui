@@ -8,7 +8,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(LightboxMotionFixture)));
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/supplemental/lightbox.css">', bodyAttributes: 'style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body, entry: '/test/fixtures/lightbox-motion-browser-entry.mjs' });
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css">', bodyAttributes: 'style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body, entry: '/test/fixtures/lightbox-motion-browser-entry.mjs' });
 }
 
 async function waitForHydration(page) {

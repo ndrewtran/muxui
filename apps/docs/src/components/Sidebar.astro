@@ -18,6 +18,8 @@ const { sidebar } = Astro.locals.starlightRoute;
 <div class="md:sl-hidden"><MobileMenuFooter /></div>
 
 <style>
+	/* Mux UI's component layer keeps these rules competing with Mux UI by specificity, as they did before layers; see mux-docs.css. */
+	@layer muxui.components {
 	:global(.mux-sidebar-rail) {
 		position: absolute;
 		inset-block: 0;
@@ -120,5 +122,6 @@ const { sidebar } = Astro.locals.starlightRoute;
 		:global(.mux-sidebar-rail) { display: none; }
 		:global(.mux-sidebar-content) { margin-inline-start: 0; }
 		:global(.mux-sidebar-content) { padding-block-start: var(--muxui-reference-dimension-space-s); }
+	}
 	}
 </style>

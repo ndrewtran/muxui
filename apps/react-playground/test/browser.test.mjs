@@ -113,12 +113,16 @@ test('R1.4 React component browser and axe matrix', async () => {
     const page = await browser.newPage();
     await page.goto(url);
     await page.addScriptTag({ path: require.resolve('axe-core/axe.min.js') });
-    const fieldMediaProof = await page.evaluate(() => [...document.styleSheets].some((sheet) => {
-      try {
-        return [...sheet.cssRules].some((rule) => rule.conditionText === '(forced-colors: active)')
-          && [...sheet.cssRules].some((rule) => rule.conditionText === '(prefers-contrast: more)');
-      } catch { return false; }
-    }));
+    // The Mux UI rules sit inside `@layer` blocks, so the media rules are nested one level down.
+    const fieldMediaProof = await page.evaluate(() => {
+      const hasCondition = (rules, conditionText) => [...rules].some((rule) => rule.conditionText === conditionText
+        || (rule.cssRules !== undefined && hasCondition(rule.cssRules, conditionText)));
+      return [...document.styleSheets].some((sheet) => {
+        try {
+          return hasCondition(sheet.cssRules, '(forced-colors: active)') && hasCondition(sheet.cssRules, '(prefers-contrast: more)');
+        } catch { return false; }
+      });
+    });
     if (!fieldMediaProof) throw new Error('R1.2 field CSS must load forced-colors and high-contrast adaptations');
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
     if (!await page.locator('[data-profile]').first().isVisible()) throw new Error('R1.2 forced-colors profile did not render');

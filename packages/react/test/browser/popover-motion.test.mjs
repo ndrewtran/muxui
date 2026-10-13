@@ -7,7 +7,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(PopoverMotionFixture)));
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/fields.css"><link rel="stylesheet" href="/src/styles/collections.css">', bodyAttributes: 'style="margin: 32px; display: flex; gap: 24px; flex-direction: column; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body, entry: '/test/fixtures/popover-motion-browser-entry.mjs' });
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css">', bodyAttributes: 'style="margin: 32px; display: flex; gap: 24px; flex-direction: column; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body, entry: '/test/fixtures/popover-motion-browser-entry.mjs' });
 }
 
 async function readMotion(page, selector) {

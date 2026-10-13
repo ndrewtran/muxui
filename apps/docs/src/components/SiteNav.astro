@@ -21,6 +21,8 @@ const links: readonly { section: Section; label: string; href: string }[] = [
 </nav>
 
 <style>
+	/* Mux UI's component layer keeps these rules competing with Mux UI by specificity, as they did before layers; see mux-docs.css. */
+	@layer muxui.components {
 	.mux-site-nav {
 		flex: none;
 	}
@@ -72,5 +74,6 @@ const links: readonly { section: Section; label: string; href: string }[] = [
 	/* The narrowest phones (320px) need a little more room for the title, the nav, and the theme picker. */
 	@media (max-width: 22rem) {
 		.mux-site-nav a { padding-inline: var(--muxui-reference-dimension-space-4xs); }
+	}
 	}
 </style>

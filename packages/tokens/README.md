@@ -74,15 +74,20 @@ it is not a dependency or peer dependency of Mux packages.
 
 At consumer build time, `compileTailwindTheme(source)` from
 `@muxui/tokens/tailwind` emits an `@theme inline` block whose variables refer
-to Mux's CSS variables. Include Mux's stylesheet in an earlier cascade layer
-than consumer utilities:
+to Mux's CSS variables. Mux's stylesheet puts its rules in the layers
+`muxui.tokens`, `muxui.components`, and `muxui.utilities` itself, so do not
+import it into a layer of your own. Declare your layer order first, with Mux's
+layers below Tailwind's utilities:
 
 ```css
-@layer theme, base, muxui, components, utilities;
+@layer theme, base, muxui.tokens, muxui.components, muxui.utilities, components, utilities;
 @import "tailwindcss";
-@import "@muxui/react/styles.css" layer(muxui);
+@import "@muxui/react/styles.css";
 @import "./muxui-tailwind-theme.css";
 ```
+
+CSS outside any layer always beats Mux, so your own unlayered rules override a
+component without `!important`.
 
 For example, `bg-muxui-component-button-background` uses the current Mux
 button background token, and `rounded-muxui-component-button-radius` uses its

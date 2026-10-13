@@ -1,5 +1,17 @@
 body:has(.scale-app) { margin: 0; }
 
+/* Mux UI's controls get the font and focus-ring resets inside Mux UI's own layer, where they still compete
+   with Mux UI's selectors by specificity and source order, exactly as they did before Mux UI moved into layers. */
+@layer muxui.components {
+  @scope (.scale-app) {
+    :scope button, :scope input { font: inherit; }
+    :scope button:focus-visible, :scope input:focus-visible {
+      outline: 2px solid var(--muxui-semantic-focus-ring);
+      outline-offset: 2px;
+    }
+  }
+}
+
 @scope (.scale-app) {
 
 :scope {
@@ -7,10 +19,11 @@ body:has(.scale-app) { margin: 0; }
   text-rendering: optimizeLegibility;
 }
 :scope, :scope * { box-sizing: border-box; }
-:scope button, :scope input { font: inherit; }
+/* Unlayered CSS beats Mux UI whatever its specificity, so the font and focus-ring resets skip Mux UI's own controls. */
+:scope :is(button, input):where(:not([class^='muxui-'], [class*=' muxui-'])) { font: inherit; }
 :scope button { cursor: pointer; }
 :scope button:disabled { cursor: default; opacity: .45; }
-:scope button:focus-visible, :scope input:focus-visible {
+:scope :is(button, input):where(:not([class^='muxui-'], [class*=' muxui-'])):focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
