@@ -59,40 +59,85 @@ function declarations(style) {
   const authored = style.cssProperties.some((property) => property.range);
   return style.cssProperties
     .filter((property) => (authored ? property.range : !property.implicit) && !property.disabled && property.parsedOk !== false)
-    .map(({ name, value, important }) => ({ name, value, important: Boolean(important) }));
+    // Chrome keeps the `!important` flag in an authored declaration's value text.
+    .map(({ name, value, important }) => ({ name, value: value.replace(/\s*!important$/u, ''), important: Boolean(important) }));
 }
 
+// Names of the cascade layers a rule sits in, outermost first (Chrome 145 and
+// 154 list them that way, although the protocol documents innermost first).
+// A dotted name such as `muxui.tokens` is a path of nested layers.
+const layerNames = (rule) => (rule.layers ?? []).map(({ text }) => text);
+
 // A generated theme block: a top-level library rule on `:root` or one
-// `[data-muxui-<axis>='<value>']` selector. Token custom properties declared
-// anywhere else are overrides the resolver follows, so the audit sees them.
+// `[data-muxui-<axis>='<value>']` selector, unlayered or in the `muxui.tokens`
+// layer. Token custom properties declared anywhere else are overrides the
+// resolver follows, so the audit sees them.
 const THEME_SELECTOR = /^(?::root|\[data-muxui-[a-z-]+=(?:'[a-z0-9-]+'|"[a-z0-9-]+")\])$/u;
+const TOKENS_LAYER = 'muxui.tokens';
 function isThemeRule(rule, sources) {
   return sources.get(rule.styleSheetId) === LIBRARY_STYLESHEET
+    && (!rule.layers?.length || layerNames(rule).join('.') === TOKENS_LAYER)
     && !rule.media?.length && !rule.scopes?.length && !rule.supports?.length && !rule.containerQueries?.length
     && THEME_SELECTOR.test(rule.selectorList.text.trim());
+}
+
+/**
+ * Cascade order of every named layer in a `CSS.getLayersForNode` tree, keyed
+ * by dotted path. Chrome numbers layers by the document's layer declaration
+ * order, a layer's sublayers before its own rules; a higher number wins for
+ * normal declarations. Anonymous layers cannot be addressed by name, so they
+ * are left out.
+ * @param {{ subLayers?: any[] }} root The tree's `rootLayer`.
+ * @returns {Map<string, number>}
+ */
+export function layerOrders(root) {
+  const orders = new Map();
+  const visit = (layer, path) => {
+    for (const sub of layer.subLayers ?? []) {
+      if (!sub.name) continue;
+      const key = path ? `${path}.${sub.name}` : sub.name;
+      orders.set(key, sub.order);
+      visit(sub, key);
+    }
+  };
+  visit(root, '');
+  return orders;
 }
 
 // Declarations the resolver can read: custom properties and the sources of every measured longhand.
 const MEASURED_NAMES = new Set(Object.values(LONGHAND_SOURCES).flat());
 const measuredDeclaration = ({ name }) => name.startsWith('--') || MEASURED_NAMES.has(name);
 
-function level(matches, inline, inside, sources) {
+// Cascade order of a rule's layer, or undefined for an unlayered author rule.
+// The user-agent origin sits below every author layer. A layer the page does
+// not list by name (an anonymous one) fails rather than being guessed at.
+function cascadeLayer(rule, layers, sources) {
+  if (rule.origin === 'user-agent') return -Infinity;
+  if (!rule.layers?.length) return undefined;
+  const names = layerNames(rule);
+  const order = names.includes('') ? undefined : layers.get(names.join('.'));
+  if (order === undefined) {
+    throw new Error(`MUXUI_FIGMA_COMPONENTS_LAYER_UNORDERED: ${describeRule(rule, sources)} sits in cascade layer ${names.map((name) => name || '(anonymous)').join(' > ')}; the measurement can only order named layers listed by the page`);
+  }
+  return order;
+}
+
+function level(matches, inline, inside, sources, layers) {
   const rules = matches.flatMap(({ rule }) => {
-    // Layer order changes the cascade, and the resolver models unlayered rules
-    // only. A layered rule that sets nothing measured (React Aria's injected
-    // touch-action rule) cannot change a result, so it is left out.
-    if (rule.layers?.length) {
-      if (!declarations(rule.style).some(measuredDeclaration)) return [];
-      throw new Error(`MUXUI_FIGMA_COMPONENTS_LAYER_UNSUPPORTED: ${describeRule(rule, sources)} sits in cascade layer ${rule.layers.map(({ text }) => text || '(anonymous)').join(' > ')}; the measurement cannot order layered rules`);
-    }
+    // A layered rule that sets nothing measured (React Aria's injected
+    // touch-action rule, in an anonymous layer) cannot change a result, so it
+    // is left out rather than ordered.
+    if (rule.layers?.length && !declarations(rule.style).some(measuredDeclaration)) return [];
+    const layer = cascadeLayer(rule, layers, sources);
     return [{
       rule: describeRule(rule, sources),
       component: rule.origin !== 'user-agent' && !isThemeRule(rule, sources),
       library: rule.origin !== 'user-agent' && sources.get(rule.styleSheetId) === LIBRARY_STYLESHEET,
+      ...(layer === undefined ? {} : { layer }),
       declarations: declarations(rule.style),
     }];
   });
-  if (inline) rules.push({ rule: 'inline style', component: true, declarations: declarations(inline) });
+  if (inline) rules.push({ rule: 'inline style', component: true, inline: true, declarations: declarations(inline) });
   return { rules, inside };
 }
 
@@ -101,17 +146,19 @@ function level(matches, inline, inside, sources) {
  * pseudo-element's rules (when measuring one), the element, then its
  * ancestors nearest first. `depth` counts the ancestors inside the measured
  * component instance (below the fixture wrapper); the rest are outside.
+ * `layers` orders the named cascade layers (see `layerOrders`); without it a
+ * layered rule that sets a measured property fails.
  * @param {{ matchedCSSRules: any[], inlineStyle?: any, inherited: { matchedCSSRules: any[], inlineStyle?: any }[], pseudoElements?: { pseudoType: string, matches: any[] }[] }} matched
- * @param {{ depth: number, pseudo?: string, sources: Map<string, string>, at?: string }} options
+ * @param {{ depth: number, pseudo?: string, sources: Map<string, string>, at?: string, layers?: Map<string, number> }} options
  * @returns {import('./css.mjs').StyleContext}
  */
-export function styleContext(matched, { depth, pseudo, sources, at = 'part' }) {
-  const element = level(matched.matchedCSSRules, matched.inlineStyle, true, sources);
-  const ancestors = matched.inherited.map((entry, ancestor) => level(entry.matchedCSSRules, entry.inlineStyle, ancestor < depth, sources));
+export function styleContext(matched, { depth, pseudo, sources, at = 'part', layers = new Map() }) {
+  const element = level(matched.matchedCSSRules, matched.inlineStyle, true, sources, layers);
+  const ancestors = matched.inherited.map((entry, ancestor) => level(entry.matchedCSSRules, entry.inlineStyle, ancestor < depth, sources, layers));
   if (!pseudo) return { levels: [element, ...ancestors] };
   const pseudoMatches = (matched.pseudoElements ?? []).find(({ pseudoType }) => pseudoType === pseudo)?.matches;
   if (!pseudoMatches) throw new Error(`MUXUI_FIGMA_COMPONENTS_PART_MISSING: ${at} has no ::${pseudo}`);
-  return { levels: [level(pseudoMatches, null, true, sources), element, ...ancestors] };
+  return { levels: [level(pseudoMatches, null, true, sources, layers), element, ...ancestors] };
 }
 
 /**
@@ -123,6 +170,7 @@ async function measureFamily(page, cdp, resolved, tokens, sources) {
   const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
   const query = async (nodeId, selector) => (await cdp.send('DOM.querySelector', { nodeId, selector })).nodeId;
   const html = await query(root.nodeId, 'html');
+  const layers = layerOrders((await cdp.send('CSS.getLayersForNode', { nodeId: html })).rootLayer);
   const output = variants.map(({ key, name, axes, selection, state }) => ({ key, name, axes, ...(selection ? { selection } : {}), state, parts: {} }));
   const glyphs = {};
 
@@ -151,7 +199,7 @@ async function measureFamily(page, cdp, resolved, tokens, sources) {
     await cdp.send('Runtime.releaseObject', { objectId: object.objectId });
     const { depth, computed, text, svg, strokeWidth } = facts.result.value;
     const matched = await cdp.send('CSS.getMatchedStylesForNode', { nodeId });
-    const context = styleContext(matched, { depth, pseudo, sources, at: `${at.family} ${at.variant} part ${at.part}` });
+    const context = styleContext(matched, { depth, pseudo, sources, layers, at: `${at.family} ${at.variant} part ${at.part}` });
     const resolutions = {};
     for (const longhand of longhands) {
       const measured = resolveProperty(context, longhand, tokens);

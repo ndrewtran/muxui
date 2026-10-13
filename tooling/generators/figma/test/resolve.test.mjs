@@ -41,6 +41,50 @@ test('the cascade honours order, !important, shorthands, inheritance, and the in
   assert.equal(resolveCss('font-size', '.muxui-child { display: block; }', library).token, 'semantic.control.size-md');
 });
 
+// cssLevel rules tagged with cascade layer orders (an omitted order leaves a rule unlayered).
+function layeredLevel(css, orders) {
+  const level = cssLevel(css);
+  level.rules.forEach((rule, index) => {
+    if (orders[index] !== undefined) rule.layer = orders[index];
+  });
+  return level;
+}
+
+test('cascade layers: unlayered and later layers win normal declarations, the earliest layer wins !important', () => {
+  const strong = 'var(--muxui-semantic-surface-strong)';
+  const raised = 'var(--muxui-semantic-surface-raised)';
+  const winner = (declarationA, declarationB, orders) => resolveCss('color', layeredLevel(`.a { color: ${declarationA}; } .b { color: ${declarationB}; }`, orders)).token;
+  // Normal: a later layer beats an earlier one wherever it is listed, and unlayered beats every layer.
+  assert.equal(winner(strong, raised, [1, 0]), 'semantic.surface.strong');
+  assert.equal(winner(strong, raised, [0, 1]), 'semantic.surface.raised');
+  assert.equal(winner(strong, raised, [undefined, 0]), 'semantic.surface.strong');
+  assert.equal(winner(strong, raised, [0, undefined]), 'semantic.surface.raised');
+  assert.equal(winner(strong, raised, [0, 0]), 'semantic.surface.raised');
+  // Important: the order reverses and unlayered loses.
+  assert.equal(winner(`${strong} !important`, `${raised} !important`, [1, 0]), 'semantic.surface.raised');
+  assert.equal(winner(`${strong} !important`, `${raised} !important`, [0, 1]), 'semantic.surface.strong');
+  assert.equal(winner(`${strong} !important`, `${raised} !important`, [undefined, 1]), 'semantic.surface.raised');
+  assert.equal(winner(`${strong} !important`, `${raised} !important`, [1, undefined]), 'semantic.surface.strong');
+  assert.equal(winner(`${strong} !important`, `${raised} !important`, [0, 0]), 'semantic.surface.raised');
+  // Important beats normal across layered and unlayered rules alike.
+  assert.equal(winner(`${strong} !important`, raised, [0, undefined]), 'semantic.surface.strong');
+  assert.equal(winner(`${strong} !important`, raised, [undefined, 0]), 'semantic.surface.strong');
+});
+
+test('cascade layers: the style attribute beats every layer and the user agent loses to every layer', () => {
+  const inline = (css) => ({ ...cssLevel(css).rules[0], inline: true });
+  const layered = layeredLevel('.a { color: var(--muxui-semantic-surface-strong) !important; }', [0]);
+  assert.equal(resolveCss('color', { ...layered, rules: [...layered.rules, inline('.i { color: var(--muxui-semantic-surface-raised) !important; }')] }).token, 'semantic.surface.raised');
+  const unlayered = cssLevel('.a { color: var(--muxui-semantic-surface-strong); }');
+  assert.equal(resolveCss('color', { ...unlayered, rules: [...unlayered.rules, inline('.i { color: var(--muxui-semantic-surface-raised); }')] }).token, 'semantic.surface.raised');
+  // The user-agent origin ranks -Infinity: below every author layer, and above them for !important.
+  const winner = (important, orders) => resolveCss('color', layeredLevel(`.first { color: var(--muxui-semantic-surface-strong)${important}; } .second { color: var(--muxui-semantic-surface-raised)${important}; }`, orders)).token;
+  assert.equal(winner('', [-Infinity, 0]), 'semantic.surface.raised');
+  assert.equal(winner('', [0, -Infinity]), 'semantic.surface.strong');
+  assert.equal(winner(' !important', [-Infinity, 0]), 'semantic.surface.strong');
+  assert.equal(winner(' !important', [0, -Infinity]), 'semantic.surface.raised');
+});
+
 test('paints resolve to overlays, mixes, and shadow layers', () => {
   const element = `.muxui-x {
     background-image: linear-gradient(color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent), color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent));
