@@ -142,6 +142,14 @@ function generatedText(source, body, open = '//', close = '') {
   return `${open} @generated-from: ${source}${close}\n${open} @generated-content-sha256: sha256:${sha256(body)}${close}\n${body}`;
 }
 
+// Decision 0031 item 15: every shipped rule sits in one of these layers, in this order.
+// `muxui.utilities` is declared for consumers and holds no rule yet. The wrapped
+// bodies keep their own indentation, so the layer braces never re-indent them.
+const cssLayerOrder = '@layer muxui.tokens, muxui.components, muxui.utilities;';
+function cssLayer(name, body) {
+  return `@layer ${name} {\n${body}\n}`;
+}
+
 function generatedCss(source, body) {
   const digestBody = ` */\n${body}`;
   return `/* @generated-from: ${source}\n * @generated-content-sha256: sha256:${sha256(digestBody)}\n${digestBody}`;
@@ -329,7 +337,6 @@ export declare const MUXUI_DEFAULT_THEME_PRESET_ID: MuxUIThemeId;
 `;
 
 const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
-const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 
 const candidateVersion = '0.1.0-rc.1';
 // Decision 0023: a bad candidate is fixed forward in the next rc.
@@ -673,6 +680,20 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
+## Cascade layers
+
+Every rule in \`styles.css\` and \`themes.css\` sits in one of the cascade layers \`muxui.tokens\`, \`muxui.components\`, and \`muxui.utilities\`, in that order. Tokens, theme presets, and direction rules are in \`muxui.tokens\`; component, field, collection, overlay, and supplemental styles are in \`muxui.components\`; \`muxui.utilities\` is declared and empty. Each file starts with the full order statement.
+
+CSS outside a layer always beats CSS inside one, whatever its specificity. Your own unlayered rules therefore override Mux UI without \`!important\` or a higher-specificity selector. Mux UI's \`!important\` rules (forced colors and reduced motion) stay in their layer and beat your unlayered \`!important\` rules, so those protections cannot be overridden. To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
+
+\`\`\`css
+@layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
+@import '@muxui/react/styles.css';
+@import '@muxui/react/themes.css';
+\`\`\`
+
+The first \`@layer\` statement that names a layer fixes its rank, so a later order statement in the Mux UI files cannot reorder yours.
+
 ## Optional preset themes
 
 The optional \`@muxui/react/themes\` entry exports the 15 canonical Scale
@@ -998,7 +1019,10 @@ const currentContractRecord = {
 };
 const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.mjs';\n`).join('')}`;
 const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
-const currentStylesBody = `${fullCssBody}${supplementalStylesSource ? `\n\n${supplementalStylesSource.trim()}` : ''}${[...currentSubpathRecords, ...currentEagerRecords].map(({ style }) => style ? `\n\n${style.trim()}` : '').join('')}`;
+const componentCssBody = `${authoredCss}${supplementalStylesSource ? `\n\n${supplementalStylesSource.trim()}` : ''}${[...currentSubpathRecords, ...currentEagerRecords].map(({ style }) => style ? `\n\n${style.trim()}` : '').join('')}`;
+const layeredStylesCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', cssBody)}\n\n${cssLayer('muxui.components', componentCssBody)}`;
+const layeredThemeCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', themeCssBody)}`;
+const layeredSupplementalCss = `${cssLayerOrder}\n\n${cssLayer('muxui.components', supplementalStylesSource.trim())}`;
 assertReactR15GeneratedContracts({
   closure: r15ClosureSource,
   snapshot: familySnapshot,
@@ -1010,7 +1034,7 @@ assertReactR15GeneratedContracts({
   supplementalComponents: r16SupplementalComponents,
   manifest,
   runtimeSources,
-  styles: currentStylesBody,
+  styles: layeredStylesCss,
 });
 const descriptor = `${canonicalJson(currentDescriptorRecord)}\n`;
 const release = `${canonicalJson(currentReleaseRecord)}\n`;
@@ -1033,10 +1057,10 @@ const outputs = new Map([
   ['index.d.ts', generatedText('packages/react/src/generate.mjs', currentTypesBody)],
   ['button.mjs', generatedText('packages/react/src/button.mjs', buttonSource)],
   ['testing.mjs', generatedText('packages/react/src/generate.mjs', testingBody)],
-  ['styles.css', generatedCss('packages/react/src/generate.mjs', currentStylesBody)],
+  ['styles.css', generatedCss('packages/react/src/generate.mjs', layeredStylesCss)],
   ['themes.mjs', generatedText('packages/react/src/generate.mjs', themeRuntimeBody)],
   ['themes.d.ts', generatedText('packages/react/src/generate.mjs', themeTypesBody)],
-  ['themes.css', generatedCss('packages/react/src/generate.mjs', themeCssBody)],
+  ['themes.css', generatedCss('packages/react/src/generate.mjs', layeredThemeCss)],
   ['descriptor.json', descriptor],
   ['descriptor.json.provenance', provenance('descriptor.json', descriptor)],
   ['release.json', release],
@@ -1045,7 +1069,7 @@ const outputs = new Map([
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
   ['supplemental.mjs', generatedText('packages/react/src/supplemental/index.mjs', `${generatedSupplementalSource}`)],
   ['supplemental.d.ts', generatedText('packages/react/src/supplemental/index.d.ts', `${supplementalTypesSource}`)],
-  ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', supplementalStylesSource)],
+  ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', layeredSupplementalCss)],
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
   ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],

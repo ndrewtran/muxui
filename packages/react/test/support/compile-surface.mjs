@@ -4,7 +4,6 @@
 //
 // Each of these is left out until the stage that adds it, and that stage extends
 // this compiler and its test:
-// - cascade layers: Stage 1;
 // - `data-muxui-state-*` state attributes: Stage 2;
 // - `data-muxui-slot` slots and `muxui:` DOM events: they belong to the `web.html`
 //   contract and return with W1.0, so React never publishes them (item 14).
@@ -12,6 +11,9 @@
 const BINDING_ID = 'web.react';
 // The one stylesheet entry React ships today; Stage 3 splits it.
 const STYLE_EXPORT = './styles.css';
+
+// Decision 0031 item 15: the layers every shipped style entry declares first, in rank order.
+const CASCADE_LAYERS = Object.freeze(['muxui.tokens', 'muxui.components', 'muxui.utilities']);
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -23,7 +25,7 @@ function slugFromArtifactRef(artifactRef) {
   return match[1];
 }
 
-function hookName(tokenId) {
+export function hookName(tokenId) {
   return `--muxui-${tokenId.replaceAll('.', '-')}`;
 }
 
@@ -49,6 +51,7 @@ export function compileReactSurface({ artifact, packageExports, tokenSource }) {
     bindingRef: `${artifact.id}#${BINDING_ID}`,
     lifecycle: binding.lifecycle,
     rootClass: `.muxui-${slug}`,
+    cascadeLayers: CASCADE_LAYERS,
     publicCustomProperties: Object.freeze(publicCustomProperties),
     styleExport: `@muxui/react${STYLE_EXPORT.slice(1)}`,
   });

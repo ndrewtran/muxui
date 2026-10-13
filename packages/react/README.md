@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:e55b576659e23af5c313f7713ff763ef02a7573a57228e19fd3d6c82a392860f -->
+<!-- @generated-content-sha256: sha256:53a7e051c3091b71c0183ef519f5e8d855e69629293e721684ac69e091008991 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -47,6 +47,20 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+## Cascade layers
+
+Every rule in `styles.css` and `themes.css` sits in one of the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens, theme presets, and direction rules are in `muxui.tokens`; component, field, collection, overlay, and supplemental styles are in `muxui.components`; `muxui.utilities` is declared and empty. Each file starts with the full order statement.
+
+CSS outside a layer always beats CSS inside one, whatever its specificity. Your own unlayered rules therefore override Mux UI without `!important` or a higher-specificity selector. Mux UI's `!important` rules (forced colors and reduced motion) stay in their layer and beat your unlayered `!important` rules, so those protections cannot be overridden. To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
+
+```css
+@layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
+@import '@muxui/react/styles.css';
+@import '@muxui/react/themes.css';
+```
+
+The first `@layer` statement that names a layer fixes its rank, so a later order statement in the Mux UI files cannot reorder yours.
 
 ## Optional preset themes
 

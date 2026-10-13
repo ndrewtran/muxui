@@ -161,3 +161,43 @@ export function styleRuleClasses(stylesheet) {
   }
   return classes;
 }
+
+/**
+ * The depth-0 constructs of a stylesheet: each `;` statement and each `{` block, as its
+ * prelude text. Comments and string literals are skipped whole, so a brace in either does
+ * not count. A stylesheet whose braces do not balance throws.
+ */
+export function topLevelConstructs(stylesheet) {
+  const constructs = [];
+  let depth = 0;
+  let prelude = '';
+  for (let index = 0; index < stylesheet.length; index += 1) {
+    const char = stylesheet[index];
+    if (char === '/' && stylesheet[index + 1] === '*') {
+      const end = stylesheet.indexOf('*/', index + 2);
+      if (end < 0) throw new Error('unterminated comment');
+      index = end + 1;
+    } else if (char === '"' || char === "'") {
+      const end = stringEnd(stylesheet, index);
+      if (depth === 0) prelude += stylesheet.slice(index, end + 1);
+      index = end;
+    } else if (char === '{') {
+      if (depth === 0) constructs.push({ kind: 'block', prelude: prelude.trim() });
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth < 0) throw new Error('unbalanced closing brace');
+      if (depth === 0) prelude = '';
+    } else if (depth === 0) {
+      if (char === ';') {
+        constructs.push({ kind: 'statement', prelude: prelude.trim() });
+        prelude = '';
+      } else {
+        prelude += char;
+      }
+    }
+  }
+  if (depth !== 0) throw new Error('unbalanced opening brace');
+  if (prelude.trim() !== '') throw new Error('text outside a rule');
+  return constructs;
+}

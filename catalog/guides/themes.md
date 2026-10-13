@@ -28,6 +28,20 @@ The default theme declares `light` and `dark` color schemes, with standard and m
 
 The current theme does not provide runtime switching through the package. If a consumer owns mode switching, scope the generated stylesheet and set the accepted mode attributes according to the package contract.
 
+## Cascade layers
+
+`@muxui/react/styles.css` and `@muxui/react/themes.css` put every rule in the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens and theme presets sit in `muxui.tokens`, component styles in `muxui.components`, and `muxui.utilities` is declared and empty.
+
+CSS outside any layer always beats Mux UI, whatever its specificity, so your own unlayered rules override a component without `!important`. Declare your layer order once, before importing Mux UI, so a reset or framework sits below it and your layers sit above:
+
+```css
+@layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
+@import '@muxui/react/styles.css';
+@import '@muxui/react/themes.css';
+```
+
+Mux UI's `!important` rules for forced colors and reduced motion stay in their layer, where they beat your unlayered `!important` rules.
+
 ## Semantic roles
 
 Use the generated Mux UI roles for content, surfaces, borders, actions, focus, typography, and motion. Component styles consume the roles exposed by the generated stylesheet. Consumers should not copy resolved color values into application CSS. Prefer semantic typography family roles such as `semantic.typography.text-font-family` and `semantic.typography.label-font-family`; raw reference family aliases are implementation details.
