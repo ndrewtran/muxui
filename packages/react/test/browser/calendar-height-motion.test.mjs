@@ -47,21 +47,60 @@ async function navigate(page, direction) {
   await page.locator(`.muxui-calendar-${direction}`).click();
 }
 
-async function inFlight(page, previous, growing) {
-  await page.waitForFunction(({ previous, growing }) => {
-    const grid = document.querySelector('.muxui-calendar-grid');
-    const height = grid.parentElement.getBoundingClientRect().height;
-    const target = grid.getBoundingClientRect().height;
-    return grid.parentElement.style.height && (growing
-      ? height > previous + 1 && height < target - 1
-      : height < previous - 1 && height > target + 1);
+// Records every frame from before the click: a stalled runner can finish the spring between polls, but not between frames.
+async function recordFrames(page, previous, growing) {
+  await page.evaluate(({ previous, growing }) => {
+    const recorder = { frames: [], stopped: false };
+    const record = () => {
+      const grid = document.querySelector('.muxui-calendar-grid');
+      const body = grid.parentElement;
+      const calendar = body.parentElement;
+      const height = body.getBoundingClientRect().height;
+      const target = grid.getBoundingClientRect().height;
+      recorder.frames.push({
+        body: height,
+        calendar: calendar.getBoundingClientRect().height,
+        popup: calendar.closest('.muxui-date-popover')?.getBoundingClientRect().height,
+        overflow: calendar.style.overflow,
+        midFlight: Boolean(body.style.height) && (growing
+          ? height > previous + 1 && height < target - 1
+          : height < previous - 1 && height > target + 1),
+      });
+      if (!recorder.stopped) requestAnimationFrame(record);
+    };
+    window.heightRecorder = recorder;
+    record();
   }, { previous: previous.body, growing });
-  const current = await geometry(page);
-  assert.equal(current.overflow, 'clip');
-  const change = current.body - previous.body;
-  assert.ok(Math.abs((current.calendar - previous.calendar) - change) < 1, 'visible calendar border follows body height');
-  if (previous.popup) assert.ok(Math.abs((current.popup - previous.popup) - change) < 1, 'visible popup border follows calendar height');
-  return current;
+}
+
+async function inFlight(page, previous) {
+  const frames = await page.evaluate(() => {
+    window.heightRecorder.stopped = true;
+    return window.heightRecorder.frames;
+  });
+  const midFlight = frames.filter((frame) => frame.midFlight);
+  assert.ok(midFlight.length > 0, 'month height passes through intermediate heights');
+  for (const frame of midFlight) {
+    assert.equal(frame.overflow, 'clip');
+    const change = frame.body - previous.body;
+    assert.ok(Math.abs((frame.calendar - previous.calendar) - change) < 1, 'visible calendar border follows body height');
+    if (previous.popup) assert.ok(Math.abs((frame.popup - previous.popup) - change) < 1, 'visible popup border follows calendar height');
+  }
+}
+
+// An interruption must land mid-motion, which the 600ms spring can finish before a stalled runner gets there, so it runs slowed.
+async function growUntilMidFlight(page, previous) {
+  const slow = (on) => page.evaluate((on) => {
+    const style = document.documentElement.style;
+    if (on) style.setProperty('--muxui-semantic-motion-content-resize-duration', '5s');
+    else style.removeProperty('--muxui-semantic-motion-content-resize-duration');
+  }, on);
+  await slow(true);
+  await recordFrames(page, previous, true);
+  await navigate(page, 'next');
+  await page.waitForFunction(() => window.heightRecorder.frames.some((frame) => frame.midFlight));
+  await slow(false);
+  await inFlight(page, previous);
 }
 
 function documentHtml(kind) {
@@ -95,28 +134,30 @@ test('calendar month height interpolates without changing semantics or reduced m
       const initial = await settled(page);
       assert.equal(initial.rows, 4, `${kind}: February has four rows and no initial height animation`);
       const firstResizeStarted = kind === 'calendar' ? Date.now() : null;
+      await recordFrames(page, initial, true);
       await navigate(page, 'next');
-      await inFlight(page, initial, true);
       const march = await settled(page, initial);
       if (firstResizeStarted !== null) {
         assert.ok(Date.now() - firstResizeStarted < 1_500, 'calendar resize keeps its total duration when visual duration is overridden');
       }
+      await inFlight(page, initial);
       assert.equal(march.rows, 5);
       assert.ok(march.calendar > initial.calendar);
       await navigate(page, 'next');
       assert.equal((await geometry(page)).height, '', 'same-height months do not animate');
       const april = await settled(page);
+      await recordFrames(page, april, true);
       await navigate(page, 'next');
-      await inFlight(page, april, true);
       const may = await settled(page, april);
+      await inFlight(page, april);
       assert.equal(may.rows, 6);
+      await recordFrames(page, may, false);
       await navigate(page, 'previous');
-      await inFlight(page, may, false);
       await settled(page, may);
+      await inFlight(page, may);
 
       // Redirect an active growth back toward the smaller month.
-      await navigate(page, 'next');
-      await inFlight(page, april, true);
+      await growUntilMidFlight(page, april);
       const beforeRedirect = await geometry(page);
       await page.locator('.muxui-calendar-previous').evaluate((button) => button.click());
       const redirected = await geometry(page);
@@ -125,8 +166,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       assert.ok(Math.abs((await geometry(page)).body - april.body) < 1);
 
       // A nested trigger scope must also reach portaled popup calendars.
-      await navigate(page, 'next');
-      await inFlight(page, april, true);
+      await growUntilMidFlight(page, april);
       await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
       await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: 200 });
       assert.equal((await settled(page)).rows, 6);
@@ -134,8 +174,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       assert.equal((await geometry(page)).height, '');
       await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
       assert.equal((await geometry(page)).height, '', 'restoring motion does not replay height changes');
-      await navigate(page, 'next');
-      await inFlight(page, april, true);
+      await growUntilMidFlight(page, april);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: 200 });
       await navigate(page, 'previous');
