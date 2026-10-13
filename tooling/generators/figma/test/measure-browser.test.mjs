@@ -39,7 +39,8 @@ test('Button measures mode-consistently in Chrome and applies idempotently', { s
 // from the earlier, height from the unlayered rule over both, min-width from
 // the style attribute over layered and unlayered important rules, and an
 // autofilled input's background from the important user-agent rule over its
-// important style attribute.
+// important style attribute. An important font-family keeps its escaped and
+// commented value text.
 test('layered rules resolve as Chrome cascades them', { skip: !process.env.MUXUI_CHROME_EXECUTABLE, timeout: 60_000 }, async () => {
   const browser = await launchBrowser();
   try {
@@ -53,7 +54,7 @@ test('layered rules resolve as Chrome cascades them', { skip: !process.env.MUXUI
 @layer lib.tokens, lib.components;
 @layer lib.components { #t { color: rgb(0, 0, 2); width: 20px !important; height: 2px; min-width: 8px !important; } }
 @layer lib { @layer tokens { #t { color: rgb(0, 0, 1); width: 10px !important; height: 1px; min-width: 7px !important; } } }
-#t { height: 3px; min-width: 9px !important; }
+#t { height: 3px; min-width: 9px !important; font-family: \\!important /* keep */ serif !important /* tail */; }
 </style><div id="t" style="min-width: 6px !important"></div><input id="i" style="background-color: rgb(1, 2, 3) !important">`);
     const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
     const query = async (selector) => (await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector })).nodeId;
@@ -68,6 +69,11 @@ test('layered rules resolve as Chrome cascades them', { skip: !process.env.MUXUI
     const element = await measure('#t', ['color', 'width', 'height', 'min-width']);
     assert.deepEqual(element.computed, { color: 'rgb(0, 0, 2)', width: '10px', height: '3px', 'min-width': '6px' });
     assert.deepEqual(Object.fromEntries(Object.entries(element.resolved).map(([name, { value }]) => [name, value])), element.computed);
+
+    // Only the trailing annotation leaves the value; the escaped `\!important` before it is part of the family name.
+    const family = await measure('#t', ['font-family']);
+    assert.equal(family.computed['font-family'], '"!important serif"');
+    assert.equal(family.resolved['font-family'].value, '\\!important /* keep */ serif');
 
     await cdp.send('CSS.forcePseudoState', { nodeId: await query('#i'), forcedPseudoClasses: ['autofill'] });
     const input = await measure('#i', ['background-color']);

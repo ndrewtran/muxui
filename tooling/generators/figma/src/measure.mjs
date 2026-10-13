@@ -55,15 +55,57 @@ function describeRule(rule, sources) {
   return `${[...context, rule.selectorList.text.replace(/\s+/gu, ' ')].join(' ')} (${source})`;
 }
 
-// Chrome keeps the priority annotation in the value text of an important
-// declaration: `!important` in any case, with whitespace or comments around the
-// words. A normal declaration's value is left alone (`\!important` is an ident).
-const PRIORITY = /\s*!(?:\s|\/\*[\s\S]*?\*\/)*important(?:\s|\/\*[\s\S]*?\*\/)*$/iu;
+// Skip CSS whitespace and comments from `index`; a comment ends at its first `*/`.
+function skipTrivia(text, index) {
+  let position = index;
+  for (;;) {
+    if (/[ \t\n\r\f]/u.test(text[position] ?? '')) {
+      position += 1;
+    } else if (text.startsWith('/*', position)) {
+      const end = text.indexOf('*/', position + 2);
+      position = end < 0 ? text.length : end + 2;
+    } else {
+      return position;
+    }
+  }
+}
+
+/**
+ * Chrome leaves the priority annotation in the value text of an important
+ * declaration: `!`, then `important` in any case, with whitespace or comments
+ * around the word. The scan runs left to right, so a `!` inside a comment or a
+ * string, or after a backslash, is value text and never the annotation. The
+ * value is returned untouched unless its last real `!` starts exactly that
+ * annotation and nothing else follows.
+ */
+function withoutPriority(value) {
+  let bang = -1;
+  for (let index = 0; index < value.length;) {
+    const character = value[index];
+    if (character === '\\') {
+      index += 2;
+    } else if (value.startsWith('/*', index)) {
+      index = skipTrivia(value, index);
+    } else if (character === '"' || character === "'") {
+      index += 1;
+      while (index < value.length && value[index] !== character) index += value[index] === '\\' ? 2 : 1;
+      index += 1;
+    } else {
+      if (character === '!') bang = index;
+      index += 1;
+    }
+  }
+  if (bang < 0) return value;
+  const word = skipTrivia(value, bang + 1);
+  if (value.slice(word, word + 'important'.length).toLowerCase() !== 'important' || skipTrivia(value, word + 'important'.length) !== value.length) return value;
+  return value.slice(0, bang).replace(/[ \t\n\r\f]+$/u, '');
+}
+
 function declarations(style) {
   const authored = style.cssProperties.some((property) => property.range);
   return style.cssProperties
     .filter((property) => (authored ? property.range : !property.implicit) && !property.disabled && property.parsedOk !== false)
-    .map(({ name, value, important }) => ({ name, value: important ? value.replace(PRIORITY, '') : value, important: Boolean(important) }));
+    .map(({ name, value, important }) => ({ name, value: important ? withoutPriority(value) : value, important: Boolean(important) }));
 }
 
 // Names of the cascade layers a rule sits in, outermost first (Chrome 145 and

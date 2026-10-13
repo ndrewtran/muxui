@@ -145,14 +145,25 @@ test('a layer path that also names a different layer when read in reverse fails 
   assert.equal(styleContext(payload([rule('.muxui-x', { color: 'red' }, { layers: ['muxui', 'components'] })]), { depth: 1, sources, layers }).levels[0].rules[0].layer, 1);
 });
 
-test('the priority annotation is stripped from important declarations only, in any spelling', () => {
+test('only the trailing priority annotation of an important declaration is stripped', () => {
   const fontFamily = (value, important) => resolveProperty(styleContext(payload([rule('.muxui-x', { 'font-family': value }, { important })]), { depth: 1, sources }), 'font-family', tokens).value;
-  for (const annotation of [true, ' !IMPORTANT', ' ! important', ' !/**/important', ' !/* a */ /* b */important', ' !important /* trail */', '   !important   ']) {
+  // Any case, spacing, and comments around the word; the annotation may carry a trailing comment.
+  for (const annotation of [true, ' !IMPORTANT', ' ! important', ' !/**/important', ' !/* a */ /* b */important', ' !important /* trail */', '   !important   ', ' !important/* a */ /* b */']) {
     assert.equal(fontFamily('serif', annotation), 'serif', JSON.stringify(annotation));
   }
-  // `\!important` is an escaped identifier: a normal declaration keeps it, and an important one keeps it too.
+  // A normal declaration keeps `\!important`, an escaped identifier.
   assert.equal(fontFamily('\\!important'), '\\!important');
+  // Value text that looks like an annotation is kept: escapes, comments, and strings are skipped, and a comment ends at its first `*/`.
   assert.equal(fontFamily('\\!important', true), '\\!important');
+  assert.equal(fontFamily('\\!important /* keep */ serif', ' !important /* tail */'), '\\!important /* keep */ serif');
+  assert.equal(fontFamily('"!important"', true), '"!important"');
+  assert.equal(fontFamily("'a\\'!important'", true), "'a\\'!important'");
+  assert.equal(fontFamily('serif /* !important */', true), 'serif /* !important */');
+  assert.equal(fontFamily('serif', ' !important /* !important */'), 'serif');
+  assert.equal(fontFamily('serif /* a */', ' !/* b */ /* c */important'), 'serif /* a */');
+  // Anything but exactly `!`, the word, and trivia leaves the value alone.
+  assert.equal(fontFamily('serif', ' !nope'), 'serif !nope');
+  assert.equal(fontFamily('serif', ' !important x'), 'serif !important x');
 });
 
 test('a dark @scope override of a token custom property fails the mode audit', () => {
