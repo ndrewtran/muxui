@@ -32,7 +32,7 @@ The current theme does not provide runtime switching through the package. If a c
 
 `@muxui/react/styles.css` and `@muxui/react/themes.css` put every rule in the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens and theme presets sit in `muxui.tokens`, component styles in `muxui.components`, and `muxui.utilities` is declared and empty.
 
-CSS outside any layer always beats Mux UI, whatever its specificity, so your own unlayered rules override a component without `!important`. Declare your layer order once, before importing Mux UI, so a reset or framework sits below it and your layers sit above:
+For ordinary declarations, CSS outside any layer beats Mux UI, whatever its specificity, so your own unlayered rules override a component without `!important`. Declare your layer order once, before importing Mux UI, so a reset or framework sits below it and your layers sit above:
 
 ```css
 @layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
@@ -40,7 +40,7 @@ CSS outside any layer always beats Mux UI, whatever its specificity, so your own
 @import '@muxui/react/themes.css';
 ```
 
-Mux UI's `!important` rules for forced colors and reduced motion stay in their layer, where they beat your unlayered `!important` rules.
+Mux UI's `!important` rules for forced colors and reduced motion stay in their layer, where they beat the `!important` declarations in your unlayered stylesheets. An `!important` declaration in a layer you rank before Mux UI's layers, or in a `style` attribute, still wins over them.
 
 ## Semantic roles
 

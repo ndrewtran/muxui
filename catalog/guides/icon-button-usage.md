@@ -3,7 +3,7 @@
 Use `IconButton` for an action represented by one icon. Import it from
 `@muxui/react` and load `@muxui/react/styles.css` once in your application,
 after declaring your cascade layer order (`@layer reset, muxui.tokens,
-muxui.components, muxui.utilities, app;`). Your unlayered CSS always beats Mux.
+muxui.components, muxui.utilities, app;`). Your unlayered rules override Mux's ordinary declarations.
 Provide your own icon as children; Mux does not require a particular icon library.
 
 ```tsx

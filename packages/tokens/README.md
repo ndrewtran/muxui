@@ -86,8 +86,8 @@ layers below Tailwind's utilities:
 @import "./muxui-tailwind-theme.css";
 ```
 
-CSS outside any layer always beats Mux, so your own unlayered rules override a
-component without `!important`.
+For ordinary declarations, CSS outside any layer beats Mux, so your own
+unlayered rules override a component without `!important`.
 
 For example, `bg-muxui-component-button-background` uses the current Mux
 button background token, and `rounded-muxui-component-button-radius` uses its

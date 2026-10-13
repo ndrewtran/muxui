@@ -410,8 +410,8 @@ test('Button-family labels keep their rest colour and 4.5:1 contrast while only 
 });
 
 test('focus, choice geometry, and validation text have independent semantic overrides', { timeout: 30_000 }, async () => {
-  const css = (await Promise.all(['generated/styles.css', 'generated/supplemental.css', 'src/text-editor/text-editor.css']
-    .map((path) => readFile(resolve(packageRoot, path), 'utf8')))).join('\n');
+  // The shipped stylesheet alone, so a rule that generation drops is not masked by its raw source.
+  const css = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();

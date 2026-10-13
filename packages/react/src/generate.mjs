@@ -684,7 +684,7 @@ Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a them
 
 Every rule in \`styles.css\` and \`themes.css\` sits in one of the cascade layers \`muxui.tokens\`, \`muxui.components\`, and \`muxui.utilities\`, in that order. Tokens, theme presets, and direction rules are in \`muxui.tokens\`; component, field, collection, overlay, and supplemental styles are in \`muxui.components\`; \`muxui.utilities\` is declared and empty. Each file starts with the full order statement.
 
-CSS outside a layer always beats CSS inside one, whatever its specificity. Your own unlayered rules therefore override Mux UI without \`!important\` or a higher-specificity selector. Mux UI's \`!important\` rules (forced colors and reduced motion) stay in their layer and beat your unlayered \`!important\` rules, so those protections cannot be overridden. To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
+For ordinary declarations, CSS outside a layer beats CSS inside one, whatever its specificity, so your own unlayered rules override Mux UI without \`!important\` or a higher-specificity selector. \`!important\` reverses that order: Mux UI's \`!important\` rules (forced colors and reduced motion) beat the \`!important\` declarations in your unlayered stylesheets, but an \`!important\` declaration in a layer you rank before Mux UI's layers, or in a \`style\` attribute, still wins over them. To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
 
 \`\`\`css
 @layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
