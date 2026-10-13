@@ -87,10 +87,6 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/button/examples/html/basic.example.json"
-    },
-    {
-      "family": "example",
       "path": "catalog/components/button/examples/react/basic.example.json"
     },
     {

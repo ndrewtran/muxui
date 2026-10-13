@@ -6,6 +6,6 @@
   "summary": "Portable usage guidance for Button.",
   "lifecycle": "experimental",
   "keywords": ["action", "button"],
-  "platforms": ["web.html", "web.react", "native.react-native"],
+  "platforms": ["web.react"],
   "source": "catalog/guides/button-usage.md"
 }

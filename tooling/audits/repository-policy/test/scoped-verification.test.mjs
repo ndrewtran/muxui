@@ -313,10 +313,10 @@ test('dependencyOrder puts each package after the workspace packages it depends 
     item('@muxui/catalog', { '@muxui/schema': 'workspace:*', 'not-in-workspace': '1.0.0' }),
     item('@muxui/schema'),
     item('@muxui/tooling', { '@muxui/catalog': 'workspace:*' }),
-    item('@muxui/web'),
+    item('@muxui/scale'),
   ];
   assert.deepEqual(dependencyOrder(input).map(({ name }) => name), [
-    '@muxui/schema', '@muxui/catalog', '@muxui/tooling', '@muxui/docs', '@muxui/web',
+    '@muxui/schema', '@muxui/catalog', '@muxui/tooling', '@muxui/docs', '@muxui/scale',
   ]);
   // A cycle (which the workspace forbids) cannot loop or drop a package.
   const cyclic = [item('a', { b: '1' }), item('b', { a: '1' })];

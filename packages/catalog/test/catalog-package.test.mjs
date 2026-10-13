@@ -242,8 +242,9 @@ test('E-G1.0-04 test pack projection binds catalog, descriptors, and release map
     catalogBundle: bundle,
   });
   assert.doesNotThrow(() => assertPackedCompatibilityFixture(fixture));
-  assert.equal(fixture.descriptors.length, 3);
-  assert.equal(fixture.release.bindings.length, 3);
+  // Only web.react is implemented; the unsupported web.html and native.react-native bindings have no token sets to pack.
+  assert.equal(fixture.descriptors.length, 1);
+  assert.equal(fixture.release.bindings.length, 1);
 
   for (const field of [
     'tokenRequirementSetDigests',

@@ -18,40 +18,45 @@
   "bindings": {
     "web.html": {
       "schemaVersion": "2.0.0",
-      "lifecycle": "experimental",
-      "strategy": "direct",
-      "api": {
-        "props": ["disabled"],
-        "events": ["activate"],
-        "parts": ["root", "label"],
-        "defaults": { "disabled": false }
-      },
-      "behavior": ["Activation requests one immediate action"],
-      "accessibility": ["Expose accessible name and disabled state"],
-      "tokenRecipe": {
-        "source": "muxui:token:default-theme",
-        "requirements": [
-          { "token": "component.button.background", "requirement": "required" },
-          { "token": "component.button.foreground", "requirement": "required" },
-          { "token": "component.button.min-height", "requirement": "required" },
-          { "token": "component.button.padding-inline", "requirement": "required" },
-          { "token": "component.button.radius", "requirement": "required" }
-        ]
-      },
-    "platformSafety": [
-      {
-        "profile": "web.html",
-        "requirements": [
-          { "id": "system.forced-colors", "disposition": "required" },
-          { "id": "system.high-contrast", "disposition": "required" },
-          { "id": "native.dynamic-color", "disposition": "not-applicable", "reason": "Native dynamic colors do not apply to the HTML binding." },
-          { "id": "native.font-metrics", "disposition": "not-applicable", "reason": "Native font metrics do not apply to the HTML binding." },
-          { "id": "layout.direction", "disposition": "required" },
-          { "id": "platform.accessibility-mapping", "disposition": "required" }
-        ]
-      }
-    ],
-    "runtimeProfiles": {}
+      "strategy": "unsupported",
+      "reason": "Parked by Decision 0031: no responsible implementation until W1.0 restores @muxui/web.",
+      "platformSafety": [
+        {
+          "profile": "web.html",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
+            }
+          ]
+        }
+      ]
     },
     "web.react": {
       "schemaVersion": "2.0.0",
@@ -114,80 +119,45 @@
     },
     "native.react-native": {
       "schemaVersion": "2.0.0",
-      "lifecycle": "experimental",
-      "strategy": "adapted",
-      "api": {
-        "props": ["disabled"],
-        "events": ["activate"],
-        "parts": ["root", "label"],
-        "defaults": { "disabled": false }
-      },
-      "behavior": ["Activation requests one immediate action"],
-      "accessibility": ["Expose accessible name and disabled state"],
-      "tokenRecipe": {
-        "source": "muxui:token:default-theme",
-        "requirements": [
-          { "token": "component.button.background", "requirement": "required", "profiles": ["native.ios", "native.android"] },
-          { "token": "component.button.foreground", "requirement": "required", "profiles": ["native.ios", "native.android"] },
-          { "token": "component.button.min-height", "requirement": "required", "profiles": ["native.ios", "native.android"] },
-          { "token": "component.button.padding-inline", "requirement": "required", "profiles": ["native.ios", "native.android"] },
-          { "token": "component.button.radius", "requirement": "required", "profiles": ["native.ios", "native.android"] }
-        ]
-      },
-    "platformSafety": [
-      {
-        "profile": "ios",
-        "validationProfile": "native.ios",
-        "requirements": [
-          { "id": "system.forced-colors", "disposition": "not-applicable", "reason": "Web forced-colors mode does not apply to the iOS runtime." },
-          { "id": "system.high-contrast", "disposition": "not-applicable", "reason": "Web high-contrast media handling does not apply to the iOS runtime." },
-          { "id": "native.dynamic-color", "disposition": "required" },
-          { "id": "native.font-metrics", "disposition": "required" },
-          { "id": "layout.direction", "disposition": "required" },
-          { "id": "platform.accessibility-mapping", "disposition": "required" }
-        ]
-      },
-      {
-        "profile": "android",
-        "validationProfile": "native.android",
-        "requirements": [
-          { "id": "system.forced-colors", "disposition": "not-applicable", "reason": "Web forced-colors mode does not apply to the Android runtime." },
-          { "id": "system.high-contrast", "disposition": "not-applicable", "reason": "Web high-contrast media handling does not apply to the Android runtime." },
-          { "id": "native.dynamic-color", "disposition": "required" },
-          { "id": "native.font-metrics", "disposition": "required" },
-          { "id": "layout.direction", "disposition": "required" },
-          { "id": "platform.accessibility-mapping", "disposition": "required" }
-        ]
-      },
-      {
-        "profile": "native.react-native-web",
-        "validationProfile": "native.react-native-web",
-        "requirements": [
-          { "id": "system.forced-colors", "disposition": "not-applicable", "reason": "The runtime profile is unsupported in G1.0." },
-          { "id": "system.high-contrast", "disposition": "not-applicable", "reason": "The runtime profile is unsupported in G1.0." },
-          { "id": "native.dynamic-color", "disposition": "not-applicable", "reason": "The runtime profile is unsupported in G1.0." },
-          { "id": "native.font-metrics", "disposition": "not-applicable", "reason": "The runtime profile is unsupported in G1.0." },
-          { "id": "layout.direction", "disposition": "not-applicable", "reason": "The runtime profile is unsupported in G1.0." },
-          { "id": "platform.accessibility-mapping", "disposition": "not-applicable", "reason": "The runtime profile is unsupported in G1.0." }
-        ]
-      }
-    ],
-    "runtimeProfiles": {
-        "ios": {
-          "strategy": "adapted",
-          "lifecycle": "experimental",
-          "validationProfile": "native.ios"
-        },
-        "android": {
-          "strategy": "adapted",
-          "lifecycle": "experimental",
-          "validationProfile": "native.android"
-        },
-        "native.react-native-web": {
-          "strategy": "unsupported",
-          "reason": "No responsible implementation in the first proof artifact."
+      "strategy": "unsupported",
+      "reason": "Parked by Decision 0031: no responsible implementation until N1.0 restores @muxui/react-native.",
+      "platformSafety": [
+        {
+          "profile": "native.react-native",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "not-applicable",
+              "reason": "native.react-native is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "not-applicable",
+              "reason": "native.react-native is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "native.react-native is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "native.react-native is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "not-applicable",
+              "reason": "native.react-native is unsupported, so no platform-safety requirement applies."
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "not-applicable",
+              "reason": "native.react-native is unsupported, so no platform-safety requirement applies."
+            }
+          ]
         }
-      }
+      ]
     }
   }
 }

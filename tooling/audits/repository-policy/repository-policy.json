@@ -19,8 +19,6 @@
       "catalog/tokens/default-theme.json",
       "tests/fixtures/g0.4/",
       "tests/fixtures/g1.0/",
-      "tests/fixtures/g1.2/",
-      "packages/react-native/test/contract.test.mjs",
       "tooling/audits/repository-policy/src/policy.mjs",
       "tooling/audits/repository-policy/test/repository-policy.test.mjs",
       "packages/schema/schemas/react-r1.schema.json",
@@ -143,15 +141,21 @@
       "tests/evidence/",
       "tests/fixtures/g0.4/",
       "tests/fixtures/g1.0/",
-      "tests/fixtures/g1.2/AGENTS.md",
       "tooling/AGENTS.md",
       "tooling/audits/repository-policy/"
     ],
     "themePrefixes": [
       "catalog/tokens/",
-      "packages/foundation/",
       "packages/tokens/"
     ],
+    "reactTestInputs": {
+      "test/public-surface.test.mjs": [
+        "catalog/components/button/artifact.json",
+        "catalog/components/button/examples/react/basic.example.json",
+        "catalog/components/button/examples/react/basic.tsx",
+        "catalog/tokens/default-theme.json"
+      ]
+    },
     "reactCatalogInputReaders": {
       "catalog/react-r1-0/": {
         "reactGenerator": true,
@@ -193,9 +197,7 @@
     ],
     "packageFixtureOwners": {
       "packages/catalog/test/fixtures/": ["@muxui/catalog", "@muxui/tooling"],
-      "tests/fixtures/g0.5/": "@muxui/tooling",
-      "tests/fixtures/g1.1/": "@muxui/web",
-      "tests/fixtures/g1.2/": "@muxui/react-native"
+      "tests/fixtures/g0.5/": "@muxui/tooling"
     },
     "packageSourceOwners": {
       "catalog/capabilities/": "@muxui/catalog",

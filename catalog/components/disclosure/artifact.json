@@ -33,87 +33,45 @@
   "bindings": {
     "web.html": {
       "schemaVersion": "2.0.0",
-      "lifecycle": "experimental",
-      "strategy": "direct",
-      "api": {
-        "props": [
-          "expanded",
-          "defaultExpanded",
-          "disabled",
-          "id"
-        ],
-        "events": [
-          "expandedChange"
-        ],
-        "parts": [
-          "root",
-          "trigger",
-          "panel"
-        ],
-        "defaults": {
-          "expanded": false,
-          "defaultExpanded": false,
-          "disabled": false
-        }
-      },
-      "behavior": [
-        "Enter and Space toggle the panel",
-        "Expanded state is controllable or internally managed"
-      ],
-      "accessibility": [
-        "Expose a labelled button with expanded state and a controlled panel relationship"
-      ],
-      "tokenRecipe": {
-        "source": "muxui:token:default-theme",
-        "requirements": [
-          {
-            "token": "semantic.control.padding-inline",
-            "requirement": "required"
-          },
-          {
-            "token": "semantic.control.radius",
-            "requirement": "required"
-          },
-          {
-            "token": "semantic.focus.ring",
-            "requirement": "required"
-          }
-        ]
-      },
+      "strategy": "unsupported",
+      "reason": "Parked by Decision 0031: no responsible implementation until W1.0 restores @muxui/web.",
       "platformSafety": [
         {
           "profile": "web.html",
           "requirements": [
             {
               "id": "system.forced-colors",
-              "disposition": "required"
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
             },
             {
               "id": "system.high-contrast",
-              "disposition": "required"
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
             },
             {
               "id": "native.dynamic-color",
               "disposition": "not-applicable",
-              "reason": "Native dynamic colors do not apply to web.html."
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
             },
             {
               "id": "native.font-metrics",
               "disposition": "not-applicable",
-              "reason": "Native font metrics do not apply to web.html."
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
             },
             {
               "id": "layout.direction",
-              "disposition": "required"
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
             },
             {
               "id": "platform.accessibility-mapping",
-              "disposition": "required"
+              "disposition": "not-applicable",
+              "reason": "web.html is unsupported, so no platform-safety requirement applies."
             }
           ]
         }
-      ],
-      "runtimeProfiles": {}
+      ]
     },
     "web.react": {
       "schemaVersion": "2.0.0",
