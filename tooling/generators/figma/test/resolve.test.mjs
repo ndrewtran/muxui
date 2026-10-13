@@ -41,14 +41,14 @@ test('the cascade honours order, !important, shorthands, inheritance, and the in
   assert.equal(resolveCss('font-size', '.muxui-child { display: block; }', library).token, 'semantic.control.size-md');
 });
 
-// cssLevel rules tagged with cascade layer orders (an omitted order leaves a rule unlayered).
-function layeredLevel(css, orders) {
+// cssLevel with each rule tagged (`layer`, `userAgent`, `inline`), in rule order.
+function taggedLevel(css, tags) {
   const level = cssLevel(css);
-  level.rules.forEach((rule, index) => {
-    if (orders[index] !== undefined) rule.layer = orders[index];
-  });
+  level.rules.forEach((rule, index) => Object.assign(rule, tags[index]));
   return level;
 }
+// Tags for a list of layer orders (an omitted order leaves a rule unlayered).
+const layeredLevel = (css, orders) => taggedLevel(css, orders.map((layer) => ({ layer })));
 
 test('cascade layers: unlayered and later layers win normal declarations, the earliest layer wins !important', () => {
   const strong = 'var(--muxui-semantic-surface-strong)';
@@ -71,18 +71,29 @@ test('cascade layers: unlayered and later layers win normal declarations, the ea
   assert.equal(winner(`${strong} !important`, raised, [undefined, 0]), 'semantic.surface.strong');
 });
 
-test('cascade layers: the style attribute beats every layer and the user agent loses to every layer', () => {
-  const inline = (css) => ({ ...cssLevel(css).rules[0], inline: true });
-  const layered = layeredLevel('.a { color: var(--muxui-semantic-surface-strong) !important; }', [0]);
-  assert.equal(resolveCss('color', { ...layered, rules: [...layered.rules, inline('.i { color: var(--muxui-semantic-surface-raised) !important; }')] }).token, 'semantic.surface.raised');
-  const unlayered = cssLevel('.a { color: var(--muxui-semantic-surface-strong); }');
-  assert.equal(resolveCss('color', { ...unlayered, rules: [...unlayered.rules, inline('.i { color: var(--muxui-semantic-surface-raised); }')] }).token, 'semantic.surface.raised');
-  // The user-agent origin ranks -Infinity: below every author layer, and above them for !important.
-  const winner = (important, orders) => resolveCss('color', layeredLevel(`.first { color: var(--muxui-semantic-surface-strong)${important}; } .second { color: var(--muxui-semantic-surface-raised)${important}; }`, orders)).token;
-  assert.equal(winner('', [-Infinity, 0]), 'semantic.surface.raised');
-  assert.equal(winner('', [0, -Infinity]), 'semantic.surface.strong');
-  assert.equal(winner(' !important', [-Infinity, 0]), 'semantic.surface.strong');
-  assert.equal(winner(' !important', [0, -Infinity]), 'semantic.surface.raised');
+test('cascade origin and importance rank before the style attribute, and both before layers', () => {
+  // Each entry is [important, tags]; every rule sets color to its own token, and the winner's index comes back.
+  const ids = ['semantic.surface.raised', 'semantic.surface.strong', 'semantic.selection.track', 'semantic.content.strong'];
+  const winner = (...entries) => {
+    const css = entries.map(([important], index) => `.r${index} { color: var(--muxui-${ids[index].replaceAll('.', '-')})${important ? ' !important' : ''}; }`).join('\n');
+    return ids.indexOf(resolveCss('color', taggedLevel(css, entries.map(([, tags]) => tags))).token);
+  };
+  const userAgent = { userAgent: true };
+  const inline = { inline: true };
+  // Important user agent beats an important style attribute, layered, and unlayered rule, wherever it is listed.
+  assert.equal(winner([true, userAgent], [true, inline], [true, { layer: 0 }], [true, {}]), 0);
+  assert.equal(winner([true, inline], [true, { layer: 0 }], [true, {}], [true, userAgent]), 3);
+  // Without the user agent, an important style attribute beats layered and unlayered important rules.
+  assert.equal(winner([true, { layer: 0 }], [true, {}], [true, inline]), 2);
+  assert.equal(winner([true, inline], [true, { layer: 0 }], [true, {}]), 0);
+  // Important author beats normal author, including the style attribute.
+  assert.equal(winner([false, inline], [true, {}]), 1);
+  assert.equal(winner([true, { layer: 1 }], [false, inline]), 0);
+  // Normal: the style attribute beats unlayered and layered rules, and any author rule beats the user agent.
+  assert.equal(winner([false, inline], [false, {}], [false, { layer: 2 }]), 0);
+  assert.equal(winner([false, {}], [false, inline]), 1);
+  assert.equal(winner([false, userAgent], [false, { layer: 0 }]), 1);
+  assert.equal(winner([false, {}], [false, userAgent]), 0);
 });
 
 test('paints resolve to overlays, mixes, and shadow layers', () => {

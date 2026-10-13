@@ -33,10 +33,13 @@ test('Button measures mode-consistently in Chrome and applies idempotently', { s
   assert.deepEqual([second.created, second.updated, state.writes], [0, 0, writes]);
 });
 
-// Chrome's own cascade is the reference for the layer model: the layer order is
-// declared before the blocks, one layer is nested, and each winner differs by
-// rule: normal color from the later layer, important width from the earlier,
-// and height from the unlayered rule over both.
+// Chrome's own cascade is the reference for the layer and origin model. The
+// layer order is declared before the blocks and one layer is nested. Each
+// winner differs by rule: normal color from the later layer, important width
+// from the earlier, height from the unlayered rule over both, min-width from
+// the style attribute over layered and unlayered important rules, and an
+// autofilled input's background from the important user-agent rule over its
+// important style attribute.
 test('layered rules resolve as Chrome cascades them', { skip: !process.env.MUXUI_CHROME_EXECUTABLE, timeout: 60_000 }, async () => {
   const browser = await launchBrowser();
   try {
@@ -48,18 +51,28 @@ test('layered rules resolve as Chrome cascades them', { skip: !process.env.MUXUI
     await cdp.send('CSS.enable');
     await page.setContent(`<style>
 @layer lib.tokens, lib.components;
-@layer lib.components { #t { color: rgb(0, 0, 2); width: 20px !important; height: 2px; } }
-@layer lib { @layer tokens { #t { color: rgb(0, 0, 1); width: 10px !important; height: 1px; } } }
-#t { height: 3px; }
-</style><div id="t"></div>`);
+@layer lib.components { #t { color: rgb(0, 0, 2); width: 20px !important; height: 2px; min-width: 8px !important; } }
+@layer lib { @layer tokens { #t { color: rgb(0, 0, 1); width: 10px !important; height: 1px; min-width: 7px !important; } } }
+#t { height: 3px; min-width: 9px !important; }
+</style><div id="t" style="min-width: 6px !important"></div><input id="i" style="background-color: rgb(1, 2, 3) !important">`);
     const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
     const query = async (selector) => (await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector })).nodeId;
     const layers = layerOrders((await cdp.send('CSS.getLayersForNode', { nodeId: await query('html') })).rootLayer);
-    const context = styleContext(await cdp.send('CSS.getMatchedStylesForNode', { nodeId: await query('#t') }), { depth: 0, sources, layers });
-    const longhands = ['color', 'width', 'height'];
-    const computed = await page.evaluate((names) => Object.fromEntries(names.map((name) => [name, getComputedStyle(document.getElementById('t')).getPropertyValue(name)])), longhands);
-    assert.deepEqual(computed, { color: 'rgb(0, 0, 2)', width: '10px', height: '3px' });
-    assert.deepEqual(Object.fromEntries(longhands.map((name) => [name, resolveProperty(context, name, new Map()).value])), computed);
+    const measure = async (selector, longhands) => {
+      const nodeId = await query(selector);
+      const context = styleContext(await cdp.send('CSS.getMatchedStylesForNode', { nodeId }), { depth: 0, sources, layers });
+      const computed = await page.evaluate(({ selector, names }) => Object.fromEntries(names.map((name) => [name, getComputedStyle(document.querySelector(selector)).getPropertyValue(name)])), { selector, names: longhands });
+      return { context, computed, resolved: Object.fromEntries(longhands.map((name) => [name, resolveProperty(context, name, new Map())])) };
+    };
+
+    const element = await measure('#t', ['color', 'width', 'height', 'min-width']);
+    assert.deepEqual(element.computed, { color: 'rgb(0, 0, 2)', width: '10px', height: '3px', 'min-width': '6px' });
+    assert.deepEqual(Object.fromEntries(Object.entries(element.resolved).map(([name, { value }]) => [name, value])), element.computed);
+
+    await cdp.send('CSS.forcePseudoState', { nodeId: await query('#i'), forcedPseudoClasses: ['autofill'] });
+    const input = await measure('#i', ['background-color']);
+    assert.equal(input.computed['background-color'], 'rgb(232, 240, 254)');
+    assert.match(input.resolved['background-color'].rule, /\(user-agent\)$/u);
   } finally {
     await browser.close();
   }

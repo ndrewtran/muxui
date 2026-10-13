@@ -14,7 +14,7 @@ import { cssName } from '@muxui/tokens/core';
 
 /**
  * @typedef {{ name: string, value: string, important?: boolean }} Declaration
- * @typedef {{ rule: string, component: boolean, library?: boolean, layer?: number, inline?: boolean, declarations: Declaration[] }} Rule
+ * @typedef {{ rule: string, component: boolean, library?: boolean, layer?: number, userAgent?: boolean, inline?: boolean, declarations: Declaration[] }} Rule
  *   `rule` is a stable description used in diagnostics; `component` marks
  *   any rule other than a generated theme block (including its at-rule
  *   context, such as an `@scope` prelude), so a token custom property
@@ -22,9 +22,8 @@ import { cssName } from '@muxui/tokens/core';
  *   `library` marks a rule from Mux UI's own stylesheet, such as its
  *   `:where(body)` text defaults, which apply outside the instance too.
  *   `layer` is the cascade order of the rule's cascade layer (higher is
- *   declared later), omitted for an unlayered rule and -Infinity for the
- *   user-agent origin, which sits below every author layer; `inline` marks
- *   the element's style attribute.
+ *   declared later), omitted for an unlayered rule; `userAgent` marks the
+ *   user-agent origin and `inline` the element's style attribute.
  * @typedef {{ rules: Rule[], inside: boolean }} Level
  *   `inside` is false for ancestors outside the measured component instance.
  * @typedef {{ levels: Level[] }} StyleContext
@@ -197,38 +196,45 @@ export function longhandValue(longhand, declaration) {
 }
 
 /**
- * Where a declaration ranks in the cascade, the higher winning (CSS Cascade 5,
- * 6.4). An element's style attribute beats every layer. Normal declarations
- * favour later layers and unlayered styles over layered ones; important ones
- * reverse that: the earliest layer wins and unlayered styles lose. Equal ranks
- * (one layer, or both unlayered) leave the later rule in the level winning.
+ * Where a declaration ranks in the cascade, compared part by part with the
+ * higher winning (CSS Cascade 5, 6.4.1):
+ * 1. origin and importance: important user agent, important author, normal
+ *    author, normal user agent;
+ * 2. the element's style attribute over style rules;
+ * 3. layers: normal declarations favour later layers and unlayered styles;
+ *    important ones reverse that, so the earliest layer wins and unlayered
+ *    styles lose.
+ * Equal ranks (one layer, or both unlayered) leave the later rule in the
+ * level winning, since a level lists rules in specificity and source order.
  */
 function precedence(rule, important) {
-  if (rule.inline) return Infinity;
-  if (!important) return rule.layer ?? Infinity;
-  return rule.layer === undefined ? -Infinity : -rule.layer;
+  const origin = rule.userAgent ? (important ? 3 : 0) : (important ? 2 : 1);
+  const layer = rule.layer ?? Infinity;
+  return [origin, rule.inline ? 1 : 0, important ? -layer : layer];
+}
+
+// Whether rank `a` is equal to or above rank `b`.
+function atLeast(a, b) {
+  const differs = a.findIndex((part, index) => part !== b[index]);
+  return differs < 0 || a[differs] > b[differs];
 }
 
 /** The winning declaration for `longhand` within one level, or undefined. */
 export function winningDeclaration(level, longhand) {
   const names = longhand.startsWith('--') ? [longhand] : LONGHAND_SOURCES[longhand];
   if (!names) throw new Error(`MUXUI_FIGMA_COMPONENTS_PROPERTY_UNKNOWN: ${longhand} is not a measured longhand`);
-  let normal;
-  let important;
+  let best;
   for (const rule of level.rules) {
     for (const declaration of rule.declarations) {
       if (!names.includes(declaration.name)) continue;
       const value = longhandValue(longhand, declaration);
       if (value === undefined) continue;
       const rank = precedence(rule, declaration.important);
-      const current = declaration.important ? important : normal;
-      if (current && rank < current.rank) continue;
-      const winner = { rank, found: { rule: rule.rule, component: rule.component, library: Boolean(rule.library), value: value.trim() } };
-      if (declaration.important) important = winner;
-      else normal = winner;
+      if (best && !atLeast(rank, best.rank)) continue;
+      best = { rank, found: { rule: rule.rule, component: rule.component, library: Boolean(rule.library), value: value.trim() } };
     }
   }
-  return (important ?? normal)?.found;
+  return best?.found;
 }
 
 // First winning declaration from `start` outwards. Inherited and custom

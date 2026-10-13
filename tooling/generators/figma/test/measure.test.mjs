@@ -9,6 +9,7 @@ import { tokens } from './support.mjs';
 const LIBRARY = 'packages/react/generated/styles.css';
 const sources = new Map([['library', LIBRARY], ['harness', 'harness.css']]);
 let line = 0;
+// `important` is true, or the priority annotation as written (Chrome keeps it in the value text).
 function rule(selector, properties, { sheet = 'library', origin = 'regular', scopes, media, layers, important = false } = {}) {
   line += 1;
   return {
@@ -16,7 +17,7 @@ function rule(selector, properties, { sheet = 'library', origin = 'regular', sco
       selectorList: { text: selector },
       origin,
       styleSheetId: sheet,
-      style: { cssProperties: Object.entries(properties).map(([name, value]) => ({ name, value: important ? `${value} !important` : value, ...(important ? { important } : {}), range: { startLine: line } })), range: { startLine: line } },
+      style: { cssProperties: Object.entries(properties).map(([name, value]) => ({ name, value: important ? `${value}${important === true ? ' !important' : important}` : value, ...(important ? { important: true } : {}), range: { startLine: line } })), range: { startLine: line } },
       ...(scopes ? { scopes } : {}),
       ...(media ? { media } : {}),
       // Chrome lists a rule's layers outermost first; `layers` takes their names.
@@ -82,10 +83,10 @@ test('layered rules take their cascade order from the page tree, and the resolve
     rule('.consumer', { width: '20px' }, { sheet: 'harness' }),
   ]);
   const context = styleContext(matched, { depth: 1, sources, layers });
-  // The user-agent origin ranks below every layer, and an unlayered rule carries no layer.
-  assert.deepEqual(context.levels[0].rules.map((entry) => entry.layer), [-Infinity, 1, 1, undefined]);
-  assert.equal('layer' in context.levels[0].rules[3], false);
-  // A layer beats the user agent; a later rule in the same layer beats an earlier one, however the layer is spelled.
+  // The user-agent origin is marked, and an unlayered rule carries no layer.
+  assert.deepEqual(context.levels[0].rules.map((entry) => entry.layer), [undefined, 1, 1, undefined]);
+  assert.deepEqual(context.levels[0].rules.map((entry) => entry.userAgent), [true, undefined, undefined, undefined]);
+  // An author layer beats the user agent; a later rule in the same layer beats an earlier one, however the layer is spelled.
   assert.equal(resolveProperty(context, 'background-color', tokens).token, 'semantic.surface.raised');
   assert.equal(resolveProperty(context, 'color', tokens).token, 'semantic.focus.ring');
   // An unlayered rule beats a layered one without specificity.
@@ -130,6 +131,28 @@ test('a layered rule the page cannot order fails loudly unless it sets nothing m
   // React Aria's injected anonymous-layer rule sets nothing measured, so it is left out.
   const unmeasured = payload([rule('[data-react-aria-pressable]', { 'touch-action': 'pan-x pan-y pinch-zoom' }, { sheet: 'harness', layers: [''] })]);
   assert.deepEqual(styleContext(unmeasured, { depth: 1, sources, layers }).levels[0].rules, []);
+});
+
+test('a layer path that also names a different layer when read in reverse fails as ambiguous', () => {
+  // `@layer a.b, b.a;` leaves the order Chrome lists nested layers in undecidable from names alone.
+  const collision = layerOrders({ subLayers: [{ name: 'a', order: 2, subLayers: [{ name: 'b', order: 0 }] }, { name: 'b', order: 3, subLayers: [{ name: 'a', order: 1 }] }] });
+  const layer = (...names) => styleContext(payload([rule('.muxui-x', { color: 'red' }, { layers: names })]), { depth: 1, sources, layers: collision }).levels[0].rules[0].layer;
+  assert.throws(() => layer('a', 'b'), /MUXUI_FIGMA_COMPONENTS_LAYER_AMBIGUOUS: \.muxui-x .* sits in cascade layer a > b, which names two layers .*a\.b and b\.a/u);
+  // One dotted name has no other reading, and a path whose reverse is not a layer is unambiguous.
+  assert.equal(layer('a.b'), 0);
+  assert.equal(layer('b.a'), 1);
+  assert.equal(layer('a'), 2);
+  assert.equal(styleContext(payload([rule('.muxui-x', { color: 'red' }, { layers: ['muxui', 'components'] })]), { depth: 1, sources, layers }).levels[0].rules[0].layer, 1);
+});
+
+test('the priority annotation is stripped from important declarations only, in any spelling', () => {
+  const fontFamily = (value, important) => resolveProperty(styleContext(payload([rule('.muxui-x', { 'font-family': value }, { important })]), { depth: 1, sources }), 'font-family', tokens).value;
+  for (const annotation of [true, ' !IMPORTANT', ' ! important', ' !/**/important', ' !/* a */ /* b */important', ' !important /* trail */', '   !important   ']) {
+    assert.equal(fontFamily('serif', annotation), 'serif', JSON.stringify(annotation));
+  }
+  // `\!important` is an escaped identifier: a normal declaration keeps it, and an important one keeps it too.
+  assert.equal(fontFamily('\\!important'), '\\!important');
+  assert.equal(fontFamily('\\!important', true), '\\!important');
 });
 
 test('a dark @scope override of a token custom property fails the mode audit', () => {

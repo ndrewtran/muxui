@@ -55,12 +55,15 @@ function describeRule(rule, sources) {
   return `${[...context, rule.selectorList.text.replace(/\s+/gu, ' ')].join(' ')} (${source})`;
 }
 
+// Chrome keeps the priority annotation in the value text of an important
+// declaration: `!important` in any case, with whitespace or comments around the
+// words. A normal declaration's value is left alone (`\!important` is an ident).
+const PRIORITY = /\s*!(?:\s|\/\*[\s\S]*?\*\/)*important(?:\s|\/\*[\s\S]*?\*\/)*$/iu;
 function declarations(style) {
   const authored = style.cssProperties.some((property) => property.range);
   return style.cssProperties
     .filter((property) => (authored ? property.range : !property.implicit) && !property.disabled && property.parsedOk !== false)
-    // Chrome keeps the `!important` flag in an authored declaration's value text.
-    .map(({ name, value, important }) => ({ name, value: value.replace(/\s*!important$/u, ''), important: Boolean(important) }));
+    .map(({ name, value, important }) => ({ name, value: important ? value.replace(PRIORITY, '') : value, important: Boolean(important) }));
 }
 
 // Names of the cascade layers a rule sits in, outermost first (Chrome 145 and
@@ -108,16 +111,21 @@ export function layerOrders(root) {
 const MEASURED_NAMES = new Set(Object.values(LONGHAND_SOURCES).flat());
 const measuredDeclaration = ({ name }) => name.startsWith('--') || MEASURED_NAMES.has(name);
 
-// Cascade order of a rule's layer, or undefined for an unlayered author rule.
-// The user-agent origin sits below every author layer. A layer the page does
-// not list by name (an anonymous one) fails rather than being guessed at.
+// Cascade order of a rule's layer, or undefined for an unlayered rule. Chrome
+// lists a rule's layers outermost first; if a version listed them the other
+// way, a path that also exists reversed would silently take the wrong layer, so
+// such a rule fails. So does a layer the page does not list by name (an
+// anonymous one) rather than being guessed at.
 function cascadeLayer(rule, layers, sources) {
-  if (rule.origin === 'user-agent') return -Infinity;
   if (!rule.layers?.length) return undefined;
   const names = layerNames(rule);
   const order = names.includes('') ? undefined : layers.get(names.join('.'));
   if (order === undefined) {
     throw new Error(`MUXUI_FIGMA_COMPONENTS_LAYER_UNORDERED: ${describeRule(rule, sources)} sits in cascade layer ${names.map((name) => name || '(anonymous)').join(' > ')}; the measurement can only order named layers listed by the page`);
+  }
+  const reversed = layers.get([...names].reverse().join('.'));
+  if (reversed !== undefined && reversed !== order) {
+    throw new Error(`MUXUI_FIGMA_COMPONENTS_LAYER_AMBIGUOUS: ${describeRule(rule, sources)} sits in cascade layer ${names.join(' > ')}, which names two layers of the page (${names.join('.')} and ${[...names].reverse().join('.')}) depending on the order Chrome lists them`);
   }
   return order;
 }
@@ -133,6 +141,7 @@ function level(matches, inline, inside, sources, layers) {
       rule: describeRule(rule, sources),
       component: rule.origin !== 'user-agent' && !isThemeRule(rule, sources),
       library: rule.origin !== 'user-agent' && sources.get(rule.styleSheetId) === LIBRARY_STYLESHEET,
+      ...(rule.origin === 'user-agent' ? { userAgent: true } : {}),
       ...(layer === undefined ? {} : { layer }),
       declarations: declarations(rule.style),
     }];
