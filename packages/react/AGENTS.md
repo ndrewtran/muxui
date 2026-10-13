@@ -1,8 +1,8 @@
 # React package navigation
 
 `src/` owns the standalone React lifecycle, host-language refinements, and
-Mux UI-owned CSS implementation. It does not import `@muxui/web` or external
-design-system packages at runtime or build time. Each admitted component owns
+Mux UI-owned CSS implementation. It does not import external design-system
+packages at runtime or build time. Each admitted component owns
 its Mux UI selectors, metadata, and token/style behavior. `test/` proves
 SSR/hydration, effect cleanup, typed host ergonomics, CSS conformance, and
 applicable binding behavior. No

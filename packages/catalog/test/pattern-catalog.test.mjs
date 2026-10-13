@@ -621,10 +621,14 @@ test('E-BL1-07: usedIn follows the requested platform', async () => {
       files.set('artifact.json', JSON.stringify(record));
     },
   });
-  const api = createCatalogApi(withButton.bundle);
+  // Button ships web.react only, so a copy that also serves web.html exercises the platform filter.
+  const widened = structuredClone(withButton.bundle);
+  widened.artifacts.find(({ id }) => id === 'muxui:component:button').platforms = ['web.html', 'web.react'];
+  const { catalogDigest: _catalogDigest, ...widenedPreimage } = widened;
+  const api = createCatalogApi({ ...widenedPreimage, catalogDigest: canonicalDigest(widenedPreimage) });
   const usedIn = (platform) => api.getArtifact({ id: 'muxui:component:button', platform }).data.usedIn.map(({ id }) => id);
   const uses = (platform) => api.listArtifacts({ uses: 'muxui:component:button', platform }).data.items.map(({ id }) => id);
-  // Button supports web.html and web.react; the pattern is web.react only.
+  // The copy supports web.html and web.react; the pattern is web.react only.
   assert.deepEqual(usedIn(null), [patternId]);
   assert.deepEqual(usedIn('web.react'), [patternId]);
   assert.deepEqual(usedIn('web.html'), []);

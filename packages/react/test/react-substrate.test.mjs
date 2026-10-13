@@ -18,7 +18,6 @@ test('package has an exact standalone React Aria substrate identity', async () =
   assert.equal(reactCompatibility.upstream.version, manifest.dependencies['react-aria-components']);
   const substrate = { dependencies: { 'react-aria-components': manifest.dependencies['react-aria-components'] } };
   assert.deepEqual(exactLockedProblems(await readLockfile(), 'packages/react', substrate), []);
-  assert.equal(manifest.dependencies['@muxui/web'], undefined);
 });
 
 test('the declared upstream follows the pin and keeps the retained commit only for the retained version', async () => {

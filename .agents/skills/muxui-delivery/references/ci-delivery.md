@@ -48,7 +48,7 @@ checks:
   or by running the wider proof the notice plans.
 
 Typical causes, as examples only: the token catalog under `catalog/tokens/`,
-`packages/foundation/`, global or selector-free rules in shared stylesheets,
+global or selector-free rules in shared stylesheets,
 and the `reactStorybookSharedPaths` in
 `tooling/audits/repository-policy/repository-policy.json` such as the story
 factory and Storybook preview. Breadth alone never needs approval; ask Andrew

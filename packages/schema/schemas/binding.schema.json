@@ -218,7 +218,7 @@
       "required": ["profile", "requirements"],
       "properties": {
         "profile": {
-          "enum": ["web.html", "web.react", "ios", "android", "native.react-native-web"],
+          "enum": ["web.html", "web.react", "native.react-native", "ios", "android", "native.react-native-web"],
           "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
         },
         "validationProfile": {

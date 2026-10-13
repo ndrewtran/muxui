@@ -248,6 +248,12 @@ function unquoteLockKey(key) {
   return key.replace(/^['"]|['"]$/gu, '');
 }
 
+// An importer the head lockfile no longer lists, whose package left the workspace.
+function isRemovedWorkspaceImporter(importer, packages, lockfileAfter) {
+  if (packageByPath(importer, packages)) return false;
+  return ![...lockfileSections(lockfileAfter).importerRecords.keys()].map(unquoteLockKey).includes(importer);
+}
+
 // `name: version` (snapshot) or `name:\n  version: version` (importer) entries
 // under the dependency sections of one lockfile record body.
 function lockRecordDependencies(body) {
@@ -658,11 +664,6 @@ function applyPackageImpact(plan, packageName, records, pageIndex) {
     plan.tailwind = true;
     return 'token compiler and theme consumers';
   }
-  if (packageName === '@muxui/foundation') {
-    addUnique(plan.packageChecks, packageName);
-    plan.storyTheme = true;
-    return 'foundation package and theme consumers';
-  }
   if (packageName === '@muxui/docs') {
     plan.docs = true;
     return 'documentation application';
@@ -700,7 +701,7 @@ function routeLockfileImporter(plan, importer, packages, records, pageIndex) {
     throw new Error(`MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer ${importer} has no current workspace package owner`);
   }
   const description = applyPackageImpact(plan, owner.name, records, pageIndex);
-  if (!['@muxui/repository-policy', '@muxui/catalog', '@muxui/tokens', '@muxui/foundation', '@muxui/docs', '@muxui/scale', '@muxui/react', '@muxui/react-storybook'].includes(owner.name)) {
+  if (!['@muxui/repository-policy', '@muxui/catalog', '@muxui/tokens', '@muxui/docs', '@muxui/scale', '@muxui/react', '@muxui/react-storybook'].includes(owner.name)) {
     addUnique(plan.packageChecks, owner.name);
   }
   plan.reasons.push(`lockfile importer ${importer} changes ${description}`);
@@ -1151,8 +1152,6 @@ export async function buildPullRequestImpact({
         if (path.startsWith('packages/tokens/src/') || path === 'packages/tokens/package.json') {
           plan.storyChrome = true;
         }
-      } else if (path.startsWith('packages/foundation/')) {
-        plan.packageChecks.add('@muxui/foundation');
       }
       plan.reactTheme = true;
       plan.storyTheme = true;
@@ -1462,6 +1461,11 @@ export async function buildPullRequestImpact({
       plan.reasons.push('pnpm-lock.yaml changes only the repository-policy importer and adds its parser resolutions');
     } else if (plan.fullReasons.length === 0) {
       for (const importer of changedLockfileImporters(lockfileBefore, lockfileAfter)) {
+        // Removing a workspace package changes the workspace graph itself: no owner remains to scope the proof to.
+        if (isRemovedWorkspaceImporter(importer, packages, lockfileAfter)) {
+          plan.fullReasons.push(`pnpm-lock.yaml drops the importer ${importer}, whose workspace package was removed`);
+          continue;
+        }
         changedPackages.add(routeLockfileImporter(plan, importer, packages, records, pageIndex));
       }
     }
@@ -1719,7 +1723,7 @@ export function needsStorybookGeneration(paths, config, {
     || path.startsWith('apps/react-storybook/.storybook/generated/'));
   if (sourceNeedsMetadata) return true;
 
-  const metadataOwners = ['@muxui/react', '@muxui/react-storybook', '@muxui/tokens', '@muxui/foundation'];
+  const metadataOwners = ['@muxui/react', '@muxui/react-storybook', '@muxui/tokens'];
   const importerOwners = lockfileImporters.map((importer) => packageByPath(importer, packages)?.name).filter(Boolean);
   if (importerOwners.some((name) => metadataOwners.includes(name))) return true;
   // A dependent routed as if it changed reads the same records.

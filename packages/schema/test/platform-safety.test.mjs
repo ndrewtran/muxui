@@ -96,6 +96,28 @@ test('E-G1.0-07 rejects unknown, missing, duplicate, and wrong-profile declarati
   }));
 });
 
+test('E-G1.0-07 an unsupported native binding declares platform safety under its own binding ID', () => {
+  const binding = {
+    schemaVersion: '2.0.0',
+    strategy: 'unsupported',
+    reason: 'No responsible implementation exists.',
+    platformSafety: [{
+      profile: 'native.react-native',
+      requirements: contract.requirements.map(({ id }) => ({
+        id,
+        disposition: 'not-applicable',
+        reason: 'The binding is unsupported.',
+      })),
+    }],
+  };
+  validateFamily('binding', binding);
+  const set = compilePlatformSafetyRequirementSets({
+    contract, bindingId: 'native.react-native', binding,
+  })['native.react-native'];
+  assert.equal(set.profile, 'native.react-native');
+  assert.equal(set.dispositions.every(({ disposition }) => disposition === 'not-applicable'), true);
+});
+
 test('E-G1.0-07 unsupported top-level bindings retain a complete declaration and digest', () => {
   const binding = {
     schemaVersion: '2.0.0',

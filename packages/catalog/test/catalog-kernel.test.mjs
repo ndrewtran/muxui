@@ -67,6 +67,42 @@ function preimage(bundle) {
   return value;
 }
 
+// Button's real native binding is unsupported; query tests that select by runtime profile
+// swap in a schema-valid implemented binding on a copy of the bundle.
+function implementedNativeBinding() {
+  const tokens = ['background', 'foreground', 'min-height', 'padding-inline', 'radius'];
+  const profiles = { ios: 'native.ios', android: 'native.android', 'native.react-native-web': 'native.react-native-web' };
+  const webOnly = (id) => id === 'system.forced-colors' || id === 'system.high-contrast';
+  return {
+    schemaVersion: '2.0.0',
+    lifecycle: 'experimental',
+    strategy: 'adapted',
+    api: { props: ['disabled'], events: ['activate'], parts: ['root', 'label'], defaults: { disabled: false } },
+    behavior: ['Activation requests one immediate action'],
+    accessibility: ['Expose accessible name and disabled state'],
+    tokenRecipe: {
+      source: 'muxui:token:default-theme',
+      requirements: tokens.map((name) => ({
+        token: `component.button.${name}`,
+        requirement: 'required',
+        profiles: ['native.ios', 'native.android'],
+      })),
+    },
+    platformSafety: Object.entries(profiles).map(([profile, validationProfile]) => ({
+      profile,
+      validationProfile,
+      requirements: ['system.forced-colors', 'system.high-contrast', 'native.dynamic-color', 'native.font-metrics', 'layout.direction', 'platform.accessibility-mapping']
+        .map((id) => (webOnly(id)
+          ? { id, disposition: 'not-applicable', reason: 'Web system modes do not apply to the native runtime.' }
+          : { id, disposition: 'required' })),
+    })),
+    runtimeProfiles: Object.fromEntries(Object.entries(profiles).map(([profile, validationProfile]) => [
+      profile,
+      { strategy: 'adapted', lifecycle: 'experimental', validationProfile },
+    ])),
+  };
+}
+
 function countTokens(value) {
   return value.match(/[\p{L}\p{N}_]+/gu)?.length ?? 0;
 }
@@ -798,17 +834,11 @@ test('E-G0.2-04: search is bounded and retrieval traverses only direct relations
   assert.equal(examples.data.value[0].id, 'muxui:example:button-basic-react');
   assert.equal(Object.hasOwn(examples.data.value[0], 'record'), false);
 
-  const htmlExamples = getArtifact({
+  // Button's web.html binding is unsupported, so the component is not served there.
+  assert.equal(getArtifact({
     id: 'muxui:component:button',
     platform: 'web.html',
-    section: 'examples',
-    purpose: 'generation',
-    detail: 'compact',
-  });
-  assert.deepEqual(
-    htmlExamples.data.value.map(({ id }) => id),
-    ['muxui:example:button-basic-html'],
-  );
+  }).error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
 
   const profileBundle = structuredClone(baseBundle);
   const profileButton = profileBundle.artifacts.find(
@@ -816,13 +846,9 @@ test('E-G0.2-04: search is bounded and retrieval traverses only direct relations
   );
   profileButton.platforms.push('native.react-native-web');
   profileButton.platforms.sort();
-  profileButton.record.bindings['native.react-native'].runtimeProfiles['native.react-native-web'] = {
-    strategy: 'adapted',
-    lifecycle: 'experimental',
-    validationProfile: 'native.react-native-web',
-  };
+  profileButton.record.bindings['native.react-native'] = implementedNativeBinding();
   const profileExample = structuredClone(
-    profileBundle.artifacts.find(({ id }) => id === 'muxui:example:button-basic-html'),
+    profileBundle.artifacts.find(({ id }) => id === 'muxui:example:button-basic-react'),
   );
   profileExample.id = 'muxui:example:button-native-profile';
   profileExample.record.id = profileExample.id;

@@ -198,23 +198,19 @@ test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and re
     schemaPointer: '#/properties/api',
   });
 
-  const missingRuntimeReason = structuredClone(preview.record);
-  delete missingRuntimeReason.bindings['native.react-native']
-    .runtimeProfiles['native.react-native-web'].reason;
-  const runtimeDiagnosis = diagnoseCanonicalSource({
+  const missingReason = structuredClone(preview.record);
+  delete missingReason.bindings['web.html'].reason;
+  const reasonDiagnosis = diagnoseCanonicalSource({
     context,
     family: 'component',
-    record: missingRuntimeReason,
+    record: missingReason,
     recordPath: sourcePath,
   });
-  assert.equal(
-    runtimeDiagnosis.diagnostics[0].details.source.path,
-    '$/bindings/native.react-native/runtimeProfiles/native.react-native-web/reason',
-  );
-  assert.deepEqual(runtimeDiagnosis.diagnostics[0].details.owner, {
+  assert.equal(reasonDiagnosis.diagnostics[0].details.source.path, '$/bindings/web.html/reason');
+  assert.deepEqual(reasonDiagnosis.diagnostics[0].details.owner, {
     name: 'binding-contract',
     schema: 'binding.schema.json',
-    schemaPointer: '#/$defs/runtimeProfile/properties/reason',
+    schemaPointer: '#/properties/reason',
   });
   assert.equal(diagnoseCanonicalSource({
     context,
@@ -454,9 +450,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
     '@muxui/scale',
     '@muxui/catalog',
     '@muxui/react',
-    '@muxui/react-native',
     '@muxui/tooling',
-    '@muxui/web',
     '@muxui/repository-policy',
     '@muxui/figma',
   ]);
@@ -466,9 +460,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/scale check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/catalog check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react check'));
-  assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react-native check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/tooling check'));
-  assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/web check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/repository-policy check'));
   assert.deepEqual(closure.deferred, [{
     capability: 'renderer-proof-evaluation-closure',
@@ -488,11 +480,9 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
     '@muxui/scale',
     '@muxui/catalog',
     '@muxui/react',
-    '@muxui/react-native',
     '@muxui/schema',
     '@muxui/tokens',
     '@muxui/tooling',
-    '@muxui/web',
     '@muxui/repository-policy',
     '@muxui/figma',
   ]);

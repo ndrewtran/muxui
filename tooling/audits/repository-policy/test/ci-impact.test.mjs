@@ -128,9 +128,7 @@ const packages = [
   { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*' }, devDependencies: { '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
   { name: '@muxui/figma', path: 'tooling/generators/figma', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { check: 'check' } } },
-  { name: '@muxui/foundation', path: 'packages/foundation', manifest: { scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:browser': 'node --test --test-concurrency=1 test/browser/*.test.mjs', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
-  { name: '@muxui/react-native', path: 'packages/react-native', manifest: { dependencies: { '@muxui/foundation': 'workspace:*' }, devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/react-playground', path: 'apps/react-playground', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'check' } } },
   { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
   { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:evidence': 'check:evidence' } } },
@@ -138,7 +136,6 @@ const packages = [
   { name: '@muxui/schema', path: 'packages/schema', manifest: { dependencies: {}, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/tokens', path: 'packages/tokens', manifest: { dependencies: { '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/tooling', path: 'packages/tooling', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/web', path: 'packages/web', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
 ];
 
 const componentTestPaths = [
@@ -428,7 +425,7 @@ test('token changes request compiler and theme contrast proof without behavior a
   // theme proof rather than the full package check.
   assert.equal(result.docs && result.scale && result.policy, true);
   assert.equal(result.reactPackageFull, false);
-  assert.deepEqual(result.packageChecks, ['@muxui/figma', '@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(result.packageChecks, ['@muxui/figma', '@muxui/tooling']);
   assert.deepEqual(result.reactFamilies, []);
   assert.deepEqual(result.reactTestFiles, []);
   assert.deepEqual(result.storyRuns.map(({ proof, families, storyIds }) => ({ proof, families, storyIds })), [
@@ -443,9 +440,8 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
 
   assert.equal(result.catalog && result.docs, true);
   // Guides belong to @muxui/catalog: tooling and policy depend on it at
-  // runtime, while React Native and Web devDependencies run their package
-  // checks only. React's catalog devDependency is scoped.
-  assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  // runtime. React's catalog devDependency is scoped.
+  assert.deepEqual(result.packageChecks, ['@muxui/tooling']);
   assert.equal(result.policy, true);
   assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling, false);
   assert.deepEqual(result.reactFamilies, []);
@@ -462,8 +458,6 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
   assert.deepEqual(groups[2].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
-    ['--filter', '@muxui/react-native', 'run', 'check'],
-    ['--filter', '@muxui/web', 'run', 'check'],
   ]);
 });
 
@@ -471,7 +465,7 @@ test('per-family usage guides take the guide route without selecting their compo
   const result = await plan(['catalog/guides/number-field-usage.md', 'catalog/guides/number-field-usage.json']);
 
   assert.equal(result.catalog && result.docs, true);
-  assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(result.packageChecks, ['@muxui/tooling']);
   assert.deepEqual(result.reactFamilies, []);
   assert.deepEqual(result.storyRuns, []);
 });
@@ -514,7 +508,7 @@ test('Scale, Starlight docs, and CI policy edits stay in their independent owner
 test('root and directory guidance docs without another owner take the policy route', async () => {
   const guidancePaths = [
     'LICENSE', 'README.md', 'apps/AGENTS.md', 'apps/react-storybook/AGENTS.md', 'catalog/AGENTS.md',
-    'packages/AGENTS.md', 'tests/AGENTS.md', 'tests/evidence/README.md', 'tests/fixtures/g1.2/AGENTS.md',
+    'packages/AGENTS.md', 'tests/AGENTS.md', 'tests/evidence/README.md',
   ];
   for (const path of guidancePaths) {
     const result = await plan([path], edited(path));
@@ -687,7 +681,7 @@ test('the data the growth auditor and its fixture read, not only the modules the
 
   // Every package manifest: the auditor reads each one's version, privacy, publish configuration and dependencies.
   const manifests = execFileSync('git', ['ls-files', '-z', '*package.json'], { cwd: repositoryRoot, encoding: 'utf8' }).split('\0').filter(Boolean);
-  assert.ok(manifests.length >= 14 && manifests.includes('package.json') && manifests.includes('packages/react/package.json'), manifests.join(', '));
+  assert.ok(manifests.length >= 11 && manifests.includes('package.json') && manifests.includes('packages/react/package.json'), manifests.join(', '));
   for (const path of manifests) assert.equal(await editReaches(path), true, `${path} is a package manifest`);
 
   // The auditor's hosting names (workflows among them) are one pattern, copied here from its source; its other reads are named files.
@@ -1116,21 +1110,20 @@ test('a failed CI prerequisite stops the run before dependent checks', () => {
 
 test('generation and install commands are marked as CI prerequisites', async () => {
   const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
-  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(8).fill(false)]);
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(6).fill(false)]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
   const catalog = await plan(['packages/catalog/src/compiler.mjs']);
   const catalogCommands = executionCommands(catalog, { packages });
   // Catalog changes also run the tooling dense goldens that snapshot catalog
-  // responses, plan its runtime dependents (docs, tooling, and policy through
-  // tooling) as if they changed, and run only the package checks of React
-  // Native and Web, which depend on the catalog as a devDependency. React's
-  // catalog devDependency is scoped: React never imports @muxui/catalog.
+  // responses and plan its runtime dependents (docs, tooling, and policy through
+  // tooling) as if they changed. React's catalog devDependency is scoped:
+  // React never imports @muxui/catalog.
   // This matches the real `ci-impact.mjs --preview` for this change.
   assert.deepEqual(catalog.generationPackages, [
-    '@muxui/catalog', '@muxui/foundation', '@muxui/react', '@muxui/react-native', '@muxui/repository-policy',
-    '@muxui/schema', '@muxui/tokens', '@muxui/tooling', '@muxui/web',
+    '@muxui/catalog', '@muxui/react', '@muxui/repository-policy',
+    '@muxui/schema', '@muxui/tokens', '@muxui/tooling',
   ]);
   assert.deepEqual(catalogCommands[0].args, [
     '--recursive', '--sort', '--workspace-concurrency=1', '--if-present',
@@ -1144,8 +1137,6 @@ test('clean owner checks schedule only their generation dependencies before chec
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
-    ['--filter', '@muxui/react-native', 'run', 'check'],
-    ['--filter', '@muxui/web', 'run', 'check'],
   ]);
   assert.equal(catalog.reactPackageFull, false);
   assert.deepEqual(catalog.storyRuns, []);
@@ -1871,11 +1862,11 @@ test('story page groups generate Storybook metadata unless this process already 
 
   const prepared = executionGroups(result, { packages, environment: {}, pageIndex, metadataPrepared: true });
   assert.deepEqual(groupIds(prepared), groupIds(groups));
-  // Only the catalog's other dependents (policy through tooling, React Native,
-  // Web) and the tooling goldens that snapshot catalog responses remain to generate.
+  // Only the catalog's other dependents (policy through tooling) and the tooling
+  // goldens that snapshot catalog responses remain to generate.
   for (const command of prepared.flatMap(({ commands }) => commands).filter(({ prerequisite }) => prerequisite)) {
     assert.deepEqual(generationFilters(command), [
-      '@muxui/foundation', '@muxui/react-native', '@muxui/repository-policy', '@muxui/tooling', '@muxui/web',
+      '@muxui/repository-policy', '@muxui/tooling',
     ], 'metadata preparation already generated the React and Storybook closure');
   }
 });
@@ -2098,7 +2089,7 @@ test('the full plan runs the package checks the recursive command ran, once each
     .filter(({ path }) => typeof JSON.parse(readFileSync(resolve(path, 'package.json'), 'utf8')).scripts?.check === 'string')
     .map(({ name }) => name)
     .sort();
-  assert.ok(before.length >= 10 && before.includes('@muxui/repository-policy') && before.includes('@muxui/tooling'), before.join(', '));
+  assert.ok(before.length >= 8 && before.includes('@muxui/repository-policy') && before.includes('@muxui/tooling'), before.join(', '));
 
   const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
   const groups = executionGroups(fullWorkspacePlan(), { packages: workspacePackages, environment: {} });
@@ -2832,7 +2823,7 @@ test('modules the React projection compiler imports take the compiler route', as
   assert.equal(result.reactProjectionCheck, false);
 });
 
-function nativeLockfile(withRenderer) {
+function playgroundLockfile(withRenderer) {
   return [
     "lockfileVersion: '9.0'",
     '',
@@ -2841,7 +2832,7 @@ function nativeLockfile(withRenderer) {
     '',
     'importers:',
     '',
-    '  packages/react-native:',
+    '  apps/react-playground:',
     '    devDependencies:',
     '      react:',
     '        specifier: 19.2.8',
@@ -2892,13 +2883,13 @@ function nativeLockfile(withRenderer) {
 }
 
 test('records pruned with a removed devDependency route to the importer that dropped it', async () => {
-  const lockfileBefore = nativeLockfile(true);
-  const lockfileAfter = nativeLockfile(false);
-  assert.deepEqual(changedLockfileImporters(lockfileBefore, lockfileAfter), ['packages/react-native']);
-  const result = await plan(['packages/react-native/package.json', 'pnpm-lock.yaml'], {
+  const lockfileBefore = playgroundLockfile(true);
+  const lockfileAfter = playgroundLockfile(false);
+  assert.deepEqual(changedLockfileImporters(lockfileBefore, lockfileAfter), ['apps/react-playground']);
+  const result = await plan(['apps/react-playground/package.json', 'pnpm-lock.yaml'], {
     packages: workspacePackages, lockfileBefore, lockfileAfter,
   });
-  assert.deepEqual(result.packageChecks, ['@muxui/react-native']);
+  assert.deepEqual(result.packageChecks, ['@muxui/react-playground']);
   assert.equal(result.full, false);
   assert.deepEqual(result.storyRuns, []);
 
@@ -2906,17 +2897,34 @@ test('records pruned with a removed devDependency route to the importer that dro
   const orphaned = lockfileBefore.replace('  scheduler@0.27.0: {}\n', '  scheduler@0.27.0: {}\n\n  orphan@1.0.0: {}\n');
   assert.throws(() => changedLockfileImporters(orphaned, lockfileAfter), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: .*orphan@1\.0\.0/u);
   // A removed record something still depends on is unexplained too.
-  const dangling = nativeLockfile(false).replace('  react@19.2.8:\n    dependencies:\n      scheduler: 0.27.0\n',
+  const dangling = playgroundLockfile(false).replace('  react@19.2.8:\n    dependencies:\n      scheduler: 0.27.0\n',
     '  react@19.2.8:\n    dependencies:\n      react-is: 19.2.8\n      scheduler: 0.27.0\n');
-  assert.throws(() => changedLockfileImporters(lockfileBefore, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer packages\/react-native reaches react-is@19\.2\.8, which has no snapshot record/u);
+  assert.throws(() => changedLockfileImporters(lockfileBefore, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer apps\/react-playground reaches react-is@19\.2\.8, which has no snapshot record/u);
   // So is one still referenced only from a snapshot no importer reaches.
   const withOrphan = (source) => `${source}\n  orphan@1.0.0:\n    dependencies:\n      react-is: 19.2.8\n`;
   assert.throws(() => changedLockfileImporters(withOrphan(lockfileBefore), withOrphan(lockfileAfter)), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: existing package resolutions were removed/u);
 });
 
+test('a lockfile importer whose workspace package was removed plans the full workspace', async () => {
+  const lockfileBefore = playgroundLockfile(false);
+  const lockfileAfter = ["lockfileVersion: '9.0'", '', 'settings:', '  autoInstallPeers: true', '', 'importers:', '', 'packages:', '', 'snapshots:', ''].join('\n');
+  assert.deepEqual(changedLockfileImporters(lockfileBefore, lockfileAfter), ['apps/react-playground']);
+
+  const removed = await plan(['apps/react-playground/package.json', 'pnpm-lock.yaml'], {
+    packages: packages.filter(({ name }) => name !== '@muxui/react-playground'), lockfileBefore, lockfileAfter,
+  });
+  assert.equal(removed.full, true);
+  assert.deepEqual(removed.fullReasons, ['pnpm-lock.yaml drops the importer apps/react-playground, whose workspace package was removed']);
+
+  // An importer dropped while its package stays in the workspace still routes to that package.
+  const kept = await plan(['apps/react-playground/package.json', 'pnpm-lock.yaml'], { packages, lockfileBefore, lockfileAfter });
+  assert.equal(kept.full, false);
+  assert.deepEqual(kept.packageChecks, ['@muxui/react-playground']);
+});
+
 // Trimmed from the pnpm-lock.yaml diff of the @internationalized/date
 // 3.12.3 to 3.12.4 pin: React reaches the date package directly and through
-// react-aria; React Native shares only react and scheduler with it.
+// react-aria; the playground shares only react and scheduler with it.
 function consumerLockfile(date = '3.12.3') {
   return [
     "lockfileVersion: '9.0'",
@@ -2942,7 +2950,7 @@ function consumerLockfile(date = '3.12.3') {
     '        specifier: workspace:*',
     '        version: link:../catalog',
     '',
-    '  packages/react-native:',
+    '  apps/react-playground:',
     '    devDependencies:',
     '      react:',
     '        specifier: 19.2.8',
@@ -3002,9 +3010,9 @@ test('changed lockfile resolutions route to every importer that reaches them', (
   assert.deepEqual(changedLockfileImporters(base, aria), ['packages/react']);
   // A snapshot or package record shared through react plans both importers.
   const scheduler = base.replace('  scheduler@0.27.0: {}', "  scheduler@0.27.0:\n    dependencies:\n      '@swc/helpers': 0.5.23");
-  assert.deepEqual(changedLockfileImporters(base, scheduler), ['packages/react', 'packages/react-native']);
+  assert.deepEqual(changedLockfileImporters(base, scheduler), ['apps/react-playground', 'packages/react']);
   const integrity = base.replace('sha512-scheduler', 'sha512-scheduler-repacked');
-  assert.deepEqual(changedLockfileImporters(base, integrity), ['packages/react', 'packages/react-native']);
+  assert.deepEqual(changedLockfileImporters(base, integrity), ['apps/react-playground', 'packages/react']);
   // A package record maps through its peer-suffixed snapshot.
   const ariaIntegrity = base.replace('sha512-aria', 'sha512-aria-repacked');
   assert.deepEqual(changedLockfileImporters(base, ariaIntegrity), ['packages/react']);
@@ -3015,11 +3023,11 @@ test('changed lockfile resolutions route to every importer that reaches them', (
 
 test('lockfile consumer tracing follows optional dependencies and URL versions', () => {
   const withOptional = consumerLockfile()
-    .replace("  packages/react-native:\n    devDependencies:\n      react:\n        specifier: 19.2.8\n        version: 19.2.8\n",
-      "  packages/react-native:\n    devDependencies:\n      react:\n        specifier: 19.2.8\n        version: 19.2.8\n    optionalDependencies:\n      fsevents:\n        specifier: 2.3.3\n        version: 2.3.3\n")
+    .replace("  apps/react-playground:\n    devDependencies:\n      react:\n        specifier: 19.2.8\n        version: 19.2.8\n",
+      "  apps/react-playground:\n    devDependencies:\n      react:\n        specifier: 19.2.8\n        version: 19.2.8\n    optionalDependencies:\n      fsevents:\n        specifier: 2.3.3\n        version: 2.3.3\n")
     .replace('  orphan@1.0.0: {}', "  fsevents@2.3.3:\n    optionalDependencies:\n      nan: 2.22.0\n\n  nan@2.22.0: {}\n\n  orphan@1.0.0: {}");
   const nan = withOptional.replace('  nan@2.22.0: {}', '  nan@2.22.0:\n    optional: true');
-  assert.deepEqual(changedLockfileImporters(withOptional, nan), ['packages/react-native']);
+  assert.deepEqual(changedLockfileImporters(withOptional, nan), ['apps/react-playground']);
 
   // Tarball and git versions are snapshot keys under the dependency's own name.
   for (const [name, version] of [
@@ -3027,10 +3035,10 @@ test('lockfile consumer tracing follows optional dependencies and URL versions',
     ['y', 'git+ssh://git@github.com/owner/y.git#0123456789abcdef'],
   ]) {
     const base = consumerLockfile()
-      .replace("  packages/react-native:\n    devDependencies:\n", `  packages/react-native:\n    devDependencies:\n      '${name}':\n        specifier: ${version}\n        version: ${version}\n`)
+      .replace("  apps/react-playground:\n    devDependencies:\n", `  apps/react-playground:\n    devDependencies:\n      '${name}':\n        specifier: ${version}\n        version: ${version}\n`)
       .replace('  orphan@1.0.0: {}', `  '${name}@${version}': {}\n\n  orphan@1.0.0: {}`);
     const scheduler = base.replace('sha512-scheduler', 'sha512-scheduler-repacked');
-    assert.deepEqual(changedLockfileImporters(base, scheduler), ['packages/react', 'packages/react-native'], name);
+    assert.deepEqual(changedLockfileImporters(base, scheduler), ['apps/react-playground', 'packages/react'], name);
   }
 });
 
@@ -3043,7 +3051,7 @@ test('changed lockfile records no importer reaches fail closed with their names'
   assert.throws(() => changedLockfileImporters(unused('sha512-unused'), unused('sha512-unused-repacked')), /reach no workspace importer: unused@1\.0\.0;/u);
   // A dependency without a snapshot record leaves the graph unresolvable.
   const dangling = base.replace('      scheduler: 0.27.0\n', '      scheduler: 0.27.0\n      missing: 1.0.0\n');
-  assert.throws(() => changedLockfileImporters(base, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer packages\/(react|react-native) reaches missing@1\.0\.0/u);
+  assert.throws(() => changedLockfileImporters(base, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer (packages\/react|apps\/react-playground) reaches missing@1\.0\.0/u);
 });
 
 test('the @internationalized/date pin plans like a React dependency change', async () => {
@@ -3068,7 +3076,7 @@ test('the @internationalized/date pin plans like a React dependency change', asy
 });
 
 test('workspace-wide inputs skip lockfile importer mapping for override-only settings changes', () => {
-  const lockfileBefore = nativeLockfile(true);
+  const lockfileBefore = playgroundLockfile(true);
   const overridden = lockfileBefore.replace('importers:', "overrides:\n  scheduler: 0.27.0\n\nimporters:");
   assert.throws(() => changedLockfileImporters(lockfileBefore, overridden), /lockfile settings changed/u);
   assert.equal(isWorkspaceWideChange(['pnpm-workspace.yaml', 'pnpm-lock.yaml'], config), true);
@@ -3082,7 +3090,7 @@ test('React examples no Storybook story uses validate the catalog, docs, and fam
   assert.equal(record.docs, true);
   // The selected React family changes React output, so React's runtime
   // dependents (Figma, the playground) run too.
-  assert.deepEqual(record.packageChecks, ['@muxui/figma', '@muxui/react-native', '@muxui/react-playground', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(record.packageChecks, ['@muxui/figma', '@muxui/react-playground', '@muxui/tooling']);
   assert.deepEqual(record.reactFamilies, ['Tree']);
   assert.deepEqual(record.storyIds, []);
   assert.deepEqual(record.reactTestFiles, []);
@@ -3135,12 +3143,9 @@ test('generator inputs, package fixtures, and Storybook config each route to the
 
   const capability = await route('catalog/capabilities/query-baseline.json');
   assert.equal(capability.catalog, true);
-  assert.deepEqual(capability.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(capability.packageChecks, ['@muxui/tooling']);
 
   assert.deepEqual((await route('tests/fixtures/g0.5/corpus.json')).packageChecks, ['@muxui/tooling']);
-  assert.deepEqual((await route('tests/fixtures/g1.1/platform-safety-fixtures.json')).packageChecks, ['@muxui/web']);
-  assert.deepEqual((await route('tests/fixtures/g1.2/profile.mjs')).packageChecks, ['@muxui/react-native']);
-  assert.equal((await route('tests/fixtures/g1.2/AGENTS.md')).policy, true);
 
   const tailwind = await route('tests/fixtures/tailwind-consumer/check.mjs');
   assert.equal(tailwind.tailwind, true);
@@ -3513,13 +3518,13 @@ test('a React lockfile importer change plans the React runtime dependents', asyn
   assert.equal(result.docs && result.scale, true);
 });
 
-test('catalog edits run the React Native and Web package checks but not the React package check', async () => {
+test('catalog edits run the tooling package check but not the React package check', async () => {
   for (const path of ['catalog/guides/accessibility.md', 'packages/catalog/src/compiler.mjs']) {
     const result = await plan([path], { packages: workspacePackages });
     const commands = executionCommands(result, { packages: workspacePackages }).map(({ args }) => args.join(' '));
     assert.ok(!commands.includes('--filter @muxui/react run check'), path);
     assert.equal(result.reactPackageFull, false, path);
-    for (const name of ['@muxui/react-native', '@muxui/web']) assert.ok(result.packageChecks.includes(name), `${path} ${name}`);
+    assert.ok(result.packageChecks.includes('@muxui/tooling'), path);
   }
 });
 
@@ -3536,7 +3541,7 @@ test('pattern sources route to the catalog, tooling goldens, docs, and the packe
     const result = await plan([path]);
     assert.equal(result.catalog && result.docs, true, path);
     // Patterns belong to @muxui/catalog, like guides: its dependents run their own checks.
-    assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web'], path);
+    assert.deepEqual(result.packageChecks, ['@muxui/tooling'], path);
     assert.deepEqual(result.reactFamilies, [], path);
     assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling, false, path);
     assert.equal(
