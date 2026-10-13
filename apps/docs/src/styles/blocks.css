@@ -5,6 +5,11 @@
  * inside Mux headings and take their colour, underline, and focus ring from Mux tokens.
  */
 
+/* The rules below were written against Mux UI's selectors while both were unlayered, and several rely
+   on losing to a more specific Mux UI rule or beating a less specific one. They sit in Mux UI's component
+   layer, appended after Mux UI's own rules, so they keep competing by specificity and source order. A
+   rule moved out of this layer beats Mux UI outright. */
+@layer muxui.components {
 .blocks-body {
 	display: grid;
 	grid-template-rows: var(--sl-nav-height) minmax(0, 1fr);
@@ -464,4 +469,5 @@
 	.blocks-meta {
 		grid-template-columns: minmax(0, 1fr);
 	}
+}
 }

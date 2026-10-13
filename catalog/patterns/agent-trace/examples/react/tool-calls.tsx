@@ -32,9 +32,19 @@ export function AgentTraceToolCallsExample() {
           padding: var(--muxui-semantic-layout-inset-xlarge) var(--muxui-semantic-layout-viewport-inset);
         }
 
-        /* The header rests as plain text; the Disclosure fills its trigger, so this block clears it. */
+        /* The header and the chips rest as plain text; the Disclosure fills its trigger and the Button
+           fills a chip, so this block clears both. Unlayered CSS beats Mux UI whatever its specificity,
+           so the header's hover and press fills are restated below. */
         .calls .calls-disclosure button[aria-expanded] {
           background-color: transparent;
+        }
+
+        .calls .calls-disclosure > button[aria-expanded]:hover {
+          background-color: var(--muxui-semantic-action-neutral-background-hover);
+        }
+
+        .calls .calls-disclosure > button[aria-expanded]:active {
+          background-color: var(--muxui-semantic-action-neutral-background-pressed);
         }
 
         .calls-title {

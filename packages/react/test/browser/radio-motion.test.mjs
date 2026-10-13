@@ -10,7 +10,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(RadioMotionFixture)));
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><link rel="stylesheet" href="/src/supplemental/styles.css"><style>
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><style>
     :root { --muxui-semantic-motion-state-duration: 800ms; }
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     main { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 32px; }

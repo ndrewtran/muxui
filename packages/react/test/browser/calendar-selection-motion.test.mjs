@@ -6,7 +6,7 @@ import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
-  return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><link rel="stylesheet" href="/packages/react/src/styles/collections.css"><style>
+  return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><style>
     :root { --muxui-semantic-motion-state-duration: 900ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 900ms; }
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); }
     main { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 32px; }

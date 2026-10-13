@@ -2253,16 +2253,16 @@
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Public Button background customization point.",
-      "overridePolicy": "instance",
+      "meaning": "Button background role that themes assign; it defaults to the action background.",
+      "overridePolicy": "theme",
       "alias": "semantic.action.background"
     },
     "component.button.foreground": {
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Public Button foreground customization point.",
-      "overridePolicy": "instance",
+      "meaning": "Button foreground role that themes assign; it defaults to the action foreground.",
+      "overridePolicy": "theme",
       "alias": "semantic.action.foreground"
     },
     "component.button.min-height": {

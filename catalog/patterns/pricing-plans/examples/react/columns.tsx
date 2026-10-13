@@ -62,10 +62,6 @@ export function PricingPlansColumnsExample() {
           gap: var(--muxui-semantic-layout-action-gap);
         }
 
-        .pricing-body {
-          margin-block-start: var(--muxui-semantic-layout-section-gap);
-        }
-
         .pricing-name {
           display: flex;
           flex-wrap: wrap;
@@ -156,7 +152,7 @@ export function PricingPlansColumnsExample() {
                 </div>
                 <Text as="p" size="sm" color="muted">{plan.note[column]}</Text>
               </Card.Header>
-              <Card.Body className="pricing-stack pricing-body">
+              <Card.Body className="pricing-stack">
                 <Text as="p" size="sm" color="muted">{plan.summary}</Text>
                 <ul className="pricing-features">
                   {plan.features.map((feature) => (

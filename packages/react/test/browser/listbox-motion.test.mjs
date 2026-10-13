@@ -7,7 +7,7 @@ import { ListBoxMotionFixture } from '../fixtures/listbox-motion-fixture.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>:root { --muxui-semantic-motion-state-duration: 400ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${renderToString(React.createElement(ListBoxMotionFixture))}</div>`, entry: '/test/fixtures/listbox-motion-browser-entry.mjs' });
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><style>:root { --muxui-semantic-motion-state-duration: 400ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${renderToString(React.createElement(ListBoxMotionFixture))}</div>`, entry: '/test/fixtures/listbox-motion-browser-entry.mjs' });
 }
 
 function rect(node) {

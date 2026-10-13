@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:e55b576659e23af5c313f7713ff763ef02a7573a57228e19fd3d6c82a392860f -->
+<!-- @generated-content-sha256: sha256:902353badef807cc48f457f70ece186ecdaf5a31500aab46a08d94cf309d0a2f -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -47,6 +47,20 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+## Cascade layers
+
+Every rule in `styles.css` and `themes.css` sits in one of the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens, theme presets, and direction rules are in `muxui.tokens`; component, field, collection, overlay, and supplemental styles are in `muxui.components`; `muxui.utilities` is declared and empty. Each file starts with the full order statement.
+
+For ordinary declarations, CSS outside a layer beats CSS inside one, whatever its specificity, so your own unlayered rules override Mux UI without `!important` or a higher-specificity selector. `!important` reverses that order: Mux UI's `!important` rules (forced colors and reduced motion) beat the `!important` declarations in your unlayered stylesheets, but an `!important` declaration in a layer you rank before Mux UI's layers, or in a `style` attribute, still wins over them. To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
+
+```css
+@layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
+@import '@muxui/react/styles.css';
+@import '@muxui/react/themes.css';
+```
+
+The first `@layer` statement that names a layer fixes its rank, so a later order statement in the Mux UI files cannot reorder yours.
 
 ## Optional preset themes
 

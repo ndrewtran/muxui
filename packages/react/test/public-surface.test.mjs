@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { compileReactSurface } from './support/compile-surface.mjs';
-import { consumedHooks, styleRuleClasses } from './support/scan-surface.mjs';
+import { compileReactSurface, hookName } from './support/compile-surface.mjs';
+import { consumedHooks, styleRuleClasses, topLevelConstructs } from './support/scan-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -16,20 +16,22 @@ const button = await readJson(resolve(repositoryRoot, 'catalog/components/button
 const tokenSource = await readJson(resolve(repositoryRoot, 'catalog/tokens/default-theme.json'));
 const manifest = await readJson(resolve(packageRoot, 'package.json'));
 const packageExports = Object.keys(manifest.exports);
+// supplemental.css is not exported, but the styling tests read it, so it follows the same layer rules.
+const generatedStyles = Object.fromEntries(await Promise.all(
+  ['styles.css', 'themes.css', 'supplemental.css'].map(async (name) => [name, await readFile(resolve(packageRoot, 'generated', name), 'utf8')]),
+));
 
 test('the Button surface derives from its web.react binding, the token policy, and the package exports', async () => {
   const surface = compileReactSurface({ artifact: button, packageExports, tokenSource });
   assert.equal(surface.bindingRef, 'muxui:component:button#web.react');
   assert.equal(surface.rootClass, '.muxui-button');
-  // Button's two instance-policy tokens. Stage 1 drops them or makes them real (Decision 0031 item 15).
-  assert.deepEqual(surface.publicCustomProperties, [
-    '--muxui-component-button-background',
-    '--muxui-component-button-foreground',
-  ]);
+  // Decision 0031 item 15 dropped Button's two instance hooks: no rule read them.
+  assert.deepEqual(surface.publicCustomProperties, []);
+  assert.deepEqual(surface.cascadeLayers, ['muxui.tokens', 'muxui.components', 'muxui.utilities']);
   assert.equal(surface.styleExport, '@muxui/react/styles.css');
-  // Layers, state attributes, slots, and events are not part of the React surface yet.
+  // State attributes, slots, and events are not part of the React surface yet.
   assert.deepEqual(Object.keys(surface).sort(), [
-    'artifactRef', 'bindingRef', 'lifecycle', 'publicCustomProperties', 'rootClass', 'styleExport',
+    'artifactRef', 'bindingRef', 'cascadeLayers', 'lifecycle', 'publicCustomProperties', 'rootClass', 'styleExport',
   ]);
 
   // The root class is a style-rule selector in the stylesheet the style export resolves to.
@@ -37,6 +39,54 @@ test('the Button surface derives from its web.react binding, the token policy, a
   assert.equal(typeof target, 'string');
   const stylesheet = await readFile(resolve(packageRoot, target), 'utf8');
   assert.ok(styleRuleClasses(stylesheet).has(surface.rootClass.slice(1)), `${surface.rootClass} in ${target}`);
+});
+
+test('the construct scanner sees unlayered rules and ignores braces in comments and strings', () => {
+  const css = `/* } */ @layer a, b;\n@layer a { .x::after { content: "}"; } @media (x) { .y { color: red } } }\n.z { color: red }`;
+  assert.deepEqual(topLevelConstructs(css), [
+    { kind: 'statement', prelude: '@layer a, b' },
+    { kind: 'block', prelude: '@layer a' },
+    { kind: 'block', prelude: '.z' },
+  ]);
+  assert.throws(() => topLevelConstructs('@layer a { .x { color: red }'), /unbalanced opening brace/u);
+});
+
+test('every shipped style entry declares the layer order first and holds every rule in a layer', () => {
+  const { cascadeLayers } = compileReactSurface({ artifact: button, packageExports, tokenSource });
+  const orderStatement = `@layer ${cascadeLayers.join(', ')}`;
+  const entries = Object.entries(manifest.exports).filter(([name]) => name.endsWith('.css'));
+  assert.deepEqual(entries.map(([name]) => name), ['./styles.css', './themes.css']);
+  for (const [name, target] of entries) {
+    assert.ok(generatedStyles[target.replace('./generated/', '')], `${name} resolves to a generated file`);
+  }
+  for (const [file, css] of Object.entries(generatedStyles)) {
+    const constructs = topLevelConstructs(css);
+    assert.deepEqual(constructs[0], { kind: 'statement', prelude: orderStatement }, `${file} starts with the layer order`);
+    // The text after the generated header comment starts with the order statement itself.
+    assert.ok(css.replace(/^\/\*[\s\S]*?\*\/\s*/u, '').startsWith(`${orderStatement};`), `${file} has no rule before the order statement`);
+    const rest = constructs.slice(1);
+    assert.ok(rest.length > 0, `${file} holds at least one layer`);
+    for (const construct of rest) {
+      assert.equal(construct.kind, 'block', `${file}: ${construct.prelude}`);
+      const layer = /^@layer (muxui\.[a-z]+)$/u.exec(construct.prelude)?.[1];
+      assert.ok(cascadeLayers.includes(layer), `${file} has a top-level rule outside the Mux UI layers: ${construct.prelude}`);
+    }
+  }
+  const layersIn = (file) => [...new Set(topLevelConstructs(generatedStyles[file]).slice(1).map(({ prelude }) => prelude))];
+  assert.deepEqual(layersIn('styles.css'), ['@layer muxui.tokens', '@layer muxui.components']);
+  assert.deepEqual(layersIn('themes.css'), ['@layer muxui.tokens']);
+  assert.deepEqual(layersIn('supplemental.css'), ['@layer muxui.components']);
+});
+
+// An instance-policy token is a promise that setting it on a rendered instance restyles it (Decision 0031
+// item 15). No token has that policy today; this keeps one from returning as a hook no rule reads. The
+// computed-style proof for a future instance hook belongs with the item 19 public-property test.
+test('every instance-policy token is read through var() in the shipped stylesheet', () => {
+  for (const [id, definition] of Object.entries(tokenSource.tokens)) {
+    if (definition.overridePolicy !== 'instance') continue;
+    const reader = new RegExp(`var\\(\\s*${hookName(id)}\\s*[,)]`, 'u');
+    assert.match(generatedStyles['styles.css'], reader, `${id} has the instance policy but no rule reads ${hookName(id)}`);
+  }
 });
 
 test('the Button surface refuses a missing style export, a missing binding, and a non-component identity', () => {

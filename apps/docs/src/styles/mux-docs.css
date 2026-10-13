@@ -1,13 +1,21 @@
+/* The whole layer order comes first, ahead of the Mux UI import: Starlight ranks lowest, the
+   box-model restore sits above it, and Mux UI's layers sit above both. Declared after the import,
+   the docs layers would outrank Mux UI. */
+@layer starlight, muxui-docs-component-defaults, muxui.tokens, muxui.components, muxui.utilities;
 @import '@muxui/react/styles.css';
 
-/* Restore component default box models without overriding library unlayered control rules. */
-@layer starlight, muxui-docs-component-defaults;
+/* Restore component default box models without overriding Mux UI's own control rules. */
 @layer muxui-docs-component-defaults {
 	:where([class^='muxui-'], [class*=' muxui-']) {
 		box-sizing: revert;
 	}
 }
 
+/* The rules below were written against Mux UI's selectors while both were unlayered, and several rely
+   on losing to a more specific Mux UI rule or beating a less specific one. They sit in Mux UI's component
+   layer, appended after Mux UI's own rules, so they keep competing by specificity and source order. A
+   rule moved out of this layer beats Mux UI outright. */
+@layer muxui.components {
 :root {
 	--sl-color-accent: var(--muxui-semantic-content-link);
 	--sl-color-accent-high: var(--muxui-semantic-content-link-hover);
@@ -1357,4 +1365,5 @@ html[data-theme='dark'] {
 
 @media (max-width: 30rem) {
 	.foundation-token-legend { gap: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-xs); }
+}
 }

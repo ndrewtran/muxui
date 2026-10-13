@@ -12,7 +12,7 @@ async function selectModel(page, label) {
   await page.locator('.muxui-select-popover').waitFor({ state: 'detached' });
 }
 const modelValue = (page) => page.locator('.muxui-prompt-composer-model .muxui-select-value');
-const fixture = pageShell({ attributes: 'data-muxui-color-scheme="light"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/supplemental/prompt-composer.css">', bodyAttributes:'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"',body:'<main style="max-width:560px;margin:auto;padding-top:280px"><div id="root"></div></main>',entry:'/prompt-entry.mjs' });
+const fixture = pageShell({ attributes: 'data-muxui-color-scheme="light"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css">', bodyAttributes:'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"',body:'<main style="max-width:560px;margin:auto;padding-top:280px"><div id="root"></div></main>',entry:'/prompt-entry.mjs' });
 
 test('PromptComposer native validation/reset, multiline/IME, caret menus, file/model actions and pending work by keyboard', { timeout: 120_000 }, async () => {
   const server=await startServer({entries:['src/supplemental/prompt-composer.mjs'],pages:{'/prompt.html':fixture},modules:{'/prompt-entry.mjs':entry}}); const browser=await launchBrowser(); const page=await browser.newPage({viewport:{width:800,height:700}});

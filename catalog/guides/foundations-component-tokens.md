@@ -8,13 +8,12 @@ Component tokens are the final customization points owned by a component family.
 
 Use a component token when a component needs a family-specific customization. Use the semantic token when a page-wide role should change. Do not reuse a Button token as a field or overlay contract.
 
+Component tokens are theme-scope roles: assign them on `:root` or on a theme scope element, not on one rendered component. Button's CSS, for example, reads its minimum height and inline padding:
+
 ```css
 .muxui-button {
   min-block-size: var(--muxui-component-button-min-height);
   padding-inline: var(--muxui-component-button-padding-inline);
-  border-radius: var(--muxui-component-button-radius);
-  background: var(--muxui-component-button-background);
-  color: var(--muxui-component-button-foreground);
 }
 ```
 

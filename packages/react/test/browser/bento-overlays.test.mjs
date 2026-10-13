@@ -77,7 +77,6 @@ async function withFixture(run, direction = 'ltr') {
     import { Dialog, Popover, Tooltip, PreviewTrigger } from '/packages/react/src/overlays.mjs';
     import { AlertDialog } from '/packages/react/src/supplemental/index.mjs';
     import '/packages/react/generated/styles.css';
-    import '/packages/react/src/styles/overlays.css';
     ${StatefulPopoverContent.toString()}
     ${OverlayFixture.toString()}
     window.openChanges = [];

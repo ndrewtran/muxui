@@ -1,8 +1,9 @@
-@import '@muxui/react/styles.css';
-
 /* One isolated document per variant. It shares the docs layer contract so the
-   Mux components render exactly as they do on the component pages. */
-@layer preview-reset, muxui-docs-component-defaults;
+   Mux components render exactly as they do on the component pages. The whole order
+   comes first, ahead of the import, so the reset and the box-model restore rank below
+   Mux UI's layers. */
+@layer preview-reset, muxui-docs-component-defaults, muxui.tokens, muxui.components, muxui.utilities;
+@import '@muxui/react/styles.css';
 
 @layer preview-reset {
 	*,
@@ -39,6 +40,11 @@
 	}
 }
 
+/* The rules below were written against Mux UI's selectors while both were unlayered, and several rely
+   on losing to a more specific Mux UI rule or beating a less specific one. They sit in Mux UI's component
+   layer, appended after Mux UI's own rules, so they keep competing by specificity and source order. A
+   rule moved out of this layer beats Mux UI outright. */
+@layer muxui.components {
 body {
 	background: var(--muxui-semantic-surface-canvas);
 	color: var(--muxui-semantic-content-default);
@@ -67,4 +73,5 @@ body {
 	clip: rect(0, 0, 0, 0);
 	white-space: nowrap;
 	border: 0;
+}
 }

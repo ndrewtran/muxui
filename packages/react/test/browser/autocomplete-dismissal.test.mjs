@@ -24,7 +24,7 @@ window.__mount();
 
 const page = pageShell({
   attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"',
-  head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/fields.css">',
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
   bodyAttributes: 'style="margin: 32px"',
   body: '<p id="inert" style="height: 120px; margin: 0">Inert content</p><div id="root"></div>'
     + '<input id="outside-input" aria-label="Outside input"><button id="outside-button">Outside button</button>'

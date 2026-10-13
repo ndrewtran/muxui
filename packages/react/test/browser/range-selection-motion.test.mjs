@@ -8,7 +8,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(RangeSelectionMotionFixture)));
   const consumerFocusStyle = `@scope (.range-consumer) { :scope :is(button, .muxui-range-calendar-cell):focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; } }`;
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/fields.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>${consumerFocusStyle}</style>`, bodyAttributes: 'style="margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body: `<div class="range-consumer">${body}</div>`, entry: '/test/fixtures/range-selection-motion-browser-entry.mjs' });
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><style>${consumerFocusStyle}</style>`, bodyAttributes: 'style="margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body: `<div class="range-consumer">${body}</div>`, entry: '/test/fixtures/range-selection-motion-browser-entry.mjs' });
 }
 
 async function readRange(page) {

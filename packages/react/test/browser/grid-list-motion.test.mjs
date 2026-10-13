@@ -9,7 +9,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 function documentHtml() {
   const markup = renderToString(React.createElement(GridListMotionFixture));
   assert.doesNotMatch(markup, /data-muxui-grid-list-motion-ready|data-muxui-grid-list-hover/u);
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>:root { --muxui-semantic-motion-state-transition-duration: 320ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 320ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${markup}</div>`, entry: '/test/fixtures/grid-list-motion-browser-entry.mjs' });
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><style>:root { --muxui-semantic-motion-state-transition-duration: 320ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 320ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${markup}</div>`, entry: '/test/fixtures/grid-list-motion-browser-entry.mjs' });
 }
 
 async function rowRect(page, label) {

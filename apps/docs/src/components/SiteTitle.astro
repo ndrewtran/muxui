@@ -12,6 +12,8 @@ const href = Astro.props.href ?? Astro.locals.starlightRoute.siteTitleHref;
 </a>
 
 <style>
+	/* Mux UI's component layer keeps these rules competing with Mux UI by specificity, as they did before layers; see mux-docs.css. */
+	@layer muxui.components {
 	.mux-site-title {
 		display: inline-flex;
 		align-items: center;
@@ -25,5 +27,6 @@ const href = Astro.props.href ?? Astro.locals.starlightRoute.siteTitleHref;
 
 	.mux-name {
 		font-size: var(--muxui-semantic-typography-label-l-font-size);
+	}
 	}
 </style>
