@@ -148,6 +148,14 @@
       "catalog/tokens/",
       "packages/tokens/"
     ],
+    "reactTestInputs": {
+      "test/public-surface.test.mjs": [
+        "catalog/components/button/artifact.json",
+        "catalog/components/button/examples/react/basic.example.json",
+        "catalog/components/button/examples/react/basic.tsx",
+        "catalog/tokens/default-theme.json"
+      ]
+    },
     "reactCatalogInputReaders": {
       "catalog/react-r1-0/": {
         "reactGenerator": true,

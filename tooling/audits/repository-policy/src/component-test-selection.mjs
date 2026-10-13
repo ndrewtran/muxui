@@ -25,6 +25,7 @@ const FAMILY_EXTRA_TESTS = Object.freeze({
   PromptComposer: ['test/browser/candidate-motion.test.mjs'],
   Autocomplete: ['test/browser/autocomplete-dismissal.test.mjs'],
   Avatar: ['test/image-avatar.test.mjs'],
+  Button: ['test/public-surface.test.mjs'],
   CodeBlock: ['test/code-block-highlight.test.mjs', 'test/code-block-lifecycle.test.mjs', 'test/code-block-package-boundary.test.mjs', 'test/browser/candidate-motion.test.mjs'],
   ColorPicker: ['test/color-swatch.test.mjs'],
   ColorSwatch: ['test/color-swatch.test.mjs'],

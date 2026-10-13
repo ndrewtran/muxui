@@ -422,12 +422,12 @@ test('token changes request compiler and theme contrast proof without behavior a
   assert.equal(result.storyTheme, true);
   // The token source belongs to @muxui/tokens, so its runtime dependents
   // (catalog, docs, Scale, Figma, tooling, policy) run whole; React keeps its
-  // theme proof rather than the full package check.
+  // theme proof rather than the full package check, plus the surface test that reads the token source.
   assert.equal(result.docs && result.scale && result.policy, true);
   assert.equal(result.reactPackageFull, false);
   assert.deepEqual(result.packageChecks, ['@muxui/figma', '@muxui/tooling']);
   assert.deepEqual(result.reactFamilies, []);
-  assert.deepEqual(result.reactTestFiles, []);
+  assert.deepEqual(result.reactTestFiles, ['test/public-surface.test.mjs']);
   assert.deepEqual(result.storyRuns.map(({ proof, families, storyIds }) => ({ proof, families, storyIds })), [
     { proof: 'theme', families: [], storyIds: [] },
     { proof: 'chrome', families: [], storyIds: [] },
@@ -3367,6 +3367,100 @@ async function reactTestTexts() {
     await readFile(resolve(repositoryRoot, file), 'utf8'),
   ])));
 }
+
+// Decision 0031 item 13: the surface check moved from @muxui/web into this React test, so a change to
+// anything it reads must still run it. It reads Button's record and React example, the token source,
+// the React manifest `exports`, and the stylesheet generated from React's sources.
+test('the React public-surface test runs for every input it reads', async () => {
+  const surfaceTest = 'test/public-surface.test.mjs';
+  const artifact = 'catalog/components/button/artifact.json';
+  const exampleRecord = 'catalog/components/button/examples/react/basic.example.json';
+  const exampleSource = 'catalog/components/button/examples/react/basic.tsx';
+  const reactTests = await reactTestTexts();
+  const buttonRecord = { family: 'Button', export: 'Button', slug: 'button', source: 'packages/react/src/button.mjs', parts: ['root', 'label'] };
+  const buttonPage = (stories) => ({
+    family: 'Button',
+    storyFile: 'apps/react-storybook/.storybook/generated/button.stories.mjs',
+    stories,
+  });
+  const unusedExample = { records: [...records, buttonRecord], pageIndex: [...pageIndex, buttonPage([])] };
+  const usedExample = {
+    records: [...records, buttonRecord],
+    pageIndex: [...pageIndex, buttonPage([{ id: 'muxui-react-r1-1-button--basic', exportName: 'Basic', name: 'Basic', source: exampleSource }])],
+  };
+  const withButtonTests = {
+    componentTestSources: {
+      ...componentTestSources,
+      [surfaceTest]: reactTests[surfaceTest],
+      'test/fixture.test.mjs': reactTests['test/fixture.test.mjs'],
+    },
+  };
+  const surfaceTestRuns = (result) => executionCommands(result, { packages })
+    .some(({ args }) => args.at(-1) === surfaceTest && args.includes('--test'));
+
+  // Button's record and its React example, when no story uses the example, run Button's component route,
+  // which names every test of the file so the negative cases run too.
+  for (const [path, options] of [[artifact, unusedExample], [exampleRecord, unusedExample], [exampleSource, unusedExample]]) {
+    const result = await plan([path], { ...options, ...withButtonTests });
+    assert.deepEqual(result.reactFamilies, ['Button'], path);
+    assert.ok(result.reactComponentTests.includes(surfaceTest), path);
+    assert.ok(result.reactComponentTestNames[surfaceTest].includes('the Button surface refuses a missing style export, a missing binding, and a non-component identity'), path);
+    assert.equal(result.reactPackageFull, false, path);
+  }
+
+  // A story that uses the example source sends it to that page and not to Button's family,
+  // so the test is planned on its own.
+  const used = await plan([exampleSource], { ...usedExample, ...withButtonTests });
+  assert.deepEqual(used.reactFamilies, []);
+  assert.deepEqual(used.storyIds, ['muxui-react-r1-1-button--basic']);
+  assert.ok(used.reactTestFiles.includes(surfaceTest));
+  assert.equal(surfaceTestRuns(used), true);
+
+  // The token source plans the React theme proof, not the full React check, so the test is planned beside it.
+  const tokens = await plan(['catalog/tokens/default-theme.json'], withButtonTests);
+  assert.equal(tokens.reactTheme, true);
+  assert.equal(tokens.reactPackageFull, false);
+  assert.ok(tokens.reactTestFiles.includes(surfaceTest));
+  assert.equal(surfaceTestRuns(tokens), true);
+
+  // A change to the manifest exports plans the full React check, whose test glob runs this file.
+  const manifest = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8'));
+  const exported = JSON.stringify({ ...manifest, exports: { ...manifest.exports, './surface.css': './generated/surface.css' } });
+  const manifestChange = await plan(['packages/react/package.json'], {
+    reactPackageBefore: JSON.stringify(manifest),
+    reactPackageAfter: exported,
+  });
+  assert.equal(manifestChange.reactPackageFull, true);
+  assert.ok(executionCommands(manifestChange, { packages }).some(({ args }) => args.join(' ') === '--filter @muxui/react run check'));
+  const check = manifest.scripts.check;
+  assert.match(check, /node --test 'test\/!\(/u);
+  assert.doesNotMatch(check, /public-surface/u);
+
+  // A change to the scanners or the surface compiler reruns it as a referencing test.
+  for (const helper of ['compile-surface.mjs', 'scan-surface.mjs']) {
+    const result = await plan([`packages/react/test/support/${helper}`], {
+      reactTestReferenceSources: reactTests,
+      textSnapshots: { [`packages/react/test/support/${helper}`]: { after: 'present' } },
+    });
+    assert.ok(result.reactTestFiles.includes(surfaceTest), helper);
+  }
+});
+
+test('reactTestInputs names the test files and inputs they read', async () => {
+  const inputsByTest = config.reactTestInputs;
+  assert.ok(Object.keys(inputsByTest).length > 0);
+  for (const [testFile, inputs] of Object.entries(inputsByTest)) {
+    const source = readFileSync(resolve(repositoryRoot, 'packages/react', testFile), 'utf8');
+    for (const input of inputs) {
+      assert.ok(existsSync(resolve(repositoryRoot, input)), `${input} exists`);
+      assert.ok(source.includes(input), `${testFile} names ${input}`);
+    }
+    // The other direction: a catalog input the test reads but the config omits would not rerun it.
+    const read = [...source.matchAll(/'(catalog\/[^']+\.(?:json|tsx))'/gu)].map((match) => match[1]);
+    assert.ok(read.length > 0, `${testFile} reads catalog inputs`);
+    assert.deepEqual(read.filter((input) => !inputs.includes(input)), [], `${testFile} reads inputs the config omits`);
+  }
+});
 
 test('a shared React test helper reruns the test files that reference it', async () => {
   const reactTestReferenceSources = await reactTestTexts();

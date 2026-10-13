@@ -1125,6 +1125,13 @@ export async function buildPullRequestImpact({
   }
 
   for (const path of routedPaths) {
+    // A React test can read inputs outside packages/react. It runs when any of them changes,
+    // whatever else routes the path, so a moved check never lapses (Decision 0031 item 13).
+    for (const [testFile, inputs] of Object.entries(config.reactTestInputs ?? {})) {
+      if (!matches(path, inputs)) continue;
+      plan.reactTestFiles.add(testFile);
+      plan.reasons.push(`${path} is read by the React test ${testFile}`);
+    }
     if (config.fullInputPaths.includes(path)) {
       plan.fullReasons.push(`${path} is a workspace-wide execution input`);
       continue;
