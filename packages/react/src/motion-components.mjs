@@ -4,22 +4,22 @@ import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } 
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const ENTRY_DISTANCE = 4;
-const DISCLOSURE_GROUP_BASE_DURATION = 0.268;
+// Each phase runs the component token spring scaled by these ratios, so retiming or
+// reshaping `component.disclosuregroup.transition` moves every phase with it. They were
+// tuned against its default spring (268ms visual duration, bounce 0.38).
 const DISCLOSURE_GROUP_SPRING_PHASES = Object.freeze({
-  open: Object.freeze({ duration: 0.58, visualDuration: 0.3022, bounce: 0.32 }),
-  close: Object.freeze({ duration: 0.46, visualDuration: 0.2545, bounce: 0.26 }),
-  icon: Object.freeze({ duration: 0.42, visualDuration: 0.228, bounce: 0.28 }),
+  open: Object.freeze({ visualDuration: 1.1276, bounce: 0.8421 }),
+  close: Object.freeze({ visualDuration: 0.9496, bounce: 0.6842 }),
+  icon: Object.freeze({ visualDuration: 0.8507, bounce: 0.7368 }),
 });
 
-// Motion 13.4 maps these duration-based springs to the shared token time-spring base.
 function disclosureGroupSpring(base, phase) {
   if (!base) return null;
-  const target = DISCLOSURE_GROUP_SPRING_PHASES[phase];
+  const ratio = DISCLOSURE_GROUP_SPRING_PHASES[phase];
   return {
-    ...base,
-    duration: base.duration * (target.duration / DISCLOSURE_GROUP_BASE_DURATION),
-    visualDuration: base.visualDuration * (target.visualDuration / DISCLOSURE_GROUP_BASE_DURATION),
-    bounce: base.bounce * (target.bounce / 0.38),
+    type: base.type,
+    visualDuration: base.visualDuration * ratio.visualDuration,
+    bounce: Math.min(1, base.bounce * ratio.bounce),
   };
 }
 

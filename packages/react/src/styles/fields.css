@@ -4,8 +4,8 @@
   display: block;
   width: 100%;
   transition:
-    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 .muxui-field-input:hover:not(:focus, [data-focused], [data-disabled], [data-invalid], :disabled) {
   outline-color: var(--muxui-semantic-border-indicator);
@@ -190,8 +190,8 @@
   background-color: var(--muxui-field-bg);
   overflow: hidden;
   transition:
-    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 .muxui-number-control:focus-within {
@@ -302,9 +302,9 @@
   width: 100%;
   line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
-    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 .muxui-field-input:hover:not(:focus, [data-disabled], [data-invalid]) {
@@ -360,8 +360,8 @@
   cursor: pointer;
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   flex-shrink: 0;
   transform: translateX(calc(-1 * var(--muxui-semantic-layout-inset-tight)));
 }
@@ -463,9 +463,9 @@
   background-color: var(--muxui-semantic-color-neutral-20);
   transform: translateY(-50%);
   transition:
-    background-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
+    border-color var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
+    box-shadow var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
 }
 
 .muxui-switch[data-focus-visible]::before {
@@ -526,7 +526,7 @@
   background-color: var(--muxui-semantic-surface-emphasis);
   box-shadow: var(--muxui-semantic-elevation-indicator);
   transition:
-    background-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
   transform: translate(var(--muxui-switch-indicator-x), -50%) scaleX(var(--muxui-switch-indicator-scale-x))
     scaleY(var(--muxui-switch-indicator-scale-y));
   transform-origin: center;
@@ -580,9 +580,9 @@
   width: 100%;
   line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
-    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 .muxui-field-input:hover:not(:focus, [data-disabled], [data-invalid]) {

@@ -127,7 +127,9 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     const entryRecording = await recordFrames(page, samplePanel);
     await openTriggered(page);
     await waitForPanelEntry(page);
-    assert.equal(await page.locator('.muxui-dialog-backdrop').evaluate((node) => getComputedStyle(node).transitionDuration), '0.18s', 'backdrop uses modal entry duration');
+    const entryBackdrop = await page.locator('.muxui-dialog-backdrop').evaluate((node) => ({ duration: getComputedStyle(node).transitionDuration, easing: getComputedStyle(node).transitionTimingFunction }));
+    assert.equal(entryBackdrop.duration, '0.4s', 'backdrop uses the modal composite settle duration');
+    assert.match(entryBackdrop.easing, /^linear\(/u, 'backdrop uses the modal composite spring curve');
     await settleEntry(page);
     const entryFrames = await entryRecording.stop();
     const entry = entryFrames.find(isMidFlight) ?? {};
@@ -151,8 +153,8 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     assert.ok(exit.opacity < 1, `exit fades out: ${JSON.stringify(exitFrames)}`);
     assert.ok(exit.y < 0 && exit.y > -8, `exit translates upward: ${JSON.stringify(exit)}`);
     assert.ok(exit.scale < 1 && exit.scale > 0.97, `exit scales down: ${JSON.stringify(exit)}`);
-    assert.equal(exit.backdropDuration, '0.12s', 'backdrop uses modal exit duration');
-    assert.equal(exit.backdropEasing, 'cubic-bezier(0.16, 1, 0.3, 1)', 'backdrop uses modal easing');
+    assert.equal(exit.backdropDuration, '0.25s', 'backdrop uses the modal-dismiss composite settle duration');
+    assert.match(exit.backdropEasing, /^linear\(/u, 'backdrop uses the modal-dismiss composite spring curve');
     await page.waitForFunction(() => document.activeElement?.classList.contains('muxui-dialog-trigger'));
     assert.equal(await page.locator('.muxui-dialog-trigger').evaluate((node) => document.activeElement === node), true, 'Escape restores trigger focus');
 
@@ -205,7 +207,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
       document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
       document.documentElement.setAttribute('data-muxui-motion', 'full');
       document.documentElement.style.setProperty('--muxui-semantic-motion-modal-enter-duration', '180ms');
-      document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-dismiss-transition-duration', '800ms');
       const scope = document.getElementById('dialog-scope');
       scope.setAttribute('data-muxui-motion', 'full');
       window.__muxuiDialogSetMode('no-trigger');

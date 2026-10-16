@@ -7,7 +7,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><style>
-    :root { --muxui-semantic-motion-state-duration: 900ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 900ms; }
+    :root { --muxui-semantic-motion-state-transition-duration: 900ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 900ms; }
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); }
     main { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 32px; }
   </style>`, body: `<div id="root">${renderToString(fixture())}</div>`, entry: '/packages/react/test/fixtures/calendar-selection-motion-fixture.mjs' });
@@ -153,7 +153,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
     const marker = primary.locator('.muxui-calendar-selection');
     assert.equal(await marker.getAttribute('data-selection-traveling'), 'true', 'shared indicator travel has started');
     assert.ok(colorTransition && colorTransition.playState === 'running', 'selected foreground transition starts with date selection');
-    assert.ok(colorTransition.duration >= 850, 'selected foreground uses the Calendar state-motion duration');
+    assert.ok(colorTransition.duration >= 850, 'selected foreground uses the Calendar state composite duration');
     assert.notEqual(targetForegroundAtStart, targetForegroundBeforeClick, 'new selected label begins changing colour immediately');
     assert.notEqual(targetForegroundAtStart, selectedForeground, 'new selected label is still transitioning while the indicator moves');
     const sourceCenter = await center(source);

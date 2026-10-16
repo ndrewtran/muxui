@@ -334,7 +334,7 @@ test('ComboBox keeps its inner input neutral while the shell owns field states',
   assert.doesNotMatch(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
   assert.doesNotMatch(comboCss, /^\.muxui-field-input\s*\{/mu);
   assert.match(css, /\.muxui-combo-control:focus-within\s*\{[\s\S]*var\(--muxui-field-focus-glow\)/u);
-  assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\)/u);
+  assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\)/u);
 });
 
 test('NumberField steppers expose stable direction hooks and edge geometry', async () => {

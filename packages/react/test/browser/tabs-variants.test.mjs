@@ -218,7 +218,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     }
 
     const motionPill = '#tabs-preview-light #light-pill-tabs';
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '1200ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '1200ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '1200ms'); });
     await page.locator(`${motionPill} [role="tab"]`).nth(1).click();
     await page.waitForFunction((selector) => document.querySelector(`${selector} [role="tab"][aria-selected="true"]`)?.textContent?.trim() === 'Activity', motionPill);
     await page.waitForFunction((selector) => {
@@ -237,7 +237,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
         && selected && indicator && Math.abs(indicator.getBoundingClientRect().width - selected.getBoundingClientRect().width) < 1);
     }, motionPill, { timeout: 1000 });
     await page.locator('#tabs-preview-light').evaluate((canvas) => canvas.removeAttribute('data-muxui-motion'));
-    await page.evaluate(() => document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration'));
+    await page.evaluate(() => { document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration'); document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration'); });
 
     const overflowRoot = '#tabs-preview-light #light-overflow-tabs';
     await page.locator(overflowRoot).evaluate((root) => { root.style.inlineSize = '220px'; });
@@ -284,7 +284,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     // The shape and inverse-contrast layer must share one geometry timeline.
     // This catches the screenshot regression at intermediate selection frames,
     // including the native reveal scroll that happens before RAC updates ARIA.
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '900ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '900ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '900ms'); });
     await overflowMotion.locator('[role="tab"]').filter({ hasText: 'Team' }).click();
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'Team');
     const contrastRecording = await recordFrames(page, sampleContrast, '#light-overflow-tabs');
@@ -373,7 +373,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const reducedScrollAfter = await overflowViewport.evaluate((node) => node.scrollLeft);
     assert.ok(reducedScrollAfter > reducedScrollBefore, 'reduced motion scrolls immediately');
     await page.locator(overflowRoot).evaluate((root) => root.removeAttribute('data-muxui-motion'));
-    await page.evaluate(() => document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration'));
+    await page.evaluate(() => { document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration'); document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration'); });
 
     await overflowMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => { node.scrollLeft = 8; });
     await page.waitForFunction(() => !document.querySelector('#light-overflow-tabs button[aria-label="Scroll tabs left"]')?.disabled);

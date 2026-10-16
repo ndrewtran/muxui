@@ -38,6 +38,15 @@ settings:
 }
 ```
 
+Transitions that carry a spring (`interaction`, `state`, `dismiss`, `reveal`,
+`content-resize`, `modal`, and `modal-dismiss`) resolve
+`--muxui-semantic-motion-<role>-transition`, `-transition-duration`, and
+`-transition-easing` to the spring's settle duration and `linear()` curve.
+Replace a consumer's raw `<role>-duration` and `<role>-easing` pair with the
+composite's `-transition-duration` and `-transition-easing`, and replace a
+scope's base-duration override with the composite override described in the
+Motion foundation guide.
+
 Token contract `4.0.0` removed redundant or unused token IDs before consumer
 adoption. The change map below lists them.
 

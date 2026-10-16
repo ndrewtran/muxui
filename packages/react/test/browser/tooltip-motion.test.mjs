@@ -96,7 +96,7 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('.muxui-tooltip').count(), 0, 'SSR and hydration begin closed');
 
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-feedback-duration', '800ms'));
+    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms'));
     await page.locator('#tooltip-trigger').focus();
     await configure(page, true, 'top');
     const tooltip = page.locator('.muxui-tooltip');
@@ -164,7 +164,7 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
 
     await configure(page, false);
     await tooltip.waitFor({ state: 'detached' });
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-feedback-duration', '800ms'));
+    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms'));
     await configure(page, true, 'start');
     await tooltip.waitFor();
     await readMotion(page, { axis: 'x', direction: 1 });

@@ -54,35 +54,55 @@ export function formatEasingValue(value) {
   return String(value);
 }
 
-function formatTransitionValue(value) {
-  const duration = `${formatNumber(value.duration)}ms`;
-  return `${duration} ${formatEasingValue(value.easing)}`;
+/** A spring-bearing transition is its compiled spring: settle duration and `linear()` curve. */
+function springTransitionPair(spring) {
+  const { duration, easing } = compileSpringCSS({
+    visualDuration: spring.visualDuration / 1000,
+    bounce: spring.bounce,
+  });
+  return { duration: `${formatNumber(duration)}ms`, easing };
 }
 
+function formatTransitionValue(value) {
+  if (value.spring) {
+    const { duration, easing } = springTransitionPair(value.spring);
+    return `${duration} ${easing}`;
+  }
+  return `${formatNumber(value.duration)}ms ${formatEasingValue(value.easing)}`;
+}
+
+/**
+ * A transition without a spring composes its referenced duration and easing. A
+ * transition with a spring composes that spring: `<id>`, `-duration`, and `-easing`
+ * resolve to the spring's settle duration and `linear()` curve, so a consumer of the
+ * composite gets the spring without an override of its own. The perceived
+ * `-spring-visual-duration` and `-spring-bounce` stay for runtimes that run the
+ * spring. The authored duration and easing references remain the topology that theme
+ * overrides must preserve; they do not shape the composite while a spring is present.
+ */
 function transitionCssDeclarations(token, dependencies = {}) {
   const prefix = cssName(token.id);
   const dependencyIds = dependencies[token.id] ?? [];
-  const durationValue = dependencyIds[0] ? `var(${cssName(dependencyIds[0])})` : `${formatNumber(token.value.duration)}ms`;
-  const easingValue = dependencyIds[1] ? `var(${cssName(dependencyIds[1])})` : formatEasingValue(token.value.easing);
-  const declarations = [
-    `  ${prefix}: ${durationValue} ${easingValue};`,
-    `  ${prefix}-duration: ${durationValue};`,
-    `  ${prefix}-easing: ${easingValue};`,
-  ];
-  if (token.value.spring) {
-    const visualDurationValue = dependencyIds[2] ? `var(${cssName(dependencyIds[2])})` : `${formatNumber(token.value.spring.visualDuration)}ms`;
-    const spring = compileSpringCSS({
-      visualDuration: token.value.spring.visualDuration / 1000,
-      bounce: token.value.spring.bounce,
-    });
-    declarations.push(
-      `  ${prefix}-spring-visual-duration: ${visualDurationValue};`,
-      `  ${prefix}-spring-duration: ${formatNumber(spring.duration)}ms;`,
-      `  ${prefix}-spring-easing: ${spring.easing};`,
-      `  ${prefix}-spring-bounce: ${formatMotionNumber(token.value.spring.bounce)};`,
-    );
+  if (!token.value.spring) {
+    const durationValue = dependencyIds[0] ? `var(${cssName(dependencyIds[0])})` : `${formatNumber(token.value.duration)}ms`;
+    const easingValue = dependencyIds[1] ? `var(${cssName(dependencyIds[1])})` : formatEasingValue(token.value.easing);
+    return [
+      `  ${prefix}: ${durationValue} ${easingValue};`,
+      `  ${prefix}-duration: ${durationValue};`,
+      `  ${prefix}-easing: ${easingValue};`,
+    ].join('\n');
   }
-  return declarations.join('\n');
+  const visualDurationValue = dependencyIds[2] ? `var(${cssName(dependencyIds[2])})` : `${formatNumber(token.value.spring.visualDuration)}ms`;
+  const spring = springTransitionPair(token.value.spring);
+  return [
+    `  ${prefix}: var(${prefix}-spring-duration) var(${prefix}-spring-easing);`,
+    `  ${prefix}-duration: var(${prefix}-spring-duration);`,
+    `  ${prefix}-easing: var(${prefix}-spring-easing);`,
+    `  ${prefix}-spring-visual-duration: ${visualDurationValue};`,
+    `  ${prefix}-spring-duration: ${spring.duration};`,
+    `  ${prefix}-spring-easing: ${spring.easing};`,
+    `  ${prefix}-spring-bounce: ${formatMotionNumber(token.value.spring.bounce)};`,
+  ].join('\n');
 }
 
 export function cssValue(token) {

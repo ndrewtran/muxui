@@ -54,10 +54,8 @@ async function closeCalendarWithEscape(page) {
   });
   const exit = await readEntryMotion(page);
   assert.equal(exit.animationName, 'none', 'Motion owns exit without a CSS keyframe');
-  assert.deepEqual(exit.animations.map(({ duration, easing }) => ({ duration, easing })), [
-    { duration: 120, easing: 'cubic-bezier(0.42, 0, 1, 1)' },
-    { duration: 120, easing: 'cubic-bezier(0.42, 0, 1, 1)' },
-  ], 'both exit channels use the exit duration and dismiss easing');
+  assert.deepEqual(exit.animations.map(({ duration }) => duration), [250, 250], 'both exit channels use the dismiss composite settle duration');
+  assert.ok(exit.animations.every(({ easing }) => /^linear\(/u.test(easing)), 'both exit channels use the dismiss composite spring curve');
   await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
   await assertTriggerFocus(page, 'Escape restores trigger focus');
 }
@@ -143,8 +141,8 @@ async function recordSlowedEntry(page) {
 function assertEntryMotion(entry) {
   const fade = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.opacity !== undefined));
   const travel = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.transform !== undefined));
-  assert.equal(fade?.duration, 200, 'opacity uses the reveal duration');
-  assert.equal(fade?.easing, 'cubic-bezier(0, 0, 0.58, 1)', 'opacity uses reveal easing');
+  assert.equal(fade?.duration, 400, 'opacity uses the reveal composite settle duration');
+  assert.match(fade?.easing ?? '', /^linear\(/u, 'opacity uses the reveal composite spring curve');
   assert.match(travel?.easing ?? '', /^linear\(/u, 'travel uses the sampled Motion spring');
 }
 
@@ -232,6 +230,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await settleEntry(page);
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '800ms');
       window.__muxuiDatePopoverSetOpen(false);
     });
     await page.waitForFunction(() => {
@@ -249,6 +248,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assert.equal(await page.locator('.muxui-date-popover[data-exiting]').count(), 1, 'one completed channel cannot release the retained popup');
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration');
       window.__muxuiDatePopoverSetOpen(true);
     });
     await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting'));
@@ -262,7 +262,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       window.setTimeout(() => window.__muxuiDatePopoverSetOpen(true), 24);
     });
     await page.locator('.muxui-date-popover').waitFor();
-    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting') && document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
+    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting') && document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 400));
     const rapidStarted = await readEntryMotion(page);
     assertEntryMotion(rapidStarted);
     const rapidSettled = await settleEntry(page);
@@ -291,6 +291,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms');
     });
     const slowedSystemEntry = await recordSlowedEntry(page);
     assert.equal(slowedSystemEntry.animations.some(({ duration }) => Number(duration) === 800), true, 'system reduction test starts from a slowed entry');
@@ -319,6 +320,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assert.equal(systemRestoredWhileOpen.opacity, '1', `restoring system motion keeps the popup settled: ${JSON.stringify(systemRestoredWhileOpen)}`);
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-transition-duration');
       window.__muxuiDatePopoverSetOpen(false);
     });
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
@@ -327,6 +329,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       document.documentElement.setAttribute('data-muxui-motion', 'full');
       document.getElementById('root').removeAttribute('data-muxui-motion');
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms');
     });
     const slowedNestedEntry = await recordSlowedEntry(page);
     assert.equal(slowedNestedEntry.animations.some(({ duration }) => Number(duration) === 800), true, 'nested reduction test starts from a slowed entry');
@@ -355,6 +358,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assert.equal(nestedRestoredWhileOpen.opacity, '1', `restoring nested motion keeps the popup settled: ${JSON.stringify(nestedRestoredWhileOpen)}`);
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-transition-duration');
     });
     await closeCalendarWithEscape(page);
 
@@ -365,6 +369,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       await settleEntry(page);
       await page.evaluate(() => {
         document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
+        document.documentElement.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '800ms');
         window.__muxuiDatePopoverSetOpen(false);
       });
       await page.waitForFunction(() => {
@@ -381,6 +386,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       await page.evaluate(() => {
         document.getElementById('root').removeAttribute('data-muxui-motion');
         document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
+        document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration');
       });
     }
 
@@ -463,7 +469,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await rangePage.locator('.muxui-date-range-control .muxui-date-trigger').click();
     await rangePage.locator('.muxui-date-popover').waitFor();
     assert.equal(await rangePage.locator('.muxui-date-range-picker-popover').count(), 1, 'DateRangePicker popup carries its canonical family selector');
-    await rangePage.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
+    await rangePage.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 400));
     const rangeEntry = await readEntryMotion(rangePage);
     assertEntryMotion(rangeEntry);
     await rangePage.keyboard.press('ArrowRight');

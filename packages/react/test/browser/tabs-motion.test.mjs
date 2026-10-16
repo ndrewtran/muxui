@@ -57,7 +57,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     assert.ok(initial.trigger.width > initial.label.width + 8, 'variable trigger padding is not included in the indicator');
     assert.equal(await page.locator('#primary-tabs [role="tab"][aria-disabled="true"]').count(), 1);
 
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '800ms'); });
     await page.evaluate(() => window.__muxuiTabsSetSelected('long'));
     await page.waitForFunction(() => document.querySelector('#primary-tabs [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'A considerably longer label');
     assert.equal(await page.locator('#tabs-changes').textContent(), '0', 'controlled state changes do not require an animation callback');
@@ -123,6 +123,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     const beforeReduced = await readIndicator(page, '#primary-tabs');
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '1200ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '1200ms');
       window.__muxuiTabsSetSelected('short');
     });
     await page.waitForFunction((beforeWidth) => {
@@ -152,6 +153,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await page.evaluate(() => {
       document.getElementById('root').removeAttribute('data-muxui-motion');
       document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '1200ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '1200ms');
       window.__muxuiTabsSetSelected('long');
     });
     await page.waitForFunction(() => document.querySelector('#primary-tabs [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'A considerably longer label');
@@ -180,6 +182,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration');
       window.__muxuiTabsUnmount();
     });
     await page.locator('#tabs-unmounted').waitFor({ state: 'attached' });

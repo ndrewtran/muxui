@@ -9,28 +9,21 @@ const CalendarSelectionContext = React.createContext(null);
 const CIRCLE_SCALE = { scaleX: 1, scaleY: 1 };
 const TRAVEL_SCALE = { scaleX: [1, 1.07, 1], scaleY: [1, 0.93, 1] };
 const SQUISH_TIMES = [0, 0.12, 1];
-const SQUISH_EASING = [0.22, 1, 0.36, 1];
-
-function motionTransition(value) {
-  if (!value) return undefined;
-  return {
-    type: value.type,
-    duration: value.duration,
-    visualDuration: value.visualDuration,
-    bounce: Math.max(value.bounce ?? 0, 0.2),
-  };
-}
 
 /** Keeps RAC in control while one selected date background travels within a month. */
 export function CalendarSelectionMotion({ children, rootRef }) {
   const [root, setRootRef] = useRootRef(rootRef);
   const [reduced, setReduced] = React.useState(false);
-  const [travelTransition, setTravelTransition] = React.useState({ duration: 0 });
+  const [spring, setSpring] = React.useState(null);
+  // The selection travels on the state spring and squishes on its composite curve.
+  const travelTransition = React.useMemo(() => spring
+    ? { type: spring.type, visualDuration: spring.visualDuration, bounce: spring.bounce }
+    : { duration: 0 }, [spring]);
   const squishTransition = React.useMemo(() => ({
-    duration: Math.max(travelTransition.visualDuration ?? travelTransition.duration ?? 0, 0.32),
+    duration: spring?.duration ?? 0,
     times: SQUISH_TIMES,
-    ease: SQUISH_EASING,
-  }), [travelTransition]);
+    ease: spring?.opacity.ease,
+  }), [spring]);
   const groupId = React.useId();
   const triggerRef = React.useContext(PopoverContext)?.triggerRef;
 
@@ -43,11 +36,7 @@ export function CalendarSelectionMotion({ children, rootRef }) {
   }, [root, triggerRef]);
 
   useIsomorphicLayoutEffect(() => {
-    if (!root || reduced) {
-      setTravelTransition({ duration: 0 });
-      return undefined;
-    }
-    setTravelTransition(motionTransition(resolvedMotionSpring(root, triggerRef?.current, 'state', 'interaction')) ?? { duration: 0 });
+    setSpring(!root || reduced ? null : resolvedMotionSpring(root, triggerRef?.current, 'state', 'interaction'));
     return undefined;
   }, [root, reduced, triggerRef]);
 

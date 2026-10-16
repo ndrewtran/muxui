@@ -2,7 +2,7 @@
 
 .muxui-breadcrumbs-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
 .muxui-breadcrumbs-item:not(:last-child)::after { color: var(--muxui-semantic-content-muted); content: '/'; }
-.muxui-breadcrumbs-link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-breadcrumbs-link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
 .muxui-breadcrumbs-link:hover, .muxui-link:hover { color: var(--muxui-semantic-content-link-hover); }
 .muxui-breadcrumbs-link[data-hovered], .muxui-link[data-hovered] { color: var(--muxui-semantic-content-link-hover); }
 .muxui-breadcrumbs-link[data-pressed], .muxui-link[data-pressed] { color: var(--muxui-semantic-content-link-pressed); }
@@ -20,7 +20,7 @@
 
 .muxui-disclosure-group { overflow: hidden; border: 1px solid var(--muxui-semantic-border-subtle); border-radius: var(--muxui-semantic-shape-container-radius); }
 .muxui-disclosure:last-child { border-block-end: 0; }
-.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-size-md); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-size-md); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing), color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
 .muxui-disclosure-trigger:hover:not([data-disabled]), .muxui-disclosure-trigger[data-pressed] { background: var(--muxui-semantic-surface-hover); color: var(--muxui-semantic-content-strong); }
 .muxui-disclosure-panel { margin-block-start: var(--muxui-semantic-layout-control-gap); padding: 0 var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small); }
 .muxui-disclosure[data-disabled] { cursor: not-allowed; }
@@ -37,7 +37,7 @@
 .muxui-value-label { color: var(--muxui-progress-label-color); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
 .muxui-switch-label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
 .muxui-meter-track, .muxui-progress-bar-track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
-.muxui-meter-fill, .muxui-progress-bar-fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-meter-fill, .muxui-progress-bar-fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
 .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill {
   inline-size: 40%;
   margin-inline-start: 30%;
@@ -89,10 +89,10 @@
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   white-space: nowrap;
   user-select: none;
 
@@ -236,7 +236,7 @@
   text-decoration: none;
   outline: none;
   border-radius: var(--muxui-semantic-shape-indicator-radius);
-  transition: color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   cursor: pointer;
 }
 
@@ -302,9 +302,9 @@
   background-color: var(--muxui-component-checkbox-indicator-background);
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    border-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   flex-shrink: 0;
   pointer-events: none;
   outline-offset: 0px;
@@ -430,10 +430,10 @@
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    border-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   white-space: nowrap;
   user-select: none;
   padding-inline: var(--muxui-semantic-control-padding-inline);
@@ -536,7 +536,7 @@
   text-decoration: none;
   text-underline-offset: 0.2em;
   border-radius: var(--muxui-semantic-shape-indicator-radius);
-  transition: color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   text-decoration: underline;
 }
 
@@ -697,10 +697,10 @@
   line-height: 1;
   cursor: pointer;
   transition:
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   user-select: none;
 
   padding-inline: var(--muxui-semantic-control-padding-inline);
@@ -1336,8 +1336,8 @@
   border-radius: 0;
   background-color: var(--muxui-component-disclosuregroup-background);
   transition:
-    margin-block-start var(--muxui-component-disclosuregroup-transition-spring-duration) var(--muxui-component-disclosuregroup-transition-spring-easing),
-    border-radius var(--muxui-component-disclosuregroup-transition-spring-duration) var(--muxui-component-disclosuregroup-transition-spring-easing);
+    margin-block-start var(--muxui-component-disclosuregroup-transition-duration) var(--muxui-component-disclosuregroup-transition-easing),
+    border-radius var(--muxui-component-disclosuregroup-transition-duration) var(--muxui-component-disclosuregroup-transition-easing);
 }
 
 /* Feed the same compiled component spring to MotionHeight without changing

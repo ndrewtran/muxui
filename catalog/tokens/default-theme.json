@@ -900,7 +900,7 @@
       "layer": "semantic",
       "type": "easing",
       "unit": "structured",
-      "meaning": "Easing curve for standard interface state transitions and popup motion.",
+      "meaning": "Non-spring easing for standard interface state transitions; spring-bearing composites use their own spring curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "keyword",
@@ -1044,7 +1044,7 @@
       "layer": "semantic",
       "type": "easing",
       "unit": "structured",
-      "meaning": "Ease-out curve for content and overlay entry transitions.",
+      "meaning": "Non-spring ease-out for content and overlay entry transitions; the reveal composite uses its spring curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "keyword",
@@ -1055,7 +1055,7 @@
       "layer": "semantic",
       "type": "easing",
       "unit": "structured",
-      "meaning": "Ease-in curve for content and overlay dismissal transitions.",
+      "meaning": "Non-spring ease-in for content and overlay dismissal transitions; the dismiss composite uses its spring curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "keyword",
@@ -1066,7 +1066,7 @@
       "layer": "semantic",
       "type": "easing",
       "unit": "structured",
-      "meaning": "Easing curve for modal panel and backdrop transitions.",
+      "meaning": "Non-spring easing for modal panel and backdrop transitions; the modal composites use their spring curves.",
       "overridePolicy": "theme",
       "value": {
         "kind": "cubic-bezier",
@@ -9464,7 +9464,7 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic interaction transition composed from canonical motion timing roles.",
+      "meaning": "Semantic interaction transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -9481,7 +9481,7 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic reveal transition composed from canonical motion timing roles.",
+      "meaning": "Semantic reveal transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -9498,7 +9498,7 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic dismiss transition composed from canonical motion timing roles.",
+      "meaning": "Semantic dismiss transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -9515,7 +9515,7 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic state transition composed from canonical motion timing roles.",
+      "meaning": "Semantic state transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -9532,7 +9532,7 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic content resize transition composed from canonical motion timing roles.",
+      "meaning": "Semantic content resize transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -9561,24 +9561,34 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Modal panel transition composed from the modal enter duration and easing.",
+      "meaning": "Modal panel entry transition: the modal enter spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.modal-enter-duration",
-        "easing": "semantic.motion.modal-easing"
+        "easing": "semantic.motion.modal-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.modal-enter-duration",
+          "bounce": 0
+        }
       }
     },
     "semantic.motion.modal-dismiss-transition": {
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Modal panel dismissal transition composed from the exit duration and easing.",
+      "meaning": "Modal panel dismissal transition: the exit spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.exit-duration",
-        "easing": "semantic.motion.modal-easing"
+        "easing": "semantic.motion.modal-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.exit-duration",
+          "bounce": 0
+        }
       }
     },
     "component.codeblock.added-background": {

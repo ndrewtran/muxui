@@ -85,6 +85,10 @@ function isReducedMotion(node, triggerNode) {
   return systemReduced || hasReducedScope(node) || hasReducedScope(triggerNode);
 }
 
+/**
+ * Resolve a role's composite as a tween: its settle duration and `linear()`
+ * curve (or the base duration and easing when the composite is absent).
+ */
 export function resolvedMotionTransition(node, triggerNode, durationRole = 'interaction', easingRole = 'interaction') {
   if (typeof window === 'undefined' || !node || isReducedMotion(node, triggerNode)) return null;
   const role = transitionRole(durationRole, easingRole);
@@ -100,10 +104,12 @@ export function resolvedMotionTransition(node, triggerNode, durationRole = 'inte
 }
 
 /**
- * Resolve a restrained duration-based spring for physical values while keeping
- * opacity on the semantic easing curve. `visualDuration` coordinates the bulk
- * of the spring with token-timed siblings; bounce zero keeps utility surfaces
- * from overshooting.
+ * Resolve a role's Motion spring for physical values. `visualDuration` and
+ * `bounce` are the perceived spring settings Motion runs, so JS springs keep
+ * the role's perceived timing; bounce zero keeps utility surfaces from
+ * overshooting. `duration` is the role composite's settle duration, the bound
+ * for the whole interpolation including the spring's tail, and `opacity` is a
+ * tween on the same composite, so opacity follows the CSS curve.
  */
 export function resolvedMotionSpring(node, triggerNode, durationRole = 'interaction', easingRole = 'interaction') {
   const transition = resolvedMotionTransition(node, triggerNode, durationRole, easingRole);

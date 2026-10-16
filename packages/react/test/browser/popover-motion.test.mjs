@@ -83,7 +83,7 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     assert.equal(await page.locator('.muxui-menu-popup, .muxui-select-popover, .muxui-combo-box-popover, .muxui-autocomplete-popover').count(), 0, 'SSR and hydration begin popovers closed');
     assert.match(await page.locator('html').getAttribute('data-muxui-popover-refs'), /DIV/u);
 
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms'); });
     const cases = [
       { trigger: '#motion-menu-trigger', popup: '.muxui-menu-popup' },
       { trigger: '.muxui-select-trigger', popup: '.muxui-select-popover' },
@@ -146,6 +146,7 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
 
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '1200ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '1200ms');
       document.documentElement.setAttribute('data-muxui-motion', 'full');
     });
     await page.locator('#motion-menu-trigger').click();
@@ -209,6 +210,7 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
 
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-transition-duration');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-spring-visual-duration');
       window.__muxuiPopoverUnmount();

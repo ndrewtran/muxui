@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { canonicalJson, parseJsonStrict } from '@muxui/schema';
+import { cssValue } from '../src/core.mjs';
 import {
   TokenContractError,
   compileNativeTheme,
@@ -374,9 +375,69 @@ test('default theme motion scale removes Quick and preserves Fast (120ms) semant
   assert.deepEqual({ ...source.tokens['semantic.motion.modal-easing'].value }, { kind: 'cubic-bezier', x1: 0.16, y1: 1, x2: 0.3, y2: 1 });
 });
 
+const SPRING_ROLES = {
+  interaction: { visualDuration: 'interaction-duration', settle: 350 },
+  state: { visualDuration: 'state-duration', settle: 250 },
+  dismiss: { visualDuration: 'exit-duration', settle: 250 },
+  reveal: { visualDuration: 'reveal-duration', settle: 400 },
+  'content-resize': { visualDuration: 'content-resize-duration', settle: 1050 },
+  modal: { visualDuration: 'modal-enter-duration', settle: 400 },
+  'modal-dismiss': { visualDuration: 'exit-duration', settle: 250 },
+};
+
+function cssDeclarations(css) {
+  return new Map([...css.matchAll(/^ {2}(--[a-z0-9-]+): (.+);$/gmu)].map(([, name, value]) => [name, value]));
+}
+
+test('spring roles compose their own settle duration and linear() curve', () => {
+  const declarations = cssDeclarations(compileWebTheme(source).css);
+  for (const [role, { visualDuration, settle }] of Object.entries(SPRING_ROLES)) {
+    const prefix = `--muxui-semantic-motion-${role}-transition`;
+    assert.equal(declarations.get(prefix), `var(${prefix}-spring-duration) var(${prefix}-spring-easing)`, role);
+    assert.equal(declarations.get(`${prefix}-duration`), `var(${prefix}-spring-duration)`, role);
+    // No role borrows another role's curve: each composite reads its own spring easing.
+    assert.equal(declarations.get(`${prefix}-easing`), `var(${prefix}-spring-easing)`, role);
+    assert.equal(declarations.get(`${prefix}-spring-duration`), `${settle}ms`, role);
+    assert.match(declarations.get(`${prefix}-spring-easing`), /^linear\(0, .+, 1\)$/u, role);
+    // The perceived duration and bounce stay for JavaScript springs.
+    assert.equal(declarations.get(`${prefix}-spring-visual-duration`), `var(--muxui-semantic-motion-${visualDuration})`, role);
+    assert.equal(declarations.get(`${prefix}-spring-bounce`), '0', role);
+  }
+  // Roles without a spring keep their authored duration and easing.
+  assert.equal(
+    declarations.get('--muxui-semantic-motion-progress-transition'),
+    'var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-progress-easing)',
+  );
+  // The perceived base durations are untouched.
+  const graph = compileTokenGraph(source);
+  assert.equal(graph.tokens['semantic.motion.interaction-duration'].value, 150);
+  assert.equal(graph.tokens['semantic.motion.modal-enter-duration'].value, 180);
+});
+
+test('a spring transition token formats as its spring pair', () => {
+  const graph = compileTokenGraph(source);
+  assert.match(
+    cssValue(graph.tokens['semantic.motion.state-transition']),
+    /^250ms linear\(0, 0\.4615, 0\.8176, /u,
+  );
+  assert.equal(cssValue(graph.tokens['semantic.motion.progress-transition']), '300ms ease-in-out');
+});
+
+test('reduced motion zeroes the compiled settle where the duration role is Instant', () => {
+  const reduced = cssDeclarations(compileWebTheme(source, { modes: { motion: 'reduced' } }).css);
+  for (const role of ['state', 'dismiss', 'modal', 'modal-dismiss']) {
+    const prefix = `--muxui-semantic-motion-${role}-transition`;
+    assert.equal(reduced.get(`${prefix}-spring-duration`), '0ms', role);
+    assert.equal(reduced.get(`${prefix}-spring-easing`), 'linear', role);
+    assert.equal(reduced.get(`${prefix}-duration`), `var(${prefix}-spring-duration)`, role);
+  }
+  // Roles without a reduced branch keep their authored values, as before.
+  assert.equal(reduced.get('--muxui-semantic-motion-interaction-transition-spring-duration'), '350ms');
+});
+
 test('motion compositions preserve references and regenerate spring CSS from theme overrides', () => {
   const defaultCss = compileWebTheme(source).css;
-  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-duration\);/u);
+  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-transition-spring-duration\);/u);
   assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-spring-duration: 350ms;/u);
   assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-spring-easing: linear\(0, 0\.3049/u);
   const overriddenCss = compileWebTheme(source, {
@@ -384,9 +445,11 @@ test('motion compositions preserve references and regenerate spring CSS from the
       'semantic.motion.interaction-duration': { type: 'duration', unit: 'ms', value: 200 },
     },
   }).css;
+  // A retimed perceived duration regenerates the settle pair the composite follows.
   assert.match(overriddenCss, /--muxui-semantic-motion-interaction-transition-spring-duration: 400ms;/u);
+  assert.match(overriddenCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-transition-spring-duration\);/u);
   const reduced = compileWebTheme(source, { modes: { motion: 'reduced' } }).css;
-  assert.match(reduced, /--muxui-semantic-motion-state-transition-duration: var\(--muxui-semantic-motion-state-duration\);/u);
+  assert.match(reduced, /--muxui-semantic-motion-state-transition-duration: var\(--muxui-semantic-motion-state-transition-spring-duration\);/u);
   assert.match(reduced, /--muxui-semantic-motion-state-transition-spring-duration: 0ms;/u);
   assert.throws(() => compileWebTheme(source, {
     overrides: {
