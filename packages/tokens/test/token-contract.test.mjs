@@ -393,7 +393,8 @@ test('spring roles compose their own settle duration and linear() curve', () => 
   const declarations = cssDeclarations(compileWebTheme(source).css);
   for (const [role, { visualDuration, settle }] of Object.entries(SPRING_ROLES)) {
     const prefix = `--muxui-semantic-motion-${role}-transition`;
-    assert.equal(declarations.get(prefix), `var(${prefix}-spring-duration) var(${prefix}-spring-easing)`, role);
+    // The shorthand composes its own public parts, which resolve to the spring pair.
+    assert.equal(declarations.get(prefix), `var(${prefix}-duration) var(${prefix}-easing)`, role);
     assert.equal(declarations.get(`${prefix}-duration`), `var(${prefix}-spring-duration)`, role);
     // No role borrows another role's curve: each composite reads its own spring easing.
     assert.equal(declarations.get(`${prefix}-easing`), `var(${prefix}-spring-easing)`, role);
@@ -467,6 +468,27 @@ test('motion compositions preserve references and regenerate spring CSS from the
   }), /MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY/u);
   const native = compileNativeTheme(source, { profile: 'native.ios' });
   assert.ok(native.diagnostics.some(({ id, code }) => id === 'semantic.motion.interaction-transition' && code === 'MUXUI_TOKEN_TRANSITION_NATIVE_DEFERRED'));
+});
+
+test('modal transition overrides from the previous contract are rejected with a clear diagnostic', () => {
+  assert.equal(source.tokenContractVersion, '6.0.0');
+  for (const [id, visualDuration] of [
+    ['semantic.motion.modal-transition', 'semantic.motion.modal-enter-duration'],
+    ['semantic.motion.modal-dismiss-transition', 'semantic.motion.exit-duration'],
+  ]) {
+    const previous = { type: 'transition', unit: 'structured', value: { kind: 'transition', duration: visualDuration, easing: 'semantic.motion.modal-easing' } };
+    assert.throws(
+      () => compileWebTheme(source, { overrides: { [id]: previous } }),
+      (error) => error instanceof TokenContractError
+        && error.code === 'MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY'
+        && error.message.includes('declares a spring')
+        && error.message.includes(visualDuration)
+        && error.details.visualDuration === visualDuration,
+      id,
+    );
+    const current = { ...previous, value: { ...previous.value, spring: { kind: 'time', visualDuration, bounce: 0.2 } } };
+    assert.doesNotThrow(() => compileWebTheme(source, { overrides: { [id]: current } }), id);
+  }
 });
 
 test('transition overrides follow selected mode and alias target topology', () => {
@@ -687,6 +709,30 @@ test('E-G1.0-04 requirement digests track exact semantic closure only', () => {
     source: dependency, recipe, bindingId: 'web.html', profile: 'web.html',
   });
   assert.notEqual(dependencySet.digest, base.digest);
+});
+
+test('a component record lists the motion composites it consumes, so a composite change moves its digest', async () => {
+  const tooltip = parseJsonStrict(await readFile(
+    new URL('../../../catalog/components/tooltip/artifact.json', import.meta.url),
+    'utf8',
+  ));
+  const tooltipRecipe = tooltip.bindings['web.react'].tokenRecipe;
+  const digestFor = (candidate) => compileTokenRequirementSet({
+    source: candidate, recipe: tooltipRecipe, bindingId: 'web.react', profile: 'web.react',
+  }).digest;
+  const withBounce = (tokenId) => {
+    const candidate = structuredClone(source);
+    candidate.tokens[tokenId].value.spring.bounce = 0.3;
+    return candidate;
+  };
+  assert.deepEqual(
+    tooltipRecipe.requirements.map(({ token }) => token).filter((token) => token.startsWith('semantic.motion.')).sort(),
+    ['semantic.motion.dismiss-transition', 'semantic.motion.reveal-transition'],
+  );
+  const base = digestFor(source);
+  assert.notEqual(digestFor(withBounce('semantic.motion.reveal-transition')), base);
+  assert.notEqual(digestFor(withBounce('semantic.motion.dismiss-transition')), base);
+  assert.equal(digestFor(withBounce('semantic.motion.modal-transition')), base);
 });
 
 test('E-G1.0-06 static mode output works while runtime switching remains unavailable', () => {

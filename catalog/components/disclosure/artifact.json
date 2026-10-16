@@ -135,6 +135,14 @@
           {
             "token": "semantic.motion.content-resize-transition",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.state-transition",
+            "requirement": "required"
           }
         ]
       },

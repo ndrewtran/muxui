@@ -29,7 +29,7 @@
         { "token": "semantic.selection.track", "requirement": "required" },
         { "token": "semantic.action.selection-background", "requirement": "required" },
         { "token": "component.dropzone.drop-target-background", "requirement": "required" },
-        { "token": "semantic.motion.feedback-duration", "requirement": "required" }
+        { "token": "semantic.motion.interaction-transition", "requirement": "required" }
       ] },
       "platformSafety": [{ "profile": "web.react", "requirements": [
         { "id": "system.forced-colors", "disposition": "required" },

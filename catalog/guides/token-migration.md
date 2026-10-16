@@ -5,9 +5,11 @@ id: muxui:guide:token-migration
 # Token contract migration
 
 The current versions are `schemaVersion` and `tokenContractVersion` in the
-`muxui:token:default-theme` source. Token contract `5.2.0` added two
-component-owned DataDiff change backgrounds derived from existing status
-accents, `5.1.0` added the separate CodeBlock change backgrounds, and `5.0.0`
+`muxui:token:default-theme` source. Token contract `6.0.0` changed the meaning
+of the spring-bearing transition tokens, described below. Token contract
+`5.2.0` added two component-owned DataDiff change backgrounds derived from
+existing status accents, `5.1.0` added the separate CodeBlock change
+backgrounds, and `5.0.0`
 added typed easing and transition compositions while retaining the `4.0.0`
 removals. Those versions are past migration steps. Removed names are not
 exported, emitted as CSS variables, accepted by authoring documents, or
@@ -38,14 +40,23 @@ settings:
 }
 ```
 
-Transitions that carry a spring (`interaction`, `state`, `dismiss`, `reveal`,
-`content-resize`, `modal`, and `modal-dismiss`) resolve
+Token contract `6.0.0` is a breaking change to transition tokens. The
+interaction, state, dismiss, reveal, content-resize, modal, and modal-dismiss
+transitions carry a spring, and
 `--muxui-semantic-motion-<role>-transition`, `-transition-duration`, and
-`-transition-easing` to the spring's settle duration and `linear()` curve.
-Replace a consumer's raw `<role>-duration` and `<role>-easing` pair with the
-composite's `-transition-duration` and `-transition-easing`, and replace a
-scope's base-duration override with the composite override described in the
-Motion foundation guide.
+`-transition-easing` now resolve to that spring's settle duration and
+`linear()` curve instead of the perceived duration and a keyword or
+cubic-bezier. A transition duration therefore means settle time, the role
+`*-easing` tokens no longer reshape those composites, and the modal and
+modal-dismiss transitions gained springs. A transition override for either modal
+role must now keep the authored spring, as in the example above, or it is
+rejected with `MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY`. No compatibility
+aliases are provided: authoring documents declare `6.0.0`, replace a consumer's
+raw `<role>-duration` and `<role>-easing` pair with the composite's
+`-transition-duration` and `-transition-easing`, and replace a scope's
+base-duration override with the composite override described in the Motion
+foundation guide. Component records now list the composites each component reads
+instead of `feedback-duration`.
 
 Token contract `4.0.0` removed redundant or unused token IDs before consumer
 adoption. The change map below lists them.

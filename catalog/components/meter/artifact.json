@@ -113,6 +113,10 @@
           {
             "token": "semantic.selection.track",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.state-transition",
+            "requirement": "required"
           }
         ]
       },

@@ -77,6 +77,7 @@ const SPRING_ROLES = ['interaction', 'state', 'dismiss', 'reveal', 'content-resi
 test('shipped composites are each role spring settle duration and curve', () => {
   for (const role of SPRING_ROLES) {
     const prefix = `--muxui-semantic-motion-${role}-transition`;
+    assert.equal(rootDeclarations.get(prefix), `var(${prefix}-duration) var(${prefix}-easing)`, role);
     assert.equal(rootDeclarations.get(`${prefix}-duration`), `var(${prefix}-spring-duration)`, role);
     assert.equal(rootDeclarations.get(`${prefix}-easing`), `var(${prefix}-spring-easing)`, role);
     assert.match(resolveVar(rootDeclarations.get(`${prefix}-easing`)), /^linear\(0, .+, 1\)$/u, role);

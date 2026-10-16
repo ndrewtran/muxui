@@ -73,12 +73,14 @@ function formatTransitionValue(value) {
 
 /**
  * A transition without a spring composes its referenced duration and easing. A
- * transition with a spring composes that spring: `<id>`, `-duration`, and `-easing`
- * resolve to the spring's settle duration and `linear()` curve, so a consumer of the
- * composite gets the spring without an override of its own. The perceived
- * `-spring-visual-duration` and `-spring-bounce` stay for runtimes that run the
- * spring. The authored duration and easing references remain the topology that theme
- * overrides must preserve; they do not shape the composite while a spring is present.
+ * transition with a spring resolves its public `-duration` and `-easing` parts to the
+ * spring's settle duration and `linear()` curve, and the `<id>` shorthand composes
+ * those two parts, so the shorthand and its parts can never disagree where an
+ * override of a part is declared. The perceived `-spring-visual-duration` and
+ * `-spring-bounce` stay for runtimes that run the spring. The authored duration and
+ * easing references remain the topology that theme overrides must preserve; the
+ * validator requires them, but they do not shape the composite while a spring is
+ * present.
  */
 function transitionCssDeclarations(token, dependencies = {}) {
   const prefix = cssName(token.id);
@@ -95,7 +97,7 @@ function transitionCssDeclarations(token, dependencies = {}) {
   const visualDurationValue = dependencyIds[2] ? `var(${cssName(dependencyIds[2])})` : `${formatNumber(token.value.spring.visualDuration)}ms`;
   const spring = springTransitionPair(token.value.spring);
   return [
-    `  ${prefix}: var(${prefix}-spring-duration) var(${prefix}-spring-easing);`,
+    `  ${prefix}: var(${prefix}-duration) var(${prefix}-easing);`,
     `  ${prefix}-duration: var(${prefix}-spring-duration);`,
     `  ${prefix}-easing: var(${prefix}-spring-easing);`,
     `  ${prefix}-spring-visual-duration: ${visualDurationValue};`,
@@ -131,7 +133,7 @@ export function cssDeclaration(token, dependencies = {}) {
       const prefix = cssName(token.id);
       const targetPrefix = cssName(targetId);
       const declarations = [
-        `  ${prefix}: var(${targetPrefix});`,
+        `  ${prefix}: var(${prefix}-duration) var(${prefix}-easing);`,
         `  ${prefix}-duration: var(${targetPrefix}-duration);`,
         `  ${prefix}-easing: var(${targetPrefix}-easing);`,
       ];
@@ -361,6 +363,9 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
           candidate.spring.kind === authored.spring.kind
           && candidate.spring.visualDuration === authored.spring.visualDuration
         ));
+      if (!sameRefs && authored?.spring && !candidate.spring) {
+        fail('MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY', `${tokenId} declares a spring and an override must keep it: add spring { kind: 'time', visualDuration: '${authored.spring.visualDuration}', bounce } (overrides written for a contract before 6.0.0 omit it and are not accepted)`, { tokenId, visualDuration: authored.spring.visualDuration });
+      }
       if (!sameRefs) fail('MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY', `${tokenId} overrides must preserve authored duration, easing, and visualDuration references`, { tokenId });
     }
     if (override.type === 'string' && !SAFE_OVERRIDE_STRING.test(override.value)) fail('MUXUI_TOKEN_STRING_INVALID', `${tokenId} override must use the supported CSS string grammar`, { tokenId });

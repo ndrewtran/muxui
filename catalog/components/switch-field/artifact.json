@@ -100,7 +100,11 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback-duration",
+            "token": "semantic.motion.reveal-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.state-transition",
             "requirement": "required"
           }
         ]

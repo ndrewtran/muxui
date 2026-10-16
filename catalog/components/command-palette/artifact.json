@@ -171,7 +171,11 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback-duration",
+            "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.state-transition",
             "requirement": "required"
           },
           {

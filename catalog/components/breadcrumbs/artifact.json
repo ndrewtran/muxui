@@ -115,6 +115,14 @@
           {
             "token": "semantic.control.radius",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.state-transition",
+            "requirement": "required"
           }
         ]
       },

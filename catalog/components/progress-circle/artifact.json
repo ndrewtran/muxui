@@ -90,7 +90,27 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback-duration",
+            "token": "semantic.motion.progress-update-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-easing",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-spin-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-sweep-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-easing",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.constant-easing",
             "requirement": "required"
           }
         ]

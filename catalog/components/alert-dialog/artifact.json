@@ -93,10 +93,6 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback-duration",
-            "requirement": "required"
-          },
-          {
             "token": "semantic.motion.modal-transition",
             "requirement": "required"
           },
