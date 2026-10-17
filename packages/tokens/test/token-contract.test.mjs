@@ -770,17 +770,25 @@ test('E-G1.0-04 requirement digests track exact semantic closure only', () => {
   assert.notEqual(dependencySet.digest, base.digest);
 });
 
-// The spring roles a component's code reads, per its record: a bounce change on one of
-// them must move the requirement digest, and a change on any other must not.
+// What each component's code reads from the motion tokens, per its record: a bounce change on a consumed spring role, or an edit to a
+// consumed spinner token, must move the requirement digest, and a change to any other spring or spinner token must not. IconButton shows
+// its pending spinner without animation, so it reads the Button spring but none of the spinner tokens.
+const SPINNER_EDITS = {
+  'semantic.motion.progress-spin-duration': (token) => { token.value += 100; },
+  'semantic.motion.progress-sweep-duration': (token) => { token.value += 100; },
+  'semantic.motion.progress-easing': (token) => { token.value = { kind: 'keyword', value: 'linear' }; },
+  'semantic.motion.constant-easing': (token) => { token.alias = 'reference.motion.easing-standard'; },
+};
 const MOTION_CONSUMERS = {
-  tooltip: ['dismiss', 'reveal'],
-  button: ['interaction'],
-  'alert-dialog': ['interaction', 'modal', 'modal-dismiss'],
-  disclosure: ['content-resize', 'dismiss', 'interaction', 'reveal', 'state'],
+  tooltip: { springs: ['dismiss', 'reveal'], spinner: [] },
+  button: { springs: ['interaction'], spinner: Object.keys(SPINNER_EDITS) },
+  'icon-button': { springs: ['interaction'], spinner: [] },
+  'alert-dialog': { springs: ['interaction', 'modal', 'modal-dismiss'], spinner: [] },
+  disclosure: { springs: ['content-resize', 'dismiss', 'interaction', 'reveal', 'state'], spinner: [] },
 };
 
-test('a component record lists the motion composites it consumes, so a composite change moves its digest', async () => {
-  for (const [slug, consumed] of Object.entries(MOTION_CONSUMERS)) {
+test('a component record lists the motion tokens it consumes, so a change to one moves its digest', async () => {
+  for (const [slug, { springs, spinner }] of Object.entries(MOTION_CONSUMERS)) {
     const artifact = parseJsonStrict(await readFile(
       new URL(`../../../catalog/components/${slug}/artifact.json`, import.meta.url),
       'utf8',
@@ -789,20 +797,24 @@ test('a component record lists the motion composites it consumes, so a composite
     const digestFor = (candidate) => compileTokenRequirementSet({
       source: candidate, recipe, bindingId: 'web.react', profile: 'web.react',
     }).digest;
-    const withBounce = (role) => {
+    const edited = (tokenId, edit) => {
       const candidate = structuredClone(source);
-      candidate.tokens[`semantic.motion.${role}-transition`].value.spring.bounce = 0.3;
+      edit(candidate.tokens[tokenId]);
       return candidate;
     };
     assert.deepEqual(
       recipe.requirements.map(({ token }) => token).filter((token) => token.startsWith('semantic.motion.')).sort(),
-      consumed.map((role) => `semantic.motion.${role}-transition`).sort(),
+      [...springs.map((role) => `semantic.motion.${role}-transition`), ...spinner].sort(),
       slug,
     );
     const base = digestFor(source);
     for (const role of Object.keys(SPRING_ROLES)) {
-      const moved = digestFor(withBounce(role)) !== base;
-      assert.equal(moved, consumed.includes(role), `${slug}: ${role} spring ${consumed.includes(role) ? 'moves' : 'leaves'} the digest`);
+      const moved = digestFor(edited(`semantic.motion.${role}-transition`, (token) => { token.value.spring.bounce = 0.3; })) !== base;
+      assert.equal(moved, springs.includes(role), `${slug}: ${role} spring ${springs.includes(role) ? 'moves' : 'leaves'} the digest`);
+    }
+    for (const [tokenId, edit] of Object.entries(SPINNER_EDITS)) {
+      const moved = digestFor(edited(tokenId, edit)) !== base;
+      assert.equal(moved, spinner.includes(tokenId), `${slug}: ${tokenId} ${spinner.includes(tokenId) ? 'moves' : 'leaves'} the digest`);
     }
   }
 });

@@ -100,7 +100,11 @@
           { "token": "semantic.action.background-pressed", "requirement": "required" },
           { "token": "component.button.danger-ghost-foreground", "requirement": "required" },
           { "token": "component.button.danger-neutral-foreground", "requirement": "required" },
-          { "token": "semantic.motion.interaction-transition", "requirement": "required" }
+          { "token": "semantic.motion.interaction-transition", "requirement": "required" },
+          { "token": "semantic.motion.progress-spin-duration", "requirement": "required" },
+          { "token": "semantic.motion.progress-sweep-duration", "requirement": "required" },
+          { "token": "semantic.motion.progress-easing", "requirement": "required" },
+          { "token": "semantic.motion.constant-easing", "requirement": "required" }
         ]
       },
     "platformSafety": [
