@@ -73,14 +73,13 @@ function formatTransitionValue(value) {
 
 /**
  * A transition without a spring composes its referenced duration and easing. A
- * transition with a spring resolves its public `-duration` and `-easing` parts to the
- * spring's settle duration and `linear()` curve, and the `<id>` shorthand composes
- * those two parts, so the shorthand and its parts can never disagree where an
- * override of a part is declared. The perceived `-spring-visual-duration` and
- * `-spring-bounce` stay for runtimes that run the spring. The authored duration and
- * easing references remain the topology that theme overrides must preserve; the
- * validator requires them, but they do not shape the composite while a spring is
- * present.
+ * transition with a spring names no easing: its public `-duration` and `-easing`
+ * parts resolve to the spring's settle duration and `linear()` curve, and the `<id>`
+ * shorthand composes those two parts, so the shorthand and its parts can never
+ * disagree where an override of a part is declared. The perceived
+ * `-spring-visual-duration` and `-spring-bounce` stay for runtimes that run the
+ * spring. Positional dependencies are `[duration, easing]` without a spring and
+ * `[duration, visualDuration]` with one.
  */
 function transitionCssDeclarations(token, dependencies = {}) {
   const prefix = cssName(token.id);
@@ -94,7 +93,7 @@ function transitionCssDeclarations(token, dependencies = {}) {
       `  ${prefix}-easing: ${easingValue};`,
     ].join('\n');
   }
-  const visualDurationValue = dependencyIds[2] ? `var(${cssName(dependencyIds[2])})` : `${formatNumber(token.value.spring.visualDuration)}ms`;
+  const visualDurationValue = dependencyIds[1] ? `var(${cssName(dependencyIds[1])})` : `${formatNumber(token.value.spring.visualDuration)}ms`;
   const spring = springTransitionPair(token.value.spring);
   return [
     `  ${prefix}: var(${prefix}-duration) var(${prefix}-easing);`,
@@ -236,15 +235,19 @@ function validateEasingValue(value, path, fail) {
 function validateTransitionValue(value, path, fail) {
   if (!isRecord(value) || value.kind !== 'transition'
     || Object.keys(value).some((key) => !['kind', 'duration', 'easing', 'spring'].includes(key))
-    || !TOKEN_ID.test(value.duration) || !TOKEN_ID.test(value.easing)) {
-    fail('MUXUI_TOKEN_MOTION_TRANSITION_INVALID', `${path} must reference a duration and easing token`, { path });
+    || !TOKEN_ID.test(value.duration)) {
+    fail('MUXUI_TOKEN_MOTION_TRANSITION_INVALID', `${path} must reference a duration token and either an easing token or a spring`, { path });
   }
-  if (value.spring !== undefined) {
-    const spring = value.spring;
-    if (!isRecord(spring) || spring.kind !== 'time' || Object.keys(spring).some((key) => !['kind', 'visualDuration', 'bounce'].includes(key))
-      || !TOKEN_ID.test(spring.visualDuration) || !Number.isFinite(spring.bounce) || spring.bounce < 0 || spring.bounce > 1) {
-      fail('MUXUI_TOKEN_MOTION_SPRING_INVALID', `${path}/spring must reference a duration with a bounded bounce`, { path });
-    }
+  if (value.spring === undefined) {
+    if (!TOKEN_ID.test(value.easing)) fail('MUXUI_TOKEN_MOTION_TRANSITION_INVALID', `${path} must reference an easing token unless it declares a spring`, { path });
+    return;
+  }
+  // The composite easing is the spring's linear() curve, so an easing reference would be inert.
+  if (value.easing !== undefined) fail('MUXUI_TOKEN_MOTION_TRANSITION_INVALID', `${path} declares a spring and takes no easing reference`, { path });
+  const spring = value.spring;
+  if (!isRecord(spring) || spring.kind !== 'time' || Object.keys(spring).some((key) => !['kind', 'visualDuration', 'bounce'].includes(key))
+    || !TOKEN_ID.test(spring.visualDuration) || !Number.isFinite(spring.bounce) || spring.bounce < 0 || spring.bounce > 1) {
+    fail('MUXUI_TOKEN_MOTION_SPRING_INVALID', `${path}/spring must reference a duration with a bounded bounce`, { path });
   }
 }
 
@@ -416,24 +419,26 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
         sourceKind = override ? 'authoring-override' : 'mix';
       } else if (definition.type === 'transition') {
         validateTransitionValue(branch.value, `tokens/${tokenId}`, fail);
-        const durationTarget = source.tokens[branch.value.duration];
-        const easingTarget = source.tokens[branch.value.easing];
-        if (!durationTarget || !easingTarget) fail('MUXUI_TOKEN_MOTION_TRANSITION_MISSING', `${tokenId} references a missing duration or easing token`, { tokenId });
-        if (LAYER_RANK[durationTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition cannot reference forward to ${branch.value.duration}`, { tokenId, targetId: branch.value.duration });
-        if (LAYER_RANK[easingTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition cannot reference forward to ${branch.value.easing}`, { tokenId, targetId: branch.value.easing });
-        if (durationTarget.type !== 'duration' || durationTarget.unit !== 'ms') fail('MUXUI_TOKEN_MOTION_TRANSITION_TYPE_MISMATCH', `${tokenId} duration reference must be a duration token`, { tokenId, targetId: branch.value.duration });
-        if (easingTarget.type !== 'easing' || easingTarget.unit !== 'structured') fail('MUXUI_TOKEN_MOTION_TRANSITION_TYPE_MISMATCH', `${tokenId} easing reference must be an easing token`, { tokenId, targetId: branch.value.easing });
-        const duration = resolveToken(branch.value.duration);
-        const easing = resolveToken(branch.value.easing);
-        value = { kind: 'transition', duration: duration.value, easing: easing.value };
-        const transitionDependencies = [branch.value.duration, branch.value.easing];
-        if (branch.value.spring) {
-          const visualDurationTarget = source.tokens[branch.value.spring.visualDuration];
-          if (!visualDurationTarget || visualDurationTarget.type !== 'duration' || visualDurationTarget.unit !== 'ms') fail('MUXUI_TOKEN_MOTION_SPRING_TYPE_MISMATCH', `${tokenId} spring visualDuration must reference a duration token`, { tokenId, targetId: branch.value.spring.visualDuration });
-          if (LAYER_RANK[visualDurationTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition spring cannot reference forward to ${branch.value.spring.visualDuration}`, { tokenId, targetId: branch.value.spring.visualDuration });
-          const visualDuration = resolveToken(branch.value.spring.visualDuration);
-          value.spring = { kind: 'time', visualDuration: visualDuration.value, bounce: branch.value.spring.bounce };
-          transitionDependencies.push(branch.value.spring.visualDuration);
+        const { duration: durationId, easing: easingId, spring } = branch.value;
+        const durationTarget = source.tokens[durationId];
+        const easingTarget = easingId === undefined ? undefined : source.tokens[easingId];
+        if (!durationTarget || (easingId !== undefined && !easingTarget)) fail('MUXUI_TOKEN_MOTION_TRANSITION_MISSING', `${tokenId} references a missing duration or easing token`, { tokenId });
+        if (LAYER_RANK[durationTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition cannot reference forward to ${durationId}`, { tokenId, targetId: durationId });
+        if (durationTarget.type !== 'duration' || durationTarget.unit !== 'ms') fail('MUXUI_TOKEN_MOTION_TRANSITION_TYPE_MISMATCH', `${tokenId} duration reference must be a duration token`, { tokenId, targetId: durationId });
+        value = { kind: 'transition', duration: resolveToken(durationId).value };
+        const transitionDependencies = [durationId];
+        if (easingTarget) {
+          if (LAYER_RANK[easingTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition cannot reference forward to ${easingId}`, { tokenId, targetId: easingId });
+          if (easingTarget.type !== 'easing' || easingTarget.unit !== 'structured') fail('MUXUI_TOKEN_MOTION_TRANSITION_TYPE_MISMATCH', `${tokenId} easing reference must be an easing token`, { tokenId, targetId: easingId });
+          value.easing = resolveToken(easingId).value;
+          transitionDependencies.push(easingId);
+        }
+        if (spring) {
+          const visualDurationTarget = source.tokens[spring.visualDuration];
+          if (!visualDurationTarget || visualDurationTarget.type !== 'duration' || visualDurationTarget.unit !== 'ms') fail('MUXUI_TOKEN_MOTION_SPRING_TYPE_MISMATCH', `${tokenId} spring visualDuration must reference a duration token`, { tokenId, targetId: spring.visualDuration });
+          if (LAYER_RANK[visualDurationTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition spring cannot reference forward to ${spring.visualDuration}`, { tokenId, targetId: spring.visualDuration });
+          value.spring = { kind: 'time', visualDuration: resolveToken(spring.visualDuration).value, bounce: spring.bounce };
+          transitionDependencies.push(spring.visualDuration);
         }
         dependencies.set(tokenId, transitionDependencies);
         sourceKind = override ? 'authoring-override' : 'composition';

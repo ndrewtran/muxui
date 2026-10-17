@@ -446,13 +446,17 @@
     "transitionValue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "duration", "easing"],
+      "required": ["kind", "duration"],
       "properties": {
         "kind": { "const": "transition" },
         "duration": { "$ref": "#/$defs/tokenReference" },
         "easing": { "$ref": "#/$defs/tokenReference" },
         "spring": { "$ref": "#/$defs/springValue" }
-      }
+      },
+      "oneOf": [
+        { "required": ["easing"], "not": { "required": ["spring"] } },
+        { "required": ["spring"], "not": { "required": ["easing"] } }
+      ]
     },
     "themeFontAsset": {
       "type": "object",

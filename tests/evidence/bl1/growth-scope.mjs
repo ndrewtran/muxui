@@ -155,6 +155,7 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
 // rejects it, so a file the strict parser refuses is left as it is, and the compiler reports it.
 const removedManifestKey = 'authorityDecisionPath';
 const categoryRegistryPath = 'catalog/patterns/categories.json';
+const tokenSourcePath = 'catalog/tokens/default-theme.json';
 /**
  * The closed list, byte for byte as `catalog/patterns/categories.json` shipped it, so a tree from before compiles to the same bundle as the
  * tree that moved the list. The integrity test holds this text to the file as that change added it.
@@ -191,6 +192,29 @@ async function normalizeCategoryRegistry(directory) {
   await writeFile(path, `${JSON.stringify(labelled, null, 2)}\n`);
 }
 
+/**
+ * A spring transition now names no easing (token contract 6.0.0), and the token source schema refuses one that does. A tree from before then
+ * carries an easing reference beside the spring of each spring-bearing transition, so it is dropped on both sides. A transition without a spring
+ * keeps its easing, and a source the strict parser refuses is left as it is for the compiler to report.
+ */
+async function normalizeLegacySpringTransitions(directory) {
+  const path = join(directory, tokenSourcePath);
+  const source = await readFile(path, 'utf8').then(parseJsonStrict, () => undefined);
+  if (source === null || typeof source !== 'object' || source.tokens === null || typeof source.tokens !== 'object') return;
+  let changed = false;
+  for (const definition of Object.values(source.tokens)) {
+    if (definition === null || typeof definition !== 'object') continue;
+    for (const branch of [definition, ...Object.values(definition.modes ?? {})]) {
+      const value = branch?.value;
+      if (value?.kind === 'transition' && value.spring !== undefined && 'easing' in value) {
+        delete value.easing;
+        changed = true;
+      }
+    }
+  }
+  if (changed) await writeFile(path, `${JSON.stringify(source, null, 2)}\n`);
+}
+
 /** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
 async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
@@ -222,14 +246,15 @@ async function withTree(cwd, revision, use) {
  * changed (`excludedDirectories`). The commit holds when the digests are equal, so the digest changed only for those
  * sources, and when it changed no `digestAffectingPaths` file, which the same-compiler comparison cannot see. A
  * growth commit that edits any other source, a close-out block included, or the catalog package version, moves the digest.
- * A tree from before Decision 0028, before block categories became catalog data, or before they carried labels is normalized first
- * (`normalizeLegacyManifest` and `normalizeCategoryRegistry`).
+ * A tree from before Decision 0028, before block categories became catalog data, before they carried labels, or before a spring transition
+ * named no easing is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, and `normalizeLegacySpringTransitions`).
  */
 export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged }) {
   const excluded = ({ path }) => excludedDirectories.some((directory) => path.startsWith(directory));
   const digestAt = (revision) => withTree(cwd, revision, async (directory) => {
     await normalizeLegacyManifest(directory);
     await normalizeCategoryRegistry(directory);
+    await normalizeLegacySpringTransitions(directory);
     return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
   });
   const [digestBefore, digestAfter] = await Promise.all([digestAt(parent), digestAt(commit)]);

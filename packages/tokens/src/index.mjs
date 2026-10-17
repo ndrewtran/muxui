@@ -402,7 +402,7 @@ export function compileTokenRequirementSet({ source, recipe, bindingId, profile,
       overridePolicy: definition.overridePolicy,
       resolved: graph.tokens[tokenId].value,
       // A transition keeps positional dependency metadata internally so the
-      // CSS projection can distinguish duration, easing, and spring duration.
+      // CSS projection can tell its easing (no spring) from its spring duration.
       // Requirement-set consumers only need the unique closure dependencies.
       dependencies: [...new Set(graph.dependencies[tokenId] ?? [])],
     };

@@ -5,8 +5,8 @@ import test from 'node:test';
 import { catalogAcrossCommit } from '../../../../tests/evidence/bl1/growth-scope.mjs';
 import { gitIn, growthRepository, jsonEdit } from './evidence-growth-repository.mjs';
 
-// BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, or before they carried labels is
-// normalized the same way on both sides of the comparison. Like `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees
+// BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, before they carried labels, or before a spring
+// transition named no easing is normalized the same way on both sides of the comparison. Like `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees
 // per comparison, and `node --test` runs the two files in parallel.
 test('trees from before the manifest key was removed or before category labels compile the way they did, and an unknown registry shape still fails', async () => {
   const repo = await growthRepository();
@@ -47,6 +47,17 @@ test('trees from before the manifest key was removed or before category labels c
     assert.equal(await sameDigest(lists, derived), true, 'a group-to-id-list registry compiles as the labelled file with capitalised ids');
     assert.equal(await sameDigest(unregistered, lists), true, 'the injected closed list is the same registry as the group-to-id-list file');
     assert.equal(await sameDigest(lists, second), false, 'the labels are derived, so a file with explicit labels such as "FAQ" differs');
+    // A spring transition names no easing (token contract 6.0.0) and the token source schema refuses one that does, so a tree from before, which carries an
+    // easing reference beside each spring, drops it on both sides and compiles to the digest of the tree without them. A transition without a spring still
+    // needs its easing, so removing that one is not normalized away.
+    const themePath = 'catalog/tokens/default-theme.json';
+    const themeEdit = (change) => repo.modify((edit) => edit(themePath, jsonEdit((theme) => { change(theme.tokens); return theme; })));
+    const springEasing = await themeEdit((tokens) => {
+      for (const token of Object.values(tokens)) if (token.value?.kind === 'transition' && token.value.spring) token.value.easing = 'semantic.motion.interaction-easing';
+    });
+    assert.equal(await sameDigest(springEasing, second), true, 'a legacy easing beside a spring is dropped, so the tree compiles as the one without it');
+    const bareTransition = await themeEdit((tokens) => { delete tokens['semantic.motion.progress-transition'].value.easing; });
+    await assert.rejects(catalogAcrossCommit({ cwd, commit: bareTransition, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'MUXUI_SCHEMA_INVALID', 'a transition with neither a spring nor an easing still fails the compiler');
     // Anything else is not converted, so the compiler still rejects it: a group that is not a list of ids, a list mixed with a labelled group, and a list the
     // old schema already refused.
     for (const [name, change] of [

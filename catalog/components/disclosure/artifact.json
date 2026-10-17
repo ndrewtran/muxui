@@ -137,7 +137,15 @@
             "requirement": "required"
           },
           {
+            "token": "semantic.motion.dismiss-transition",
+            "requirement": "required"
+          },
+          {
             "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.reveal-transition",
             "requirement": "required"
           },
           {

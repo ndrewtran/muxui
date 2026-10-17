@@ -73,6 +73,13 @@ test('authoring documents written for the previous contract version are rejected
   assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '5.2.0', overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID/u);
 });
 
+test('authoring documents that override a removed motion easing token are rejected', () => {
+  for (const id of ['semantic.motion.reveal-easing', 'semantic.motion.dismiss-easing', 'semantic.motion.modal-easing']) {
+    const overrides = { [id]: { type: 'easing', unit: 'structured', value: { kind: 'keyword', value: 'linear' } } };
+    assert.throws(() => validateThemeAuthoringDocument({ ...base, overrides }, { source }), new RegExp(`MUXUI_THEME_OVERRIDE_UNKNOWN: ${id}`, 'u'));
+  }
+});
+
 test('selection, focus and link interaction roles follow authored palettes in both modes', () => {
   for (const namedColor of ['#9227ad', '#207c39']) {
     const scale = { ...documentFor({}).scale, namedColor };

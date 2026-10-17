@@ -135,6 +135,7 @@ test('E-G1.0-04 catalog exposes resolved requirement sets matching packed descri
     || /^semantic\.control\.size-(?:sm|md|lg)$/u.test(token)
     || /^semantic\.action\.neutral-background(?:-hover|-pressed)?$/u.test(token)
     || /^semantic\.action\.background-(?:hover|pressed)$/u.test(token)
+    || token === 'semantic.motion.interaction-transition'
   )), true);
   assert.equal(
     set.digest,
@@ -153,35 +154,35 @@ test('E-G1.0-04 motion consumers retain transition metadata and dependency closu
     dialog: {
       requirements: ['semantic.motion.modal-transition', 'semantic.motion.modal-dismiss-transition'],
       dependencies: {
-        'semantic.motion.modal-transition': ['semantic.motion.modal-enter-duration', 'semantic.motion.modal-easing'],
-        'semantic.motion.modal-dismiss-transition': ['semantic.motion.exit-duration', 'semantic.motion.modal-easing'],
+        'semantic.motion.modal-transition': ['semantic.motion.modal-enter-duration'],
+        'semantic.motion.modal-dismiss-transition': ['semantic.motion.exit-duration'],
       },
     },
     popover: {
       requirements: ['semantic.motion.reveal-transition', 'semantic.motion.dismiss-transition'],
       dependencies: {
-        'semantic.motion.reveal-transition': ['semantic.motion.reveal-duration', 'semantic.motion.reveal-easing'],
-        'semantic.motion.dismiss-transition': ['semantic.motion.exit-duration', 'semantic.motion.dismiss-easing'],
+        'semantic.motion.reveal-transition': ['semantic.motion.reveal-duration'],
+        'semantic.motion.dismiss-transition': ['semantic.motion.exit-duration'],
       },
     },
     calendar: {
       requirements: ['semantic.motion.content-resize-transition'],
       dependencies: {
-        'semantic.motion.content-resize-transition': ['semantic.motion.content-resize-duration', 'semantic.motion.interaction-easing'],
+        'semantic.motion.content-resize-transition': ['semantic.motion.content-resize-duration'],
       },
     },
     rangeCalendar: {
       requirements: ['semantic.motion.content-resize-transition', 'semantic.motion.state-transition', 'semantic.motion.dismiss-transition'],
       dependencies: {
-        'semantic.motion.state-transition': ['semantic.motion.state-duration', 'semantic.motion.interaction-easing'],
-        'semantic.motion.dismiss-transition': ['semantic.motion.exit-duration', 'semantic.motion.dismiss-easing'],
+        'semantic.motion.state-transition': ['semantic.motion.state-duration'],
+        'semantic.motion.dismiss-transition': ['semantic.motion.exit-duration'],
       },
     },
     tabs: {
       requirements: ['semantic.motion.state-transition', 'semantic.motion.interaction-transition'],
       dependencies: {
-        'semantic.motion.state-transition': ['semantic.motion.state-duration', 'semantic.motion.interaction-easing'],
-        'semantic.motion.interaction-transition': ['semantic.motion.interaction-duration', 'semantic.motion.interaction-easing'],
+        'semantic.motion.state-transition': ['semantic.motion.state-duration'],
+        'semantic.motion.interaction-transition': ['semantic.motion.interaction-duration'],
       },
     },
   };
