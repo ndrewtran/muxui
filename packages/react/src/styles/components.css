@@ -117,8 +117,12 @@
   cursor: default;
 }
 
+/* The wrapper is a flex row so a leading or trailing icon and its label share
+   one cross-axis center, spaced by the size recipe's gap that the Button sets. */
 .muxui-button-content {
-  display: inline;
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
 }
 
 .muxui-button[data-pending] .muxui-button-content {
@@ -126,9 +130,6 @@
 }
 
 .muxui-button[data-pending] .muxui-button-content--with-spinner {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--muxui-semantic-layout-control-gap);
   opacity: 1;
 }
 
