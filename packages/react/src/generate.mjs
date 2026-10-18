@@ -653,17 +653,17 @@ before any such claim and before stable promotion. Automated accessibility,
 keyboard, and focus checks still apply. Publication, dist-tag mutation, and
 post-publication verification are separate authorized operations.
 
-Once published, install the prerelease as \`@muxui/react@next\`. npm also
-points \`latest\` at the first published version; that is not a stable or
-\`latest\` support claim.
+## Install
 
-## Local tarball usage
-
-Install the versioned local candidate from the package directory:
+Install the prerelease from the \`next\` dist-tag on npm:
 
 \`\`\`sh
-pnpm add ./muxui-react-${candidateVersion}.tgz
+pnpm add @muxui/react@next
 \`\`\`
+
+It requires Node.js \`${manifest.engines.node}\`, React \`${manifest.peerDependencies.react}\`, and React DOM \`${manifest.peerDependencies['react-dom']}\`. npm also points \`latest\` at the first published version; that is not a stable or \`latest\` support claim.
+
+## Usage
 
 Import the generated MuxUI styles once, then use the React exports:
 
@@ -679,6 +679,14 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
+
+## Local tarball usage
+
+To develop against an unpublished build, install the versioned local candidate from the package directory instead:
+
+\`\`\`sh
+pnpm add ./muxui-react-${candidateVersion}.tgz
+\`\`\`
 
 ## Cascade layers
 
