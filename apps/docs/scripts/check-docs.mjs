@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { authoredPatternReference } from './authored-pattern-reference.mjs';
+import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
@@ -153,7 +154,31 @@ for (const [file, css] of authoredStyles) {
 
 const routeSource = readFileSync(resolve(docsRoot, 'src/pages/components/[slug].astro'), 'utf8');
 assert(routeSource.includes('getComponentPage') && routeSource.includes('<ExampleHost'), 'Component pages are not backed by the catalog route and executable example host.');
-assert(routeSource.includes('id="basic"') && routeSource.includes('id="api-reference"'), 'Component page anchors are incomplete.');
+for (const id of ['basic', 'used-in-blocks', 'api-reference']) {
+	assert(routeSource.includes(`id="${id}"`), `Component page anchor ${id} is missing.`);
+}
+assert(routeSource.includes('componentReference('), 'Component pages do not project their facts through the shared component reference module.');
+
+// Component reference: every family projects from its catalog record, and the rendered section order is proved in check-component-sections.mjs.
+const packageFacts = readReactPackageFacts(repositoryRoot);
+for (const component of components) {
+	const detail = canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full' });
+	const examples = canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value;
+	const reference = componentReference({ artifact: detail.data.artifact, examples, packageFacts });
+	const requirements = detail.data.artifact.bindings['web.react'].tokenRecipe.requirements;
+	assert(reference.styling.tokenGroups.flatMap(({ tokens }) => tokens).length === requirements.length, `The token groups of ${component.id} drop a requirement.`);
+	for (const { paths } of reference.sources) {
+		for (const path of paths) assert(existsSync(resolve(repositoryRoot, path)), `The source ${path} of ${component.id} is missing.`);
+	}
+}
+// A usage guide is related to a family by its declared id. Shared guidance that names no family is listed here on purpose.
+const sharedUsageGuideIds = guides
+	.filter(({ id }) => id.endsWith('-usage') && !components.some((component) => usageGuideId(component.id) === id))
+	.map(({ id }) => id);
+assert(
+	JSON.stringify(sharedUsageGuideIds) === JSON.stringify(['muxui:guide:control-sizing-usage']),
+	`The usage guides that belong to no component family are ${sharedUsageGuideIds.join(', ')}. A new one needs a deliberate home before it is added here.`,
+);
 
 // The Blocks section is a projection: no pattern, variant, or example fact may be authored in the docs app.
 const blockPatterns = [];

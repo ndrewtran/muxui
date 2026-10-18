@@ -108,6 +108,7 @@
   },
   "affectedPathConsumers": {
     "apps/component-navigation.mjs": ["@muxui/docs", "@muxui/react-storybook"],
+    "apps/component-reference.mjs": ["@muxui/docs"],
     "apps/scale/src/": ["@muxui/docs"]
   },
   "generationPrerequisites": {
@@ -209,6 +210,7 @@
       "packages/tooling/command-registry.json": "@muxui/tooling"
     },
     "documentationPrefixes": [
+      "apps/component-reference.mjs",
       "apps/docs/",
       "apps/scale/src/"
     ],

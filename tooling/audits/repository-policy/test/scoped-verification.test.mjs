@@ -367,4 +367,5 @@ test('shared app source selects its declared consumers without a workspace depen
   assert.deepEqual(selected('apps/scale/test/browser/docs-theme.test.mjs'), ['@muxui/scale']);
   assert.deepEqual(selected('apps/docs/src/pages/scale.astro'), ['@muxui/docs']);
   assert.deepEqual(selected('apps/component-navigation.mjs'), ['@muxui/docs', '@muxui/react-storybook']);
+  assert.deepEqual(selected('apps/component-reference.mjs'), ['@muxui/docs']);
 });
