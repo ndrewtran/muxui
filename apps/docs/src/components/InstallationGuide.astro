@@ -10,37 +10,59 @@ const packageManifest: unknown = JSON.parse(
 );
 const packageReadme = readFileSync(resolve(canonicalRepositoryRoot, 'packages/react/README.md'), 'utf8');
 
-function isPackageManifest(value: unknown): value is { name: string; version: string } {
+interface PackageManifest {
+	name: string;
+	engines: { node: string };
+	peerDependencies: { react: string; 'react-dom': string };
+}
+
+function hasStrings(value: unknown, keys: readonly string[]): boolean {
+	return typeof value === 'object' && value !== null && keys.every((key) => typeof Reflect.get(value, key) === 'string');
+}
+
+function isPackageManifest(value: unknown): value is PackageManifest {
 	return typeof value === 'object'
 		&& value !== null
-		&& 'name' in value
-		&& typeof value.name === 'string'
-		&& 'version' in value
-		&& typeof value.version === 'string';
+		&& hasStrings(value, ['name'])
+		&& hasStrings(Reflect.get(value, 'engines'), ['node'])
+		&& hasStrings(Reflect.get(value, 'peerDependencies'), ['react', 'react-dom']);
 }
 
 if (!isPackageManifest(packageManifest)) {
-	throw new Error('The React package manifest is missing its canonical name or version.');
+	throw new Error('The React package manifest is missing its canonical name, engines, or peer dependencies.');
 }
 
-const shellExample = packageReadme.match(/```sh\n([\s\S]*?)```/u)?.[1]?.trim();
-const tsxExample = packageReadme.match(/```tsx\n([\s\S]*?)```/u)?.[1]?.trim();
+// The README's "## <heading>" section holds the fenced block of this language.
+function readmeCode(heading: string, lang: 'sh' | 'tsx') {
+	const section = packageReadme.split(/^## /mu).find((part) => part.startsWith(`${heading}\n`));
+	return section?.match(new RegExp(`\`\`\`${lang}\\n([\\s\\S]*?)\`\`\``, 'u'))?.[1]?.trim();
+}
 
-if (!shellExample || !tsxExample) {
-	throw new Error('The generated React package README is missing its canonical usage examples.');
+const installExample = readmeCode('Install', 'sh');
+const tsxExample = readmeCode('Usage', 'tsx');
+const tarballExample = readmeCode('Local tarball usage', 'sh');
+
+if (!installExample || !tsxExample || !tarballExample) {
+	throw new Error('The generated React package README is missing its canonical install, usage, or local tarball examples.');
 }
 ---
 
 <GuideMarkup>
-	<p>Install <code>{packageManifest.name}@{packageManifest.version}</code> from the current local package candidate.</p>
+	<p>Install <code>{packageManifest.name}</code> from the <code>next</code> dist-tag. It requires Node.js <code>{packageManifest.engines.node}</code>, React <code>{packageManifest.peerDependencies.react}</code>, and React DOM <code>{packageManifest.peerDependencies['react-dom']}</code>.</p>
 
-	<h2 id="local-tarball">Local tarball</h2>
+	<h2 id="install">Install</h2>
 
-	<p>Build or obtain the versioned local candidate, then install it from the package directory.</p>
+	<CodeBlock id="installation-shell-code" code={installExample} lang="bash" label="shell" />
 
-	<CodeBlock id="installation-shell-code" code={shellExample} lang="bash" label="shell" />
+	<p>All exports are experimental, and Mux UI makes no assistive-technology support claim. See <a href="/lifecycle/">Lifecycle</a> and <a href="/accessibility/">Accessibility</a>.</p>
 
 	<h2 id="usage">Usage</h2>
 
 	<CodeBlock id="installation-usage-code" code={tsxExample} lang="tsx" label="tsx" />
+
+	<h2 id="local-tarball">Local tarball</h2>
+
+	<p>To develop against an unpublished build, install the versioned local candidate from the package directory instead.</p>
+
+	<CodeBlock id="installation-tarball-code" code={tarballExample} lang="bash" label="shell" />
 </GuideMarkup>

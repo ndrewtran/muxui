@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:902353badef807cc48f457f70ece186ecdaf5a31500aab46a08d94cf309d0a2f -->
+<!-- @generated-content-sha256: sha256:3b6feb0bd9dee0930ec7ac774c5851ef482fbc18647d7a3b2a14b3cb84682646 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -21,17 +21,17 @@ before any such claim and before stable promotion. Automated accessibility,
 keyboard, and focus checks still apply. Publication, dist-tag mutation, and
 post-publication verification are separate authorized operations.
 
-Once published, install the prerelease as `@muxui/react@next`. npm also
-points `latest` at the first published version; that is not a stable or
-`latest` support claim.
+## Install
 
-## Local tarball usage
-
-Install the versioned local candidate from the package directory:
+Install the prerelease from the `next` dist-tag on npm:
 
 ```sh
-pnpm add ./muxui-react-0.1.0-rc.1.tgz
+pnpm add @muxui/react@next
 ```
+
+It requires Node.js `>=24.19.0 <25`, React `>=19.2.0 <20`, and React DOM `>=19.2.0 <20`. npm also points `latest` at the first published version; that is not a stable or `latest` support claim.
+
+## Usage
 
 Import the generated MuxUI styles once, then use the React exports:
 
@@ -47,6 +47,14 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+## Local tarball usage
+
+To develop against an unpublished build, install the versioned local candidate from the package directory instead:
+
+```sh
+pnpm add ./muxui-react-0.1.0-rc.1.tgz
+```
 
 ## Cascade layers
 

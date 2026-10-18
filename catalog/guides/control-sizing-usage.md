@@ -41,12 +41,13 @@ preserved in forced-colors mode.
 
 ## Current family map
 
-The current React projection has 74 named families. The rule applies to the
-control part, not automatically to a component's surrounding container.
+The table groups React families by how the rule applies; a family it does not
+list has no recorded classification here. The rule applies to the control part,
+not automatically to a component's surrounding container.
 
 | Coverage | Families |
 | --- | --- |
-| Public `sm`/`md`/`lg` size API | Autocomplete, Button, Checkbox, CheckboxGroup, CheckboxField, ColorField, ComboBox, CommandPalette, DateField, DatePicker, DateRangePicker, Input, InputTags, MultiSelect, NumberField, PaymentInput, RadioField, RadioGroup, SearchField, Select, Switch, SwitchField, Tabs, TagSelect, TextField, TimeField, ToggleButton, ToggleButtonGroup |
+| Public `sm`/`md`/`lg` size API | Autocomplete, Button, Checkbox, CheckboxGroup, CheckboxField, ColorField, ComboBox, CommandPalette, DateField, DatePicker, DateRangePicker, IconButton, Input, InputTags, MultiSelect, NumberField, PaymentInput, RadioField, RadioGroup, SearchField, Select, Switch, SwitchField, Tabs, TagSelect, TextField, TimeField, ToggleButton, ToggleButtonGroup |
 | Default `md` target on an actionable part; no public size axis | ButtonGroup, ColorModeToggle, Disclosure, DisclosureGroup, FileTrigger, GridList, HeaderNav, ListBox, Menu, Table, TagGroup, TextEditor, TokenField, Toolbar, Tree |
 | Content-driven root with sized interactive parts | AlertDialog, Calendar, Dialog, DropZone, Lightbox, Popover, PreviewTrigger, RangeCalendar, Sidebar, Toast, Tooltip |
 | Specialized geometry; retain dedicated track, swatch, canvas, or handle sizing | ColorArea, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, Slider |
