@@ -148,6 +148,7 @@ export default defineConfig({
 				{ label: 'Foundations', items: foundationSidebar },
 				{ label: 'Scale', link: '/scale/' },
 				{ label: 'Accessibility', link: '/accessibility/' },
+				{ label: 'Control sizing', link: '/control-sizing/' },
 				{ label: 'Discovery & CLI', link: '/discovery/' },
 				{ label: 'Lifecycle', link: '/lifecycle/' },
 				{ label: 'Authoring', link: '/contribution/' },

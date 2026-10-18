@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { groupComponentNavigation } from '../../../component-navigation.mjs';
+import { readReactPackageFacts, usageGuideId } from '../../../component-reference.mjs';
 import { componentRecordCategory } from './component-categories.ts';
 
 export interface CatalogSummary {
@@ -32,6 +33,12 @@ interface CatalogIntent {
 	avoidWhen?: readonly string[];
 }
 
+export interface CatalogTokenRequirement {
+	token: string;
+	requirement: string;
+	profiles?: readonly string[];
+}
+
 export interface CatalogBinding {
 	api: {
 		props: readonly string[];
@@ -41,6 +48,7 @@ export interface CatalogBinding {
 	};
 	behavior?: readonly string[];
 	accessibility?: readonly string[];
+	tokenRecipe: { source: string; requirements: readonly CatalogTokenRequirement[] };
 	lifecycle: string;
 	strategy: string;
 }
@@ -146,6 +154,12 @@ if (!repositoryRoot) {
 	throw new Error('Mux UI docs could not locate the canonical catalog sources. Set MUXUI_REPOSITORY_ROOT to the repository root when running from a generated output directory.');
 }
 export const canonicalRepositoryRoot = repositoryRoot;
+let reactPackageFacts: ReturnType<typeof readReactPackageFacts> | undefined;
+/** Import specifiers, the styles import and runtime files of the React package, verified against its manifest. Read on first use, because the renderer descriptor is generated. */
+export function getReactPackageFacts() {
+	reactPackageFacts ??= readReactPackageFacts(canonicalRepositoryRoot);
+	return reactPackageFacts;
+}
 
 export function requiredString(value: unknown, field: string): string {
 	if (typeof value !== 'string' || value.length === 0) {
@@ -303,6 +317,23 @@ function readUsedIn(value: unknown): CatalogUsedIn {
 	});
 }
 
+function readTokenRecipe(value: unknown): CatalogBinding['tokenRecipe'] {
+	if (!isRecord(value) || !Array.isArray(value.requirements)) {
+		throw new Error('Canonical React binding is missing its token recipe.');
+	}
+	return Object.freeze({
+		source: requiredString(value.source, 'tokenRecipe.source'),
+		requirements: Object.freeze(value.requirements.map((item): CatalogTokenRequirement => {
+			if (!isRecord(item)) throw new Error('Canonical React binding has an invalid token requirement.');
+			return Object.freeze({
+				token: requiredString(item.token, 'tokenRecipe.requirements.token'),
+				requirement: requiredString(item.requirement, 'tokenRecipe.requirements.requirement'),
+				...(item.profiles === undefined ? {} : { profiles: stringArray(item.profiles, 'tokenRecipe.requirements.profiles') }),
+			});
+		})),
+	});
+}
+
 function readBinding(value: unknown): CatalogBinding {
 	if (!isRecord(value) || !isRecord(value.api)) {
 		throw new Error('Canonical artifact is missing its React binding API.');
@@ -318,6 +349,7 @@ function readBinding(value: unknown): CatalogBinding {
 		}),
 		...(value.behavior === undefined ? {} : { behavior: stringArray(value.behavior, 'binding.behavior') }),
 		...(value.accessibility === undefined ? {} : { accessibility: stringArray(value.accessibility, 'binding.accessibility') }),
+		tokenRecipe: readTokenRecipe(value.tokenRecipe),
 		lifecycle: requiredString(value.lifecycle, 'binding.lifecycle'),
 		strategy: requiredString(value.strategy, 'binding.strategy'),
 	});
@@ -414,10 +446,10 @@ export function getGuide(id: string): CatalogGuide | null {
 	return guideSummaries.find((guide) => guide.id === id) ?? null;
 }
 
+/** A component's own usage guide, related by its declared id. Shared usage guides name no family and are not listed here. */
 function guidesForComponent(summary: CatalogSummary): readonly CatalogGuide[] {
-	const matches = guideSummaries.filter((guide) => guide.name === `${summary.name} usage`);
-	if (matches.length > 1) throw new Error(`Mux UI docs found multiple usage guides for ${summary.id}.`);
-	return Object.freeze(matches);
+	const guide = getGuide(usageGuideId(summary.id));
+	return Object.freeze(guide ? [guide] : []);
 }
 
 export interface ComponentPage {

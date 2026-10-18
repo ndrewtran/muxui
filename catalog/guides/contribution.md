@@ -51,11 +51,14 @@ Narrative guidance belongs under `catalog/guides/`: a `<slug>.json` record
 whose `source` names the `<slug>.md` file. The docs application reads these
 records and renders them; it does not become a second normative source.
 
-Name a component's guide `<Component> usage`, as in `button-usage.json`. The
-docs component page shows the guide whose name matches. A guide with any other
-name appears in the docs only after `apps/docs` adds a page route and sidebar
-entry for it; `src/pages/[guide].astro` and `astro.config.mjs` list the current
-ones. The query API serves every registered guide.
+Give a component's guide the id `muxui:guide:<component-slug>-usage` and the
+name `<Component> usage`, as in `button-usage.json`. The docs component page
+shows the guide with that id. A guide with any other id, such as
+`control-sizing-usage`, which names no component, appears in the docs only after
+`apps/docs` adds a page route and sidebar entry for it. `src/pages/[guide].astro`,
+`astro.config.mjs`, and `src/components/PageTitle.astro` (its Source link) list
+the current ones, and the docs check fails a shared usage guide that has no page.
+The query API serves every registered guide.
 
 ## Verify the projection
 

@@ -6,8 +6,8 @@ id: muxui:guide:accessibility
 
 Accessibility obligations are part of every component's canonical binding. The
 component reference lists the states, parts, and binding obligations alongside
-its API, and each component's catalog record declares whether it requires an
-accessible name.
+its API, and each component page's Accessibility section states whether it
+requires an accessible name.
 
 ## Support status
 

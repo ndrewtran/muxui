@@ -298,6 +298,68 @@ main > .content-panel:nth-child(2) {
 	font-weight: var(--muxui-semantic-typography-label-weight);
 }
 
+.docs-section > ul {
+	max-width: 50rem;
+}
+
+/* Labels inside a section (Use when, Obligations, Anatomy) sit a clear step below the section heading. */
+.docs-section > h3,
+.related-guidance h3 {
+	font-size: var(--muxui-semantic-typography-title-m-font-size);
+}
+
+.docs-section > h2 + h3 {
+	margin-block-start: 0;
+}
+
+/* Token requirements: a canonical path per row, grouped under its prefix when the recipe is long. */
+.docs-section > .token-group {
+	margin-block: var(--muxui-reference-dimension-space-m) var(--muxui-reference-dimension-space-2xs);
+	color: var(--muxui-semantic-content-muted);
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	font-weight: var(--muxui-semantic-typography-label-weight);
+}
+
+.token-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+	gap: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-m);
+	margin-block: var(--muxui-reference-dimension-space-xs);
+	padding: 0;
+	list-style: none;
+}
+
+.token-list > li {
+	margin: 0;
+	overflow-wrap: anywhere;
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	line-height: var(--muxui-semantic-typography-mono-line-height);
+}
+
+.token-requirement {
+	margin-inline-start: var(--muxui-reference-dimension-space-2xs);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.sources-list {
+	margin: 0;
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	overflow-wrap: anywhere;
+}
+
+.sources-list dt {
+	margin-block-start: var(--muxui-reference-dimension-space-s);
+	color: var(--muxui-semantic-content-strong);
+	font-weight: var(--muxui-semantic-typography-label-weight);
+}
+
+.sources-list dd {
+	margin: var(--muxui-reference-dimension-space-3xs) 0 0;
+}
+
 .related-guidance {
 	max-width: 50rem;
 	margin-block-start: var(--muxui-reference-dimension-space-m);
@@ -307,7 +369,6 @@ main > .content-panel:nth-child(2) {
 
 .related-guidance h3 {
 	margin-block: 0 var(--muxui-reference-dimension-space-2xs);
-	font-size: var(--muxui-semantic-typography-heading-s-font-size);
 }
 
 .related-guidance p {

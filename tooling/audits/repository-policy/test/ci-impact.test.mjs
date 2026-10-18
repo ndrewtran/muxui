@@ -478,6 +478,13 @@ test('the shared component navigation helper selects the docs and every Storyboo
   assert.deepEqual(result.storyRuns[0].families, records.map(({ family }) => family));
 });
 
+test('the shared component reference helper selects the docs and no Storybook family', async () => {
+  const result = await plan(['apps/component-reference.mjs']);
+  assert.equal(result.docs, true);
+  assert.equal(result.scale || result.catalog || result.tokens || result.reactTheme, false);
+  assert.deepEqual(result.storyRuns, []);
+});
+
 test('Scale, Starlight docs, and CI policy edits stay in their independent owner scopes', async () => {
   const scale = await plan(['apps/scale/test/browser/theme-builder.test.mjs']);
   assert.equal(scale.scale, true);

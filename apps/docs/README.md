@@ -13,6 +13,12 @@ pnpm docs
 Documentation content lives in `src/content/docs/`. The site is a projection
 over canonical catalog and guide sources; it does not own component facts.
 
+## Component pages
+
+`/components/<slug>/` pages project one catalog component record. Their sections, each an h2 with a stable id and an outline entry, run: Basic example (`basic`), Installation and imports (`installation`), Usage (`usage`), Behavior (`behavior`), Examples (`examples`), Used in blocks (`used-in-blocks`, only when a block uses the component), API reference (`api-reference`), Events (`events`), Accessibility (`accessibility`), Anatomy and styling (`anatomy-and-styling`), and Sources (`sources`).
+
+The facts behind those sections come from `../component-reference.mjs`, which turns a component record, the renderer descriptor and contract, and the package manifest into section facts, so the app authors no per-family text. A component's usage guide is related by its declared id (`muxui:guide:<slug>-usage`). A usage guide that names no family, `control-sizing-usage`, is shared guidance: it has its own Docs page and sidebar entry like the other shared guides, and `scripts/check-component-sections.mjs` fails when any such guide is unreachable. The API reference keeps the Prop and Default table until Decision 0031's TypeScript extraction supplies types. `scripts/check-component-sections.mjs` proves the section order of every built route and that each projected string equals its catalog value.
+
 ## Blocks
 
 The private Blocks section (`/blocks/`) projects the catalog's `pattern` records

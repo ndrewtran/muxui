@@ -2,7 +2,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-import { canonicalRepositoryRoot, componentSummaries, getComponentPage } from '../../lib/catalog.ts';
+import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getReactPackageFacts } from '../../lib/catalog.ts';
+import { componentReference } from '../../../../component-reference.mjs';
 import { resolveUsedIn } from '../../lib/blocks.ts';
 import { variantPath } from '../../lib/block-paths.ts';
 import { assertExampleSource } from '../../lib/example-modules.tsx';
@@ -10,6 +11,8 @@ import DemoPanel from '../../components/DemoPanel.astro';
 import ExampleHost from '../../components/ExampleHost.tsx';
 import TimeFieldExampleHost from '../../components/TimeFieldExampleHost.tsx';
 import GuideProjection from '../../components/GuideProjection.astro';
+import CodeBlock from '../../components/CodeBlock.astro';
+import TokenInlineMarkup from '../../components/TokenInlineMarkup.astro';
 
 export const prerender = true;
 
@@ -36,6 +39,8 @@ const basicSource = basicExample.source.content;
 const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
 // The blocks that use this component, from the usedIn view the catalog derives. Block variants are never listed as component examples.
 const usedInBlocks = resolveUsedIn(page.usedIn);
+// Every fact below is projected from the catalog record; this page authors none.
+const { imports, usage, behavior, events, accessibility, styling, sources } = componentReference({ artifact, examples, packageFacts: getReactPackageFacts() });
 
 for (const example of examples) {
 	assertExampleSource(example.source.content);
@@ -45,13 +50,20 @@ function sourceText(source: string | undefined) {
 	return source ? readFileSync(resolve(canonicalRepositoryRoot, source), 'utf8') : '';
 }
 
+function sourceUrl(path: string) {
+	return `https://github.com/ndrewtran/muxui/blob/main/${path}`;
+}
+
 function slugify(value: string) {
 	return value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
 }
 
+// The section order of every component page. Each section is an h2 with a stable id, listed in the outline.
 const headings = [
-	{ depth: 2, text: 'Installation', slug: 'installation' },
+	{ depth: 2, text: 'Basic example', slug: 'basic' },
+	{ depth: 2, text: 'Installation and imports', slug: 'installation' },
 	{ depth: 2, text: 'Usage', slug: 'usage' },
+	{ depth: 2, text: 'Behavior', slug: 'behavior' },
 	{ depth: 2, text: 'Examples', slug: 'examples' },
 	...examples.slice(1).map((example, index) => ({
 		depth: 3,
@@ -60,11 +72,10 @@ const headings = [
 	})),
 	...(usedInBlocks.length > 0 ? [{ depth: 2, text: 'Used in blocks', slug: 'used-in-blocks' }] : []),
 	{ depth: 2, text: 'API reference', slug: 'api-reference' },
-	{ depth: 3, text: 'Props', slug: 'api-props' },
-	{ depth: 3, text: 'Events', slug: 'api-events' },
-	{ depth: 3, text: 'Parts', slug: 'api-parts' },
-	{ depth: 3, text: 'States', slug: 'api-states' },
-	{ depth: 3, text: 'Accessibility', slug: 'api-accessibility' },
+	{ depth: 2, text: 'Events', slug: 'events' },
+	{ depth: 2, text: 'Accessibility', slug: 'accessibility' },
+	{ depth: 2, text: 'Anatomy and styling', slug: 'anatomy-and-styling' },
+	{ depth: 2, text: 'Sources', slug: 'sources' },
 ];
 ---
 
@@ -73,7 +84,7 @@ const headings = [
 	headings={headings}
 >
 	<section id="basic" class="docs-section">
-		<h2 class="visually-hidden">Basic</h2>
+		<h2>Basic example</h2>
 		<DemoPanel id={basicDemoId} source={basicSource} sourceCode={sourceText(basicSource)}>
 			{componentSlug === 'time-field'
 				? <TimeFieldExampleHost slot="live" source={basicSource} client:only="react" />
@@ -82,21 +93,40 @@ const headings = [
 	</section>
 
 	<section id="installation" class="docs-section">
-		<h2>Installation</h2>
+		<h2>Installation and imports</h2>
 		<p>Follow the <a href="/installation/">canonical package installation guidance</a> before importing this component.</p>
+		<CodeBlock id="component-imports-code" code={imports.code} lang="tsx" label="imports" />
 	</section>
 
 	<section id="usage" class="docs-section">
 		<h2>Usage</h2>
-		<p>{artifact.intent?.useWhen?.[0] ?? summary.summary}</p>
-		{artifact.intent?.avoidWhen?.length ? <p>Avoid it when {artifact.intent.avoidWhen[0].toLocaleLowerCase()}.</p> : null}
-		{reactBinding.behavior?.length ? <ul>{reactBinding.behavior.map((item) => <li>{item}</li>)}</ul> : null}
+		{usage.useWhen.length > 0 && (
+			<Fragment>
+				<h3>Use when</h3>
+				<ul data-fact="intent.useWhen">{usage.useWhen.map((item) => <li>{item}</li>)}</ul>
+			</Fragment>
+		)}
+		{usage.avoidWhen.length > 0 && (
+			<Fragment>
+				<h3>Avoid when</h3>
+				<ul data-fact="intent.avoidWhen">{usage.avoidWhen.map((item) => <li>{item}</li>)}</ul>
+			</Fragment>
+		)}
+		{usage.useWhen.length === 0 && usage.avoidWhen.length === 0 && page.guides.length === 0
+			&& <p>No usage guidance is declared for this component.</p>}
 		{page.guides.map((guide) => (
 			<aside class="related-guidance">
 				<h3>Related usage guidance</h3>
 				<GuideProjection id={guide.id} />
 			</aside>
 		))}
+	</section>
+
+	<section id="behavior" class="docs-section">
+		<h2>Behavior</h2>
+		{behavior.length > 0
+			? <ul data-fact="binding.behavior">{behavior.map((item) => <li>{item}</li>)}</ul>
+			: <p>This binding does not declare behavior notes.</p>}
 	</section>
 
 	<section id="examples" class="docs-section">
@@ -134,20 +164,66 @@ const headings = [
 	<section id="api-reference" class="docs-section">
 		<h2>API reference</h2>
 		<p class="api-binding"><strong>web.react</strong><span>binding · lifecycle: {reactBinding.lifecycle}</span></p>
-		<h3 id="api-props">Props</h3>
 		<table>
 			<thead><tr><th scope="col">Prop</th><th scope="col">Default</th></tr></thead>
-			<tbody>
+			<tbody data-fact="binding.api.props">
 				{reactBinding.api.props.map((prop) => <tr><th scope="row"><code>{prop}</code></th><td><code>{reactBinding.api.defaults[prop] === undefined ? 'Not specified' : JSON.stringify(reactBinding.api.defaults[prop])}</code></td></tr>)}
 			</tbody>
 		</table>
-		<h3 id="api-events">Events</h3>
-		<p>{reactBinding.api.events.length ? reactBinding.api.events.map((event) => <code class="inline-code">{event}</code>) : 'This binding does not declare events.'}</p>
-		<h3 id="api-parts">Parts</h3>
-		<p>{reactBinding.api.parts.map((part) => <code class="inline-code">{part}</code>)}</p>
-		<h3 id="api-states">States</h3>
-		<p>{artifact.states.map((state) => <code class="inline-code">{state}</code>)}</p>
-		<h3 id="api-accessibility">Accessibility</h3>
-		<ul>{(reactBinding.accessibility ?? artifact.accessibility.obligations).map((obligation) => <li>{obligation}</li>)}</ul>
+	</section>
+
+	<section id="events" class="docs-section">
+		<h2>Events</h2>
+		<p data-fact="binding.api.events">{events.length ? events.map((event) => <code class="inline-code">{event}</code>) : 'This binding does not declare events.'}</p>
+	</section>
+
+	<section id="accessibility" class="docs-section">
+		<h2>Accessibility</h2>
+		<p data-fact="accessibility.nameRequired">Accessible name required: {accessibility.nameRequired ? 'yes' : 'no'}</p>
+		<h3>Obligations</h3>
+		<ul data-fact="accessibility.obligations">{accessibility.obligations.map((item) => <li>{item}</li>)}</ul>
+		{accessibility.binding.length > 0 && (
+			<Fragment>
+				<h3>React binding</h3>
+				<ul data-fact="binding.accessibility">{accessibility.binding.map((item) => <li>{item}</li>)}</ul>
+			</Fragment>
+		)}
+	</section>
+
+	<section id="anatomy-and-styling" class="docs-section">
+		<h2>Anatomy and styling</h2>
+		<h3>Anatomy</h3>
+		<p data-fact="anatomy">{styling.anatomy.map((part) => <code class="inline-code">{part}</code>)}</p>
+		<h3>States</h3>
+		<p data-fact="states">{styling.states.map((state) => <code class="inline-code">{state}</code>)}</p>
+		<h3>Token requirements</h3>
+		<p data-fact="tokenRecipe.source">Token source: <code>{styling.tokenSource}</code></p>
+		<TokenInlineMarkup>
+			{styling.tokenGroups.map((group) => (
+				<Fragment>
+					{group.prefix && <h4 class="token-group">{group.prefix}</h4>}
+					<ul class="token-list" data-fact="tokenRecipe.requirements">
+						{group.tokens.map(({ token, requirement, profiles }) => (
+							<li>
+								<code>{token}</code>
+								{requirement !== 'required' && <span class="token-requirement">{[requirement, ...(profiles ?? [])].join(', ')}</span>}
+							</li>
+						))}
+					</ul>
+				</Fragment>
+			))}
+		</TokenInlineMarkup>
+	</section>
+
+	<section id="sources" class="docs-section">
+		<h2>Sources</h2>
+		<dl class="sources-list">
+			{sources.map(({ label, paths }) => (
+				<Fragment>
+					<dt>{label}</dt>
+					{paths.map((path) => <dd><a href={sourceUrl(path)} target="_blank" rel="noreferrer">{path}</a></dd>)}
+				</Fragment>
+			))}
+		</dl>
 	</section>
 </StarlightPage>
