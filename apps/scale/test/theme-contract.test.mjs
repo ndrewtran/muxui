@@ -136,7 +136,6 @@ test('motion easing and transition overrides round-trip through Scale authoring'
         value: {
           kind: 'transition',
           duration: 'semantic.motion.interaction-duration',
-          easing: 'semantic.motion.interaction-easing',
           spring: {
             kind: 'time',
             visualDuration: 'semantic.motion.interaction-duration',

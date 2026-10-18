@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "5.2.0",
+  "tokenContractVersion": "6.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -900,7 +900,7 @@
       "layer": "semantic",
       "type": "easing",
       "unit": "structured",
-      "meaning": "Easing curve for standard interface state transitions and popup motion.",
+      "meaning": "Non-spring easing for determinate progress value changes; spring-bearing transition composites use their own spring curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "keyword",
@@ -1039,42 +1039,6 @@
       "meaning": "Duration of compact selection popovers entering.",
       "overridePolicy": "theme",
       "alias": "reference.motion.duration-fast"
-    },
-    "semantic.motion.reveal-easing": {
-      "layer": "semantic",
-      "type": "easing",
-      "unit": "structured",
-      "meaning": "Ease-out curve for content and overlay entry transitions.",
-      "overridePolicy": "theme",
-      "value": {
-        "kind": "keyword",
-        "value": "ease-out"
-      }
-    },
-    "semantic.motion.dismiss-easing": {
-      "layer": "semantic",
-      "type": "easing",
-      "unit": "structured",
-      "meaning": "Ease-in curve for content and overlay dismissal transitions.",
-      "overridePolicy": "theme",
-      "value": {
-        "kind": "keyword",
-        "value": "ease-in"
-      }
-    },
-    "semantic.motion.modal-easing": {
-      "layer": "semantic",
-      "type": "easing",
-      "unit": "structured",
-      "meaning": "Easing curve for modal panel and backdrop transitions.",
-      "overridePolicy": "theme",
-      "value": {
-        "kind": "cubic-bezier",
-        "x1": 0.16,
-        "y1": 1,
-        "x2": 0.3,
-        "y2": 1
-      }
     },
     "semantic.layout.payment-icon-inset": {
       "layer": "semantic",
@@ -2377,7 +2341,6 @@
       "value": {
         "kind": "transition",
         "duration": "component.disclosuregroup.motion-duration",
-        "easing": "semantic.motion.interaction-easing",
         "spring": {
           "kind": "time",
           "visualDuration": "component.disclosuregroup.motion-duration",
@@ -9464,12 +9427,11 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic interaction transition composed from canonical motion timing roles.",
+      "meaning": "Semantic interaction transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.interaction-duration",
-        "easing": "semantic.motion.interaction-easing",
         "spring": {
           "kind": "time",
           "visualDuration": "semantic.motion.interaction-duration",
@@ -9481,12 +9443,11 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic reveal transition composed from canonical motion timing roles.",
+      "meaning": "Semantic reveal transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.reveal-duration",
-        "easing": "semantic.motion.reveal-easing",
         "spring": {
           "kind": "time",
           "visualDuration": "semantic.motion.reveal-duration",
@@ -9498,12 +9459,11 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic dismiss transition composed from canonical motion timing roles.",
+      "meaning": "Semantic dismiss transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.exit-duration",
-        "easing": "semantic.motion.dismiss-easing",
         "spring": {
           "kind": "time",
           "visualDuration": "semantic.motion.exit-duration",
@@ -9515,12 +9475,11 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic state transition composed from canonical motion timing roles.",
+      "meaning": "Semantic state transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.state-duration",
-        "easing": "semantic.motion.interaction-easing",
         "spring": {
           "kind": "time",
           "visualDuration": "semantic.motion.state-duration",
@@ -9532,12 +9491,11 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Semantic content resize transition composed from canonical motion timing roles.",
+      "meaning": "Semantic content resize transition: the role spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.content-resize-duration",
-        "easing": "semantic.motion.interaction-easing",
         "spring": {
           "kind": "time",
           "visualDuration": "semantic.motion.content-resize-duration",
@@ -9561,24 +9519,32 @@
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Modal panel transition composed from the modal enter duration and easing.",
+      "meaning": "Modal panel entry transition: the modal enter spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.modal-enter-duration",
-        "easing": "semantic.motion.modal-easing"
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.modal-enter-duration",
+          "bounce": 0
+        }
       }
     },
     "semantic.motion.modal-dismiss-transition": {
       "layer": "semantic",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Modal panel dismissal transition composed from the exit duration and easing.",
+      "meaning": "Modal panel dismissal transition: the exit spring's settle duration and linear() curve.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
         "duration": "semantic.motion.exit-duration",
-        "easing": "semantic.motion.modal-easing"
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.exit-duration",
+          "bounce": 0
+        }
       }
     },
     "component.codeblock.added-background": {

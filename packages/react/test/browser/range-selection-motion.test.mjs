@@ -290,7 +290,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     current = await readRange(page);
     assertBandCap(endpointBand(current), 'both', 'forward same-row endpoint band');
 
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '800ms'); });
     const reverseCell = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${reverseDate}"]`);
     const reversePointerFrames = await samplePointerTransition(page, sameRowDate, reverseDate);
     assertPointerTransition(reversePointerFrames, 'reverse pointer transition');
@@ -366,6 +366,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     // by the stale exit completion.
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '1200ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '1200ms');
       window.__muxuiRangeSetOpen(true);
     });
     await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${weekWrapDate}"]`).hover();
@@ -393,7 +394,9 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
 
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '1200ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '1200ms');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration');
     });
     await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${sameRowDate}"]`).hover();
     await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
@@ -421,6 +424,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration');
       window.__muxuiRangeUnmount();
     });
     await page.locator('#range-unmounted').waitFor({ state: 'attached' });

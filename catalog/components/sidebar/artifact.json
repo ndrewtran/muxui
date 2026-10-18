@@ -152,7 +152,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback-duration",
+            "token": "semantic.motion.state-transition",
             "requirement": "required"
           },
           {
@@ -172,11 +172,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.reveal-duration",
-            "requirement": "required"
-          },
-          {
-            "token": "semantic.motion.reveal-easing",
+            "token": "semantic.motion.reveal-transition",
             "requirement": "required"
           },
           {

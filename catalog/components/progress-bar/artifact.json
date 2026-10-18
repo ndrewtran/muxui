@@ -118,7 +118,19 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback-duration",
+            "token": "semantic.motion.progress-update-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-easing",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-travel-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-easing",
             "requirement": "required"
           }
         ]

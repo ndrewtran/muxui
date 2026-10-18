@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { canonicalJson, parseJsonStrict } from '@muxui/schema';
+import { compilePureTokenGraph, cssDeclaration, cssValue } from '../src/core.mjs';
 import {
   TokenContractError,
   compileNativeTheme,
@@ -371,12 +372,72 @@ test('default theme motion scale removes Quick and preserves Fast (120ms) semant
   assert.equal(source.tokens['semantic.motion.modal-enter-duration'].alias, 'reference.motion.duration-moderate');
   assert.equal(full.tokens['semantic.motion.modal-enter-duration'].value, 180);
   assert.equal(reduced.tokens['semantic.motion.modal-enter-duration'].value, 0);
-  assert.deepEqual({ ...source.tokens['semantic.motion.modal-easing'].value }, { kind: 'cubic-bezier', x1: 0.16, y1: 1, x2: 0.3, y2: 1 });
+});
+
+const SPRING_ROLES = {
+  interaction: { visualDuration: 'interaction-duration', settle: 350 },
+  state: { visualDuration: 'state-duration', settle: 250 },
+  dismiss: { visualDuration: 'exit-duration', settle: 250 },
+  reveal: { visualDuration: 'reveal-duration', settle: 400 },
+  'content-resize': { visualDuration: 'content-resize-duration', settle: 1050 },
+  modal: { visualDuration: 'modal-enter-duration', settle: 400 },
+  'modal-dismiss': { visualDuration: 'exit-duration', settle: 250 },
+};
+
+function cssDeclarations(css) {
+  return new Map([...css.matchAll(/^ {2}(--[a-z0-9-]+): (.+);$/gmu)].map(([, name, value]) => [name, value]));
+}
+
+test('spring roles compose their own settle duration and linear() curve', () => {
+  const declarations = cssDeclarations(compileWebTheme(source).css);
+  for (const [role, { visualDuration, settle }] of Object.entries(SPRING_ROLES)) {
+    const prefix = `--muxui-semantic-motion-${role}-transition`;
+    // The shorthand composes its own public parts, which resolve to the spring pair.
+    assert.equal(declarations.get(prefix), `var(${prefix}-duration) var(${prefix}-easing)`, role);
+    assert.equal(declarations.get(`${prefix}-duration`), `var(${prefix}-spring-duration)`, role);
+    // No role borrows another role's curve: each composite reads its own spring easing.
+    assert.equal(declarations.get(`${prefix}-easing`), `var(${prefix}-spring-easing)`, role);
+    assert.equal(declarations.get(`${prefix}-spring-duration`), `${settle}ms`, role);
+    assert.match(declarations.get(`${prefix}-spring-easing`), /^linear\(0, .+, 1\)$/u, role);
+    // The perceived duration and bounce stay for JavaScript springs.
+    assert.equal(declarations.get(`${prefix}-spring-visual-duration`), `var(--muxui-semantic-motion-${visualDuration})`, role);
+    assert.equal(declarations.get(`${prefix}-spring-bounce`), '0', role);
+  }
+  // Roles without a spring keep their authored duration and easing.
+  assert.equal(
+    declarations.get('--muxui-semantic-motion-progress-transition'),
+    'var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-progress-easing)',
+  );
+  // The perceived base durations are untouched.
+  const graph = compileTokenGraph(source);
+  assert.equal(graph.tokens['semantic.motion.interaction-duration'].value, 150);
+  assert.equal(graph.tokens['semantic.motion.modal-enter-duration'].value, 180);
+});
+
+test('a spring transition token formats as its spring pair', () => {
+  const graph = compileTokenGraph(source);
+  assert.match(
+    cssValue(graph.tokens['semantic.motion.state-transition']),
+    /^250ms linear\(0, 0\.4615, 0\.8176, /u,
+  );
+  assert.equal(cssValue(graph.tokens['semantic.motion.progress-transition']), '300ms ease-in-out');
+});
+
+test('reduced motion zeroes the compiled settle where the duration role is Instant', () => {
+  const reduced = cssDeclarations(compileWebTheme(source, { modes: { motion: 'reduced' } }).css);
+  for (const role of ['state', 'dismiss', 'modal', 'modal-dismiss']) {
+    const prefix = `--muxui-semantic-motion-${role}-transition`;
+    assert.equal(reduced.get(`${prefix}-spring-duration`), '0ms', role);
+    assert.equal(reduced.get(`${prefix}-spring-easing`), 'linear', role);
+    assert.equal(reduced.get(`${prefix}-duration`), `var(${prefix}-spring-duration)`, role);
+  }
+  // Roles without a reduced branch keep their authored values, as before.
+  assert.equal(reduced.get('--muxui-semantic-motion-interaction-transition-spring-duration'), '350ms');
 });
 
 test('motion compositions preserve references and regenerate spring CSS from theme overrides', () => {
   const defaultCss = compileWebTheme(source).css;
-  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-duration\);/u);
+  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-transition-spring-duration\);/u);
   assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-spring-duration: 350ms;/u);
   assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-spring-easing: linear\(0, 0\.3049/u);
   const overriddenCss = compileWebTheme(source, {
@@ -384,9 +445,11 @@ test('motion compositions preserve references and regenerate spring CSS from the
       'semantic.motion.interaction-duration': { type: 'duration', unit: 'ms', value: 200 },
     },
   }).css;
+  // A retimed perceived duration regenerates the settle pair the composite follows.
   assert.match(overriddenCss, /--muxui-semantic-motion-interaction-transition-spring-duration: 400ms;/u);
+  assert.match(overriddenCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-transition-spring-duration\);/u);
   const reduced = compileWebTheme(source, { modes: { motion: 'reduced' } }).css;
-  assert.match(reduced, /--muxui-semantic-motion-state-transition-duration: var\(--muxui-semantic-motion-state-duration\);/u);
+  assert.match(reduced, /--muxui-semantic-motion-state-transition-duration: var\(--muxui-semantic-motion-state-transition-spring-duration\);/u);
   assert.match(reduced, /--muxui-semantic-motion-state-transition-spring-duration: 0ms;/u);
   assert.throws(() => compileWebTheme(source, {
     overrides: {
@@ -396,7 +459,6 @@ test('motion compositions preserve references and regenerate spring CSS from the
         value: {
           kind: 'transition',
           duration: 'semantic.motion.state-duration',
-          easing: 'semantic.motion.interaction-easing',
           spring: { kind: 'time', visualDuration: 'semantic.motion.state-duration', bounce: 0 },
         },
       },
@@ -404,6 +466,91 @@ test('motion compositions preserve references and regenerate spring CSS from the
   }), /MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY/u);
   const native = compileNativeTheme(source, { profile: 'native.ios' });
   assert.ok(native.diagnostics.some(({ id, code }) => id === 'semantic.motion.interaction-transition' && code === 'MUXUI_TOKEN_TRANSITION_NATIVE_DEFERRED'));
+});
+
+test('modal transition overrides from the previous contract are rejected with a clear diagnostic', () => {
+  assert.equal(source.tokenContractVersion, '6.0.0');
+  for (const [id, visualDuration] of [
+    ['semantic.motion.modal-transition', 'semantic.motion.modal-enter-duration'],
+    ['semantic.motion.modal-dismiss-transition', 'semantic.motion.exit-duration'],
+  ]) {
+    const previous = { type: 'transition', unit: 'structured', value: { kind: 'transition', duration: visualDuration, easing: 'semantic.motion.modal-easing' } };
+    assert.throws(
+      () => compileWebTheme(source, { overrides: { [id]: previous } }),
+      (error) => error instanceof TokenContractError
+        && error.code === 'MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY'
+        && error.message.includes('declares a spring')
+        && error.message.includes(visualDuration)
+        && error.details.visualDuration === visualDuration,
+      id,
+    );
+    const current = { ...previous, value: { kind: 'transition', duration: visualDuration, spring: { kind: 'time', visualDuration, bounce: 0.2 } } };
+    assert.doesNotThrow(() => compileWebTheme(source, { overrides: { [id]: current } }), id);
+  }
+});
+
+test('a spring transition names no easing and a transition without a spring still must', () => {
+  const candidate = structuredClone(source);
+  const springOnly = {
+    layer: 'semantic',
+    type: 'transition',
+    unit: 'structured',
+    meaning: 'Spring-only transition.',
+    overridePolicy: 'theme',
+    value: {
+      kind: 'transition',
+      duration: 'semantic.motion.state-duration',
+      spring: { kind: 'time', visualDuration: 'semantic.motion.reveal-duration', bounce: 0.1 },
+    },
+  };
+  candidate.tokens['semantic.motion.test-spring-transition'] = springOnly;
+  const graph = compileTokenGraph(candidate);
+  const resolved = graph.tokens['semantic.motion.test-spring-transition'];
+  assert.equal(Object.hasOwn(resolved.value, 'easing'), false);
+  assert.deepEqual(graph.dependencies['semantic.motion.test-spring-transition'], ['semantic.motion.state-duration', 'semantic.motion.reveal-duration']);
+  const declarations = cssDeclarations(cssDeclaration(resolved, graph.dependencies));
+  const prefix = '--muxui-semantic-motion-test-spring-transition';
+  assert.equal(declarations.get(prefix), `var(${prefix}-duration) var(${prefix}-easing)`);
+  assert.equal(declarations.get(`${prefix}-easing`), `var(${prefix}-spring-easing)`);
+  assert.equal(declarations.get(`${prefix}-spring-visual-duration`), 'var(--muxui-semantic-motion-reveal-duration)');
+  assert.match(cssValue(resolved), /^\d+ms linear\(0, /u);
+
+  // A record with both, or with neither, fails the source schema and the compiler's own validator.
+  const withEasing = structuredClone(candidate);
+  withEasing.tokens['semantic.motion.test-spring-transition'].value.easing = 'semantic.motion.progress-easing';
+  const withoutEither = structuredClone(candidate);
+  delete withoutEither.tokens['semantic.motion.test-spring-transition'].value.spring;
+  for (const invalid of [withEasing, withoutEither]) {
+    assert.throws(() => compileTokenGraph(invalid), /MUXUI_SCHEMA_INVALID/u);
+    assert.throws(() => compilePureTokenGraph(invalid), /MUXUI_TOKEN_MOTION_TRANSITION_INVALID/u);
+  }
+  expectCode('MUXUI_TOKEN_MOTION_TRANSITION_INVALID', () => compileWebTheme(source, {
+    overrides: {
+      'semantic.motion.reveal-transition': {
+        type: 'transition',
+        unit: 'structured',
+        value: {
+          kind: 'transition',
+          duration: 'semantic.motion.reveal-duration',
+          easing: 'semantic.motion.progress-easing',
+          spring: { kind: 'time', visualDuration: 'semantic.motion.reveal-duration', bounce: 0 },
+        },
+      },
+    },
+  }));
+});
+
+test('removed motion easing tokens are undeclared, so a theme cannot override them', () => {
+  for (const id of ['semantic.motion.reveal-easing', 'semantic.motion.dismiss-easing', 'semantic.motion.modal-easing']) {
+    assert.equal(Object.hasOwn(source.tokens, id), false, id);
+    expectCode('MUXUI_TOKEN_OVERRIDE_UNKNOWN', () => compileWebTheme(source, {
+      overrides: { [id]: { type: 'easing', unit: 'structured', value: { kind: 'keyword', value: 'linear' } } },
+    }));
+  }
+  // interaction-easing stays: progress consumers read it directly.
+  assert.doesNotThrow(() => compileWebTheme(source, {
+    overrides: { 'semantic.motion.interaction-easing': { type: 'easing', unit: 'structured', value: { kind: 'keyword', value: 'linear' } } },
+  }));
 });
 
 test('transition overrides follow selected mode and alias target topology', () => {
@@ -417,7 +564,6 @@ test('transition overrides follow selected mode and alias target topology', () =
     value: {
       kind: 'transition',
       duration: 'semantic.motion.state-duration',
-      easing: 'semantic.motion.interaction-easing',
       spring: { kind: 'time', visualDuration: 'semantic.motion.state-duration', bounce: 0 },
     },
   };
@@ -426,7 +572,6 @@ test('transition overrides follow selected mode and alias target topology', () =
       value: {
         kind: 'transition',
         duration: 'reference.motion.duration-instant',
-        easing: 'semantic.motion.interaction-easing',
         spring: { kind: 'time', visualDuration: 'reference.motion.duration-instant', bounce: 0 },
       },
     },
@@ -446,7 +591,6 @@ test('transition overrides follow selected mode and alias target topology', () =
     value: {
       kind: 'transition',
       duration: 'semantic.motion.state-duration',
-      easing: 'semantic.motion.interaction-easing',
       spring: { kind: 'time', visualDuration: 'semantic.motion.state-duration', bounce: 0.2 },
     },
   };
@@ -624,6 +768,55 @@ test('E-G1.0-04 requirement digests track exact semantic closure only', () => {
     source: dependency, recipe, bindingId: 'web.html', profile: 'web.html',
   });
   assert.notEqual(dependencySet.digest, base.digest);
+});
+
+// What each component's code reads from the motion tokens, per its record: a bounce change on a consumed spring role, or an edit to a
+// consumed spinner token, must move the requirement digest, and a change to any other spring or spinner token must not. IconButton shows
+// its pending spinner without animation, so it reads the Button spring but none of the spinner tokens.
+const SPINNER_EDITS = {
+  'semantic.motion.progress-spin-duration': (token) => { token.value += 100; },
+  'semantic.motion.progress-sweep-duration': (token) => { token.value += 100; },
+  'semantic.motion.progress-easing': (token) => { token.value = { kind: 'keyword', value: 'linear' }; },
+  'semantic.motion.constant-easing': (token) => { token.alias = 'reference.motion.easing-standard'; },
+};
+const MOTION_CONSUMERS = {
+  tooltip: { springs: ['dismiss', 'reveal'], spinner: [] },
+  button: { springs: ['interaction'], spinner: Object.keys(SPINNER_EDITS) },
+  'icon-button': { springs: ['interaction'], spinner: [] },
+  'alert-dialog': { springs: ['interaction', 'modal', 'modal-dismiss'], spinner: [] },
+  disclosure: { springs: ['content-resize', 'dismiss', 'interaction', 'reveal', 'state'], spinner: [] },
+};
+
+test('a component record lists the motion tokens it consumes, so a change to one moves its digest', async () => {
+  for (const [slug, { springs, spinner }] of Object.entries(MOTION_CONSUMERS)) {
+    const artifact = parseJsonStrict(await readFile(
+      new URL(`../../../catalog/components/${slug}/artifact.json`, import.meta.url),
+      'utf8',
+    ));
+    const recipe = artifact.bindings['web.react'].tokenRecipe;
+    const digestFor = (candidate) => compileTokenRequirementSet({
+      source: candidate, recipe, bindingId: 'web.react', profile: 'web.react',
+    }).digest;
+    const edited = (tokenId, edit) => {
+      const candidate = structuredClone(source);
+      edit(candidate.tokens[tokenId]);
+      return candidate;
+    };
+    assert.deepEqual(
+      recipe.requirements.map(({ token }) => token).filter((token) => token.startsWith('semantic.motion.')).sort(),
+      [...springs.map((role) => `semantic.motion.${role}-transition`), ...spinner].sort(),
+      slug,
+    );
+    const base = digestFor(source);
+    for (const role of Object.keys(SPRING_ROLES)) {
+      const moved = digestFor(edited(`semantic.motion.${role}-transition`, (token) => { token.value.spring.bounce = 0.3; })) !== base;
+      assert.equal(moved, springs.includes(role), `${slug}: ${role} spring ${springs.includes(role) ? 'moves' : 'leaves'} the digest`);
+    }
+    for (const [tokenId, edit] of Object.entries(SPINNER_EDITS)) {
+      const moved = digestFor(edited(tokenId, edit)) !== base;
+      assert.equal(moved, spinner.includes(tokenId), `${slug}: ${tokenId} ${spinner.includes(tokenId) ? 'moves' : 'leaves'} the digest`);
+    }
+  }
 });
 
 test('E-G1.0-06 static mode output works while runtime switching remains unavailable', () => {

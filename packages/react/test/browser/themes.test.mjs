@@ -98,7 +98,7 @@ function renderThemeFixture() {
         '--muxui-semantic-typography-body-size': '19px',
         '--muxui-semantic-typography-label-m-font-size': '19px',
         '--muxui-field-font-size': '19px',
-        '--muxui-semantic-motion-interaction-duration': '123ms',
+        '--muxui-semantic-motion-interaction-transition-duration': '123ms',
       },
     },
     h(Button, { id: 'nested-button' }, 'Save'),

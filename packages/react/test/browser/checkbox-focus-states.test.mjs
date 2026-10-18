@@ -143,7 +143,9 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
       await page.evaluate((scheme) => {
         document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
         document.documentElement.style.setProperty('--muxui-semantic-motion-interaction-duration', '0ms');
+        document.documentElement.style.setProperty('--muxui-semantic-motion-interaction-transition-duration', '0ms');
         document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '0ms');
+        document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '0ms');
       }, mode);
       await page.locator('[data-focus-start]').click();
 

@@ -138,7 +138,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       await navigate(page, 'next');
       const march = await settled(page, initial);
       if (firstResizeStarted !== null) {
-        assert.ok(Date.now() - firstResizeStarted < 1_500, 'calendar resize keeps its total duration when visual duration is overridden');
+        assert.ok(Date.now() - firstResizeStarted > 2_000, 'calendar resize runs the spring at its overridden visual duration');
       }
       await inFlight(page, initial);
       assert.equal(march.rows, 5);

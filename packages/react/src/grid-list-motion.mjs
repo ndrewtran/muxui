@@ -330,9 +330,12 @@ function observeGridListRipple(root) {
     ripple.className = RIPPLE_CLASS;
     const motion = reduced ? null : resolvedMotionSpring(root, row, 'state', 'interaction');
     const isStatic = !motion;
-    // The selected 300/180/120ms profile scales with Mux's state timing token.
-    const minimumVisibleMs = motion ? motion.duration * 1000 : 0;
-    const fadeDurationMs = motion ? motion.duration * 1500 : (reduced ? 80 : 0);
+    // The ripple expands on a spring scaled from the state spring's perceived duration
+    // (a 300ms visual duration at the default 120ms) and stays at least that long. It
+    // fades on the state composite, so the CSS fade and this timer share one duration.
+    const perceivedMs = motion ? (motion.visualDuration ?? motion.duration) * 1000 : 0;
+    const minimumVisibleMs = perceivedMs;
+    const fadeDurationMs = motion ? motion.duration * 1000 : (reduced ? 80 : 0);
     if (isStatic) {
       ripple.setAttribute('data-static', 'true');
     } else {
@@ -369,9 +372,9 @@ function observeGridListRipple(root) {
 
     if (motion) {
       const transition = {
-        ...motion,
-        duration: motion.duration * 2.5,
-        visualDuration: (motion.visualDuration ?? motion.duration) * 2.5,
+        type: motion.type,
+        visualDuration: perceivedMs * 2.5 / 1000,
+        bounce: motion.bounce,
       };
       const controls = animate(ripple, {
         transform: ['translate(-50%, -50%) scale(0)', 'translate(-50%, -50%) scale(1)'],

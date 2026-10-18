@@ -5,7 +5,7 @@ import {
   OverlayTriggerStateContext,
   PopoverContext,
 } from 'react-aria-components';
-import { observeReducedMotion, resolvedMotionTransition } from './motion.mjs';
+import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const DIALOG_REDUCED_ATTRIBUTE = 'data-muxui-dialog-reduced';
 const MODAL_INITIAL_Y = -8;
@@ -15,9 +15,6 @@ const MODAL_INITIAL_SCALE = 0.97;
 const MODAL_SETTLED_SCALE = 1;
 const MODAL_Y_VARIABLE = '--muxui-modal-y';
 const MODAL_SCALE_VARIABLE = '--muxui-modal-scale';
-// This canonical entry pacing role drives both the panel spring and backdrop fade.
-const MODAL_DEFAULT_ENTRY_DURATION = 0.18;
-const MODAL_SPRING = Object.freeze({ stiffness: 560, damping: 40, mass: 0.5 });
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
 function parseTranslate(value) {
@@ -53,22 +50,12 @@ function modalTargetValues(isOpen) {
     : modalHiddenValues();
 }
 
-function modalEntryTransition(transition) {
-  const durationScale = transition.duration / MODAL_DEFAULT_ENTRY_DURATION;
-  return {
-    type: 'spring',
-    stiffness: MODAL_SPRING.stiffness / (durationScale ** 2),
-    damping: MODAL_SPRING.damping / durationScale,
-    mass: MODAL_SPRING.mass,
-  };
-}
-
+// The panel runs the modal spring and exits on the modal-dismiss composite; the
+// backdrop reads the same two composites in CSS, so both move in step.
 function modalTransition(node, triggerNode, isOpen) {
-  const transition = isOpen
-    ? resolvedMotionTransition(node, triggerNode, 'modal-enter', 'modal')
-    : resolvedMotionTransition(node, triggerNode, 'exit', 'modal');
-  if (!transition) return null;
-  return isOpen ? modalEntryTransition(transition) : transition;
+  if (!isOpen) return resolvedMotionTransition(node, triggerNode, 'exit', 'modal');
+  const spring = resolvedMotionSpring(node, triggerNode, 'modal-enter', 'modal');
+  return spring && { type: 'spring', visualDuration: spring.visualDuration, bounce: spring.bounce };
 }
 
 function styleValues(node, values) {

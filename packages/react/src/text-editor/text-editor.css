@@ -75,8 +75,8 @@
   box-shadow: 0 0 0 1px var(--muxui-field-border-color);
   outline: none;
   transition:
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   cursor: text;
 }
 
@@ -266,8 +266,8 @@
   cursor: pointer;
   flex-shrink: 0;
   transition:
-    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing),
+    color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
   padding: 0;
 }
 
@@ -338,7 +338,7 @@
   border: none;
   padding: 0;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
-  transition: transform var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: transform var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
 .muxui-text-editor__color-swatch:hover {
@@ -397,8 +397,8 @@
   cursor: pointer;
   outline: none;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+    border-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 .muxui-text-editor__select:hover {

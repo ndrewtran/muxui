@@ -70,10 +70,6 @@
           {
             "token": "semantic.focus.ring",
             "requirement": "required"
-          },
-          {
-            "token": "semantic.motion.feedback-duration",
-            "requirement": "required"
           }
         ]
       },

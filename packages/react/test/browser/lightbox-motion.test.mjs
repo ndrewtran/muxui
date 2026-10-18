@@ -228,8 +228,11 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     await page.evaluate(() => {
       document.documentElement.dir = 'ltr';
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms');
       document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '800ms');
       document.documentElement.style.setProperty('--muxui-semantic-motion-interaction-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-interaction-transition-duration', '800ms');
       document.getElementById('lightbox-origin').setAttribute('data-muxui-motion', 'full');
       window.__muxuiLightboxSetOpen(false);
     });
@@ -265,8 +268,11 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
 
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-transition-duration');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-interaction-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-interaction-transition-duration');
       window.__muxuiLightboxSetOpen(true);
     });
     await popup.waitFor();

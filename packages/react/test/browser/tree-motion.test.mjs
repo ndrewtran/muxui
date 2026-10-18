@@ -8,7 +8,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 function documentHtml() {
   const body = renderToString(React.createElement(TreeMotionFixture));
   return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><style>
-    :root { --muxui-semantic-motion-interaction-duration: 360ms; --muxui-semantic-motion-interaction-easing: cubic-bezier(0.2, 0, 0, 1); --muxui-semantic-motion-state-duration: 300ms; }
+    :root { --muxui-semantic-motion-interaction-transition-duration: 360ms; --muxui-semantic-motion-interaction-transition-easing: cubic-bezier(0.2, 0, 0, 1); --muxui-semantic-motion-state-duration: 300ms; --muxui-semantic-motion-state-transition-duration: 300ms; }
     body { margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     .tree-motion-fixture { display: grid; grid-template-columns: 320px 320px; gap: 48px; align-items: start; }
     .tree-motion-fixture h2 { margin: 0 0 12px; font: inherit; }

@@ -46,9 +46,9 @@ export function CalendarHeightMotion({ children }) {
       calendar.style.overflow = 'clip';
       // Animate a number so cleanup owns every height write, including interruption.
       controls = animate(from, nextHeight, {
-        // The content-resize token bounds the whole interpolation, including settle.
+        // The content-resize spring's perceived timing; its settle ends the interpolation.
         type: transition.type,
-        duration: transition.duration,
+        visualDuration: transition.visualDuration,
         bounce: transition.bounce,
         onUpdate: (height) => { body.style.height = `${height}px`; },
         onComplete: () => {

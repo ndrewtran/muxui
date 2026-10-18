@@ -102,6 +102,10 @@
           {
             "token": "semantic.control.size-md",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
           }
         ]
       },

@@ -167,7 +167,7 @@ test('R1.3 collection source preserves glyph alignment state selectors', async (
   assert.match(styles, /\.muxui-range-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
   assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-block: max\(0px, calc\(\(var\(--muxui-control-target-size/u);
   assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-inline: var\(--muxui-semantic-layout-inset-large\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\);/u);
+  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\);/u);
   assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
   assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
   assert.match(styles, /\.muxui-token\s*\{[\s\S]*?display:\s*inline-flex;[\s\S]*?padding-inline:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?background-color:\s*var\(--muxui-semantic-surface-subtle\);/u, 'TokenField tokens need a visible, separated affordance');

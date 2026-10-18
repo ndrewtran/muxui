@@ -264,8 +264,11 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       const root = document.documentElement;
       root.style.setProperty('--muxui-semantic-motion-content-resize-duration', '900ms');
       root.style.setProperty('--muxui-semantic-motion-reveal-duration', '900ms');
+      root.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '900ms');
       root.style.setProperty('--muxui-semantic-motion-exit-duration', '900ms');
+      root.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '900ms');
       root.style.setProperty('--muxui-semantic-motion-interaction-duration', '900ms');
+      root.style.setProperty('--muxui-semantic-motion-interaction-transition-duration', '900ms');
     });
 
     const primaryTrigger = page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger');
@@ -472,7 +475,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await waitForSettledVisual(page, toastSelector('toast-b'));
     await page.waitForFunction(() => window.__interactionToastDismisses?.['toast-c'] === 1, undefined, { timeout: 5000 });
 
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '200ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '200ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '200ms'); });
     await page.evaluate(() => window.__interactionToastAdd('toast-pause', 650));
     const pauseToast = page.locator(toastSelector('toast-pause'));
     await pauseToast.waitFor();
@@ -526,7 +529,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await page.keyboard.press('Escape');
     await page.locator(tagPopup).waitFor({ state: 'detached' });
     await primaryTrigger.focus();
-    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '900ms'));
+    await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '900ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '900ms'); });
     await page.locator(tagInput).focus();
     await page.locator(tagPopup).waitFor();
     await waitForEntry(page, tagPopup);
@@ -543,7 +546,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await page.keyboard.press('Escape');
     await page.locator(multiPopup).waitFor({ state: 'detached' });
 
-    await page.evaluate(() => document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration'));
+    await page.evaluate(() => { document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration'); document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration'); });
     const alertTrigger = page.locator('#interaction-alert-trigger');
     const alertPopup = '.muxui-alert-dialog__popup';
     const alertBackdrop = '.muxui-alert-dialog__backdrop';
@@ -561,7 +564,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await page.locator('.muxui-alert-dialog__close').click();
     await page.waitForFunction((selector) => {
       const node = document.querySelector(selector);
-      return node?.hasAttribute('data-exiting') && getComputedStyle(node).transitionDuration === '0.12s';
+      return node?.hasAttribute('data-exiting') && getComputedStyle(node).transitionDuration === '0.25s';
     }, alertBackdrop, { timeout: 1800 });
     await page.waitForFunction((selector) => {
       const node = document.querySelector(selector);
@@ -658,8 +661,11 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
       const root = document.documentElement;
       root.style.setProperty('--muxui-semantic-motion-content-resize-duration', '900ms');
       root.style.setProperty('--muxui-semantic-motion-reveal-duration', '900ms');
+      root.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '900ms');
       root.style.setProperty('--muxui-semantic-motion-exit-duration', '900ms');
+      root.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '900ms');
       root.style.setProperty('--muxui-semantic-motion-interaction-duration', '900ms');
+      root.style.setProperty('--muxui-semantic-motion-interaction-transition-duration', '900ms');
       document.getElementById('root').setAttribute('data-muxui-motion', 'reduced');
       window.__interactionToastAdd('toast-mount-reduced', 5000);
     });
