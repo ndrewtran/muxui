@@ -13,6 +13,8 @@ import { compilePureTokenGraph } from '@muxui/tokens/core';
 import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
+import { isTextEditorDocument } from '@muxui/react/text-editor';
+import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
 import { componentRecordCategory } from '../src/component-categories.mjs';
@@ -350,6 +352,246 @@ test('InputTags controlled and uncontrolled stories render their list values', a
   const story = await import('../.storybook/generated/r1-6-input-tags.stories.mjs');
   assert.doesNotThrow(() => renderToStaticMarkup(story.Controlled.render(story.Controlled.args)));
   assert.doesNotThrow(() => renderToStaticMarkup(story.Uncontrolled.render(story.Uncontrolled.args)));
+});
+
+function currentRecord(family) {
+  const binding = descriptorSource.bindings.find(({ export: name }) => name === family);
+  assert.ok(binding, `${family} binding`);
+  return { family, tranche: manifestByFamily.get(family).tranche, binding };
+}
+
+test('supplemental adapter modes seed valid values and preserve exclusive defaults', () => {
+  for (const [family, controlled, uncontrolled] of [
+    ['ColorModeToggle', 'mode', 'defaultMode'],
+    ['MultiSelect', 'selectedKeys', 'defaultSelectedKeys'],
+    ['Resizable', 'sizes', 'defaultSizes'],
+    ['TextEditor', 'value', 'defaultValue'],
+  ]) {
+    const record = currentRecord(family);
+    const controlledStory = createControlledStory(record);
+    const uncontrolledStory = createUncontrolledStory(record);
+    assert.equal(Object.hasOwn(controlledStory.args, controlled), family !== 'ColorModeToggle', family);
+    assert.equal(Object.hasOwn(controlledStory.args, uncontrolled), false, family);
+    assert.equal(Object.hasOwn(uncontrolledStory.args, uncontrolled), family !== 'ColorModeToggle', family);
+    assert.equal(Object.hasOwn(uncontrolledStory.args, controlled), false, family);
+    if (family === 'TextEditor') {
+      assert.equal(isTextEditorDocument(controlledStory.args.value), true);
+      assert.equal(isTextEditorDocument(uncontrolledStory.args.defaultValue), true);
+    } else if (family === 'MultiSelect') {
+      assert.ok(controlledStory.args.selectedKeys instanceof Set);
+      assert.ok(uncontrolledStory.args.defaultSelectedKeys instanceof Set);
+      assert.equal(renderFamily(family, { selectedKeys: 'all' }).props.selectedKeys, 'all');
+    } else {
+      assert.doesNotThrow(() => renderToStaticMarkup(controlledStory.render(controlledStory.args)), family);
+      assert.doesNotThrow(() => renderToStaticMarkup(uncontrolledStory.render(uncontrolledStory.args)), family);
+    }
+  }
+  const sizes = { main: 70, side: 30 };
+  const resizable = renderFamily('Resizable', { sizes, defaultSizes: { main: 60, side: 40 } });
+  assert.strictEqual(resizable.props.sizes, sizes);
+  assert.equal(Object.hasOwn(resizable.props, 'defaultSizes'), false);
+  assert.doesNotMatch(renderToStaticMarkup(resizable), /data-invalid="true"/u);
+  const editor = renderFamily('TextEditor', createControlledStory(currentRecord('TextEditor')).args);
+  assert.equal(Object.hasOwn(editor.props, 'defaultValue'), false);
+});
+
+test('IconButton offers only runtime-admitted variants and keeps its ghost default', () => {
+  const record = currentRecord('IconButton');
+  const control = argTypesForBinding(record.binding).variant;
+  assert.equal(control.options.includes('success'), false);
+  assert.equal(control.options.includes('warning'), false);
+  for (const variant of control.options) {
+    const html = renderToStaticMarkup(renderFamily('IconButton', { variant }));
+    assert.match(html, new RegExp(`data-variant="${variant}"`, 'u'));
+  }
+  assert.match(renderToStaticMarkup(renderFamily('IconButton', {})), /data-variant="ghost"/u);
+});
+
+test('native select stock mode seeds decode values and forward the original change event', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const record = currentRecord('SelectNative');
+  try {
+    for (const story of [createControlledStory(record), createUncontrolledStory(record), createStory(record, 'default')]) {
+      for (const multiple of [false, true]) {
+        let received;
+        let receivedTarget;
+        const args = { ...story.args, multiple, onChange: (event) => { received = event; receivedTarget = event.currentTarget; } };
+        await act(async () => root.render(React.cloneElement(story.render(args), { key: `${story.name}-${multiple}` })));
+        const select = host.querySelector('select');
+        const controlled = host.querySelector('[data-muxui-controlled-values]');
+        const uncontrolled = host.querySelector('[data-muxui-uncontrolled-values]');
+        assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? [] : ['']);
+        if (controlled) assert.deepEqual(JSON.parse(controlled.textContent).value, multiple ? [] : '');
+        if (uncontrolled) assert.deepEqual(JSON.parse(uncontrolled.textContent).defaultValue, multiple ? [] : '');
+        if (multiple) {
+          for (const option of select.options) option.selected = option.value !== '';
+        } else select.value = 'research';
+        await act(async () => select.dispatchEvent(new Event('change', { bubbles: true })));
+        assert.equal(received.type, 'change');
+        assert.strictEqual(receivedTarget, select);
+        if (controlled) assert.deepEqual(JSON.parse(controlled.textContent).value, multiple ? ['inbox', 'research'] : 'research');
+        if (uncontrolled) assert.deepEqual(JSON.parse(uncontrolled.textContent).defaultValue, multiple ? [] : '');
+        assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? ['inbox', 'research'] : ['research']);
+      }
+    }
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('color mode stories update controlled values and restore an independent uncontrolled mode', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const toolbarUpdates = [];
+  const changes = [];
+  const record = currentRecord('ColorModeToggle');
+  const controlled = createControlledStory(record);
+  const uncontrolled = createUncontrolledStory(record);
+  const themed = (story, args, scheme, key = args.storageKey ?? story.name) => React.createElement(StorybookThemeContext.Provider, { value: { scheme, setScheme: (value) => toolbarUpdates.push(value) } }, React.cloneElement(story.render(args), { key }));
+  try {
+    await act(async () => root.render(themed(controlled, controlled.args, 'dark')));
+    assert.equal(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).mode, 'dark');
+    await act(async () => root.render(themed(controlled, { ...controlled.args, storageKey: 'controlled-explicit-mode', mode: 'light', onModeChange: (value) => changes.push(value) }, 'dark')));
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'light');
+    await act(async () => host.querySelector('input').click());
+    assert.deepEqual(changes, ['dark']);
+    assert.equal(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).mode, 'dark');
+
+    toolbarUpdates.length = 0;
+    const restoreKey = 'muxui-storybook-restore-probe';
+    window.localStorage.setItem(restoreKey, 'light');
+    await act(async () => root.render(themed(uncontrolled, { ...uncontrolled.args, storageKey: restoreKey, onModeChange: (value) => changes.push(value) }, 'dark')));
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'light');
+    assert.equal(JSON.parse(host.querySelector('[data-muxui-uncontrolled-values]').textContent).defaultMode, 'dark');
+    const storageKey = 'muxui-storybook-uncontrolled-interaction';
+    await act(async () => root.render(themed(uncontrolled, { ...uncontrolled.args, storageKey, defaultMode: 'light', onModeChange: (value) => changes.push(value) }, 'dark')));
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'light');
+    const defaults = host.querySelector('[data-muxui-uncontrolled-values]').textContent;
+    await act(async () => host.querySelector('input').click());
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'dark');
+    assert.equal(host.querySelector('[data-muxui-uncontrolled-values]').textContent, defaults);
+    assert.equal(window.localStorage.getItem(storageKey), 'dark');
+    assert.deepEqual(toolbarUpdates, []);
+    const existingKeys = new Set(Object.keys(window.localStorage));
+    for (const scheme of ['light', 'dark']) {
+      await act(async () => root.render(themed(uncontrolled, uncontrolled.args, scheme, `seed-${scheme}`)));
+      assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), scheme);
+    }
+    const specimenKeys = Object.keys(window.localStorage).filter((key) => !existingKeys.has(key));
+    assert.equal(specimenKeys.length, 2);
+    assert.deepEqual(new Set(specimenKeys.map((key) => window.localStorage.getItem(key))), new Set(['light', 'dark']));
+    await act(async () => root.render(themed(uncontrolled, uncontrolled.args, 'light', 'seed-dark')));
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'dark');
+    assert.equal(JSON.parse(host.querySelector('[data-muxui-uncontrolled-values]').textContent).defaultMode, 'dark');
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('resize controlled and event harnesses preserve size records and change metadata', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const record = currentRecord('Resizable');
+  const changes = [];
+  const commits = [];
+  const args = { onSizesChange: (...payload) => changes.push(payload), onSizesCommit: (...payload) => commits.push(payload) };
+  try {
+    for (const story of [createControlledStory(record), createEventsStory(record)]) {
+      await act(async () => root.render(story.render({ ...story.args, ...args })));
+      const handle = host.querySelector('[data-handle-id="main-side"]');
+      await act(async () => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })));
+      assert.deepEqual(changes.at(-1), [{ main: 61, side: 39 }, { handleId: 'main-side', source: 'keyboard' }]);
+      assert.deepEqual(commits.at(-1), changes.at(-1));
+      const output = host.querySelector('[data-muxui-controlled-values]');
+      if (output) assert.deepEqual(JSON.parse(output.textContent).sizes, { main: 61, side: 39 });
+      else {
+        const log = host.querySelector('[data-muxui-storybook-event-log]').textContent;
+        assert.match(log, /sizesChange:/u);
+        assert.match(log, /sizesCommit:/u);
+        assert.match(log, /"handleId":"main-side","source":"keyboard"/u);
+      }
+    }
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('MultiSelect and TextEditor controlled harnesses accept their public callback values', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  let editor;
+  let editorDestroyed;
+  try {
+    const multi = createControlledStory(currentRecord('MultiSelect'));
+    let selection;
+    await act(async () => root.render(multi.render({ ...multi.args, selectedKeys: 'all', onSelectionChange: (value) => { selection = value; } })));
+    assert.equal(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).selectedKeys, 'all');
+    await act(async () => host.querySelector('.muxui-multi-select__trigger').click());
+    await act(async () => document.querySelector('.muxui-multi-select__item').click());
+    assert.ok(selection instanceof Set);
+    assert.deepEqual(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).selectedKeys, [...selection]);
+
+    const editorStory = createControlledStory(currentRecord('TextEditor'));
+    let documentValue;
+    await act(async () => root.render(React.cloneElement(editorStory.render({ ...editorStory.args, onChange: (value) => { documentValue = value; } }), { key: 'editor' })));
+    editor = host.querySelector('.ProseMirror').editor;
+    editorDestroyed = new Promise((resolve) => editor.on('destroy', resolve));
+    await act(async () => editor.commands.insertContent('Updated '));
+    assert.equal(isTextEditorDocument(documentValue), true);
+    assert.deepEqual(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).value, documentValue);
+    assert.match(host.querySelector('.ProseMirror').textContent, /Updated/u);
+  } finally {
+    await act(async () => root.unmount());
+    if (editor && !editor.isDestroyed) await editorDestroyed;
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('named adapter state specimens render actual items, progress values, and orientation', () => {
+  const stateDocument = (family) => {
+    const record = currentRecord(family);
+    const story = createStory(record, 'states');
+    return new JSDOM(renderToStaticMarkup(story.render(story.args))).window.document;
+  };
+  const section = (document, state) => [...document.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3')?.textContent === state);
+  const breadcrumbs = stateDocument('Breadcrumbs');
+  assert.ok(section(breadcrumbs, 'disabled').querySelector('[data-disabled="true"]'));
+  assert.ok(section(breadcrumbs, 'current').querySelector('span[aria-current="page"]'));
+  assert.equal(breadcrumbs.querySelector('[data-muxui-storybook-state="unavailable"]'), null);
+  for (const family of ['GridList', 'ListBox']) {
+    const document = stateDocument(family);
+    assert.equal(section(document, 'selected').querySelector('[aria-selected="true"]').textContent, 'One');
+    for (const [id, expected] of [['custom', 'custom'], ['', '0'], [' ', ' '], [' padded ', ' padded ']]) {
+      const items = [{ id, label: id === '' ? 'Fallback item' : 'Custom item' }];
+      const args = stateArgsForBinding(currentRecord(family).binding, 'selected', family, { items });
+      assert.deepEqual(args.selectedIds, [expected]);
+      const rendered = new JSDOM(renderToStaticMarkup(renderFamily(family, args)));
+      assert.equal(rendered.window.document.querySelector('[aria-selected="true"]').textContent, items[0].label);
+      rendered.window.close();
+    }
+  }
+  const progress = stateDocument('ProgressCircle');
+  assert.equal(progress.querySelector('[data-muxui-storybook-state="unavailable"]'), null);
+  assert.equal(section(progress, 'indeterminate').querySelector('[role="progressbar"]').hasAttribute('aria-valuenow'), false);
+  for (const [state, value] of [['zero', '0'], ['partial', '50'], ['complete', '100']]) assert.equal(section(progress, state).querySelector('[role="progressbar"]').getAttribute('aria-valuenow'), value);
+  for (const [state, width] of [['sm', '32'], ['md', '48'], ['lg', '64']]) assert.match(section(progress, state).querySelector('svg').getAttribute('viewBox'), new RegExp(`0 0 ${width} ${width}`, 'u'));
+  for (const value of [null, undefined]) assert.doesNotMatch(renderToStaticMarkup(renderFamily('ProgressCircle', { value })), /aria-valuenow=/u);
+  const separator = stateDocument('Separator');
+  assert.equal(section(separator, 'vertical').querySelector('[role="separator"]').getAttribute('aria-orientation'), 'vertical');
+  const mode = stateDocument('ColorModeToggle');
+  for (const state of ['light', 'dark']) assert.equal(section(mode, state).querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), state);
 });
 
 test('Button Matrix statically covers every finite visual tuple and States keeps pending/disabled', () => {

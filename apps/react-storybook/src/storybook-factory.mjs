@@ -5,15 +5,15 @@ import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
 
 // Keep the theme control and Storybook toolbar on the same mode.
-function ColorModeTogglePreview(args) {
+function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
   const theme = React.useContext(StorybookThemeContext);
   return React.createElement(MuxUI.ColorModeToggle, {
     ...args,
-    mode: args.mode ?? theme?.scheme,
+    mode: args.mode ?? (syncWithToolbar ? theme?.scheme : undefined),
     'aria-label': 'Toggle color mode',
     onModeChange: (mode) => {
       args.onModeChange?.(mode);
-      theme?.setScheme(mode);
+      if (syncWithToolbar) theme?.setScheme(mode);
     },
   });
 }
@@ -57,6 +57,9 @@ const CONTROLLED_DEFAULT_PAIRS = Object.freeze([
   ['selected', 'defaultSelected'],
   ['selectedId', 'defaultSelectedId'],
   ['selectedIds', 'defaultSelectedIds'],
+  ['selectedKeys', 'defaultSelectedKeys'],
+  ['mode', 'defaultMode'],
+  ['sizes', 'defaultSizes'],
   ['value', 'defaultValue'],
   ['sourcesExpanded', 'defaultSourcesExpanded'],
   ['selectedModel', 'defaultSelectedModel'],
@@ -118,7 +121,7 @@ const callbackType = { summary: 'MuxUI callback' };
 function inferControl(name, defaults, props, family) {
   if (name.startsWith('on')) return { control: false, table: { type: callbackType } };
   if (name === 'trigger') return { control: false, table: { type: { summary: 'React element' } } };
-  if (family === 'Button' && BUTTON_SELECT_PROPS[name]) {
+  if ((family === 'Button' || family === 'IconButton') && BUTTON_SELECT_PROPS[name]) {
     return { control: { type: 'select' }, options: BUTTON_SELECT_PROPS[name] };
   }
   if (family === 'Text' && TEXT_SELECT_PROPS[name]) {
@@ -193,7 +196,11 @@ function kebabCase(value) {
 function sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs) {
   const defaults = binding.api.defaults ?? {};
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
+  if (family === 'SelectNative' && controlled === 'value' && sourceArgs.multiple && (sourceValue === undefined || sourceValue === '')) return [];
   if (sourceValue !== undefined) return sourceValue;
+  if (controlled === 'mode') return 'light';
+  if (controlled === 'selectedKeys') return new Set();
+  if (controlled === 'sizes') return { main: 60, side: 40 };
   if (controlled === 'open' || controlled === 'checked' || controlled === 'collapsed' || controlled === 'expanded' || controlled === 'selected') return false;
   if (controlled === 'selectedId') return 'Melbourne';
   if (controlled.endsWith('Ids')) return [];
@@ -206,19 +213,23 @@ function sampleControlledValue(binding, family, controlled, uncontrolled, source
   if (family.startsWith('Color')) return '#ff0000';
   if (family === 'NumberField') return 2;
   if (family === 'Slider') return 60;
+  if (family === 'TextEditor') return TEXT_EDITOR_SAMPLE_DOCUMENT;
   return '';
 }
 
 function pairArgs(binding, family, sourceArgs, mode) {
   const args = { ...sourceArgs };
   for (const { controlled, uncontrolled } of controlledDefaultPairsForBinding(binding)) {
-    const value = sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs);
+    let value = sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs);
+    if (mode === 'uncontrolled' && controlled === 'selectedKeys' && value === 'all') {
+      value = new Set(Array.from(sourceArgs.items ?? MULTI_SELECT_SAMPLE_ITEMS, (item) => item.id));
+    }
     if (mode === 'controlled') {
       if (value !== undefined) args[controlled] = value;
       delete args[uncontrolled];
     } else {
       delete args[controlled];
-      if (args[uncontrolled] === undefined && value !== undefined) args[uncontrolled] = value;
+      if ((args[uncontrolled] === undefined || family === 'SelectNative' && controlled === 'value' && sourceArgs.multiple && args[uncontrolled] === '') && value !== undefined) args[uncontrolled] = value;
     }
   }
   return args;
@@ -300,14 +311,19 @@ function setSelectedState(args, props, family, preserveExplicit) {
   if (props.has('selected') && canSupplyStateValue(args, props, 'selected', preserveExplicit)) return setControlledArg(args, props, 'selected', true);
   if (props.has('selectedIds')) {
     if (props.has('selectionMode')) args.selectionMode = 'single';
-    const selectedId = family === 'Tree'
+    const firstItem = ['GridList', 'ListBox'].includes(family)
+      ? (args.items ?? COLLECTION_SAMPLE_ITEMS)[0]
+      : undefined;
+    const selectedId = firstItem !== undefined
+      ? (typeof firstItem === 'string' ? firstItem : String(firstItem.id ?? firstItem.key ?? firstItem.value ?? 0)) || '0'
+      : family === 'Tree'
       ? 'src'
       : family === 'Table'
         ? 'ada'
         : family === 'ToggleButtonGroup'
           ? 'bold'
           : 'Melbourne';
-    if (canSupplyStateValue(args, props, 'selectedIds', preserveExplicit)) return setControlledArg(args, props, 'selectedIds', [selectedId]);
+    if (canSupplyStateValue(args, props, 'selectedIds', preserveExplicit)) return setControlledArg(args, props, 'selectedIds', firstItem === undefined && ['GridList', 'ListBox'].includes(family) ? [] : [selectedId]);
     return undefined;
   }
   if (props.has('selectedId') && canSupplyStateValue(args, props, 'selectedId', preserveExplicit)) return setControlledArg(args, props, 'selectedId', 'Melbourne');
@@ -346,7 +362,7 @@ function stateIsSupported(binding, state, family) {
     case 'visible':
       return true;
     case 'disabled':
-      return props.has('disabled');
+      return props.has('disabled') || family === 'Breadcrumbs' && props.has('items');
     case 'invalid':
       return props.has('invalid');
     case 'readonly':
@@ -363,7 +379,7 @@ function stateIsSupported(binding, state, family) {
     case 'unchecked':
       return props.has('checked');
     case 'indeterminate':
-      return props.has('indeterminate') || family === 'ProgressBar';
+      return props.has('indeterminate') || family === 'ProgressBar' || family === 'ProgressCircle';
     case 'expanded':
       return props.has('expanded') || props.has('expandedIds');
     case 'collapsed':
@@ -391,7 +407,17 @@ function stateIsSupported(binding, state, family) {
       return family === 'Meter' && props.has('value');
     case 'progress':
     case 'complete':
-      return family === 'ProgressBar' && props.has('value');
+      return ['ProgressBar', 'ProgressCircle'].includes(family) && props.has('value');
+    case 'zero':
+    case 'partial':
+      return family === 'ProgressCircle' && props.has('value');
+    case 'sm':
+    case 'md':
+    case 'lg':
+      return family === 'ProgressCircle' && props.has('size');
+    case 'light':
+    case 'dark':
+      return family === 'ColorModeToggle' && props.has('mode');
     case 'filled':
       return family === 'SearchField' && props.has('value');
     case 'empty':
@@ -405,7 +431,7 @@ function stateIsSupported(binding, state, family) {
     case 'timed':
       return props.has('duration');
     case 'current':
-      return props.has('current');
+      return props.has('current') || family === 'Breadcrumbs' && props.has('items');
     case 'removable':
       return family === 'TagGroup';
     // Pressed and dismissed are transient lifecycle results without a MuxUI
@@ -426,10 +452,8 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'disabled':
       if (props.has('disabled') && canSupplyStateValue(args, props, 'disabled', preserveExplicit)) args.disabled = true;
       if (family === 'Breadcrumbs' && props.has('items')) {
-        args.items = [
-          { id: 'home', label: 'Home', href: '#', disabled: true },
-          { id: 'docs', label: 'Docs', href: '#' },
-        ];
+        args.items = (args.items ?? [{ id: 'home', label: 'Home', href: '#' }, { id: 'docs', label: 'Docs', href: '#' }])
+          .map((item, index) => ({ ...(typeof item === 'string' ? { label: item, href: '#' } : item), ...(index === 0 ? { disabled: true } : {}) }));
       }
       break;
     case 'invalid':
@@ -472,6 +496,7 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'indeterminate':
       if (props.has('indeterminate')) args.indeterminate = true;
       else if (family === 'ProgressBar' && props.has('value')) args.value = undefined;
+      else if (family === 'ProgressCircle' && props.has('value')) args.value = null;
       break;
     case 'expanded':
       if (props.has('expanded')) setControlledArg(args, props, 'expanded', true);
@@ -514,7 +539,22 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       if (family === 'ProgressBar' && props.has('value')) setControlledArg(args, props, 'value', 64);
       break;
     case 'complete':
-      if (family === 'ProgressBar' && props.has('value')) setControlledArg(args, props, 'value', args.maxValue ?? 100);
+      if (['ProgressBar', 'ProgressCircle'].includes(family) && props.has('value')) setControlledArg(args, props, 'value', args.maxValue ?? 100);
+      break;
+    case 'zero':
+      if (family === 'ProgressCircle') args.value = args.minValue ?? 0;
+      break;
+    case 'partial':
+      if (family === 'ProgressCircle') args.value = ((args.minValue ?? 0) + (args.maxValue ?? 100)) / 2;
+      break;
+    case 'sm':
+    case 'md':
+    case 'lg':
+      if (family === 'ProgressCircle') args.size = normalizedState;
+      break;
+    case 'light':
+    case 'dark':
+      if (family === 'ColorModeToggle') setControlledArg(args, props, 'mode', normalizedState);
       break;
     case 'filled':
       if (props.has('value') && (typeof args.value === 'string' || args.value === undefined)) {
@@ -642,6 +682,9 @@ function DataDiffPreview(args) {
     onApply: (ids) => { args.onApply?.(ids); setResult(`Requested locally: ${ids.join(', ')}`); },
   }), result && e('p', { role: 'status' }, result));
 }
+const COLLECTION_SAMPLE_ITEMS = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }];
+const MULTI_SELECT_SAMPLE_ITEMS = [{ id: 'email', label: 'Email' }, { id: 'sms', label: 'SMS' }];
+const TEXT_EDITOR_SAMPLE_DOCUMENT = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Mux UI' }] }] };
 
 const ADAPTERS = {
   PromptComposer: (args) => e(PromptComposerPreview, args),
@@ -720,8 +763,8 @@ const ADAPTERS = {
   ColorSwatchPicker: (args) => e(MuxUI.ColorSwatchPicker, { ...args, 'aria-label': fallback(args['aria-label'], 'Palette'), items: ownArg(args, 'items', fallback(args.items, [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }])) }),
   ColorWheel: (args) => e(MuxUI.ColorWheel, { ...args, 'aria-label': fallback(args['aria-label'], 'Hue'), outerRadius: args.outerRadius ?? 96, innerRadius: args.innerRadius ?? 64, defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
   ComboBox: (args) => e(MuxUI.ComboBox, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
-  GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], 'Grid'), items: ownArg(args, 'items', fallback(args.items, ['One', 'Two'])) }),
-  ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], 'List'), items: ownArg(args, 'items', fallback(args.items, ['One', 'Two'])) }),
+  GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], 'Grid'), items: ownArg(args, 'items', COLLECTION_SAMPLE_ITEMS) }),
+  ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], 'List'), items: ownArg(args, 'items', COLLECTION_SAMPLE_ITEMS) }),
   Menu: (args) => e(MuxUI.Menu, { ...args, 'aria-label': fallback(args['aria-label'], 'Actions'), items: ownArg(args, 'items', fallback(args.items, ['Save', 'Delete'])) }),
   RadioGroup: (args) => e(MuxUI.RadioGroup, { ...args, label: fallback(args.label, 'Size'), options: ownArg(args, 'options', fallback(args.options, [{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }])) }),
   RangeCalendar: (args) => e(MuxUI.RangeCalendar, {
@@ -884,7 +927,7 @@ Object.assign(ADAPTERS, {
     e(MuxUI.Input.Description, null, 'Your display name'),
     e(MuxUI.Input.Error, null, args.invalid ? 'Name is invalid' : null),
   ),
-  MultiSelect: (args) => e(MuxUI.MultiSelect.Root, { ...args, label: 'Notifications', items: [{ id: 'email', label: 'Email' }, { id: 'sms', label: 'SMS' }] },
+  MultiSelect: (args) => e(MuxUI.MultiSelect.Root, { ...args, label: 'Notifications', items: MULTI_SELECT_SAMPLE_ITEMS },
     e(MuxUI.MultiSelect.Item, { id: 'email' }, 'Email'),
     e(MuxUI.MultiSelect.Item, { id: 'sms' }, 'SMS'),
     e(MuxUI.MultiSelect.Footer, null, '2 options'),
@@ -899,7 +942,7 @@ Object.assign(ADAPTERS, {
     e(MuxUI.PaymentInput.Description, null, 'Secure payment'),
     e(MuxUI.PaymentInput.Error, null, args.invalid ? 'Invalid card' : null),
   ),
-  ProgressCircle: (args) => e(MuxUI.ProgressCircle.Root, { ...args, value: args.value ?? 64, label: 'Upload progress' },
+  ProgressCircle: (args) => e(MuxUI.ProgressCircle.Root, { ...args, label: 'Upload progress' },
     e(MuxUI.ProgressCircle.Track),
     e(MuxUI.ProgressCircle.Label, null, 'Upload'),
     e(MuxUI.ProgressCircle.Value),
@@ -967,7 +1010,7 @@ Object.assign(ADAPTERS, {
     ...args,
     size: args.size === 'xs' && ['display', 'heading', 'title'].includes(args.variant) ? 'sm' : args.size,
   }, 'Manage your profile details.'),
-  Resizable: (args) => e(MuxUI.Resizable, { ...args, defaultSizes: args.defaultSizes ?? { main: 60, side: 40 } },
+  Resizable: ({ defaultSizes, ...args }) => e(MuxUI.Resizable, { ...args, ...(args.sizes === undefined ? { defaultSizes: defaultSizes ?? { main: 60, side: 40 } } : {}) },
     e(MuxUI.ResizablePanel, { id: 'main' }, 'Main'),
     e(MuxUI.ResizableHandle, { id: 'main-side', before: 'main', after: 'side', 'aria-label': 'Resize panels' }),
     e(MuxUI.ResizablePanel, { id: 'side' }, 'Side'),
@@ -975,7 +1018,7 @@ Object.assign(ADAPTERS, {
   SelectNative: (args) => e(MuxUI.SelectNative, {
     ...args,
     label: args.label ?? 'Choose a saved panel',
-    defaultValue: args.value === undefined ? (args.defaultValue ?? '') : undefined,
+    defaultValue: args.value === undefined ? (args.defaultValue ?? (args.multiple ? [] : '')) : undefined,
     errorMessage: args.invalid ? (args.errorMessage ?? 'Choose a panel') : args.errorMessage,
   },
   e('option', { value: '' }, 'Choose a panel'),
@@ -993,7 +1036,7 @@ Object.assign(ADAPTERS, {
     ),
   ),
   Markdown: (args) => e(Markdown, { ...args, source: args.source ?? '## Mux UI\n\nA **bounded** example.' }),
-  TextEditor: (args) => e(TextEditor, { ...args, label: fallback(args.label, 'Note'), defaultValue: args.defaultValue ?? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Mux UI' }] }] } }),
+  TextEditor: ({ defaultValue, ...args }) => e(TextEditor, { ...args, label: fallback(args.label, 'Note'), ...(args.value === undefined ? { defaultValue: defaultValue ?? TEXT_EDITOR_SAMPLE_DOCUMENT } : {}) }),
 });
 
 export const adapterNames = Object.freeze(Object.keys(ADAPTERS));
@@ -1244,12 +1287,19 @@ function StateVariant({ family, state, args, available }) {
 
 export function renderStateCoverage(record, args = storyArgsForBinding(record.binding, 'states', record.family)) {
   const variants = stateCoverageForBinding(record.binding, record.family);
+  const defaults = storyArgsForBinding(record.binding, 'states', record.family);
+  // These specimens need binding defaults removed so their named state can initialize them.
+  // Changed controls still override the state. Other families retain their existing precedence.
+  const overrides = ['ColorModeToggle', 'GridList', 'ListBox', 'ProgressCircle', 'Separator'].includes(record.family)
+    ? Object.fromEntries(Object.entries(args).filter(([name, value]) =>
+      !Object.hasOwn(defaults, name) || serializableEventValue(value) !== serializableEventValue(defaults[name])))
+    : args;
   const stateMatrix = e('div', { className: 'muxui-storybook-states' }, variants.map(({ name }) => e(StateVariant, {
     key: name,
     family: record.family,
     state: name,
     available: stateIsSupported(record.binding, name, record.family),
-    args: stateArgsForBinding(record.binding, name, record.family, args),
+    args: stateArgsForBinding(record.binding, name, record.family, overrides),
   })));
   const lifecycleStates = variants.map(({ name }) => name).filter((name) => LIFECYCLE_ATTRIBUTES[name]);
   return lifecycleStates.length > 0
@@ -1333,13 +1383,19 @@ function eventForControlledProp(controlled, family) {
   if (controlled === 'open') return 'openChange';
   if (controlled === 'collapsed') return 'collapsedChange';
   if (controlled === 'expanded' || controlled === 'expandedIds') return 'expandedChange';
-  if (controlled === 'selectedIds') return 'selectionChange';
+  if (controlled === 'selectedIds' || controlled === 'selectedKeys') return 'selectionChange';
+  if (controlled === 'mode') return 'modeChange';
+  if (controlled === 'sizes') return 'sizesChange';
   if (controlled === 'selectedId') return 'select';
   return 'change';
 }
 
-function controlledValueFromEvent(controlled, payload) {
+function controlledValueFromEvent(controlled, payload, family) {
   const value = payload[0];
+  if (family === 'SelectNative' && controlled === 'value') {
+    const select = value.currentTarget;
+    return select.multiple ? Array.from(select.selectedOptions, (option) => option.value) : select.value;
+  }
   if (controlled === 'selectedId') {
     if (value && typeof value === 'object') return value.id ?? value.value;
   }
@@ -1347,7 +1403,9 @@ function controlledValueFromEvent(controlled, payload) {
 }
 
 function ControlledHarness({ record, args }) {
-  const [values, setValues] = React.useState(() => controlledStoryArgsForBinding(record.binding, record.family, args));
+  const theme = React.useContext(StorybookThemeContext);
+  const [values, setValues] = React.useState(() => controlledStoryArgsForBinding(record.binding, record.family,
+    record.family === 'ColorModeToggle' ? { ...args, mode: args.mode ?? args.defaultMode ?? theme?.scheme ?? 'light' } : args));
   const controlledPairs = controlledDefaultPairsForBinding(record.binding);
   const eventArgs = { ...values };
   for (const { controlled } of controlledPairs) {
@@ -1356,7 +1414,7 @@ function ControlledHarness({ record, args }) {
     const supplied = args[prop];
     eventArgs[prop] = (...payload) => {
       supplied?.(...payload);
-      const next = controlledValueFromEvent(controlled, payload);
+      const next = controlledValueFromEvent(controlled, payload, record.family);
       if (next !== undefined) setValues((previous) => ({ ...previous, [controlled]: next }));
     };
   }
@@ -1371,25 +1429,31 @@ function ControlledHarness({ record, args }) {
     e(HarnessStatus, {
       label: 'Value',
       note: controlledPairs.length ? 'Updated from the component callback.' : 'This family has no controlled/default pair.',
-      children: e('output', { 'aria-label': `${record.family} controlled values`, 'data-muxui-controlled-values': record.family }, JSON.stringify(valuesToShow)),
+      children: e('output', { 'aria-label': `${record.family} controlled values`, 'data-muxui-controlled-values': record.family }, serializableEventValue(valuesToShow)),
     }),
   );
 }
 
 function UncontrolledHarness({ record, args }) {
+  const theme = React.useContext(StorybookThemeContext);
+  const [initialScheme] = React.useState(theme?.scheme ?? 'light');
+  // Keep the initial host default; explicit keys retain restoration across host mode changes.
+  const specimenArgs = record.family === 'ColorModeToggle'
+    ? { ...args, defaultMode: args.defaultMode ?? initialScheme, storageKey: args.storageKey ?? `muxui-storybook-uncontrolled-color-mode-${initialScheme}`, syncWithToolbar: false }
+    : record.family === 'SelectNative' ? uncontrolledStoryArgsForBinding(record.binding, record.family, args) : args;
   const uncontrolledPairs = controlledDefaultPairsForBinding(record.binding);
-  const valuesToShow = Object.fromEntries(uncontrolledPairs.map(({ controlled, uncontrolled }) => [uncontrolled, args[uncontrolled]]));
+  const valuesToShow = Object.fromEntries(uncontrolledPairs.map(({ uncontrolled }) => [uncontrolled, specimenArgs[uncontrolled]]));
   return e('div', {
     className: 'muxui-storybook-proof',
     role: 'group',
     'aria-label': 'Uncontrolled mode',
     'data-muxui-storybook-proof': 'uncontrolled',
   },
-    renderFamily(record.family, args),
+    renderFamily(record.family, specimenArgs),
     e(HarnessStatus, {
       label: 'Default',
       note: uncontrolledPairs.length ? 'Initial default. The component manages subsequent changes.' : 'This family has no controlled/default pair.',
-      children: e('output', { 'aria-label': `${record.family} uncontrolled defaults`, 'data-muxui-uncontrolled-values': record.family }, JSON.stringify(valuesToShow)),
+      children: e('output', { 'aria-label': `${record.family} uncontrolled defaults`, 'data-muxui-uncontrolled-values': record.family }, serializableEventValue(valuesToShow)),
     }),
   );
 }
@@ -2165,18 +2229,25 @@ export function createAnatomyStory(record) {
 }
 
 export function createControlledStory(record) {
+  const args = controlledStoryArgsForBinding(record.binding, record.family);
+  if (record.family === 'ColorModeToggle') delete args.mode;
   return {
     name: 'Controlled',
-    args: controlledStoryArgsForBinding(record.binding, record.family),
+    args,
     argTypes: argTypesForBinding(record.binding),
     render: (args) => e(ControlledHarness, { record, args }),
   };
 }
 
 export function createUncontrolledStory(record) {
+  const args = uncontrolledStoryArgsForBinding(record.binding, record.family);
+  if (record.family === 'ColorModeToggle') {
+    delete args.defaultMode;
+    delete args.storageKey;
+  }
   return {
     name: 'Uncontrolled',
-    args: uncontrolledStoryArgsForBinding(record.binding, record.family),
+    args,
     argTypes: argTypesForBinding(record.binding),
     render: (args) => e(UncontrolledHarness, { record, args }),
   };
