@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
@@ -50,7 +50,8 @@ function listComponents() {
 
 const manifest = readJson('packages/react/package.json');
 const descriptor = readJson('packages/react/generated/descriptor.json');
-const supplemental = readJson('catalog/react-r1-6/supplemental-components.json');
+// The generated contract carries two marker comment lines ahead of its JSON; it names the runtime file of every family.
+const contract = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
 const guideIds = new Set();
 {
 	let cursor;
@@ -180,19 +181,31 @@ for (const component of listComponents()) {
 		assert(container !== undefined && JSON.stringify(codeTexts(container)) === JSON.stringify(expected), `${route} ${name} differs from the catalog.`);
 	}
 	const requirements = binding.tokenRecipe.requirements;
-	const renderedTokens = facts(styling, 'tokenRecipe.requirements').flatMap((list) => elements(list).filter((node) => node.tagName === 'li').map((item) => textContent(elements(item).find((node) => node.tagName === 'code'))));
-	assert(JSON.stringify([...renderedTokens].sort()) === JSON.stringify(requirements.map(({ token }) => token).sort()), `${route} token requirements differ from the recipe.`);
+	const annotation = ({ requirement, profiles }) => requirement === 'required' ? null : [requirement, ...(profiles ?? [])].join(', ');
+	const tokenSource = facts(styling, 'tokenRecipe.source');
+	assert(tokenSource.length === 1 && textContent(tokenSource[0]) === `Token source: ${binding.tokenRecipe.source}`, `${route} token source differs from the recipe.`);
+	// Each token row carries its path and, unless it is plainly required, its requirement and profiles.
+	const renderedTokens = facts(styling, 'tokenRecipe.requirements').flatMap((list) => elements(list).filter((node) => node.tagName === 'li').map((item) => {
+		const note = elements(item).find((node) => node.tagName === 'span' && classNames(node).has('token-requirement'));
+		return [textContent(elements(item).find((node) => node.tagName === 'code')), note === undefined ? null : textContent(note)];
+	}));
+	const byToken = ([left], [right]) => left < right ? -1 : left > right ? 1 : 0;
+	assert(
+		JSON.stringify([...renderedTokens].sort(byToken)) === JSON.stringify(requirements.map((entry) => [entry.token, annotation(entry)]).sort(byToken)),
+		`${route} token requirements or their annotations differ from the recipe.`,
+	);
 	const groupLabels = elements(styling).filter((node) => node.tagName === 'h4' && classNames(node).has('token-group')).map((node) => textContent(node));
 	const expectedGroups = requirements.length > tokenGroupThreshold ? [...new Set(requirements.map(({ token }) => token.split('.').slice(0, 2).join('.')))] : [];
 	assert(JSON.stringify(groupLabels) === JSON.stringify(expectedGroups), `${route} token groups differ from the token prefixes.`);
 	assert(!/\.muxui-|data-muxui|\[data-/u.test(textContent(styling)), `${route} anatomy and styling shows a class name or selector.`);
 
-	// Sources: the record, the canonical examples, the declared runtime file, and the package manifest.
-	const runtime = supplemental.components.find((entry) => entry.slug === slug)?.runtimeSource;
+	// Sources: the record, the canonical examples, the family's runtime file, and the package manifest.
+	const runtime = contract.components.find((entry) => entry.slug === slug)?.source;
+	assert(runtime !== undefined, `${route} has no runtime source in the renderer contract.`);
 	const expectedSources = [
 		artifact.source.record,
 		...examples.map((example) => example.source.content),
-		...(runtime === undefined ? [] : [runtime]),
+		runtime,
 		'packages/react/package.json',
 	];
 	const links = elements(section('sources')).filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href'));
@@ -207,4 +220,20 @@ for (const component of listComponents()) {
 	routes += 1;
 }
 
-console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values.`);
+// A usage guide that names no family is shared guidance. It must have its own Docs page, listed in the sidebar like the other shared guides.
+const familyGuideIds = new Set(listComponents().map(({ id }) => `muxui:guide:${id.slice(id.lastIndexOf(':') + 1)}-usage`));
+const sharedUsageGuides = [...guideIds].filter((id) => id.endsWith('-usage') && !familyGuideIds.has(id));
+const docsPages = readdirSync(docsDist, { withFileTypes: true })
+	.filter((entry) => entry.isDirectory() && existsSync(resolve(docsDist, entry.name, 'index.html')))
+	.map((entry) => ({ route: `/${entry.name}/`, root: parse(readFileSync(resolve(docsDist, entry.name, 'index.html'), 'utf8')) }));
+for (const id of sharedUsageGuides) {
+	const pages = docsPages.filter(({ root }) => elements(root).some((node) => attributeValue(node, 'data-guide-id') === id));
+	assert(pages.length === 1, `The shared usage guide ${id} is rendered by ${pages.length} Docs pages, expected one. Give it a route in [guide].astro and an entry in the sidebar.`);
+	const { route, root } = pages[0];
+	assert(
+		elements(root).some((node) => node.tagName === 'a' && attributeValue(node, 'href') === route && attributeValue(node, 'aria-current') === 'page'),
+		`The shared usage guide ${id} has no sidebar entry at ${route}.`,
+	);
+}
+
+console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);

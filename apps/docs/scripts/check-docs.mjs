@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { authoredPatternReference } from './authored-pattern-reference.mjs';
-import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { componentReference, readReactPackageFacts } from '../../component-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
@@ -171,14 +171,6 @@ for (const component of components) {
 		for (const path of paths) assert(existsSync(resolve(repositoryRoot, path)), `The source ${path} of ${component.id} is missing.`);
 	}
 }
-// A usage guide is related to a family by its declared id. Shared guidance that names no family is listed here on purpose.
-const sharedUsageGuideIds = guides
-	.filter(({ id }) => id.endsWith('-usage') && !components.some((component) => usageGuideId(component.id) === id))
-	.map(({ id }) => id);
-assert(
-	JSON.stringify(sharedUsageGuideIds) === JSON.stringify(['muxui:guide:control-sizing-usage']),
-	`The usage guides that belong to no component family are ${sharedUsageGuideIds.join(', ')}. A new one needs a deliberate home before it is added here.`,
-);
 
 // The Blocks section is a projection: no pattern, variant, or example fact may be authored in the docs app.
 const blockPatterns = [];

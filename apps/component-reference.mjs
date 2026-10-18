@@ -12,8 +12,8 @@ import { resolve } from 'node:path';
 
 const manifestPath = 'packages/react/package.json';
 const descriptorPath = 'packages/react/generated/descriptor.json';
-const supplementalPath = 'catalog/react-r1-6/supplemental-components.json';
-const supplementalSchema = 'muxui-react-r1-6-supplemental-components-v2';
+const contractPath = 'packages/react/generated/r1-6-contract.json';
+const contractSchema = 'muxui-react-r1-6-contract-v1';
 const stylesheetSubpath = './styles.css';
 /** More token requirements than this are grouped by their first two path segments. */
 const tokenGroupThreshold = 8;
@@ -52,13 +52,13 @@ const tokenGroupThreshold = 8;
  * @property {string} manifestPath The package manifest the import specifiers are verified against.
  * @property {string} stylesheet The import specifier of the package stylesheet.
  * @property {ReadonlyMap<string, { export: string, specifier: string }>} bindings By binding ref, such as `muxui:component:button#web.react`.
- * @property {ReadonlyMap<string, string>} runtimeSources The declared runtime file of each supplemental family, by slug.
+ * @property {ReadonlyMap<string, string>} runtimeSources The runtime file of every family, by slug.
  */
 
 /**
  * Read the React package facts imports and sources need: the renderer descriptor
- * (generated), the package manifest, and the supplemental mapping. Fails when
- * the three disagree.
+ * and the renderer contract (both generated), and the package manifest. Fails
+ * when they disagree.
  * @param {string} repositoryRoot
  * @returns {ReactPackageFacts}
  */
@@ -67,12 +67,13 @@ export function readReactPackageFacts(repositoryRoot) {
   const readJson = (path) => JSON.parse(readFileSync(resolve(repositoryRoot, path), 'utf8'));
   const manifest = readJson(manifestPath);
   const descriptor = readJson(descriptorPath);
-  const supplemental = readJson(supplementalPath);
+  // The contract is generated with two marker comment lines ahead of its JSON.
+  const contract = JSON.parse(readFileSync(resolve(repositoryRoot, contractPath), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
   if (descriptor.package !== manifest.name) {
     throw new Error(`The renderer descriptor is for ${descriptor.package}, not ${manifest.name}.`);
   }
-  if (supplemental.schema !== supplementalSchema) {
-    throw new Error(`${supplementalPath} is not ${supplementalSchema}.`);
+  if (contract.schema !== contractSchema) {
+    throw new Error(`${contractPath} is not ${contractSchema}.`);
   }
   /** @param {string} subpath */
   const exported = (subpath) => Object.hasOwn(manifest.exports, subpath);
@@ -87,7 +88,7 @@ export function readReactPackageFacts(repositoryRoot) {
       if (!exported(binding.module)) throw new Error(`${binding.binding} imports from ${binding.module}, which ${manifestPath} does not export.`);
       return [binding.binding, { export: binding.export, specifier: specifier(binding.module) }];
     })),
-    runtimeSources: new Map(supplemental.components.map((/** @type {{ slug: string, runtimeSource: string }} */ component) => [component.slug, component.runtimeSource])),
+    runtimeSources: new Map(contract.components.map((/** @type {{ slug: string, source: string }} */ component) => [component.slug, component.source])),
   });
 }
 
@@ -126,6 +127,7 @@ export function componentReference({ artifact, examples, packageFacts }) {
   if (exported === undefined) throw new Error(`The renderer descriptor has no export for ${ref}.`);
   const slug = artifact.id.slice(artifact.id.lastIndexOf(':') + 1);
   const runtimeSource = packageFacts.runtimeSources.get(slug);
+  if (runtimeSource === undefined) throw new Error(`The renderer contract has no runtime source for ${artifact.id}.`);
   const obligations = artifact.accessibility.obligations;
   const bindingObligations = binding.accessibility ?? [];
 
@@ -157,7 +159,7 @@ export function componentReference({ artifact, examples, packageFacts }) {
     sources: [
       { label: 'Component record', paths: [artifact.source.record] },
       { label: 'Examples', paths: examples.map(({ source }) => source.content) },
-      ...(runtimeSource === undefined ? [] : [{ label: 'Runtime', paths: [runtimeSource] }]),
+      { label: 'Runtime', paths: [runtimeSource] },
       { label: 'Package imports', paths: [packageFacts.manifestPath] },
     ],
   });

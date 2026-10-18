@@ -22,7 +22,7 @@ const record = ({ requirements = [requirement('component.card.background')], obl
     },
   },
 });
-const packageFacts = (runtimeSources = []) => ({
+const packageFacts = (runtimeSources = [['card', 'packages/react/src/components.mjs']]) => ({
   packageName: '@muxui/react',
   manifestPath: 'packages/react/package.json',
   stylesheet: '@muxui/react/styles.css',
@@ -40,13 +40,17 @@ test('imports name the descriptor export, its module specifier and the package s
   );
 });
 
-test('usage keeps every declared entry and sources add a runtime file only where one is declared', () => {
+test('usage keeps every declared entry and sources always name the runtime file', () => {
   const intent = { useWhen: ['Acting', 'Grouping'], avoidWhen: ['Navigation', 'For primary text'] };
-  const plain = componentReference({ artifact: record({ intent }), examples, packageFacts: packageFacts() });
-  assert.deepEqual(plain.usage, intent);
-  assert.deepEqual(plain.sources.map(({ label }) => label), ['Component record', 'Examples', 'Package imports']);
-  const supplemental = componentReference({ artifact: record(), examples, packageFacts: packageFacts([['card', 'packages/react/src/supplemental/index.mjs']]) });
-  assert.deepEqual(supplemental.sources.find(({ label }) => label === 'Runtime')?.paths, ['packages/react/src/supplemental/index.mjs']);
+  const reference = componentReference({ artifact: record({ intent }), examples, packageFacts: packageFacts() });
+  assert.deepEqual(reference.usage, intent);
+  assert.deepEqual(reference.sources, [
+    { label: 'Component record', paths: ['catalog/components/card/artifact.json'] },
+    { label: 'Examples', paths: ['catalog/components/card/examples/react/basic.tsx'] },
+    { label: 'Runtime', paths: ['packages/react/src/components.mjs'] },
+    { label: 'Package imports', paths: ['packages/react/package.json'] },
+  ]);
+  assert.throws(() => componentReference({ artifact: record(), examples, packageFacts: packageFacts([]) }), /no runtime source for muxui:component:card/u);
 });
 
 test('the React binding accessibility list shows only when it differs from the component obligations', () => {
@@ -72,7 +76,7 @@ test('usage guides are related by the declared id', () => {
   assert.equal(usageGuideId('muxui:component:icon-button'), 'muxui:guide:icon-button-usage');
 });
 
-test('package facts verify the descriptor, supplemental mapping and stylesheet against the manifest', () => {
+test('package facts verify the descriptor, renderer contract and stylesheet against the manifest', () => {
   const root = mkdtempSync(resolve(tmpdir(), 'muxui-component-reference-'));
   try {
     const write = (path, value) => {
@@ -84,11 +88,13 @@ test('package facts verify the descriptor, supplemental mapping and stylesheet a
       { binding: 'muxui:component:card#web.react', export: 'Card', module: '.' },
       { binding: 'muxui:component:markdown#web.react', export: 'Markdown', module: './markdown' },
     ] };
-    const supplemental = { schema: 'muxui-react-r1-6-supplemental-components-v2', components: [{ slug: 'markdown', runtimeSource: 'packages/react/src/markdown/index.mjs' }] };
+    const contract = { schema: 'muxui-react-r1-6-contract-v1', components: [{ slug: 'markdown', source: 'packages/react/src/markdown/index.mjs' }] };
     const files = (overrides = {}) => {
       write('packages/react/package.json', overrides.manifest ?? manifest);
       write('packages/react/generated/descriptor.json', overrides.descriptor ?? descriptor);
-      write('catalog/react-r1-6/supplemental-components.json', overrides.supplemental ?? supplemental);
+      // The generated contract carries two marker comment lines ahead of its JSON.
+      mkdirSync(resolve(root, 'packages/react/generated'), { recursive: true });
+      writeFileSync(resolve(root, 'packages/react/generated/r1-6-contract.json'), `// @generated-from: x\n// @generated-content-sha256: y\n${JSON.stringify(overrides.contract ?? contract)}`);
     };
     files();
     const facts = readReactPackageFacts(root);
@@ -98,8 +104,8 @@ test('package facts verify the descriptor, supplemental mapping and stylesheet a
     assert.throws(() => readReactPackageFacts(root), /imports from \.\/markdown, which packages\/react\/package\.json does not export/u);
     files({ manifest: { ...manifest, exports: { '.': {}, './markdown': {} } } });
     assert.throws(() => readReactPackageFacts(root), /does not export \.\/styles\.css/u);
-    files({ supplemental: { ...supplemental, schema: 'older' } });
-    assert.throws(() => readReactPackageFacts(root), /is not muxui-react-r1-6-supplemental-components-v2/u);
+    files({ contract: { ...contract, schema: 'older' } });
+    assert.throws(() => readReactPackageFacts(root), /is not muxui-react-r1-6-contract-v1/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
