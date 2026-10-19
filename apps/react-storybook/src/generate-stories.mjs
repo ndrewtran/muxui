@@ -8,6 +8,7 @@ import { blockStoryExports, selectionKeyOwners } from './block-pages.mjs';
 import { adapterNames } from './storybook-factory.mjs';
 import { componentCategory } from '../../component-navigation.mjs';
 import { componentRecordCategory } from './component-categories.mjs';
+import { readComponentDocs } from './component-docs.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const descriptorPath = resolve(repositoryRoot, 'packages/react/generated/descriptor.json');
@@ -201,6 +202,7 @@ function storyFilename(record) {
 }
 
 function storySource(record) {
+  const docs = componentDocs.get(record.binding.binding.slice(0, record.binding.binding.indexOf('#')));
   const canonicalExample = canonicalStoryExamples.get(record.family);
   const dedicatedImport = record.binding.module === './text-editor'
     ? "\nimport { TextEditor as TextEditorSubpath } from '@muxui/react/text-editor';"
@@ -245,9 +247,11 @@ export default {
       states: binding.states,
       controlled: controlledDefaultPairsForBinding(binding),
     },
+    // The catalog facts the Docs page projects (see .storybook/component-docs-page.mjs).
+    muxuiReference: ${JSON.stringify(docs, null, 2).replaceAll('\n', '\n    ')},
     docs: {
       description: {
-        component: 'Private development showcase for the Mux UI-owned ${record.family} family.',
+        component: ${stringLiteral(docs.summary)},
       },
     },
   },
@@ -304,6 +308,17 @@ try {
 
 const blockStoryId = (page) => `muxui-block-${page.slug}`;
 const blockStoryFilename = (page) => `block-${page.slug}.stories.mjs`;
+
+// The Docs page of each family shows its catalog facts, with the Block pages that use it linked by their first variant story.
+const componentDocs = await readComponentDocs({
+  repositoryRoot,
+  componentIds: records.map(({ binding }) => binding.binding.slice(0, binding.binding.indexOf('#'))),
+  blocks: blockPages.map((page) => ({
+    pattern: page.pattern,
+    family: page.family,
+    storyId: toId(blockStoryId(page), storyNameFromExport(page.variants[0].exportName)),
+  })),
+});
 
 function blockStorySource(page) {
   return `import React from 'react';

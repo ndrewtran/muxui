@@ -478,11 +478,50 @@ test('the shared component navigation helper selects the docs and every Storyboo
   assert.deepEqual(result.storyRuns[0].families, records.map(({ family }) => family));
 });
 
-test('the shared component reference helper selects the docs and no Storybook family', async () => {
+test('the shared component reference helper selects the docs and every Storybook family', async () => {
   const result = await plan(['apps/component-reference.mjs']);
   assert.equal(result.docs, true);
   assert.equal(result.scale || result.catalog || result.tokens || result.reactTheme, false);
-  assert.deepEqual(result.storyRuns, []);
+  assert.deepEqual(result.storyRuns.map(({ proof }) => proof), ['component']);
+  assert.deepEqual(result.storyRuns[0].families, records.map(({ family }) => family));
+});
+
+test('the inputs a Storybook Docs page embeds plan generation and the Docs page test, not the browser audit', async () => {
+  const docsTest = [{ file: 'test/component-docs.test.mjs' }];
+  const embedded = [
+    'catalog/components/tree/artifact.json',
+    'catalog/components/tree/examples/react/basic.tsx',
+    'catalog/components/tree/examples/react/basic.example.json',
+    sizingExamplePath,
+    'catalog/guides/number-field-usage.md',
+    'catalog/guides/number-field-usage.json',
+    'catalog/patterns/poster-grid/artifact.json',
+    'apps/component-reference.mjs',
+  ];
+  for (const path of embedded) {
+    const result = await plan([path]);
+    assert.equal(result.storyTooling, true, path);
+    assert.deepEqual(result.storyUnitTests, docsTest, path);
+    const selection = storybookSelection(result, { packages, environment: {}, pageIndex });
+    assert.equal(selection.full, false, path);
+    const commands = selection.commands.map(({ args }) => args.join(' '));
+    assert.ok(commands.includes('--filter @muxui/react-storybook run generate:check'), path);
+    assert.ok(commands.includes('--filter @muxui/react-storybook exec node --test test/component-docs.test.mjs'), path);
+  }
+
+  // A guide with no family, a shared guide and a pattern's example record are not embedded.
+  for (const path of ['catalog/guides/control-sizing-usage.md', 'catalog/guides/accessibility.md', 'catalog/patterns/poster-grid/examples/react/css-grid.example.json']) {
+    const result = await plan([path]);
+    assert.equal(result.storyTooling, false, path);
+    assert.deepEqual(result.storyUnitTests, [], path);
+  }
+
+  // Adding or removing a pattern entry changes which components list a Block.
+  const manifest = (slugs) => JSON.stringify({ records: slugs.map((slug) => ({ family: 'pattern', path: `catalog/patterns/${slug}/artifact.json` })) });
+  const added = await plan(['packages/catalog/catalog-sources.json'], {
+    textSnapshots: { 'packages/catalog/catalog-sources.json': { before: manifest(['poster-grid']), after: manifest(['poster-grid', 'task-filters']) } },
+  });
+  assert.deepEqual(added.storyUnitTests.filter(({ file }) => file === 'test/component-docs.test.mjs'), docsTest);
 });
 
 test('Scale, Starlight docs, and CI policy edits stay in their independent owner scopes', async () => {
@@ -1961,7 +2000,7 @@ test('mixed proofs keep one command each with their own page selection', async (
   const selection = storybookSelection(result, { packages, environment: {}, pageIndex });
 
   assert.equal(selection.full, false);
-  assert.deepEqual(selection.commands.slice(1).map(({ env }) => [env.MUXUI_STORYBOOK_AUDIT_PROOF, env.MUXUI_STORYBOOK_FAMILIES, env.MUXUI_STORYBOOK_STORY_IDS]), [
+  assert.deepEqual(selection.commands.filter(({ env }) => env.MUXUI_STORYBOOK_AUDIT_PROOF).map(({ env }) => [env.MUXUI_STORYBOOK_AUDIT_PROOF, env.MUXUI_STORYBOOK_FAMILIES, env.MUXUI_STORYBOOK_STORY_IDS]), [
     ['component', 'Tree', undefined],
     ['story', 'NumberField', sizingStoryId],
     ['theme', 'MultiSelect,NumberField,TagSelect', undefined],
@@ -3167,6 +3206,12 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   assert.deepEqual(previewCss.storyUnitTests.map(({ file }) => file), ['test/storybook-colors.test.mjs', 'test/storybook.test.mjs']);
   assert.equal((await route('apps/react-storybook/.storybook/measure-palette.mjs')).storyUnitTests[0].file, 'test/storybook-colors.test.mjs');
   assert.equal((await route('apps/react-storybook/.storybook/manager.mjs')).storyChrome, true);
+  // The component Docs page and its catalog projection shape every family page, and run their own unit test.
+  for (const path of ['.storybook/component-docs-page.mjs', 'src/component-docs.mjs']) {
+    const docs = await route(`apps/react-storybook/${path}`);
+    assert.deepEqual(docs.storyFamilies, main.storyFamilies, path);
+    assert.deepEqual(docs.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }], path);
+  }
   assert.equal((await route('apps/react-storybook/.gitignore')).policy, true);
 });
 
@@ -3644,7 +3689,9 @@ test('pattern sources route to the catalog, tooling goldens, docs, and the packe
     // Patterns belong to @muxui/catalog, like guides: its dependents run their own checks.
     assert.deepEqual(result.packageChecks, ['@muxui/tooling'], path);
     assert.deepEqual(result.reactFamilies, [], path);
-    assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling, false, path);
+    assert.equal(result.tokens || result.reactTheme || result.reactPackageFull, false, path);
+    // Only the record names participants, so only it changes a component's Used in blocks.
+    assert.equal(result.storyTooling, path.endsWith('/artifact.json'), path);
     assert.equal(
       result.reasons[0],
       `${path} is a canonical pattern input; validate the catalog, its dense goldens, the docs that render it, and its Storybook pages and ${browserTest}`,

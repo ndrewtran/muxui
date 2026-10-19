@@ -108,7 +108,7 @@
   },
   "affectedPathConsumers": {
     "apps/component-navigation.mjs": ["@muxui/docs", "@muxui/react-storybook"],
-    "apps/component-reference.mjs": ["@muxui/docs"],
+    "apps/component-reference.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/scale/src/": ["@muxui/docs"]
   },
   "generationPrerequisites": {
@@ -210,12 +210,12 @@
       "packages/tooling/command-registry.json": "@muxui/tooling"
     },
     "documentationPrefixes": [
-      "apps/component-reference.mjs",
       "apps/docs/",
       "apps/scale/src/"
     ],
     "componentNavigationPaths": [
-      "apps/component-navigation.mjs"
+      "apps/component-navigation.mjs",
+      "apps/component-reference.mjs"
     ],
     "reactStylePrefixes": [
       "packages/react/src/styles/",
@@ -233,7 +233,9 @@
       "packages/tokens/package.json"
     ],
     "reactStorybookSharedPaths": [
+      "apps/react-storybook/src/component-docs.mjs",
       "apps/react-storybook/src/storybook-factory.mjs",
+      "apps/react-storybook/.storybook/component-docs-page.mjs",
       "apps/react-storybook/.storybook/main.mjs",
       "apps/react-storybook/.storybook/measure-palette.mjs",
       "apps/react-storybook/.storybook/preview.css",
