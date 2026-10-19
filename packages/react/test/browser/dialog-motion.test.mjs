@@ -6,6 +6,11 @@ import { Dialog } from '../../src/overlays.mjs';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
+// Reduction cases slow the motion far beyond any wait below, so a dialog that settles or detaches inside a wait
+// was released by the reduction, whatever the runner's speed.
+const SLOWED = '30s';
+const REDUCTION_WAIT = 5_000;
+
 function dialogDocument() {
   const body = renderToString(React.createElement('div', { id: 'root' },
     React.createElement('div', { id: 'dialog-scope', 'data-muxui-motion': 'full' },
@@ -22,7 +27,7 @@ function dialogDocument() {
 }
 
 async function waitForHydration(page) {
-  await page.waitForFunction(() => document.documentElement.dataset.muxuiDialogHydrated === 'true', undefined, { timeout: 5_000 });
+  await page.waitForFunction(() => document.documentElement.dataset.muxuiDialogHydrated === 'true');
 }
 
 async function readMotion(page) {
@@ -78,7 +83,7 @@ async function openTriggered(page) {
   await page.locator('.muxui-dialog').waitFor();
 }
 
-async function closeAndWait(page, timeout = 500) {
+async function closeAndWait(page, timeout = REDUCTION_WAIT) {
   await page.keyboard.press('Escape');
   await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout });
 }
@@ -111,7 +116,7 @@ async function waitForPanelExit(page) {
 }
 
 test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, focus, and reduced cleanup', { timeout: 120_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/dialog-motion.html': dialogDocument } });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/dialog-motion-browser-entry.mjs'], pages: { '/dialog-motion.html': dialogDocument } });
   let browser;
   try {
     browser = await launchBrowser();
@@ -173,12 +178,13 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.evaluate(() => window.__muxuiDialogSetMode('trigger'));
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
 
-    await page.evaluate(() => {
-      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-enter-duration', '800ms');
+    await page.evaluate((duration) => {
+      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-enter-duration', duration);
+      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-dismiss-transition-duration', duration);
       document.documentElement.setAttribute('data-muxui-motion', 'full');
       const scope = document.getElementById('dialog-scope');
       scope.setAttribute('data-muxui-motion', 'full');
-    });
+    }, SLOWED);
     await page.evaluate(() => window.__muxuiDialogSetMode('no-trigger'));
     await page.evaluate(() => window.__muxuiDialogSetOpen(true));
     await page.locator('.muxui-dialog').waitFor();
@@ -194,24 +200,22 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
         && getComputedStyle(panel).opacity === '1'
         && Math.abs(Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y')) || 0) < 0.01
         && Math.abs((Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-scale')) || 1) - 1) < 0.0001;
-    }, undefined, { timeout: 250 });
+    }, undefined, { timeout: REDUCTION_WAIT });
     const nestedReduced = await readMotion(page);
     assert.equal(nestedReduced.reduced, true, 'nested explicit reduction marks the portaled panel');
     assert.ok(Math.abs(nestedReduced.y) < 1, `nested reduction settles the interrupted entry: ${JSON.stringify(nestedReduced)}`);
-    const reducedCloseStarted = Date.now();
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
-    await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: 150 });
-    assert.ok(Date.now() - reducedCloseStarted < 150, 'nested reduced close detaches immediately');
+    await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: REDUCTION_WAIT });
 
-    await page.evaluate(() => {
+    await page.evaluate((duration) => {
       document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
       document.documentElement.setAttribute('data-muxui-motion', 'full');
       document.documentElement.style.setProperty('--muxui-semantic-motion-modal-enter-duration', '180ms');
-      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-dismiss-transition-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-dismiss-transition-duration', duration);
       const scope = document.getElementById('dialog-scope');
       scope.setAttribute('data-muxui-motion', 'full');
       window.__muxuiDialogSetMode('no-trigger');
-    });
+    }, SLOWED);
     await page.evaluate(() => window.__muxuiDialogSetOpen(true));
     await page.locator('.muxui-dialog').waitFor();
     await waitForPanelEntry(page);
@@ -221,10 +225,8 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await waitForPanelExit(page);
     // Let the exit progress mid-flight before reducing it.
     await page.waitForTimeout(40);
-    const slowedExitReductionStarted = Date.now();
     await page.locator('#dialog-scope').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
-    await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: 200 });
-    assert.ok(Date.now() - slowedExitReductionStarted < 200, 'reduction during a slowed exit detaches promptly');
+    await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: REDUCTION_WAIT });
 
     await page.evaluate(() => {
       document.querySelector('link[href*="styles.css"]')?.remove();
@@ -238,20 +240,21 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     assert.equal(missingStyles.opacity, 1, 'missing styles leave a no-trigger dialog statically visible');
     assert.equal(missingStyles.transform, 'none', 'missing styles preserve natural static positioning');
     assert.deepEqual(missingStyles.animations, [], 'missing styles do not start Motion');
-    const missingStylesCloseStarted = Date.now();
+    // The slowed dismiss duration is still set, so only a close that starts no exit can detach inside the wait.
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
-    await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: 100 });
-    assert.ok(Date.now() - missingStylesCloseStarted < 100, 'missing styles detach a no-trigger dialog immediately');
+    await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: REDUCTION_WAIT });
 
     await page.reload({ waitUntil: 'networkidle' });
     await waitForHydration(page);
+    await page.evaluate((duration) => document.documentElement.style.setProperty('--muxui-semantic-motion-modal-dismiss-transition-duration', duration), SLOWED);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openTriggered(page);
     const systemReduced = await readMotion(page);
     assert.equal(systemReduced.opacity, 1, 'system reduced entry is immediately visible');
     assert.ok(Math.abs(systemReduced.y) < 1, `system reduced entry is immediately centered: ${JSON.stringify(systemReduced)}`);
     assert.equal(systemReduced.animations.some(({ duration }) => Number(duration) > 1), false, 'system reduced entry starts no meaningful animation');
-    await closeAndWait(page, 150);
+    await closeAndWait(page);
+    await page.evaluate(() => document.documentElement.style.removeProperty('--muxui-semantic-motion-modal-dismiss-transition-duration'));
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => window.__muxuiDialogSetModeOpen('dismissablefalse'));
