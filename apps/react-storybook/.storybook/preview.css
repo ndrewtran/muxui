@@ -137,6 +137,22 @@ main.muxui-storybook-surface {
   padding: 1.5rem;
 }
 
+/* HeaderNav specimen: the links show once the frame is 40rem wide, as in the catalog's responsive example. */
+.muxui-storybook-header-frame {
+  container-type: inline-size;
+  inline-size: 100%;
+}
+
+.muxui-storybook-header-links {
+  display: none;
+}
+
+@container (min-width: 40rem) {
+  .muxui-storybook-header-links {
+    display: flex;
+  }
+}
+
 /* The lifecycle harness is Storybook chrome, so native controls use Mux UI tokens too. */
 [data-muxui-storybook-lifecycle-select] {
   background: var(--muxui-semantic-surface-canvas);

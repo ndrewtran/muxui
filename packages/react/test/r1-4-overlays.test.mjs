@@ -306,7 +306,7 @@ test('DropZone and FileTrigger normalize browser inputs to Mux UI-owned values',
   }
 });
 
-test('DropZone marks disabled state for styling only, without aria-disabled on its role-less root', async () => {
+test('DropZone root carries aria-disabled only while disabled', async () => {
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
@@ -316,7 +316,7 @@ test('DropZone marks disabled state for styling only, without aria-disabled on i
     const dropZone = host.querySelector('.muxui-drop-zone');
     assert.ok(dropZone);
     assert.equal(dropZone.getAttribute('data-disabled'), 'true');
-    assert.equal(dropZone.hasAttribute('aria-disabled'), false);
+    assert.equal(dropZone.getAttribute('aria-disabled'), 'true');
     const dropButton = dropZone.querySelector('button');
     await act(async () => dropButton.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })));
     assert.deepEqual(activations, []);

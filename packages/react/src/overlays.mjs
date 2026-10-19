@@ -154,11 +154,12 @@ export const DropZone = React.forwardRef(function DropZone({
     if (event.target !== dropButton || dropButton.tagName !== 'BUTTON' || disabledRef.current) return;
     onActivate?.({ type: 'activate', x: event.clientX ?? 0, y: event.clientY ?? 0 });
   }, [onActivate]);
-  // RAC sets data-disabled on the role-less root; aria-disabled is not valid there.
+  // RAC sets data-disabled on the root but does not forward aria-disabled, so the render function adds it.
   return React.createElement(AriaDropZone, {
     ...props,
     ref,
     isDisabled: disabled,
+    render: (domProps) => React.createElement('div', { ...domProps, 'aria-disabled': disabled || undefined }),
     onDrop: handleDrop,
     onClickCapture: handleActivate,
     className: classNames('muxui-drop-zone', className),
