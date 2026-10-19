@@ -145,8 +145,13 @@ export type CommandPaletteContentProps = PartProps<HTMLDivElement>;
 export type CommandPaletteSearchFieldProps = React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'inline' };
 export type CommandPaletteInputProps = React.InputHTMLAttributes<HTMLInputElement>;
 export type CommandPaletteClearButtonProps = ButtonPartProps;
-export type CommandPaletteListBoxProps = PartProps<HTMLDivElement>;
-export type CommandPaletteSectionProps = PartProps<HTMLElement>;
+// Static children, or items with a render function that returns one element per item.
+// A render function without items renders nothing, and items without a render function are ignored.
+type CommandPaletteItemsProps<T> =
+  | { items?: undefined; dependencies?: undefined; children?: React.ReactNode }
+  | { items: Iterable<T>; dependencies?: readonly unknown[]; children: (item: T) => React.ReactElement };
+export type CommandPaletteListBoxProps<T = unknown> = Omit<PartProps<HTMLDivElement>, 'children'> & CommandPaletteItemsProps<T>;
+export type CommandPaletteSectionProps<T = unknown> = Omit<PartProps<HTMLElement>, 'children'> & CommandPaletteItemsProps<T>;
 export type CommandPaletteSectionHeaderProps = PartProps<HTMLElement>;
 export type CommandPaletteSeparatorProps = PartProps<HTMLHRElement>;
 export type CommandPaletteItemIconProps = PartProps<HTMLSpanElement>;
@@ -156,12 +161,21 @@ export type CommandPaletteItemDescriptionProps = PartProps<HTMLSpanElement>;
 export type CommandPaletteItemMetaProps = PartProps<HTMLSpanElement>;
 export type CommandPaletteShortcutProps = PartProps<HTMLSpanElement> & { keys?: readonly string[] };
 export type CommandPaletteLoadMoreItemProps = PartProps<HTMLDivElement>;
-export type CommandPaletteCollectionProps = React.PropsWithChildren<Record<string, unknown>>;
+export type CommandPaletteCollectionProps<T = unknown> = CommandPaletteItemsProps<T>;
 export type CommandPaletteEmptyProps = PartProps<HTMLDivElement>;
 export type CommandPaletteFooterProps = PartProps<HTMLDivElement>;
 export type CommandPaletteChipsProps = PartProps<HTMLDivElement>;
 export type CommandPaletteChipProps = PartProps<HTMLSpanElement>;
 export type CommandPaletteChipRemoveProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+export interface CommandPaletteListBoxComponent {
+  <T = unknown>(props: CommandPaletteListBoxProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
+}
+export interface CommandPaletteSectionComponent {
+  <T = unknown>(props: CommandPaletteSectionProps<T> & React.RefAttributes<HTMLElement>): React.ReactElement | null;
+}
+export interface CommandPaletteCollectionComponent {
+  <T = unknown>(props: CommandPaletteCollectionProps<T>): React.ReactElement | null;
+}
 export declare const CommandPalette: {
   Root: React.ForwardRefExoticComponent<CommandPaletteRootProps & React.RefAttributes<HTMLDivElement>>;
   Trigger: React.ForwardRefExoticComponent<ButtonPartProps & React.RefAttributes<HTMLButtonElement>>;
@@ -174,12 +188,12 @@ export declare const CommandPalette: {
   SearchField: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'inline' } & React.RefAttributes<HTMLDivElement>>;
   Input: React.ForwardRefExoticComponent<React.InputHTMLAttributes<HTMLInputElement> & React.RefAttributes<HTMLInputElement>>;
   ClearButton: React.ForwardRefExoticComponent<ButtonPartProps & React.RefAttributes<HTMLButtonElement>>;
-  ListBox: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Section: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  ListBox: CommandPaletteListBoxComponent;
+  Section: CommandPaletteSectionComponent;
   SectionHeader: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
   Item: React.ForwardRefExoticComponent<CommandPaletteItemProps & React.RefAttributes<HTMLDivElement>>;
   Separator: React.ForwardRefExoticComponent<PartProps<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
-  Collection: React.ComponentType<React.PropsWithChildren<Record<string, unknown>>>;
+  Collection: CommandPaletteCollectionComponent;
   ItemIcon: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
   ItemContent: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
   ItemTitle: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
@@ -272,7 +286,7 @@ export declare const PaymentInput: {
   Label: React.ForwardRefExoticComponent<PartProps<HTMLLabelElement> & React.RefAttributes<HTMLLabelElement>>;
   Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
   Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  CardIcon: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  CardIcon: React.ForwardRefExoticComponent<PaymentInputCardIconProps & React.RefAttributes<HTMLSpanElement>>;
 };
 
 export type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & { value?: number | null; minValue?: number; maxValue?: number; size?: 'sm' | 'md' | 'lg'; /** Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence. */ label?: string };
