@@ -2,14 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { SubmitForms } from './button-submit-fixture.mjs';
+import { SubmitForms, submitControls } from './button-submit-fixture.mjs';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // A Button's icon and label share one cross-axis center and sit one size-recipe
 // gap apart, whichever side the icon is on and while pending with visible text.
-// A pending submit Button starts no form submission by click or Enter, in a client render
-// and in server markup before hydration (implicit submission needs a real browser). Runs in
-// every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+// A pending submit Button or Card.Button starts no form submission by click or Enter, in a
+// client render and in server markup before hydration (implicit submission needs a real
+// browser). Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
 import React from 'react';
@@ -39,31 +39,31 @@ const styles = '<link rel="stylesheet" href="/generated/styles.css">';
 const fixtureModule = '/test/browser/button-submit-fixture.mjs';
 const fixtureEntries = ['src/button.mjs', 'test/browser/button-submit-fixture.mjs'];
 
-const formsEntry = `
+const formsEntry = (control) => `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { SubmitForms, trackSubmits } from '${fixtureModule}';
 
 trackSubmits();
-createRoot(document.getElementById('root')).render(React.createElement(SubmitForms));
+createRoot(document.getElementById('root')).render(React.createElement(SubmitForms, { control: ${JSON.stringify(control)} }));
 `;
 const formsPage = pageShell({ attributes: 'data-muxui-color-scheme="light"', head: styles, body: '<div id="root"></div>', entry: '/forms-entry.mjs' });
 
 // Server markup is in the page and hydration waits for the test, so a pending submit
 // Button can be used before its click handler exists.
-const hydrationEntry = `
+const hydrationEntry = (control) => `
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { SubmitForms, trackSubmits } from '${fixtureModule}';
 
 trackSubmits();
 await new Promise((resolve) => { window.__hydrate = resolve; });
-hydrateRoot(document.getElementById('root'), React.createElement(SubmitForms));
+hydrateRoot(document.getElementById('root'), React.createElement(SubmitForms, { control: ${JSON.stringify(control)} }));
 `;
-const hydrationPage = pageShell({
+const hydrationPage = (control) => pageShell({
   attributes: 'data-muxui-color-scheme="light"',
   head: styles,
-  body: `<div id="root">${renderToString(React.createElement(SubmitForms))}</div>`,
+  body: `<div id="root">${renderToString(React.createElement(SubmitForms, { control }))}</div>`,
   entry: '/hydration-entry.mjs',
 });
 
@@ -179,30 +179,32 @@ for (const engine of browserEngines()) {
     }
   });
 
-  test(`A pending submit Button starts no form submission in ${engine}`, { timeout: 120_000 }, async () => {
-    const { tab, errors, close } = await openPage(engine, { pages: { '/forms.html': formsPage }, modules: { '/forms-entry.mjs': formsEntry }, path: '/forms.html', ready: '#one-save' });
-    try {
-      await assertPendingThenSettled(tab, errors);
-    } finally {
-      await close();
-    }
-  });
+  for (const control of Object.keys(submitControls)) {
+    test(`A pending submit ${control} starts no form submission in ${engine}`, { timeout: 120_000 }, async () => {
+      const { tab, errors, close } = await openPage(engine, { pages: { '/forms.html': formsPage }, modules: { '/forms-entry.mjs': formsEntry(control) }, path: '/forms.html', ready: '#one-save' });
+      try {
+        await assertPendingThenSettled(tab, errors);
+      } finally {
+        await close();
+      }
+    });
 
-  test(`A server-rendered pending submit Button starts no submission before hydration in ${engine}`, { timeout: 120_000 }, async () => {
-    const { tab, errors, close } = await openPage(engine, { pages: { '/hydration.html': hydrationPage }, modules: { '/hydration-entry.mjs': hydrationEntry }, path: '/hydration.html', ready: '#one-save' });
-    try {
-      await tab.waitForFunction(() => typeof window.__hydrate === 'function');
-      // Nothing has hydrated the Button, so it is natively disabled: click and Enter do nothing.
-      assert.equal(await tab.locator('#one-save').evaluate((button) => button.disabled), true, 'the server-rendered pending Button is disabled');
-      const before = await submissionsByPath(tab, ['Enter in the field', 'click on the Button']);
-      assert.deepEqual(before, Object.fromEntries(Object.keys(before).map((name) => [name, {}])), 'before hydration');
+    test(`A server-rendered pending submit ${control} starts no submission before hydration in ${engine}`, { timeout: 120_000 }, async () => {
+      const { tab, errors, close } = await openPage(engine, { pages: { '/hydration.html': hydrationPage(control) }, modules: { '/hydration-entry.mjs': hydrationEntry(control) }, path: '/hydration.html', ready: '#one-save' });
+      try {
+        await tab.waitForFunction(() => typeof window.__hydrate === 'function');
+        // Nothing has hydrated the control, so it is natively disabled: click and Enter do nothing.
+        assert.equal(await tab.locator('#one-save').evaluate((button) => button.disabled), true, `the server-rendered pending ${control} is disabled`);
+        const before = await submissionsByPath(tab, ['Enter in the field', 'click on the Button']);
+        assert.deepEqual(before, Object.fromEntries(Object.keys(before).map((name) => [name, {}])), 'before hydration');
 
-      await tab.evaluate(() => window.__hydrate());
-      await tab.waitForFunction(() => !document.getElementById('one-save').disabled);
-      // Hydrated: focusable again, its click cancelled, and submitting once pending clears.
-      await assertPendingThenSettled(tab, errors);
-    } finally {
-      await close();
-    }
-  });
+        await tab.evaluate(() => window.__hydrate());
+        await tab.waitForFunction(() => !document.getElementById('one-save').disabled);
+        // Hydrated: focusable again, its click cancelled, and submitting once pending clears.
+        await assertPendingThenSettled(tab, errors);
+      } finally {
+        await close();
+      }
+    });
+  }
 }

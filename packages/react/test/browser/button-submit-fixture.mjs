@@ -1,11 +1,15 @@
 import React from 'react';
 import { Button } from '../../src/button.mjs';
+import { Card } from '../../src/supplemental/index.mjs';
 
-// Forms with a pending submit Button for button.test.mjs. The page that loads this module
-// (and, for server markup, node) counts submissions in window.__submits by form id and
-// Button activations in window.__activations.
+// Forms with a pending submit Button or Card.Button for button.test.mjs. The page that loads
+// this module (and, for server markup, node) counts submissions in window.__submits by form id
+// and activations in window.__activations.
 
 const h = React.createElement;
+
+/** The pending submit controls the forms can use, by the name the tests report. */
+export const submitControls = { Button, 'Card.Button': Card.Button };
 
 /** Records one submission for `id`. */
 function count(id) {
@@ -27,14 +31,14 @@ export function trackSubmits() {
 }
 
 /**
- * One- and two-field forms whose submit Button starts pending, an explicitly disabled
- * pending one, and a form with a reset Button. Implicit submission differs by field count:
- * a one-field form submits on Enter even with no submit button, a two-field form does not.
- * `#toggle` flips pending for every form.
+ * One- and two-field forms whose submit control (`control`, a key of submitControls) starts
+ * pending, an explicitly disabled pending one, and a form with a reset Button. Implicit
+ * submission differs by field count: a one-field form submits on Enter even with no submit
+ * button, a two-field form does not. `#toggle` flips pending for every form.
  */
-export function SubmitForms() {
+export function SubmitForms({ control = 'Button' }) {
   const [pending, setPending] = React.useState(true);
-  const save = (id, props) => h(Button, { id: `${id}-save`, type: 'submit', pending, onActivate: () => { window.__activations += 1; }, ...props }, 'Save');
+  const save = (id, props) => h(submitControls[control], { id: `${id}-save`, type: 'submit', pending, onActivate: () => { window.__activations += 1; }, ...props }, 'Save');
   const form = (id, fields, ...buttons) => h('form', {
     id,
     onSubmit: (event) => { event.preventDefault(); count(id); },
