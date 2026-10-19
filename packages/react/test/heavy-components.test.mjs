@@ -5,7 +5,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Markdown } from '../src/markdown/index.mjs';
+import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.mjs';
 import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
 import { Resizable, ResizableHandle, ResizablePanel } from '../src/supplemental/resizable.mjs';
 import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxTrigger } from '../src/supplemental/lightbox.mjs';
@@ -23,9 +23,39 @@ test('Markdown renders its bounded subset without raw HTML or unsafe URLs', () =
   const mixed = renderToStaticMarkup(React.createElement(Markdown, { source: 'before <span>raw</span> after' }));
   assert.match(mixed, /before raw after/u); assert.doesNotMatch(mixed, /<span>|<\/span>/u);
 });
-test('Markdown returns its fallback for source and line bounds', () => {
-  const html = renderToStaticMarkup(React.createElement(Markdown, { source: 'x'.repeat(100_001), invalidFallback: 'Blocked' }));
-  assert.match(html, /MARKDOWN_SOURCE_LIMIT_EXCEEDED/u); assert.match(html, /Blocked/u);
+test('Markdown exports its documented bounds', () => {
+  assert.deepEqual(
+    { MARKDOWN_SOURCE_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_DEPTH_LIMIT, MARKDOWN_NODE_LIMIT },
+    { MARKDOWN_SOURCE_LIMIT: 100_000, MARKDOWN_LINE_LIMIT: 10_000, MARKDOWN_LINE_LENGTH_LIMIT: 10_000, MARKDOWN_DEPTH_LIMIT: 32, MARKDOWN_NODE_LIMIT: 10_000 },
+  );
+});
+test('Markdown returns its fallback for source, line count, and line length bounds', () => {
+  const render = (source) => renderToStaticMarkup(React.createElement(Markdown, { source, invalidFallback: 'Blocked' }));
+  const lines = (count, separator) => Array.from({ length: count }, () => 'x').join(separator);
+  const rejected = (source, code) => {
+    const html = render(source);
+    assert.match(html, new RegExp(`data-markdown-error="${code}"`, 'u')); assert.match(html, />Blocked</u);
+  };
+  const accepted = (source) => {
+    const html = render(source);
+    assert.doesNotMatch(html, /data-markdown-error/u); assert.doesNotMatch(html, /Blocked/u);
+  };
+
+  rejected('x'.repeat(MARKDOWN_SOURCE_LIMIT + 1), 'MARKDOWN_SOURCE_LIMIT_EXCEEDED');
+
+  // The line limit counts lines, so many short lines are rejected.
+  accepted(lines(MARKDOWN_LINE_LIMIT, '\n'));
+  rejected(lines(MARKDOWN_LINE_LIMIT + 1, '\n'), 'MARKDOWN_LINE_LIMIT_EXCEEDED');
+  accepted(lines(MARKDOWN_LINE_LIMIT, '\r\n')); accepted(lines(MARKDOWN_LINE_LIMIT, '\r'));
+  rejected(lines(MARKDOWN_LINE_LIMIT + 1, '\r\n'), 'MARKDOWN_LINE_LIMIT_EXCEEDED'); rejected(lines(MARKDOWN_LINE_LIMIT + 1, '\r'), 'MARKDOWN_LINE_LIMIT_EXCEEDED');
+  // A trailing newline starts a final blank line, as in CodeBlock.
+  accepted(`${lines(MARKDOWN_LINE_LIMIT - 1, '\n')}\n`);
+  rejected(`${lines(MARKDOWN_LINE_LIMIT, '\n')}\n`, 'MARKDOWN_LINE_LIMIT_EXCEEDED');
+
+  // The per-line character guard has its own limit and code.
+  accepted('x'.repeat(MARKDOWN_LINE_LENGTH_LIMIT));
+  rejected('x'.repeat(MARKDOWN_LINE_LENGTH_LIMIT + 1), 'MARKDOWN_LINE_LENGTH_LIMIT_EXCEEDED');
+  rejected(`short\n${'x'.repeat(MARKDOWN_LINE_LENGTH_LIMIT + 1)}\nshort`, 'MARKDOWN_LINE_LENGTH_LIMIT_EXCEEDED');
 });
 test('Markdown preserves indented code as paragraph content while fencing creates code blocks', () => {
   const html = renderToStaticMarkup(React.createElement(Markdown, { source: '    indented code\n\n```js\nfenced code\n```' }));
