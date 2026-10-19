@@ -11,6 +11,48 @@ const initialDocument = {
   content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hydrated draft' }] }],
 };
 
+const textDocument = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });
+const documentText = (document) => document.content.map((block) => block.content?.map((node) => node.text).join('') ?? '').join('\n');
+
+// Two five-character editors, one controlled and one uncontrolled, each logging the text onChange reports.
+// The uncontrolled log skips React state so its editor re-renders only for its own reasons.
+function LimitEditors() {
+  const [controlled, setControlled] = React.useState(() => textDocument('abc'));
+  const [controlledCalls, setControlledCalls] = React.useState([]);
+  const uncontrolledCalls = React.useRef([]);
+  const uncontrolledOutput = React.useRef(null);
+  const [readOnly, setReadOnly] = React.useState(false);
+  return h('section', { id: 'limit-editors' },
+    h('button', { id: 'limit-set-external', type: 'button', onClick: () => setControlled(textDocument('xy')) }, 'Set limit value'),
+    h('button', { id: 'limit-toggle-readonly', type: 'button', onClick: () => setReadOnly((value) => !value) }, 'Toggle limit read-only'),
+    h(TextEditor, {
+      id: 'limit-controlled',
+      'data-testid': 'limit-controlled',
+      value: controlled,
+      onChange: (next) => { setControlledCalls((calls) => [...calls, documentText(next)]); setControlled(next); },
+      'aria-label': 'Controlled limit editor',
+      toolbar: false,
+      limit: 5,
+    }),
+    h('output', { 'data-testid': 'limit-controlled-value' }, documentText(controlled)),
+    h('output', { 'data-testid': 'limit-controlled-calls' }, JSON.stringify(controlledCalls)),
+    h(TextEditor, {
+      id: 'limit-uncontrolled',
+      'data-testid': 'limit-uncontrolled',
+      defaultValue: textDocument('abc'),
+      onChange: (next) => {
+        uncontrolledCalls.current.push(documentText(next));
+        uncontrolledOutput.current.textContent = JSON.stringify(uncontrolledCalls.current);
+      },
+      'aria-label': 'Uncontrolled limit editor',
+      toolbar: false,
+      readOnly,
+      limit: 5,
+    }),
+    h('output', { 'data-testid': 'limit-uncontrolled-calls', ref: uncontrolledOutput }),
+  );
+}
+
 export function HeavyBrowserFixture({ interactive = true }) {
   const [editorValue, setEditorValue] = React.useState(initialDocument);
   const [rejectEditorChanges, setRejectEditorChanges] = React.useState(false);
@@ -54,6 +96,7 @@ export function HeavyBrowserFixture({ interactive = true }) {
       limit: 500,
     }),
     h(TextEditor, { id: 'readonly-editor', defaultValue: initialDocument, 'aria-label': 'Read-only editor', toolbar: false, readOnly: true }),
+    h(LimitEditors, null),
     h('output', { 'data-testid': 'editor-value' }, editorValue.content?.[0]?.content?.[0]?.text ?? ''),
     h('output', { 'data-testid': 'editor-document' }, JSON.stringify(editorValue)),
     h('output', { 'data-testid': 'link-requests' }, String(linkRequests)),

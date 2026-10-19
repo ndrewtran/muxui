@@ -209,3 +209,22 @@ test('a Link in an enabled GridList item still receives an outer LinkContext', a
     await view.dispose();
   }
 });
+
+// An empty href already disables the Link, so no href attribute is rendered and React has nothing to warn about.
+test('Link with an empty href renders a disabled span without an href attribute and logs no React warning', async () => {
+  const errors = [];
+  const original = console.error;
+  console.error = (...args) => errors.push(args.map(String).join(' '));
+  const view = await mount(h('div', null, h(Link, { href: '' }, 'Empty'), h(Link, { href: '/ok' }, 'Valid')));
+  try {
+    const [empty, valid] = [...view.container.querySelectorAll('.muxui-link')];
+    assert.deepEqual(state(empty), ['span', 'true', 'true'], 'an empty href disables the Link');
+    assert.equal(empty.hasAttribute('href'), false, 'the empty string is not rendered as an attribute');
+    assert.equal(valid.getAttribute('href'), '/ok', 'a real href is untouched');
+    assert.doesNotMatch(renderToString(h(Link, { href: '' }, 'Empty')), /href/u, 'server markup carries no href either');
+    assert.deepEqual(errors, [], 'no console error, including the empty href warning');
+  } finally {
+    console.error = original;
+    await view.dispose();
+  }
+});
