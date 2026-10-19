@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:header-nav-usage",
+  "kind": "guide",
+  "name": "HeaderNav usage",
+  "summary": "Portable usage guidance for HeaderNav.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "header-nav",
+    "react",
+    "accessibility"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/header-nav-usage.md"
+}

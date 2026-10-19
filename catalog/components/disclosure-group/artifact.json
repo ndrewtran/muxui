@@ -99,7 +99,11 @@
       },
       "behavior": [
         "Group state coordinates child Disclosure instances",
-        "Single expansion is supported when multiple is false"
+        "expandedIds and defaultExpandedIds list the id of each expanded child Disclosure, so give every child a stable id",
+        "While a Disclosure is inside the group, the group owns its expansion and the child's own expanded and defaultExpanded are ignored",
+        "onExpandedChange receives the expanded ids as an array of strings",
+        "When multiple is false, at most one Disclosure is expanded: expanding another collapses the open one",
+        "A Disclosure that is a direct child of the group gets the grouped styling; one wrapped in another element stays in the group without it"
       ],
       "accessibility": [
         "Preserve each child disclosure accessible relationship and state"

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:sidebar-usage",
+  "kind": "guide",
+  "name": "Sidebar usage",
+  "summary": "Portable usage guidance for Sidebar.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "sidebar",
+    "react",
+    "accessibility"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/sidebar-usage.md"
+}

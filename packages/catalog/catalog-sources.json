@@ -1207,6 +1207,62 @@
     },
     {
       "family": "example",
+      "path": "catalog/components/disclosure-group/examples/react/controlled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/disclosure/examples/react/stateful-panel.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/header-nav/examples/react/responsive.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/resizable/examples/react/three-panels.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/responsive.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/table/examples/react/sorting.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tag-group/examples/react/removable.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toggle-button-group/examples/react/multiple.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toolbar/examples/react/separate-action.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tree/examples/react/controlled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/virtualizer/examples/react/rows.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/header-nav-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/resizable-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/sidebar-usage.json"
+    },
+    {
+      "family": "example",
       "path": "catalog/components/alert-dialog/examples/react/confirm.example.json"
     },
     {
