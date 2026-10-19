@@ -42,7 +42,8 @@ test('IconButton preserves its name, native form props, and pending/disabled sta
       else assert.equal(button.getAttribute(key), value);
     }
     assert.equal(button.getAttribute('aria-busy'), 'true');
-    assert.equal(button.getAttribute('type'), 'button', 'pending prevents native form submission');
+    // The Button cancels its own submission while pending (see test/browser/button.test.mjs), so it keeps its type.
+    assert.equal(button.getAttribute('type'), 'submit');
     assert.equal(button.getAttribute('name'), 'action');
     assert.equal(button.getAttribute('value'), 'save');
     assert.ok(button.querySelector('.muxui-button-spinner'));
