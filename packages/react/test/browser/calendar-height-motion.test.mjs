@@ -88,13 +88,17 @@ async function inFlight(page, previous) {
   }
 }
 
-// An interruption must land mid-motion, which the 600ms spring can finish before a stalled runner gets there, so it runs slowed.
+// An interruption must land mid-motion, which the 600ms spring can finish before a stalled runner gets there, so it
+// runs slowed. The slowed spring outlasts any wait below, so a growth that ends inside one was cut by the interruption.
+const SLOWED_RESIZE = '30s';
+const INTERRUPTION_WAIT = 5_000;
+
 async function growUntilMidFlight(page, previous) {
-  const slow = (on) => page.evaluate((on) => {
+  const slow = (on) => page.evaluate(({ on, duration }) => {
     const style = document.documentElement.style;
-    if (on) style.setProperty('--muxui-semantic-motion-content-resize-duration', '5s');
+    if (on) style.setProperty('--muxui-semantic-motion-content-resize-duration', duration);
     else style.removeProperty('--muxui-semantic-motion-content-resize-duration');
-  }, on);
+  }, { on, duration: SLOWED_RESIZE });
   await slow(true);
   await recordFrames(page, previous, true);
   await navigate(page, 'next');
@@ -110,6 +114,7 @@ function documentHtml(kind) {
 test('calendar month height interpolates without changing semantics or reduced motion', { timeout: 120_000 }, async () => {
   const { url, close } = await startServer({
     root: 'repository',
+    entries: ['packages/react/test/fixtures/calendar-height-motion-browser-entry.mjs'],
     pages: Object.fromEntries(['calendar', 'range', 'picker', 'range-picker'].map((kind) => [`/calendar-height/${kind}`, () => documentHtml(kind)])),
   });
   let browser;
@@ -121,6 +126,8 @@ test('calendar month height interpolates without changing semantics or reduced m
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
       await page.goto(`${url}/calendar-height/${kind}`, { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.documentElement.dataset.muxuiCalendarHeightHydrated === 'true')
+        .catch((error) => assert.fail(`${kind}: the fixture did not hydrate: ${error.message}; page errors: ${errors.join(' | ')}`));
       if (kind === 'range-picker') await page.evaluate(() => { document.body.style.marginTop = '600px'; });
       if (kind.includes('picker')) {
         await page.locator('.muxui-date-trigger').click();
@@ -168,7 +175,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       // A nested trigger scope must also reach portaled popup calendars.
       await growUntilMidFlight(page, april);
       await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
-      await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: 200 });
+      await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: INTERRUPTION_WAIT });
       assert.equal((await settled(page)).rows, 6);
       await navigate(page, 'previous');
       assert.equal((await geometry(page)).height, '');
@@ -176,7 +183,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       assert.equal((await geometry(page)).height, '', 'restoring motion does not replay height changes');
       await growUntilMidFlight(page, april);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: 200 });
+      await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: INTERRUPTION_WAIT });
       await navigate(page, 'previous');
       assert.equal((await geometry(page)).height, '', 'system reduced motion changes height immediately');
       await page.emulateMedia({ reducedMotion: 'no-preference' });

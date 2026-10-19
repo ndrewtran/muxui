@@ -82,7 +82,7 @@ async function waitForFrames(page, count = 2) {
 }
 
 test('Calendar selection circle travels within a month, resets across dates/pages, and preserves semantics', { timeout: 120_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/calendar-selection-motion.html': documentHtml } });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/calendar-selection-motion-fixture.mjs'], pages: { '/calendar-selection-motion.html': documentHtml } });
   let browser;
   try {
     const staticMarkup = renderToString(fixture());

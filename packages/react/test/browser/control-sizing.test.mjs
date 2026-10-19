@@ -613,7 +613,7 @@ function collectDefaultMeasurementFailures(measurements, label, failures) {
 }
 
 test('hydrated controls keep 32/36/40 targets across scoped themes and densities', { timeout: 120_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/control-sizing.html': fixtureDocument } });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/control-sizing-browser-entry.mjs'], pages: { '/control-sizing.html': fixtureDocument } });
   let browser;
   try {
     browser = await launchBrowser();

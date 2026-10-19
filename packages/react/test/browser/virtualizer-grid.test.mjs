@@ -305,12 +305,24 @@ for (const engine of browserEngines()) {
             report: () => ({ row: document.activeElement.closest('[role="row"]')?.getBoundingClientRect().toJSON(), view: window.__snapshot().view, scroll: window.__scrollPosition() }),
           }),
           // No stretch of the viewport longer than a row gap lacks a card, down any column's center.
-          // `hit` waits for scrolling to end, then proves it with elementFromPoint.
+          // `hit` waits for scrolling to end, then proves it with elementFromPoint. RAC turns pointer
+          // events off while it scrolls, which blinds elementFromPoint, so the hit test must run in the
+          // same page task that sees scrolling has ended: a scroll that restarts between two round
+          // trips on a stalled runner would otherwise read as a viewport with no card.
           async expectNoBlank(message, { hit = false } = {}) {
+            let reading;
             if (hit) {
-              await pollUntil(tab, () => window.__blank(false).hittable, undefined, { message: `${message}: scrolling ends`, report: () => window.__blank(false) });
+              await api.settle();
+              const handle = await tab.waitForFunction(() => (window.__blank(false).hittable ? window.__blank(true) : null), undefined, { timeout: 3000 }).catch(async (error) => {
+                if (error.name !== 'TimeoutError') throw error;
+                assert.fail(`${message}: scrolling did not end within 3000ms; the page held ${JSON.stringify(await tab.evaluate(() => window.__blank(false)))}`);
+              });
+              reading = await handle.jsonValue();
+              await handle.dispose();
+            } else {
+              reading = await tab.evaluate(() => window.__blank(false));
             }
-            const { longest, rowGap } = await tab.evaluate((hitTest) => window.__blank(hitTest), hit);
+            const { longest, rowGap } = reading;
             assert.ok(longest <= rowGap + 8, `${message}: a ${longest}px stretch of the viewport holds no card (row gap ${rowGap}px)`);
           },
           async expectTidy(message) {

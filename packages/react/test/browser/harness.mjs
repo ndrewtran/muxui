@@ -75,6 +75,10 @@ export function pageShell({ attributes = '', head = '', bodyAttributes = '', bod
  *   the repository root, so package files live under `/packages/react/`.
  * - `entries`: real modules, relative to the root, that Vite scans before the
  *   first request so dependency optimisation never reloads a running page.
+ *   Pass the module each page's script loads, even with `root: 'repository'`:
+ *   without it Vite finds the dependencies while the page loads, re-optimises,
+ *   and answers requests already in flight with 504 "Outdated Optimize Dep",
+ *   which blanks or reloads the page on a slow runner.
  * - `pages`: HTML documents keyed by pathname; a function receives the request URL.
  * - `modules`: virtual module source keyed by request path.
  * - `middleware`: an extra connect handler that runs before `pages`.

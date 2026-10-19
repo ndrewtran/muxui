@@ -19,7 +19,7 @@ function fixtureDocument() {
 }
 
 test('real browser read-only Slider blocks keyboard and pointer changes while retaining focus', { timeout: 90_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/read-only-slider.html': fixtureDocument } });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/read-only-slider-browser-entry.mjs'], pages: { '/read-only-slider.html': fixtureDocument } });
   let browser;
   try {
     browser = await launchBrowser();

@@ -6,6 +6,7 @@ const changes = [];
 globalThis.__muxuiReadOnlyColorChanges = changes;
 
 function Fixture() {
+  React.useEffect(() => { document.documentElement.dataset.muxuiReadOnlyColorsHydrated = 'true'; }, []);
   return React.createElement('div', { id: 'proof-fixture' },
     React.createElement(ColorArea, {
       'aria-label': 'Read-only color area',
