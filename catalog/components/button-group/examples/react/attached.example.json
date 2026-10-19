@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:button-group-attached-react",
+  "kind": "example",
+  "name": "Attached ButtonGroup",
+  "summary": "Join Buttons into one horizontal and one vertical strip, with one child disabled by its own prop.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:button-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/button-group/examples/react/attached.tsx"
+}

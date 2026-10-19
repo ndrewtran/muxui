@@ -1263,6 +1263,90 @@
     },
     {
       "family": "example",
+      "path": "catalog/components/button-group/examples/react/attached.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/card/examples/react/button.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/color-picker/examples/react/disabled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/color-swatch-picker/examples/react/read-only.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/color-wheel/examples/react/radius.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/group/examples/react/disabled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/image/examples/react/recovery.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/image/examples/react/source-change.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/link/examples/react/no-destination.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/markdown/examples/react/invalid-base.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/markdown/examples/react/relative-links.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/meter/examples/react/custom-range.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/meter/examples/react/external-label.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/progress-bar/examples/react/states.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/progress-circle/examples/react/operation.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/separator/examples/react/vertical.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-editor/examples/react/limit.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-editor/examples/react/stored-document.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text/examples/react/collection-text.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text/examples/react/field-text.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text/examples/react/truncate.example.json"
+    },
+    {
+      "family": "example",
       "path": "catalog/components/alert-dialog/examples/react/confirm.example.json"
     },
     {

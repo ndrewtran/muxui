@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:image-recovery-react",
+  "kind": "example",
+  "name": "Image fallback recovery",
+  "summary": "Compare a fallback that loads with a fallback that fails, and count the load errors of each.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:image#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/image/examples/react/recovery.tsx"
+}

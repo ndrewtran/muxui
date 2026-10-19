@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:meter-external-label-react",
+  "kind": "example",
+  "name": "Meter with an external label",
+  "summary": "Name a Meter with aria-labelledby and render the visible label outside it.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:meter#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/meter/examples/react/external-label.tsx"
+}

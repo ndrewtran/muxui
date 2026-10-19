@@ -88,7 +88,10 @@
       },
       "behavior": [
         "Orientation controls the logical axis",
-        "A semantic separator is exposed to assistive technology"
+        "A semantic separator is exposed to assistive technology",
+        "A horizontal Separator renders an hr; a vertical one renders a div with the separator role and aria-orientation set to vertical.",
+        "A vertical Separator is 1px wide and takes the height of the flex or grid row it sits in.",
+        "A vertical Separator in a block parent, or in a row with nothing else in it, has no height."
       ],
       "accessibility": [
         "Expose separator role and orientation for non-decorative separators"

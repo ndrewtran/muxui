@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-collection-text-react",
+  "kind": "example",
+  "name": "Text in a collection",
+  "summary": "Fill the label and description slots of collection items with Text.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text/examples/react/collection-text.tsx"
+}

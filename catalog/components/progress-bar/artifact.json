@@ -101,7 +101,12 @@
       "behavior": [
         "Determinate values are clamped to the range",
         "Omitted value produces an indeterminate progressbar",
-        "Determinate completion is exposed when value reaches or exceeds maxValue"
+        "Determinate completion is exposed when value reaches or exceeds maxValue",
+        "A value of 0 is determinate: it shows 0% and an empty fill.",
+        "The visible value text is Loading while indeterminate, and the percent of the range with a % sign otherwise.",
+        "The percent is not rounded: a value of 33.3333 shows 33.3333%.",
+        "The text Loading is built in and is not localized.",
+        "ProgressBar holds no task or result state: it renders the value it is given."
       ],
       "accessibility": [
         "Expose progressbar role and value semantics without continuous motion"

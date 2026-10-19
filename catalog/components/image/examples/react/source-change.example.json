@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:image-source-change-react",
+  "kind": "example",
+  "name": "Image source change",
+  "summary": "Change the primary source to start recovery over.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:image#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/image/examples/react/source-change.tsx"
+}

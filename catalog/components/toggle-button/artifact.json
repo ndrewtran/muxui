@@ -101,7 +101,10 @@
       },
       "behavior": [
         "Enter and Space toggle selection",
-        "Selection is controllable or internally managed"
+        "Selection is either controlled by the application or managed by the component",
+        "size must be sm, md, or lg, or ToggleButton throws a TypeError",
+        "Outside a ToggleButtonGroup, size defaults to md",
+        "Inside a ToggleButtonGroup, a ToggleButton without size takes the size of the group, and a size on the ToggleButton takes precedence"
       ],
       "accessibility": [
         "Expose button role, pressed state, accessible name, and disabled state"

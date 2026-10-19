@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:color-swatch-picker-read-only-react",
+  "kind": "example",
+  "name": "Read-only ColorSwatchPicker",
+  "summary": "Keep a palette inspectable with the arrow keys while its value stays fixed.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:color-swatch-picker#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/color-swatch-picker/examples/react/read-only.tsx"
+}

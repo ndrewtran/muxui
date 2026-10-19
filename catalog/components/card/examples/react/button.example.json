@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:card-button-react",
+  "kind": "example",
+  "name": "Selectable Card",
+  "summary": "Use Card.Button as the whole-card control and track its selected state in the application.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:card#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/card/examples/react/button.tsx"
+}

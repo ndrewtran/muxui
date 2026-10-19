@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:markdown-invalid-base-react",
+  "kind": "example",
+  "name": "Markdown with an invalid base URL",
+  "summary": "Show invalidFallback when baseUrl is not an absolute HTTP(S) URL.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:markdown#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/markdown/examples/react/invalid-base.tsx"
+}

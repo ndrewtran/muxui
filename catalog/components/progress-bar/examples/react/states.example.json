@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:progress-bar-states-react",
+  "kind": "example",
+  "name": "ProgressBar states",
+  "summary": "Compare an omitted value, a value of zero, active progress, and completion.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:progress-bar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/progress-bar/examples/react/states.tsx"
+}

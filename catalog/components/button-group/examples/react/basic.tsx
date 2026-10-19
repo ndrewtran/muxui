@@ -1,5 +1,5 @@
-import { ButtonGroup } from "@muxui/react";
+import { Button, ButtonGroup } from "@muxui/react";
 
 export function BasicButtonGroupExample() {
-  return <ButtonGroup aria-label="Document actions"><button type="button">Save</button><button type="button">Share</button></ButtonGroup>;
+  return <ButtonGroup aria-label="Document actions"><Button>Save</Button><Button>Share</Button></ButtonGroup>;
 }

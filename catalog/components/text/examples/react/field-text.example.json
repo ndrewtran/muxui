@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-field-text-react",
+  "kind": "example",
+  "name": "Text in a field",
+  "summary": "Use Text as a native label with htmlFor and as a field description slot.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text/examples/react/field-text.tsx"
+}

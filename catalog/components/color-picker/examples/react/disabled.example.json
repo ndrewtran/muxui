@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:color-picker-disabled-react",
+  "kind": "example",
+  "name": "Disabled ColorPicker",
+  "summary": "Disable every Mux UI color control in a ColorPicker from the picker itself.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:color-picker#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/color-picker/examples/react/disabled.tsx"
+}

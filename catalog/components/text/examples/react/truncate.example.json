@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-truncate-react",
+  "kind": "example",
+  "name": "Truncated Text",
+  "summary": "Clip a single line of Text inside a container with a limited width.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/text/examples/react/truncate.tsx"
+}

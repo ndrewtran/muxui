@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:separator-vertical-react",
+  "kind": "example",
+  "name": "Vertical Separator",
+  "summary": "Place a vertical Separator in a flex row between two items.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:separator#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/separator/examples/react/vertical.tsx"
+}

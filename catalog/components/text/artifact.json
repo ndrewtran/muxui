@@ -24,7 +24,7 @@
     "nameRequired": false,
       "obligations": [
         "The as prop selects the native semantic host; caller-supplied role, aria, data, event, and slot props remain on that host.",
-        "Text participates in React Aria description slots inside fields and label and description slots inside collection items; a field's label association remains owned by the field component, while as=label with htmlFor provides native labeling. Without a slot prop, Text fills a collection item's default label slot and stays out of field label and description contexts, which have only named slots.",
+        "Text can fill a field's description slot and a collection item's label and description slots; a field's label association remains owned by the field component, while as=label with htmlFor provides native labeling. Without a slot prop, Text fills a collection item's default label slot and stays out of field label and description contexts, which have only named slots.",
         "Truncation is visual; the complete text remains in the DOM and consumers provide an accessible name when a clipped label needs additional context."
     ]
   },
@@ -54,14 +54,21 @@
         }
       },
       "behavior": [
-        "Composes the existing Mux typography role and size tokens; display, heading, and title use sm, md, and lg while label, body, expressive, and mono also support xs; each size maps internally to the matching typography scale token.",
+        "variant selects the typography role: display, heading, title, label, body, expressive, or mono.",
+        "display, heading, and title support the sizes sm, md, and lg; label, body, expressive, and mono also support xs.",
         "The as prop selects p, span, h1 through h6, div, or label without changing caller-supplied role, aria, data, event, or slot props.",
         "The color prop keeps default role color, or applies the existing muted content role.",
-        "truncate applies single-line overflow clipping and ellipsis; block hosts stay block, inline hosts become bottom-aligned inline blocks, and the containing width remains consumer-owned."
+        "truncate clips the text to a single line and ends it with an ellipsis.",
+        "A truncated block host stays a block; a truncated inline host becomes an inline block aligned to the bottom.",
+        "Text sets no width of its own, so it clips only where its container limits the width.",
+        "variant=\"label\" selects label typography only; it does not associate the text with a field.",
+        "as=\"label\" renders a native label, and its htmlFor targets a native input by id.",
+        "Inside a field, Text with slot=\"description\" becomes the field's description.",
+        "Inside a collection item, Text with slot=\"label\" or slot=\"description\" fills that slot, and Text without a slot fills the label."
       ],
       "accessibility": [
         "The selected native element supplies its normal semantic meaning and caller-supplied role and ARIA attributes are preserved.",
-        "Text participates in React Aria description slots inside fields and label and description slots inside collection items; field labels retain the field component's association, and as=label with htmlFor remains native labeling.",
+        "Text can fill a field's description slot and a collection item's label and description slots; field labels retain the field component's association, and as=label with htmlFor remains native labeling.",
         "Truncation does not remove the complete text from the DOM."
       ],
       "tokenRecipe": {

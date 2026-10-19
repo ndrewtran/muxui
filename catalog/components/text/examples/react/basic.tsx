@@ -5,6 +5,5 @@ export function BasicTextExample() {
     <Text as="h2" variant="heading" size="md">Account</Text>
     <Text color="muted">Manage your profile details.</Text>
     <Text variant="mono" size="sm">user@example.com</Text>
-    <Text truncate>Long text remains available to assistive technology when its container clips it.</Text>
   </div>;
 }
