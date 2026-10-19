@@ -71,7 +71,8 @@
       "family": "CheckboxField",
       "slug": "checkbox-field",
       "examples": [
-        "catalog/components/checkbox-field/examples/react/basic.tsx"
+        "catalog/components/checkbox-field/examples/react/basic.tsx",
+        "catalog/components/checkbox-field/examples/react/form.tsx"
       ],
       "export": {
         "module": ".",
@@ -179,7 +180,8 @@
       "family": "Input",
       "slug": "input",
       "examples": [
-        "catalog/components/input/examples/react/basic.tsx"
+        "catalog/components/input/examples/react/basic.tsx",
+        "catalog/components/input/examples/react/form.tsx"
       ],
       "export": {
         "module": ".",
@@ -258,7 +260,8 @@
       "family": "PaymentInput",
       "slug": "payment-input",
       "examples": [
-        "catalog/components/payment-input/examples/react/basic.tsx"
+        "catalog/components/payment-input/examples/react/basic.tsx",
+        "catalog/components/payment-input/examples/react/formatting.tsx"
       ],
       "export": {
         "module": ".",
@@ -299,7 +302,8 @@
       "family": "RadioField",
       "slug": "radio-field",
       "examples": [
-        "catalog/components/radio-field/examples/react/basic.tsx"
+        "catalog/components/radio-field/examples/react/basic.tsx",
+        "catalog/components/radio-field/examples/react/options.tsx"
       ],
       "export": {
         "module": ".",
@@ -351,7 +355,8 @@
       "family": "SwitchField",
       "slug": "switch-field",
       "examples": [
-        "catalog/components/switch-field/examples/react/basic.tsx"
+        "catalog/components/switch-field/examples/react/basic.tsx",
+        "catalog/components/switch-field/examples/react/form.tsx"
       ],
       "export": {
         "module": ".",
