@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:44ee0dc9c4db43b1e47ffaffec01c8bd605dfb467abbc0177e8dd6fb85d7c2dc -->
+<!-- @generated-content-sha256: sha256:ba53e1c342b4c158066fe80ef75b4247afe914504b5081c7ffbf4da4a6ec6f00 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -142,7 +142,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Image | experimental | . | .muxui-image | src, srcSet, sizes, alt, width, height, loading, decoding, fallbackSrc, fallbackSrcSet, radius, fit |
 | Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
-| Lightbox | experimental | . | .muxui-lightbox | items, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
+| Lightbox | experimental | . | .muxui-lightbox | items, renderContent, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
 | ListBox | experimental | . | .muxui-list-box | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
@@ -295,61 +295,125 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 ### CommandPalette
 
 - Search and collection navigation preserve React Aria keyboard semantics.
-- Escape closes the modal and closeOnSelect controls item activation dismissal.
-- Input owns native value, defaultValue, onChange, keyboard, paste, composition, and selection handlers; its ref resolves to HTMLInputElement for focus and cursor restoration.
-- Applications control the query on Input and supply Item results to ListBox. Content preserves application filtering and ordering and has no inputValue prop; the optional useCommandPalette hook owns reusable command data management.
-- Applications may compose loading content, Empty, Footer, and custom Item content. Enter during IME composition or cancelled by Input onKeyDown does not activate a command; Input defaults autoFocus to true when the palette opens.
-- useCommandPalette accepts commands with string IDs and preserves extended application metadata. It returns query, setQuery, filteredCommands, groupedCommands, runCommand, and getItemProps.
-- The hook supports query/onQueryChange or defaultQuery. Default matching trims the query and uses locale-aware case- and accent-insensitive substring matching across title, subtitle, group, and keywords. Default ranking prefers exact titles, title prefixes, title substrings, then secondary fields, preserving input order for ties.
-- Hook filter and sort callbacks override matching and ranking; filter:false and sort:false preserve externally supplied results and order. sort:()=>0 also preserves order. groupBy and getGroupTitle customize grouping; groups otherwise use command.group in first-seen order, with an empty title for ungrouped commands.
-- runCommand accepts a command or its string ID, ignores disabled or missing commands, awaits command.action then hook onAction, and calls close only after success when command.closeOnSelect ?? closeOnSelect is true. Rejections propagate to the caller without closing. The hook does not navigate hrefs or implement browser commands.
-- getItemProps adapts a command to Mux Item id, title, description, textValue, href, target, disabled, and onActivate. It sets Item closeOnSelect:false so only the hook close callback dismisses after actions; provide close when automatic dismissal is wanted. Connect Input value and native onChange to the hook query and setQuery.
-- Item activation through getItemProps catches action failures and calls the optional hook onError(error, command); without onError it reports to the global error reporter or console. Failures keep the palette open. Direct runCommand callers handle its rejected promise themselves.
+- Escape closes the palette.
+- closeOnSelect controls whether activating an item closes the palette.
+- Input is a native input. It takes value, defaultValue, onChange, and keyboard, paste, composition, and selection handlers.
+- The ref on Input resolves to an HTMLInputElement for focus and cursor restoration.
+- The application controls the query on Input and supplies the Item results to ListBox.
+- Content keeps the application's filtering and ordering, and has no inputValue prop.
+- The optional useCommandPalette hook manages reusable command data.
+- Applications may compose loading content, Empty, Footer, and custom Item content.
+- Enter during IME composition, or cancelled by Input onKeyDown, does not activate a command.
+- Input defaults autoFocus to true when the palette opens.
+- Collection is the React Aria Components Collection: it renders the Item and Section elements inside it and adds no element or class of its own.
+- Shortcut displays key text, with each key in a kbd element, and registers no keyboard shortcut.
+- Shortcut is aria-hidden by default.
+- LoadMoreItem is a presentational div that loads nothing and tracks no scrolling, so the application owns pagination.
+- Chips, Chip, and ChipRemove are structural: they change neither the query nor the results.
+- The application keeps the chip data and handles removal.
+- Description renders a visible paragraph and does not link itself to the Popup.
+- Give Description an id and pass it to the Popup's aria-describedby to connect them.
+- useCommandPalette accepts commands with string IDs and preserves extended application metadata.
+- useCommandPalette returns query, setQuery, filteredCommands, groupedCommands, runCommand, and getItemProps.
+- The hook supports query with onQueryChange, or defaultQuery.
+- Default matching trims the query and uses locale-aware, case- and accent-insensitive substring matching across title, subtitle, group, and keywords.
+- Default ranking prefers exact titles, title prefixes, title substrings, then secondary fields, and preserves input order for ties.
+- Hook filter and sort callbacks override matching and ranking.
+- filter:false and sort:false preserve externally supplied results and order, and sort:()=>0 also preserves order.
+- groupBy and getGroupTitle customize grouping.
+- By default, groups use command.group in first-seen order, with an empty title for ungrouped commands.
+- runCommand accepts a command or its string ID, and ignores disabled or missing commands.
+- runCommand awaits command.action, then the hook onAction.
+- runCommand then calls close when command.closeOnSelect ?? closeOnSelect is true, but only after success.
+- Rejections propagate to the runCommand caller without closing.
+- The hook does not navigate hrefs or implement browser commands.
+- getItemProps adapts a command to Item props: id, title, description, textValue, href, target, disabled, and onActivate.
+- getItemProps sets Item closeOnSelect:false, so only the hook close callback dismisses after actions.
+- Pass close to the hook when automatic dismissal is wanted.
+- Connect Input value and native onChange to the hook query and setQuery.
+- Item activation through getItemProps catches action failures and calls the optional hook onError(error, command).
+- Without onError, failures go to the global error reporter or the console.
+- Failures keep the palette open.
+- Direct runCommand callers handle its rejected promise themselves.
 
-Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `close`, `content`, `search-field`, `input`, `clear-button`, `listbox`, `section`, `section-header`, `item`, `separator`, `item-icon`, `item-content`, `item-title`, `item-description`, `item-meta`, `shortcut`, `load-more-item`, `empty`, `footer`, `chips`, `chip`, `chip-remove`.
+Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `close`, `content`, `search-field`, `input`, `clear-button`, `listbox`, `section`, `section-header`, `item`, `separator`, `collection`, `item-icon`, `item-content`, `item-title`, `item-description`, `item-meta`, `shortcut`, `load-more-item`, `empty`, `footer`, `chips`, `chip`, `chip-remove`.
 
 ### Popover
 
-- Delegate portal mounting, anchor positioning, outside-content exclusion, focus restoration, and topmost dismissal to RAC Popover; use a stable React Aria FocusScope for optional modal focus containment.
-- If the element focused when the Popover opened has left the DOM when the Popover closes or unmounts, and focus is otherwise on the document body, move focus to the nearest ancestor recorded at opening that is still connected and focusable; with no such ancestor, focus stays on the document body.
-- Require a focusable trigger and toggle controlled or uncontrolled state through RAC DialogTrigger.
-- Support logical placements top, bottom, start, end, top-start, top-end, bottom-start, bottom-end, start-top, start-bottom, end-top, and end-bottom; resolve start and end through the current locale direction.
-- Validate finite offset and crossOffset, boolean shouldFlip, and nonnegative finite containerPadding while retaining existing geometry defaults.
-- Optionally position relative to an existing DOM element through anchorRef while keeping the required trigger responsible for opening and accessibility relationships.
-- Use modal false for non-blocking content without focus containment, outside-content exclusion, or scroll locking; modal remains true by default.
-- Preserve muxui-popover-positioner and muxui-popover selectors, data-placement and transition states; expose data-modal on the positioner for consumer styling.
-- Changing modal while open retains the existing content, uncontrolled values, and child state; entering modal mode focuses the dialog surface when focus is outside it.
-- When dismissable, a non-modal popover also closes on outside press and on Escape while focus is on the trigger. dismissable false rejects accidental dismissal by Escape, outside press, the hidden dismiss buttons, or trigger toggle; an explicit slot="close" button in the content still requests close, which closes an uncontrolled Popover and calls onOpenChange(false) for a controlled owner.
+- A Popover renders in a portal and is positioned against its trigger.
+- Closing returns focus to the element that was focused when the Popover opened.
+- If the element that opened the Popover has left the DOM when the Popover closes or unmounts, focus moves to the nearest ancestor recorded at opening that is still connected and focusable.
+- That move happens only when focus would otherwise be on the document body, and with no such ancestor focus stays there.
+- When overlays are stacked, Escape closes the topmost one.
+- trigger is required and must be a focusable React element.
+- Pressing the trigger toggles the Popover.
+- Open state is controlled with open and onOpenChange, or starts from defaultOpen when uncontrolled.
+- placement accepts top, bottom, start, end, top-start, top-end, bottom-start, bottom-end, start-top, start-bottom, end-top, and end-bottom.
+- start and end resolve through the current locale direction.
+- An unsupported placement, a non-finite offset or crossOffset, a non-boolean shouldFlip, or a negative or non-finite containerPadding throws a TypeError.
+- anchorRef positions the Popover against another DOM element, while the trigger still opens it and keeps its accessibility relationships.
+- With modal set to false, the Popover is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking.
+- Changing modal while open keeps the existing content, uncontrolled values, and child state.
+- Entering modal mode focuses the dialog surface when focus is outside it.
+- Keep the muxui-popover-positioner and muxui-popover selectors, and the data-placement and transition state attributes.
+- data-modal on the positioner exposes the modal setting for consumer styling.
+- A dismissable non-modal Popover also closes on an outside press, and on Escape while focus is on the trigger.
+- With dismissable set to false, Escape, an outside press, and the trigger do not close the Popover, in modal and non-modal mode.
+- A button with slot="close" in the content still closes it.
+- Pressing a close-slot button closes an uncontrolled Popover and calls onOpenChange(false).
+- A controlled Popover stays open until its owner sets open to false.
 
 Public parts: `trigger`, `root`, `content`.
 
 ### Tooltip
 
-- Delegate hover and focus timing, global one-tooltip sequencing, Escape handling, portal mounting, and teardown to RAC TooltipTrigger.
-- Require descriptive content and a focusable trigger while preserving Core's 500 ms open and zero-delay close defaults.
-- Support logical placements top, bottom, start, end, top-start, top-end, bottom-start, bottom-end, start-top, start-bottom, end-top, and end-bottom; resolve start and end through the current locale direction.
-- Validate finite offset and crossOffset, boolean shouldFlip, and nonnegative finite containerPadding while retaining existing geometry defaults.
-- Optionally position relative to an existing DOM element through anchorRef while keeping the required trigger as the hover, focus, and descriptive relationship owner.
-- Preserve muxui-tooltip and data-placement, data-entering, and data-exiting selectors for consumer styling.
-- disabled suppresses opening and closes an open overlay without adding aria-disabled or data-disabled to the trigger, which stays operable.
+- A Tooltip opens on pointer hover and on keyboard focus, after its delay.
+- Only one Tooltip is open at a time.
+- Escape closes the open Tooltip.
+- A Tooltip renders in a portal.
+- content is required, and trigger is required and must be a focusable React element.
+- placement accepts top, bottom, start, end, top-start, top-end, bottom-start, bottom-end, start-top, start-bottom, end-top, and end-bottom.
+- start and end resolve through the current locale direction.
+- An unsupported placement, a non-finite offset or crossOffset, a non-boolean shouldFlip, or a negative or non-finite containerPadding throws a TypeError.
+- anchorRef positions the Tooltip against another DOM element, while the trigger still owns hover, focus, and the description.
+- Keep the muxui-tooltip selector and the data-placement, data-entering, and data-exiting attributes for consumer styling.
+- With disabled set, the Tooltip does not open, and an open one closes.
+- The trigger stays operable: disabled adds no aria-disabled or data-disabled to it.
+- A Tooltip describes its trigger and does not name it, so an icon-only trigger needs its own accessible name.
+- The Tooltip surface has pointer events turned off, so links and buttons in its content do not receive clicks.
 
 Public parts: `trigger`, `tooltip`.
 
 ### Dialog
 
-- Delegate portal mounting, inert outside content, scroll locking, topmost dismissal, and focus restoration to RAC Modal and ModalOverlay.
-- If the element focused when the Dialog opened has left the DOM when the Dialog closes or unmounts, and focus is otherwise on the document body, move focus to the nearest ancestor recorded at opening that is still connected and focusable; with no such ancestor, focus stays on the document body.
-- Use DialogTrigger when a trigger is supplied and let ModalOverlay own controlled or uncontrolled state otherwise.
-- Render optional description and actions with stable muxui-dialog-description and muxui-dialog-actions selectors.
-- Keep Mux UI part classes when applying consumer backdrop, panel, title, description, content, actions, and close classes; preserve default styling unless the consumer overrides it.
-- With dismissable false, reject accidental dismissal by Escape, outside press, or trigger toggle; an explicit slot="close" button in the content or actions still requests close, which closes an uncontrolled Dialog and calls onOpenChange(false) for a controlled owner.
+- A Dialog renders in a portal and makes the content outside it inert while it is open.
+- Page scrolling is locked while a Dialog is open.
+- When overlays are stacked, Escape closes the topmost one.
+- Closing returns focus to the element that was focused when the Dialog opened.
+- If the element that opened the Dialog has left the DOM when the Dialog closes or unmounts, focus moves to the nearest ancestor recorded at opening that is still connected and focusable.
+- That move happens only when focus would otherwise be on the document body, and with no such ancestor focus stays there.
+- trigger is optional and renders the element that opens the Dialog.
+- Open state is controlled with open and onOpenChange, or starts from defaultOpen when uncontrolled.
+- Optional description and actions render with the stable muxui-dialog-description and muxui-dialog-actions selectors.
+- Mux UI part classes stay when consumer backdrop, panel, title, description, content, actions, and close classes are applied.
+- Default styling is preserved unless the consumer overrides it.
+- With dismissable set to false, Escape, an outside press, and the trigger do not close the Dialog.
+- A Dialog with dismissable set to false has no built-in close button.
+- A button with slot="close" in the content or actions still closes it.
+- Pressing a close-slot button closes an uncontrolled Dialog and calls onOpenChange(false).
+- A controlled Dialog stays open until its owner sets open to false.
 
 Public parts: `backdrop`, `root`, `title`, `description`, `content`, `actions`, `close`.
 
 ### AlertDialog
 
-- Escape and backdrop dismissal follow React Aria modal semantics.
-- Close returns focus to the trigger.
+- Open state is controlled with open and onOpenChange, or starts from defaultOpen when uncontrolled.
+- Escape closes the dialog, and pressing the backdrop does not.
+- A close request reaches onOpenChange(false), and a controlled owner keeps the dialog open by leaving open unchanged.
+- Close is a button in the close slot. It closes the dialog and runs no confirming action.
+- The confirming action is the application's own button, such as one placed in Actions.
+- AlertDialog does not track the confirming action's progress or outcome, so the application owns them.
+- Closing returns focus to the trigger.
 - Keep muxui-alert-dialog__backdrop, __popup, __content, __title, __description, __actions, and __close selectors when consumer className values customize the corresponding parts.
 
 Public parts: `root`, `trigger`, `backdrop`, `popup`, `content`, `title`, `description`, `actions`, `close`.
