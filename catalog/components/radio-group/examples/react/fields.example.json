@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:radio-group-fields-react",
+  "kind": "example",
+  "name": "RadioGroup with RadioField options",
+  "summary": "Compose RadioField options as children of a controlled RadioGroup that supplies the selected value and the size.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:radio-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/radio-group/examples/react/fields.tsx"
+}

@@ -20,7 +20,16 @@
         "parts": ["root", "input"],
         "defaults": { "allowsMultiple": false, "acceptDirectory": false, "disabled": false }
       },
-      "behavior": ["Use the browser File API through RAC FileTrigger and report selected files as a Core File array.", "Reset the native input before every press so selecting the same file again still emits select."],
+      "behavior": [
+        "onSelect receives the selected files as an array of File objects.",
+        "acceptedFileTypes sets the native accept attribute, which narrows what the picker offers.",
+        "allowsMultiple lets the picker select more than one file.",
+        "acceptDirectory sets the native webkitdirectory attribute.",
+        "defaultCamera, user or environment, sets the native capture attribute.",
+        "Pressing the trigger resets the native input first, so choosing the same file again calls onSelect.",
+        "FileTrigger uploads nothing, and a form does not submit the chosen files.",
+        "A disabled FileTrigger disables its trigger and does not call onSelect."
+      ],
       "accessibility": ["Keep activation on the consumer trigger and preserve its accessible name.", "Apply disabled behavior to the trigger while retaining the native input as a hidden implementation detail."],
       "tokenRecipe": { "source": "muxui:token:default-theme", "requirements": [
         { "token": "semantic.focus.ring", "requirement": "optional", "profiles": ["web.react"] }

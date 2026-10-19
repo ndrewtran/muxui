@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:file-trigger-selection-react",
+  "kind": "example",
+  "name": "FileTrigger selection",
+  "summary": "Pick several images, keep the selected files in state, and check their size before using them. Nothing is uploaded.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:file-trigger#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/file-trigger/examples/react/selection.tsx"
+}

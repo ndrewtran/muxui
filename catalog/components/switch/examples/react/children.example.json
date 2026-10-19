@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:switch-children-react",
+  "kind": "example",
+  "name": "Switch with children and an aria-label",
+  "summary": "Use children for the visible label and aria-label for the name, because children alone do not name a Switch.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:switch#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/switch/examples/react/children.tsx"
+}

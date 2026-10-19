@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:number-field-formatting-react",
+  "kind": "example",
+  "name": "NumberField formatting and bounds",
+  "summary": "Show a currency-formatted value with a decimal step and bounds, read the number the callback receives, and keep an empty field empty.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:number-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/number-field/examples/react/formatting.tsx"
+}
