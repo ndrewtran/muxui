@@ -230,12 +230,13 @@ export const Link = React.forwardRef(function Link({
   ...props
 }, ref) {
   // Like Button, an undefined disabled inherits a disabled GridList item; an explicit false still
-  // wins. A Link without an href is always disabled. The RAC Link always gets an explicit value.
+  // wins. A Link without an href is always disabled, and an empty href is not forwarded because
+  // React warns about it. The RAC Link always gets an explicit isDisabled.
   const inheritedDisabled = React.useContext(GridListItemDisabledContext);
   return React.createElement(AriaLink, {
     ...props,
     ref,
-    href,
+    href: href || undefined,
     isDisabled: !href || (disabled ?? inheritedDisabled),
     target,
     rel,
