@@ -1191,6 +1191,22 @@
     },
     {
       "family": "example",
+      "path": "catalog/components/button/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/form/examples/react/external-validation.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toast/examples/react/declarative-update.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toast/examples/react/keys.example.json"
+    },
+    {
+      "family": "example",
       "path": "catalog/components/checkbox-field/examples/react/form.example.json"
     },
     {

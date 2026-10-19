@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ec8aa72ea3dc6b171fece452ab41b7812e841cd3ae521ec98d2305bdd86f4a1c -->
+<!-- @generated-content-sha256: sha256:f5f7a5046854277d6d54897d71e9b8126587f5fadcb3f48d58e9e095e18c19a1 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -362,6 +362,9 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `content`, `title`, `descr
 
 - Activation requests one immediate action
 - Pending suppresses activation while retaining focusability
+- Inside a form, Button does not submit or reset the form unless it is given the native submit or reset type
+- A pending submit Button renders as a plain button, so activating it does not submit the form; the application sets and clears pending around its own work
+- Disabled applies the native disabled attribute, so the Button is neither focusable nor activatable
 - Variant and size select finite visual recipes
 - showTextWhileLoading keeps the pending label visible beside its spinner
 - The ref resolves to the native HTMLButtonElement; native pointer, pointer capture, auxiliary click, and context-menu handlers run on that host. Consumers may capture and release pointers without replacing onActivate.
