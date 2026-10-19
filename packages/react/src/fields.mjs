@@ -49,7 +49,6 @@ import { IconButton } from './supplemental/icon-button.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
-const DATE_PLACEHOLDER = /*#__PURE__*/ parseDate('2000-01-01');
 const TIME_PLACEHOLDER = /*#__PURE__*/ parseTime('00:00');
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const MUX_RUNTIME_SCOPE_SELECTOR = /*#__PURE__*/ [
@@ -814,7 +813,6 @@ export const DateField = React.forwardRef(function DateField({
     minValue: parsedMinValue,
     maxValue: parsedMaxValue,
     isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
-    placeholderValue: DATE_PLACEHOLDER,
     onChange: (next) => onChange?.(serializeDateValue(next)),
     name,
     className: classNames('muxui-date-field', className),
@@ -942,7 +940,6 @@ export const DatePicker = /*#__PURE__*/ (() => {
       minValue: parsedMinValue,
       maxValue: parsedMaxValue,
       isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
-      placeholderValue: DATE_PLACEHOLDER,
       onChange: (next) => onChange?.(serializeDateValue(next)),
       isOpen: open,
       defaultOpen,
@@ -1028,7 +1025,6 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
       minValue: parsedMinValue,
       maxValue: parsedMaxValue,
       isDateUnavailable: unavailableDateCallback(unavailableDateMatcher, true),
-      placeholderValue: DATE_PLACEHOLDER,
       onChange: handleChange,
       isOpen: open,
       defaultOpen,
