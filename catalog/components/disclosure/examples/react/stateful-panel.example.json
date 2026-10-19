@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:disclosure-stateful-panel-react",
+  "kind": "example",
+  "name": "Disclosure with a form field",
+  "summary": "Collapse a Disclosure from a button inside its panel, and see the field keep its value and focus move to the trigger.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:disclosure#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/disclosure/examples/react/stateful-panel.tsx"
+}

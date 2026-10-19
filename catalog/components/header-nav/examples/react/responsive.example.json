@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:header-nav-responsive-react",
+  "kind": "example",
+  "name": "Responsive HeaderNav",
+  "summary": "Show the links in the header from a container width and the drawer trigger below it, with the current page marked on both copies.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:header-nav#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/header-nav/examples/react/responsive.tsx"
+}
