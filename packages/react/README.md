@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:91ab904c378e04acf86b8418134f6638564f99139eb2278ecbbab2c62958df83 -->
+<!-- @generated-content-sha256: sha256:b23e28c6195e74530f73faf3fe7c96777da24de43de333032348edff12392283 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -451,7 +451,9 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `content`, `title`, `descr
 - Activation requests one immediate action
 - Pending suppresses activation while retaining focusability
 - Inside a form, Button does not submit or reset the form unless it is given the native submit or reset type
-- A pending submit Button renders as a plain button, so activating it does not submit the form; the application sets and clears pending around its own work
+- A pending submit Button does not submit its form by click or by Enter in a field; the application sets and clears pending around its own work
+- A server-rendered pending submit Button is disabled until it hydrates, so it is not focusable until then
+- A script that calls requestSubmit with a pending submit Button as the submitter is application code and is not blocked
 - Disabled applies the native disabled attribute, so the Button is neither focusable nor activatable
 - Variant and size select finite visual recipes
 - showTextWhileLoading keeps the pending label visible beside its spinner
