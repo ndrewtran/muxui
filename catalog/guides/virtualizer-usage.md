@@ -2,6 +2,12 @@
 
 Use the Mux UI Virtualizer contract. The default stack layout renders its own fixed-height rows and needs an accessible name on the Virtualizer. Grid layout virtualizes a GridList, which carries the name instead.
 
+## Stack layout
+
+The default stack layout is a list of the items you give it, in rows placed a fixed distance apart. Its rows cannot be selected, and it does not virtualize children or another collection such as a Table or Tree; use grid layout for a GridList. Height and row height are in pixels and overscan counts whole rows, and the Behavior section lists the valid values.
+
+Rows are not measured, so keep each row's content within the row height: taller content overflows into the next row. The Virtualizer sets its own block size and scrolls inside it, which replaces any block size or overflow in its style. Only the visible rows, the overscan rows, and the focused row are in the page at once, so more rows than that are mounted when focus has moved away from the visible window. The Virtualizer with taller rows example fits a two-line label inside a larger row height.
+
 ## Grid composition
 
 Wrap one `<GridList layout="grid">` in `<Virtualizer layout="grid">`. The Virtualizer renders no element of its own, so the two split the work:
@@ -31,7 +37,7 @@ Rows measure their content, and every card in a row takes the tallest height. Ne
 
 ## Scrolling
 
-Give the GridList a block size, such as `style={{ blockSize: '40rem' }}`, so it is a bounded scroller. Without a block size, the page scrolls the grid. That works, with one upstream caveat: WebKit can log a benign ResizeObserver loop warning while the container resizes.
+Give the GridList a block size, such as `style={{ blockSize: '40rem' }}`, so it is a bounded scroller. Without a block size, the page scrolls the grid. That works, with one caveat: WebKit can log a benign ResizeObserver loop warning while the container resizes.
 
 ## Page layout and breakpoints
 

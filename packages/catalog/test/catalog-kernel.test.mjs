@@ -200,7 +200,7 @@ test('R1.4 guide sources preserve Markdown newlines', async () => {
   const guideSources = baseBundle.artifacts
     .filter(({ kind, source }) => kind === 'guide' && source.content?.includes('-usage.md'))
     .map(({ source }) => source.content);
-  assert.equal(guideSources.length, 56);
+  assert.equal(guideSources.length, 59);
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
     assert.doesNotMatch(source, /\\n/u, sourcePath);

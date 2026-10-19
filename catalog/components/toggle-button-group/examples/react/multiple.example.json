@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:toggle-button-group-multiple-react",
+  "kind": "example",
+  "name": "Multiple selection ToggleButtonGroup",
+  "summary": "Select several ToggleButtons in a group by the id of each button.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:toggle-button-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/toggle-button-group/examples/react/multiple.tsx"
+}

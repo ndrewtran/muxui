@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:resizable-usage",
+  "kind": "guide",
+  "name": "Resizable usage",
+  "summary": "Portable usage guidance for Resizable.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "resizable",
+    "react",
+    "accessibility"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/resizable-usage.md"
+}

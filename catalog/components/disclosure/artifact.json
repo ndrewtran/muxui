@@ -79,6 +79,8 @@
       "strategy": "direct",
       "api": {
         "props": [
+          "title",
+          "children",
           "expanded",
           "defaultExpanded",
           "disabled",
@@ -100,7 +102,11 @@
       },
       "behavior": [
         "Enter and Space toggle the panel",
-        "Expanded state is controllable or internally managed"
+        "Expanded state is controllable or internally managed",
+        "The required title is the content of the trigger button, not a separate part, and children are the panel content",
+        "A collapsed panel keeps its content mounted, so the state and effects of that content continue while it is closed",
+        "A collapsed panel is marked inert and aria-hidden, so its content cannot be focused or clicked",
+        "Collapsing the Disclosure while focus is inside its panel moves focus to the trigger"
       ],
       "accessibility": [
         "Expose a labelled button with expanded state and a controlled panel relationship"

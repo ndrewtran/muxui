@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:disclosure-group-controlled-react",
+  "kind": "example",
+  "name": "Controlled DisclosureGroup",
+  "summary": "Control which Disclosure is expanded by the id of each child, and read the expanded ids from the change callback.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:disclosure-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/disclosure-group/examples/react/controlled.tsx"
+}
