@@ -1112,6 +1112,19 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     }, content)) : null);
 }
 
+// Re-renders only when the character count changes, for every transaction in either mode.
+function CharactersLeft({ editor, limit }) {
+  const length = React.useSyncExternalStore(
+    React.useCallback((notify) => {
+      editor?.on('transaction', notify);
+      return () => { editor?.off('transaction', notify); };
+    }, [editor]),
+    () => editor?.getText().length ?? 0,
+    () => 0,
+  );
+  return `${Math.max(0, limit - length)} characters left`;
+}
+
 /** Rich editing through Mux-owned document and command values; Tiptap stays internal. */
 export const TextEditor = React.forwardRef(function TextEditor({
   value, defaultValue = emptyDocument, onChange, disabled = false, invalid = false, placeholder = '', limit,
@@ -1170,10 +1183,11 @@ export const TextEditor = React.forwardRef(function TextEditor({
     onUpdate: ({ editor: instance }) => {
       const next = normalizeTextEditorDocument(instance.getJSON());
       if (limitRef.current !== undefined && instance.getText().length > limitRef.current) {
-        instance.commands.setContent(last.current, false);
+        // Undo the edit quietly: Tiptap 3 takes an options object here, and a boolean would still emit an update.
+        instance.commands.setContent(last.current, { emitUpdate: false });
         return;
       }
-      if (controlledValueRef.current === undefined) last.current = next;
+      last.current = next;
       onChangeRef.current?.(next);
       if (controlledValueRef.current !== undefined) requestControlledReconciliation();
     },
@@ -1181,7 +1195,7 @@ export const TextEditor = React.forwardRef(function TextEditor({
 
   React.useEffect(() => {
     if (!editor) return undefined;
-    editor.setEditable(!disabled && !readOnly);
+    editor.setEditable(!disabled && !readOnly, false);
     return undefined;
   }, [disabled, editor, readOnly]);
 
@@ -1198,7 +1212,7 @@ export const TextEditor = React.forwardRef(function TextEditor({
     const current = normalizeTextEditorDocument(editor.getJSON());
     if (JSON.stringify(next) !== JSON.stringify(current)) {
       last.current = next;
-      editor.commands.setContent(next, false);
+      editor.commands.setContent(next, { emitUpdate: false });
     }
   }, [editor]);
 
@@ -1268,7 +1282,7 @@ export const TextEditor = React.forwardRef(function TextEditor({
       : null),
   description !== undefined ? React.createElement('p', { id: descriptionId, className: 'muxui-text-editor__description' }, description) : null,
   errorMessage !== undefined ? React.createElement('p', { id: errorId, className: 'muxui-text-editor__error', 'aria-live': 'polite' }, errorMessage) : null,
-  characterLimit !== undefined ? React.createElement('p', { id: description === undefined && errorMessage === undefined ? descriptionId : undefined, className: cx('muxui-text-editor__hint', invalid && 'muxui-text-editor__hint--invalid'), 'aria-live': 'polite' }, `${Math.max(0, characterLimit - (editor?.getText().length ?? 0))} characters left`) : null);
+  characterLimit !== undefined ? React.createElement('p', { id: description === undefined && errorMessage === undefined ? descriptionId : undefined, className: cx('muxui-text-editor__hint', invalid && 'muxui-text-editor__hint--invalid'), 'aria-live': 'polite' }, React.createElement(CharactersLeft, { editor, limit: characterLimit })) : null);
 });
 TextEditor.displayName = 'TextEditor';
 TextEditor.Root = TextEditor;

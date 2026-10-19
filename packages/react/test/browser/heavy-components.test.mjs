@@ -338,3 +338,85 @@ test('TextEditor blockquote Backspace and leading code block ArrowUp follow Tipt
     await close();
   }
 });
+
+// Tiptap 3 reads setContent's second argument as an options object, so a boolean
+// still emitted an update, and setEditable emits one by default. Real typing
+// proves the limit revert, mount, read-only toggles and external value changes
+// stay out of onChange, and the characters-left hint follows every edit.
+test('TextEditor limit reverts over-limit edits without reporting them and keeps the hint live', { timeout: 60_000 }, async () => {
+  const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const { page, settle } = await openDocumentEditor(browser, url);
+    await page.waitForSelector('#limit-controlled.ProseMirror');
+    await page.waitForSelector('#limit-uncontrolled.ProseMirror');
+    const text = async (selector) => {
+      await settle();
+      return page.locator(selector).textContent();
+    };
+    const calls = async (name) => JSON.parse(await text(`[data-testid="${name}-calls"]`) || '[]');
+    const shown = (name) => text(`[data-testid="${name}"] .ProseMirror`);
+    const hint = (name) => text(`[data-testid="${name}"] .muxui-text-editor__hint`);
+    const left = (count) => `${count} characters left`;
+    const typeAtEnd = async (name, characters) => {
+      await page.locator(`#${name}`).click();
+      await page.keyboard.press('End');
+      await page.keyboard.type(characters);
+    };
+
+    // Mounting reports nothing and the hint counts the starting text.
+    for (const name of ['limit-controlled', 'limit-uncontrolled']) {
+      assert.deepEqual(await calls(name), [], `${name} reports no change at mount`);
+      assert.equal(await shown(name), 'abc');
+      assert.equal(await hint(name), left(2));
+    }
+
+    // Uncontrolled: accepted edits report, rejected ones do not, and the hint follows without a parent render.
+    await typeAtEnd('limit-uncontrolled', 'de');
+    assert.equal(await shown('limit-uncontrolled'), 'abcde');
+    assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde']);
+    assert.equal(await hint('limit-uncontrolled'), left(0));
+    for (const character of 'fg') {
+      await page.keyboard.type(character);
+      assert.equal(await shown('limit-uncontrolled'), 'abcde', `${character} is undone`);
+      assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde'], `undoing ${character} is not reported`);
+      assert.equal(await hint('limit-uncontrolled'), left(0));
+    }
+    await page.keyboard.press('Backspace');
+    assert.equal(await shown('limit-uncontrolled'), 'abcd');
+    assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd']);
+    assert.equal(await hint('limit-uncontrolled'), left(1));
+    await page.locator('#limit-toggle-readonly').click();
+    await page.locator('#limit-toggle-readonly').click();
+    assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd'], 'read-only toggles are not reported');
+
+    // Controlled: an over-limit edit leaves the editor and the parent on the last accepted value.
+    await typeAtEnd('limit-controlled', 'de');
+    assert.equal(await shown('limit-controlled'), 'abcde');
+    assert.equal(await text('[data-testid="limit-controlled-value"]'), 'abcde');
+    assert.deepEqual(await calls('limit-controlled'), ['abcd', 'abcde']);
+    assert.equal(await hint('limit-controlled'), left(0));
+    for (const character of 'fg') {
+      await page.keyboard.type(character);
+      assert.equal(await shown('limit-controlled'), 'abcde', `${character} is undone`);
+      assert.equal(await text('[data-testid="limit-controlled-value"]'), 'abcde');
+      assert.deepEqual(await calls('limit-controlled'), ['abcd', 'abcde'], `undoing ${character} is not reported`);
+      assert.equal(await hint('limit-controlled'), left(0));
+    }
+
+    // A value changed from outside shows up with a matching hint and is not echoed to onChange.
+    await page.locator('#limit-set-external').click();
+    assert.equal(await shown('limit-controlled'), 'xy');
+    assert.equal(await text('[data-testid="limit-controlled-value"]'), 'xy');
+    assert.deepEqual(await calls('limit-controlled'), ['abcd', 'abcde']);
+    assert.equal(await hint('limit-controlled'), left(3));
+    await typeAtEnd('limit-controlled', 'z');
+    assert.equal(await shown('limit-controlled'), 'xyz');
+    assert.deepEqual(await calls('limit-controlled'), ['abcd', 'abcde', 'xyz']);
+    assert.equal(await hint('limit-controlled'), left(2));
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});
