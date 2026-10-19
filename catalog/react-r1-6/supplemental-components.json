@@ -201,7 +201,9 @@
       "family": "InputTags",
       "slug": "input-tags",
       "examples": [
-        "catalog/components/input-tags/examples/react/basic.tsx"
+        "catalog/components/input-tags/examples/react/basic.tsx",
+        "catalog/components/input-tags/examples/react/form.tsx",
+        "catalog/components/input-tags/examples/react/validation.tsx"
       ],
       "export": {
         "module": ".",
@@ -257,7 +259,8 @@
       "family": "MultiSelect",
       "slug": "multi-select",
       "examples": [
-        "catalog/components/multi-select/examples/react/basic.tsx"
+        "catalog/components/multi-select/examples/react/basic.tsx",
+        "catalog/components/multi-select/examples/react/form.tsx"
       ],
       "export": {
         "module": ".",
@@ -341,7 +344,9 @@
       "family": "SelectNative",
       "slug": "select-native",
       "examples": [
-        "catalog/components/select-native/examples/react/basic.tsx"
+        "catalog/components/select-native/examples/react/basic.tsx",
+        "catalog/components/select-native/examples/react/controlled.tsx",
+        "catalog/components/select-native/examples/react/form.tsx"
       ],
       "export": {
         "module": ".",

@@ -3,10 +3,7 @@ import { join, relative, sep } from 'node:path';
 
 // Canonical component, pattern, or example records that stay out of the manifest on
 // purpose. Keys are repository-relative record paths; values give the reason.
-export const MANIFEST_EXCLUSIONS = Object.freeze({
-  'catalog/components/select/examples/react/composition.example.json':
-    'Its source declares two executable exports; the docs example contract requires exactly one.',
-});
+export const MANIFEST_EXCLUSIONS = Object.freeze({});
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {

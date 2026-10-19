@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:1035371aade4bcbfc2faf797083ff07b0b77e6b1717506a5fa81ccf5255ff85d -->
+<!-- @generated-content-sha256: sha256:1d3d76256a8701d4af729bb15eb59f3b77aaceb0f8dc8f3eeb2572913f51410d -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -253,14 +253,30 @@ Public parts: `root`, `viewport`, `item`.
 
 ### Select
 
-- Existing named Select items, form submission, sizes, controlled or uncontrolled string values, and open state remain supported. Interactive control sizes use shared sm, md, and lg targets; md is the default.
-- Select.Root, Label, Trigger, Value, Popup, List, Item, Description, and Error compose the same control. Supply label, aria-label, or aria-labelledby on the root, or include a nonempty Select.Label directly, in a fragment, or in native wrappers. Root label/description/errorMessage props also render with compound children.
-- The simple trigger prop accepts a native button element and preserves its native ref, attributes, and handlers. Select.Trigger also owns a native button. Use Select.Value inside a custom trigger to retain selected-value accessibility.
-- selectedContent customizes the simple default trigger value. Select.Value children customize compound selected content; its default renders the selected item children. Item IDs and textValue remain Mux strings and raw upstream render props/state objects are not public.
-- Arrow keys open and navigate the list. Selection and Escape close it and restore trigger focus. Root disabled state cannot be overridden by child disabled=false; readOnly preserves the value and suppresses onChange.
-- Popup geometry uses finite offset/crossOffset, nonnegative finite containerPadding, and logical placement such as bottom-start or end-top. Existing bottom-start and 8px defaults are preserved. Popup-specific props override root geometry; anchorRef positions against a consumer-owned element, and modal=false keeps outside content accessible.
-- Mux selectors are .muxui-select, .muxui-select-label, .muxui-select-trigger, .muxui-select-value, .muxui-select-popover, .muxui-select-list, .muxui-select-option, .muxui-select-description, and .muxui-select-error. Root states include data-open, data-disabled, data-readonly, and data-invalid; options expose data-selected, data-disabled, data-focused, and data-focus-visible.
-- Root, Popup, List, and Item refs target divs; Trigger targets a button; Label, Value, Description, and Error target spans. Error renders only while invalid.
+- Named Select items, form submission, sizes, controlled or uncontrolled string values, and open state are supported.
+- Interactive control sizes use the shared sm, md, and lg targets; md is the default.
+- Select.Root, Label, Trigger, Value, Popup, List, Item, Description, and Error compose the same control.
+- Supply label, aria-label, or aria-labelledby on the root, or include a nonempty Select.Label directly, in a fragment, or in native wrappers.
+- Root label, description, and errorMessage props also render with compound children.
+- The simple trigger prop accepts a native button element and preserves its native ref, attributes, and handlers.
+- Select.Trigger also owns a native button.
+- Use Select.Value inside a custom trigger to retain selected-value accessibility.
+- selectedContent customizes the simple default trigger value.
+- Select.Value children customize compound selected content; its default renders the selected item children.
+- Item IDs and textValue are plain strings, and the underlying library's render props and state objects are not public.
+- Arrow keys open and navigate the list.
+- Selection and Escape close the list and restore trigger focus.
+- Root disabled state cannot be overridden by child disabled=false.
+- readOnly preserves the value and suppresses onChange.
+- Popup geometry uses finite offset and crossOffset, nonnegative finite containerPadding, and logical placement such as bottom-start or end-top.
+- The placement defaults to bottom-start and the offset to 8px.
+- Popup-specific props override root geometry.
+- anchorRef positions the popup against a consumer-owned element, and modal=false keeps outside content accessible.
+- Select class names are .muxui-select, .muxui-select-label, .muxui-select-trigger, .muxui-select-value, .muxui-select-popover, .muxui-select-list, .muxui-select-option, .muxui-select-description, and .muxui-select-error.
+- Root states include data-open, data-disabled, data-readonly, and data-invalid.
+- Options expose data-selected, data-disabled, data-focused, and data-focus-visible.
+- Root, Popup, List, and Item refs target divs; Trigger targets a button; Label, Value, Description, and Error target spans.
+- Error renders only while invalid.
 - Named forms submit the selected item id, not item.value.
 - errorMessage is shown only while the field is invalid, through the invalid prop or failed validation, and replaces the default message; it never makes the field invalid by itself.
 

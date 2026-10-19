@@ -3,7 +3,7 @@
   "id": "muxui:example:input-tags-basic-react",
   "kind": "example",
   "name": "Basic React InputTags",
-  "summary": "A source-faithful React input-tags example using the Mux-owned compound API.",
+  "summary": "A React InputTags example with an initial tag and a placeholder.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:input-tags#web.react",

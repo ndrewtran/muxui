@@ -40,8 +40,8 @@
   "accessibility": {
     "nameRequired": true,
     "obligations": [
-      "Supports serializable item IDs, controlled or uncontrolled multiple selection, filtering, reset and select-all actions.",
-      "Escape and modal focus semantics come from React Aria."
+      "Items have serializable IDs, and the popup filters them by search text.",
+      "Keyboard focus stays inside the open popup until it closes on Escape."
     ]
   },
   "bindings": {
@@ -105,12 +105,24 @@
         }
       },
       "behavior": [
-        "Supports serializable item IDs, controlled or uncontrolled multiple selection, filtering, reset and select-all actions.",
-        "Escape and modal focus semantics come from React Aria."
+        "Items have serializable IDs, and the selection is a set of those IDs, or all of them.",
+        "The selection is controlled with selectedKeys or left uncontrolled.",
+        "onSelectionChange reports the new selection.",
+        "The popup filters items by the search text.",
+        "The Reset and Select all buttons only call onReset and onSelectAll.",
+        "The application changes the selection in those callbacks, so the buttons do nothing to an uncontrolled selection.",
+        "MultiSelect is not a native select: it renders no form input and submits nothing.",
+        "The application serializes the selected IDs when the form submits.",
+        "required adds an asterisk to the label; it does not check that anything is selected.",
+        "Escape clears the selection when there is one.",
+        "With nothing selected, Escape closes the popup and returns focus to the trigger.",
+        "Keyboard focus stays inside the popup while it is open.",
+        "The search field's label and placeholder and the Reset, Select all, and Clear search buttons use fixed English text.",
+        "The label, placeholder, selection summary, and empty-state text come from props."
       ],
       "accessibility": [
-        "Supports serializable item IDs, controlled or uncontrolled multiple selection, filtering, reset and select-all actions.",
-        "Escape and modal focus semantics come from React Aria."
+        "Items have serializable IDs, and the popup filters them by search text.",
+        "Keyboard focus stays inside the open popup until it closes on Escape."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",

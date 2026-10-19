@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0.0","id":"muxui:guide:multi-select-usage","kind":"guide","name":"MultiSelect usage","summary":"Use MultiSelect through the Mux UI React binding.","lifecycle":"experimental","keywords":["multi-select","react","forms"],"platforms":["web.react"],"source":"catalog/guides/multi-select-usage.md"}
