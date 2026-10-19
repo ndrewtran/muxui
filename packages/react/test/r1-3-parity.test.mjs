@@ -567,6 +567,135 @@ test('R1.3 ColorArea associates visible and explicit labels with its interactive
   }
 });
 
+// Like ColorSlider without colorSpace, the area emits rgba() for a hex or rgb value and hsla() for an
+// hsl or hsb value (Core writes an HSB color as hsla), keeping alpha.
+test('R1.3 ColorArea emits a CSS string in the color space of the value it was given', async () => {
+  const rgba = (alpha) => new RegExp(`^rgba\\(\\d+, \\d+, \\d+, ${alpha}\\)$`, 'u');
+  const hsla = (alpha) => new RegExp(`^hsla\\(210, [\\d.]+%, [\\d.]+%, ${alpha}\\)$`, 'u');
+  const cases = [
+    ['#3366cc', rgba('1')],
+    ['#369', rgba('1')],
+    ['#33669980', rgba('0\\.50196\\d*')],
+    ['rgb(51, 102, 153)', rgba('1')],
+    ['rgba(51, 102, 153, 0.5)', rgba('0\\.5')],
+    ['hsl(210, 50%, 40%)', hsla('1')],
+    ['hsla(210, 50%, 40%, 0.5)', hsla('0\\.5')],
+    ['hsb(210, 60%, 40%)', hsla('1')],
+    ['hsba(210, 60%, 40%, 0.5)', hsla('0\\.5')],
+    [undefined, rgba('1')],
+  ];
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  try {
+    for (const [defaultValue, emitted] of cases) {
+      const uncontrolled = [];
+      const controlled = [];
+      const sliderChanges = [];
+      // Remounting with a key gives every case a fresh area.
+      await act(async () => root.render(React.createElement('div', { key: defaultValue },
+        React.createElement(ColorArea, { 'aria-label': 'Uncontrolled', defaultValue, onChange: (value) => uncontrolled.push(value) }),
+        React.createElement(ColorArea, { 'aria-label': 'Controlled', value: defaultValue ?? '#ffffff', onChange: (value) => controlled.push(value) }),
+        React.createElement(ColorSlider, { 'aria-label': 'Slider', defaultValue: defaultValue ?? '#808080', channel: defaultValue?.startsWith('hs') ? 'hue' : 'red', onChange: (value) => sliderChanges.push(value) }))));
+      for (const input of container.querySelectorAll('.muxui-color-area input[type="range"]:first-of-type, .muxui-color-slider input')) {
+        await act(async () => { input.focus(); keyPress(input, 'ArrowRight'); });
+      }
+      assert.equal(uncontrolled.length, 1, `${defaultValue} emits once`);
+      assert.match(uncontrolled[0], emitted, `${defaultValue} uncontrolled`);
+      assert.equal(controlled.length, 1);
+      assert.match(controlled[0], emitted, `${defaultValue} controlled`);
+      // Same function and field count as the ColorSlider the area is aligned with.
+      const shape = (text) => text.replace(/[\d.]+/gu, '0');
+      assert.equal(shape(uncontrolled[0]), shape(sliderChanges[0]), `${defaultValue} matches ColorSlider`);
+    }
+  } finally {
+    await act(async () => { document.activeElement?.blur(); root.unmount(); });
+    env.restore();
+  }
+});
+
+test('R1.3 ColorArea inside a ColorPicker edits saturation and brightness and keeps the picker color space', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  try {
+    for (const [value, channel, notation] of [
+      ['#336699', 'red', /^rgba\(\d+, \d+, \d+, 1\)$/u],
+      ['hsl(210, 50%, 40%)', 'lightness', /^hsla\(210, [\d.]+%, [\d.]+%, 1\)$/u],
+      ['hsb(210, 60%, 40%)', 'brightness', /^hsla\(210, [\d.]+%, [\d.]+%, 1\)$/u],
+    ]) {
+      const pickerChanges = [];
+      const areaChanges = [];
+      // A slider without colorSpace throws when the picker color leaves its space, so it proves the space holds.
+      await act(async () => root.render(React.createElement(ColorPicker, { key: value, defaultValue: value, onChange: (next) => pickerChanges.push(next) },
+        React.createElement(ColorArea, { 'aria-label': 'Area', onChange: (next) => areaChanges.push(next) }),
+        React.createElement(ColorSlider, { 'aria-label': 'Channel', channel }))));
+      const [x, y] = container.querySelectorAll('.muxui-color-area input[type="range"]');
+      assert.match(x.getAttribute('aria-valuetext'), /^Saturation:/u);
+      assert.match(y.getAttribute('aria-valuetext'), /^Brightness:/u);
+      await act(async () => { x.focus(); keyPress(x, 'ArrowRight'); });
+      await act(async () => keyPress(x, 'ArrowRight'));
+      assert.equal(pickerChanges.length, 2, `${value} picker changes`);
+      assert.match(pickerChanges[1], notation, `${value} picker notation`);
+      assert.deepEqual(areaChanges, pickerChanges, `${value} the area reports what the picker reports`);
+      assert.equal(container.querySelectorAll('.muxui-color-slider input[type="range"]').length, 1);
+    }
+  } finally {
+    await act(async () => { document.activeElement?.blur(); root.unmount(); });
+    env.restore();
+  }
+});
+
+// Renders a ColorPicker holding the area and one slider and hands `scenario` key presses for each.
+async function withAreaAndSlider(pickerProps, sliderProps, scenario) {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const press = async (input, key, times = 1) => {
+    await act(async () => input.focus());
+    for (let step = 0; step < times; step += 1) await act(async () => keyPress(input, key));
+  };
+  try {
+    await act(async () => root.render(React.createElement(ColorPicker, pickerProps,
+      React.createElement(ColorArea, { 'aria-label': 'Area' }),
+      React.createElement(ColorSlider, { 'aria-label': 'Slider', ...sliderProps }))));
+    const [x, y] = container.querySelectorAll('.muxui-color-area input[type="range"]');
+    await scenario({
+      channels: () => [x.value, y.value],
+      brightness: (key, times) => press(y, key, times),
+      slider: (key) => press(container.querySelector('.muxui-color-slider input[type="range"]'), key),
+    });
+  } finally {
+    await act(async () => { document.activeElement?.blur(); root.unmount(); });
+    env.restore();
+  }
+}
+
+test('R1.3 ColorArea in an hsb ColorPicker follows a sibling slider after an edit to black', async () => {
+  // A lower saturation in the same black serializes as the same hsla(210, 0%, 0%, 1), but the change is real.
+  await withAreaAndSlider({ defaultValue: 'hsb(210, 60%, 40%)' }, { channel: 'saturation' }, async ({ channels, brightness, slider }) => {
+    await brightness('PageDown', 4);
+    assert.deepEqual(channels(), ['60', '0']);
+    await slider('ArrowLeft');
+    assert.deepEqual(channels(), ['59', '0'], 'the area shows the slider change');
+    await brightness('PageUp');
+    assert.deepEqual(channels(), ['59', '10'], 'raising brightness keeps the slider change');
+  });
+});
+
+test('R1.3 ColorArea in a ColorPicker keeps its remembered hue through an alpha-only change', async () => {
+  const changes = [];
+  await withAreaAndSlider({ defaultValue: '#336699', onChange: (next) => changes.push(next) }, { channel: 'alpha' }, async ({ brightness, slider }) => {
+    await brightness('PageDown', 6);
+    assert.equal(changes.at(-1), 'rgba(0, 0, 0, 1)');
+    await slider('ArrowLeft');
+    assert.equal(changes.at(-1), 'rgba(0, 0, 0, 0.99)');
+    await brightness('PageUp');
+    // Blue at brightness 10 with the new alpha; without the remembered hue it would be the gray rgba(26, 26, 26, 0.99).
+    assert.equal(changes.at(-1), 'rgba(8, 17, 26, 0.99)');
+  });
+});
+
 test('R1.3 scalar composites preserve string and numeric callbacks with disabled guards', async () => {
   const env = createDom();
   const container = document.querySelector('#root');
