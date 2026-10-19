@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:group-disabled-react",
+  "kind": "example",
+  "name": "Disabled Group",
+  "summary": "Mark a Group as disabled and disable each Button in it separately.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/group/examples/react/disabled.tsx"
+}

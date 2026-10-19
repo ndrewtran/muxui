@@ -67,7 +67,12 @@
         }
       },
       "behavior": [
-        "Card.Button is the interactive alternate root and exposes selected and pending state."
+        "Card.Root is a static div.",
+        "Card.Button is the interactive alternate root: a button that makes the whole card one control.",
+        "Card.Button reports selected as aria-pressed, and sets no pressed state when selected is not given.",
+        "pending on Card.Button suppresses activation and keeps it focusable; disabled applies the native disabled attribute.",
+        "A native button cannot contain interactive elements, so buttons and links do not nest inside Card.Button.",
+        "Card.Header, Card.Body, and Card.Footer are div elements, not headings; a heading is the application's own element."
       ],
       "accessibility": [
         "Card.Button is the interactive alternate root and exposes selected and pending state."

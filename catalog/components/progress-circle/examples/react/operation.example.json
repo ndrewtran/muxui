@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:progress-circle-operation-react",
+  "kind": "example",
+  "name": "ProgressCircle for an operation",
+  "summary": "Show unknown progress while work runs, with the application's own status text beside the circle.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:progress-circle#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/progress-circle/examples/react/operation.tsx"
+}

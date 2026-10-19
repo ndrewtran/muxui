@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-editor-limit-react",
+  "kind": "example",
+  "name": "TextEditor with a character limit",
+  "summary": "Limit the length of a note, check it before saving, and reset to the saved note.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text-editor#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 11
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text-editor/examples/react/limit.tsx"
+}

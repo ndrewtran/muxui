@@ -67,11 +67,15 @@
       },
       "behavior": [
         "Root forwards refs to the native HTMLDivElement progressbar and Track renders an aria-hidden SVG.",
-        "label is a plain aria-label shorthand when no explicit aria-label or aria-labelledby is supplied; explicit names take precedence, and supplying label with Label chooses the shorthand.",
+        "label is a shorthand for aria-label when no explicit aria-label or aria-labelledby is supplied.",
+        "An explicit aria-label or aria-labelledby takes precedence over label.",
+        "When both label and a Label part are supplied, the label shorthand names the progress circle.",
         "Clamps determinate values to the min/max range and exposes accessible progress values.",
         "Indeterminate progress treats null, undefined, and non-finite values as unknown and omits aria-valuenow and aria-valuetext.",
         "size selects 32px, 48px, or 64px Track dimensions; use Track className for a local compact size and motion policy because there is no built-in 16px size.",
-        "Indeterminate progress uses the Mux rotate and dash motion recipe; prefers-reduced-motion and a data-reduced-motion or data-muxui-motion=\"reduced\" ancestor settle both animations."
+        "Indeterminate progress uses a rotate and dash motion.",
+        "prefers-reduced-motion, and a data-reduced-motion or data-muxui-motion=\"reduced\" ancestor, settle both animations.",
+        "ProgressCircle holds no task state: the application sets value, with null while the length of the work is unknown, and renders any status text itself."
       ],
       "accessibility": [
         "Expose a named progressbar through Label, label, aria-label, or aria-labelledby; when label is supplied with Label, the shorthand aria-label is used. A Track-only composition is decorative and does not provide progress semantics.",

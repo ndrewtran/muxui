@@ -54,7 +54,14 @@
       },
       "behavior": [
         "Preserves child action order and keyboard focus order.",
-        "Presentation groups require no accessible name; named groups expose group semantics."
+        "Presentation groups require no accessible name; named groups expose group semantics.",
+        "horizontal lays the children out in a row and vertical stacks them in a column.",
+        "attached removes the gap between the children and rounds only the outer corners of the first and last child.",
+        "attached joins only direct Button, IconButton, and ToggleButton children; a Button inside a wrapping element keeps its own rounded corners.",
+        "ButtonGroup does not manage selection.",
+        "ButtonGroup adds no arrow-key navigation: each child is a separate Tab stop.",
+        "disabled sets data-disabled on the group and does not disable its children.",
+        "A child is disabled only by its own disabled prop."
       ],
       "accessibility": [
         "Preserves child action order and keyboard focus order.",
