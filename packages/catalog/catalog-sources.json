@@ -1204,6 +1204,46 @@
     {
       "family": "example",
       "path": "catalog/components/toast/examples/react/keys.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/alert-dialog/examples/react/confirm.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/command-palette/examples/react/parts.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/dialog/examples/react/non-dismissable.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/lightbox/examples/react/render-functions.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/non-dismissable.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/preview-trigger/examples/react/interactive.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tooltip/examples/react/icon-button.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/alert-dialog-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/command-palette-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/lightbox-usage.json"
     }
   ]
 }

@@ -19,7 +19,8 @@
       "family": "AlertDialog",
       "slug": "alert-dialog",
       "examples": [
-        "catalog/components/alert-dialog/examples/react/basic.tsx"
+        "catalog/components/alert-dialog/examples/react/basic.tsx",
+        "catalog/components/alert-dialog/examples/react/confirm.tsx"
       ],
       "export": {
         "module": ".",
@@ -113,7 +114,8 @@
       "examples": [
         "catalog/components/command-palette/examples/react/basic.tsx",
         "catalog/components/command-palette/examples/react/controlled-query.tsx",
-        "catalog/components/command-palette/examples/react/managed-commands.tsx"
+        "catalog/components/command-palette/examples/react/managed-commands.tsx",
+        "catalog/components/command-palette/examples/react/parts.tsx"
       ],
       "export": {
         "module": ".",
@@ -205,7 +207,8 @@
       "family": "Lightbox",
       "slug": "lightbox",
       "examples": [
-        "catalog/components/lightbox/examples/react/basic.tsx"
+        "catalog/components/lightbox/examples/react/basic.tsx",
+        "catalog/components/lightbox/examples/react/render-functions.tsx"
       ],
       "export": {
         "module": ".",

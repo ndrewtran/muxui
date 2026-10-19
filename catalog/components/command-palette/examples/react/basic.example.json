@@ -3,7 +3,7 @@
   "id": "muxui:example:command-palette-basic-react",
   "kind": "example",
   "name": "Basic React CommandPalette",
-  "summary": "A source-faithful React command-palette example using the Mux-owned compound API.",
+  "summary": "The minimum React CommandPalette example.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:command-palette#web.react",
