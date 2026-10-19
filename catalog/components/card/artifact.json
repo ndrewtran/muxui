@@ -71,6 +71,9 @@
         "Card.Button is the interactive alternate root: a button that makes the whole card one control.",
         "Card.Button reports selected as aria-pressed, and sets no pressed state when selected is not given.",
         "pending on Card.Button suppresses activation and keeps it focusable; disabled applies the native disabled attribute.",
+        "A pending submit Card.Button does not submit its form by click or by Enter in a field; the application sets and clears pending around its own work.",
+        "A server-rendered pending submit Card.Button is disabled until it hydrates, so it is not focusable until then.",
+        "A script that calls requestSubmit with a pending submit Card.Button as the submitter is application code and is not blocked.",
         "A native button cannot contain interactive elements, so buttons and links do not nest inside Card.Button.",
         "Card.Header, Card.Body, and Card.Footer are div elements, not headings; a heading is the application's own element."
       ],

@@ -61,7 +61,7 @@ import { observeReducedMotion } from '../motion.mjs';
 import { Tooltip } from '../overlays.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
-import { Button as MuxUIButton } from '../button.mjs';
+import { Button as MuxUIButton, usePendingSubmitProps } from '../button.mjs';
 import { IconButton } from './icon-button.mjs';
 
 const h = React.createElement;
@@ -359,6 +359,7 @@ const Card = {
     return h('div', { ...cardProps({ ...props, variant, padding }), ref });
   }),
   Button: React.forwardRef(function CardButton({ variant, padding, selected, disabled = false, pending = false, onActivate, ...props }, ref) {
+    const pendingSubmitProps = usePendingSubmitProps(pending, props.type);
     return h(AriaButton, {
       ...cardProps({ ...props, variant, padding, className: cx('muxui-card--button', props.className) }),
       ref,
@@ -368,6 +369,7 @@ const Card = {
       'data-selected': dataState(selected),
       'data-pending': dataState(pending),
       onPress: pressHandler(onActivate),
+      render: (domProps) => h('button', { ...domProps, ...pendingSubmitProps }),
     });
   }),
   Header: React.forwardRef(function CardHeader(props, ref) { return nativePart('div', 'muxui-card__header', props, ref); }),

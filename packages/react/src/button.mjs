@@ -6,6 +6,24 @@ const BUTTON_SIZES = new Set(['sm', 'md', 'lg']);
 
 const subscribeToNothing = () => () => {};
 
+/**
+ * DOM button props that keep a pending submit button from submitting its form, or `undefined`
+ * when `pending` and `type` do not call for them. Spread them onto the rendered `<button>` of
+ * a React Aria Button (Button and Card.Button) after its own DOM props.
+ */
+export function usePendingSubmitProps(pending, type) {
+  // React Aria renders a pending submit Button as type=button, but a form with one text field
+  // still submits on Enter when it has no submit button. Keep type=submit so Enter clicks this
+  // Button, and cancel that click along with any other click on it. A script's
+  // form.requestSubmit(button) fires no click and is application code, so it is not blocked.
+  // Server markup has no click handler until hydration, so a pending submit Button is natively
+  // disabled until then: it cannot be clicked, and a disabled default button makes Enter submit
+  // nothing. False while hydrating and true for client-only renders, so hydration finds the same markup.
+  const hydrated = React.useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  if (!pending || type !== 'submit') return undefined;
+  return { type: 'submit', onClick: (event) => event.preventDefault(), ...(hydrated ? {} : { disabled: true }) };
+}
+
 function assertButtonOption(name, value, allowed) {
   if (!allowed.has(value)) {
     throw new TypeError(`Button ${name} must be one of: ${[...allowed].join(', ')}`);
@@ -42,15 +60,7 @@ export const Button = React.forwardRef(function Button({
     onActivate?.(activation);
   };
 
-  // React Aria renders a pending submit Button as type=button, but a form with one text field
-  // still submits on Enter when it has no submit button. Keep type=submit so Enter clicks this
-  // Button, and cancel that click along with any other click on it. A script's
-  // form.requestSubmit(button) fires no click and is application code, so it is not blocked.
-  const blocksSubmit = pending && type === 'submit';
-  // Server markup has no click handler until hydration, so a pending submit Button is natively
-  // disabled until then: it cannot be clicked, and a disabled default button makes Enter submit
-  // nothing. False while hydrating and true for client-only renders, so hydration finds the same markup.
-  const hydrated = React.useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const pendingSubmitProps = usePendingSubmitProps(pending, type);
 
   const showPendingText = pending && showTextWhileLoading;
   const callerNamesButton = props['aria-label'] != null || props['aria-labelledby'] != null;
@@ -93,8 +103,7 @@ export const Button = React.forwardRef(function Button({
       'data-variant': variant,
       'data-size': size,
       ...pendingAriaProps,
-      ...(blocksSubmit ? { type: 'submit', onClick: (event) => event.preventDefault() } : {}),
-      ...(blocksSubmit && !hydrated ? { disabled: true } : {}),
+      ...pendingSubmitProps,
     }),
     onPress: handlePress,
   }, content, spinner);

@@ -9,8 +9,8 @@ const cities = [
 
 export function ComboBoxControlledExample() {
   const [text, setText] = useState('');
-  // An empty string selects no option.
-  const [selectedId, setSelectedId] = useState('');
+  // null selects no option.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   return (
     <>
@@ -18,20 +18,17 @@ export function ComboBoxControlledExample() {
         label="City"
         items={cities}
         value={text}
-        onChange={(next) => {
-          setText(next);
-          // Emptying the input clears the selection without calling onSelect.
-          if (next === '') setSelectedId('');
-        }}
+        onChange={setText}
         selectedId={selectedId}
         onSelect={(item) => {
+          // onSelect receives no item when the selection clears, so one handler covers choosing and clearing.
           // With both controlled, the application sets the text to the chosen option.
           const city = cities.find((candidate) => candidate.id === item?.id);
-          setSelectedId(city?.id ?? '');
+          setSelectedId(city?.id ?? null);
           setText(city?.label ?? '');
         }}
       />
-      <p>Text {text || 'empty'}, selected ID {selectedId || 'none'}</p>
+      <p>Text {text || 'empty'}, selected ID {selectedId ?? 'none'}</p>
     </>
   );
 }
