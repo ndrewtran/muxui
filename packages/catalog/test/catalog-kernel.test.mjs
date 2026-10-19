@@ -200,7 +200,9 @@ test('R1.4 guide sources preserve Markdown newlines', async () => {
   const guideSources = baseBundle.artifacts
     .filter(({ kind, source }) => kind === 'guide' && source.content?.includes('-usage.md'))
     .map(({ source }) => source.content);
-  assert.equal(guideSources.length, 55);
+  // Every usage guide record on disk is in the bundle, so adding a guide needs no count edit.
+  const guideRecords = (await readdir(join(repositoryRoot, 'catalog/guides'))).filter((name) => name.endsWith('-usage.json'));
+  assert.equal(guideSources.length, guideRecords.length);
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
     assert.doesNotMatch(source, /\\n/u, sourcePath);

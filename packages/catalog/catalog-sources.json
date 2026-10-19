@@ -1188,6 +1188,82 @@
     {
       "family": "example",
       "path": "catalog/patterns/recommendation/examples/react/ranked.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/autocomplete/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/calendar/examples/react/focus.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/combo-box/examples/react/controlled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/date-field/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/date-picker/examples/react/controlled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/date-range-picker/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/date-range-picker/examples/react/range.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input-tags/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input-tags/examples/react/validation.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/multi-select/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/select-native/examples/react/controlled.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/select-native/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/select/examples/react/custom-trigger.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/time-field/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/token-field/examples/react/form.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/input-tags-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/multi-select-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/select-native-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/select/examples/react/composition.example.json"
     }
   ]
 }

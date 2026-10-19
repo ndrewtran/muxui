@@ -93,9 +93,21 @@
         }
       },
       "behavior": [
-        "Enter adds a validated tag; Backspace or ArrowLeft transfers focus to the last tag.",
+        "Enter adds the trimmed draft as a tag, if it passes validation, and empties the input.",
+        "Enter never submits a surrounding form.",
+        "Backspace or ArrowLeft in an empty input moves focus to the last tag.",
+        "A draft is rejected when it is blank, repeats an existing tag exactly, would exceed maxTags, or fails validate.",
+        "The duplicate check is case-sensitive, and allowDuplicates turns it off.",
+        "validate receives the trimmed draft and returns whether to accept it; it runs after the blank, duplicate, and limit checks.",
+        "A rejected draft stays in the input, no callback is called, and invalid and errorMessage do not change.",
+        "An added tag calls onChange with the full string array and then onTagAdded with the new tag.",
+        "A removed tag calls onChange with the full string array and then onTagRemoved with the removed tag.",
         "Delete removes a focused tag and restores input focus when the list empties.",
-        "Stable tag IDs preserve controlled duplicate-value reconciliation."
+        "Stable tag IDs preserve controlled duplicate-value reconciliation.",
+        "The committed tags are the value; the text being typed is a separate draft that joins the value only when Enter adds it.",
+        "The draft input has no name and the tags have no hidden inputs, so a surrounding form does not submit them.",
+        "required adds an asterisk to the label and sets aria-required on the field; it does not check that the list has a tag.",
+        "errorMessage is shown only while invalid is true, in place of the description."
       ],
       "accessibility": [
         "Enter adds a validated tag; Backspace or ArrowLeft transfers focus to the last tag.",

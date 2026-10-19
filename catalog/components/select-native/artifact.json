@@ -34,7 +34,7 @@
   "accessibility": {
     "nameRequired": true,
     "obligations": [
-      "Provide label, aria-label, or aria-labelledby; optional description and error content is associated through internal React Aria useField.",
+      "Provide label, aria-label, or aria-labelledby; optional description and error content is associated with the select.",
       "Keep the visible control a native HTMLSelectElement and preserve option, optgroup, multiple, keyboard, ref, change, form, and reset behavior.",
       "Use string size for Mux visual sizing; a numeric size remains the native list size and does not get discarded."
     ]
@@ -85,8 +85,16 @@
       },
       "behavior": [
         "Renders a genuine visible native select with caller options and optgroups unchanged.",
-        "Internal useField supplies deterministic label, description, and error associations while native value/defaultValue/onChange, name, disabled, required, multiple, ref, form submit, and reset remain native.",
-        "String sm, md, and lg values select Mux visual targets; a positive integer numeric size is forwarded as the native list size with md visual styling."
+        "Label, description, and error text are associated with the select.",
+        "value, defaultValue, onChange, name, disabled, required, multiple, ref, form submission, and reset stay native.",
+        "onChange receives the native React change event; read the selected value or values from event.currentTarget.",
+        "A single select takes and reports a string value, and a multiple select takes an array of option values.",
+        "A named multiple select submits one form entry per selected option; read them with FormData.getAll.",
+        "Resetting the form restores the defaultValue selection.",
+        "The strings sm, md, and lg set the visual size.",
+        "A positive integer size is the native number of visible rows, and the select keeps the md visual size.",
+        "Any other size throws a TypeError.",
+        "A nonempty errorMessage makes the select invalid and shows the message even when invalid is false."
       ],
       "accessibility": [
         "The native select receives the generated or caller-supplied label and description IDs.",
