@@ -111,8 +111,14 @@
       },
       "behavior": [
         "Space toggles selection",
-        "Indeterminate state is exposed as mixed until changed",
-        "size defaults to md for a standalone Checkbox; inside a CheckboxGroup an omitted size follows the group, and an explicit size wins."
+        "indeterminate is separate from checked, and the mixed state shows for as long as it is true.",
+        "A toggle calls onChange with the new boolean and never changes indeterminate, so the application derives or clears it.",
+        "A checked Checkbox submits its name with its value; an unchecked one submits nothing.",
+        "required sets the native required attribute, so native form validation blocks submitting it unchecked.",
+        "invalid marks the Checkbox invalid but shows no message: Checkbox has no error or description part.",
+        "aria-describedby reaches the native input, so the application can link its own message.",
+        "size defaults to md for a standalone Checkbox.",
+        "Inside a CheckboxGroup, an omitted size follows the group and an explicit size wins."
       ],
       "accessibility": [
         "Expose checkbox role, checked or mixed state, label, disabled, and invalid state"

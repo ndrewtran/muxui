@@ -3,7 +3,7 @@
   "id": "muxui:example:command-palette-managed-commands-react",
   "kind": "example",
   "name": "CommandPalette managed commands",
-  "summary": "Use the Mux-owned command hook for locale-aware matching, grouped results, command activation, and dismissal.",
+  "summary": "Use the useCommandPalette hook for locale-aware matching, grouped results, command activation, and dismissal.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:command-palette#web.react",

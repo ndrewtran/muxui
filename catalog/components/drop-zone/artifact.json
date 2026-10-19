@@ -20,8 +20,19 @@
         "parts": ["root", "content"],
         "defaults": { "disabled": false }
       },
-      "behavior": ["Delegate pointer, keyboard, and clipboard drop semantics to the RAC DropZone and translate its DropEvent to the Core drop item facade.", "Do not read browser globals during SSR.", "Report onActivate only for activation of RAC's drop button, not for clicks from nested consumer controls such as a FileTrigger."],
-      "accessibility": ["Expose RAC's keyboard drop affordance alongside pointer and clipboard input.", "Expose disabled state on RAC's drop button and visible-focus state, and preserve the consumer-provided accessible name; the role-less root carries data-disabled for styling only."],
+      "behavior": [
+        "Pointer, keyboard, and clipboard input all reach the same onDrop callback.",
+        "onDrop receives the dropped items as a list of file, directory, and text items, not a File array.",
+        "A file item reads with getFile, which resolves a File, or getText, which resolves its text.",
+        "A text item reads with getText and one of the formats listed in its types.",
+        "A directory item lists its contents with getEntries, an async iterator of file and directory items.",
+        "Reads are asynchronous, and DropZone does not catch a failed read.",
+        "DropZone does not filter items by kind or type; every dropped item arrives.",
+        "onActivate runs when the drop target's own hidden button is activated.",
+        "Clicks on controls inside DropZone, such as a FileTrigger, do not call onActivate.",
+        "DropZone reads no browser globals during server rendering."
+      ],
+      "accessibility": ["Expose a keyboard drop affordance alongside pointer and clipboard input.", "Expose disabled state on the drop button and visible-focus state, and preserve the consumer-provided accessible name; the role-less root carries data-disabled for styling only."],
       "tokenRecipe": { "source": "muxui:token:default-theme", "requirements": [
         { "token": "semantic.control.radius", "requirement": "required" },
         { "token": "semantic.control.padding-inline", "requirement": "required" },

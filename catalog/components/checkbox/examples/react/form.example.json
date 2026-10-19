@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:checkbox-form-react",
+  "kind": "example",
+  "name": "Checkbox in a form",
+  "summary": "Submit a named Checkbox with a value, handle the submission in the application, and link the application's own error text.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:checkbox#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/checkbox/examples/react/form.tsx"
+}

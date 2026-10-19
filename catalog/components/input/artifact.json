@@ -30,7 +30,7 @@
   "accessibility": {
     "nameRequired": true,
     "obligations": [
-      "Uses the shared Mux field vocabulary and native input serialization."
+      "Uses the label, description, and error parts shared with other Mux UI fields, and native input serialization."
     ]
   },
   "bindings": {
@@ -70,10 +70,20 @@
         }
       },
       "behavior": [
-        "Uses the shared Mux field vocabulary and native input serialization."
+        "Root owns the field: value, defaultValue, and onChange go on Input.Root.",
+        "Root also takes size, disabled, invalid, required, and readOnly.",
+        "Root's onChange receives the new string, not an event.",
+        "On Root, size is sm, md, or lg; on Input.Input, size is the native character count.",
+        "Input.Input is the native input, so name, type, placeholder, and autoComplete go on it.",
+        "A named Input submits its text; the name goes on Input.Input, not Root.",
+        "Input.Input also takes the native onChange, which receives the change event and runs alongside Root's.",
+        "Input.Root's ref is its wrapping div.",
+        "Input.Input's ref is the native input, the one to focus.",
+        "Input.Description and Input.Error are linked to the input.",
+        "Input.Error shows whenever it is mounted, so render it only while the field is invalid."
       ],
       "accessibility": [
-        "Uses the shared Mux field vocabulary and native input serialization."
+        "Uses the label, description, and error parts shared with other Mux UI fields, and native input serialization."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
