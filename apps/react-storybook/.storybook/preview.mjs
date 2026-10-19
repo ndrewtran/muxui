@@ -1,10 +1,11 @@
 import React from 'react';
 import { useGlobals } from 'storybook/preview-api';
 import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events';
-import { DocsContainer } from '@storybook/addon-docs/blocks';
+import { AnchorMdx, Controls, DocsContainer, DocsPage, Markdown, Primary, Source, Title, useOf } from '@storybook/addon-docs/blocks';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { backgroundOptions, buildTheme } from './theme.mjs';
+import { ComponentDocs } from './component-docs-page.mjs';
 import '@muxui/react/styles.css';
 import './preview.css';
 
@@ -56,6 +57,16 @@ function MuxUIDocsContainer({ context, children }) {
   }, [context.channel]);
 
   return React.createElement(DocsContainer, { context, theme: buildTheme(scheme) }, children);
+}
+
+const docsBlocks = { Title, Primary, Controls, Source, Markdown, Anchor: AnchorMdx };
+
+/** A family's Docs page lays out its catalog facts, which the generator embeds as `muxuiReference`. */
+function MuxUIDocsPage() {
+  const entry = useOf('meta', ['meta']).preparedMeta.parameters.muxuiReference;
+  return entry
+    ? React.createElement(ComponentDocs, { entry, blocks: docsBlocks })
+    : React.createElement(DocsPage);
 }
 
 function StorySurface({ children, scheme, direction, viewMode }) {
@@ -144,6 +155,8 @@ export default {
     docs: {
       theme: buildTheme('light'),
       container: MuxUIDocsContainer,
+      page: MuxUIDocsPage,
+      toc: { headingSelector: 'h2', title: 'On this page', ignoreSelector: '.docs-story h2' },
     },
   },
 };
