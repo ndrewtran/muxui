@@ -301,6 +301,7 @@ function stateVariantNames(binding, family) {
   const props = new Set(binding.api.props);
   if (props.has('placement')) names.push('placement');
   if (family === 'DropZone') names.push('dragging');
+  if (family === 'Link') names.push('no-href', 'empty-href');
   if (family === 'TagGroup') names.push('removable');
   if (OVERLAY_FAMILIES.has(family)) names.push('entering', 'exiting');
   return [...new Set(names)];
@@ -372,7 +373,17 @@ function setSelectedState(args, props, family, preserveExplicit) {
   return undefined;
 }
 
+// States a specimen cannot show honestly, each with its reason. The matrix labels them unavailable rather than
+// rendering a stand-in that looks like another state.
+const STATE_LIMITATIONS = Object.freeze({
+  ...Object.fromEntries(['sm', 'md', 'lg', 'full'].map((radius) => [`Image:radius-${radius}`,
+    'the colour audit accepts only a transparent image, so a radius has nothing visible to round'])),
+  'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
+  'InputTags:disabled': 'a disabled InputTags label has no accessible disabled signal, so its dimmed colour fails the axe contrast audit',
+});
+
 function stateIsSupported(binding, state, family) {
+  if (Object.hasOwn(STATE_LIMITATIONS, `${family}:${state}`)) return false;
   const props = new Set(binding.api.props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
@@ -384,10 +395,11 @@ function stateIsSupported(binding, state, family) {
     case 'streaming':
       return family === 'Message';
     case 'error':
-      return family === 'PromptComposer' || family === 'Avatar';
+      return family === 'PromptComposer' || family === 'Avatar' || family === 'Image';
     case 'loaded':
-    case 'fallback':
       return family === 'Avatar';
+    case 'fallback':
+      return family === 'Avatar' || family === 'Image';
     case 'mixed':
       return family === 'DataDiff';
     case 'diff':
@@ -481,6 +493,9 @@ function stateIsSupported(binding, state, family) {
       return props.has('current') || family === 'Breadcrumbs' && props.has('items');
     case 'removable':
       return family === 'TagGroup';
+    case 'nohref':
+    case 'emptyhref':
+      return family === 'Link';
     // Pressed and dismissed are transient lifecycle results without a MuxUI
     // prop or reliable public interaction that can hold the state in a story.
     case 'pressed':
@@ -530,13 +545,12 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       break;
     case 'error':
       if (family === 'PromptComposer') args.error = 'Unable to send. Try again.';
-      else if (family === 'Avatar') args.src = AVATAR_BROKEN_SRC;
-      break;
-    case 'loaded':
-      if (family === 'Avatar') args.src = TRANSPARENT_PIXEL;
+      else if (family === 'Avatar') args.src = BROKEN_IMAGE_SRC;
+      else if (family === 'Image') Object.assign(args, { src: BROKEN_IMAGE_SRC, fallbackSrc: BROKEN_IMAGE_SRC });
       break;
     case 'fallback':
       if (family === 'Avatar') args.src = '';
+      else if (family === 'Image') Object.assign(args, { src: BROKEN_IMAGE_SRC, fallbackSrc: TRANSPARENT_PIXEL });
       break;
     case 'mixed':
       if (family === 'DataDiff') args.defaultSelectedIds = ['added'];
@@ -557,7 +571,10 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', [family === 'Tree' ? 'src' : 'one']);
       break;
     case 'collapsed':
-      if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
+      // The Sidebar folds its rail through Provider; its expanded prop belongs to the Roadmap group.
+      if (family === 'Sidebar') {
+        if (canSupplyStateValue(args, props, 'collapsed', preserveExplicit)) setControlledArg(args, props, 'collapsed', true);
+      } else if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
       else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', []);
       else if (props.has('collapsed')) setControlledArg(args, props, 'collapsed', true);
       break;
@@ -634,6 +651,8 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       break;
     case 'placement':
       if (props.has('placement')) args.placement = 'top';
+      // Only the triggered popup has a placement, so the Menu row opens it.
+      if (family === 'Menu' && canSupplyStateValue(args, props, 'open', preserveExplicit)) args.open = true;
       break;
     case 'current':
       if (props.has('current')) args.current = true;
@@ -647,14 +666,48 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'removable':
       if (family === 'TagGroup') args.onRemove = () => {};
       break;
+    case 'nohref':
+      if (family === 'Link') args.href = undefined;
+      break;
+    case 'emptyhref':
+      if (family === 'Link') args.href = '';
+      break;
     default:
       break;
   }
   return args;
 }
 
+// Specimens whose named states must override binding defaults (disabled: false, defaultOpen: false, and so on).
+// Other families keep the existing precedence until their States pages pass the Storybook audit with it. Dialog
+// (a truly open modal blocks the lifecycle states) and DropZone (its only named state is disabled) stay off the list.
+const NAMED_STATE_FAMILIES = new Set([
+  'Avatar', 'Card', 'ColorModeToggle', 'GridList', 'HeaderNav', 'InputTags', 'Link', 'ListBox', 'Menu', 'ProgressCircle', 'Separator', 'Sidebar',
+]);
+
+/**
+ * The props a named state changes from the default. A named family's States story leaves them unset, so each state
+ * supplies its own value, while anything a user supplies, even false, empty, or the default value, wins in every row.
+ */
+function stateDrivingProps(binding, family) {
+  const defaults = normalizeDefaultArgs(binding);
+  const driving = new Set();
+  for (const { args } of stateCoverageForBinding(binding, family)) {
+    for (const name of Object.keys(defaults)) {
+      if (serializableEventValue(args[name]) !== serializableEventValue(defaults[name])) driving.add(name);
+    }
+  }
+  return driving;
+}
+
 export function storyArgsForBinding(binding, variant, family) {
-  if (variant === 'default' || variant === 'states') return normalizeDefaultArgs(binding);
+  if (variant === 'default') return normalizeDefaultArgs(binding);
+  if (variant === 'states') {
+    const args = normalizeDefaultArgs(binding);
+    if (!NAMED_STATE_FAMILIES.has(family)) return args;
+    const driving = stateDrivingProps(binding, family);
+    return Object.fromEntries(Object.entries(args).filter(([name]) => !driving.has(name)));
+  }
   return stateArgsForBinding(binding, variant, family);
 }
 
@@ -748,10 +801,58 @@ function DataDiffPreview(args) {
     onApply: (ids) => { args.onApply?.(ids); setResult(`Requested locally: ${ids.join(', ')}`); },
   }), result && e('p', { role: 'status' }, result));
 }
+/**
+ * The audited sources are a transparent pixel and broken data, so the image itself draws nothing. The caption
+ * reports which source it ended on, read from the data attributes Image sets while it recovers.
+ */
+const IMAGE_OUTCOMES = Object.freeze({
+  loading: 'Loading the primary source.',
+  primary: 'Primary source loaded.',
+  fallback: 'Primary source failed; using fallbackSrc.',
+  error: 'Primary and fallback sources failed.',
+});
+
+function ImagePreview({ onLoad, ...args }) {
+  const imageRef = React.useRef(null);
+  const [outcome, setOutcome] = React.useState('loading');
+  const read = React.useCallback(() => {
+    const image = imageRef.current;
+    if (!image) return;
+    setOutcome(image.hasAttribute('data-error') ? 'error'
+      : image.hasAttribute('data-fallback') ? 'fallback'
+      : image.complete && image.naturalWidth > 0 ? 'primary' : 'loading');
+  }, []);
+  React.useEffect(() => {
+    const image = imageRef.current;
+    if (!image) return undefined;
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(image, { attributes: true, attributeFilter: ['data-fallback', 'data-error'] });
+    return () => observer.disconnect();
+  }, [read]);
+  return e('figure', { style: { margin: 0 } },
+    e(MuxUI.Image, {
+      ...args,
+      ref: imageRef,
+      src: args.src ?? TRANSPARENT_PIXEL,
+      alt: args.alt ?? 'Workspace preview',
+      width: args.width ?? 160,
+      height: args.height ?? 96,
+      // A failed image would draw the browser's alt text and broken-image icon in colours the audit cannot verify,
+      // so only its box stays; the caption and the data-error attribute carry the outcome.
+      style: outcome === 'error' ? { ...args.style, visibility: 'hidden' } : args.style,
+      onLoad: (event) => {
+        onLoad?.(event);
+        read();
+      },
+    }),
+    e('figcaption', null, IMAGE_OUTCOMES[outcome]),
+  );
+}
 // A single transparent pixel loads as an image without painting a colour the audits cannot verify.
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 // Truncated image data: the browser fires an error event instead of loading it.
-const AVATAR_BROKEN_SRC = 'data:image/png;base64,AAAA';
+const BROKEN_IMAGE_SRC = 'data:image/png;base64,AAAA';
 const TAG_SELECT_SAMPLE_ITEMS = [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }];
 const LIGHTBOX_SAMPLE_ITEMS = [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }];
 const COLLECTION_SAMPLE_ITEMS = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }];
@@ -793,7 +894,8 @@ const ADAPTERS = {
     e(MuxUI.Button, null, 'Duplicate'),
     e(MuxUI.Button, null, 'Archive'),
   ),
-  Link: (args) => e(MuxUI.Link, { ...args, href: fallback(args.href, '/settings') }, 'Settings'),
+  // A Link with no href, or an empty one, renders disabled whatever its disabled prop says, so a supplied href is passed on as is.
+  Link: (args) => e(MuxUI.Link, { ...args, href: ownArg(args, 'href', '/settings') }, 'Settings'),
   Meter: (args) => e(MuxUI.Meter, { ...args, label: fallback(args.label, 'Storage'), value: Object.hasOwn(args, 'value') ? args.value : ownArg(args, 'values', {}).meter ?? 72 }),
   ProgressBar: (args) => e(MuxUI.ProgressBar, { ...args, label: fallback(args.label, 'Upload'), value: args.indeterminate || Object.hasOwn(args, 'value') && args.value == null ? undefined : Object.hasOwn(args, 'value') ? args.value : (ownArg(args, 'values', {}).progress ?? 64) }),
   // A rule only has geometry between content: a vertical one needs a row to stretch across.
@@ -1054,9 +1156,10 @@ Object.assign(ADAPTERS, {
       ),
     ),
   ),
-  // Image owns the source, alt text, and load and error callbacks; Root keeps size and the rest. An empty source is no image.
+  // Image owns the source, alt text, and load and error callbacks; Root keeps size and the rest. Without a source the
+  // initials show, since the only image the colour audit accepts is transparent and would hide them.
   Avatar: ({ src, srcSet, alt, children, onLoad, onError, ...root }) => e(MuxUI.Avatar.Root, root,
-    e(MuxUI.Avatar.Image, { src: src === undefined ? TRANSPARENT_PIXEL : src || undefined, srcSet, alt: alt ?? 'Workspace avatar', onLoad, onError }),
+    e(MuxUI.Avatar.Image, { src: src || undefined, srcSet, alt: alt ?? 'Workspace avatar', onLoad, onError }),
     e(MuxUI.Avatar.Fallback, null, fallback(children, 'WS')),
   ),
   ButtonGroup: (args) => e(MuxUI.ButtonGroup, { ...args },
@@ -1094,13 +1197,7 @@ Object.assign(ADAPTERS, {
       e(MuxUI.HeaderNav.MobileTrigger, null, navigation),
     );
   },
-  Image: (args) => e(MuxUI.Image, {
-    ...args,
-    src: args.src ?? 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
-    alt: args.alt ?? 'Workspace preview',
-    width: args.width ?? 160,
-    height: args.height ?? 96,
-  }),
+  Image: (args) => e(ImagePreview, args),
   // Supplied seeds and text win; the sample tags and copy only fill what a story leaves out.
   InputTags: (args) => {
     const label = fallback(args.label, 'Tags');
@@ -1139,17 +1236,19 @@ Object.assign(ADAPTERS, {
     e(MuxUI.ProgressCircle.Value),
   ),
   // RadioField supplies the parts of one radio, and RadioGroup supplies the selection: the first
-  // field takes the field props and starts selected, the second is an unselected comparison.
+  // field takes the field props and starts selected, the second is an unselected comparison with its own value.
   RadioField: ({ value, size, disabled, invalid, required, readOnly }) => {
-    const first = fallback(value, 'monthly');
-    const field = (fieldValue, text, props) => e(MuxUI.RadioField.Root, { value: fieldValue, size, ...props },
-      e(MuxUI.RadioField.Button, null, e(MuxUI.RadioField.Indicator, null, e(MuxUI.RadioField.Dot)), text),
+    const first = String(fallback(value, 'monthly'));
+    const second = first === 'annual' ? 'monthly' : 'annual';
+    const planName = (plan) => (plan === 'monthly' ? 'Monthly' : plan === 'annual' ? 'Annual' : plan);
+    const field = (fieldValue, props) => e(MuxUI.RadioField.Root, { value: fieldValue, size, ...props },
+      e(MuxUI.RadioField.Button, null, e(MuxUI.RadioField.Indicator, null, e(MuxUI.RadioField.Dot)), planName(fieldValue)),
       e(MuxUI.RadioField.Description, null, 'Choose one plan'),
       e(MuxUI.RadioField.Error, null, 'Invalid choice'),
     );
     return e(MuxUI.RadioGroup, { key: first, label: 'Plan', defaultValue: first, size },
-      field(first, 'Monthly', { disabled, invalid, required, readOnly }),
-      field('annual', 'Annual'),
+      field(first, { disabled, invalid, required, readOnly }),
+      field(second),
     );
   },
   Sidebar: (args) => e(SidebarPreview, args),
@@ -1158,13 +1257,18 @@ Object.assign(ADAPTERS, {
     e(MuxUI.SwitchField.Description, null, 'Enable updates'),
     e(MuxUI.SwitchField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
-  // Items and label come from the story; the function child renders each item's own label.
-  TagSelect: (args) => e(MuxUI.TagSelect.Root, {
-    ...args,
-    label: fallback(args.label, 'Topics'),
-    items: ownArg(args, 'items', TAG_SELECT_SAMPLE_ITEMS),
-    placeholder: fallback(args.placeholder, 'Add a topic'),
-  }, (item) => item.label),
+  // Items and label come from the story. One resolver names both the popup options and the selected tags, the
+  // caller's getItemLabel or TagSelect's own name, label, then id fallback.
+  TagSelect: (args) => {
+    const getItemLabel = args.getItemLabel ?? ((item) => String(item.name ?? item.label ?? item.id));
+    return e(MuxUI.TagSelect.Root, {
+      ...args,
+      label: fallback(args.label, 'Topics'),
+      items: ownArg(args, 'items', TAG_SELECT_SAMPLE_ITEMS),
+      placeholder: fallback(args.placeholder, 'Add a topic'),
+      getItemLabel,
+    }, (item) => getItemLabel(item));
+  },
   // Root owns field state and the string callback; the textarea owns the native attributes.
   TextArea: ({ rows, maxLength, placeholder, ...root }) => e(MuxUI.TextArea.Root, root,
     e(MuxUI.TextArea.Label, null, 'Notes'),
@@ -1453,12 +1557,18 @@ function StateVariant({ family, state, args, available }) {
     ? e('p', {
       className: 'muxui-storybook-state-unavailable',
       'data-muxui-storybook-state': 'unavailable',
-    }, `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
+    }, STATE_LIMITATIONS[`${family}:${state}`]
+      ? `Unavailable: MuxUI ${family} cannot show the ${state} state here because ${STATE_LIMITATIONS[`${family}:${state}`]}.`
+      : `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
     : lifecycleAttribute
     ? activeLifecycleState === state
       ? e(LifecycleTransition, { family, state, args: variantArgs })
       : e('p', { className: 'muxui-storybook-lifecycle-inactive' }, `Select ${state} to inspect this lifecycle state.`)
     : renderFamily(family, variantArgs);
+  // An open Menu popup floats over its neighbours, so its rows reserve room above and below the trigger.
+  const specimen = family === 'Menu' && (state === 'open' || state === 'placement')
+    ? e('div', { 'data-muxui-storybook-popup-room': '', style: { display: 'flex', alignItems: 'center', minBlockSize: '14rem' } }, rendered)
+    : rendered;
   const stateContent = e('section', {
     ref: stateRef,
     className: 'muxui-storybook-state',
@@ -1468,34 +1578,18 @@ function StateVariant({ family, state, args, available }) {
     // as well so the Storybook state matrix remains axe-clean.
     inert: hiddenByOverlay ? true : undefined,
     'data-muxui-storybook-lifecycle': lifecycleAttribute ? state : undefined,
-  }, e('h3', { id: labelId }, state), rendered);
+  }, e('h3', { id: labelId }, state), specimen);
   return marker ? e(OverlayHost, { marker }, stateContent) : stateContent;
 }
 
-// Specimens whose named states must override binding defaults (disabled: false, defaultOpen: false, and so on),
-// so a state initialises from the default and only controls the user changed still win. Other families keep the
-// existing precedence until their States pages pass the Storybook audit with it. Dialog (a truly open modal blocks
-// the lifecycle states) and DropZone (its only named state is disabled) stay off the list.
-const NAMED_STATE_FAMILIES = new Set([
-  'Avatar', 'Card', 'ColorModeToggle', 'GridList', 'HeaderNav', 'InputTags', 'ListBox', 'ProgressCircle', 'Separator', 'Sidebar',
-]);
-// A disabled InputTags label sits outside the disabled group and has no accessible disabled signal, so axe flags
-// its dimmed contrast. That state keeps the binding default until the runtime exposes one.
-const MASKED_STATES = new Set(['InputTags:disabled']);
-
 export function renderStateCoverage(record, args = storyArgsForBinding(record.binding, 'states', record.family)) {
   const variants = stateCoverageForBinding(record.binding, record.family);
-  const defaults = storyArgsForBinding(record.binding, 'states', record.family);
-  const overrides = NAMED_STATE_FAMILIES.has(record.family)
-    ? Object.fromEntries(Object.entries(args).filter(([name, value]) =>
-      !Object.hasOwn(defaults, name) || serializableEventValue(value) !== serializableEventValue(defaults[name])))
-    : args;
   const stateMatrix = e('div', { className: 'muxui-storybook-states' }, variants.map(({ name }) => e(StateVariant, {
     key: name,
     family: record.family,
     state: name,
     available: stateIsSupported(record.binding, name, record.family),
-    args: stateArgsForBinding(record.binding, name, record.family, MASKED_STATES.has(`${record.family}:${name}`) ? args : overrides),
+    args: stateArgsForBinding(record.binding, name, record.family, args),
   })));
   const lifecycleStates = variants.map(({ name }) => name).filter((name) => LIFECYCLE_ATTRIBUTES[name]);
   return lifecycleStates.length > 0
@@ -2423,7 +2517,8 @@ export function createEventsStory(record) {
   };
   return {
     name: 'Events',
-    args: storyArgsForBinding(record.binding, 'default', record.family),
+    // An avatar reports load only once it has an image; the transparent pixel is the one the colour audit accepts.
+    args: { ...storyArgsForBinding(record.binding, 'default', record.family), ...(record.family === 'Avatar' && { src: TRANSPARENT_PIXEL }) },
     argTypes: argTypesForBinding(record.binding),
     render: (args) => renderEvents(args),
   };

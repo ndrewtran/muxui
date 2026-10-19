@@ -388,6 +388,15 @@ async function withRuntime(body) {
 
 const settleRuntime = (milliseconds = 20) => act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)));
 
+/** The nearest prop of this name on a React ancestor of a DOM node, for options jsdom's layout-free DOM never reports. */
+function ancestorProp(node, name) {
+  let fiber = node[Object.keys(node).find((key) => key.startsWith('__reactFiber'))];
+  for (; fiber; fiber = fiber.return) {
+    if (fiber.memoizedProps?.[name] !== undefined) return fiber.memoizedProps[name];
+  }
+  return undefined;
+}
+
 /** The States showcase as a document, keyed by state name. */
 function stateSections(family, args) {
   const record = currentRecord(family);
@@ -671,20 +680,28 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
   assert.equal(root.hasAttribute('alt'), false);
   assert.equal(root.hasAttribute('src'), false);
   assert.equal(routed.querySelector('.muxui-avatar__fallback').textContent, 'AL');
+  // With no source the initials show, instead of an invisible loaded pixel.
+  const bare = doc({});
+  assert.equal(bare.querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
+  assert.equal(bare.querySelector('.muxui-avatar__fallback').hidden, false);
+  assert.equal(bare.querySelector('.muxui-avatar__fallback').textContent, 'WS');
 
+  const storyArgs = createStory(currentRecord('Avatar'), 'states').args;
+  assert.equal(Object.hasOwn(storyArgs, 'size'), false, 'the States story leaves the size the rows set unset');
   const { document: states, sections } = stateSections('Avatar');
-  assert.equal(states.querySelector('[data-muxui-storybook-state="unavailable"]').closest('.muxui-storybook-state').querySelector('h3').textContent, 'loading');
-  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 1);
+  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['loading', 'loaded']);
+  assert.match(unavailable[1].textContent, /Unavailable: MuxUI Avatar cannot show the loaded state here because the colour audit rejects any visible image/u);
   for (const size of ['sm', 'md', 'lg']) assert.equal(sections.get(size).querySelector('.muxui-avatar').getAttribute('data-size'), size);
   assert.equal(sections.get('fallback').querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
-  assert.match(sections.get('loaded').querySelector('img').getAttribute('src'), /^data:image\/gif/u);
   assert.match(sections.get('error').querySelector('img').getAttribute('src'), /^data:image\/png/u);
-  // A changed control still wins over the named state.
-  assert.equal(stateSections('Avatar', { ...createStory(currentRecord('Avatar'), 'states').args, size: 'lg' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'lg');
+  // A supplied value wins in every row, including one that equals the row's own default.
+  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'lg' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'lg');
+  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'md' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'md');
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const events = [];
-    await act(async () => reactRoot.render(renderFamily('Avatar', { onLoad: () => events.push('load'), onError: () => events.push('error') })));
+    await act(async () => reactRoot.render(renderFamily('Avatar', { src: '/ada.png', onLoad: () => events.push('load'), onError: () => events.push('error') })));
     const avatar = host.querySelector('.muxui-avatar');
     await act(async () => host.querySelector('img').dispatchEvent(new Event('load')));
     assert.equal(avatar.getAttribute('data-image-state'), 'loaded');
@@ -695,6 +712,8 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
     assert.equal(avatar.getAttribute('data-image-state'), 'error');
     assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, false);
   });
+  // Events seeds the one image the colour audit accepts, so load can be observed.
+  assert.match(createEventsStory(currentRecord('Avatar')).args.src, /^data:image\/gif/u);
 });
 
 test('Card routes variant and padding to both roots and selection, pending, disabled, and activation to Card.Button', async () => {
@@ -722,6 +741,13 @@ test('Card routes variant and padding to both roots and selection, pending, disa
   assert.equal(sections.get('selected').querySelector('.muxui-card--button').getAttribute('aria-pressed'), 'true');
   assert.equal(sections.get('pending').querySelector('.muxui-card--button').hasAttribute('data-pending'), true);
   assert.equal(sections.get('disabled').querySelector('.muxui-card--button').disabled, true);
+  // The States story leaves the props the rows set unset, and a supplied false wins in every row.
+  const cardStoryArgs = createStory(currentRecord('Card'), 'states').args;
+  for (const name of ['disabled', 'pending', 'variant']) assert.equal(Object.hasOwn(cardStoryArgs, name), false, name);
+  const forced = stateSections('Card', { ...cardStoryArgs, disabled: false, variant: 'outlined' }).sections;
+  assert.equal(forced.get('disabled').querySelector('.muxui-card--button').disabled, false);
+  assert.ok(forced.get('elevated').querySelector('.muxui-card--button.muxui-card--outlined'), 'a supplied variant wins, even when it is the default');
+  assert.equal(forced.get('pending').querySelector('.muxui-card--button').hasAttribute('data-pending'), true, 'rows the user left alone keep their state');
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createEventsStory(currentRecord('Card'));
@@ -762,6 +788,10 @@ test('HeaderNav routes href and current to the link and fills the drawer with th
   assert.equal(links({})[0].hasAttribute('aria-current'), false);
   const current = stateSections('HeaderNav').sections.get('current');
   assert.equal(current.querySelector('.muxui-header-nav__secondary a').getAttribute('aria-current'), 'page');
+  // A supplied current: false wins in every row.
+  const headerArgs = createStory(currentRecord('HeaderNav'), 'states').args;
+  assert.equal(Object.hasOwn(headerArgs, 'current'), false);
+  assert.equal(stateSections('HeaderNav', { ...headerArgs, current: false }).sections.get('current').querySelector('.muxui-header-nav__secondary a').hasAttribute('aria-current'), false);
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     await act(async () => reactRoot.render(renderFamily('HeaderNav', { href: '/guide', current: true })));
@@ -802,6 +832,16 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
   assert.equal(sections.get('current').querySelector('.muxui-sidebar__nav-link').getAttribute('aria-current'), 'page');
   assert.ok(sections.get('external').querySelector('.muxui-sidebar__nav-external'));
   assert.equal(sections.get('expanded').querySelector('details').open, true);
+  // collapsed folds the rail through Provider, not the Roadmap group.
+  const rail = sections.get('collapsed');
+  assert.equal(rail.querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), true);
+  assert.equal(rail.querySelector('.muxui-sidebar__toggle').getAttribute('aria-expanded'), 'false');
+  assert.equal(sections.get('expanded').querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), false);
+  assert.equal(sections.get('expanded').querySelector('.muxui-sidebar__toggle').getAttribute('aria-expanded'), 'true');
+  const sidebarStoryArgs = createStory(currentRecord('Sidebar'), 'states').args;
+  for (const name of ['current', 'defaultCollapsed', 'defaultExpanded', 'external']) assert.equal(Object.hasOwn(sidebarStoryArgs, name), false, name);
+  // A supplied defaultCollapsed wins over the row, even when it is the default value.
+  assert.equal(stateSections('Sidebar', { ...sidebarStoryArgs, defaultCollapsed: false }).sections.get('collapsed').querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), false);
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createEventsStory(currentRecord('Sidebar'));
@@ -844,7 +884,12 @@ test('InputTags keeps supplied seeds and copy, and offers placement and tag-focu
   assert.deepEqual([...tags(controlled.args).querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent), ['Mux', 'UI']);
 
   const { document: states, sections } = stateSections('InputTags');
-  assert.equal(states.querySelector('[data-muxui-storybook-state="unavailable"]'), null, 'every InputTags state has a specimen');
+  // The disabled row is labelled unavailable, never an enabled stand-in; the adapter itself still disables the input.
+  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['disabled']);
+  assert.match(unavailable[0].textContent, /Unavailable: MuxUI InputTags cannot show the disabled state here because .*no accessible disabled signal/u);
+  assert.equal(sections.get('disabled').querySelector('input'), null);
+  assert.equal(tags({ disabled: true }).querySelector('input').disabled, true);
   assert.equal(sections.get('inline').querySelector('.muxui-input-tags').classList.contains('muxui-input-tags--below'), false);
   assert.equal(sections.get('below').querySelector('.muxui-input-tags').classList.contains('muxui-input-tags--below'), true);
   assert.equal(sections.get('invalid').querySelector('.muxui-input-tags').hasAttribute('data-invalid'), true);
@@ -879,6 +924,12 @@ test('RadioField renders its own parts inside RadioGroup and routes field props 
   assert.ok(first.querySelector('.muxui-radio-field__error'));
   assert.equal(second.querySelector('.muxui-radio-field__error'), null);
   assert.ok([first, second].every((field) => field.classList.contains('muxui-radio-field--sm')));
+  // The second radio takes its own value, so choosing either plan checks exactly one radio.
+  for (const value of ['monthly', 'annual', 'weekly']) {
+    const inputs = [...doc({ value }).querySelectorAll('.muxui-radio-field input[type="radio"]')];
+    assert.deepEqual(inputs.map((input) => input.value).sort(), [value, value === 'annual' ? 'monthly' : 'annual'].sort(), value);
+    assert.deepEqual(inputs.filter((input) => input.checked).map((input) => input.value), [value], `${value}: exactly one radio is checked`);
+  }
   assert.ok(BROWSER_PROOF_FAMILIES.includes('RadioField'));
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createBrowserProofStory(currentRecord('RadioField'));
@@ -921,6 +972,17 @@ test('TagSelect follows the Set key contract and lets item and label controls th
     await act(async () => host.querySelectorAll('.muxui-tag-select__tag-remove')[0].click());
     await settleRuntime(60);
     assert.deepEqual(values().selectedKeys, ['code']);
+
+    // The popup names unselected items with the resolver the tags use: getItemLabel, else name, label, then id.
+    const items = [{ id: 'x', name: 'By name' }, { id: 'y', label: 'By label' }, { id: 'z' }];
+    const optionLabels = async (key, args) => {
+      await act(async () => reactRoot.render(React.cloneElement(renderFamily('TagSelect', { items, ...args }), { key })));
+      await act(async () => host.querySelector('.muxui-tag-select__input').focus());
+      await settleRuntime(60);
+      return [...document.querySelectorAll('.muxui-tag-select__item')].map((node) => node.textContent);
+    };
+    assert.deepEqual(await optionLabels('fallback-labels', {}), ['By name', 'By label', 'z']);
+    assert.deepEqual(await optionLabels('custom-labels', { getItemLabel: (item) => `Item ${item.id}` }), ['Item x', 'Item y', 'Item z']);
   });
 });
 
@@ -1157,15 +1219,90 @@ test('Menu uses the triggered composition for open-state stories and keeps the p
     assert.match(log, /openChange: true/u);
     assert.match(log, /action:/u);
 
-    // Popup geometry belongs to the popup.
-    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Menu', { open: true, placement: 'top' }), { key: 'placement' })));
-    await settleRuntime();
-    assert.equal(document.querySelector('.muxui-menu-popup').getAttribute('data-placement') ?? 'top', 'top');
+    // Popup geometry belongs to the popup: the placement row opens its own popup, placed on top.
     const states = createStory(menu, 'states');
     await act(async () => reactRoot.render(React.cloneElement(states.render(states.args), { key: 'states' })));
     await settleRuntime();
-    assert.ok(document.querySelector('.muxui-menu-popup'), 'the open state shows its popup');
+    const rowPopup = (row) => {
+      const trigger = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('.muxui-menu-trigger');
+      return document.getElementById(trigger.getAttribute('aria-controls'));
+    };
+    assert.equal(document.querySelectorAll('.muxui-menu-popup').length, 2, 'the open and placement rows each show a popup');
+    assert.equal(ancestorProp(rowPopup('placement'), 'placement'), 'top');
+    assert.equal(ancestorProp(rowPopup('open'), 'placement'), 'bottom start', 'React Aria spells the default bottom-start with a space');
+    for (const row of ['open', 'placement']) {
+      const room = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('[data-muxui-storybook-popup-room]');
+      assert.equal(room.style.minBlockSize, '14rem', `${row} reserves room for its popup`);
+      assert.ok(room.querySelector('.muxui-menu-trigger'));
+    }
   });
+});
+
+test('Image shows fallback recovery and final failure, and names the source it ended on', async () => {
+  const { document: states } = stateSections('Image');
+  // Recovery has specimens; only the radius rows are labelled unavailable, with their reason.
+  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['radius-sm', 'radius-md', 'radius-lg', 'radius-full']);
+  assert.ok(unavailable.every((node) => /because the colour audit accepts only a transparent image/u.test(node.textContent)));
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createStory(currentRecord('Image'), 'states');
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await settleRuntime(60);
+    const row = (name) => [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === name);
+    const caption = (name) => row(name).querySelector('figcaption').textContent;
+    // jsdom loads no images, so raise each source's error as the browser does.
+    const fail = (name) => act(async () => row(name).querySelector('img').dispatchEvent(new Event('error')));
+
+    assert.equal(caption('fallback'), 'Loading the primary source.');
+    await fail('fallback');
+    assert.equal(row('fallback').querySelector('img').hasAttribute('data-fallback'), true);
+    assert.match(row('fallback').querySelector('img').getAttribute('src'), /^data:image\/gif/u, 'the working fallback is the verified transparent pixel');
+    await settleRuntime(20);
+    assert.equal(caption('fallback'), 'Primary source failed; using fallbackSrc.');
+
+    await fail('error');
+    await fail('error');
+    assert.equal(row('error').querySelector('img').hasAttribute('data-error'), true);
+    await settleRuntime(20);
+    assert.equal(caption('error'), 'Primary and fallback sources failed.');
+    assert.equal(row('error').querySelector('img').style.visibility, 'hidden', 'a failed image is not painted in the page');
+    assert.equal(row('fallback').querySelector('img').style.visibility, '', 'a recovered image is');
+  });
+});
+
+test('Link without a destination renders disabled even when disabled is false', () => {
+  const link = (args) => new JSDOM(renderToStaticMarkup(renderFamily('Link', args))).window.document.querySelector('.muxui-link');
+  assert.equal(link({}).localName, 'a', 'the default specimen has a destination');
+  assert.equal(link({}).getAttribute('href'), '/settings');
+  assert.equal(link({ href: '/guide', disabled: false }).getAttribute('href'), '/guide');
+  for (const args of [{ href: undefined }, { href: '' }, { href: undefined, disabled: false }]) {
+    const disabled = link(args);
+    assert.equal(disabled.getAttribute('aria-disabled'), 'true', JSON.stringify(args));
+    assert.equal(disabled.hasAttribute('href'), false, JSON.stringify(args));
+  }
+
+  const { sections } = stateSections('Link');
+  assert.equal(sections.get('idle').querySelector('.muxui-link').getAttribute('href'), '/settings');
+  assert.equal(sections.get('disabled').querySelector('.muxui-link').getAttribute('aria-disabled'), 'true', 'the disabled row is really disabled');
+  assert.equal(sections.get('current').querySelector('.muxui-link').getAttribute('aria-current'), 'page');
+  for (const name of ['no-href', 'empty-href']) {
+    const specimen = sections.get(name).querySelector('.muxui-link');
+    assert.equal(specimen.getAttribute('aria-disabled'), 'true', name);
+    assert.equal(specimen.hasAttribute('href'), false, name);
+    assert.equal(sections.get(name).querySelector('[data-muxui-storybook-state="unavailable"]'), null, name);
+  }
+});
+
+test('ProgressCircle shows unknown progress beside determinate values with no invented percent', () => {
+  const { document: states, sections } = stateSections('ProgressCircle');
+  assert.equal(states.querySelector('[data-muxui-storybook-state="unavailable"]'), null);
+  const bar = (name) => sections.get(name).querySelector('[role="progressbar"]');
+  assert.equal(bar('indeterminate').hasAttribute('aria-valuenow'), false, 'unknown progress exposes no value');
+  assert.equal(bar('indeterminate').querySelector('.muxui-progress-circle__value').textContent, '', 'and shows no percent');
+  assert.ok(bar('indeterminate').hasAttribute('data-indeterminate'));
+  for (const [name, now] of [['zero', '0'], ['partial', '50'], ['complete', '100']]) assert.equal(bar(name).getAttribute('aria-valuenow'), now, name);
+  assert.equal(createStory(currentRecord('ProgressCircle'), 'default').args.value, null, 'the default specimen is the unknown-progress one');
 });
 
 test('Button Matrix statically covers every finite visual tuple and States keeps pending/disabled', () => {
