@@ -135,6 +135,23 @@ function releaseCapture(gesture) {
   } catch { /* capture may already have been released by the user agent */ }
 }
 
+// The sizes from before a gesture, if they still form a valid layout once rounded at the current precision.
+function restorable(origin, graph, precision) {
+  const sizes = normalize(origin, graph, precision);
+  return sizes && graph.panels.every((panel) => sizes[panel.id] >= panel.min && sizes[panel.id] <= panel.max) ? sizes : null;
+}
+
+// Whether a pointer event from `pointerId` belongs to this pointer gesture on this handle.
+function ownsPointer(gesture, handleId, pointerId) {
+  return Boolean(gesture) && gesture.handleId === handleId && gesture.source === 'pointer' && (gesture.pointerId === null || gesture.pointerId === pointerId);
+}
+
+// Whether a controlled parent shows sizes other than the ones it was last given: the gesture's latest proposal, or its starting sizes before the first one.
+function parentDiverged(gesture, state) {
+  const expected = gesture.lastProposal ?? gesture.origin;
+  return Boolean(state.controlled && expected && !equal(state.current, expected, state.graph, state.digits));
+}
+
 function direction(root, orientation) {
   if (orientation !== 'horizontal') return 1;
   try { return root.ownerDocument.defaultView?.getComputedStyle(root).direction === 'rtl' ? -1 : 1; } catch { return 1; }
@@ -159,11 +176,26 @@ function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, orientat
   const stateRef = React.useRef({ graph, current, axis, disabled, readOnly, digits, controlled, keyboardStep, keyboardLargeStep });
   stateRef.current = { graph, current, axis, disabled, readOnly, digits, controlled, keyboardStep, keyboardLargeStep };
 
-  const cancel = React.useCallback((handleId) => {
-    if (handleId !== undefined && gestureRef.current?.handleId !== handleId) return;
-    releaseCapture(gestureRef.current);
+  // Ends the gesture. With `rollback`, a pointer gesture that changed the sizes reports the sizes from before it through onSizesChange, once,
+  // unless they no longer form a valid layout. It never commits. The gesture is cleared first so a lost-capture event from the release cannot restore twice.
+  const finish = React.useCallback((rollback) => {
+    const gesture = gestureRef.current;
+    if (!gesture) return;
     gestureRef.current = null;
+    releaseCapture(gesture);
+    if (!rollback || gesture.source !== 'pointer' || !gesture.lastProposal) return;
+    const state = stateRef.current;
+    if (parentDiverged(gesture, state)) return;
+    const restored = state.graph && restorable(gesture.origin, state.graph, state.digits);
+    if (!restored || equal(restored, gesture.lastProposal, state.graph, state.digits)) return;
+    if (!state.controlled) setLocal(restored);
+    propsRef.current.onSizesChange?.(restored, Object.freeze({ handleId: gesture.handleId, source: 'pointer' }));
   }, []);
+
+  // Pointer cancel and lost pointer capture interrupt only the gesture of the pointer they report.
+  const cancel = React.useCallback((handleId, pointerId) => {
+    if (ownsPointer(gestureRef.current, handleId, pointerId)) finish(true);
+  }, [finish]);
 
   React.useEffect(() => {
     if (!graph || topologyRef.current === graph.signature || controlled) return;
@@ -173,23 +205,27 @@ function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, orientat
   }, [controlled, digits, graph, local]);
 
   React.useEffect(() => {
-    const onResize = () => cancel();
+    const onResize = () => finish(true);
     const ownerWindow = rootRef.current?.ownerDocument?.defaultView;
     ownerWindow?.addEventListener('resize', onResize);
-    return () => { ownerWindow?.removeEventListener('resize', onResize); cancel(); };
-  }, [cancel]);
+    return () => { ownerWindow?.removeEventListener('resize', onResize); finish(false); };
+  }, [finish]);
 
   React.useEffect(() => {
     const gesture = gestureRef.current;
     const state = stateRef.current;
-    if (!gesture || !state.graph || !state.current || !state.axis || state.disabled || state.readOnly || !state.graph.handleById.has(gesture.handleId) || (state.controlled && gesture.lastProposal && !equal(state.current, gesture.lastProposal, state.graph, state.digits))) cancel();
+    if (!gesture) return;
+    // An invalid layout, a removed handle, or a controlled parent showing other sizes ends the gesture silently; a mounted Resizable that stops accepting input restores.
+    const usable = state.graph && state.current && state.axis && state.graph.handleById.has(gesture.handleId) && !parentDiverged(gesture, state);
+    if (!usable) finish(false);
+    else if (state.disabled || state.readOnly) finish(true);
   });
 
   const apply = React.useCallback((handleId, source, delta) => {
     const state = stateRef.current;
     const gesture = gestureRef.current;
     if (!gesture || gesture.handleId !== handleId || gesture.source !== source || !state.current || !state.graph || state.disabled || state.readOnly) return null;
-    if (state.controlled && gesture.lastProposal && !equal(state.current, gesture.lastProposal, state.graph, state.digits)) { cancel(handleId); return null; }
+    if (parentDiverged(gesture, state)) { finish(false); return null; }
     const handle = state.graph.handleById.get(handleId);
     if (!handle) return null;
     const next = pairUpdate(state.graph, handle, state.current, state.current[handle.before] + delta, state.digits);
@@ -201,7 +237,7 @@ function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, orientat
     propsRef.current.onSizesChange?.(next, meta);
     if (source === 'keyboard') propsRef.current.onSizesCommit?.(next, meta);
     return next;
-  }, [cancel]);
+  }, [finish]);
 
   const beginPointer = React.useCallback((handleId, event, element) => {
     const state = stateRef.current;
@@ -212,7 +248,7 @@ function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, orientat
     const span = state.axis === 'vertical' ? rect?.height : rect?.width;
     if (!Number.isFinite(span) || span <= 0) return false;
     const point = state.axis === 'vertical' ? event.clientY : event.clientX;
-    gestureRef.current = { handleId, source: 'pointer', changed: false, lastProposal: null, pointerId: event.pointerId ?? null, captureElement: element, lastPoint: point, span, direction: direction(rootRef.current, state.axis) };
+    gestureRef.current = { handleId, source: 'pointer', changed: false, lastProposal: null, origin: state.current, pointerId: event.pointerId ?? null, captureElement: element, lastPoint: point, span, direction: direction(rootRef.current, state.axis) };
     try { element.setPointerCapture?.(event.pointerId); } catch { /* capture may be unavailable in a test DOM */ }
     return true;
   }, []);
@@ -220,21 +256,22 @@ function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, orientat
   const movePointer = React.useCallback((handleId, event) => {
     const gesture = gestureRef.current;
     const state = stateRef.current;
-    if (!gesture || gesture.handleId !== handleId || gesture.source !== 'pointer' || (gesture.pointerId !== null && event.pointerId !== gesture.pointerId)) return;
+    if (!ownsPointer(gesture, handleId, event.pointerId)) return;
     const point = state.axis === 'vertical' ? event.clientY : event.clientX;
     const delta = ((point - gesture.lastPoint) / gesture.span) * 100 * gesture.direction;
     gesture.lastPoint = point;
     apply(handleId, 'pointer', delta);
   }, [apply]);
 
-  const endPointer = React.useCallback((handleId, element) => {
+  const endPointer = React.useCallback((handleId, pointerId) => {
     const gesture = gestureRef.current;
     const state = stateRef.current;
-    if (!gesture || gesture.handleId !== handleId || gesture.source !== 'pointer') return;
-    if (gesture.changed && gesture.lastProposal && (!state.controlled || (state.current && state.graph && equal(state.current, gesture.lastProposal, state.graph, state.digits)))) propsRef.current.onSizesCommit?.(gesture.lastProposal, Object.freeze({ handleId, source: 'pointer' }));
-    releaseCapture(gesture);
-    gestureRef.current = null;
-  }, []);
+    if (!ownsPointer(gesture, handleId, pointerId)) return;
+    const proposal = gesture.changed && gesture.lastProposal && !parentDiverged(gesture, state) ? gesture.lastProposal : null;
+    // The gesture ends before the callback runs, so an update the callback makes synchronously cannot roll the committed sizes back.
+    finish(false);
+    if (proposal) propsRef.current.onSizesCommit?.(proposal, Object.freeze({ handleId, source: 'pointer' }));
+  }, [finish]);
 
   const keyboard = React.useCallback((handleId, event) => {
     const state = stateRef.current;
@@ -242,22 +279,19 @@ function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, orientat
     const back = state.axis === 'vertical' ? 'ArrowUp' : 'ArrowLeft';
     const forward = state.axis === 'vertical' ? 'ArrowDown' : 'ArrowRight';
     let amount;
-    if (event.key === 'Home' || event.key === 'End' || event.key === 'PageUp' || event.key === 'PageDown') {
+    if (event.key === 'Home' || event.key === 'End') {
       const handle = state.graph.handleById.get(handleId);
       if (!handle) return;
       const [lower, upper] = pairBounds(state.graph, handle, state.current);
-      const currentValue = state.current[handle.before];
-      const target = event.key === 'Home' ? lower : event.key === 'End' ? upper : currentValue + (event.key === 'PageUp' ? 1 : -1) * state.keyboardLargeStep;
-      gestureRef.current = { handleId, source: 'keyboard', changed: false, lastProposal: null };
-      event.preventDefault();
-      apply(handleId, 'keyboard', target - currentValue);
-      gestureRef.current = null;
-      return;
+      amount = (event.key === 'Home' ? lower : upper) - state.current[handle.before];
+    } else {
+      // Page Up and Page Down are the large-step back and forward arrows, so they follow the same axis and direction.
+      const large = event.shiftKey || event.key === 'PageUp' || event.key === 'PageDown';
+      if (event.key === back || event.key === 'PageUp') amount = -(large ? state.keyboardLargeStep : state.keyboardStep);
+      else if (event.key === forward || event.key === 'PageDown') amount = large ? state.keyboardLargeStep : state.keyboardStep;
+      else return;
+      if (state.axis === 'horizontal') amount *= direction(rootRef.current, state.axis);
     }
-    if (event.key === back) amount = -(event.shiftKey ? state.keyboardLargeStep : state.keyboardStep);
-    else if (event.key === forward) amount = event.shiftKey ? state.keyboardLargeStep : state.keyboardStep;
-    else return;
-    if (state.axis === 'horizontal') amount *= direction(rootRef.current, state.axis);
     gestureRef.current = { handleId, source: 'keyboard', changed: false, lastProposal: null };
     event.preventDefault();
     apply(handleId, 'keyboard', amount);
@@ -287,9 +321,9 @@ function ResizableHandle({ id, before, after, disabled = false, className, onKey
   const orientation = context?.axis === 'horizontal' ? 'vertical' : 'horizontal';
   const onPointerDown = (event) => { if (context?.beginPointer(id, event, event.currentTarget)) event.currentTarget.setPointerCapture?.(event.pointerId); };
   const onPointerMove = (event) => context?.movePointer(id, event);
-  const onPointerUp = (event) => context?.endPointer(id, event.currentTarget);
+  const onPointerUp = (event) => context?.endPointer(id, event.pointerId);
   const onKey = (event) => { onKeyDown?.(event); if (!event.defaultPrevented && !blocked) context?.keyboard(id, event); };
-  return React.createElement('div', { ...props, role: 'separator', ref: undefined, tabIndex: blocked ? -1 : 0, className: cx('muxui-resizable-handle', className), 'data-handle-id': validId(id) ? id : undefined, 'data-disabled': blocked || undefined, 'aria-disabled': blocked || undefined, 'aria-controls': valid ? `${beforePanel.domId} ${afterPanel.domId}` : undefined, 'aria-orientation': orientation, 'aria-valuemin': valid ? bounds[0] : undefined, 'aria-valuemax': valid ? bounds[1] : undefined, 'aria-valuenow': valid ? value : undefined, 'aria-valuetext': valid ? `${value}% / ${context.current[after]}%` : undefined, onPointerDown, onPointerMove, onPointerUp, onPointerCancel: () => context?.cancel(id), onLostPointerCapture: () => context?.cancel(id), onKeyDown: onKey });
+  return React.createElement('div', { ...props, role: 'separator', ref: undefined, tabIndex: blocked ? -1 : 0, className: cx('muxui-resizable-handle', className), 'data-handle-id': validId(id) ? id : undefined, 'data-disabled': blocked || undefined, 'aria-disabled': blocked || undefined, 'aria-controls': valid ? `${beforePanel.domId} ${afterPanel.domId}` : undefined, 'aria-orientation': orientation, 'aria-valuemin': valid ? bounds[0] : undefined, 'aria-valuemax': valid ? bounds[1] : undefined, 'aria-valuenow': valid ? value : undefined, 'aria-valuetext': valid ? `${value}% / ${context.current[after]}%` : undefined, onPointerDown, onPointerMove, onPointerUp, onPointerCancel: (event) => context?.cancel(id, event.pointerId), onLostPointerCapture: (event) => context?.cancel(id, event.pointerId), onKeyDown: onKey });
 }
 
 export { Resizable, ResizablePanel, ResizableHandle };

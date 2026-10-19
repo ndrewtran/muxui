@@ -148,11 +148,31 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     const beforeCancel = await page.locator('[data-testid="commits"]').textContent();
     const box = await handle.boundingBox();
     assert.ok(box);
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2);
-    await page.evaluate(() => document.querySelector('[data-handle-id="split"]').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 })));
-    assert.equal(await page.locator('[data-testid="commits"]').textContent(), beforeCancel);
+    const grip = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const sizesAre = (text) => page.waitForFunction((expected) => document.querySelector('[data-testid="sizes"]')?.textContent === expected, text);
+    const dragLeft = async () => {
+      await page.mouse.move(grip.x, grip.y);
+      await page.mouse.down();
+      await page.mouse.move(grip.x - 80, grip.y);
+      await page.waitForFunction(() => document.querySelector('[data-testid="sizes"]')?.textContent !== '55/45');
+    };
+    // A cancelled drag, and one that loses pointer capture, put back the sizes from before it and never commit.
+    for (const cancelDrag of [
+      () => page.evaluate(() => document.querySelector('[data-handle-id="split"]').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }))),
+      () => page.evaluate(() => document.querySelector('[data-handle-id="split"]').releasePointerCapture(1)),
+    ]) {
+      await dragLeft();
+      await cancelDrag();
+      await sizesAre('55/45');
+      assert.equal(await page.locator('[data-testid="commits"]').textContent(), beforeCancel);
+      await page.mouse.up();
+    }
+    // A finished drag commits once and keeps its sizes through the lost capture that follows the release.
+    await dragLeft();
+    await page.mouse.up();
+    await page.waitForFunction((count) => document.querySelector('[data-testid="commits"]')?.textContent === String(Number(count) + 1), beforeCancel);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.notEqual(await page.locator('[data-testid="sizes"]').textContent(), '55/45');
 
     const trigger = page.getByRole('button', { name: 'Open lightbox' });
     await trigger.focus();
