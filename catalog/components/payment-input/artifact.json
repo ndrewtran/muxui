@@ -77,8 +77,15 @@
         }
       },
       "behavior": [
-        "Strips non-digits and formats Visa, Mastercard, Amex and Discover groups.",
+        "Non-digit characters are stripped as the user types.",
+        "Numbers starting with 34 or 37 are Amex and group as 4, 6, and 5; every other number groups as 4, 4, 4, and 4.",
+        "Digits past the last group are dropped: 15 digits for Amex, 16 for any other card.",
+        "Root's onChange receives the formatted string, spaces included, not the digits and not an event.",
+        "value and defaultValue take digits or formatted text, and the field shows either formatted.",
+        "A named PaymentInput.Input submits the formatted string, spaces included.",
+        "The card type is detected from the leading digits only.",
         "Formatting and card detection do not validate payment credentials.",
+        "Error shows only while the field is invalid.",
         "Interactive control sizes use the shared sm, md, and lg targets; md is the default."
       ],
       "accessibility": [

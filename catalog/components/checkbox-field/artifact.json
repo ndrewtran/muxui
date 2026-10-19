@@ -72,7 +72,15 @@
         }
       },
       "behavior": [
-        "Root supports controlled and uncontrolled selection plus native name/value form serialization with field description and error linkage."
+        "Root owns the selection: checked or defaultChecked sets it.",
+        "onChange receives the new boolean, not a DOM event.",
+        "A checked field submits its name and value; an unchecked field submits nothing.",
+        "indeterminate changes only how the field looks; submission depends on checked alone.",
+        "A disabled field ignores toggles and submits nothing.",
+        "A read-only field ignores toggles and still submits while checked.",
+        "Button is a label that wraps the native input, not an action button, and its ref is the label element.",
+        "Description is linked to the input.",
+        "Error appears only while the field is invalid, and is linked to the input."
       ],
       "accessibility": [
         "Root supports controlled and uncontrolled selection plus native name/value form serialization with field description and error linkage."

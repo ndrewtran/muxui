@@ -1384,6 +1384,70 @@
     {
       "family": "guide",
       "path": "catalog/guides/lightbox-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/checkbox-field/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/checkbox/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/checkbox/examples/react/mixed.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/drop-zone/examples/react/read-items.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/file-trigger/examples/react/selection.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/number-field/examples/react/formatting.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/payment-input/examples/react/formatting.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/radio-field/examples/react/options.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/radio-group/examples/react/fields.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/search-field/examples/react/cancel-shortcut.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/search-field/examples/react/submit-clear.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/slider/examples/react/save.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/switch-field/examples/react/form.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/switch/examples/react/children.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/payment-input-usage.json"
     }
   ]
 }

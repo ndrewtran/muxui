@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:switch-field-form-react",
+  "kind": "example",
+  "name": "SwitchField in a form",
+  "summary": "Control a SwitchField with a boolean, name its input, and see that an on switch submits its value and an off switch submits nothing.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:switch-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/switch-field/examples/react/form.tsx"
+}

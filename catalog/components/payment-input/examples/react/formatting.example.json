@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:payment-input-formatting-react",
+  "kind": "example",
+  "name": "PaymentInput formatting",
+  "summary": "Keep the formatted text the callback receives, read the digits from it, and show an error from the application's own check.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:payment-input#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/payment-input/examples/react/formatting.tsx"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:radio-field-options-react",
+  "kind": "example",
+  "name": "RadioField options with descriptions and an error",
+  "summary": "Give a RadioGroup the selected value, and give each RadioField option a description, an error, and a disabled state.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:radio-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/radio-field/examples/react/options.tsx"
+}
