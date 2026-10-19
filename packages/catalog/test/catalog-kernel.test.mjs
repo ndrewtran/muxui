@@ -200,7 +200,7 @@ test('R1.4 guide sources preserve Markdown newlines', async () => {
   const guideSources = baseBundle.artifacts
     .filter(({ kind, source }) => kind === 'guide' && source.content?.includes('-usage.md'))
     .map(({ source }) => source.content);
-  assert.equal(guideSources.length, 59);
+  assert.equal(guideSources.length, 62);
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
     assert.doesNotMatch(source, /\\n/u, sourcePath);
@@ -280,7 +280,7 @@ test('examples section orders by authored preference, not artifact ID', () => {
   // popover-anchored-react sorts before popover-basic-react by ID but has preference 1.
   assert.deepEqual(
     response.data.value.map(({ id }) => id),
-    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react'],
+    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react', 'muxui:example:popover-non-dismissable-react'],
   );
 });
 
