@@ -1702,6 +1702,8 @@ function controlledValueFromEvent(controlled, payload, family) {
   }
   if (controlled === 'selectedId') {
     if (value && typeof value === 'object') return value.id ?? value.value;
+    // onSelect reports a cleared selection with no item; a controlled selectedId expresses it as null.
+    if (value === undefined) return null;
   }
   return value;
 }
