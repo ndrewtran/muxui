@@ -103,7 +103,8 @@ test('MultiSelect Escape closes the popup and keeps the selection, and Reset and
     assert.equal(await popup.count(), 1);
     await page.keyboard.press('Escape');
     await popup.waitFor({ state: 'detached' });
-    assert.equal(await trigger.evaluate((node) => document.activeElement === node), true, 'focus returns to the trigger');
+    // React Aria restores focus a frame after the popup unmounts, which a slow runner can stretch.
+    await page.waitForFunction((node) => document.activeElement === node, await trigger.elementHandle());
     assert.match(await trigger.textContent(), /2 selected/u);
     assert.equal(await log(), '', 'Escape does not report a selection change');
 
