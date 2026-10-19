@@ -3,6 +3,7 @@ import { Lexer } from 'marked';
 
 export const MARKDOWN_SOURCE_LIMIT = 100_000;
 export const MARKDOWN_LINE_LIMIT = 10_000;
+export const MARKDOWN_LINE_LENGTH_LIMIT = 10_000;
 export const MARKDOWN_DEPTH_LIMIT = 32;
 export const MARKDOWN_NODE_LIMIT = 10_000;
 const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
@@ -32,17 +33,20 @@ function safeUrl(value, protocols, baseUrl, allowFragment = false) {
   }
 }
 
+// A trailing newline starts a final blank line, so it counts as a line like CodeBlock's.
 function bounded(source) {
   if (typeof source !== 'string') return 'MARKDOWN_INVALID_SOURCE_TYPE';
   if (source.length > MARKDOWN_SOURCE_LIMIT) return 'MARKDOWN_SOURCE_LIMIT_EXCEEDED';
+  let lines = 1;
   let lineLength = 0;
   for (let index = 0; index < source.length; index += 1) {
     const code = source.charCodeAt(index);
     if (code === 10 || code === 13) {
+      if (++lines > MARKDOWN_LINE_LIMIT) return 'MARKDOWN_LINE_LIMIT_EXCEEDED';
       lineLength = 0;
       if (code === 13 && source.charCodeAt(index + 1) === 10) index += 1;
-    } else if (++lineLength > MARKDOWN_LINE_LIMIT) {
-      return 'MARKDOWN_LINE_LIMIT_EXCEEDED';
+    } else if (++lineLength > MARKDOWN_LINE_LENGTH_LIMIT) {
+      return 'MARKDOWN_LINE_LENGTH_LIMIT_EXCEEDED';
     }
   }
   return undefined;
