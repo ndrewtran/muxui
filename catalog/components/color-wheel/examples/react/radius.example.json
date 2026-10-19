@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:color-wheel-radius-react",
+  "kind": "example",
+  "name": "ColorWheel with a custom radius",
+  "summary": "Set a valid outer and inner radius pair.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:color-wheel#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/color-wheel/examples/react/radius.tsx"
+}

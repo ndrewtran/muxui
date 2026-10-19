@@ -45,6 +45,7 @@
       "family": "ButtonGroup",
       "slug": "button-group",
       "examples": [
+        "catalog/components/button-group/examples/react/attached.tsx",
         "catalog/components/button-group/examples/react/basic.tsx"
       ],
       "export": {
@@ -58,7 +59,8 @@
       "family": "Card",
       "slug": "card",
       "examples": [
-        "catalog/components/card/examples/react/basic.tsx"
+        "catalog/components/card/examples/react/basic.tsx",
+        "catalog/components/card/examples/react/button.tsx"
       ],
       "export": {
         "module": ".",
@@ -167,7 +169,9 @@
       "family": "Image",
       "slug": "image",
       "examples": [
-        "catalog/components/image/examples/react/basic.tsx"
+        "catalog/components/image/examples/react/basic.tsx",
+        "catalog/components/image/examples/react/recovery.tsx",
+        "catalog/components/image/examples/react/source-change.tsx"
       ],
       "export": {
         "module": ".",
@@ -219,7 +223,9 @@
       "family": "Markdown",
       "slug": "markdown",
       "examples": [
-        "catalog/components/markdown/examples/react/basic.tsx"
+        "catalog/components/markdown/examples/react/basic.tsx",
+        "catalog/components/markdown/examples/react/invalid-base.tsx",
+        "catalog/components/markdown/examples/react/relative-links.tsx"
       ],
       "export": {
         "module": "./markdown",
@@ -273,7 +279,8 @@
       "slug": "progress-circle",
       "examples": [
         "catalog/components/progress-circle/examples/react/basic.tsx",
-        "catalog/components/progress-circle/examples/react/indeterminate.tsx"
+        "catalog/components/progress-circle/examples/react/indeterminate.tsx",
+        "catalog/components/progress-circle/examples/react/operation.tsx"
       ],
       "export": {
         "module": ".",
@@ -380,7 +387,10 @@
       "family": "Text",
       "slug": "text",
       "examples": [
-        "catalog/components/text/examples/react/basic.tsx"
+        "catalog/components/text/examples/react/basic.tsx",
+        "catalog/components/text/examples/react/collection-text.tsx",
+        "catalog/components/text/examples/react/field-text.tsx",
+        "catalog/components/text/examples/react/truncate.tsx"
       ],
       "export": {
         "module": ".",
@@ -407,7 +417,9 @@
       "slug": "text-editor",
       "examples": [
         "catalog/components/text-editor/examples/react/basic.tsx",
-        "catalog/components/text-editor/examples/react/selection-actions.tsx"
+        "catalog/components/text-editor/examples/react/limit.tsx",
+        "catalog/components/text-editor/examples/react/selection-actions.tsx",
+        "catalog/components/text-editor/examples/react/stored-document.tsx"
       ],
       "export": {
         "module": "./text-editor",

@@ -47,18 +47,20 @@ not automatically to a component's surrounding container.
 
 | Coverage | Families |
 | --- | --- |
-| Public `sm`/`md`/`lg` size API | Autocomplete, Button, Checkbox, CheckboxGroup, CheckboxField, ColorField, ComboBox, CommandPalette, DateField, DatePicker, DateRangePicker, IconButton, Input, InputTags, MultiSelect, NumberField, PaymentInput, RadioField, RadioGroup, SearchField, Select, Switch, SwitchField, Tabs, TagSelect, TextField, TimeField, ToggleButton, ToggleButtonGroup |
+| Public `sm`/`md`/`lg` size API | Autocomplete, Button, Checkbox, CheckboxGroup, CheckboxField, ColorField, ComboBox, CommandPalette, DateField, DatePicker, DateRangePicker, IconButton, Input, InputTags, MultiSelect, NumberField, PaymentInput, RadioField, RadioGroup, SearchField, Select, SelectNative, Switch, SwitchField, Tabs, TagSelect, TextField, TimeField, ToggleButton, ToggleButtonGroup |
 | Default `md` target on an actionable part; no public size axis | ButtonGroup, ColorModeToggle, Disclosure, DisclosureGroup, FileTrigger, GridList, HeaderNav, ListBox, Menu, Table, TagGroup, TextEditor, TokenField, Toolbar, Tree |
-| Content-driven root with sized interactive parts | AlertDialog, Calendar, Dialog, DropZone, Lightbox, Popover, PreviewTrigger, RangeCalendar, Sidebar, Toast, Tooltip |
+| Content-driven root with sized interactive parts | Activity, AlertDialog, Calendar, CodeBlock, DataDiff, Dialog, DropZone, Lightbox, Message, Popover, PreviewTrigger, PromptComposer, RangeCalendar, Sidebar, Toast, Tooltip |
 | Specialized geometry; retain dedicated track, swatch, canvas, or handle sizing | ColorArea, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, Slider |
-| Public size prop retained for a non-target surface | ProgressCircle, TextArea |
-| Layout, status, or multiline surface; do not impose a shared control height | Breadcrumbs, Card, Form, Group, Link, Markdown, Meter, ProgressBar, Resizable, Separator, Virtualizer |
+| Public size prop retained for a non-target surface | Avatar, ProgressCircle, TextArea |
+| Layout, status, or multiline surface; do not impose a shared control height | Breadcrumbs, Card, Form, Group, Image, Link, Markdown, Meter, ProgressBar, Resizable, Separator, Text, Virtualizer |
 
 The default-md row is intentionally part-level: collection options, calendar
 navigation/cells, dialog and lightbox actions, table actionable rows, sidebar
 actions, and text-editor toolbar buttons are targets; their panels, grids, and
 content remain content-driven. The small-target exceptions above are explicit
 per-action exceptions and are not combined to claim target-size compliance.
+
+Activity, CodeBlock, DataDiff, Message, and PromptComposer have no size prop. Their buttons, DataDiff's selection checkboxes, and PromptComposer's input use the small (`sm`) target, and their roots and content stay content-driven. SelectNative takes the shared targets through its `size` prop; a number there passes to the native select's `size` attribute instead. An Avatar is not an interactive target: its three sizes read the shared size roles for its diameter. Image has no size axis and no interactive part. Text's `size` prop selects a typography step, not a control target.
 
 `semantic.control.size-md` owns the default `md` target; `size-sm` and
 `size-lg` remain independent shared roles. `component.button.min-height`

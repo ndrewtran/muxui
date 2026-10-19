@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:markdown-relative-links-react",
+  "kind": "example",
+  "name": "Markdown with relative links",
+  "summary": "Resolve relative links and images against baseUrl, and drop URLs that are not allowed.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:markdown#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/markdown/examples/react/relative-links.tsx"
+}

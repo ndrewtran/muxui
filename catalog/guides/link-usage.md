@@ -5,3 +5,7 @@ Use Link for navigating to another location. Keep its Mux UI-owned props and acc
 Compose consumer-supplied icons as Link children: put a leading decorative icon before the text and a trailing decorative icon after it. Inline SVG icons should use `currentColor`, `1em` width and height, `aria-hidden="true"`, and `focusable="false"`.
 
 An icon-only Link still needs an accessible name, such as `aria-label`. A decorative icon does not name the link.
+
+## Destination
+
+A Link needs a non-empty `href` to be enabled. Without one, or with an empty one, it is disabled even when `disabled` is false. Its `onActivate` callback runs in addition to following the `href` and cannot stand in for one. The Link without a destination example shows the disabled result.

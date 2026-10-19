@@ -54,8 +54,16 @@
         }
       },
       "behavior": [
-        "Reads bounded localStorage and prefers-color-scheme defaults without accessing browser globals during SSR.",
-        "Writes the Mux data-muxui-color-scheme hook on the document root."
+        "The first render uses defaultMode, or light when it is not set, so server rendering and the first client render match.",
+        "localStorage and the operating system preference are read only after mount, never during server rendering.",
+        "After mount, the mode saved in localStorage under storageKey is restored when it is light or dark; any other saved value is ignored.",
+        "Without a saved mode, defaultMode is used, and without that the operating system prefers-color-scheme.",
+        "The current mode is written to data-muxui-color-scheme on the document root and saved under storageKey.",
+        "A change calls onModeChange with light or dark; restoring a saved mode does not call it.",
+        "mode sets the displayed mode and is still written to the document root and storage; the toggle does not change it, so the application updates mode.",
+        "The toggle does not listen for later changes to the operating system preference or to localStorage.",
+        "Unmounting the toggle leaves data-muxui-color-scheme on the document root.",
+        "Each ColorModeToggle keeps its own mode, so several toggles stay in step only when they share mode and onModeChange."
       ],
       "accessibility": [
         "Reads bounded localStorage and prefers-color-scheme defaults without accessing browser globals during SSR.",

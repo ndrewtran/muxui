@@ -99,7 +99,11 @@
       },
       "behavior": [
         "Enter activates an enabled link",
-        "Disabled links suppress navigation and remain perceivable"
+        "Disabled links suppress navigation and remain perceivable",
+        "A Link without an href, or with an empty one, is disabled even when disabled is false.",
+        "A disabled Link renders as a span with the link role, not as an anchor.",
+        "onActivate runs when an enabled Link is activated, in addition to following href; it does not replace href.",
+        "A disabled Link does not call onActivate."
       ],
       "accessibility": [
         "Expose link role, destination, current state, and disabled state"

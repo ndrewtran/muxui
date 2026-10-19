@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:818a905e4c42c8d349e8118df15a3c7e7de9835cde334b920f2c4d7b63d39c21 -->
+<!-- @generated-content-sha256: sha256:44ee0dc9c4db43b1e47ffaffec01c8bd605dfb467abbc0177e8dd6fb85d7c2dc -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -148,7 +148,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
 | Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect, children, open, defaultOpen, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay |
 | Message | experimental | . | .muxui-message | sender, author, children, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
-| Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
+| Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions, aria-label, aria-labelledby |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |
@@ -237,7 +237,6 @@ Public parts: `root`, `item`.
 
 - Only a bounded visible window plus overscan is mounted.
 - The focused item stays mounted wherever it is scrolled, so the mounted count can exceed the visible window plus overscan.
-- Scroll geometry preserves the full collection extent.
 - The default stack layout is a list of the items passed, in rows placed itemHeight apart, and its rows cannot be selected.
 - Stack layout renders items only. It does not virtualize children, a render function, or another collection such as Table or Tree.
 - height and itemHeight are in pixels and must be finite numbers greater than 0, or Virtualizer throws a TypeError.

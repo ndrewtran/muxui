@@ -81,7 +81,9 @@
           "minValue",
           "maxValue",
           "label",
-          "formatOptions"
+          "formatOptions",
+          "aria-label",
+          "aria-labelledby"
         ],
         "events": [],
         "parts": [
@@ -98,7 +100,14 @@
       },
       "behavior": [
         "Values are clamped to the declared range",
-        "Fill reflects the normalized percentage"
+        "Fill reflects the normalized percentage",
+        "The value text defaults to the position in the range as a percent: with minValue 20, maxValue 100, and value 60 it reads 50%.",
+        "formatOptions with the percent style format that same percent of the range.",
+        "formatOptions without the percent style format the clamped value itself instead; a decimal style reads 60 for the same range and value.",
+        "The fill always shows the position in the range, whatever the format of the text.",
+        "Numbers are formatted for the default locale of the environment that renders them.",
+        "label is the visible name, and it is not rendered when aria-label or aria-labelledby is supplied.",
+        "With aria-label or aria-labelledby, Meter shows only its value text, so any visible label is the application's own element."
       ],
       "accessibility": [
         "Expose meter role, value range, value text, and accessible name"

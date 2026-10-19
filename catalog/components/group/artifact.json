@@ -100,7 +100,9 @@
         }
       },
       "behavior": [
-        "Group state is reflected on the root",
+        "disabled sets aria-disabled and data-disabled on the group root, and invalid sets aria-invalid and data-invalid.",
+        "readOnly sets only data-readonly on the group root.",
+        "Group renders a div, not a fieldset, and does not pass disabled, invalid, or readOnly to the controls inside it.",
         "Content remains in document order"
       ],
       "accessibility": [

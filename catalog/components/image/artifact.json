@@ -67,8 +67,13 @@
       },
       "behavior": [
         "Renders a native HTMLImageElement and forwards native attributes, dimensions, refs, and callbacks.",
-        "fallbackSrc and fallbackSrcSet provide one bounded recovery attempt; changing the primary source or source set clears stale recovery state.",
-        "radius and fit select the muxui-image--radius-* and muxui-image--fit-* modifier classes without changing intrinsic image dimensions; when width and height are both set, the declared box keeps its ratio through the --muxui-image-ratio custom property, which consumer classes and styles can override, so fit applies and loading does not shift layout."
+        "When the primary source fails to load and fallbackSrc or fallbackSrcSet is supplied, the image switches to the fallback once and sets data-fallback.",
+        "If the fallback also fails, or none is supplied, the image sets data-error, keeps the failed source, and tries nothing further.",
+        "Changing src, srcSet, fallbackSrc, or fallbackSrcSet starts recovery over, so the new primary source is tried first.",
+        "onError runs for every load error, including the failure of the fallback.",
+        "radius and fit select the muxui-image--radius-* and muxui-image--fit-* modifier classes without changing intrinsic image dimensions.",
+        "When width and height are both set, the declared box keeps its ratio through the --muxui-image-ratio custom property, so fit applies and loading does not shift layout.",
+        "Consumer classes and styles can override --muxui-image-ratio."
       ],
       "accessibility": [
         "alt is required by the public type and runtime contract; an empty alt keeps decorative images out of the accessibility tree.",

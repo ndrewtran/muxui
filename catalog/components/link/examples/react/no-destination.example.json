@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:link-no-destination-react",
+  "kind": "example",
+  "name": "Link without a destination",
+  "summary": "A Link with no href renders disabled.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:link#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/link/examples/react/no-destination.tsx"
+}

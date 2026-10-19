@@ -154,7 +154,8 @@ for (const slug of ${JSON.stringify(renderedSlugs)}) {
     const module = await import(\`./\${slug}/\${file}\`);
     const examples = Object.values(module).filter((value) => typeof value === 'function');
     assert.ok(examples.length > 0, \`\${slug}/\${file} exports an example component\`);
-    markup[slug] = examples.map((Example) => renderToStaticMarkup(React.createElement(Example))).join('');
+    // A family can have several examples, so keep the markup of all of them.
+    markup[slug] = (markup[slug] ?? '') + examples.map((Example) => renderToStaticMarkup(React.createElement(Example))).join('');
   }
 }
 assert.match(markup.text, /<h2 class="muxui-text muxui-text--heading-md">Account<\\/h2>/);
