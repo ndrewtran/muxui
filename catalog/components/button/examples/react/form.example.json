@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:button-form-react",
+  "kind": "example",
+  "name": "Button in a form",
+  "summary": "Submit and reset a native form with Button, handle the submission in the application, and set pending while its request runs.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/button/examples/react/form.tsx"
+}
