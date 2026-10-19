@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button, CommandPalette, IconButton, SearchField, TextField, type FieldInputProps } from '@muxui/react';
+import { Button, CommandPalette, IconButton, PaymentInput, SearchField, TextField, type FieldInputProps } from '@muxui/react';
 
 const inputRef = React.createRef<HTMLInputElement>();
 const fieldRef = React.createRef<HTMLDivElement>();
@@ -55,3 +55,15 @@ const upstreamPress = <Button onPress={() => {}}>Action</Button>;
 // @ts-expect-error Upstream disabled names are not part of the Mux action contract.
 const upstreamDisabled = <IconButton aria-label="Action" isDisabled>X</IconButton>;
 void [outerRefContract, incorrectInputRef, nestedValue, nestedChange, nestedDisabled, nestedLabel, misplacedQuery, upstreamPress, upstreamDisabled];
+
+// CardIcon is decorative: it takes a card type but no children or accessible name.
+const cardIconRef = React.createRef<HTMLSpanElement>();
+const cardIcons = <PaymentInput.Root aria-label="Card number"><PaymentInput.Group><PaymentInput.Input /><PaymentInput.CardIcon ref={cardIconRef} cardType="visa" className="card" data-testid="icon" /></PaymentInput.Group></PaymentInput.Root>;
+// @ts-expect-error cardType is limited to the card types the runtime knows.
+const unknownCardType = <PaymentInput.CardIcon cardType="diners" />;
+// @ts-expect-error CardIcon renders its own icon and ignores children.
+const cardIconChildren = <PaymentInput.CardIcon>VISA</PaymentInput.CardIcon>;
+// JSX skips hyphenated attributes that a type omits, so the name is checked as a props object.
+// @ts-expect-error CardIcon is aria-hidden, so the runtime drops aria-label.
+const cardIconLabel: React.ComponentProps<typeof PaymentInput.CardIcon> = { 'aria-label': 'Visa' };
+void [cardIcons, unknownCardType, cardIconChildren, cardIconLabel];

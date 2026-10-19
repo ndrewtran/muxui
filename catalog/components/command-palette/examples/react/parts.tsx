@@ -53,10 +53,8 @@ export function CommandPalettePartsExample() {
                 </CommandPalette.Chip>
               ))}
             </CommandPalette.Chips>
-            <CommandPalette.ListBox>
-              {visible.map((command) => (
-                <CommandPalette.Item key={command.id} id={command.id} title={command.title} />
-              ))}
+            <CommandPalette.ListBox items={visible}>
+              {(command) => <CommandPalette.Item id={command.id} title={command.title} />}
             </CommandPalette.ListBox>
             {matches.length > visible.length && (
               <CommandPalette.LoadMoreItem>

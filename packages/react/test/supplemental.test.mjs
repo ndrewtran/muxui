@@ -444,6 +444,17 @@ test('CommandPalette registers section headers and hides shortcut presentation b
   ]);
 });
 
+test('CommandPalette ListBox, Section, and Collection render items through a render function', () => {
+  const commands = [{ id: 'one', title: 'First command' }, { id: 'two', title: 'Second command' }];
+  const item = (command) => React.createElement(CommandPalette.Item, { id: command.id, title: command.title });
+  const titles = (part) => [...renderToStaticMarkup(React.createElement(CommandPalette.Root, null, part)).matchAll(/(?:First|Second) command/gu)].map(([title]) => title);
+  const listBox = (...children) => React.createElement(CommandPalette.ListBox, { 'aria-label': 'Commands' }, ...children);
+  const expected = ['First command', 'Second command'];
+  assert.deepEqual(titles(React.createElement(CommandPalette.ListBox, { 'aria-label': 'Commands', items: commands, dependencies: [commands.length] }, item)), expected);
+  assert.deepEqual(titles(listBox(React.createElement(CommandPalette.Section, { 'aria-label': 'Group', items: commands }, item))), expected);
+  assert.deepEqual(titles(listBox(React.createElement(CommandPalette.Collection, { items: new Set(commands) }, item))), expected);
+});
+
 test('PaymentInput propagates field naming and keeps the card icon decorative', () => {
   const labelled = new JSDOM(renderToStaticMarkup(React.createElement(
     PaymentInput.Root,
