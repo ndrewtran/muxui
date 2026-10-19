@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import { act } from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
@@ -968,13 +969,314 @@ test('Resizable maintains pair totals, RTL keyboard direction, and cancels point
       const freshProps = reactProps(fresh);
       freshProps.onPointerDown({ button: 0, pointerId: 2, clientX: 500, currentTarget: fresh });
       freshProps.onPointerMove({ pointerId: 2, clientX: 600, currentTarget: fresh });
-      freshProps.onPointerCancel();
+      freshProps.onPointerCancel({ pointerId: 2 });
     });
     assert.equal(commits.length, commitCount);
   } finally {
     await act(async () => root?.unmount());
     restore();
     dom.window.close();
+  }
+});
+
+// Mounts a Resizable of two panels (the first from `minLeft`, both to 90) with the recorded callbacks and key and pointer helpers.
+// `show` maps each change to the sizes a controlled parent displays; `update` re-renders with new Resizable props or `minLeft`.
+// `layout(sizes)` runs in the parent's layout effect, and `afterCommit(controls)` inside onSizesCommit, where `controls.lock()` disables the Resizable synchronously.
+async function mountResizable({ orientation = 'horizontal', dir = 'ltr', controlled = false, start = { left: 50, right: 50 }, show = (next) => next, layout, afterCommit, ...initial } = {}) {
+  const dom = new JSDOM(`<!doctype html><html dir="${dir}"><body><div id="root"></div></body></html>`);
+  const restore = installDom(dom);
+  const changes = [];
+  const commits = [];
+  const root = createRoot(document.querySelector('#root'));
+  const controls = {};
+  function Harness({ minLeft, ...props }) {
+    const [sizes, setSizes] = React.useState(start);
+    const [locked, setLocked] = React.useState(false);
+    controls.setSizes = setSizes;
+    controls.lock = () => flushSync(() => setLocked(true));
+    React.useLayoutEffect(() => layout?.(sizes), [sizes]);
+    return React.createElement(Resizable, {
+      orientation,
+      ...props,
+      ...(locked ? { disabled: true } : {}),
+      ...(controlled ? { sizes } : { defaultSizes: start }),
+      onSizesChange: (next, meta) => { changes.push({ left: next.left, source: meta.source }); if (controlled) setSizes(show(next)); },
+      onSizesCommit: (next, meta) => { commits.push({ left: next.left, source: meta.source }); afterCommit?.(controls); },
+    }, React.createElement(ResizablePanel, { id: 'left', minSize: minLeft, maxSize: 90 }, 'Left'), React.createElement(ResizableHandle, { id: 'split', before: 'left', after: 'right', 'aria-label': 'Resize' }), React.createElement(ResizablePanel, { id: 'right', minSize: 10, maxSize: 90 }, 'Right'));
+  }
+  let settings = { minLeft: 10, ...initial };
+  const render = () => act(async () => root.render(React.createElement(Harness, settings)));
+  await render();
+  document.querySelector('.muxui-resizable').getBoundingClientRect = () => ({ width: 1_000, height: 1_000, top: 0, left: 0, right: 1_000, bottom: 1_000 });
+  const handle = () => document.querySelector('[data-handle-id="split"]');
+  return {
+    changes,
+    commits,
+    value: () => Number(handle().getAttribute('aria-valuenow')),
+    update: (next) => { settings = { ...settings, ...next }; return render(); },
+    setSizes: (next) => act(async () => controls.setSizes(next)),
+    key: (key, shiftKey = false) => act(async () => reactProps(handle()).onKeyDown({ key, shiftKey, preventDefault() {}, defaultPrevented: false })),
+    pointer: (type, point = 500, pointerId = 1) => act(async () => reactProps(handle())[type]({ button: 0, pointerId, clientX: point, clientY: point, currentTarget: handle() })),
+    resizeWindow: () => act(async () => { window.dispatchEvent(new window.Event('resize')); }),
+    async close() {
+      await act(async () => root.unmount());
+      restore();
+      dom.window.close();
+    },
+  };
+}
+
+// Back is ArrowUp when vertical and ArrowLeft when horizontal, and it grows the first panel in right-to-left.
+const keyLayouts = [
+  { orientation: 'horizontal', dir: 'ltr', back: 'ArrowLeft', forward: 'ArrowRight', grows: -1 },
+  { orientation: 'vertical', dir: 'ltr', back: 'ArrowUp', forward: 'ArrowDown', grows: -1 },
+  { orientation: 'horizontal', dir: 'rtl', back: 'ArrowLeft', forward: 'ArrowRight', grows: 1 },
+];
+for (const { orientation, dir, back, forward, grows } of keyLayouts) {
+  test(`Resizable Page Up and Page Down move a ${orientation} ${dir} handle like ${back} and ${forward}, and Home and End reach the pair bounds`, async () => {
+    const resizable = await mountResizable({ orientation, dir });
+    try {
+      const press = async (key, shiftKey = false) => {
+        const before = resizable.value();
+        await resizable.key(key, shiftKey);
+        return resizable.value() - before;
+      };
+      const backStep = await press(back, true);
+      const forwardStep = await press(forward, true);
+      assert.equal(backStep, 10 * grows, `Shift+${back} moves 10`);
+      assert.equal(forwardStep, -10 * grows, `Shift+${forward} moves 10 the other way`);
+      assert.equal(await press('PageUp'), backStep, `Page Up follows ${back}`);
+      assert.equal(await press('PageDown'), forwardStep, `Page Down follows ${forward}`);
+      await resizable.key('Home');
+      assert.equal(resizable.value(), 10, 'Home gives the first panel its smallest size');
+      await resizable.key('End');
+      assert.equal(resizable.value(), 90, 'End gives the first panel its largest size');
+    } finally {
+      await resizable.close();
+    }
+  });
+}
+
+for (const controlled of [false, true]) {
+  for (const cancelEvent of ['onPointerCancel', 'onLostPointerCapture']) {
+    test(`Resizable restores the sizes from before a drag on ${cancelEvent} (${controlled ? 'controlled' : 'uncontrolled'})`, async () => {
+      const resizable = await mountResizable({ controlled });
+      try {
+        await resizable.pointer('onPointerDown', 500);
+        await resizable.pointer('onPointerMove', 600);
+        await resizable.pointer('onPointerMove', 700);
+        assert.equal(resizable.value(), 70);
+        await resizable.pointer(cancelEvent);
+        assert.equal(resizable.value(), 50);
+        assert.deepEqual(resizable.changes, [{ left: 60, source: 'pointer' }, { left: 70, source: 'pointer' }, { left: 50, source: 'pointer' }]);
+        assert.deepEqual(resizable.commits, []);
+        // The browser can follow a cancel with the other event; the drag is already over.
+        await resizable.pointer(cancelEvent === 'onPointerCancel' ? 'onLostPointerCapture' : 'onPointerCancel');
+        assert.equal(resizable.changes.length, 3);
+        // The next drag starts from the restored sizes and commits normally.
+        await resizable.pointer('onPointerDown', 500);
+        await resizable.pointer('onPointerMove', 600);
+        await resizable.pointer('onPointerUp', 600);
+        assert.equal(resizable.value(), 60);
+        assert.deepEqual(resizable.commits, [{ left: 60, source: 'pointer' }]);
+      } finally {
+        await resizable.close();
+      }
+    });
+  }
+}
+
+test('Resizable keeps a finished drag when the browser then reports lost pointer capture', async () => {
+  const resizable = await mountResizable();
+  try {
+    await resizable.pointer('onPointerDown', 500);
+    await resizable.pointer('onPointerMove', 700);
+    await resizable.pointer('onPointerUp', 700);
+    await resizable.pointer('onLostPointerCapture');
+    assert.equal(resizable.value(), 70);
+    assert.deepEqual(resizable.changes, [{ left: 70, source: 'pointer' }]);
+    assert.deepEqual(resizable.commits, [{ left: 70, source: 'pointer' }]);
+  } finally {
+    await resizable.close();
+  }
+});
+
+test('Resizable reports no restore when a cancelled drag has nothing to restore', async () => {
+  const unmoved = await mountResizable();
+  try {
+    await unmoved.pointer('onPointerDown', 500);
+    await unmoved.pointer('onPointerCancel');
+    assert.deepEqual(unmoved.changes, []);
+  } finally {
+    await unmoved.close();
+  }
+  const returned = await mountResizable();
+  try {
+    await returned.pointer('onPointerDown', 500);
+    await returned.pointer('onPointerMove', 700);
+    await returned.pointer('onPointerMove', 500);
+    await returned.pointer('onPointerCancel');
+    assert.deepEqual(returned.changes, [{ left: 70, source: 'pointer' }, { left: 50, source: 'pointer' }]);
+  } finally {
+    await returned.close();
+  }
+});
+
+for (const controlled of [false, true]) {
+  const mode = controlled ? 'controlled' : 'uncontrolled';
+  test(`Resizable ignores pointer events from other pointers during a drag (${mode})`, async () => {
+    const resizable = await mountResizable({ controlled });
+    try {
+      await resizable.pointer('onPointerDown', 500, 1);
+      await resizable.pointer('onPointerMove', 700, 1);
+      // A second pointer cannot start a gesture, and its events leave the first pointer's gesture running.
+      await resizable.pointer('onPointerDown', 300, 2);
+      for (const type of ['onPointerMove', 'onPointerUp', 'onPointerCancel', 'onLostPointerCapture']) await resizable.pointer(type, 100, 2);
+      assert.equal(resizable.value(), 70);
+      assert.deepEqual(resizable.changes, [{ left: 70, source: 'pointer' }]);
+      assert.deepEqual(resizable.commits, []);
+      await resizable.pointer('onPointerMove', 800, 1);
+      await resizable.pointer('onPointerUp', 800, 1);
+      assert.equal(resizable.value(), 80);
+      assert.deepEqual(resizable.commits, [{ left: 80, source: 'pointer' }]);
+    } finally {
+      await resizable.close();
+    }
+  });
+
+  test(`Resizable skips the restore when the starting sizes no longer fit once rounded (${mode})`, async () => {
+    const resizable = await mountResizable({ controlled, start: { left: 50.49, right: 49.51 }, minLeft: 50.1 });
+    try {
+      await resizable.pointer('onPointerDown', 500);
+      await resizable.pointer('onPointerMove', 600);
+      assert.equal(resizable.value(), 60.49);
+      // At precision 0 the starting 50.49 rounds to 50, below the first panel's minimum of 50.1.
+      await resizable.update({ precision: 0 });
+      await resizable.pointer('onPointerCancel');
+      assert.deepEqual(resizable.changes, [{ left: 60.49, source: 'pointer' }]);
+      assert.deepEqual(resizable.commits, []);
+    } finally {
+      await resizable.close();
+    }
+  });
+
+  const interruptions = [
+    ['a window resize', (resizable) => resizable.resizeWindow()],
+    ['becoming disabled', (resizable) => resizable.update({ disabled: true })],
+    ['becoming read-only', (resizable) => resizable.update({ readOnly: true })],
+  ];
+  for (const [name, interrupt] of interruptions) {
+    test(`Resizable restores the sizes from before a drag on ${name} (${mode})`, async () => {
+      const resizable = await mountResizable({ controlled });
+      try {
+        await resizable.pointer('onPointerDown', 500);
+        await resizable.pointer('onPointerMove', 700);
+        assert.equal(resizable.value(), 70);
+        await interrupt(resizable);
+        assert.equal(resizable.value(), 50);
+        assert.deepEqual(resizable.changes, [{ left: 70, source: 'pointer' }, { left: 50, source: 'pointer' }]);
+        // The pointer events that follow find the drag already over.
+        await resizable.pointer('onPointerUp', 700);
+        await resizable.pointer('onLostPointerCapture', 700);
+        assert.equal(resizable.changes.length, 2);
+        assert.deepEqual(resizable.commits, []);
+      } finally {
+        await resizable.close();
+      }
+    });
+  }
+}
+
+test('Resizable reports nothing when it unmounts mid-drag or a controlled parent shows other sizes', async () => {
+  const unmounting = await mountResizable();
+  try {
+    await unmounting.pointer('onPointerDown', 500);
+    await unmounting.pointer('onPointerMove', 700);
+  } finally {
+    await unmounting.close();
+  }
+  assert.deepEqual(unmounting.changes, [{ left: 70, source: 'pointer' }]);
+  assert.deepEqual(unmounting.commits, []);
+  const adjusting = await mountResizable({ controlled: true, show: () => ({ left: 60, right: 40 }) });
+  try {
+    await adjusting.pointer('onPointerDown', 500);
+    await adjusting.pointer('onPointerMove', 700);
+    await adjusting.pointer('onPointerCancel');
+    assert.equal(adjusting.value(), 60);
+    assert.deepEqual(adjusting.changes, [{ left: 70, source: 'pointer' }]);
+    assert.deepEqual(adjusting.commits, []);
+  } finally {
+    await adjusting.close();
+  }
+});
+
+test('Resizable keeps an invalid Handle inert when pointer and key events reach it', async () => {
+  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>');
+  const restore = installDom(dom);
+  const root = createRoot(document.querySelector('#root'));
+  try {
+    // A Handle without its required id makes the layout invalid.
+    await act(async () => root.render(React.createElement(Resizable, { defaultSizes: { left: 50, right: 50 } }, React.createElement(ResizablePanel, { id: 'left' }), React.createElement(ResizableHandle, { before: 'left', after: 'right', 'aria-label': 'Resize' }), React.createElement(ResizablePanel, { id: 'right' }))));
+    const handle = document.querySelector('.muxui-resizable-handle');
+    assert.equal(handle.getAttribute('aria-disabled'), 'true');
+    const props = reactProps(handle);
+    const pointerEvent = { button: 0, pointerId: 1, clientX: 5, clientY: 5, currentTarget: handle };
+    for (const type of ['onPointerDown', 'onPointerMove', 'onPointerUp', 'onPointerCancel', 'onLostPointerCapture']) assert.doesNotThrow(() => props[type](pointerEvent), type);
+    assert.doesNotThrow(() => props.onKeyDown({ key: 'ArrowRight', shiftKey: false, preventDefault() {}, defaultPrevented: false }));
+  } finally {
+    await act(async () => root.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+for (const controlled of [false, true]) {
+  test(`Resizable keeps a committed drag when onSizesCommit disables it synchronously (${controlled ? 'controlled' : 'uncontrolled'})`, async () => {
+    const resizable = await mountResizable({ controlled, afterCommit: (controls) => controls.lock() });
+    try {
+      await resizable.pointer('onPointerDown', 500);
+      await resizable.pointer('onPointerMove', 700);
+      await resizable.pointer('onPointerUp', 700);
+      assert.equal(resizable.value(), 70);
+      assert.deepEqual(resizable.changes, [{ left: 70, source: 'pointer' }]);
+      assert.deepEqual(resizable.commits, [{ left: 70, source: 'pointer' }]);
+    } finally {
+      await resizable.close();
+    }
+  });
+}
+
+test('Resizable leaves sizes a controlled parent set before the first move alone', async () => {
+  const resizable = await mountResizable({ controlled: true });
+  try {
+    await resizable.pointer('onPointerDown', 500);
+    await resizable.setSizes({ left: 60, right: 40 });
+    await resizable.pointer('onPointerMove', 700);
+    await resizable.pointer('onPointerCancel');
+    assert.equal(resizable.value(), 60);
+    assert.deepEqual(resizable.changes, []);
+    assert.deepEqual(resizable.commits, []);
+  } finally {
+    await resizable.close();
+  }
+});
+
+test('Resizable does not restore over sizes a controlled parent substituted, even from the parent\'s layout effect', async () => {
+  const resizable = await mountResizable({
+    controlled: true,
+    show: () => ({ left: 60, right: 40 }),
+    layout: (sizes) => { if (sizes.left === 60) window.dispatchEvent(new window.Event('resize')); },
+  });
+  try {
+    await resizable.pointer('onPointerDown', 500);
+    await resizable.pointer('onPointerMove', 700);
+    assert.equal(resizable.value(), 60);
+    assert.deepEqual(resizable.changes, [{ left: 70, source: 'pointer' }]);
+    await resizable.pointer('onPointerCancel');
+    assert.deepEqual(resizable.changes, [{ left: 70, source: 'pointer' }]);
+    assert.deepEqual(resizable.commits, []);
+  } finally {
+    await resizable.close();
   }
 });
 
