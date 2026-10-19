@@ -66,7 +66,18 @@
         }
       },
       "behavior": [
-        "Root requires a stable string value while the surrounding RadioGroup owns selection changes and roving keyboard focus."
+        "A RadioField must sit inside a RadioGroup and throws without one.",
+        "Root needs a stable string value, the same value the group reports in its onChange.",
+        "The group owns the selected value, the change callback, and arrow-key focus.",
+        "A RadioField has no onChange of its own.",
+        "disabled on a RadioField disables that option; on the group it disables every option.",
+        "readOnly belongs on the RadioGroup, where it stops every option from changing.",
+        "size follows the group unless the RadioField sets its own.",
+        "A RadioField is invalid when the group is invalid or when it sets invalid itself.",
+        "Description is linked to the option's input.",
+        "Error appears only while the option is invalid, and is linked to that option's input.",
+        "Error has role=\"alert\" unless it is given another role.",
+        "Button is a label that wraps the radio input, and its ref is the label element."
       ],
       "accessibility": [
         "Root requires a stable string value while the surrounding RadioGroup owns selection changes and roving keyboard focus."

@@ -70,7 +70,15 @@
         }
       },
       "behavior": [
-        "Root supports controlled and uncontrolled selection plus native name/value form serialization with field description and error linkage.",
+        "Root owns the state: checked or defaultChecked sets it.",
+        "onChange receives the new boolean, not a DOM event.",
+        "An on switch submits its name and value; an off switch submits nothing.",
+        "A disabled switch ignores toggles and submits nothing.",
+        "A read-only switch ignores toggles and still submits while on.",
+        "Button is a label that wraps the switch input, not an action button, and its ref is the label element.",
+        "Root's ref is its wrapping div.",
+        "Description is linked to the input.",
+        "Error appears only while the field is invalid, and is linked to the input.",
         "Interactive control sizes use the shared sm, md, and lg targets; md is the default."
       ],
       "accessibility": [

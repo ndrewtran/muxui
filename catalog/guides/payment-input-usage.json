@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:payment-input-usage",
+  "kind": "guide",
+  "name": "PaymentInput usage",
+  "summary": "Portable usage guidance for PaymentInput.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "payment-input",
+    "react",
+    "accessibility"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/payment-input-usage.md"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:slider-save-react",
+  "kind": "example",
+  "name": "Slider saving a value",
+  "summary": "Follow the value while it moves, and save it when an interaction ends only if it differs from the last saved value.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:slider#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/slider/examples/react/save.tsx"
+}

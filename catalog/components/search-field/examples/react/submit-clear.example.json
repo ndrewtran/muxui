@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:search-field-submit-clear-react",
+  "kind": "example",
+  "name": "SearchField submit and clear",
+  "summary": "Submit the text with Enter, clear it with Escape or the clear button, and see what each callback receives.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:search-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/search-field/examples/react/submit-clear.tsx"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:input-form-react",
+  "kind": "example",
+  "name": "Input in a form",
+  "summary": "Control the text on Input.Root, name the native input for submission, and focus it through its own ref.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:input#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/input/examples/react/form.tsx"
+}

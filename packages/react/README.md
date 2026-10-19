@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:af577e0093fa5fd4e642055dec19856ee9753e292e21496d05654b90838fdafa -->
+<!-- @generated-content-sha256: sha256:16a47ee0232e89be3dc414a97616674170c8b21aef81a933131ad7f4bfbe5cb5 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -284,12 +284,23 @@ Public parts: `root`, `label`, `input`, `description`, `error`.
 
 - Controlled and uncontrolled values are supported.
 - Keyboard input preserves the native accessible interaction model.
-- Empty and filled values expose the existing RAC-backed data-empty binding hook.
+- Enter calls onSubmit with the current text, including an empty string.
+- Escape on a field with text calls onChange with an empty string, then onClear.
+- Escape on an empty field does nothing.
+- The clear button does the same as Escape.
+- A read-only field does not submit or clear from the keyboard.
+- Enter and Escape do nothing while an input method composition is in progress.
+- A native keydown handler in inputProps that calls preventDefault stops both shortcuts.
+- The root has data-empty while the field is empty, and not while it holds text.
 - Interactive control sizes use the shared sm, md, and lg targets; md is the default.
 - The forwarded ref resolves to the outer div; inputRef resolves to the native HTMLInputElement for focus and selection.
-- inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props; its className merges with the Mux input class.
-- Root id, value, defaultValue, onChange, name, type, accessible name, validation, disabled, readOnly, and required remain authoritative; inputProps cannot replace them. Root native input attributes take precedence when supplied.
-- errorMessage renders only while the field is invalid, through the invalid prop or failed native, custom, or server validation, and replaces the built-in message.
+- inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props.
+- The className in inputProps merges with the Mux input class.
+- inputProps cannot replace the root's id, value, defaultValue, onChange, name, type, accessible name, validation, disabled, readOnly, or required.
+- Root native input attributes take precedence when supplied.
+- errorMessage renders only while the field is invalid.
+- A field is invalid through the invalid prop or failed native, custom, or server validation.
+- errorMessage replaces the built-in message.
 
 Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 

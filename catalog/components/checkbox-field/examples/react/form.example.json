@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:checkbox-field-form-react",
+  "kind": "example",
+  "name": "CheckboxField in a form",
+  "summary": "Control a CheckboxField with a boolean, and see which checked, read-only, and disabled fields a form submits.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:checkbox-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/checkbox-field/examples/react/form.tsx"
+}

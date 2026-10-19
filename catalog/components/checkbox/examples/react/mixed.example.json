@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:checkbox-mixed-react",
+  "kind": "example",
+  "name": "Checkbox with a mixed parent",
+  "summary": "Derive a parent Checkbox's mixed state from its children, and select or clear every child from the parent.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:checkbox#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/checkbox/examples/react/mixed.tsx"
+}

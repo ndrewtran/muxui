@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:search-field-cancel-shortcut-react",
+  "kind": "example",
+  "name": "SearchField cancelling a shortcut",
+  "summary": "Stop Escape from clearing the query by calling preventDefault in a native keydown handler passed through inputProps.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:search-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/search-field/examples/react/cancel-shortcut.tsx"
+}
