@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:virtualizer-two-line-rows-react",
+  "kind": "example",
+  "name": "Virtualizer with taller rows",
+  "summary": "Set the row height and fit a two-line label inside it.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:virtualizer#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/virtualizer/examples/react/rows.tsx"
+}

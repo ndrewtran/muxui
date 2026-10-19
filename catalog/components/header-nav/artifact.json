@@ -3,7 +3,7 @@
   "id": "muxui:component:header-nav",
   "kind": "component",
   "name": "HeaderNav",
-  "summary": "Provide responsive primary navigation with current-page state and a mobile drawer.",
+  "summary": "Provide primary navigation with current-page state and a mobile drawer.",
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
@@ -60,7 +60,12 @@
       },
       "behavior": [
         "Current links expose aria-current=page.",
-        "Mobile navigation traps focus and returns it to the trigger on close."
+        "Mobile navigation traps focus and returns it to the trigger on close.",
+        "HeaderNav has no breakpoint of its own: Secondary, Actions, and the MobileTrigger button all show at every width",
+        "The application hides the parts that do not apply at a width, for example by wrapping the MobileTrigger in an element it hides",
+        "MobileTrigger shows its children in a drawer and does not copy the Secondary links, so mark the current link in each copy",
+        "MobileTrigger accepts only children",
+        "The open button, dialog, and close button of MobileTrigger use fixed English labels that no HeaderNav prop changes"
       ],
       "accessibility": [
         "Current links expose aria-current=page.",

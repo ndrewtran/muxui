@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:3b6feb0bd9dee0930ec7ac774c5851ef482fbc18647d7a3b2a14b3cb84682646 -->
+<!-- @generated-content-sha256: sha256:428b84d9e0595c1eec553c74d31dd45d14df9652f48064afbf5c7639ea21c33e -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -130,7 +130,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
 | Dialog | experimental | . | .muxui-dialog | children, title, description, actions, open, defaultOpen, dismissable, trigger, onOpenChange, className, backdropClassName, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, aria-label, aria-labelledby, aria-describedby |
-| Disclosure | experimental | . | .muxui-disclosure | expanded, defaultExpanded, disabled, id |
+| Disclosure | experimental | . | .muxui-disclosure | title, children, expanded, defaultExpanded, disabled, id |
 | DisclosureGroup | experimental | . | .muxui-disclosure-group | expandedIds, defaultExpandedIds, multiple, disabled |
 | DropZone | experimental | . | .muxui-drop-zone | children, disabled, onDrop, onActivate, className, aria-label, aria-labelledby |
 | FileTrigger | experimental | . | .muxui-file-trigger | children, acceptedFileTypes, allowsMultiple, acceptDirectory, defaultCamera, disabled, onSelect, className |
@@ -160,7 +160,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, readOnly, value |
 | RadioGroup | experimental | . | .muxui-radio-group | label, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, unavailableDateMatcher, minValue, maxValue, disabled, readOnly, required, invalid |
-| Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, disabled, readOnly |
+| Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, keyboardStep, keyboardLargeStep, precision, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, id, inputRef, inputProps |
 | Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal |
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, aria-label, aria-labelledby, aria-describedby, id, value, defaultValue, onChange, name, form, autoComplete, disabled, required, invalid, multiple, size, children |
@@ -207,11 +207,12 @@ Public parts: `root`, `trigger`, `popup`, `list`, `item`, `section`, `header`, `
 
 ### ListBox
 
-- Existing items and controlled or uncontrolled Mux string selections remain supported. ListBox.Root aliases ListBox; Section, Header, and Item compose static collections.
+- Existing items and controlled or uncontrolled string ID selections remain supported. ListBox.Root aliases ListBox; Section, Header, and Item compose static collections.
+- Options come from items or from children: when both are supplied, children take precedence and items are not rendered.
 - Items require stable string IDs. Supply textValue for rich children so typeahead has an unambiguous text value. Sections are named by Header or title, or by aria-label when no visible header is present.
 - layout=stack navigates along the orientation. layout=grid uses actual item positions for two-dimensional arrow navigation; consumer CSS or style determines the columns and dimensions. Orientation is vertical by default.
 - Root disabled state disables every compound item and suppresses selection/action callbacks. A child disabled=false cannot re-enable an item under a disabled root.
-- Data-backed onAction returns the normalized item. Compound onAction returns identity fields id, key, and value; onSelectionChange always returns Mux string IDs or all.
+- Data-backed onAction returns the item record. Compound onAction returns identity fields id, key, and value; onSelectionChange always returns string IDs or all.
 - Mux selectors are .muxui-list-box, .muxui-list-box-section, .muxui-list-box-section-header, and .muxui-list-box-item. Root states include data-layout, data-orientation, data-disabled, and data-focus-visible; items expose data-selected, data-disabled, data-focused, and data-focus-visible.
 - Root and Item refs target divs; Section and Header refs target section/header elements.
 
@@ -235,7 +236,14 @@ Public parts: `root`, `item`.
 ### Virtualizer
 
 - Only a bounded visible window plus overscan is mounted.
+- The focused item stays mounted wherever it is scrolled, so the mounted count can exceed the visible window plus overscan.
 - Scroll geometry preserves the full collection extent.
+- The default stack layout is a list of the items passed, in rows placed itemHeight apart, and its rows cannot be selected.
+- Stack layout renders items only. It does not virtualize children, a render function, or another collection such as Table or Tree.
+- height and itemHeight are in pixels and must be finite numbers greater than 0, or Virtualizer throws a TypeError.
+- overscan counts whole rows mounted above and below the window, and must be an integer of 0 or more.
+- Virtualizer sets the viewport's block size from height and its overflow to auto, replacing any block size or overflow in style.
+- Rows are not measured: content taller than itemHeight overflows its row and overlaps the next one.
 - layout=grid wraps one GridList that has layout=grid and the vertical orientation: Virtualizer layout=grid around GridList layout=grid. The Virtualizer renders no element and takes no ref; the GridList is the scroll region and keeps its name, selection, keyboard, and nested-control behavior. Grid mode takes none of aria-label, aria-labelledby, items, height, itemHeight, disabled, onScroll, className, or style; set them on the GridList, and a prop passed to the Virtualizer throws a TypeError that names it. The stack layout likewise throws for minItemWidth, maxItemWidth, estimatedItemHeight, and maxColumns.
 - Grid columns are clamp(floor(width / (minItemWidth + column gap)), 1, maxColumns) for the GridList inner width. maxColumns only caps the count, so a narrow container shows fewer columns, and a container narrower than minItemWidth shows one column that fits it. Grid defaults are minItemWidth 200, maxItemWidth unbounded so items stretch to fill their columns, estimatedItemHeight 200, maxColumns unbounded, and overscan 2. A maxItemWidth below the column width stops items growing and centers the grid, keeping the gap.
 - Grid rows size to their measured content, so titles and nested actions are never clipped and items in a row share its height. estimatedItemHeight is a plain estimate for every row that has not mounted yet, the same whatever the item width, so it sets the scrollbar extent until rows are measured; each mounted row then takes its measured content height and is measured again when the width changes or its content grows. Content that shrinks without a width change or item update keeps the row height until the next one.

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:table-sorting-react",
+  "kind": "example",
+  "name": "Sortable Table",
+  "summary": "Sort the rows in the application when the Table reports a new sort, with ids that keep the selection on the same row.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:table#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/table/examples/react/sorting.tsx"
+}
