@@ -842,6 +842,10 @@ function storybookUnitRoute(path) {
     return [{ file: 'test/block-pages.test.mjs' }, { file: 'test/storybook-family-selection.test.mjs' }];
   }
   if (file === 'test/block-pages.test.mjs') return { file: 'test/block-pages.test.mjs' };
+  // The component Docs page: its catalog projection, its layout, and the test that renders every family's entry.
+  if (file === 'src/component-docs.mjs' || file === '.storybook/component-docs-page.mjs' || file === 'test/component-docs.test.mjs') {
+    return { file: 'test/component-docs.test.mjs' };
+  }
   if (file === 'test/storybook-colors-report.mjs' || file === 'test/storybook-colors-report.test.mjs') {
     return { file: 'test/storybook-colors-report.test.mjs' };
   }
@@ -1208,13 +1212,15 @@ export async function buildPullRequestImpact({
       plan.reasons.push(`${path} is the Tailwind consumer fixture`);
       continue;
     }
-    // The shared component grouping drives docs navigation and every generated
-    // component page title, so it selects the docs and every component page.
-    // Block pages take their titles from their patterns, not this grouping.
+    // The shared component helpers drive the docs and every generated component
+    // page: the grouping names the navigation and the page titles, and the
+    // reference projects each page's catalog facts. Each selects the docs and
+    // every component page. Block pages take their titles from their patterns,
+    // not this grouping.
     if (config.componentNavigationPaths?.includes(path)) {
       plan.docs = true;
       storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
-      plan.reasons.push(`${path} groups components for the docs navigation and every component Storybook page`);
+      plan.reasons.push(`${path} is shared by the docs and every component Storybook page`);
       continue;
     }
     // Docs also embeds source it imports by path (Scale's App), so a path can

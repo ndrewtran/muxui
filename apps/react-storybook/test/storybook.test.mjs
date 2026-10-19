@@ -1554,6 +1554,6 @@ test('manager projection covers internal chrome and keeps docs syntax scoped', a
     assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover}`, 'u'));
     assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success}`, 'u'));
   }
-  assert.match(previewCss, /\.sbdocs\.sbdocs-preview \.prismjs/u);
+  assert.match(previewCss, /:is\(\.sbdocs\.sbdocs-preview, \.docblock-source\) \.prismjs/u);
   assert.doesNotMatch(previewCss, /\.sbdocs-content\s+a\s*\{/u);
 });

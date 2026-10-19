@@ -26,6 +26,19 @@ digit emits a `Variant`-prefixed story export (`2-column` becomes
 `Variant2Column`), and generation fails when a pattern's name or slug is also a
 component family's or another pattern's selection key.
 
+Each family's Docs page is a custom page (`.storybook/component-docs-page.mjs`)
+that runs the same eleven sections as the docs site's component pages: Basic
+example, Installation and imports, Usage, Behavior, Examples, Used in blocks
+(only when a Block uses the component), API reference, Events, Accessibility,
+Anatomy and styling, and Sources. The generator reads each family's catalog
+record through the canonical query API and `../component-reference.mjs`, and
+embeds the result in the family's story module as the `muxuiReference`
+parameter, so the page authors no per-family text. The live preview stays the
+adapter Default story and the API reference stays Storybook's Controls table;
+canonical examples appear as static source, not as extra stories.
+`test/component-docs.test.mjs` renders every family's entry and checks the
+section order and each projected fact against the catalog.
+
 ```sh
 pnpm --filter @muxui/react-storybook storybook
 pnpm --filter @muxui/react-storybook check

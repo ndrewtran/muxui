@@ -478,11 +478,12 @@ test('the shared component navigation helper selects the docs and every Storyboo
   assert.deepEqual(result.storyRuns[0].families, records.map(({ family }) => family));
 });
 
-test('the shared component reference helper selects the docs and no Storybook family', async () => {
+test('the shared component reference helper selects the docs and every Storybook family', async () => {
   const result = await plan(['apps/component-reference.mjs']);
   assert.equal(result.docs, true);
   assert.equal(result.scale || result.catalog || result.tokens || result.reactTheme, false);
-  assert.deepEqual(result.storyRuns, []);
+  assert.deepEqual(result.storyRuns.map(({ proof }) => proof), ['component']);
+  assert.deepEqual(result.storyRuns[0].families, records.map(({ family }) => family));
 });
 
 test('Scale, Starlight docs, and CI policy edits stay in their independent owner scopes', async () => {
@@ -3167,6 +3168,12 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   assert.deepEqual(previewCss.storyUnitTests.map(({ file }) => file), ['test/storybook-colors.test.mjs', 'test/storybook.test.mjs']);
   assert.equal((await route('apps/react-storybook/.storybook/measure-palette.mjs')).storyUnitTests[0].file, 'test/storybook-colors.test.mjs');
   assert.equal((await route('apps/react-storybook/.storybook/manager.mjs')).storyChrome, true);
+  // The component Docs page and its catalog projection shape every family page, and run their own unit test.
+  for (const path of ['.storybook/component-docs-page.mjs', 'src/component-docs.mjs']) {
+    const docs = await route(`apps/react-storybook/${path}`);
+    assert.deepEqual(docs.storyFamilies, main.storyFamilies, path);
+    assert.deepEqual(docs.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }], path);
+  }
   assert.equal((await route('apps/react-storybook/.gitignore')).policy, true);
 });
 
