@@ -109,6 +109,8 @@ function installRuntimeDom() {
     dispatchEvent: () => false,
   });
   dom.window.PointerEvent ??= dom.window.MouseEvent;
+  // React Aria scrolls a focused option into view; jsdom has no layout to scroll.
+  dom.window.Element.prototype.scrollTo ??= () => {};
   dom.window.requestAnimationFrame ??= (callback) => dom.window.setTimeout(callback, 16);
   dom.window.cancelAnimationFrame ??= (handle) => dom.window.clearTimeout(handle);
   const globals = [
@@ -123,8 +125,8 @@ function installRuntimeDom() {
     if (dom.window[name] !== undefined) globalThis[name] = dom.window[name];
   }
   const elementPrototype = dom.window.HTMLElement.prototype;
-  const previousAttachEvent = elementPrototype.attachEvent;
-  const previousDetachEvent = elementPrototype.detachEvent;
+  // React keeps the last focused text input in module state across tests. These stay on this closed window's
+  // prototype so a late stale-focus cleanup in a later test finds no-ops instead of throwing.
   elementPrototype.attachEvent ??= () => {};
   elementPrototype.detachEvent ??= () => {};
   const previousGetAnimations = elementPrototype.getAnimations;
@@ -155,10 +157,6 @@ function installRuntimeDom() {
       }
       if (previousGetAnimations === undefined) delete elementPrototype.getAnimations;
       else elementPrototype.getAnimations = previousGetAnimations;
-      if (previousAttachEvent === undefined) delete elementPrototype.attachEvent;
-      else elementPrototype.attachEvent = previousAttachEvent;
-      if (previousDetachEvent === undefined) delete elementPrototype.detachEvent;
-      else elementPrototype.detachEvent = previousDetachEvent;
       if (previousCSSTransition === undefined) delete globalThis.CSSTransition;
       else globalThis.CSSTransition = previousCSSTransition;
       dom.window.close();
@@ -358,6 +356,54 @@ function currentRecord(family) {
   const binding = descriptorSource.bindings.find(({ export: name }) => name === family);
   assert.ok(binding, `${family} binding`);
   return { family, tranche: manifestByFamily.get(family).tranche, binding };
+}
+
+const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/index.d.ts'), 'utf8');
+// Truncated image data: the browser fires an error event instead of loading it.
+const AVATAR_FAILING_SRC = 'data:image/png;base64,AAAA';
+const supplementalTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/supplemental.d.ts'), 'utf8');
+
+/** The string members of an exported union, read from the generated public declarations. */
+function declaredUnion(source, name) {
+  const match = source.match(new RegExp(`export type ${name} = ([^;]+);`, 'u'));
+  assert.ok(match, `${name} declaration`);
+  return [...match[1].matchAll(/'([^']+)'/gu)].map(([, member]) => member);
+}
+
+/** Runs a body against a fresh jsdom runtime and always restores the globals it replaced. */
+async function withRuntime(body) {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  try {
+    await body({ host, root });
+  } finally {
+    // React keeps a focused text input registered until it blurs; release it while this window still exists.
+    await act(async () => document.activeElement?.blur?.());
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+}
+
+const settleRuntime = (milliseconds = 20) => act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)));
+
+/** The nearest prop of this name on a React ancestor of a DOM node, for options jsdom's layout-free DOM never reports. */
+function ancestorProp(node, name) {
+  let fiber = node[Object.keys(node).find((key) => key.startsWith('__reactFiber'))];
+  for (; fiber; fiber = fiber.return) {
+    if (fiber.memoizedProps?.[name] !== undefined) return fiber.memoizedProps[name];
+  }
+  return undefined;
+}
+
+/** The States showcase as a document, keyed by state name. */
+function stateSections(family, args) {
+  const record = currentRecord(family);
+  const story = createStory(record, 'states');
+  const document = new JSDOM(renderToStaticMarkup(story.render(args ?? story.args))).window.document;
+  const sections = new Map([...document.querySelectorAll('.muxui-storybook-state')].map((node) => [node.querySelector('h3').textContent, node]));
+  return { document, sections };
 }
 
 test('supplemental adapter modes seed valid values and preserve exclusive defaults', () => {
@@ -594,6 +640,715 @@ test('named adapter state specimens render actual items, progress values, and or
   for (const state of ['light', 'dark']) assert.equal(section(mode, state).querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), state);
 });
 
+test('controls offer only what the public types admit and match their value kinds', () => {
+  const controls = (family) => argTypesForBinding(currentRecord(family).binding);
+  const placements = declaredUnion(publicTypes, 'MuxUIPlacement');
+  assert.equal(placements.length, 12);
+  for (const family of ['Menu', 'Popover', 'PreviewTrigger', 'Select', 'Tooltip']) {
+    assert.deepEqual(controls(family).placement.options, placements, family);
+  }
+  // ToggleButtonGroup admits single and multiple only; the collections also admit none.
+  assert.deepEqual(controls('ToggleButtonGroup').selectionMode.options, ['single', 'multiple']);
+  for (const family of ['GridList', 'ListBox', 'Table', 'Tree']) {
+    assert.deepEqual(controls(family).selectionMode.options, ['none', 'single', 'multiple'], family);
+  }
+  assert.deepEqual(controls('Card').variant.options, declaredUnion(supplementalTypes, 'CardVariant'));
+  assert.deepEqual(controls('Card').padding.options, declaredUnion(supplementalTypes, 'CardPadding'));
+  // A color value is a string, not a collection.
+  for (const family of ['ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatchPicker', 'ColorWheel']) {
+    assert.equal(controls(family).value.control, 'text', family);
+    assert.equal(controls(family).defaultValue.control, 'text', family);
+  }
+  assert.equal(controls('TextArea').rows.control.type, 'number');
+  assert.equal(controls('Table').rows.control, 'object');
+  assert.deepEqual(controls('Sidebar').status.options, ['online', 'offline']);
+  // A control cannot edit a function, so those props stay off.
+  for (const [family, name] of [['CommandPalette', 'filter'], ['CommandPalette', 'close'], ['TagSelect', 'getItemLabel'], ['Lightbox', 'renderContent'], ['InputTags', 'validate']]) {
+    assert.equal(controls(family)[name].control, false, `${family}.${name}`);
+  }
+});
+
+test('Avatar routes image inputs to Image and shows its lifecycle and size states', async () => {
+  const doc = (args) => new JSDOM(renderToStaticMarkup(renderFamily('Avatar', args))).window.document;
+  const routed = doc({ size: 'lg', src: '/ada.png', srcSet: '/ada.png 1x', alt: 'Ada', children: 'AL' });
+  const image = routed.querySelector('.muxui-avatar__image');
+  assert.equal(image.getAttribute('src'), '/ada.png');
+  assert.equal(image.getAttribute('srcset'), '/ada.png 1x');
+  assert.equal(image.getAttribute('alt'), 'Ada');
+  const root = routed.querySelector('.muxui-avatar');
+  assert.equal(root.getAttribute('data-size'), 'lg');
+  assert.equal(root.hasAttribute('alt'), false);
+  assert.equal(root.hasAttribute('src'), false);
+  assert.equal(routed.querySelector('.muxui-avatar__fallback').textContent, 'AL');
+  // With no source the initials show, instead of an invisible loaded pixel.
+  const bare = doc({});
+  assert.equal(bare.querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
+  assert.equal(bare.querySelector('.muxui-avatar__fallback').hidden, false);
+  assert.equal(bare.querySelector('.muxui-avatar__fallback').textContent, 'WS');
+
+  const storyArgs = createStory(currentRecord('Avatar'), 'states').args;
+  assert.equal(Object.hasOwn(storyArgs, 'size'), false, 'the States story leaves the size the rows set unset');
+  const { document: states, sections } = stateSections('Avatar');
+  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['loading', 'loaded']);
+  assert.match(unavailable[1].textContent, /Unavailable: MuxUI Avatar cannot show the loaded state here because the colour audit rejects any visible image/u);
+  for (const size of ['sm', 'md', 'lg']) assert.equal(sections.get(size).querySelector('.muxui-avatar').getAttribute('data-size'), size);
+  assert.equal(sections.get('fallback').querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
+  assert.match(sections.get('error').querySelector('img').getAttribute('src'), /^data:image\/png/u);
+  // A supplied value wins in every row, including one that equals the row's own default.
+  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'lg' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'lg');
+  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'md' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'md');
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const events = [];
+    await act(async () => reactRoot.render(renderFamily('Avatar', { src: '/ada.png', onLoad: () => events.push('load'), onError: () => events.push('error') })));
+    const avatar = host.querySelector('.muxui-avatar');
+    await act(async () => host.querySelector('img').dispatchEvent(new Event('load')));
+    assert.equal(avatar.getAttribute('data-image-state'), 'loaded');
+    assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, true);
+    await act(async () => reactRoot.render(renderFamily('Avatar', { src: AVATAR_FAILING_SRC, onLoad: () => events.push('load'), onError: () => events.push('error') })));
+    await act(async () => host.querySelector('img').dispatchEvent(new Event('error')));
+    assert.deepEqual(events, ['load', 'error']);
+    assert.equal(avatar.getAttribute('data-image-state'), 'error');
+    assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, false);
+  });
+  // Events seeds the one image the colour audit accepts, so load can be observed.
+  assert.match(createEventsStory(currentRecord('Avatar')).args.src, /^data:image\/gif/u);
+});
+
+test('Card routes variant and padding to both roots and selection, pending, disabled, and activation to Card.Button', async () => {
+  const cards = (args) => [...new JSDOM(renderToStaticMarkup(renderFamily('Card', args))).window.document.querySelectorAll('.muxui-card')];
+  for (const variant of declaredUnion(supplementalTypes, 'CardVariant')) {
+    for (const padding of declaredUnion(supplementalTypes, 'CardPadding')) {
+      const [staticCard, interactive] = cards({ variant, padding });
+      for (const card of [staticCard, interactive]) {
+        assert.ok(card.classList.contains(`muxui-card--${variant}`) && card.classList.contains(`muxui-card--${padding}`), `${variant}/${padding}`);
+      }
+      assert.equal(staticCard.localName, 'div');
+      assert.equal(interactive.localName, 'button');
+    }
+  }
+  const [, pressed] = cards({ selected: true, pending: true });
+  assert.equal(pressed.getAttribute('aria-pressed'), 'true');
+  assert.equal(pressed.hasAttribute('data-pending'), true);
+  assert.equal(cards({ disabled: true })[1].disabled, true);
+  assert.equal(cards({ disabled: true })[0].querySelector('button').disabled, false, 'the footer action does not carry the state');
+
+  const { sections } = stateSections('Card');
+  for (const variant of ['elevated', 'outlined', 'filled']) {
+    assert.ok(sections.get(variant).querySelector(`.muxui-card--button.muxui-card--${variant}`), variant);
+  }
+  assert.equal(sections.get('selected').querySelector('.muxui-card--button').getAttribute('aria-pressed'), 'true');
+  assert.equal(sections.get('pending').querySelector('.muxui-card--button').hasAttribute('data-pending'), true);
+  assert.equal(sections.get('disabled').querySelector('.muxui-card--button').disabled, true);
+  // The States story leaves the props the rows set unset, and a supplied false wins in every row.
+  const cardStoryArgs = createStory(currentRecord('Card'), 'states').args;
+  for (const name of ['disabled', 'pending', 'variant']) assert.equal(Object.hasOwn(cardStoryArgs, name), false, name);
+  const forced = stateSections('Card', { ...cardStoryArgs, disabled: false, variant: 'outlined' }).sections;
+  assert.equal(forced.get('disabled').querySelector('.muxui-card--button').disabled, false);
+  assert.ok(forced.get('elevated').querySelector('.muxui-card--button.muxui-card--outlined'), 'a supplied variant wins, even when it is the default');
+  assert.equal(forced.get('pending').querySelector('.muxui-card--button').hasAttribute('data-pending'), true, 'rows the user left alone keep their state');
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createEventsStory(currentRecord('Card'));
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await act(async () => host.querySelector('.muxui-card--button').click());
+    assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /activate:/u);
+  });
+});
+
+test('Separator vertical specimen has content on both sides of a stretched rule', () => {
+  const { sections } = stateSections('Separator');
+  const vertical = sections.get('vertical').querySelector('[role="separator"]');
+  assert.equal(vertical.getAttribute('aria-orientation'), 'vertical');
+  const row = vertical.parentElement;
+  assert.equal(row.style.display, 'flex');
+  assert.deepEqual([...row.children].map((node) => node.textContent || node.getAttribute('role')), ['Left', 'separator', 'Right']);
+  assert.ok(sections.get('horizontal').querySelector('[role="separator"].muxui-separator-horizontal'));
+});
+
+test('Dialog specimen is a settings dialog because destructive confirmation belongs to AlertDialog', async () => {
+  await withRuntime(async ({ root: reactRoot }) => {
+    await act(async () => reactRoot.render(renderFamily('Dialog', { defaultOpen: true })));
+    await settleRuntime(60);
+    assert.equal(document.querySelector('.muxui-dialog-title').textContent, 'Project settings');
+    assert.match(document.querySelector('.muxui-dialog').textContent, /Review the settings for this project\./u);
+    assert.doesNotMatch(document.body.textContent, /Delete draft/u);
+  });
+});
+
+test('DropZone disabled and Dialog open rows state their limitation instead of rendering a stand-in', () => {
+  const unavailableRow = (family, name, reason) => {
+    const { sections } = stateSections(family);
+    const row = sections.get(name);
+    const message = row.querySelector('[data-muxui-storybook-state="unavailable"]');
+    assert.ok(message, `${family}/${name} is labelled unavailable`);
+    assert.match(message.textContent, new RegExp(`^Unavailable: MuxUI ${family} cannot show the ${name} state here because ${reason}`, 'u'));
+    // Nothing else renders in the row: no enabled drop zone, no closed dialog trigger.
+    assert.deepEqual([...row.children].map((node) => node.localName), ['h3', 'p']);
+    return sections;
+  };
+  const dropZone = unavailableRow('DropZone', 'disabled', 'a disabled DropZone root has no accessible disabled signal');
+  assert.equal(dropZone.get('idle').querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  assert.ok(dropZone.get('idle').querySelector('.muxui-drop-zone'));
+  const dialog = unavailableRow('Dialog', 'open', 'a truly open modal makes the whole page inert');
+  assert.ok(dialog.get('closed').querySelector('.muxui-dialog-trigger'), 'the closed row still renders');
+  assert.equal(dialog.get('entering').querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  // The adapters themselves still disable and open on request.
+  assert.equal(new JSDOM(renderToStaticMarkup(renderFamily('DropZone', { disabled: true }))).window.document.querySelector('.muxui-drop-zone').hasAttribute('data-disabled'), true);
+});
+
+test('HeaderNav routes href and current to the link and fills the drawer with the same destinations', async () => {
+  const links = (args) => [...new JSDOM(renderToStaticMarkup(renderFamily('HeaderNav', args))).window.document.querySelectorAll('.muxui-header-nav__secondary a')];
+  const [docs, components, blocks] = links({ href: '/guide', current: true });
+  assert.equal(docs.getAttribute('href'), '/guide');
+  assert.equal(docs.getAttribute('aria-current'), 'page');
+  assert.equal(components.hasAttribute('aria-current'), false);
+  assert.deepEqual([components, blocks].map((link) => link.getAttribute('href')), ['#components', '#blocks']);
+  assert.equal(links({})[0].getAttribute('href'), '#docs');
+  assert.equal(links({})[0].hasAttribute('aria-current'), false);
+  const current = stateSections('HeaderNav').sections.get('current');
+  assert.equal(current.querySelector('.muxui-header-nav__secondary a').getAttribute('aria-current'), 'page');
+  // A supplied current: false wins in every row.
+  const headerArgs = createStory(currentRecord('HeaderNav'), 'states').args;
+  assert.equal(Object.hasOwn(headerArgs, 'current'), false);
+  assert.equal(stateSections('HeaderNav', { ...headerArgs, current: false }).sections.get('current').querySelector('.muxui-header-nav__secondary a').hasAttribute('aria-current'), false);
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    await act(async () => reactRoot.render(renderFamily('HeaderNav', { href: '/guide', current: true })));
+    await act(async () => host.querySelector('.muxui-header-nav__mobile-trigger').click());
+    await settleRuntime();
+    const drawer = document.querySelector('.muxui-header-nav__mobile-dialog');
+    assert.ok(drawer, 'the drawer opens');
+    assert.deepEqual([...drawer.querySelectorAll('a')].map((link) => [link.textContent, link.getAttribute('href'), link.getAttribute('aria-current')]), [
+      ['Docs', '/guide', 'page'], ['Components', '#components', null], ['Blocks', '#blocks', null],
+    ]);
+  });
+});
+
+test('Sidebar routes each prop to its part and the mobile drawer carries the same working links', async () => {
+  const sidebar = (args) => new JSDOM(renderToStaticMarkup(renderFamily('Sidebar', args))).window.document;
+  const routed = sidebar({
+    hideBorder: true, density: 'compact', label: 'Inbox', href: '/inbox', current: true, external: true, badge: '3',
+    items: [{ href: '/a', label: 'Alpha' }], defaultExpanded: true, placeholder: 'Find', name: 'Ada', email: 'ada@example.com', status: 'online',
+  });
+  const root = routed.querySelector('.muxui-sidebar');
+  assert.ok(root.classList.contains('muxui-sidebar--no-border'));
+  assert.equal(root.getAttribute('data-density'), 'compact');
+  // The flat table is not spread onto the aside.
+  for (const name of ['current', 'external', 'href', 'items', 'badge', 'status', 'email']) assert.equal(root.hasAttribute(name), false, name);
+  const first = root.querySelector('.muxui-sidebar__nav-link');
+  assert.equal(first.textContent.includes('Inbox'), true);
+  assert.equal(first.getAttribute('href'), '/inbox');
+  assert.equal(first.getAttribute('aria-current'), 'page');
+  assert.ok(first.querySelector('.muxui-sidebar__nav-external'));
+  assert.equal(first.querySelector('.muxui-sidebar__nav-badge').textContent, '3');
+  assert.equal(root.querySelector('.muxui-sidebar__search-input').getAttribute('placeholder'), 'Find');
+  assert.deepEqual([...root.querySelectorAll('.muxui-sidebar__nav-children a')].map((link) => link.getAttribute('href')), ['/a']);
+  assert.equal(root.querySelector('details').open, true);
+  assert.equal(root.querySelector('.muxui-sidebar__account-name').textContent, 'Ada');
+  assert.equal(root.querySelector('.muxui-sidebar__account-email').textContent, 'ada@example.com');
+  assert.ok(root.querySelector('.muxui-sidebar__account-status--online'));
+  const sections = stateSections('Sidebar').sections;
+  assert.equal(sections.get('current').querySelector('.muxui-sidebar__nav-link').getAttribute('aria-current'), 'page');
+  assert.ok(sections.get('external').querySelector('.muxui-sidebar__nav-external'));
+  assert.equal(sections.get('expanded').querySelector('details').open, true);
+  // collapsed folds the rail through Provider, not the Roadmap group.
+  const rail = sections.get('collapsed');
+  assert.equal(rail.querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), true);
+  assert.equal(rail.querySelector('.muxui-sidebar__toggle').getAttribute('aria-expanded'), 'false');
+  assert.equal(sections.get('expanded').querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), false);
+  assert.equal(sections.get('expanded').querySelector('.muxui-sidebar__toggle').getAttribute('aria-expanded'), 'true');
+  const sidebarStoryArgs = createStory(currentRecord('Sidebar'), 'states').args;
+  for (const name of ['current', 'defaultCollapsed', 'defaultExpanded', 'external']) assert.equal(Object.hasOwn(sidebarStoryArgs, name), false, name);
+  // A supplied defaultCollapsed wins over the row, even when it is the default value.
+  assert.equal(stateSections('Sidebar', { ...sidebarStoryArgs, defaultCollapsed: false }).sections.get('collapsed').querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), false);
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createEventsStory(currentRecord('Sidebar'));
+    await act(async () => reactRoot.render(story.render(story.args)));
+    const log = () => host.querySelector('[data-muxui-storybook-event-log]').textContent;
+    // React binds text-input events when its DOM module loads, before this jsdom exists, so call the input's own
+    // handler with a React-shaped change event. The browser audit types into the field for real.
+    const input = host.querySelector('.muxui-sidebar__search-input');
+    input.value = 'roadmap';
+    const { onChange } = input[Object.keys(input).find((key) => key.startsWith('__reactProps'))];
+    await act(async () => onChange({ type: 'change', target: input, nativeEvent: new Event('input') }));
+    assert.match(log(), /change: \{type:change,value:"roadmap"\}/u);
+    assert.ok(host.querySelector('.muxui-sidebar__feature-card'));
+    await act(async () => host.querySelector('.muxui-sidebar__feature-card-dismiss').click());
+    assert.match(log(), /dismiss:/u);
+    assert.equal(host.querySelector('.muxui-sidebar__feature-card'), null, 'the consumer removes a dismissed card');
+
+    await act(async () => host.querySelector('.muxui-sidebar__mobile-menu-btn').click());
+    await settleRuntime();
+    const drawer = document.querySelector('.muxui-sidebar__mobile-dialog');
+    assert.ok(drawer, 'the drawer opens');
+    const desktop = [...host.querySelectorAll('.muxui-sidebar .muxui-sidebar__nav-list a')].map((link) => link.getAttribute('href'));
+    assert.deepEqual([...drawer.querySelectorAll('a')].map((link) => link.getAttribute('href')), desktop);
+    assert.ok(desktop.length >= 5 && desktop.every((href) => href.startsWith('#')), 'working destinations, not a placeholder word');
+  });
+});
+
+test('InputTags keeps supplied seeds and copy, and offers placement and tag-focus specimens', async () => {
+  const tags = (args) => new JSDOM(renderToStaticMarkup(renderFamily('InputTags', args))).window.document;
+  const supplied = tags({ defaultValue: ['One'], label: 'Skills', placeholder: 'Add a skill' });
+  assert.deepEqual([...supplied.querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent), ['One']);
+  assert.equal(supplied.querySelector('.muxui-input-tags__label').textContent, 'Skills');
+  assert.equal(supplied.querySelector('input').hasAttribute('aria-label'), false, 'the visible label names the input');
+  const empty = tags({ defaultValue: [], label: '', 'aria-label': 'Skills' });
+  assert.equal(empty.querySelector('.muxui-input-tags__tag'), null);
+  assert.equal(empty.querySelector('input').getAttribute('aria-label'), 'Skills');
+  assert.equal(empty.querySelector('input').getAttribute('placeholder'), 'Add a tag');
+  assert.deepEqual([...tags({}).querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent), ['Mux', 'UI']);
+  const controlled = createControlledStory(currentRecord('InputTags'));
+  assert.deepEqual([...tags(controlled.args).querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent), ['Mux', 'UI']);
+
+  const { document: states, sections } = stateSections('InputTags');
+  // The disabled row is labelled unavailable, never an enabled stand-in; the adapter itself still disables the input.
+  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['disabled']);
+  assert.match(unavailable[0].textContent, /Unavailable: MuxUI InputTags cannot show the disabled state here because .*no accessible disabled signal/u);
+  assert.equal(sections.get('disabled').querySelector('input'), null);
+  assert.equal(tags({ disabled: true }).querySelector('input').disabled, true);
+  assert.equal(sections.get('inline').querySelector('.muxui-input-tags').classList.contains('muxui-input-tags--below'), false);
+  assert.equal(sections.get('below').querySelector('.muxui-input-tags').classList.contains('muxui-input-tags--below'), true);
+  assert.equal(sections.get('invalid').querySelector('.muxui-input-tags').hasAttribute('data-invalid'), true);
+  // A changed control still wins over the named state.
+  const emptied = stateSections('InputTags', { ...createStory(currentRecord('InputTags'), 'states').args, defaultValue: [] }).sections;
+  assert.equal(emptied.get('inline').querySelectorAll('.muxui-input-tags__tag').length, 0);
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createStory(currentRecord('InputTags'), 'states');
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await settleRuntime(100);
+    const focusedTag = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'tag-focused');
+    assert.ok(focusedTag.querySelector('.muxui-input-tags__tag').contains(document.activeElement), `keyboard focus rests on a tag, not ${document.activeElement?.outerHTML.slice(0, 160)} in ${document.activeElement?.closest('.muxui-storybook-state')?.querySelector('h3')?.textContent}`);
+  });
+});
+
+test('RadioField renders its own parts inside RadioGroup and routes field props to the first field', async () => {
+  const doc = (args) => new JSDOM(renderToStaticMarkup(renderFamily('RadioField', args))).window.document;
+  const base = doc({});
+  assert.equal(base.querySelector('.muxui-radio'), null, 'no RadioGroup option stands in for a field');
+  const fields = [...base.querySelectorAll('.muxui-radio-field')];
+  assert.equal(fields.length, 2);
+  for (const part of ['button', 'indicator', 'dot', 'description']) {
+    assert.equal(base.querySelectorAll(`.muxui-radio-field__${part}`).length, 2, part);
+  }
+  assert.equal(base.querySelectorAll('.muxui-radio-field__button')[0].hasAttribute('data-selected'), true);
+  assert.equal(base.querySelectorAll('.muxui-radio-field__button')[1].hasAttribute('data-selected'), false);
+  const state = doc({ disabled: true, invalid: true, size: 'sm' });
+  const [first, second] = state.querySelectorAll('.muxui-radio-field');
+  assert.equal(first.hasAttribute('data-disabled'), true);
+  assert.equal(second.hasAttribute('data-disabled'), false);
+  assert.ok(first.querySelector('.muxui-radio-field__error'));
+  assert.equal(second.querySelector('.muxui-radio-field__error'), null);
+  assert.ok([first, second].every((field) => field.classList.contains('muxui-radio-field--sm')));
+  // The second radio takes its own value, so choosing either plan checks exactly one radio.
+  for (const value of ['monthly', 'annual', 'weekly']) {
+    const inputs = [...doc({ value }).querySelectorAll('.muxui-radio-field input[type="radio"]')];
+    assert.deepEqual(inputs.map((input) => input.value).sort(), [value, value === 'annual' ? 'monthly' : 'annual'].sort(), value);
+    assert.deepEqual(inputs.filter((input) => input.checked).map((input) => input.value), [value], `${value}: exactly one radio is checked`);
+  }
+  assert.ok(BROWSER_PROOF_FAMILIES.includes('RadioField'));
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createBrowserProofStory(currentRecord('RadioField'));
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await act(async () => story.play({ canvasElement: host }));
+    assert.equal(host.getAttribute('data-muxui-browser-proof-status'), 'passed');
+  });
+});
+
+test('TagSelect follows the Set key contract and lets item and label controls through', async () => {
+  const controlled = createControlledStory(currentRecord('TagSelect'));
+  const uncontrolled = createUncontrolledStory(currentRecord('TagSelect'));
+  assert.deepEqual([...controlled.args.selectedKeys], ['design']);
+  assert.deepEqual([...uncontrolled.args.defaultSelectedKeys], ['design']);
+  assert.equal(Object.hasOwn(controlled.args, 'defaultSelectedKeys'), false);
+  assert.equal(Object.hasOwn(createStory(currentRecord('TagSelect'), 'default').args, 'items'), false, 'sample items fill an empty default list');
+
+  const doc = (args) => new JSDOM(renderToStaticMarkup(renderFamily('TagSelect', args))).window.document;
+  const supplied = doc({ label: 'Skills', placeholder: 'Pick', items: [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }], defaultSelectedKeys: new Set(['b']) });
+  assert.equal(supplied.querySelector('.muxui-tag-select__label').textContent, 'Skills');
+  assert.deepEqual([...supplied.querySelectorAll('.muxui-tag-select__tag-text')].map((tag) => tag.textContent), ['Beta']);
+  assert.deepEqual([...doc({ items: [{ id: 'x', name: 'By name' }], defaultSelectedKeys: new Set(['x']), getItemLabel: (item) => `Item ${item.id}` }).querySelectorAll('.muxui-tag-select__tag-text')].map((tag) => tag.textContent), ['Item x']);
+
+  const { document: states, sections } = stateSections('TagSelect');
+  assert.deepEqual([...sections.get('selected').querySelectorAll('.muxui-tag-select__tag-text')].map((tag) => tag.textContent), ['Design']);
+  assert.equal(sections.get('empty').querySelectorAll('.muxui-tag-select__tag').length, 0);
+  assert.equal(states.querySelector('[data-muxui-storybook-state="unavailable"]').closest('.muxui-storybook-state').querySelector('h3').textContent, 'filtered');
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    await act(async () => reactRoot.render(controlled.render(controlled.args)));
+    const values = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent);
+    assert.deepEqual(values().selectedKeys, ['design']);
+    await act(async () => host.querySelector('.muxui-tag-select__input').focus());
+    await settleRuntime(60);
+    const option = [...document.querySelectorAll('.muxui-tag-select__item')].find((node) => node.textContent === 'Code');
+    assert.ok(option, 'the unselected item is offered');
+    await act(async () => option.click());
+    await settleRuntime(60);
+    assert.deepEqual(values().selectedKeys, ['design', 'code']);
+    await act(async () => host.querySelectorAll('.muxui-tag-select__tag-remove')[0].click());
+    await settleRuntime(60);
+    assert.deepEqual(values().selectedKeys, ['code']);
+
+    // The popup names unselected items with the resolver the tags use: getItemLabel, else name, label, then id.
+    const items = [{ id: 'x', name: 'By name' }, { id: 'y', label: 'By label' }, { id: 'z' }];
+    const optionLabels = async (key, args) => {
+      await act(async () => reactRoot.render(React.cloneElement(renderFamily('TagSelect', { items, ...args }), { key })));
+      await act(async () => host.querySelector('.muxui-tag-select__input').focus());
+      await settleRuntime(60);
+      return [...document.querySelectorAll('.muxui-tag-select__item')].map((node) => node.textContent);
+    };
+    assert.deepEqual(await optionLabels('fallback-labels', {}), ['By name', 'By label', 'z']);
+    assert.deepEqual(await optionLabels('custom-labels', { getItemLabel: (item) => `Item ${item.id}` }), ['Item x', 'Item y', 'Item z']);
+  });
+});
+
+test('TextArea sends native attributes to the textarea and keeps field state on Root', () => {
+  const doc = new JSDOM(renderToStaticMarkup(renderFamily('TextArea', { rows: 6, maxLength: 40, placeholder: 'Say more', disabled: true, invalid: true, size: 'sm' }))).window.document;
+  const textarea = doc.querySelector('textarea');
+  assert.equal(textarea.getAttribute('rows'), '6');
+  assert.equal(textarea.getAttribute('maxlength'), '40');
+  assert.equal(textarea.getAttribute('placeholder'), 'Say more');
+  assert.equal(textarea.disabled, true, 'disabled is Root state, carried to the control');
+  const root = doc.querySelector('.muxui-text-area');
+  for (const name of ['rows', 'maxlength', 'placeholder']) assert.equal(root.hasAttribute(name), false, name);
+  assert.equal(root.hasAttribute('data-invalid'), true);
+  assert.equal(root.getAttribute('data-size'), 'sm');
+  assert.equal(new JSDOM(renderToStaticMarkup(renderFamily('TextArea', {}))).window.document.querySelector('textarea').getAttribute('placeholder'), 'Add notes');
+  const controlled = createControlledStory(currentRecord('TextArea'));
+  assert.equal(new JSDOM(renderToStaticMarkup(controlled.render(controlled.args))).window.document.querySelector('textarea').value, '');
+});
+
+test('AlertDialog nests Backdrop, Popup, and Content and routes state and activation to their owners', async () => {
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const calls = [];
+    const props = { onOpenChange: (open) => calls.push(['open', open]), onActivate: () => calls.push(['activate']) };
+    await act(async () => reactRoot.render(renderFamily('AlertDialog', props)));
+    assert.equal(document.querySelector('.muxui-alert-dialog__backdrop'), null);
+    await act(async () => host.querySelector('.muxui-alert-dialog__trigger').click());
+    await settleRuntime();
+    const backdrop = document.querySelector('.muxui-alert-dialog__backdrop');
+    const popup = backdrop.querySelector('.muxui-alert-dialog__popup');
+    const content = popup.querySelector('.muxui-alert-dialog__content');
+    assert.ok(content, 'Backdrop > Popup > Content');
+    assert.equal(content.getAttribute('role'), 'alertdialog');
+    const sorted = (entries) => entries.map((entry) => entry.join(':')).sort();
+    assert.deepEqual(sorted(calls), ['activate', 'open:true']);
+    await act(async () => content.querySelector('.muxui-alert-dialog__close').click());
+    await settleRuntime();
+    assert.deepEqual(sorted(calls.slice(2)), ['activate', 'open:false']);
+
+    // defaultOpen and open keep their own meanings.
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('AlertDialog', { defaultOpen: true }), { key: 'default-open' })));
+    await settleRuntime();
+    assert.ok(document.querySelector('.muxui-alert-dialog__content'), 'defaultOpen opens the dialog');
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('AlertDialog', { open: false, ...props }), { key: 'controlled' })));
+    await settleRuntime();
+    await act(async () => host.querySelector('.muxui-alert-dialog__trigger').click());
+    await settleRuntime();
+    assert.equal(document.querySelector('.muxui-alert-dialog__content'), null, 'a controlled open stays closed until its owner changes it');
+    assert.deepEqual(sorted(calls.slice(-2)), ['activate', 'open:true']);
+
+    const disabled = renderToStaticMarkup(renderFamily('AlertDialog', { disabled: true }));
+    assert.match(disabled, /<button[^>]*class="muxui-alert-dialog__trigger"[^>]*disabled/u);
+  });
+});
+
+test('AlertDialog Controlled and Events stories report the callbacks of their owners', async () => {
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const controlled = createControlledStory(currentRecord('AlertDialog'));
+    await act(async () => reactRoot.render(controlled.render(controlled.args)));
+    const value = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).open;
+    assert.equal(value(), false);
+    await act(async () => host.querySelector('.muxui-alert-dialog__trigger').click());
+    await settleRuntime();
+    assert.equal(value(), true);
+    await act(async () => document.querySelector('.muxui-alert-dialog__close').click());
+    await settleRuntime();
+    assert.equal(value(), false);
+    const events = createEventsStory(currentRecord('AlertDialog'));
+    await act(async () => reactRoot.render(React.cloneElement(events.render(events.args), { key: 'events' })));
+    await act(async () => host.querySelector('.muxui-alert-dialog__trigger').click());
+    await settleRuntime();
+    const log = host.querySelector('[data-muxui-storybook-event-log]').textContent;
+    assert.match(log, /activate:/u);
+    assert.match(log, /openChange: true/u);
+  });
+});
+
+test('CommandPalette routes hook, Backdrop, and Item inputs to their owners', async () => {
+  const open = (args) => renderFamily('CommandPalette', { defaultOpen: true, ...args });
+  const titles = () => [...document.querySelectorAll('.muxui-command-palette__item-title')].map((node) => node.textContent);
+  await withRuntime(async ({ root: reactRoot }) => {
+    await act(async () => reactRoot.render(open({})));
+    await settleRuntime();
+    assert.deepEqual(titles(), ['Save', 'Open', 'Open settings']);
+    assert.deepEqual([...document.querySelectorAll('.muxui-command-palette__section-header')].map((node) => node.textContent), ['Suggestions', 'Workspace']);
+    // The query filters the supplied commands, through the hook.
+    await act(async () => reactRoot.render(React.cloneElement(open({ query: 'sett' }), { key: 'query' })));
+    await settleRuntime();
+    assert.deepEqual(titles(), ['Open settings']);
+    assert.equal(document.querySelector('.muxui-command-palette__input').value, 'sett');
+    await act(async () => reactRoot.render(React.cloneElement(open({ query: 'zzz' }), { key: 'empty' })));
+    await settleRuntime();
+    assert.deepEqual(titles(), []);
+    assert.ok(document.querySelector('.muxui-command-palette__empty'));
+    // filter: false and a caller command list configure the hook.
+    await act(async () => reactRoot.render(React.cloneElement(open({ query: 'zzz', filter: false }), { key: 'no-filter' })));
+    await settleRuntime();
+    assert.equal(titles().length, 3);
+    await act(async () => reactRoot.render(React.cloneElement(open({ commands: [{ id: 'only', title: 'Only command' }] }), { key: 'commands' })));
+    await settleRuntime();
+    assert.deepEqual(titles(), ['Only command']);
+    await act(async () => reactRoot.render(React.cloneElement(open({ title: 'Renamed', href: '/x' }), { key: 'item-props' })));
+    await settleRuntime();
+    assert.deepEqual(titles().slice(0, 1), ['Renamed']);
+    assert.equal(document.querySelector('.muxui-command-palette__item').getAttribute('href'), '/x');
+  });
+});
+
+test('CommandPalette reports the hook and Item callbacks and honours dismissable on the Backdrop', async () => {
+  await withRuntime(async ({ root: reactRoot }) => {
+    const calls = [];
+    const props = {
+      defaultOpen: true,
+      onActivate: (event) => calls.push(['activate', event.id]),
+      onAction: (command) => calls.push(['action', command.id]),
+      onOpenChange: (next) => calls.push(['open', next]),
+      onError: (error, command) => calls.push(['error', error.message, command.id]),
+      onQueryChange: (query) => calls.push(['query', query]),
+      commands: [{ id: 'ok', title: 'Works' }, { id: 'bad', title: 'Breaks', action: () => { throw new Error('nope'); } }],
+    };
+    await act(async () => reactRoot.render(renderFamily('CommandPalette', props)));
+    await settleRuntime();
+    const items = () => [...document.querySelectorAll('.muxui-command-palette__item')];
+    await act(async () => items()[1].click());
+    await settleRuntime();
+    assert.deepEqual(calls, [['activate', 'bad'], ['error', 'nope', 'bad']]);
+    await act(async () => items()[0].click());
+    await settleRuntime();
+    assert.deepEqual(calls.slice(2), [['activate', 'ok'], ['action', 'ok'], ['open', false]]);
+
+    // dismissable reaches the Backdrop, not Root; a real pointer press outside is covered by the browser audit.
+    const backdropProp = (name) => {
+      const node = document.querySelector('.muxui-command-palette__backdrop');
+      for (let fiber = node[Object.keys(node).find((key) => key.startsWith('__reactFiber'))]; fiber; fiber = fiber.return) {
+        if (fiber.memoizedProps && name in fiber.memoizedProps) return fiber.memoizedProps[name];
+      }
+      return undefined;
+    };
+    for (const dismissable of [false, true]) {
+      await act(async () => reactRoot.render(React.cloneElement(renderFamily('CommandPalette', { defaultOpen: true, dismissable }), { key: `dismissable-${dismissable}` })));
+      await settleRuntime();
+      assert.equal(backdropProp('isDismissable'), dismissable);
+      assert.equal(document.querySelector('.muxui-command-palette').hasAttribute('dismissable'), false, 'Root does not receive it');
+    }
+  });
+});
+
+test('CommandPalette Controlled story drives open state and query from their callbacks', async () => {
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createControlledStory(currentRecord('CommandPalette'));
+    assert.equal(story.args.query, '');
+    assert.equal(Object.hasOwn(story.args, 'defaultQuery'), false);
+    assert.equal(createUncontrolledStory(currentRecord('CommandPalette')).args.defaultQuery, '');
+    await act(async () => reactRoot.render(story.render(story.args)));
+    const values = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent);
+    assert.deepEqual(values(), { open: false, query: '' });
+    await act(async () => host.querySelector('.muxui-command-palette__trigger').click());
+    await settleRuntime();
+    assert.equal(values().open, true);
+    await act(async () => document.querySelector('.muxui-command-palette__close').click());
+    await settleRuntime();
+    assert.equal(values().open, false);
+  });
+});
+
+test('Lightbox Controlled story updates open and selection from callbacks and shows the selected item', async () => {
+  const lightbox = currentRecord('Lightbox');
+  const controlled = createControlledStory(lightbox);
+  assert.equal(controlled.args.selectedKey, 'one');
+  assert.equal(Object.hasOwn(controlled.args, 'defaultSelectedKey'), false);
+  assert.equal(createUncontrolledStory(lightbox).args.defaultSelectedKey, 'one');
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    await act(async () => reactRoot.render(controlled.render(controlled.args)));
+    const values = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent);
+    assert.deepEqual(values(), { open: false, selectedKey: 'one' });
+    const triggers = [...host.querySelectorAll('.muxui-lightbox-trigger')];
+    assert.deepEqual(triggers.map((node) => node.textContent), ['Open One', 'Open Two']);
+    await act(async () => triggers[1].click());
+    await settleRuntime(60);
+    assert.deepEqual(values(), { open: true, selectedKey: 'two' });
+    assert.equal(document.querySelector('.muxui-lightbox-content-layer--current').textContent, 'Item 2 of 2');
+    assert.equal(document.querySelector('.muxui-lightbox-caption').textContent, 'Two');
+    await act(async () => document.querySelector('.muxui-lightbox-previous').click());
+    await settleRuntime(60);
+    assert.deepEqual(values(), { open: true, selectedKey: 'one' });
+    assert.equal(document.querySelector('.muxui-lightbox-caption').textContent, 'One');
+    await act(async () => document.querySelector('.muxui-lightbox-close').click());
+    await settleRuntime(60);
+    assert.equal(values().open, false);
+    const events = createEventsStory(lightbox);
+    await act(async () => reactRoot.render(React.cloneElement(events.render(events.args), { key: 'events' })));
+    await act(async () => host.querySelectorAll('.muxui-lightbox-trigger')[0].click());
+    await settleRuntime(60);
+    assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /openChange: true/u);
+  });
+});
+
+test('Menu uses the triggered composition for open-state stories and keeps the plain list scoped to the default', async () => {
+  const menu = currentRecord('Menu');
+  const plain = new JSDOM(renderToStaticMarkup(renderFamily('Menu', storyArgsForBinding(menu.binding, 'default', 'Menu')))).window.document;
+  assert.ok(plain.querySelector('.muxui-menu'));
+  assert.equal(plain.querySelector('.muxui-menu-trigger'), null, 'the default is the action list');
+  assert.equal(Object.hasOwn(storyArgsForBinding(menu.binding, 'default', 'Menu'), 'defaultOpen'), false);
+  assert.equal(createUncontrolledStory(menu).args.defaultOpen, false);
+  assert.equal(createControlledStory(menu).args.open, false);
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const controlled = createControlledStory(menu);
+    await act(async () => reactRoot.render(controlled.render(controlled.args)));
+    const values = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent);
+    const trigger = host.querySelector('.muxui-menu-trigger');
+    assert.ok(trigger, 'Controlled uses Menu.Root with a trigger');
+    assert.equal(document.querySelector('.muxui-menu-popup'), null);
+    await act(async () => trigger.click());
+    await settleRuntime();
+    assert.equal(values().open, true);
+    assert.deepEqual([...document.querySelectorAll('.muxui-menu-popup .muxui-menu-item')].map((node) => node.textContent), ['Save', 'Delete']);
+    await act(async () => document.querySelector('.muxui-menu-item').click());
+    await settleRuntime();
+    assert.equal(values().open, false, 'choosing an item closes the popup through onOpenChange');
+
+    const uncontrolled = createUncontrolledStory(menu);
+    await act(async () => reactRoot.render(React.cloneElement(uncontrolled.render(uncontrolled.args), { key: 'uncontrolled' })));
+    await act(async () => host.querySelector('.muxui-menu-trigger').click());
+    await settleRuntime();
+    assert.ok(document.querySelector('.muxui-menu-popup'), 'Uncontrolled opens its own popup');
+
+    const events = createEventsStory(menu);
+    await act(async () => reactRoot.render(React.cloneElement(events.render(events.args), { key: 'events' })));
+    await act(async () => host.querySelector('.muxui-menu-trigger').click());
+    await settleRuntime();
+    await act(async () => document.querySelector('.muxui-menu-item').click());
+    await settleRuntime();
+    const log = host.querySelector('[data-muxui-storybook-event-log]').textContent;
+    assert.match(log, /openChange: true/u);
+    assert.match(log, /action:/u);
+
+    // Popup geometry belongs to the popup: the placement row opens its own popup, placed on top.
+    const states = createStory(menu, 'states');
+    await act(async () => reactRoot.render(React.cloneElement(states.render(states.args), { key: 'states' })));
+    await settleRuntime();
+    const rowPopup = (row) => {
+      const trigger = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('.muxui-menu-trigger');
+      return document.getElementById(trigger.getAttribute('aria-controls'));
+    };
+    assert.equal(document.querySelectorAll('.muxui-menu-popup').length, 2, 'the open and placement rows each show a popup');
+    assert.equal(ancestorProp(rowPopup('placement'), 'placement'), 'top');
+    assert.equal(ancestorProp(rowPopup('open'), 'placement'), 'bottom start', 'React Aria spells the default bottom-start with a space');
+    for (const row of ['open', 'placement']) {
+      const room = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('[data-muxui-storybook-popup-room]');
+      assert.equal(room.style.minBlockSize, '14rem', `${row} reserves room for its popup`);
+      assert.ok(room.querySelector('.muxui-menu-trigger'));
+    }
+  });
+});
+
+test('Image shows fallback recovery and final failure, and names the source it ended on', async () => {
+  const { document: states } = stateSections('Image');
+  // Recovery has specimens; only the radius rows are labelled unavailable, with their reason.
+  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['radius-sm', 'radius-md', 'radius-lg', 'radius-full']);
+  assert.ok(unavailable.every((node) => /because the colour audit accepts only a transparent image/u.test(node.textContent)));
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createStory(currentRecord('Image'), 'states');
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await settleRuntime(60);
+    const row = (name) => [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === name);
+    const caption = (name) => row(name).querySelector('figcaption').textContent;
+    // jsdom loads no images, so raise each source's error as the browser does.
+    const fail = (name) => act(async () => row(name).querySelector('img').dispatchEvent(new Event('error')));
+
+    assert.equal(caption('fallback'), 'Loading the primary source.');
+    await fail('fallback');
+    assert.equal(row('fallback').querySelector('img').hasAttribute('data-fallback'), true);
+    assert.match(row('fallback').querySelector('img').getAttribute('src'), /^data:image\/gif/u, 'the working fallback is the verified transparent pixel');
+    await settleRuntime(20);
+    assert.equal(caption('fallback'), 'Primary source failed; using fallbackSrc.');
+
+    await fail('error');
+    await fail('error');
+    assert.equal(row('error').querySelector('img').hasAttribute('data-error'), true);
+    await settleRuntime(20);
+    assert.equal(caption('error'), 'Primary and fallback sources failed.');
+    assert.equal(row('error').querySelector('img').style.visibility, 'hidden', 'a failed image is not painted in the page');
+    assert.equal(row('fallback').querySelector('img').style.visibility, '', 'a recovered image is');
+  });
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const image = () => host.querySelector('img');
+    const caption = () => host.querySelector('figcaption').textContent;
+    // With no fallback supplied, a failure names the primary source alone.
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: AVATAR_FAILING_SRC }), { key: 'primary-only' })));
+    await act(async () => image().dispatchEvent(new Event('error')));
+    await settleRuntime(20);
+    assert.equal(image().hasAttribute('data-error'), true);
+    assert.equal(image().hasAttribute('data-fallback'), false, 'no fallback was attempted');
+    assert.equal(caption(), 'Primary source failed; no fallback source was supplied.');
+
+    // A loaded source replaced by a pending one starts the caption over.
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: '/a.png' }), { key: 'changing' })));
+    await act(async () => image().dispatchEvent(new Event('load')));
+    assert.equal(caption(), 'Primary source loaded.');
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: '/b.png' }), { key: 'changing' })));
+    await settleRuntime(20);
+    assert.equal(image().getAttribute('src'), '/b.png');
+    assert.equal(caption(), 'Loading the primary source.');
+    await act(async () => image().dispatchEvent(new Event('load')));
+    assert.equal(caption(), 'Primary source loaded.');
+  });
+});
+
+test('Link without a destination renders disabled even when disabled is false', () => {
+  const link = (args) => new JSDOM(renderToStaticMarkup(renderFamily('Link', args))).window.document.querySelector('.muxui-link');
+  assert.equal(link({}).localName, 'a', 'the default specimen has a destination');
+  assert.equal(link({}).getAttribute('href'), '/settings');
+  assert.equal(link({ href: '/guide', disabled: false }).getAttribute('href'), '/guide');
+  for (const args of [{ href: undefined }, { href: '' }, { href: undefined, disabled: false }]) {
+    const disabled = link(args);
+    assert.equal(disabled.getAttribute('aria-disabled'), 'true', JSON.stringify(args));
+    assert.equal(disabled.hasAttribute('href'), false, JSON.stringify(args));
+  }
+
+  const { sections } = stateSections('Link');
+  assert.equal(sections.get('idle').querySelector('.muxui-link').getAttribute('href'), '/settings');
+  assert.equal(sections.get('disabled').querySelector('.muxui-link').getAttribute('aria-disabled'), 'true', 'the disabled row is really disabled');
+  assert.equal(sections.get('current').querySelector('.muxui-link').getAttribute('aria-current'), 'page');
+  for (const name of ['no-href', 'empty-href']) {
+    const specimen = sections.get(name).querySelector('.muxui-link');
+    assert.equal(specimen.getAttribute('aria-disabled'), 'true', name);
+    assert.equal(specimen.hasAttribute('href'), false, name);
+    assert.equal(sections.get(name).querySelector('[data-muxui-storybook-state="unavailable"]'), null, name);
+  }
+});
+
+test('ProgressCircle shows unknown progress beside determinate values with no invented percent', () => {
+  const { document: states, sections } = stateSections('ProgressCircle');
+  assert.equal(states.querySelector('[data-muxui-storybook-state="unavailable"]'), null);
+  const bar = (name) => sections.get(name).querySelector('[role="progressbar"]');
+  assert.equal(bar('indeterminate').hasAttribute('aria-valuenow'), false, 'unknown progress exposes no value');
+  assert.equal(bar('indeterminate').querySelector('.muxui-progress-circle__value').textContent, '', 'and shows no percent');
+  assert.ok(bar('indeterminate').hasAttribute('data-indeterminate'));
+  for (const [name, now] of [['zero', '0'], ['partial', '50'], ['complete', '100']]) assert.equal(bar(name).getAttribute('aria-valuenow'), now, name);
+  assert.equal(createStory(currentRecord('ProgressCircle'), 'default').args.value, null, 'the default specimen is the unknown-progress one');
+});
+
 test('Button Matrix statically covers every finite visual tuple and States keeps pending/disabled', () => {
   const binding = descriptor.bindings.find(({ export: family }) => family === 'Button');
   assert.ok(binding, 'Button descriptor binding');
@@ -756,7 +1511,7 @@ test('control inference and composition adapters preserve canonical values', () 
   assert.equal(argTypesForBinding(dialogBinding).children.control, 'text');
   assert.deepEqual(
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Popover')).placement.options,
-    ['top', 'bottom', 'start', 'end'],
+    declaredUnion(publicTypes, 'MuxUIPlacement'),
   );
   assert.deepEqual(
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Toast')).variant.options,

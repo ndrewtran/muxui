@@ -21,9 +21,9 @@ function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
 const MUXUI_SEARCH_FIELD_VALUE = 'MuxUI';
 
 const BOOLEAN_PROPS = new Set([
-  'acceptDirectory', 'allowsMultiple', 'checked', 'current', 'defaultChecked',
+  'acceptDirectory', 'allowsMultiple', 'checked', 'collapsed', 'current', 'defaultChecked', 'defaultCollapsed',
   'defaultExpanded', 'defaultOpen', 'defaultSelected', 'disabled', 'dismissable',
-  'expanded', 'invalid', 'indeterminate', 'open', 'pending', 'readOnly', 'required',
+  'expanded', 'external', 'invalid', 'indeterminate', 'open', 'pending', 'readOnly', 'required',
   'showTextWhileLoading', 'lineNumbers', 'copyable', 'wrap', 'streaming', 'sourcesExpanded', 'defaultSourcesExpanded', 'multiple',
   'shouldCloseOnSelect',
 ]);
@@ -38,7 +38,11 @@ const STRING_PROPS = new Set([
   'description', 'endName', 'errorMessage', 'href', 'label', 'message', 'name',
   'source', 'before', 'after', 'language', 'filename', 'inputLabel', 'author', 'streamingLabel', 'applyLabel', 'emptyMessage', 'selectedModel', 'defaultSelectedModel',
   'placeholder', 'rel', 'src', 'srcSet', 'alt', 'fallbackSrc', 'fallbackSrcSet', 'fit', 'radius', 'startName', 'target', 'title',
+  'badge', 'avatarSrc', 'email', 'query', 'defaultQuery', 'shortcut',
 ]);
+
+// Props that take a function cannot be edited as data, so their controls stay off.
+const FUNCTION_PROPS = new Set(['close', 'filter', 'sort', 'groupBy', 'getGroupTitle', 'getItemLabel', 'validate', 'renderContent']);
 
 const TEXT_VALUE_CONTEXT_PROPS = new Set(['placeholder', 'type']);
 const NUMBER_PROPS = new Set([
@@ -54,9 +58,11 @@ const CONTROLLED_DEFAULT_PAIRS = Object.freeze([
   ['expanded', 'defaultExpanded'],
   ['expandedIds', 'defaultExpandedIds'],
   ['open', 'defaultOpen'],
+  ['query', 'defaultQuery'],
   ['selected', 'defaultSelected'],
   ['selectedId', 'defaultSelectedId'],
   ['selectedIds', 'defaultSelectedIds'],
+  ['selectedKey', 'defaultSelectedKey'],
   ['selectedKeys', 'defaultSelectedKeys'],
   ['mode', 'defaultMode'],
   ['sizes', 'defaultSizes'],
@@ -84,6 +90,13 @@ export function eventBindingsForBinding(binding) {
   return binding.api.events.map((channel) => ({ channel, prop: eventCallbackPropForChannel(channel) }));
 }
 
+// The twelve logical placements of the public MuxUIPlacement type.
+const PLACEMENTS = Object.freeze([
+  'top', 'bottom', 'start', 'end',
+  'top-start', 'top-end', 'bottom-start', 'bottom-end',
+  'start-top', 'start-bottom', 'end-top', 'end-bottom',
+]);
+
 const SELECT_PROPS = Object.freeze({
   channel: ['red', 'green', 'blue', 'hue', 'saturation', 'lightness', 'brightness', 'alpha'],
   colorSpace: ['rgb', 'hsl', 'hsb'],
@@ -91,7 +104,7 @@ const SELECT_PROPS = Object.freeze({
   density: ['default', 'compact'],
   method: ['get', 'post'],
   orientation: ['horizontal', 'vertical'],
-  placement: ['top', 'bottom', 'start', 'end'],
+  placement: PLACEMENTS,
   role: ['group', 'region', 'presentation'],
   expansionTrigger: ['chevron', 'row'],
   selectionMode: ['none', 'single', 'multiple'],
@@ -116,30 +129,38 @@ const TEXT_SELECT_PROPS = Object.freeze({
   as: ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label'],
 });
 
+// A family whose public type narrows a shared enumeration lists its own choices here.
+const FAMILY_SELECT_PROPS = Object.freeze({
+  Button: BUTTON_SELECT_PROPS,
+  IconButton: BUTTON_SELECT_PROPS,
+  Text: TEXT_SELECT_PROPS,
+  Tabs: { variant: ['underline', 'pill', 'overflow', 'segment'] },
+  Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
+  ToggleButtonGroup: { selectionMode: ['single', 'multiple'] },
+  Sidebar: { status: ['online', 'offline'] },
+});
+
 const callbackType = { summary: 'MuxUI callback' };
 
 function inferControl(name, defaults, props, family) {
   if (name.startsWith('on')) return { control: false, table: { type: callbackType } };
   if (name === 'trigger') return { control: false, table: { type: { summary: 'React element' } } };
-  if ((family === 'Button' || family === 'IconButton') && BUTTON_SELECT_PROPS[name]) {
-    return { control: { type: 'select' }, options: BUTTON_SELECT_PROPS[name] };
-  }
-  if (family === 'Text' && TEXT_SELECT_PROPS[name]) {
-    return { control: { type: 'select' }, options: TEXT_SELECT_PROPS[name] };
-  }
-  if (family === 'Tabs' && name === 'variant') {
-    return { control: { type: 'select' }, options: ['underline', 'pill', 'overflow', 'segment'] };
-  }
-  if (SELECT_PROPS[name]) return { control: { type: 'select' }, options: SELECT_PROPS[name] };
+  if (FUNCTION_PROPS.has(name)) return { control: false, table: { type: { summary: 'function' } } };
+  const options = FAMILY_SELECT_PROPS[family]?.[name] ?? SELECT_PROPS[name];
+  if (options) return { control: { type: 'select' }, options };
   if (BOOLEAN_PROPS.has(name) || typeof defaults[name] === 'boolean') return { control: 'boolean' };
   if ((name === 'value' || name === 'defaultValue')
     && props.some((prop) => TEXT_VALUE_CONTEXT_PROPS.has(prop))) {
     return { control: 'text' };
   }
+  // Color families carry a color string, not a collection.
+  if ((name === 'value' || name === 'defaultValue') && family.startsWith('Color')) return { control: 'text' };
   if ((name === 'value' || name === 'defaultValue')
     && props.some((prop) => NUMBER_VALUE_CONTEXT_PROPS.has(prop))) {
     return { control: { type: 'number' } };
   }
+  // TextArea rows is the native line count, not table rows.
+  if (family === 'TextArea' && name === 'rows') return { control: { type: 'number' } };
   if (ARRAY_PROPS.has(name) || Array.isArray(defaults[name])) return { control: 'object' };
   if (NUMBER_PROPS.has(name)) return { control: { type: 'number' } };
   if (typeof defaults[name] === 'number') return { control: { type: 'number' } };
@@ -175,9 +196,12 @@ function normalizeDefaultArgs(binding) {
     }
     delete args[controlled];
   }
-  if (binding.export === 'Breadcrumbs' && Array.isArray(args.items) && args.items.length === 0) {
+  // The adapters supply sample items when none are given, so an empty default list is no list.
+  if ((binding.export === 'Breadcrumbs' || binding.export === 'TagSelect') && Array.isArray(args.items) && args.items.length === 0) {
     delete args.items;
   }
+  // An open-state arg selects Menu's triggered composition, so the plain action list leaves it unset.
+  if (binding.export === 'Menu') delete args.defaultOpen;
   return args;
 }
 
@@ -199,7 +223,9 @@ function sampleControlledValue(binding, family, controlled, uncontrolled, source
   if (family === 'SelectNative' && controlled === 'value' && sourceArgs.multiple && (sourceValue === undefined || sourceValue === '')) return [];
   if (sourceValue !== undefined) return sourceValue;
   if (controlled === 'mode') return 'light';
-  if (controlled === 'selectedKeys') return new Set();
+  if (controlled === 'query') return '';
+  if (controlled === 'selectedKey') return (sourceArgs.items ?? LIGHTBOX_SAMPLE_ITEMS)[0]?.key;
+  if (controlled === 'selectedKeys') return family === 'TagSelect' ? new Set([TAG_SELECT_SAMPLE_ITEMS[0].id]) : new Set();
   if (controlled === 'sizes') return { main: 60, side: 40 };
   if (controlled === 'open' || controlled === 'checked' || controlled === 'collapsed' || controlled === 'expanded' || controlled === 'selected') return false;
   if (controlled === 'selectedId') return 'Melbourne';
@@ -275,6 +301,7 @@ function stateVariantNames(binding, family) {
   const props = new Set(binding.api.props);
   if (props.has('placement')) names.push('placement');
   if (family === 'DropZone') names.push('dragging');
+  if (family === 'Link') names.push('no-href', 'empty-href');
   if (family === 'TagGroup') names.push('removable');
   if (OVERLAY_FAMILIES.has(family)) names.push('entering', 'exiting');
   return [...new Set(names)];
@@ -327,6 +354,12 @@ function setSelectedState(args, props, family, preserveExplicit) {
     return undefined;
   }
   if (props.has('selectedId') && canSupplyStateValue(args, props, 'selectedId', preserveExplicit)) return setControlledArg(args, props, 'selectedId', 'Melbourne');
+  if (family === 'TagSelect' && props.has('selectedKeys')) {
+    const [first] = args.items ?? TAG_SELECT_SAMPLE_ITEMS;
+    return canSupplyStateValue(args, props, 'selectedKeys', preserveExplicit) && first
+      ? setControlledArg(args, props, 'selectedKeys', new Set([first.id]))
+      : undefined;
+  }
   if (!props.has('value')) return undefined;
   if (!canSupplyStateValue(args, props, 'value', preserveExplicit)) return undefined;
   if (family === 'CheckboxGroup') return setControlledArg(args, props, 'value', ['email']);
@@ -340,7 +373,19 @@ function setSelectedState(args, props, family, preserveExplicit) {
   return undefined;
 }
 
+// States a specimen cannot show honestly, each with its reason. The matrix labels them unavailable rather than
+// rendering a stand-in that looks like another state.
+const STATE_LIMITATIONS = Object.freeze({
+  ...Object.fromEntries(['sm', 'md', 'lg', 'full'].map((radius) => [`Image:radius-${radius}`,
+    'the colour audit accepts only a transparent image, so a radius has nothing visible to round'])),
+  'DropZone:disabled': 'a disabled DropZone root has no accessible disabled signal, so its dimmed text fails the axe contrast audit',
+  'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
+  'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
+  'InputTags:disabled': 'a disabled InputTags label has no accessible disabled signal, so its dimmed colour fails the axe contrast audit',
+});
+
 function stateIsSupported(binding, state, family) {
+  if (Object.hasOwn(STATE_LIMITATIONS, `${family}:${state}`)) return false;
   const props = new Set(binding.api.props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
@@ -352,7 +397,11 @@ function stateIsSupported(binding, state, family) {
     case 'streaming':
       return family === 'Message';
     case 'error':
-      return family === 'PromptComposer';
+      return family === 'PromptComposer' || family === 'Avatar' || family === 'Image';
+    case 'loaded':
+      return family === 'Avatar';
+    case 'fallback':
+      return family === 'Avatar' || family === 'Image';
     case 'mixed':
       return family === 'DataDiff';
     case 'diff':
@@ -374,6 +423,7 @@ function stateIsSupported(binding, state, family) {
         || props.has('selected')
         || props.has('selectedIds')
         || props.has('selectedId')
+        || family === 'TagSelect' && props.has('selectedKeys')
         || ['CheckboxGroup', 'RadioGroup', 'Tabs', 'Select', 'Calendar', 'RangeCalendar', 'ColorSwatchPicker'].includes(family) && props.has('value');
     case 'checked':
     case 'unchecked':
@@ -414,12 +464,23 @@ function stateIsSupported(binding, state, family) {
     case 'sm':
     case 'md':
     case 'lg':
-      return family === 'ProgressCircle' && props.has('size');
+      return (family === 'ProgressCircle' || family === 'Avatar') && props.has('size');
+    case 'elevated':
+    case 'outlined':
+      return family === 'Card' && props.has('variant');
+    case 'inline':
+    case 'below':
+      return props.has('tagPlacement');
+    case 'tagfocused':
+      // StateVariant focuses the first tag after mount.
+      return family === 'InputTags';
+    case 'external':
+      return props.has('external');
     case 'light':
     case 'dark':
       return family === 'ColorModeToggle' && props.has('mode');
     case 'filled':
-      return family === 'SearchField' && props.has('value');
+      return family === 'SearchField' && props.has('value') || family === 'Card' && props.has('variant');
     case 'empty':
       return props.has('items') || props.has('rows') || family === 'SearchField' && props.has('value');
     case 'placement':
@@ -434,6 +495,9 @@ function stateIsSupported(binding, state, family) {
       return props.has('current') || family === 'Breadcrumbs' && props.has('items');
     case 'removable':
       return family === 'TagGroup';
+    case 'nohref':
+    case 'emptyhref':
+      return family === 'Link';
     // Pressed and dismissed are transient lifecycle results without a MuxUI
     // prop or reliable public interaction that can hold the state in a story.
     case 'pressed':
@@ -483,6 +547,12 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       break;
     case 'error':
       if (family === 'PromptComposer') args.error = 'Unable to send. Try again.';
+      else if (family === 'Avatar') args.src = BROKEN_IMAGE_SRC;
+      else if (family === 'Image') Object.assign(args, { src: BROKEN_IMAGE_SRC, fallbackSrc: BROKEN_IMAGE_SRC });
+      break;
+    case 'fallback':
+      if (family === 'Avatar') args.src = '';
+      else if (family === 'Image') Object.assign(args, { src: BROKEN_IMAGE_SRC, fallbackSrc: TRANSPARENT_PIXEL });
       break;
     case 'mixed':
       if (family === 'DataDiff') args.defaultSelectedIds = ['added'];
@@ -503,7 +573,10 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', [family === 'Tree' ? 'src' : 'one']);
       break;
     case 'collapsed':
-      if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
+      // The Sidebar folds its rail through Provider; its expanded prop belongs to the Roadmap group.
+      if (family === 'Sidebar') {
+        if (canSupplyStateValue(args, props, 'collapsed', preserveExplicit)) setControlledArg(args, props, 'collapsed', true);
+      } else if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
       else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', []);
       else if (props.has('collapsed')) setControlledArg(args, props, 'collapsed', true);
       break;
@@ -550,14 +623,26 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'sm':
     case 'md':
     case 'lg':
-      if (family === 'ProgressCircle') args.size = normalizedState;
+      if (family === 'ProgressCircle' || family === 'Avatar') args.size = normalizedState;
+      break;
+    case 'elevated':
+    case 'outlined':
+      if (family === 'Card') args.variant = normalizedState;
+      break;
+    case 'inline':
+    case 'below':
+      if (props.has('tagPlacement')) args.tagPlacement = normalizedState;
+      break;
+    case 'external':
+      if (props.has('external')) args.external = true;
       break;
     case 'light':
     case 'dark':
       if (family === 'ColorModeToggle') setControlledArg(args, props, 'mode', normalizedState);
       break;
     case 'filled':
-      if (props.has('value') && (typeof args.value === 'string' || args.value === undefined)) {
+      if (family === 'Card') args.variant = 'filled';
+      else if (props.has('value') && (typeof args.value === 'string' || args.value === undefined)) {
         setControlledArg(args, props, 'value', MUXUI_SEARCH_FIELD_VALUE);
       }
       break;
@@ -568,6 +653,8 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       break;
     case 'placement':
       if (props.has('placement')) args.placement = 'top';
+      // Only the triggered popup has a placement, so the Menu row opens it.
+      if (family === 'Menu' && canSupplyStateValue(args, props, 'open', preserveExplicit)) args.open = true;
       break;
     case 'current':
       if (props.has('current')) args.current = true;
@@ -581,14 +668,48 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'removable':
       if (family === 'TagGroup') args.onRemove = () => {};
       break;
+    case 'nohref':
+      if (family === 'Link') args.href = undefined;
+      break;
+    case 'emptyhref':
+      if (family === 'Link') args.href = '';
+      break;
     default:
       break;
   }
   return args;
 }
 
+// Specimens whose named states must override binding defaults (disabled: false, defaultOpen: false, and so on).
+// Other families keep the existing precedence until their States pages pass the Storybook audit with it. Dialog
+// (a truly open modal blocks the lifecycle states) and DropZone (its only named state is disabled) stay off the list.
+const NAMED_STATE_FAMILIES = new Set([
+  'Avatar', 'Card', 'ColorModeToggle', 'GridList', 'HeaderNav', 'InputTags', 'Link', 'ListBox', 'Menu', 'ProgressCircle', 'Separator', 'Sidebar',
+]);
+
+/**
+ * The props a named state changes from the default. A named family's States story leaves them unset, so each state
+ * supplies its own value, while anything a user supplies, even false, empty, or the default value, wins in every row.
+ */
+function stateDrivingProps(binding, family) {
+  const defaults = normalizeDefaultArgs(binding);
+  const driving = new Set();
+  for (const { args } of stateCoverageForBinding(binding, family)) {
+    for (const name of Object.keys(defaults)) {
+      if (serializableEventValue(args[name]) !== serializableEventValue(defaults[name])) driving.add(name);
+    }
+  }
+  return driving;
+}
+
 export function storyArgsForBinding(binding, variant, family) {
-  if (variant === 'default' || variant === 'states') return normalizeDefaultArgs(binding);
+  if (variant === 'default') return normalizeDefaultArgs(binding);
+  if (variant === 'states') {
+    const args = normalizeDefaultArgs(binding);
+    if (!NAMED_STATE_FAMILIES.has(family)) return args;
+    const driving = stateDrivingProps(binding, family);
+    return Object.fromEntries(Object.entries(args).filter(([name]) => !driving.has(name)));
+  }
   return stateArgsForBinding(binding, variant, family);
 }
 
@@ -682,6 +803,65 @@ function DataDiffPreview(args) {
     onApply: (ids) => { args.onApply?.(ids); setResult(`Requested locally: ${ids.join(', ')}`); },
   }), result && e('p', { role: 'status' }, result));
 }
+/**
+ * The audited sources are a transparent pixel and broken data, so the image itself draws nothing. The caption
+ * reports which source it ended on, read from the data attributes Image sets while it recovers. A change of
+ * source starts the caption over, since Image resets its own recovery then.
+ */
+const IMAGE_OUTCOMES = Object.freeze({
+  loading: 'Loading the primary source.',
+  primary: 'Primary source loaded.',
+  fallback: 'Primary source failed; using fallbackSrc.',
+  failed: 'Primary source failed; no fallback source was supplied.',
+  error: 'Primary and fallback sources failed.',
+});
+
+function ImagePreview({ onLoad, ...args }) {
+  const imageRef = React.useRef(null);
+  const [outcome, setOutcome] = React.useState('loading');
+  const src = args.src ?? TRANSPARENT_PIXEL;
+  const hasFallback = [args.fallbackSrc, args.fallbackSrcSet].some((value) => typeof value === 'string' && value.trim().length > 0);
+  // A load event reports the current source, which the recovery attributes say is the primary or the fallback.
+  const read = React.useCallback((loaded = false) => {
+    const image = imageRef.current;
+    if (!image) return;
+    setOutcome(image.hasAttribute('data-error') ? 'error'
+      : image.hasAttribute('data-fallback') ? 'fallback'
+      : loaded || image.complete && image.naturalWidth > 0 ? 'primary' : 'loading');
+  }, []);
+  React.useEffect(() => {
+    const image = imageRef.current;
+    if (!image) return undefined;
+    const observer = new MutationObserver(() => read());
+    observer.observe(image, { attributes: true, attributeFilter: ['data-fallback', 'data-error'] });
+    return () => observer.disconnect();
+  }, [read]);
+  React.useEffect(() => read(), [read, src, args.srcSet, args.fallbackSrc, args.fallbackSrcSet]);
+  return e('figure', { style: { margin: 0 } },
+    e(MuxUI.Image, {
+      ...args,
+      ref: imageRef,
+      src,
+      alt: args.alt ?? 'Workspace preview',
+      width: args.width ?? 160,
+      height: args.height ?? 96,
+      // A failed image would draw the browser's alt text and broken-image icon in colours the audit cannot verify,
+      // so only its box stays; the caption and the data-error attribute carry the outcome.
+      style: outcome === 'error' ? { ...args.style, visibility: 'hidden' } : args.style,
+      onLoad: (event) => {
+        onLoad?.(event);
+        read(true);
+      },
+    }),
+    e('figcaption', null, IMAGE_OUTCOMES[outcome === 'error' && !hasFallback ? 'failed' : outcome]),
+  );
+}
+// A single transparent pixel loads as an image without painting a colour the audits cannot verify.
+const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+// Truncated image data: the browser fires an error event instead of loading it.
+const BROKEN_IMAGE_SRC = 'data:image/png;base64,AAAA';
+const TAG_SELECT_SAMPLE_ITEMS = [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }];
+const LIGHTBOX_SAMPLE_ITEMS = [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }];
 const COLLECTION_SAMPLE_ITEMS = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }];
 const MULTI_SELECT_SAMPLE_ITEMS = [{ id: 'email', label: 'Email' }, { id: 'sms', label: 'SMS' }];
 const TEXT_EDITOR_SAMPLE_DOCUMENT = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Mux UI' }] }] };
@@ -721,10 +901,19 @@ const ADAPTERS = {
     e(MuxUI.Button, null, 'Duplicate'),
     e(MuxUI.Button, null, 'Archive'),
   ),
-  Link: (args) => e(MuxUI.Link, { ...args, href: fallback(args.href, '/settings') }, 'Settings'),
+  // A Link with no href, or an empty one, renders disabled whatever its disabled prop says, so a supplied href is passed on as is.
+  Link: (args) => e(MuxUI.Link, { ...args, href: ownArg(args, 'href', '/settings') }, 'Settings'),
   Meter: (args) => e(MuxUI.Meter, { ...args, label: fallback(args.label, 'Storage'), value: Object.hasOwn(args, 'value') ? args.value : ownArg(args, 'values', {}).meter ?? 72 }),
   ProgressBar: (args) => e(MuxUI.ProgressBar, { ...args, label: fallback(args.label, 'Upload'), value: args.indeterminate || Object.hasOwn(args, 'value') && args.value == null ? undefined : Object.hasOwn(args, 'value') ? args.value : (ownArg(args, 'values', {}).progress ?? 64) }),
-  Separator: (args) => e(MuxUI.Separator, args),
+  // A rule only has geometry between content: a vertical one needs a row to stretch across.
+  Separator: (args) => e('div', {
+    style: args.orientation === 'vertical'
+      ? { display: 'flex', alignItems: 'stretch', gap: '1rem', minBlockSize: '3rem' }
+      : { display: 'grid', gap: '1rem', maxInlineSize: '16rem' },
+  },
+  e('span', { style: { alignSelf: 'center' } }, args.orientation === 'vertical' ? 'Left' : 'Above'),
+  e(MuxUI.Separator, args),
+  e('span', { style: { alignSelf: 'center' } }, args.orientation === 'vertical' ? 'Right' : 'Below')),
   ToggleButton: (args) => e(MuxUI.ToggleButton, args, 'Pin'),
   Autocomplete: (args) => e(MuxUI.Autocomplete, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
   CheckboxGroup: (args) => e(MuxUI.CheckboxGroup, { ...args, label: fallback(args.label, 'Notifications') }, ...ownArg(args, 'choices', [{ value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS' }]).map(({ value, label }) => e(MuxUI.Checkbox, { key: value, value }, label))),
@@ -765,7 +954,16 @@ const ADAPTERS = {
   ComboBox: (args) => e(MuxUI.ComboBox, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
   GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], 'Grid'), items: ownArg(args, 'items', COLLECTION_SAMPLE_ITEMS) }),
   ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], 'List'), items: ownArg(args, 'items', COLLECTION_SAMPLE_ITEMS) }),
-  Menu: (args) => e(MuxUI.Menu, { ...args, 'aria-label': fallback(args['aria-label'], 'Actions'), items: ownArg(args, 'items', fallback(args.items, ['Save', 'Delete'])) }),
+  // The standalone Menu is an action list. Any open-state arg selects the triggered composition, which owns
+  // open state and popup geometry; the list keeps the name, items, and selection callbacks.
+  Menu: ({ open, defaultOpen, onOpenChange, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay: _delay, ...list }) => {
+    const listProps = { ...list, 'aria-label': fallback(list['aria-label'], 'Actions'), items: ownArg(list, 'items', fallback(list.items, ['Save', 'Delete'])) };
+    if (open === undefined && defaultOpen === undefined && onOpenChange === undefined) return e(MuxUI.Menu, listProps);
+    const { disabled, shouldCloseOnSelect, onAction, onSelect, ...listOnly } = listProps;
+    return e(MuxUI.Menu.Root, { open, defaultOpen, onOpenChange, disabled, shouldCloseOnSelect, onAction, onSelect },
+      e(MuxUI.Menu.Trigger, null, 'Actions'),
+      e(MuxUI.Menu.Popup, { placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal }, e(MuxUI.Menu.List, listOnly)));
+  },
   RadioGroup: (args) => e(MuxUI.RadioGroup, { ...args, label: fallback(args.label, 'Size'), options: ownArg(args, 'options', fallback(args.options, [{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }])) }),
   RangeCalendar: (args) => e(MuxUI.RangeCalendar, {
     ...args,
@@ -799,9 +997,9 @@ const ADAPTERS = {
   FileTrigger: (args) => e(MuxUI.FileTrigger, { ...args }, fallback(args.children, e(MuxUI.Button, null, 'Choose files'))),
   Dialog: (args) => e(MuxUI.Dialog, {
     ...args,
-    title: fallback(args.title, 'Delete draft'),
+    title: fallback(args.title, 'Project settings'),
     trigger: fallback(args.trigger, e(MuxUI.Button, null, 'Open dialog')),
-  }, fallback(args.children, e('p', null, 'Delete draft content.'))),
+  }, fallback(args.children, e('p', null, 'Review the settings for this project.'))),
   Popover: (args) => e(MuxUI.Popover, {
     ...args,
     'aria-label': fallback(args['aria-label'], 'More actions'),
@@ -838,32 +1036,152 @@ function SidebarSpecimenIcon({ className }) {
   return e('svg', { className, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, 'aria-hidden': true }, e('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }));
 }
 
+const SIDEBAR_SAMPLE_ITEMS = [{ href: '#now', label: 'Now' }, { href: '#next', label: 'Next' }, { href: '#later', label: 'Later' }];
+
+/**
+ * The flat Sidebar props belong to different parts. Provider owns folding. Root owns hideBorder and density.
+ * The first NavItem takes label, href, current, external, badge, and icon; the Roadmap group takes items and
+ * its open state. Search, AccountCard, and FeatureCard take their own props. One navigation fills the column
+ * and the mobile drawer, and the consumer owns the FeatureCard, so dismissing it removes it here.
+ */
+function SidebarPreview({
+  collapsed, defaultCollapsed, onCollapsedChange, shortcut,
+  label, href, current, external, badge, icon,
+  items, expanded, defaultExpanded, onExpandedChange,
+  placeholder, value, onChange,
+  name, email, avatarSrc, status,
+  onDismiss,
+  ...root
+}) {
+  const [dismissed, setDismissed] = React.useState(false);
+  const Icon = typeof icon === 'function' ? icon : SidebarSpecimenIcon;
+  const navigation = e(MuxUI.Sidebar.NavList, null,
+    e(MuxUI.Sidebar.NavItem, { href: fallback(href, '#overview'), icon: Icon, current, external, badge }, fallback(label, 'Overview')),
+    e(MuxUI.Sidebar.NavItem, { icon: Icon, items: items ?? SIDEBAR_SAMPLE_ITEMS, expanded, defaultExpanded, onExpandedChange }, 'Roadmap'),
+    e(MuxUI.Sidebar.Section, { label: 'Projects' },
+      e(MuxUI.Sidebar.NavItem, { href: '#settings', icon: Icon }, 'Settings'),
+    ),
+  );
+  return e(MuxUI.Sidebar.Provider, { collapsed, defaultCollapsed, onCollapsedChange, shortcut },
+    e(MuxUI.Sidebar.Toggle),
+    e(MuxUI.Sidebar.Root, root,
+      e(MuxUI.Sidebar.Header, null, 'Field team'),
+      e(MuxUI.Sidebar.Search, { placeholder: fallback(placeholder, 'Search'), value, onChange }),
+      e(MuxUI.Sidebar.Divider),
+      navigation,
+      e(MuxUI.Sidebar.AccountCard, { name: fallback(name, 'Sample user'), email: fallback(email, 'sample@example.com'), avatarSrc, status }),
+      e(MuxUI.Sidebar.AccountMenu, null, 'Account'),
+      dismissed ? null : e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => { onDismiss?.(); setDismissed(true); } }),
+    ),
+    e(MuxUI.Sidebar.MobileTrigger, { logo: 'Field team' }, navigation),
+  );
+}
+
+const COMMAND_PALETTE_SAMPLE_COMMANDS = [
+  { id: 'save', title: 'Save', subtitle: 'Write the open document', group: 'Suggestions', meta: 'File', shortcut: ['Ctrl', 'S'] },
+  { id: 'open', title: 'Open', subtitle: 'Choose a document', group: 'Suggestions' },
+  { id: 'settings', title: 'Open settings', subtitle: 'Workspace preferences', group: 'Workspace', keywords: ['preferences'] },
+];
+
+/**
+ * The flat CommandPalette props belong to different parts. Root owns open state, size, and closeOnSelect.
+ * The Trigger owns disabled and the Backdrop owns dismissable. The useCommandPalette hook owns the commands,
+ * the query, filtering, sorting, grouping, and the action and error callbacks. Each Item reports activation
+ * through the hook's item props plus the caller's onActivate. The first command takes title, description,
+ * href, and target when no command list is supplied.
+ */
+function CommandPalettePreview({
+  open, defaultOpen = false, onOpenChange, size, closeOnSelect, id,
+  disabled, dismissable,
+  commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, close,
+  title, description, href, target, onActivate,
+}) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const setOpen = (next) => {
+    setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  const specimenCommands = React.useMemo(() => commands ?? COMMAND_PALETTE_SAMPLE_COMMANDS.map((command, index) => (index === 0
+    ? { ...command, ...(title && { title }), ...(description && { subtitle: description }), ...(href && { href }), ...(target && { target }) }
+    : command)), [commands, title, description, href, target]);
+  const palette = MuxUI.useCommandPalette({
+    commands: specimenCommands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, closeOnSelect,
+    close: () => {
+      setOpen(false);
+      close?.();
+    },
+  });
+  return e(MuxUI.CommandPalette.Root, { id, open: open ?? internalOpen, onOpenChange: setOpen, size, closeOnSelect },
+    e(MuxUI.CommandPalette.Trigger, { disabled }, 'Open command palette'),
+    e(MuxUI.CommandPalette.Backdrop, { dismissable },
+      e(MuxUI.CommandPalette.Popup, null,
+        e(MuxUI.CommandPalette.Title, null, 'Commands'),
+        e(MuxUI.CommandPalette.Description, null, 'Choose an action'),
+        e(MuxUI.CommandPalette.Content, null,
+          e(MuxUI.CommandPalette.SearchField, null, e(MuxUI.CommandPalette.Input, {
+            placeholder: 'Search commands',
+            value: palette.query,
+            onChange: (event) => palette.setQuery(event.currentTarget.value),
+          })),
+          // A group heading, an item description, and an item's meta and shortcut each carry text the open palette must keep readable.
+          e(MuxUI.CommandPalette.ListBox, null, palette.groupedCommands.map((group) => e(MuxUI.CommandPalette.Section, { key: group.id },
+            group.title ? e(MuxUI.CommandPalette.SectionHeader, null, group.title) : null,
+            group.commands.map((command) => {
+              const item = palette.getItemProps(command);
+              return e(MuxUI.CommandPalette.Item, { key: command.id, ...item, onActivate: (event) => { item.onActivate(event); onActivate?.(event); } },
+                e(MuxUI.CommandPalette.ItemContent, null,
+                  e(MuxUI.CommandPalette.ItemTitle, null, command.title),
+                  command.subtitle ? e(MuxUI.CommandPalette.ItemDescription, null, command.subtitle) : null,
+                ),
+                command.meta ? e(MuxUI.CommandPalette.ItemMeta, null, command.meta) : null,
+                command.shortcut ? e(MuxUI.CommandPalette.Shortcut, { keys: command.shortcut }) : null,
+              );
+            }),
+          ))),
+          palette.filteredCommands.length === 0 ? e(MuxUI.CommandPalette.Empty, null, 'No matching commands') : null,
+        ),
+        e(MuxUI.CommandPalette.Close, null, 'Close'),
+      ),
+    ),
+  );
+}
+
 Object.assign(ADAPTERS, {
-  AlertDialog: (args) => e(MuxUI.AlertDialog.Root, { defaultOpen: args.open ?? false, className: args.className },
-    e(MuxUI.AlertDialog.Trigger, { disabled: args.disabled }, 'Open alert'),
-    e(MuxUI.AlertDialog.Backdrop),
-    e(MuxUI.AlertDialog.Popup, null,
-      e(MuxUI.AlertDialog.Content, null,
-        e(MuxUI.AlertDialog.Title, null, 'Delete draft'),
-        e(MuxUI.AlertDialog.Description, null, 'This action cannot be undone.'),
-        e(MuxUI.AlertDialog.Actions, null,
-          e(MuxUI.AlertDialog.Close, { disabled: args.disabled }, 'Cancel'),
+  // Root owns open state, Trigger and Close own disabled and activation, and the shell nests
+  // Backdrop > Popup > Content as in the canonical example.
+  AlertDialog: ({ open, defaultOpen, onOpenChange, disabled, onActivate }) => e(MuxUI.AlertDialog.Root, { open, defaultOpen, onOpenChange },
+    e(MuxUI.AlertDialog.Trigger, { disabled, onActivate }, 'Delete item'),
+    e(MuxUI.AlertDialog.Backdrop, null,
+      e(MuxUI.AlertDialog.Popup, null,
+        e(MuxUI.AlertDialog.Content, null,
+          e(MuxUI.AlertDialog.Title, null, 'Delete item?'),
+          e(MuxUI.AlertDialog.Description, null, 'This action cannot be undone.'),
+          e(MuxUI.AlertDialog.Actions, null,
+            e(MuxUI.AlertDialog.Close, { disabled, onActivate }, 'Cancel'),
+          ),
         ),
       ),
     ),
   ),
-  Avatar: (args) => e(MuxUI.Avatar.Root, { ...args, 'aria-label': args['aria-label'] ?? 'Workspace avatar' },
-    e(MuxUI.Avatar.Image, { src: args.src ?? 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', alt: 'Workspace avatar' }),
-    e(MuxUI.Avatar.Fallback, null, 'WS'),
+  // Image owns the source, alt text, and load and error callbacks; Root keeps size and the rest. Without a source the
+  // initials show, since the only image the colour audit accepts is transparent and would hide them.
+  Avatar: ({ src, srcSet, alt, children, onLoad, onError, ...root }) => e(MuxUI.Avatar.Root, root,
+    e(MuxUI.Avatar.Image, { src: src || undefined, srcSet, alt: alt ?? 'Workspace avatar', onLoad, onError }),
+    e(MuxUI.Avatar.Fallback, null, fallback(children, 'WS')),
   ),
   ButtonGroup: (args) => e(MuxUI.ButtonGroup, { ...args },
     e(MuxUI.Button, { disabled: args.disabled }, 'Primary'),
     e(MuxUI.Button, { disabled: args.disabled, variant: 'neutral' }, 'Secondary'),
   ),
-  Card: (args) => e(MuxUI.Card.Root, { className: args.className },
-    e(MuxUI.Card.Header, null, 'Card title'),
-    e(MuxUI.Card.Body, null, 'Card content'),
-    e(MuxUI.Card.Footer, null, e(MuxUI.Button, { disabled: args.disabled }, 'Action')),
+  // Root is the static surface. Button is the interactive alternate root, so selected, pending,
+  // disabled, and activation belong to it; both take the shared variant and padding.
+  Card: ({ variant, padding, selected, pending, disabled, onActivate, className }) => e('div', { style: { display: 'grid', gap: '1rem', maxInlineSize: '20rem' } },
+    e(MuxUI.Card.Root, { variant, padding, className },
+      e(MuxUI.Card.Header, null, 'Card title'),
+      e(MuxUI.Card.Body, null, 'Card content'),
+      e(MuxUI.Card.Footer, null, e(MuxUI.Button, null, 'Action')),
+    ),
+    e(MuxUI.Card.Button, { variant, padding, selected, pending, disabled, onActivate }, 'Interactive card'),
   ),
   CheckboxField: (args) => e(MuxUI.CheckboxField.Root, { ...args },
     e(MuxUI.CheckboxField.Button, { disabled: args.disabled }, 'Enable notifications', e(MuxUI.CheckboxField.Indicator)),
@@ -871,56 +1189,33 @@ Object.assign(ADAPTERS, {
     e(MuxUI.CheckboxField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
   ColorModeToggle: (args) => e(ColorModeTogglePreview, args),
-  CommandPalette: (args) => {
-    const rootProps = { ...args };
-    if (args.open === undefined) {
-      delete rootProps.open;
-      rootProps.defaultOpen = args.defaultOpen ?? false;
-    }
-    return e(MuxUI.CommandPalette.Root, rootProps,
-      e(MuxUI.CommandPalette.Trigger, { disabled: args.disabled }, 'Open command palette'),
-      e(MuxUI.CommandPalette.Backdrop, null,
-        e(MuxUI.CommandPalette.Popup, null,
-          e(MuxUI.CommandPalette.Title, null, 'Commands'),
-          e(MuxUI.CommandPalette.Description, null, 'Choose an action'),
-          e(MuxUI.CommandPalette.Content, null,
-            e(MuxUI.CommandPalette.SearchField, null, e(MuxUI.CommandPalette.Input, { placeholder: 'Search commands' })),
-            // A group heading, an item description, and an item's meta and shortcut each carry text the open palette must keep readable.
-            e(MuxUI.CommandPalette.ListBox, null,
-              e(MuxUI.CommandPalette.Section, null,
-                e(MuxUI.CommandPalette.SectionHeader, null, 'Suggestions'),
-                e(MuxUI.CommandPalette.Item, { id: 'save', textValue: 'Save' },
-                  e(MuxUI.CommandPalette.ItemContent, null,
-                    e(MuxUI.CommandPalette.ItemTitle, null, 'Save'),
-                    e(MuxUI.CommandPalette.ItemDescription, null, 'Write the open document'),
-                  ),
-                  e(MuxUI.CommandPalette.ItemMeta, null, 'File'),
-                  e(MuxUI.CommandPalette.Shortcut, { keys: ['Ctrl', 'S'] }),
-                ),
-                e(MuxUI.CommandPalette.Item, { id: 'open', title: 'Open', description: 'Choose a document' }),
-              ),
-            ),
-          ),
-          e(MuxUI.CommandPalette.Close, null, 'Close'),
-        ),
-      ),
+  CommandPalette: (args) => e(CommandPalettePreview, args),
+  // One list of links fills the header and the drawer. href and current belong to the first link.
+  HeaderNav: ({ href, current, ...root }) => {
+    const navigation = [
+      e(MuxUI.HeaderNav.NavButton, { key: 'docs', href: fallback(href, '#docs'), current }, 'Docs'),
+      e(MuxUI.HeaderNav.NavButton, { key: 'components', href: '#components' }, 'Components'),
+      e(MuxUI.HeaderNav.NavButton, { key: 'blocks', href: '#blocks' }, 'Blocks'),
+    ];
+    return e(MuxUI.HeaderNav.Root, root,
+      e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
+      e(MuxUI.HeaderNav.Secondary, { 'aria-label': `${root['aria-label'] ?? 'Header navigation'} secondary` }, navigation),
+      e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, null, 'Sign in')),
+      e(MuxUI.HeaderNav.MobileTrigger, null, navigation),
     );
   },
-  HeaderNav: (args) => e(MuxUI.HeaderNav.Root, { ...args },
-    e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
-    e(MuxUI.HeaderNav.Secondary, { 'aria-label': `${args['aria-label'] ?? 'Header navigation'} secondary` }, 'Docs'),
-    e(MuxUI.HeaderNav.NavButton, { href: '#components' }, 'Components'),
-    e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, { disabled: args.disabled }, 'Sign in')),
-    e(MuxUI.HeaderNav.MobileTrigger, null, 'Menu'),
-  ),
-  Image: (args) => e(MuxUI.Image, {
-    ...args,
-    src: args.src ?? 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
-    alt: args.alt ?? 'Workspace preview',
-    width: args.width ?? 160,
-    height: args.height ?? 96,
-  }),
-  InputTags: (args) => e(MuxUI.InputTags.Root, { ...args, defaultValue: ['Mux', 'UI'], label: 'Tags', 'aria-label': 'Tags', placeholder: 'Add a tag' }),
+  Image: (args) => e(ImagePreview, args),
+  // Supplied seeds and text win; the sample tags and copy only fill what a story leaves out.
+  InputTags: (args) => {
+    const label = fallback(args.label, 'Tags');
+    return e(MuxUI.InputTags.Root, {
+      ...args,
+      ...(args.value === undefined ? { defaultValue: args.defaultValue ?? ['Mux', 'UI'] } : {}),
+      label,
+      'aria-label': args['aria-label'] ?? (args.label ? undefined : label),
+      placeholder: fallback(args.placeholder, 'Add a tag'),
+    });
+  },
   Input: (args) => e(MuxUI.Input.Root, { ...args },
     e(MuxUI.Input.Label, null, 'Name'),
     e(MuxUI.Input.Input, { placeholder: 'Enter a name', disabled: args.disabled }),
@@ -947,62 +1242,46 @@ Object.assign(ADAPTERS, {
     e(MuxUI.ProgressCircle.Label, null, 'Upload'),
     e(MuxUI.ProgressCircle.Value),
   ),
-  // RadioField is a compound control whose context is supplied by RadioGroup.
-  // The Storybook workspace consumes the public Mux package only, so use its
-  // options API here instead of reaching through to RAC's private context.
-  RadioField: (args) => e('div', { className: 'muxui-radio-field', 'data-invalid': args.invalid || undefined, 'data-disabled': args.disabled || undefined },
-    e(MuxUI.RadioGroup, {
-      'aria-label': 'Preferred',
-      value: args.value,
-      defaultValue: args.defaultValue ?? 'preferred',
-      disabled: args.disabled,
-      readOnly: args.readOnly,
-      required: args.required,
-      invalid: args.invalid,
-      options: [
-        { value: 'preferred', label: 'Preferred' },
-        { value: 'alternative', label: 'Alternative' },
-      ],
-      className: 'muxui-radio-field__group',
-    }),
-    e('span', { className: 'muxui-radio-field__description' }, 'Choose one option'),
-    args.invalid ? e('span', { className: 'muxui-radio-field__error' }, 'Invalid choice') : null,
-  ),
-  Sidebar: ({ collapsed, defaultCollapsed, onCollapsedChange, expanded, defaultExpanded, onExpandedChange, shortcut, ...args }) => {
-    return e(MuxUI.Sidebar.Provider, { collapsed, defaultCollapsed, onCollapsedChange, shortcut },
-      e(MuxUI.Sidebar.Toggle),
-      e(MuxUI.Sidebar.Root, { ...args },
-        e(MuxUI.Sidebar.Header, null, 'Workspace'),
-        e(MuxUI.Sidebar.Search, { placeholder: 'Search' }),
-        e(MuxUI.Sidebar.Divider),
-        e(MuxUI.Sidebar.NavList, null,
-          e(MuxUI.Sidebar.NavItem, { href: '#home', icon: SidebarSpecimenIcon, current: true }, 'Home'),
-          e(MuxUI.Sidebar.NavItem, { href: '#reports', icon: SidebarSpecimenIcon, expanded, defaultExpanded, onExpandedChange, items: [{ href: '#weekly', label: 'Weekly' }, { href: '#monthly', label: 'Monthly' }] }, 'Reports'),
-          e(MuxUI.Sidebar.Section, { label: 'Projects' },
-            e(MuxUI.Sidebar.NavItem, { href: '#settings', icon: SidebarSpecimenIcon }, 'Settings'),
-          ),
-        ),
-        e(MuxUI.Sidebar.AccountCard, { name: 'Andrew', email: 'andrew@example.com' }),
-        e(MuxUI.Sidebar.AccountMenu, null, 'Account'),
-        e(MuxUI.Sidebar.MobileTrigger, null, 'Menu'),
-        e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens' }),
-      ),
+  // RadioField supplies the parts of one radio, and RadioGroup supplies the selection: the first
+  // field takes the field props and starts selected, the second is an unselected comparison with its own value.
+  RadioField: ({ value, size, disabled, invalid, required, readOnly }) => {
+    const first = String(fallback(value, 'monthly'));
+    const second = first === 'annual' ? 'monthly' : 'annual';
+    const planName = (plan) => (plan === 'monthly' ? 'Monthly' : plan === 'annual' ? 'Annual' : plan);
+    const field = (fieldValue, props) => e(MuxUI.RadioField.Root, { value: fieldValue, size, ...props },
+      e(MuxUI.RadioField.Button, null, e(MuxUI.RadioField.Indicator, null, e(MuxUI.RadioField.Dot)), planName(fieldValue)),
+      e(MuxUI.RadioField.Description, null, 'Choose one plan'),
+      e(MuxUI.RadioField.Error, null, 'Invalid choice'),
+    );
+    return e(MuxUI.RadioGroup, { key: first, label: 'Plan', defaultValue: first, size },
+      field(first, { disabled, invalid, required, readOnly }),
+      field(second),
     );
   },
+  Sidebar: (args) => e(SidebarPreview, args),
   SwitchField: (args) => e(MuxUI.SwitchField.Root, { ...args },
     e(MuxUI.SwitchField.Button, { disabled: args.disabled }, 'Enabled', e(MuxUI.SwitchField.Thumb)),
     e(MuxUI.SwitchField.Description, null, 'Enable updates'),
     e(MuxUI.SwitchField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
-  TagSelect: (args) => e(MuxUI.TagSelect.Root, { ...args, label: 'Topics', items: [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }] },
-    e(MuxUI.TagSelect.Item, { id: 'design' }, 'Design'),
-    e(MuxUI.TagSelect.Item, { id: 'code' }, 'Code'),
-  ),
-  TextArea: (args) => e(MuxUI.TextArea.Root, { ...args },
+  // Items and label come from the story. One resolver names both the popup options and the selected tags, the
+  // caller's getItemLabel or TagSelect's own name, label, then id fallback.
+  TagSelect: (args) => {
+    const getItemLabel = args.getItemLabel ?? ((item) => String(item.name ?? item.label ?? item.id));
+    return e(MuxUI.TagSelect.Root, {
+      ...args,
+      label: fallback(args.label, 'Topics'),
+      items: ownArg(args, 'items', TAG_SELECT_SAMPLE_ITEMS),
+      placeholder: fallback(args.placeholder, 'Add a topic'),
+      getItemLabel,
+    }, (item) => getItemLabel(item));
+  },
+  // Root owns field state and the string callback; the textarea owns the native attributes.
+  TextArea: ({ rows, maxLength, placeholder, ...root }) => e(MuxUI.TextArea.Root, root,
     e(MuxUI.TextArea.Label, null, 'Notes'),
-    e(MuxUI.TextArea.TextArea, { placeholder: 'Add notes', disabled: args.disabled }),
+    e(MuxUI.TextArea.TextArea, { rows, maxLength, placeholder: fallback(placeholder, 'Add notes') }),
     e(MuxUI.TextArea.Description, null, 'Optional'),
-    e(MuxUI.TextArea.Error, null, args.invalid ? 'Invalid notes' : null),
+    e(MuxUI.TextArea.Error, null, root.invalid ? 'Invalid notes' : null),
   ),
   // Controls cannot filter options by another arg, so xs falls back to sm for
   // the roles that do not define it instead of throwing.
@@ -1024,17 +1303,22 @@ Object.assign(ADAPTERS, {
   e('option', { value: '' }, 'Choose a panel'),
   e('option', { value: 'inbox' }, 'Inbox'),
   e('option', { value: 'research' }, 'Research')),
-  Lightbox: (args) => e(MuxUI.Lightbox, { ...args, items: args.items ?? [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }] },
-    e(MuxUI.LightboxTrigger, { itemKey: 'one', disabled: args.disabled }, 'Open gallery'),
-    e(MuxUI.LightboxBackdrop, null,
-      e(MuxUI.LightboxPopup, null,
-        e(MuxUI.LightboxContent, null, e(MuxUI.LightboxCaption, null, 'Gallery item')),
-        e(MuxUI.LightboxPrevious, null),
-        e(MuxUI.LightboxNext, null),
-        e(MuxUI.LightboxClose, null),
+  // Each item opens the gallery at its own key, and the content follows the selected item.
+  Lightbox: (args) => {
+    const items = Array.isArray(args.items) ? args.items : LIGHTBOX_SAMPLE_ITEMS;
+    return e(MuxUI.Lightbox, { ...args, items, renderContent: args.renderContent ?? ((_item, { index, count }) => e('p', null, `Item ${index + 1} of ${count}`)) },
+      items.map((item) => e(MuxUI.LightboxTrigger, { key: item.key, itemKey: item.key }, `Open ${item.label ?? item.key}`)),
+      e(MuxUI.LightboxBackdrop, null,
+        e(MuxUI.LightboxPopup, null,
+          e(MuxUI.LightboxContent),
+          e(MuxUI.LightboxCaption),
+          e(MuxUI.LightboxPrevious, null),
+          e(MuxUI.LightboxNext, null),
+          e(MuxUI.LightboxClose, null),
+        ),
       ),
-    ),
-  ),
+    );
+  },
   Markdown: (args) => e(Markdown, { ...args, source: args.source ?? '## Mux UI\n\nA **bounded** example.' }),
   TextEditor: ({ defaultValue, ...args }) => e(TextEditor, { ...args, label: fallback(args.label, 'Note'), ...(args.value === undefined ? { defaultValue: defaultValue ?? TEXT_EDITOR_SAMPLE_DOCUMENT } : {}) }),
 });
@@ -1079,6 +1363,19 @@ function scheduleOpenInteraction(element, family) {
   const handle = scheduleFrame(() => {
     if (target.isConnected && target.getAttribute('aria-expanded') !== 'true') target.click();
   });
+  return () => cancelFrame(handle);
+}
+
+// React Aria builds a tag group's rows after mount, so wait for the first one to appear before focusing it.
+function scheduleTagFocus(element) {
+  let attempts = 0;
+  let handle;
+  const attempt = () => {
+    const tag = element?.querySelector('.muxui-input-tags__tag');
+    if (tag) tag.focus();
+    else if ((attempts += 1) < 20) handle = scheduleFrame(attempt);
+  };
+  handle = scheduleFrame(attempt);
   return () => cancelFrame(handle);
 }
 
@@ -1232,6 +1529,7 @@ function StateVariant({ family, state, args, available }) {
   }, []);
   React.useEffect(() => {
     if (state === 'focused') focusStateTarget(stateRef.current);
+    if (state === 'tag-focused') return scheduleTagFocus(stateRef.current);
     if (state === 'drop-target' || state === 'dragging') dispatchDragEnter(stateRef.current);
     if (state !== 'open' || !INTERACTION_OPEN_FAMILIES.has(family)) return undefined;
     return scheduleOpenInteraction(stateRef.current, family);
@@ -1266,12 +1564,18 @@ function StateVariant({ family, state, args, available }) {
     ? e('p', {
       className: 'muxui-storybook-state-unavailable',
       'data-muxui-storybook-state': 'unavailable',
-    }, `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
+    }, STATE_LIMITATIONS[`${family}:${state}`]
+      ? `Unavailable: MuxUI ${family} cannot show the ${state} state here because ${STATE_LIMITATIONS[`${family}:${state}`]}.`
+      : `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
     : lifecycleAttribute
     ? activeLifecycleState === state
       ? e(LifecycleTransition, { family, state, args: variantArgs })
       : e('p', { className: 'muxui-storybook-lifecycle-inactive' }, `Select ${state} to inspect this lifecycle state.`)
     : renderFamily(family, variantArgs);
+  // An open Menu popup floats over its neighbours, so its rows reserve room above and below the trigger.
+  const specimen = family === 'Menu' && (state === 'open' || state === 'placement')
+    ? e('div', { 'data-muxui-storybook-popup-room': '', style: { display: 'flex', alignItems: 'center', minBlockSize: '14rem' } }, rendered)
+    : rendered;
   const stateContent = e('section', {
     ref: stateRef,
     className: 'muxui-storybook-state',
@@ -1281,25 +1585,18 @@ function StateVariant({ family, state, args, available }) {
     // as well so the Storybook state matrix remains axe-clean.
     inert: hiddenByOverlay ? true : undefined,
     'data-muxui-storybook-lifecycle': lifecycleAttribute ? state : undefined,
-  }, e('h3', { id: labelId }, state), rendered);
+  }, e('h3', { id: labelId }, state), specimen);
   return marker ? e(OverlayHost, { marker }, stateContent) : stateContent;
 }
 
 export function renderStateCoverage(record, args = storyArgsForBinding(record.binding, 'states', record.family)) {
   const variants = stateCoverageForBinding(record.binding, record.family);
-  const defaults = storyArgsForBinding(record.binding, 'states', record.family);
-  // These specimens need binding defaults removed so their named state can initialize them.
-  // Changed controls still override the state. Other families retain their existing precedence.
-  const overrides = ['ColorModeToggle', 'GridList', 'ListBox', 'ProgressCircle', 'Separator'].includes(record.family)
-    ? Object.fromEntries(Object.entries(args).filter(([name, value]) =>
-      !Object.hasOwn(defaults, name) || serializableEventValue(value) !== serializableEventValue(defaults[name])))
-    : args;
   const stateMatrix = e('div', { className: 'muxui-storybook-states' }, variants.map(({ name }) => e(StateVariant, {
     key: name,
     family: record.family,
     state: name,
     available: stateIsSupported(record.binding, name, record.family),
-    args: stateArgsForBinding(record.binding, name, record.family, overrides),
+    args: stateArgsForBinding(record.binding, name, record.family, args),
   })));
   const lifecycleStates = variants.map(({ name }) => name).filter((name) => LIFECYCLE_ATTRIBUTES[name]);
   return lifecycleStates.length > 0
@@ -1321,6 +1618,11 @@ function serializableEventValue(value) {
   if (value === undefined) return 'undefined';
   if (value === null) return 'null';
   if (value instanceof Event) return `{type:${value.type}}`;
+  // A React event carries a fiber graph; log what a reader of the log can use.
+  if (value && typeof value === 'object' && value.nativeEvent instanceof Event) {
+    const text = value.target && 'value' in value.target ? `,value:${JSON.stringify(value.target.value)}` : '';
+    return `{type:${value.type}${text}}`;
+  }
   if (typeof File !== 'undefined' && value instanceof File) return `{file:${value.name}}`;
   if (value instanceof Set) return JSON.stringify([...value]);
   if (typeof value === 'function') return '[function]';
@@ -1384,6 +1686,8 @@ function eventForControlledProp(controlled, family) {
   if (controlled === 'collapsed') return 'collapsedChange';
   if (controlled === 'expanded' || controlled === 'expandedIds') return 'expandedChange';
   if (controlled === 'selectedIds' || controlled === 'selectedKeys') return 'selectionChange';
+  if (controlled === 'selectedKey') return 'selectedChange';
+  if (controlled === 'query') return 'queryChange';
   if (controlled === 'mode') return 'modeChange';
   if (controlled === 'sizes') return 'sizesChange';
   if (controlled === 'selectedId') return 'select';
@@ -1555,6 +1859,14 @@ function anatomyArgsForBinding(record, sourceArgs) {
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
       e(MuxUI.ListBox.Item, { id: 'two' }, 'Two'));
   }
+  // Sections and a separator give the list and the open popup every Menu part.
+  if (record.family === 'Menu') {
+    args.children = [
+      e(MuxUI.Menu.Section, { key: 'editing', title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save' }, 'Save')),
+      e(MuxUI.Menu.Separator, { key: 'separator' }),
+      e(MuxUI.Menu.Item, { key: 'delete', id: 'delete' }, 'Delete'),
+    ];
+  }
   if (record.family === 'CodeBlock') args.mode = 'diff';
   if (record.family === 'PromptComposer') args.error = 'Unable to send. Try again.';
   if (record.family === 'Message') args.defaultSourcesExpanded = true;
@@ -1594,15 +1906,7 @@ function AnatomyHarness({ record, args }) {
     ? e(MuxUI.ColorPicker, { defaultValue: '#ff0000' },
       e(MuxUI.ColorSlider, { label: 'Red', channel: 'red', defaultValue: '#ff0000' }),
       e(MuxUI.ColorSwatch, { color: '#ff0000' }))
-    : record.family === 'Menu'
-      ? e(MuxUI.Menu.Root, { defaultOpen: true },
-        e(MuxUI.Menu.Trigger, null, 'Actions'),
-        e(MuxUI.Menu.Popup, null,
-          e(MuxUI.Menu.List, { 'aria-label': 'Actions' },
-            e(MuxUI.Menu.Section, { title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save' }, 'Save')),
-            e(MuxUI.Menu.Separator),
-            e(MuxUI.Menu.Item, { id: 'delete' }, 'Delete'))))
-      : null;
+    : null;
   const anatomyStatus = e('div', { className: 'muxui-storybook-anatomy-status' },
     e('p', null, 'The state matrix renders the live component parts. Each row resolves its real DOM hook after mount.'),
     e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => e('li', {
@@ -2070,7 +2374,14 @@ const BROWSER_PROOF_PLANS = {
   },
   GridList: collectionSelectionPlan('GridList', '.muxui-grid-list-item'),
   ListBox: collectionSelectionPlan('ListBox', '.muxui-list-box-item'),
-  Menu: activationPlan('Menu', '.muxui-menu-item', 'action'),
+  // The proof story logs every event, which selects the triggered composition, so the items mount once it opens.
+  Menu: async ({ canvasElement }) => {
+    canvasElement.querySelector('.muxui-menu-trigger')?.click();
+    const item = await waitForVisibleBrowserElement('.muxui-menu-item', 'Menu');
+    item.focus();
+    item.click();
+    await waitForBrowserEvent(canvasElement, 'action', 'Menu');
+  },
   RadioGroup: activationPlan('RadioGroup', '.muxui-radio', 'change'),
   RangeCalendar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-range-calendar', 'RangeCalendar');
@@ -2177,7 +2488,7 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   MultiSelect: '.muxui-multi-select__trigger',
   PaymentInput: '.muxui-payment-input__input',
   ProgressCircle: '.muxui-progress-circle',
-  RadioField: '.muxui-radio-field .muxui-radio',
+  RadioField: '.muxui-radio-field__button',
   Resizable: '.muxui-resizable-handle',
   SelectNative: '.muxui-select-native',
   Sidebar: '.muxui-sidebar__mobile-menu-btn',
@@ -2213,7 +2524,8 @@ export function createEventsStory(record) {
   };
   return {
     name: 'Events',
-    args: storyArgsForBinding(record.binding, 'default', record.family),
+    // An avatar reports load only once it has an image; the transparent pixel is the one the colour audit accepts.
+    args: { ...storyArgsForBinding(record.binding, 'default', record.family), ...(record.family === 'Avatar' && { src: TRANSPARENT_PIXEL }) },
     argTypes: argTypesForBinding(record.binding),
     render: (args) => renderEvents(args),
   };
