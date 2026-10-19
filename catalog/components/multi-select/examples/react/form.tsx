@@ -31,9 +31,6 @@ export function MultiSelectFormExample() {
         items={options}
         selectedKeys={selected}
         onSelectionChange={setSelected}
-        // Reset and Select all only call these; the application changes the selection.
-        onReset={() => setSelected(new Set())}
-        onSelectAll={() => setSelected('all')}
         invalid={missing}
         errorMessage="Choose at least one technology."
       >

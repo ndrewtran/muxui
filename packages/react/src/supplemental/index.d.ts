@@ -259,16 +259,12 @@ export type MultiSelectItem = { id: React.Key; [key: string]: unknown };
 export type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; supportingText?: React.ReactNode; emptyStateTitle?: string; emptyStateDescription?: string; items?: Iterable<T>; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key> | 'all'; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key> | 'all') => void; showSearch?: boolean; showFooter?: boolean; onReset?: () => void; onSelectAll?: () => void; selectedCountFormatter?: (count: number) => React.ReactNode };
 export type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;
 export type MultiSelectItemProps = React.HTMLAttributes<HTMLDivElement> & { disabled?: boolean; textValue?: string };
-export type MultiSelectFooterProps = PartProps<HTMLDivElement>;
-export type MultiSelectEmptyStateProps = PartProps<HTMLDivElement>;
 export interface MultiSelectRootComponent {
   <T extends MultiSelectItem = MultiSelectItem>(props: MultiSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
 }
 export declare const MultiSelect: {
   Root: MultiSelectRootComponent;
   Item: React.ForwardRefExoticComponent<MultiSelectItemProps & React.RefAttributes<HTMLDivElement>>;
-  Footer: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  EmptyState: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
 };
 
 export type PaymentInputProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & { value?: string; defaultValue?: string; onChange?: (value: string) => void };
