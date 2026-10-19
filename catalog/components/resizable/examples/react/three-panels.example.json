@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:resizable-three-panels-react",
+  "kind": "example",
+  "name": "Resizable with three panels",
+  "summary": "Control the sizes of three panels with two handles, with bounds on each panel and the source of each change.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:resizable#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/resizable/examples/react/three-panels.tsx"
+}

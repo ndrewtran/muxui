@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tag-group-removable-react",
+  "kind": "example",
+  "name": "Removable TagGroup",
+  "summary": "Remove tags by id from a list held in state, with a message when none are left.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tag-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/tag-group/examples/react/removable.tsx"
+}

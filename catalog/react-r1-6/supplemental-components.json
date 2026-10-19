@@ -140,7 +140,8 @@
       "family": "HeaderNav",
       "slug": "header-nav",
       "examples": [
-        "catalog/components/header-nav/examples/react/basic.tsx"
+        "catalog/components/header-nav/examples/react/basic.tsx",
+        "catalog/components/header-nav/examples/react/responsive.tsx"
       ],
       "export": {
         "module": ".",
@@ -315,7 +316,8 @@
       "family": "Resizable",
       "slug": "resizable",
       "examples": [
-        "catalog/components/resizable/examples/react/basic.tsx"
+        "catalog/components/resizable/examples/react/basic.tsx",
+        "catalog/components/resizable/examples/react/three-panels.tsx"
       ],
       "export": {
         "module": ".",
@@ -343,7 +345,8 @@
       "family": "Sidebar",
       "slug": "sidebar",
       "examples": [
-        "catalog/components/sidebar/examples/react/basic.tsx"
+        "catalog/components/sidebar/examples/react/basic.tsx",
+        "catalog/components/sidebar/examples/react/responsive.tsx"
       ],
       "export": {
         "module": ".",

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:sidebar-responsive-react",
+  "kind": "example",
+  "name": "Responsive Sidebar",
+  "summary": "Show the sidebar as a column from a container width and as a header with a navigation drawer below it, using one navigation for both.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:sidebar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/sidebar/examples/react/responsive.tsx"
+}

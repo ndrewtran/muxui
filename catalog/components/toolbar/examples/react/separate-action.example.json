@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:toolbar-separate-action-react",
+  "kind": "example",
+  "name": "Toolbar with a separate action",
+  "summary": "Place a Button beside the Toolbar, outside its direct-child Button styling.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:toolbar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/toolbar/examples/react/separate-action.tsx"
+}
