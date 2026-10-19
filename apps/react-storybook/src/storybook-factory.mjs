@@ -378,6 +378,8 @@ function setSelectedState(args, props, family, preserveExplicit) {
 const STATE_LIMITATIONS = Object.freeze({
   ...Object.fromEntries(['sm', 'md', 'lg', 'full'].map((radius) => [`Image:radius-${radius}`,
     'the colour audit accepts only a transparent image, so a radius has nothing visible to round'])),
+  'DropZone:disabled': 'a disabled DropZone root has no accessible disabled signal, so its dimmed text fails the axe contrast audit',
+  'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
   'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
   'InputTags:disabled': 'a disabled InputTags label has no accessible disabled signal, so its dimmed colour fails the axe contrast audit',
 });

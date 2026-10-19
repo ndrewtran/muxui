@@ -777,6 +777,27 @@ test('Dialog specimen is a settings dialog because destructive confirmation belo
   });
 });
 
+test('DropZone disabled and Dialog open rows state their limitation instead of rendering a stand-in', () => {
+  const unavailableRow = (family, name, reason) => {
+    const { sections } = stateSections(family);
+    const row = sections.get(name);
+    const message = row.querySelector('[data-muxui-storybook-state="unavailable"]');
+    assert.ok(message, `${family}/${name} is labelled unavailable`);
+    assert.match(message.textContent, new RegExp(`^Unavailable: MuxUI ${family} cannot show the ${name} state here because ${reason}`, 'u'));
+    // Nothing else renders in the row: no enabled drop zone, no closed dialog trigger.
+    assert.deepEqual([...row.children].map((node) => node.localName), ['h3', 'p']);
+    return sections;
+  };
+  const dropZone = unavailableRow('DropZone', 'disabled', 'a disabled DropZone root has no accessible disabled signal');
+  assert.equal(dropZone.get('idle').querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  assert.ok(dropZone.get('idle').querySelector('.muxui-drop-zone'));
+  const dialog = unavailableRow('Dialog', 'open', 'a truly open modal makes the whole page inert');
+  assert.ok(dialog.get('closed').querySelector('.muxui-dialog-trigger'), 'the closed row still renders');
+  assert.equal(dialog.get('entering').querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  // The adapters themselves still disable and open on request.
+  assert.equal(new JSDOM(renderToStaticMarkup(renderFamily('DropZone', { disabled: true }))).window.document.querySelector('.muxui-drop-zone').hasAttribute('data-disabled'), true);
+});
+
 test('HeaderNav routes href and current to the link and fills the drawer with the same destinations', async () => {
   const links = (args) => [...new JSDOM(renderToStaticMarkup(renderFamily('HeaderNav', args))).window.document.querySelectorAll('.muxui-header-nav__secondary a')];
   const [docs, components, blocks] = links({ href: '/guide', current: true });
