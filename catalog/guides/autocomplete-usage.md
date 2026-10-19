@@ -4,6 +4,6 @@ Use `label` or an explicit `aria-label`/`aria-labelledby` name. Suggestions are 
 
 ## In a form
 
-Give Autocomplete a name to submit it with a form. The form receives the value of the selected suggestion, or the typed text when no suggestion was selected, while the input shows the suggestion's label. The Autocomplete in a form example reads the chosen suggestion as it is selected and the submitted value from the form data.
+Give Autocomplete a name to submit it with a form. The form receives the selected suggestion's value, or the typed text when nothing was selected, while the input shows the suggestion's label. The Autocomplete in a form example reads the selection and the submitted value.
 
-While the suggestion list is open, Escape closes it and keeps the typed text, and Enter selects the highlighted suggestion without submitting the form. With the list closed, Escape clears the text. When no suggestion is highlighted, or the list is closed, Enter submits the form as usual. The [Behavior](#behavior) section lists each case.
+Escape and Enter act on the open suggestion list before the field and the form: Escape closes the list and keeps the text, and Enter selects the highlighted suggestion without submitting. The [Behavior](#behavior) section lists what each key does with the list open and closed.
