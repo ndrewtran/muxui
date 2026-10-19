@@ -2244,6 +2244,18 @@
   border-radius: var(--muxui-semantic-shape-container-radius);
 }
 
+/* A vertical Toolbar stacks its controls in the order Up and Down arrows visit
+   them. Direct Buttons drop their fit-content width so they fill the column
+   like the other controls. */
+.muxui-toolbar[aria-orientation='vertical'] {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.muxui-toolbar[aria-orientation='vertical'] > .muxui-button {
+  width: auto;
+}
+
 /* Direct button children use the compact neutral toolbar intent. */
 .muxui-toolbar > .muxui-button {
   box-sizing: border-box;
@@ -3086,12 +3098,12 @@
 }
 
 /* Virtualizer composes the same visible list surface as ListBox while keeping
-   its own fixed viewport and virtualized item layout. */
+   its own fixed viewport and virtualized item layout. React Aria's layout
+   spacer is its only in-flow child and sets the scroll extent, so the viewport
+   stays block: a column flex container would shrink the spacer to the viewport. */
 .muxui-virtualizer {
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-gap);
+  display: block;
   max-height: none;
   padding: var(--muxui-semantic-layout-inset-tight);
   background-color: var(--muxui-popup-bg);

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:1d3d76256a8701d4af729bb15eb59f3b77aaceb0f8dc8f3eeb2572913f51410d -->
+<!-- @generated-content-sha256: sha256:91ab904c378e04acf86b8418134f6638564f99139eb2278ecbbab2c62958df83 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -237,6 +237,7 @@ Public parts: `root`, `item`.
 
 - Only a bounded visible window plus overscan is mounted.
 - The focused item stays mounted wherever it is scrolled, so the mounted count can exceed the visible window plus overscan.
+- The default stack layout's scroll extent is the item count times itemHeight, plus the viewport's padding, so scrolling to the end reaches the last row.
 - The default stack layout is a list of the items passed, in rows placed itemHeight apart, and its rows cannot be selected.
 - Stack layout renders items only. It does not virtualize children, a render function, or another collection such as Table or Tree.
 - height and itemHeight are in pixels and must be finite numbers greater than 0, or Virtualizer throws a TypeError.
