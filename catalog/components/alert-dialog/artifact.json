@@ -71,13 +71,18 @@
         }
       },
       "behavior": [
-        "Escape and backdrop dismissal follow React Aria modal semantics.",
-        "Close returns focus to the trigger.",
+        "Open state is controlled with open and onOpenChange, or starts from defaultOpen when uncontrolled.",
+        "Escape closes the dialog, and pressing the backdrop does not.",
+        "A close request reaches onOpenChange(false), and a controlled owner keeps the dialog open by leaving open unchanged.",
+        "Close is a button in the close slot. It closes the dialog and runs no confirming action.",
+        "The confirming action is the application's own button, such as one placed in Actions.",
+        "AlertDialog does not track the confirming action's progress or outcome, so the application owns them.",
+        "Closing returns focus to the trigger.",
         "Keep muxui-alert-dialog__backdrop, __popup, __content, __title, __description, __actions, and __close selectors when consumer className values customize the corresponding parts."
       ],
       "accessibility": [
-        "Escape and backdrop dismissal follow React Aria modal semantics.",
-        "Close returns focus to the trigger.",
+        "Escape closes the dialog, and pressing the backdrop does not.",
+        "Closing returns focus to the trigger.",
         "Associate Title and Description automatically when they are composed inside Content, retaining explicit IDs.",
         "Merge Content aria-describedby references with the composed Description relationship."
       ],
