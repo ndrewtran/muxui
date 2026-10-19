@@ -406,21 +406,27 @@ function makeCheckboxField() {
 
 const RadioFieldContext = React.createContext(undefined);
 
+function useRadioGroupState() {
+  const state = React.useContext(AriaRadioGroupStateContext);
+  if (!state) throw new Error('RadioField must be used inside RadioGroup');
+  return state;
+}
+
 function splitIds(value) {
   return typeof value === 'string' ? value.trim().split(/\s+/u).filter(Boolean) : [];
 }
 
 function makeRadioField() {
-  const Root = React.forwardRef(function RadioFieldRoot({ onChange: _onChange, disabled, invalid, required, readOnly, size: sizeProp, className, ...props }, ref) {
+  const Root = React.forwardRef(function RadioFieldRoot({ onChange: _onChange, disabled, invalid, required, size: sizeProp, className, ...props }, ref) {
     const inheritedSize = React.useContext(ChoiceControlSizeContext);
-    const radioGroupState = React.useContext(AriaRadioGroupStateContext);
+    const radioGroupState = useRadioGroupState();
     const size = normalizeChoiceControlSize(sizeProp ?? inheritedSize, 'RadioField');
     const fallbackErrorId = React.useId();
     const inputRef = React.useRef(null);
     const [errorId, setErrorId] = React.useState(undefined);
-    const effectiveInvalid = Boolean(invalid || radioGroupState?.isInvalid);
+    const effectiveInvalid = Boolean(invalid || radioGroupState.isInvalid);
     const context = React.useMemo(() => ({ effectiveInvalid, errorId, fallbackErrorId, inputRef, setErrorId }), [effectiveInvalid, errorId, fallbackErrorId]);
-    return h(RadioFieldContext.Provider, { value: context }, h(AriaRadioField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...props }), ref, inputRef, 'data-size': size, className: cx('muxui-radio-field', size !== 'md' && `muxui-radio-field--${size}`, className) }));
+    return h(RadioFieldContext.Provider, { value: context }, h(AriaRadioField, { ...mappedFieldProps({ disabled, invalid, required, ...props }), ref, inputRef, 'data-size': size, className: cx('muxui-radio-field', size !== 'md' && `muxui-radio-field--${size}`, className) }));
   });
   const Button = React.forwardRef(function RadioFieldButton({ disabled, className, 'aria-describedby': ariaDescribedBy, 'aria-errormessage': ariaErrorMessage, ...props }, ref) {
     const field = React.useContext(RadioFieldContext);
@@ -671,6 +677,7 @@ export const InputTags = {
     };
     const tagsNode = entries.length > 0 && h('div', { ref: tagListRef, onKeyDown: handleTagListKeyDown, className: 'muxui-input-tags__tag-wrapper' }, h(AriaTagGroup, { 'aria-label': typeof label === 'string' ? label : 'Tags', onRemove: handleTagRemove, className: 'muxui-input-tags__tag-group' }, h(AriaTagList, { items: entries, className: 'muxui-input-tags__tag-list' }, (entry) => h(AriaTag, { id: entry.id, isDisabled: disabled, className: 'muxui-input-tags__tag' }, entry.label))));
     const labelId = label ? `muxui-input-tags-label-${instanceId}` : undefined;
+    const inputId = `muxui-input-tags-input-${instanceId}`;
     const descriptionId = `muxui-input-tags-description-${instanceId}`;
     const errorId = `muxui-input-tags-error-${instanceId}`;
     const supportingText = invalid && errorMessage
@@ -697,7 +704,7 @@ export const InputTags = {
         tagsInDom?.[tagsInDom.length - 1]?.focus();
       }
     };
-    return h('div', { ...props, ref, className: cx('muxui-input-tags', size !== 'md' && `muxui-input-tags--${size}`, tagPlacement === 'below' && 'muxui-input-tags--below', className), 'data-size': size, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-input-tags__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), h(AriaGroup, { isDisabled: disabled, isInvalid: invalid, 'aria-labelledby': labelId, 'aria-required': required || undefined, className: 'muxui-input-tags__group' }, tagPlacement === 'inline' && tagsNode, h(AriaInput, { ...inputAriaProps, ref: inputRef, value: inputValue, placeholder: entries.length === 0 || tagPlacement === 'below' ? placeholder : undefined, onChange: (event) => setInputValue(event.target.value), onKeyDown: handleInputKeyDown, className: 'muxui-input-tags__input', disabled, 'aria-describedby': describedby, 'aria-invalid': ariaInvalid ?? (invalid || undefined), 'aria-required': ariaRequired ?? (required || undefined) })), tagPlacement === 'below' && tagsNode ? h('div', { className: 'muxui-input-tags__tags' }, tagsNode) : null, supportingText ? h('span', { id: supportingText.id, className: supportingText.className }, supportingText.children) : null);
+    return h('div', { ...props, ref, className: cx('muxui-input-tags', size !== 'md' && `muxui-input-tags--${size}`, tagPlacement === 'below' && 'muxui-input-tags--below', className), 'data-size': size, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('label', { id: labelId, htmlFor: inputId, className: 'muxui-input-tags__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), h(AriaGroup, { isDisabled: disabled, isInvalid: invalid, 'aria-labelledby': labelId, 'aria-required': required || undefined, className: 'muxui-input-tags__group' }, tagPlacement === 'inline' && tagsNode, h(AriaInput, { ...inputAriaProps, id: inputId, ref: inputRef, value: inputValue, placeholder: entries.length === 0 || tagPlacement === 'below' ? placeholder : undefined, onChange: (event) => setInputValue(event.target.value), onKeyDown: handleInputKeyDown, className: 'muxui-input-tags__input', disabled, 'aria-describedby': describedby, 'aria-invalid': ariaInvalid ?? (invalid || undefined), 'aria-required': ariaRequired ?? (required || undefined) })), tagPlacement === 'below' && tagsNode ? h('div', { className: 'muxui-input-tags__tags' }, tagsNode) : null, supportingText ? h('span', { id: supportingText.id, className: supportingText.className }, supportingText.children) : null);
   }),
 };
 

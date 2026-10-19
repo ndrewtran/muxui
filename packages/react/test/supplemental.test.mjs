@@ -100,6 +100,13 @@ test('supplemental field and collection modules preserve accessible state hooks 
 });
 
 
+test('RadioField outside a RadioGroup throws a Mux error that names the group', () => {
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(RadioField.Root, { value: 'monthly' }, React.createElement(RadioField.Button, null, 'Monthly'))),
+    { message: 'RadioField must be used inside RadioGroup' },
+  );
+});
+
 test('RadioField links group-invalid errors without replacing descriptions or caller references', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -257,6 +264,18 @@ test('InputTags gives its editable input the label while preserving consumer ove
   const overriddenInput = overridden.window.document.querySelector('.muxui-input-tags__input');
   assert.equal(overriddenInput?.getAttribute('aria-label'), 'Tag editor');
   assert.equal(overriddenInput?.getAttribute('aria-labelledby'), null);
+});
+
+test('InputTags renders its visible label as a label for the input, including when disabled', () => {
+  for (const disabled of [false, true]) {
+    const { document } = new JSDOM(renderToStaticMarkup(React.createElement(InputTags.Root, { label: 'Technologies', required: true, disabled }))).window;
+    const label = document.querySelector('.muxui-input-tags__label');
+    const input = document.querySelector('.muxui-input-tags__input');
+    assert.equal(label?.tagName, 'LABEL');
+    assert.equal(label?.control, input);
+    assert.equal(input?.disabled, disabled);
+    assert.equal(input?.getAttribute('aria-labelledby'), label?.id);
+  }
 });
 
 test('InputTags associates live supporting text and field state with its actual input', async () => {

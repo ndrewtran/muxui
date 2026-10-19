@@ -381,7 +381,6 @@ const STATE_LIMITATIONS = Object.freeze({
   'DropZone:disabled': 'a disabled DropZone root has no accessible disabled signal, so its dimmed text fails the axe contrast audit',
   'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
   'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
-  'InputTags:disabled': 'a disabled InputTags label has no accessible disabled signal, so its dimmed colour fails the axe contrast audit',
 });
 
 function stateIsSupported(binding, state, family) {
@@ -1242,7 +1241,7 @@ Object.assign(ADAPTERS, {
   ),
   // RadioField supplies the parts of one radio, and RadioGroup supplies the selection: the first
   // field takes the field props and starts selected, the second is an unselected comparison with its own value.
-  RadioField: ({ value, size, disabled, invalid, required, readOnly }) => {
+  RadioField: ({ value, size, disabled, invalid, required }) => {
     const first = String(fallback(value, 'monthly'));
     const second = first === 'annual' ? 'monthly' : 'annual';
     const planName = (plan) => (plan === 'monthly' ? 'Monthly' : plan === 'annual' ? 'Annual' : plan);
@@ -1252,7 +1251,7 @@ Object.assign(ADAPTERS, {
       e(MuxUI.RadioField.Error, null, 'Invalid choice'),
     );
     return e(MuxUI.RadioGroup, { key: first, label: 'Plan', defaultValue: first, size },
-      field(first, { disabled, invalid, required, readOnly }),
+      field(first, { disabled, invalid, required }),
       field(second),
     );
   },
