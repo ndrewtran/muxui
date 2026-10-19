@@ -615,6 +615,11 @@ function typeInto(input, text) {
   input.dispatchEvent(new KeyboardEvent('keyup', { key: text.at(-1), bubbles: true }));
 }
 
+// Deletes the text one character at a time, as a user pressing Backspace does.
+async function backspaceAll(input) {
+  for (let length = input.value.length - 1; length >= 0; length -= 1) await act(async () => typeInto(input, input.value.slice(0, length)));
+}
+
 function keyPress(target, key) {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   target.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
@@ -694,6 +699,145 @@ test('R1.3 ComboBox selects, filters, submits, and keeps disabled and read-only 
     await act(async () => root.unmount());
     env.restore();
   }
+});
+
+// Controls the text, the selection, both, or neither, the way an application would.
+function ComboBoxClearHarness({ controlText, controlSelection, items, log, initialId = null }) {
+  const [text, setText] = React.useState('');
+  const [selectedId, setSelectedId] = React.useState(initialId);
+  return React.createElement(ComboBox, {
+    label: 'Color',
+    name: 'color',
+    items,
+    ...(controlText ? { value: text, onChange: setText } : {}),
+    ...(controlSelection ? { selectedId } : {}),
+    onSelect: (item) => {
+      log.push(item?.id);
+      if (controlSelection) setSelectedId(item?.id ?? null);
+      // With both controlled, React Aria leaves the text to the application.
+      if (controlText && controlSelection) setText(item === undefined ? '' : String(item.label));
+    },
+  });
+}
+
+// The component test selector reads literal test titles, so each control mode has its own test() call.
+async function comboBoxClearsSelection(control) {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const items = [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }];
+  const input = () => container.querySelector('.muxui-combo-box input');
+  const submitted = () => [...new FormData(form).getAll('color')];
+  const log = [];
+  try {
+    await act(async () => root.render(React.createElement(ComboBoxClearHarness, { items, log, ...control })));
+    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+    await act(async () => [...document.querySelectorAll('.muxui-combo-box-option')].find((option) => option.textContent === 'Blue').click());
+    assert.deepEqual(log, ['blue']);
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual(submitted(), ['blue']);
+
+    await backspaceAll(input());
+    assert.deepEqual(log, ['blue', undefined], 'clearing reports no item once');
+    assert.equal(input().value, '');
+    assert.deepEqual(submitted(), [''], 'the form submits an empty value');
+    await act(async () => input().blur());
+    assert.deepEqual(log, ['blue', undefined], 'leaving the field reports nothing more');
+    assert.deepEqual(submitted(), ['']);
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+}
+
+test('R1.3 ComboBox calls onSelect with no item once when the selection clears (uncontrolled)', () => comboBoxClearsSelection({ controlText: false, controlSelection: false }));
+test('R1.3 ComboBox calls onSelect with no item once when the selection clears (text controlled)', () => comboBoxClearsSelection({ controlText: true, controlSelection: false }));
+test('R1.3 ComboBox calls onSelect with no item once when the selection clears (selection controlled)', () => comboBoxClearsSelection({ controlText: false, controlSelection: true }));
+test('R1.3 ComboBox calls onSelect with no item once when the selection clears (text and selection controlled)', () => comboBoxClearsSelection({ controlText: true, controlSelection: true }));
+
+test('R1.3 ComboBox selectedId null is a controlled field with no selection', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const items = [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }];
+  const input = () => container.querySelector('.muxui-combo-box input');
+  const submitted = () => [...new FormData(form).getAll('color')];
+  const render = (props) => act(async () => root.render(React.createElement(ComboBox, { label: 'Color', name: 'color', items, ...props })));
+  const selectedOptions = () => [...document.querySelectorAll('.muxui-combo-box-option[aria-selected="true"]')];
+  try {
+    await render({ selectedId: null });
+    assert.equal(input().value, '');
+    assert.deepEqual(submitted(), ['']);
+    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+    assert.deepEqual(selectedOptions(), []);
+    await act(async () => input().blur());
+
+    // The application moves a controlled selection and an uncontrolled input follows it, back to empty.
+    await render({ selectedId: 'blue' });
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual(submitted(), ['blue']);
+    await render({ selectedId: null });
+    assert.equal(input().value, '');
+    assert.deepEqual(submitted(), ['']);
+
+    // A controlled text keeps its own text while the selection is empty.
+    await render({ key: 'text', selectedId: null, value: 'Re', onChange() {} });
+    assert.equal(input().value, 'Re');
+    assert.deepEqual(submitted(), ['']);
+    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+    assert.deepEqual(selectedOptions(), []);
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 ComboBox text that matches no option is not a cleared selection', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const items = [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }];
+  const input = () => container.querySelector('.muxui-combo-box input');
+  const submitted = () => [...new FormData(form).getAll('color')];
+  try {
+    // Over a selection: the selection stays until the field is left, then the input restores its label.
+    const kept = [];
+    await act(async () => root.render(React.createElement(ComboBoxClearHarness, { key: 'kept', items, log: kept, controlText: false, controlSelection: false })));
+    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+    await act(async () => [...document.querySelectorAll('.muxui-combo-box-option')].find((option) => option.textContent === 'Blue').click());
+    await act(async () => typeInto(input(), 'zzz'));
+    assert.deepEqual(kept, ['blue']);
+    assert.deepEqual(submitted(), ['blue']);
+    await act(async () => input().blur());
+    assert.deepEqual(kept, ['blue']);
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual(submitted(), ['blue']);
+
+    // With no selection there is nothing to clear, whichever props are controlled.
+    for (const [mode, control] of [['uncontrolled', { controlText: false, controlSelection: false }], ['controlled', { controlText: true, controlSelection: true }]]) {
+      const log = [];
+      await act(async () => root.render(React.createElement(ComboBoxClearHarness, { key: mode, items, log, ...control })));
+      await act(async () => typeInto(input(), 'zzz'));
+      await act(async () => input().blur());
+      assert.deepEqual(log, [], `${mode}: no clear is reported`);
+      assert.deepEqual(submitted(), [''], mode);
+    }
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 ComboBox rejects an empty-string selectedId and defaultSelectedId', () => {
+  const items = [{ id: 'red', label: 'Red' }];
+  assert.throws(() => renderToString(React.createElement(ComboBox, { label: 'Color', items, selectedId: '' })), /ComboBox selectedId .*null/u);
+  assert.throws(() => renderToString(React.createElement(ComboBox, { label: 'Color', items, defaultSelectedId: '' })), /ComboBox defaultSelectedId/u);
 });
 
 test('R1.3 errorMessage shows only while Select, ComboBox, or ColorField is invalid', async () => {

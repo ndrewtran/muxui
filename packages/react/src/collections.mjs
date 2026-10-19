@@ -1093,12 +1093,30 @@ export const Menu = /*#__PURE__*/ (() => {
 export const ComboBox = /*#__PURE__*/ (() => {
   const component = React.forwardRef(function ComboBox({ label, description, errorMessage, items = [], value, defaultValue, selectedId, defaultSelectedId, onChange, onSelect, disabled = false, readOnly = false, required = false, invalid = false, placeholder, size, name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ComboBox');
+    if (selectedId === '') throw new TypeError('ComboBox selectedId must be an item id, or null for no selection; an empty string is not an id');
+    if (defaultSelectedId === '') throw new TypeError('ComboBox defaultSelectedId must be an item id; omit it for no selection');
     const resolvedSize = normalizeChoiceControlSize(size, 'ComboBox');
     const normalized = normalizeItems(items);
     const disabledKeys = new Set(normalized.filter((item) => item.disabled).map((item) => item.id));
-    const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !item.disabled && !disabled && !readOnly) onSelect?.(item); };
+    // React Aria reports a cleared selection as a null key, except when both the text and the
+    // selection are controlled: then the application owns both, so the clear is read from the emptied input.
+    const bothControlled = value !== undefined && selectedId !== undefined;
+    const handleSelection = (key) => {
+      if (disabled || readOnly) return;
+      if (key == null) {
+        if (!bothControlled) onSelect?.(undefined);
+        return;
+      }
+      const item = normalized.find((candidate) => candidate.id === String(key));
+      if (item && !item.disabled) onSelect?.(item);
+    };
+    const handleInput = (next) => {
+      if (disabled || readOnly) return;
+      onChange?.(next);
+      if (bothControlled && next === '' && selectedId !== null) onSelect?.(undefined);
+    };
     // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
-    return React.createElement(AriaComboBox, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+    return React.createElement(AriaComboBox, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: handleInput, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),

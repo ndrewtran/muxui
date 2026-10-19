@@ -291,6 +291,17 @@ const r13Collections = (
 );
 void r13Collections;
 
+// A controlled ComboBox selectedId is an item id, or null for no selection;
+// onSelect receives no item when the selection clears.
+const comboBoxSelection = (
+  <>
+    <ComboBox label="City" items={['Melbourne']} selectedId={null} />
+    <ComboBox label="City" items={['Melbourne']} selectedId="Melbourne" value="" onChange={(text) => { const value: string = text; void value; }} />
+    <ComboBox label="City" items={['Melbourne']} defaultSelectedId="Melbourne" onSelect={(item) => { const id: string | undefined = item?.id; void id; }} />
+  </>
+);
+void comboBoxSelection;
+
 const r13EnrichedCollections = (
   <>
     <Calendar label="Date" focusedValue="2026-08-26" unavailableDateMatcher={(date) => date === '2026-08-27'} onFocusChange={(date) => { const value: string | undefined = date; void value; }} />
