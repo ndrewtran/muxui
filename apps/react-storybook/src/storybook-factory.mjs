@@ -1225,8 +1225,6 @@ Object.assign(ADAPTERS, {
   MultiSelect: (args) => e(MuxUI.MultiSelect.Root, { ...args, label: 'Notifications', items: MULTI_SELECT_SAMPLE_ITEMS },
     e(MuxUI.MultiSelect.Item, { id: 'email' }, 'Email'),
     e(MuxUI.MultiSelect.Item, { id: 'sms' }, 'SMS'),
-    e(MuxUI.MultiSelect.Footer, null, '2 options'),
-    e(MuxUI.MultiSelect.EmptyState, null, 'No options'),
   ),
   PaymentInput: (args) => e(MuxUI.PaymentInput.Root, args,
     e(MuxUI.PaymentInput.Label, null, 'Card number'),

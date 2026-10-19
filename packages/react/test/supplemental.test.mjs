@@ -657,6 +657,137 @@ test('MultiSelect filters and updates its uncontrolled selection through the pop
   }
 });
 
+test('MultiSelect links its description, error, and required and invalid status to the trigger', () => {
+  // aria-required is unsupported on a button and aria-invalid is deprecated there, so
+  // state travels as hidden text and aria-describedby instead.
+  const describedBy = (props) => {
+    const { document } = new JSDOM(renderToStaticMarkup(React.createElement(MultiSelect.Root, { label: 'Technologies', ...props }))).window;
+    const trigger = document.querySelector('.muxui-multi-select__trigger');
+    assert.equal(trigger?.hasAttribute('aria-required'), false);
+    assert.equal(trigger?.hasAttribute('aria-invalid'), false);
+    return (trigger?.getAttribute('aria-describedby')?.split(' ') ?? []).map((id) => document.getElementById(id)?.textContent);
+  };
+  assert.deepEqual(describedBy({}), []);
+  assert.deepEqual(describedBy({ description: 'Pick a few' }), ['Pick a few']);
+  assert.deepEqual(describedBy({ required: true }), ['Required']);
+  assert.deepEqual(describedBy({ required: true, description: 'Pick a few' }), ['Required', 'Pick a few']);
+  assert.deepEqual(describedBy({ invalid: true, errorMessage: 'Choose one', description: 'Pick a few' }), ['Invalid', 'Choose one']);
+  assert.deepEqual(describedBy({ required: true, invalid: true }), ['Required, Invalid']);
+});
+
+const multiSelectItems = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }];
+const renderMultiSelectItem = (item) => React.createElement(MultiSelect.Item, { id: item.id, textValue: item.label }, item.label);
+const multiSelect = (props, children = renderMultiSelectItem) => React.createElement(MultiSelect.Root, { items: multiSelectItems, label: 'Options', ...props }, children);
+
+// Mounts `element` in jsdom, opens its popup, and passes `run` the open document.
+async function withOpenMultiSelect(element, run) {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    root = createRoot(document.querySelector('#root'));
+    await act(async () => root.render(element));
+    await act(async () => document.querySelector('.muxui-multi-select__trigger')?.click());
+    await run(document);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+}
+
+const footerButton = (document, name) => [...document.querySelectorAll('.muxui-multi-select__footer-btn')].find((button) => button.textContent === name);
+const selectedItems = (document) => [...document.querySelectorAll('.muxui-multi-select__item[aria-selected="true"]')].map((item) => item.textContent);
+
+test('MultiSelect closes on Escape and keeps its selection', async () => {
+  const changes = [];
+  await withOpenMultiSelect(multiSelect({ defaultSelectedKeys: new Set(['one', 'two']), onSelectionChange: (keys) => changes.push(keys) }), async (document) => {
+    // Focus stays on the search field while the listbox is navigated, so Escape arrives there.
+    await act(async () => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    // jsdom runs no exit animation, so the closed popup lingers in the DOM; the trigger state is the signal.
+    const trigger = document.querySelector('.muxui-multi-select__trigger');
+    assert.equal(trigger?.getAttribute('aria-expanded'), 'false', 'Escape closes the popup');
+    assert.match(trigger?.textContent ?? '', /2 selected/u);
+    assert.deepEqual(changes, []);
+  });
+});
+
+test('MultiSelect Reset and Select all change an uncontrolled selection and notify the callbacks', async () => {
+  const events = [];
+  await withOpenMultiSelect(multiSelect({
+    defaultSelectedKeys: new Set(['one']),
+    onSelectionChange: (keys) => events.push(['change', keys === 'all' ? keys : [...keys]]),
+    onReset: () => events.push(['reset']),
+    onSelectAll: () => events.push(['selectAll']),
+  }), async (document) => {
+    const summary = () => document.querySelector('.muxui-multi-select__trigger')?.textContent ?? '';
+    await act(async () => footerButton(document, 'Select all')?.click());
+    assert.match(summary(), /2 selected/u);
+    assert.deepEqual(selectedItems(document), ['One', 'Two']);
+    await act(async () => footerButton(document, 'Reset')?.click());
+    assert.match(summary(), /Select/u);
+    assert.doesNotMatch(summary(), /selected/u);
+    assert.deepEqual(selectedItems(document), []);
+    assert.deepEqual(events, [['change', 'all'], ['selectAll'], ['change', []], ['reset']]);
+  });
+});
+
+test('MultiSelect Reset and Select all report through onSelectionChange when controlled', async () => {
+  const changes = [];
+  await withOpenMultiSelect(multiSelect({
+    selectedKeys: new Set(['one']),
+    onSelectionChange: (keys) => changes.push(keys === 'all' ? keys : [...keys]),
+  }), async (document) => {
+    await act(async () => footerButton(document, 'Select all')?.click());
+    await act(async () => footerButton(document, 'Reset')?.click());
+    assert.deepEqual(changes, ['all', []]);
+    // The parent did not apply either change, so the selection stays controlled.
+    assert.match(document.querySelector('.muxui-multi-select__trigger')?.textContent ?? '', /1 selected/u);
+  });
+});
+
+// "All" stands for the items that are not disabled, so the summary counts those.
+const threeItems = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }, { id: 'three', label: 'Three' }];
+const staticItem = (id, props) => React.createElement(MultiSelect.Item, { id, key: id, textValue: id, ...props }, id);
+const renderEnabledItem = (item) => staticItem(item.id, { disabled: item.id === 'three' });
+
+test('MultiSelect counts only enabled items for the all selection', () => {
+  const summary = (props, children) => new JSDOM(renderToStaticMarkup(React.createElement(MultiSelect.Root, { label: 'Options', selectedKeys: 'all', showFooter: false, ...props }, children)))
+    .window.document.querySelector('.muxui-multi-select__value')?.textContent;
+  assert.equal(summary({}, [staticItem('one'), staticItem('two')]), '2 selected');
+  assert.equal(summary({}, React.createElement(React.Fragment, null, staticItem('one'), staticItem('two'))), '2 selected');
+  assert.equal(summary({}, [staticItem('one'), staticItem('two'), staticItem('three', { disabled: true })]), '2 selected');
+  assert.equal(summary({ items: threeItems }, renderEnabledItem), '2 selected');
+  assert.equal(summary({ items: threeItems }, (item) => item.label), '3 selected');
+});
+
+test('MultiSelect Select all skips disabled static items and the summary agrees', async () => {
+  const children = [staticItem('one'), staticItem('two'), staticItem('three', { disabled: true })];
+  await withOpenMultiSelect(multiSelect({ items: undefined }, children), async (document) => {
+    const summary = () => document.querySelector('.muxui-multi-select__trigger')?.textContent ?? '';
+    await act(async () => footerButton(document, 'Select all')?.click());
+    assert.match(summary(), /2 selected/u);
+    assert.deepEqual(selectedItems(document), ['one', 'two']);
+    await act(async () => footerButton(document, 'Reset')?.click());
+    assert.doesNotMatch(summary(), /selected/u);
+  });
+});
+
+test('MultiSelect Select all skips disabled items when the parent applies the selection', async () => {
+  function Controlled() {
+    const [keys, setKeys] = React.useState(() => new Set());
+    return multiSelect({ items: threeItems, selectedKeys: keys, onSelectionChange: setKeys }, renderEnabledItem);
+  }
+  await withOpenMultiSelect(React.createElement(Controlled), async (document) => {
+    const summary = () => document.querySelector('.muxui-multi-select__trigger')?.textContent ?? '';
+    await act(async () => footerButton(document, 'Select all')?.click());
+    assert.match(summary(), /2 selected/u);
+    assert.deepEqual(selectedItems(document), ['one', 'two']);
+    await act(async () => footerButton(document, 'Reset')?.click());
+    assert.doesNotMatch(summary(), /selected/u);
+  });
+});
+
 // Item render functions may return any ReactNode; non-Item results are wrapped.
 const plainItemRenderers = {
   'plain content': (item) => item.title,
