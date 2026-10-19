@@ -22,6 +22,10 @@ const storybookManifestPath = 'apps/react-storybook/.storybook/generated/manifes
 const motionBoundaryTestFile = 'test/motion-package-boundary.test.mjs';
 const catalogExampleTypesTestFile = 'test/catalog-examples-types.test.mjs';
 const patternManifestPath = 'packages/catalog/catalog-sources.json';
+const componentDocsTestFile = 'test/component-docs.test.mjs';
+const componentReferencePath = 'apps/component-reference.mjs';
+// A family's own usage guide, which its Storybook Docs page shows: `<family-slug>-usage.md` and its record.
+const familyUsageGuidePath = /^catalog\/guides\/([a-z0-9-]+)-usage\.(?:md|json)$/u;
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
 const tailwindFixture = 'tests/fixtures/tailwind-consumer';
 
@@ -414,6 +418,14 @@ function routeCatalogExample(path, pageIndex) {
 
 function recordForSlug(records, slug) {
   return records.find((record) => record.slug === slug);
+}
+
+// Every family's Storybook Docs page embeds its catalog record, canonical example sources, usage guide and
+// Block relations (apps/react-storybook/src/component-docs.mjs). An edit to any of them plans Storybook
+// generation and its drift check plus the Docs page test, not the browser audit.
+function addComponentDocsProof(plan) {
+  plan.storyTooling = true;
+  addStoryUnitTest(plan, { file: componentDocsTestFile });
 }
 
 function storybookPageOwners(path, pageIndex) {
@@ -1192,6 +1204,7 @@ export async function buildPullRequestImpact({
       const slugs = changedPatternSlugs(await readBaseText(path), await readHeadText(path));
       for (const slug of slugs) {
         plan.storyTooling = true;
+        addComponentDocsProof(plan);
         plan.reactTestFiles.add(catalogExampleTypesTestFile);
         addPatternPages(plan, slug, pageIndex);
         const browserTest = blockBrowserTest(slug);
@@ -1220,6 +1233,8 @@ export async function buildPullRequestImpact({
     if (config.componentNavigationPaths?.includes(path)) {
       plan.docs = true;
       storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+      // The reference also projects every Storybook Docs page entry.
+      if (path === componentReferencePath) addComponentDocsProof(plan);
       plan.reasons.push(`${path} is shared by the docs and every component Storybook page`);
       continue;
     }
@@ -1355,6 +1370,7 @@ export async function buildPullRequestImpact({
         plan.catalog = true;
         // Docs render every component record.
         plan.docs = true;
+        addComponentDocsProof(plan);
         plan.reasons.push(`${path} changes the canonical component record for ${record.family}`);
       } else if (/\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)) {
         const owners = routeCatalogExample(path, pageIndex);
@@ -1362,6 +1378,7 @@ export async function buildPullRequestImpact({
         // Docs load every React example, and the React example type test
         // compiles every example source.
         plan.docs = true;
+        addComponentDocsProof(plan);
         if (path.endsWith('.tsx')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
         if (owners.length > 0) {
           for (const owner of owners) {
@@ -1395,6 +1412,8 @@ export async function buildPullRequestImpact({
     // pattern also runs its browser test.
     if (path.startsWith('catalog/patterns/')) {
       plan.catalog = true;
+      // A pattern record names its participant components, which list it under Used in blocks.
+      if (path.endsWith('/artifact.json')) addComponentDocsProof(plan);
       const slug = path.split('/')[2];
       if (path.endsWith('.tsx')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
       if (path.endsWith('.tsx')) {
@@ -1412,12 +1431,15 @@ export async function buildPullRequestImpact({
     }
 
     // Guides compile into the catalog that @muxui/tooling queries and renders,
-    // and docs renders every guide. No renderer or Storybook page reads
-    // guides, so per-family usage guides need no family route.
+    // and docs renders every guide. No renderer or Storybook page runs a guide,
+    // so per-family usage guides need no family route. A family's own usage
+    // guide is shown on its Storybook Docs page, which plans the Docs page test.
     if (path.startsWith('catalog/guides/')) {
       plan.catalog = true;
       plan.docs = true;
       plan.packageChecks.add('@muxui/tooling');
+      const usageGuide = familyUsageGuidePath.exec(path);
+      if (usageGuide && recordForSlug(records, usageGuide[1])) addComponentDocsProof(plan);
       plan.reasons.push(`${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
       continue;
     }
@@ -1720,6 +1742,8 @@ export function needsStorybookGeneration(paths, config, {
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
     || (path.startsWith('catalog/components/') && (/\/artifact\.json$/u.test(path)
       || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))
+    // A usage guide is routed by the family record it names.
+    || familyUsageGuidePath.test(path)
     // Pattern pages are generated Storybook pages; routing needs the page index.
     || path.startsWith('catalog/patterns/')
     || (path === patternManifestPath && patternManifestChanged)

@@ -37,7 +37,10 @@ parameter, so the page authors no per-family text. The live preview stays the
 adapter Default story and the API reference stays Storybook's Controls table;
 canonical examples appear as static source, not as extra stories.
 `test/component-docs.test.mjs` renders every family's entry and checks the
-section order and each projected fact against the catalog.
+section order and each projected fact against the catalog. An edit to a file the
+page embeds (a family's catalog record, canonical example or usage guide, a
+pattern record, or `apps/component-reference.mjs`) plans Storybook generation
+and that test, not the browser audit.
 
 ```sh
 pnpm --filter @muxui/react-storybook storybook

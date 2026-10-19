@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
@@ -46,6 +47,16 @@ const blocks = {
 };
 
 const texts = (nodes) => [...nodes].map((node) => node.textContent);
+const githubUrl = (path) => `https://github.com/ndrewtran/muxui/blob/main/${path}`;
+
+/** A guide file's body once its front matter, when it has any, and its title line are removed. */
+function guideBody(raw) {
+  const lines = raw.split('\n');
+  const afterFrontMatter = lines[0] === '---' ? lines.slice(lines.indexOf('---', 1) + 1) : lines;
+  const titleAt = afterFrontMatter.findIndex((line) => line.trim() !== '');
+  assert.match(afterFrontMatter[titleAt], /^# /u, 'a guide body opens with its title');
+  return afterFrontMatter.slice(titleAt + 1).join('\n').trim();
+}
 
 /** The generated story modules the Docs pages read, one per family, with the catalog record each projects. */
 async function families() {
@@ -61,7 +72,8 @@ async function families() {
 
 test('every family Docs page runs the continuous reference sections in order, projected from the catalog', async () => {
   const guideIds = new Set(canonicalCatalog.listArtifacts({ kind: 'guide', platform: 'web.react', detail: 'brief', limit: 100 }).data.items.map(({ id }) => id));
-  const blockStoryIds = new Set(manifest.pageIndex.filter(({ family }) => manifest.patterns.some((pattern) => pattern.family === family)).flatMap(({ stories }) => stories.map(({ id }) => id)));
+  // Every Block story with the canonical variant source it renders.
+  const blockStories = manifest.pageIndex.filter(({ family }) => manifest.patterns.some((pattern) => pattern.family === family)).flatMap(({ stories }) => stories);
   const all = await families();
   assert.equal(all.length, manifest.count);
 
@@ -103,11 +115,19 @@ test('every family Docs page runs the continuous reference sections in order, pr
     const list = (root, fact) => [...root.querySelectorAll(`[data-fact="${fact}"] li`)].map((node) => node.textContent);
     assert.deepEqual(list(section('usage'), 'intent.useWhen'), artifact.intent?.useWhen ?? [], `${family} use when`);
     assert.deepEqual(list(section('usage'), 'intent.avoidWhen'), artifact.intent?.avoidWhen ?? [], `${family} avoid when`);
-    assert.deepEqual(
-      [...section('usage').querySelectorAll('[data-guide-id]')].map((node) => node.getAttribute('data-guide-id')),
-      guideIds.has(`muxui:guide:${slug}-usage`) ? [`muxui:guide:${slug}-usage`] : [],
-      `${family} related usage guide`,
-    );
+    // The related usage guide: its id, name, source and body come from the guide record and its canonical file.
+    const guideId = `muxui:guide:${slug}-usage`;
+    const guides = [...section('usage').querySelectorAll('[data-guide-id]')];
+    assert.deepEqual(guides.map((node) => node.getAttribute('data-guide-id')), guideIds.has(guideId) ? [guideId] : [], `${family} related usage guide`);
+    if (guides.length === 1) {
+      const guide = canonicalCatalog.getArtifact({ id: guideId, platform: 'web.react', detail: 'full' }).data.artifact;
+      const raw = read(guide.source.content);
+      assert.equal(`sha256:${createHash('sha256').update(raw).digest('hex')}`, guide.source.contentDigest, `${family} guide file matches its record`);
+      const caption = guides[0].querySelector('.muxui-docs-caption');
+      assert.equal(caption.textContent, `${guide.name}: ${guide.source.content}`, `${family} guide name and source`);
+      assert.equal(caption.querySelector('a').getAttribute('href'), githubUrl(guide.source.content), `${family} guide source link`);
+      assert.equal(guides[0].querySelector('[data-block="markdown"]').textContent, guideBody(raw), `${family} guide body`);
+    }
     assert.deepEqual(list(section('behavior'), 'binding.behavior'), binding.behavior ?? [], `${family} behavior`);
     assert.deepEqual(texts(section('events').querySelectorAll('[data-fact="binding.api.events"] code')), binding.api.events, `${family} events`);
     const nameRequired = section('accessibility').querySelector('[data-fact="accessibility.nameRequired"]').textContent;
@@ -128,11 +148,22 @@ test('every family Docs page runs the continuous reference sections in order, pr
     );
     assert.deepEqual(texts(section('examples').querySelectorAll('h3')), examples.slice(1).map(({ name }) => name), `${family} example names`);
 
-    // Used in blocks: every Block that uses the component, linked to an existing Block story.
-    const links = [...(section('used-in-blocks')?.querySelectorAll('a') ?? [])];
-    assert.equal(links.length, usedIn.length, `${family} used in blocks`);
-    for (const link of links) {
-      assert.ok(blockStoryIds.has(link.getAttribute('href').replace('?path=/story/', '')), `${family} links the Block story ${link.getAttribute('href')}`);
+    // Used in blocks: each declared relation in order, by its pattern's name, its first variant's story and its roles.
+    const items = [...(section('used-in-blocks')?.querySelectorAll('li') ?? [])];
+    assert.equal(items.length, usedIn.length, `${family} used in blocks`);
+    for (const [position, relation] of usedIn.entries()) {
+      const pattern = canonicalCatalog.getArtifact({ id: relation.id, platform: 'web.react', detail: 'full' }).data.artifact;
+      const firstVariant = canonicalCatalog.getArtifact({ id: pattern.variants[0].example, platform: 'web.react', detail: 'full' }).data.artifact;
+      const story = blockStories.find(({ source }) => source === firstVariant.source.content);
+      assert.ok(story, `${relation.id} has a Block story for its first variant`);
+      const link = items[position].querySelector('a');
+      assert.equal(link.textContent, pattern.name, `${family} Block ${relation.id} name`);
+      assert.equal(link.getAttribute('href'), `?path=/story/${story.id}`, `${family} Block ${relation.id} story`);
+      assert.equal(
+        items[position].querySelector('.muxui-docs-roles').textContent,
+        relation.roles.map(({ role, requirement }) => requirement === 'optional' ? `${role} (optional)` : role).join(', '),
+        `${family} Block ${relation.id} roles`,
+      );
     }
 
     // Anatomy and styling: parts, states and every token requirement, with no class names or selectors.
@@ -165,5 +196,49 @@ test('every family Docs page runs the continuous reference sections in order, pr
         .map((path) => `https://github.com/ndrewtran/muxui/blob/main/${path}`),
       `${family} sources`,
     );
+  }
+});
+
+test('a usage guide shows without its front matter or title, and its headings sit below the page sections', async () => {
+  // Storybook's own Markdown block needs a document at import, so give it one for this test only.
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
+  const globals = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator };
+  const previous = Object.fromEntries(Object.keys(globals).map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
+  try {
+    const { Markdown } = await import('@storybook/addon-docs/blocks');
+    // Some guide files open with front matter and every one with a title; the shown body keeps neither.
+    let withFrontMatter = 0;
+    for (const { family, tranche } of manifest.families) {
+      const slug = family.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+      const { default: module } = await import(`../.storybook/generated/${tranche.replaceAll('.', '-').toLowerCase()}-${slug}.stories.mjs`);
+      const { guide } = module.parameters.muxuiReference;
+      if (guide === null) continue;
+      const guideFile = read(guide.source);
+      if (guideFile.startsWith('---\n')) withFrontMatter += 1;
+      assert.doesNotMatch(guide.markdown, /^---$|^id: |^# /mu, `${family} guide shows no front matter or title`);
+      assert.ok(guide.markdown.length > 0 && guideFile.includes(guide.markdown), `${family} guide body is part of its file`);
+    }
+    assert.ok(withFrontMatter > 0, 'a guide with front matter is covered');
+
+    // Virtualizer's guide has several second level headings and a table.
+    const { default: meta } = await import('../.storybook/generated/r1-3-virtualizer.stories.mjs');
+    const raw = read(meta.parameters.muxuiReference.guide.source);
+
+    const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry: meta.parameters.muxuiReference, blocks: { ...blocks, Markdown } }))).window.document;
+    const shown = page.querySelector('[data-guide-id]');
+    assert.equal(shown.querySelectorAll('h1, h2, h3').length, 1, 'only the guidance heading remains above h4');
+    assert.equal(shown.querySelector('h3').textContent, 'Related usage guidance');
+    const headings = raw.split('\n').filter((line) => line.startsWith('## ')).map((line) => line.slice(3));
+    assert.ok(headings.length > 1, 'the guide has second level headings');
+    assert.deepEqual(texts(shown.querySelectorAll('h4')), headings, 'each second level heading becomes an h4');
+    assert.ok(shown.querySelector('table'), 'the guide table renders');
+    // Only the eleven sections are h2 on the page.
+    assert.deepEqual(texts(page.querySelectorAll('h2')), sections.filter(([id]) => id !== 'used-in-blocks' || page.querySelector('#used-in-blocks')).map(([, title]) => title));
+  } finally {
+    for (const [key, descriptor] of Object.entries(previous)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
   }
 });
