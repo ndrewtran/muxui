@@ -22,6 +22,7 @@ import {
   CalendarStateContext,
   RangeCalendarStateContext,
   ColorArea as AriaColorArea,
+  ColorAreaContext,
   ColorField as AriaColorField,
   ColorPicker as AriaColorPicker,
   ColorPickerStateContext,
@@ -489,13 +490,50 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
 });
 ColorField.displayName = 'ColorField';
 
+// Whether two colors of one space have exactly the same channels and alpha.
+function sameColor(a, b) {
+  return a.getColorSpace() === b.getColorSpace() && a.alpha === b.alpha && a.getColorChannels().every((channel) => a.getChannelValue(channel) === b.getChannelValue(channel));
+}
+
+// Whether `hsb`, the HSB color of the area's last edit, still describes `color`: the same channels once
+// converted to the color's space, alpha aside. Hue wraps, so 0 and 360 match. RGB channels are whole numbers
+// on both sides and match exactly; only hsl and hsb percentages need a tolerance, for the two decimals a CSS
+// string keeps.
+function editDescribesColor(hsb, color) {
+  const space = color.getColorSpace();
+  const converted = hsb.toFormat(space);
+  return color.getColorChannels().every((channel) => {
+    const gap = Math.abs(converted.getChannelValue(channel) - color.getChannelValue(channel));
+    if (channel === 'hue') return gap % 360 === 0;
+    return gap <= (space === 'rgb' ? 0 : 0.01);
+  });
+}
+
 // Colour controls forward no untyped props; upstream props such as onChangeEnd,
 // xChannel, or colorSpace would bypass the Mux UI guards and string values.
+// The area always edits saturation (x) and brightness (y) in HSB and converts each edit back to the
+// colour space of its value, or of the enclosing ColorPicker's colour, so it emits the same CSS string
+// as ColorSlider: rgba() for hex and rgb values, hsla() for hsl and hsb values.
 export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorArea');
   const pickerState = React.useContext(ColorPickerContext);
+  const pickerColorState = React.useContext(ColorPickerStateContext);
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
+  const valueColor = colorValue(value, 'ColorArea');
+  const defaultColor = colorValue(defaultValue, 'ColorArea');
+  // A value or the picker's colour drives the area; otherwise React Aria keeps the HSB colour itself.
+  const driven = valueColor ?? pickerColorState?.color;
+  const sourceColor = driven ?? defaultColor;
+  const space = sourceColor?.getColorSpace() ?? 'rgb';
+  // Black, white, and grays have no hue or saturation in hex, rgb, or hsl, so a driven area remembers the HSB
+  // colour of its last edit, with the value that edit started from. The memory shows while the value describes
+  // it. A value equal to the one the edit started from may only be waiting to accept the edit, so only a new
+  // value decides: one that still describes the edit adopts it, any other forgets it.
+  const [edit, setEdit] = React.useState(null);
+  const describes = edit && driven && editDescribesColor(edit.hsb, driven);
+  if (edit && driven && !sameColor(driven, edit.received)) setEdit(describes ? { ...edit, received: driven } : null);
+  const areaColor = describes ? edit.hsb.withChannelValue('alpha', driven.alpha) : driven;
   const labelId = React.useId();
   const labelledby = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
   const assignAreaRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
@@ -507,11 +545,21 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
   };
   return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
     label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
-    React.createElement(AriaColorArea, {
+    // The area writes the picker's colour itself, in the picker's space, so it clears the context.
+    React.createElement(ColorAreaContext.Provider, { value: null }, React.createElement(AriaColorArea, {
       ref: assignAreaRef,
-      value: colorValue(value, 'ColorArea'),
-      defaultValue: colorValue(defaultValue, 'ColorArea'),
-      onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
+      value: areaColor,
+      defaultValue: driven ? undefined : defaultColor,
+      colorSpace: 'hsb',
+      xChannel: 'saturation',
+      yChannel: 'brightness',
+      onChange: (next) => {
+        if (effectiveDisabled || effectiveReadOnly) return;
+        const edited = next.toFormat(space);
+        if (driven) setEdit({ hsb: next, received: driven });
+        pickerColorState?.setColor(edited);
+        onChange?.(edited.toString());
+      },
       isDisabled: effectiveDisabled,
       'aria-label': ariaLabel,
       'aria-labelledby': labelledby,
@@ -528,7 +576,7 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
       className: 'muxui-color-area-thumb',
       'data-muxui-color-paint': 'sample',
       'data-readonly': effectiveReadOnly || undefined,
-    })),
+    }))),
   );
 });
 ColorArea.displayName = 'ColorArea';
