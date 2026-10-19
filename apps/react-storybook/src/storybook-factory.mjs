@@ -378,7 +378,6 @@ function setSelectedState(args, props, family, preserveExplicit) {
 const STATE_LIMITATIONS = Object.freeze({
   ...Object.fromEntries(['sm', 'md', 'lg', 'full'].map((radius) => [`Image:radius-${radius}`,
     'the colour audit accepts only a transparent image, so a radius has nothing visible to round'])),
-  'DropZone:disabled': 'a disabled DropZone root has no accessible disabled signal, so its dimmed text fails the axe contrast audit',
   'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
   'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
 });
@@ -681,9 +680,9 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
 
 // Specimens whose named states must override binding defaults (disabled: false, defaultOpen: false, and so on).
 // Other families keep the existing precedence until their States pages pass the Storybook audit with it. Dialog
-// (a truly open modal blocks the lifecycle states) and DropZone (its only named state is disabled) stay off the list.
+// (a truly open modal blocks the lifecycle states) stays off the list.
 const NAMED_STATE_FAMILIES = new Set([
-  'Avatar', 'Card', 'ColorModeToggle', 'GridList', 'HeaderNav', 'InputTags', 'Link', 'ListBox', 'Menu', 'ProgressCircle', 'Separator', 'Sidebar',
+  'Avatar', 'Card', 'ColorModeToggle', 'DropZone', 'GridList', 'HeaderNav', 'InputTags', 'Link', 'ListBox', 'Menu', 'ProgressCircle', 'Separator', 'Sidebar',
 ]);
 
 /**
@@ -1196,11 +1195,18 @@ Object.assign(ADAPTERS, {
       e(MuxUI.HeaderNav.NavButton, { key: 'components', href: '#components' }, 'Components'),
       e(MuxUI.HeaderNav.NavButton, { key: 'blocks', href: '#blocks' }, 'Blocks'),
     ];
-    return e(MuxUI.HeaderNav.Root, root,
-      e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
-      e(MuxUI.HeaderNav.Secondary, { 'aria-label': `${root['aria-label'] ?? 'Header navigation'} secondary` }, navigation),
-      e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, null, 'Sign in')),
-      e(MuxUI.HeaderNav.MobileTrigger, null, navigation),
+    // HeaderNav has no breakpoint of its own. Like the catalog's responsive example, the frame is a size
+    // container (preview.css) and the links show from 40rem wide, so the header fits a narrow viewport.
+    return e('div', { className: 'muxui-storybook-header-frame' },
+      e(MuxUI.HeaderNav.Root, root,
+        e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
+        e(MuxUI.HeaderNav.Secondary, {
+          className: 'muxui-storybook-header-links',
+          'aria-label': `${root['aria-label'] ?? 'Header navigation'} secondary`,
+        }, navigation),
+        e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, null, 'Sign in')),
+        e(MuxUI.HeaderNav.MobileTrigger, null, navigation),
+      ),
     );
   },
   Image: (args) => e(ImagePreview, args),
@@ -1229,7 +1235,7 @@ Object.assign(ADAPTERS, {
     e(MuxUI.PaymentInput.Label, null, 'Card number'),
     e(MuxUI.PaymentInput.Group, null,
       e(MuxUI.PaymentInput.Input, { placeholder: '4242 4242 4242 4242', disabled: args.disabled }),
-      e(MuxUI.PaymentInput.CardIcon, null, 'VISA'),
+      e(MuxUI.PaymentInput.CardIcon),
     ),
     e(MuxUI.PaymentInput.Description, null, 'Secure payment'),
     e(MuxUI.PaymentInput.Error, null, args.invalid ? 'Invalid card' : null),
