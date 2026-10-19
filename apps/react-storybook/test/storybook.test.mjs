@@ -1290,6 +1290,29 @@ test('Image shows fallback recovery and final failure, and names the source it e
     assert.equal(row('error').querySelector('img').style.visibility, 'hidden', 'a failed image is not painted in the page');
     assert.equal(row('fallback').querySelector('img').style.visibility, '', 'a recovered image is');
   });
+
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const image = () => host.querySelector('img');
+    const caption = () => host.querySelector('figcaption').textContent;
+    // With no fallback supplied, a failure names the primary source alone.
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: AVATAR_FAILING_SRC }), { key: 'primary-only' })));
+    await act(async () => image().dispatchEvent(new Event('error')));
+    await settleRuntime(20);
+    assert.equal(image().hasAttribute('data-error'), true);
+    assert.equal(image().hasAttribute('data-fallback'), false, 'no fallback was attempted');
+    assert.equal(caption(), 'Primary source failed; no fallback source was supplied.');
+
+    // A loaded source replaced by a pending one starts the caption over.
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: '/a.png' }), { key: 'changing' })));
+    await act(async () => image().dispatchEvent(new Event('load')));
+    assert.equal(caption(), 'Primary source loaded.');
+    await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: '/b.png' }), { key: 'changing' })));
+    await settleRuntime(20);
+    assert.equal(image().getAttribute('src'), '/b.png');
+    assert.equal(caption(), 'Loading the primary source.');
+    await act(async () => image().dispatchEvent(new Event('load')));
+    assert.equal(caption(), 'Primary source loaded.');
+  });
 });
 
 test('Link without a destination renders disabled even when disabled is false', () => {

@@ -805,38 +805,43 @@ function DataDiffPreview(args) {
 }
 /**
  * The audited sources are a transparent pixel and broken data, so the image itself draws nothing. The caption
- * reports which source it ended on, read from the data attributes Image sets while it recovers.
+ * reports which source it ended on, read from the data attributes Image sets while it recovers. A change of
+ * source starts the caption over, since Image resets its own recovery then.
  */
 const IMAGE_OUTCOMES = Object.freeze({
   loading: 'Loading the primary source.',
   primary: 'Primary source loaded.',
   fallback: 'Primary source failed; using fallbackSrc.',
+  failed: 'Primary source failed; no fallback source was supplied.',
   error: 'Primary and fallback sources failed.',
 });
 
 function ImagePreview({ onLoad, ...args }) {
   const imageRef = React.useRef(null);
   const [outcome, setOutcome] = React.useState('loading');
-  const read = React.useCallback(() => {
+  const src = args.src ?? TRANSPARENT_PIXEL;
+  const hasFallback = [args.fallbackSrc, args.fallbackSrcSet].some((value) => typeof value === 'string' && value.trim().length > 0);
+  // A load event reports the current source, which the recovery attributes say is the primary or the fallback.
+  const read = React.useCallback((loaded = false) => {
     const image = imageRef.current;
     if (!image) return;
     setOutcome(image.hasAttribute('data-error') ? 'error'
       : image.hasAttribute('data-fallback') ? 'fallback'
-      : image.complete && image.naturalWidth > 0 ? 'primary' : 'loading');
+      : loaded || image.complete && image.naturalWidth > 0 ? 'primary' : 'loading');
   }, []);
   React.useEffect(() => {
     const image = imageRef.current;
     if (!image) return undefined;
-    read();
-    const observer = new MutationObserver(read);
+    const observer = new MutationObserver(() => read());
     observer.observe(image, { attributes: true, attributeFilter: ['data-fallback', 'data-error'] });
     return () => observer.disconnect();
   }, [read]);
+  React.useEffect(() => read(), [read, src, args.srcSet, args.fallbackSrc, args.fallbackSrcSet]);
   return e('figure', { style: { margin: 0 } },
     e(MuxUI.Image, {
       ...args,
       ref: imageRef,
-      src: args.src ?? TRANSPARENT_PIXEL,
+      src,
       alt: args.alt ?? 'Workspace preview',
       width: args.width ?? 160,
       height: args.height ?? 96,
@@ -845,10 +850,10 @@ function ImagePreview({ onLoad, ...args }) {
       style: outcome === 'error' ? { ...args.style, visibility: 'hidden' } : args.style,
       onLoad: (event) => {
         onLoad?.(event);
-        read();
+        read(true);
       },
     }),
-    e('figcaption', null, IMAGE_OUTCOMES[outcome]),
+    e('figcaption', null, IMAGE_OUTCOMES[outcome === 'error' && !hasFallback ? 'failed' : outcome]),
   );
 }
 // A single transparent pixel loads as an image without painting a colour the audits cannot verify.
