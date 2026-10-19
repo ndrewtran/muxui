@@ -45,7 +45,6 @@
           "disabled",
           "invalid",
           "required",
-          "readOnly",
           "value"
         ],
         "events": [],
@@ -61,8 +60,7 @@
           "size": "md",
           "disabled": false,
           "invalid": false,
-          "required": false,
-          "readOnly": false
+          "required": false
         }
       },
       "behavior": [

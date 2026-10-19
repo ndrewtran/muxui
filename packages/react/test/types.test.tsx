@@ -405,6 +405,9 @@ void sliderName;
 // @ts-expect-error RadioField.Root requires a stable value for RadioGroup selection identity.
 const radioFieldWithoutValue = <RadioField.Root><RadioField.Button>Missing value</RadioField.Button></RadioField.Root>;
 void radioFieldWithoutValue;
+// @ts-expect-error RadioField has no readOnly; it belongs on the RadioGroup.
+const radioFieldReadOnly = <RadioField.Root value="pro" readOnly><RadioField.Button>Pro</RadioField.Button></RadioField.Root>;
+void radioFieldReadOnly;
 
 // @ts-expect-error TagGroup does not expose generic field descriptions.
 const tagGroupDescription = <TagGroup label="Tags" description="Unsupported" />;

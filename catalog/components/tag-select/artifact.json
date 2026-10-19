@@ -63,8 +63,7 @@
           "onSelectionChange"
         ],
         "events": [
-          "selectionChange",
-          "remove"
+          "selectionChange"
         ],
         "parts": [
           "root",

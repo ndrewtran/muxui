@@ -905,12 +905,11 @@ test('InputTags keeps supplied seeds and copy, and offers placement and tag-focu
   assert.deepEqual([...tags(controlled.args).querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent), ['Mux', 'UI']);
 
   const { document: states, sections } = stateSections('InputTags');
-  // The disabled row is labelled unavailable, never an enabled stand-in; the adapter itself still disables the input.
-  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
-  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['disabled']);
-  assert.match(unavailable[0].textContent, /Unavailable: MuxUI InputTags cannot show the disabled state here because .*no accessible disabled signal/u);
-  assert.equal(sections.get('disabled').querySelector('input'), null);
-  assert.equal(tags({ disabled: true }).querySelector('input').disabled, true);
+  // The disabled row renders: its label is a real label for the disabled input.
+  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  const disabledRow = sections.get('disabled');
+  assert.equal(disabledRow.querySelector('input').disabled, true);
+  assert.equal(disabledRow.querySelector('.muxui-input-tags__label').control, disabledRow.querySelector('input'));
   assert.equal(sections.get('inline').querySelector('.muxui-input-tags').classList.contains('muxui-input-tags--below'), false);
   assert.equal(sections.get('below').querySelector('.muxui-input-tags').classList.contains('muxui-input-tags--below'), true);
   assert.equal(sections.get('invalid').querySelector('.muxui-input-tags').hasAttribute('data-invalid'), true);
