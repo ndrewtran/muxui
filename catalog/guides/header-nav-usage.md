@@ -16,9 +16,10 @@ HeaderNav has no breakpoint of its own. It shows its links, actions, and drawer 
 
 - Repeat the header's destinations in the drawer, in the same order.
 - Add the essential actions that no longer fit in the header, such as Sign in, below the destinations.
+- Give each copy of an action the same handler, as the links share one list, so the header and the drawer do the same thing.
 - Leave out anything the header does not need, or put it after those actions so it reads as secondary.
 
-The Responsive HeaderNav example moves the links and a Sign in action into the drawer below a container width.
+The Responsive HeaderNav example moves the links and a Sign in action into the drawer below a container width. The links go to their routes, and both Sign in Buttons call one sign-in function.
 
 ## Labels
 

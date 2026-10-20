@@ -3,7 +3,7 @@
   "id": "muxui:example:file-trigger-staged-react",
   "kind": "example",
   "name": "FileTrigger with a confirmed upload",
-  "summary": "Check the chosen files, show rejections beside the picker, and stage the rest behind a separate Upload Button, with the transfer left to the application.",
+  "summary": "Check the chosen files, show rejections beside the picker, stage the rest behind a separate Upload Button, then show processing, completed, and failed feedback with a retry. The transfer is the application's own simulated code.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:file-trigger#web.react",

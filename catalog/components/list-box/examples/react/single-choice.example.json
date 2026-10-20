@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:list-box-single-choice-react",
+  "kind": "example",
+  "name": "ListBox or RadioGroup for one choice",
+  "summary": "Show one short set of three options as a RadioGroup and as a ListBox, then a longer list of rich options where a ListBox is the better fit.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:list-box#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 12
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/list-box/examples/react/single-choice.tsx"
+}

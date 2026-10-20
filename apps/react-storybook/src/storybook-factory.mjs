@@ -1217,8 +1217,10 @@ Object.assign(ADAPTERS, {
   ColorModeToggle: (args) => e(ColorModeTogglePreview, args),
   CommandPalette: (args) => e(CommandPalettePreview, args),
   // One list of links fills the header and the drawer. href and current belong to the first link. Sign in sits
-  // in the header from 40rem wide, and below it the drawer holds it under the links.
+  // in the header from 40rem wide, and below it the drawer holds it under the links. Both Buttons share one
+  // handler, which goes to the #sign-in route as the links go to their hash routes.
   HeaderNav: ({ href, current, ...root }) => {
+    const signIn = () => { window.location.hash = '#sign-in'; };
     const navigation = [
       e(MuxUI.HeaderNav.NavButton, { key: 'docs', href: fallback(href, '#docs'), current }, 'Docs'),
       e(MuxUI.HeaderNav.NavButton, { key: 'components', href: '#components' }, 'Components'),
@@ -1233,11 +1235,11 @@ Object.assign(ADAPTERS, {
           className: 'muxui-storybook-header-links',
           'aria-label': `${root['aria-label'] ?? 'Header navigation'} secondary`,
         }, navigation),
-        e(MuxUI.HeaderNav.Actions, { className: 'muxui-storybook-header-actions' }, e(MuxUI.Button, null, 'Sign in')),
+        e(MuxUI.HeaderNav.Actions, { className: 'muxui-storybook-header-actions' }, e(MuxUI.Button, { onActivate: signIn }, 'Sign in')),
         e('div', { className: 'muxui-storybook-header-menu' },
           e(MuxUI.HeaderNav.MobileTrigger, null,
             navigation,
-            e('div', { className: 'muxui-storybook-header-drawer-actions' }, e(MuxUI.Button, null, 'Sign in')),
+            e('div', { className: 'muxui-storybook-header-drawer-actions' }, e(MuxUI.Button, { onActivate: signIn }, 'Sign in')),
           ),
         ),
       ),

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tabs-activation-react",
+  "kind": "example",
+  "name": "Tabs activation and panel loading",
+  "summary": "Compare automatic and manual keyboard activation, with the application starting each panel's request when a tab is selected and showing the loading state in the panel.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tabs#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/tabs/examples/react/activation.tsx"
+}

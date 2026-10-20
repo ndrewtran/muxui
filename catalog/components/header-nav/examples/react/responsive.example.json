@@ -3,7 +3,7 @@
   "id": "muxui:example:header-nav-responsive-react",
   "kind": "example",
   "name": "Responsive HeaderNav",
-  "summary": "Show the links and Sign in in the header from a container width and the drawer trigger below it, with the same links and Sign in in the drawer and the current page marked on both copies.",
+  "summary": "Show the links and Sign in in the header from a container width and the drawer trigger below it, with the same links and Sign in in the drawer, the current page marked on both copies, and one sign-in handler behind both Sign in Buttons.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:header-nav#web.react",

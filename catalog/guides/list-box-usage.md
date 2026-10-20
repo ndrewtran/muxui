@@ -12,6 +12,16 @@ Choose by the options and by whether the choice is a form field.
 
 The Rich scrollable ListBox with multiple selection example shows titled options that scroll and can be selected together.
 
+## One choice from a short list
+
+Compare the same single choice in both. Three short options, Compact, Comfortable, and Spacious, suit a RadioGroup.
+
+- A RadioGroup always keeps one option once the user has chosen. Clicking the chosen option again changes nothing.
+- A ListBox with one selection lets the user click the selected option to clear it, so the selection can end up empty. Handle an empty selection, or use RadioGroup.
+- Choose a ListBox for that same choice only when the options carry a detail line or the list is long enough to scroll, such as a list of templates.
+
+The ListBox or RadioGroup for one choice example shows the three options as a RadioGroup and as a ListBox, then a scrolling list of templates where a ListBox fits.
+
 ## Items or children
 
 ListBox takes its options from one source. Pass data as items for a plain list, or compose Section, Header, and Item as children when options need sections or custom content. If both are supplied, the children take precedence and the items are not rendered, so move every option into the source you choose. The Basic and Grid React ListBox examples show one source each.

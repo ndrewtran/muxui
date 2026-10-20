@@ -7,6 +7,11 @@ const links = [
 ];
 const currentHref = '/docs';
 
+// Sign in is the application's own action, shared by both copies. A router-based app would call its navigate function here.
+function signIn() {
+  window.location.assign('/sign-in');
+}
+
 // One list of links fills the header and the drawer, each marking the current page.
 const navigation = links.map(({ href, label }) => (
   <HeaderNav.NavButton key={href} href={href} current={href === currentHref}>{label}</HeaderNav.NavButton>
@@ -46,14 +51,14 @@ export function ResponsiveHeaderNavExample() {
         <HeaderNav.Logo href="/">Mux</HeaderNav.Logo>
         <HeaderNav.Secondary className="header-links">{navigation}</HeaderNav.Secondary>
         <HeaderNav.Actions className="header-actions">
-          <Button>Sign in</Button>
+          <Button onActivate={signIn}>Sign in</Button>
         </HeaderNav.Actions>
         <div className="header-menu">
           <HeaderNav.MobileTrigger>
             {navigation}
             {/* The essential action that no longer fits in the header follows the links. */}
             <div className="header-drawer-actions">
-              <Button>Sign in</Button>
+              <Button onActivate={signIn}>Sign in</Button>
             </div>
           </HeaderNav.MobileTrigger>
         </div>

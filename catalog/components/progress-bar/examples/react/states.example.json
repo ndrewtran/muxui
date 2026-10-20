@@ -3,7 +3,7 @@
   "id": "muxui:example:progress-bar-states-react",
   "kind": "example",
   "name": "ProgressBar states",
-  "summary": "Compare an omitted value, a value of zero, active progress, and completion, each with a stable task label and its phase in text beside the bar.",
+  "summary": "Compare unknown, zero, and active progress with successful, rejected, failed, and cancelled outcomes, each with a stable task label and its phase or outcome in application text beside the bar.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:progress-bar#web.react",

@@ -9,6 +9,8 @@ Wrap transient notifications in ToastProvider. Use useToast for event-driven not
 - Keep a failure the user must act on beside its source, with the error text and a way to retry.
 - Skip a toast for routine updates, such as every autosave.
 
+The Toast result and inline failure example compares the two on one Save Button. A finished save adds a success toast, a failed save leaves its error and a Try again Button beside Save, and the pending state sits on the Button.
+
 ## Variants
 
 Choose the variant from what happened. A variant changes how the toast looks, not how long it stays.
@@ -35,7 +37,7 @@ Components that call useToast or mount Toast sit inside a ToastProvider, which r
 - `placement` is the viewport corner of the region: `top-start`, `top-end`, `bottom-start`, or `bottom-end`. It defaults to `top-end`.
 - `className` styles the region.
 
-useToast returns a manager. Its add method takes a message and the options `title`, `variant`, `duration`, `onDismiss`, and `className`, enqueues a toast, and returns the toast's key. Its remove method closes the toast with that key, so keep the key when the application needs to close the toast itself. The Toast keys and removal example sets both provider props, keeps a key, and removes a toast with it.
+useToast returns a manager. Its add method takes a message and the options `title`, `variant`, `duration`, `onDismiss`, and `className`, enqueues a toast, and returns the toast's key. Its remove method closes the toast with that key, so keep the key when the application needs to close the toast itself. The Toast keys and removal example sets both provider props, keeps a pending export on its Button, and removes the finished result's toast by its key.
 
 ## Declarative toasts
 

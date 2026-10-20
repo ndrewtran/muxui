@@ -13,9 +13,10 @@ Use ProgressCircle for progress in a compact space, such as beside a Button or i
 ## Finishing an operation
 
 - For a transient operation, such as a sync, show the circle while the work runs. When it ends, replace the circle with the result in your own status text, such as Synced 12 files.
+- Do the same when the work fails or the user cancels it, with text such as Sync failed or Sync cancelled. Say what happened and what the user can do next.
 - Keep a completed circle only where the measure stays useful afterward, such as a dashboard that shows how much of a plan is done.
 
-The ProgressCircle for an operation example shows the first: a circle with unknown progress, then status text in its place.
+The ProgressCircle for an operation example shows the first two: a circle with unknown progress, then status text in its place, whether the sync finishes, fails, or is cancelled.
 
 ## Content
 

@@ -23,6 +23,9 @@ The variants are visual choices, and none carries a meaning of its own. Pick the
 
 - By default, an arrow key selects the tab it reaches, which suits panels that appear at once.
 - Set `keyboardActivation` to `manual` when showing a panel is slow or has side effects, such as loading data or starting a request. Arrow keys then only move focus, and Enter or Space selects the focused tab.
+- Tabs loads nothing. The application starts a panel's request when its tab is selected, and shows a loading state in the panel until the content arrives.
+
+The Tabs activation and panel loading example sets the two side by side and counts the requests each starts as you move across the tabs.
 
 ## Content
 
