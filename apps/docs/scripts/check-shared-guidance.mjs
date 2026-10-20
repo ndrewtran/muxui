@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'parse5';
-import { accessibilityGuideSections } from '../../component-reference.mjs';
+import { accessibilityGuideSections } from '../../guide-links.mjs';
 import { attributeValue, elements, textContent } from './html-tree.mjs';
 
 // Two shared pages carry content that another surface shows too. This reads the built pages against their owners, not

@@ -51,7 +51,7 @@ adapter Default story and the API reference stays Storybook's Controls table;
 canonical examples appear as static source, not as extra stories. The
 Accessibility section also carries the shared accessibility guide's Support
 status and Verification sections, cut from `catalog/guides/accessibility.md` by
-heading (`accessibilityGuideSections` in `../component-reference.mjs`), with a
+heading (`accessibilityGuideSections` in `../guide-links.mjs`, over marked's parsed tokens), with a
 link to the full guide. Storybook has no guide pages, so the link is the guide's
 source, as for a family's usage guide. The docs site renders the same file whole
 at `/accessibility/`, and `apps/docs/scripts/check-shared-guidance.mjs` holds

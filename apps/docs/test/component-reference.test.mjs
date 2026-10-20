@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
-import { accessibilityGuideId, accessibilityGuideSections, componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 
 const requirement = (token, extra = {}) => ({ token, requirement: 'required', ...extra });
 const record = ({ requirements = [requirement('component.card.background')], obligations = ['Expose state'], binding = obligations, intent } = {}) => ({
@@ -109,32 +109,4 @@ test('package facts verify the descriptor, renderer contract and stylesheet agai
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
-});
-
-test('the accessibility sections are cut from the guide by heading and nothing else is added', () => {
-  const guide = [
-    '# Accessibility', '', 'Intro.', '', '## Support status', '', 'Experimental.', 'No claim.', '',
-    '## Names', '', 'A name.', '', '## Verification', '', 'Test it.', '```md', '## Support status', '```', '',
-  ].join('\n');
-  assert.deepEqual(accessibilityGuideSections(guide), [
-    { heading: 'Support status', markdown: 'Experimental.\nNo claim.' },
-    { heading: 'Verification', markdown: 'Test it.\n```md\n## Support status\n```' },
-  ]);
-  assert.throws(() => accessibilityGuideSections('## Verification\n\nTest it.'), /exactly one "Support status" section, found 0/u);
-  assert.throws(() => accessibilityGuideSections('## Support status\n\nA.\n\n## Support status\n\nB.\n\n## Verification\n\nC.'), /exactly one "Support status" section, found 2/u);
-  assert.throws(() => accessibilityGuideSections('## Support status\n\n## Verification\n\nC.'), /"Support status" section is empty/u);
-});
-
-test('the canonical accessibility guide supplies the sections both surfaces show', () => {
-  const root = resolve(import.meta.dirname, '../../..');
-  const record = JSON.parse(readFileSync(resolve(root, 'catalog/guides/accessibility.json'), 'utf8'));
-  assert.equal(record.id, accessibilityGuideId);
-  const file = readFileSync(resolve(root, record.source), 'utf8');
-  const sections = accessibilityGuideSections(file);
-  assert.deepEqual(sections.map(({ heading }) => heading), ['Support status', 'Verification']);
-  // Each section is a verbatim part of the guide file that Starlight renders whole, so neither surface can word it differently.
-  for (const { markdown } of sections) assert.ok(file.includes(markdown));
-  // The projection keeps the guide's own non-claim and the consumer's testing duty.
-  assert.match(sections[0].markdown, /makes no assistive-technology\s+support claim/u);
-  assert.match(sections[1].markdown, /Test the interaction with keyboard navigation and a screen reader in the\s+consumer application/u);
 });

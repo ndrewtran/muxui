@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import test from 'node:test';
-import { linkedFamilies } from '../../guide-links.mjs';
+import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies, linkedSiteRoutes } from '../../guide-links.mjs';
 
 test('a guide links to another family by its docs path', () => {
   const guide = 'Use [Checkbox](/components/checkbox/) or [CheckboxGroup](/components/checkbox-group/), then [Checkbox again](/components/checkbox/). See the [API](#api-reference), [Themes](/themes/), and [the web](https://example.com/components/x/).';
@@ -87,4 +89,74 @@ test('a link inside a code span or a code block is example text, not a link', ()
     'Then [Switch](/components/switch/).',
   ].join('\n');
   assert.deepEqual(linkedFamilies(guide), ['switch']);
+});
+
+test('the site routes a guide links are its slash-led inline links, outside code', () => {
+  const guide = [
+    'See the [tested profile](/installation/#tested-profile), [Checkbox](/components/checkbox/ "Group"), the [web](https://example.com/), [here](#top) and [again](/installation/#tested-profile).',
+    '',
+    'A [protocol-relative link](//example.com/x) and `[code](/components/code/)` are not routes.',
+    '',
+    '```md',
+    '[Fenced](/fenced/)',
+    '```',
+  ].join('\n');
+  assert.deepEqual(linkedSiteRoutes(guide), ['/installation/#tested-profile', '/components/checkbox/']);
+});
+
+const fence = (marker, lines) => [`${marker}md`, ...lines, marker].join('\n');
+
+test('the accessibility sections are cut at the guide\'s second level headings and keep their deeper ones', () => {
+  const guide = [
+    '# Accessibility', '', 'Intro.', '',
+    '## Support status', '', 'Experimental.', 'No claim.', '', '### Limits', '', 'One limit.', '',
+    '## Names', '', 'A name.', '',
+    '## Verification', '', 'Test it.', '',
+  ].join('\n');
+  assert.deepEqual(accessibilityGuideSections(guide), [
+    { heading: 'Support status', markdown: 'Experimental.\nNo claim.\n\n### Limits\n\nOne limit.' },
+    { heading: 'Verification', markdown: 'Test it.' },
+  ]);
+});
+
+test('a heading inside a fenced block is code, whatever the fence is made of', () => {
+  const body = (support, verification) => ['## Support status', '', support, '', '## Verification', '', verification, ''].join('\n');
+  // A four-backtick block holds a three-backtick block, with a heading inside.
+  const nested = fence('````', [fence('```', ['## Support status']), '## Verification']);
+  assert.deepEqual(accessibilityGuideSections(body(`Real.\n\n${nested}`, 'Test it.')), [
+    { heading: 'Support status', markdown: `Real.\n\n${nested}` },
+    { heading: 'Verification', markdown: 'Test it.' },
+  ]);
+  // A tilde line inside a backtick block does not close it.
+  const tilde = fence('```', ['~~~', '## Verification', '~~~']);
+  assert.deepEqual(accessibilityGuideSections(body(`Real.\n\n${tilde}`, 'Test it.')), [
+    { heading: 'Support status', markdown: `Real.\n\n${tilde}` },
+    { heading: 'Verification', markdown: 'Test it.' },
+  ]);
+  // A tilde block can hold backtick lines, and an indented block is code too.
+  const backticks = fence('~~~', ['```', '## Support status']);
+  const indented = '    ## Verification';
+  assert.equal(accessibilityGuideSections(body(`${backticks}\n\n${indented}`, 'Test it.'))[0].markdown, `${backticks}\n\n${indented}`);
+});
+
+test('the accessibility guide must have each section once, with something in it', () => {
+  assert.throws(() => accessibilityGuideSections('## Verification\n\nTest it.'), /exactly one "Support status" section, found 0/u);
+  assert.throws(() => accessibilityGuideSections('## Support status\n\nA.\n\n## Support status\n\nB.\n\n## Verification\n\nC.'), /exactly one "Support status" section, found 2/u);
+  assert.throws(() => accessibilityGuideSections('## Support status\n\n## Verification\n\nC.'), /"Support status" section is empty/u);
+  // A heading at another level is not the section.
+  assert.throws(() => accessibilityGuideSections('### Support status\n\nA.\n\n## Verification\n\nC.'), /exactly one "Support status" section, found 0/u);
+});
+
+test('the canonical accessibility guide supplies the sections both surfaces show', () => {
+  const root = resolve(import.meta.dirname, '../../..');
+  const record = JSON.parse(readFileSync(resolve(root, 'catalog/guides/accessibility.json'), 'utf8'));
+  assert.equal(record.id, accessibilityGuideId);
+  const file = readFileSync(resolve(root, record.source), 'utf8');
+  const sections = accessibilityGuideSections(file);
+  assert.deepEqual(sections.map(({ heading }) => heading), ['Support status', 'Verification']);
+  // Each section is a verbatim part of the guide file that Starlight renders whole, so neither surface can word it differently.
+  for (const { markdown } of sections) assert.ok(file.includes(markdown));
+  // The projection keeps the guide's own non-claim and the consumer's testing duty.
+  assert.match(sections[0].markdown, /makes no assistive-technology\s+support claim/u);
+  assert.match(sections[1].markdown, /Test the interaction with keyboard navigation and a screen reader in the\s+consumer application/u);
 });

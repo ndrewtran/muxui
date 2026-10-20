@@ -3,8 +3,8 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { posix, resolve } from 'node:path';
-import { accessibilityGuideId, accessibilityGuideSections, componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
-import { linkedFamilies } from '../../guide-links.mjs';
+import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies } from '../../guide-links.mjs';
 
 /**
  * The docs entry of every component family: the catalog facts its Storybook
