@@ -16,22 +16,33 @@ export function RemoteSearchFieldExample() {
   const [results, setResults] = useState<string[] | null>(null);
   const latest = useRef(0);
 
+  // Resetting also drops any pending request, so a late response cannot reappear.
+  function reset() {
+    latest.current += 1;
+    setSearching(false);
+    setResults(null);
+  }
+
   // Enter starts the request, so typing sends nothing.
   async function handleSubmit(text: string) {
+    if (text.trim() === '') {
+      reset();
+      return;
+    }
     const id = ++latest.current;
     setSearching(true);
     const found = await searchProjects(text.trim());
-    // Ignore a response that a newer search or a clear has replaced.
+    // Ignore a response that a newer search or a reset has replaced.
     if (id !== latest.current) return;
     setResults(found);
     setSearching(false);
   }
 
-  // Clearing does not submit, so reset the results here.
-  function handleClear() {
-    latest.current += 1;
-    setSearching(false);
-    setResults(null);
+  // Emptying the field by hand reports only a change, and Escape or the clear button report an empty change first,
+  // so an empty change is the one signal that covers all three.
+  function handleChange(text: string) {
+    setQuery(text);
+    if (text === '') reset();
   }
 
   return (
@@ -40,9 +51,8 @@ export function RemoteSearchFieldExample() {
         label="Search projects"
         description="Press Enter to search."
         value={query}
-        onChange={setQuery}
+        onChange={handleChange}
         onSubmit={handleSubmit}
-        onClear={handleClear}
       />
       {searching ? <p>Searching projects</p> : null}
       {!searching && results !== null ? (

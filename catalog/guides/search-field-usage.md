@@ -26,4 +26,4 @@ Enter submits the current text. Escape, or the clear button, empties a field tha
 
 ## Common mistake
 
-Leaving results on screen after the field is cleared. Clearing reports the empty text and the clear, and does not submit, so reset the results in the clear callback, as the searching on Enter example does.
+Leaving results on screen after the field is emptied. Escape and the clear button report `onClear`, but deleting the text by hand reports only `onChange`, and none of them submits. Reset the results and any pending request when `onChange` receives an empty string, as the searching on Enter example does.

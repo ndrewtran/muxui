@@ -3,7 +3,7 @@
   "id": "muxui:example:search-field-remote-search-react",
   "kind": "example",
   "name": "SearchField searching on Enter",
-  "summary": "Send a request when Enter submits the text, keep the request state in the application, and reset the results when the field is cleared.",
+  "summary": "Send a request when Enter submits the text, keep the request state in the application, and reset the results and any pending request when the field is emptied.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:search-field#web.react",
