@@ -159,7 +159,11 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     // A cancelled drag, and one that loses pointer capture, put back the sizes from before it and never commit.
     for (const cancelDrag of [
       () => page.evaluate(() => document.querySelector('[data-handle-id="split"]').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }))),
-      () => page.evaluate(() => document.querySelector('[data-handle-id="split"]').releasePointerCapture(1)),
+      // Chromium fires lostpointercapture with the next pointer event, so move the pointer after releasing it.
+      async () => {
+        await page.evaluate(() => document.querySelector('[data-handle-id="split"]').releasePointerCapture(1));
+        await page.mouse.move(grip.x - 81, grip.y);
+      },
     ]) {
       await dragLeft();
       await cancelDrag();

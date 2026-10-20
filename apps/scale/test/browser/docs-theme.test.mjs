@@ -78,7 +78,8 @@ async function inspectSearch(page, screenshotName) {
 	const input = page.locator('#starlight__search .pagefind-ui__search-input');
 	await input.waitFor();
 	await input.fill('button');
-	await page.waitForFunction(() => document.querySelectorAll('#starlight__search .pagefind-ui__result').length > 0);
+	// Results render as loading placeholders until their fragments arrive.
+	await page.waitForFunction(() => document.querySelector('#starlight__search .pagefind-ui__result-title:not(.pagefind-ui__loading)'));
 	const values = await page.evaluate(() => {
 		const root = document.documentElement;
 		const resolve = (property, token) => {
@@ -148,6 +149,9 @@ test('docs Scale applies one validated theme across shell, islands and portals',
   const browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
+  // Starlight mounts Pagefind UI from a requestIdleCallback that Chromium may never run on a slow runner, so the search input never appears.
+  // Use the setTimeout fallback Starlight takes when the API is missing.
+  await page.addInitScript(() => { window.requestIdleCallback = (callback) => setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 0 }), 1); });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   try {
