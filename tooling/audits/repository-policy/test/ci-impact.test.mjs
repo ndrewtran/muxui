@@ -495,6 +495,8 @@ test('the inputs a Storybook Docs page embeds plan generation and the Docs page 
     sizingExamplePath,
     'catalog/guides/number-field-usage.md',
     'catalog/guides/number-field-usage.json',
+    'catalog/guides/accessibility.md',
+    'catalog/guides/accessibility.json',
     'catalog/patterns/poster-grid/artifact.json',
     'apps/component-reference.mjs',
     'apps/guide-links.mjs',
@@ -510,8 +512,8 @@ test('the inputs a Storybook Docs page embeds plan generation and the Docs page 
     assert.ok(commands.includes('--filter @muxui/react-storybook exec node --test test/component-docs.test.mjs'), path);
   }
 
-  // A guide with no family, a shared guide and a pattern's example record are not embedded.
-  for (const path of ['catalog/guides/control-sizing-usage.md', 'catalog/guides/accessibility.md', 'catalog/patterns/poster-grid/examples/react/css-grid.example.json']) {
+  // A guide with no family, another shared guide and a pattern's example record are not embedded.
+  for (const path of ['catalog/guides/control-sizing-usage.md', 'catalog/guides/lifecycle.md', 'catalog/patterns/poster-grid/examples/react/css-grid.example.json']) {
     const result = await plan([path]);
     assert.equal(result.storyTooling, false, path);
     assert.deepEqual(result.storyUnitTests, [], path);

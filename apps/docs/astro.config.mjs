@@ -111,6 +111,7 @@ export default defineConfig({
 			alias: [
 				{ find: /^starlight-style\//u, replacement: `${starlightStyleDirectory}/` },
 				{ find: /^@muxui\/react\/styles\.css$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/styles.css') },
+				{ find: /^@muxui\/react\/compatibility$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/compatibility.mjs') },
 				{ find: /^@muxui\/react\/markdown$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/markdown.mjs') },
 				{ find: /^@muxui\/react\/text-editor$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/text-editor.mjs') },
 				{ find: '@muxui/react', replacement: resolve(repositoryRoot, 'packages/react/generated/index.mjs') },

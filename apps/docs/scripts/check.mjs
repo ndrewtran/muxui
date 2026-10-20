@@ -23,10 +23,12 @@ try {
 	runNode('Component navigation categories', ['--test', resolve(docsRoot, 'test/component-navigation.test.mjs')]);
 	runNode('Component reference projection', ['--test', resolve(docsRoot, 'test/component-reference.test.mjs')]);
 	runNode('Guide links to other families', ['--test', resolve(docsRoot, 'test/guide-links.test.mjs')]);
+	runNode('Installation tested profile', ['--test', resolve(docsRoot, 'test/compatibility-profile.test.mjs')]);
 	runNode('Blocks loader parity and drift guard', ['--test', resolve(docsRoot, 'test/blocks-loader.test.mjs'), resolve(docsRoot, 'test/authored-pattern-reference.test.mjs')]);
 	runNode('Astro build', [astroCli, 'build', '--outDir', outputDirectory]);
 	runNode('Rendered source contract', [resolve(import.meta.dirname, 'check-rendered-source.mjs'), outputDirectory]);
 	runNode('Component reference contract', [resolve(import.meta.dirname, 'check-component-sections.mjs'), outputDirectory]);
+	runNode('Shared guidance contract', [resolve(import.meta.dirname, 'check-shared-guidance.mjs'), outputDirectory]);
 	runNode('Blocks contract', [resolve(import.meta.dirname, 'check-blocks.mjs'), outputDirectory]);
 	runNode('Navigation contract', [resolve(import.meta.dirname, 'check-navigation.mjs'), outputDirectory]);
 	runNode('Token path contract', ['--experimental-strip-types', resolve(import.meta.dirname, 'check-token-path.mjs'), outputDirectory]);

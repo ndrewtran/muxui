@@ -21,9 +21,12 @@ const docsSections = Object.freeze([
   ['sources', 'Sources'],
 ]);
 
+/** Headings in Markdown shown below the page's own, each rendered as the given deeper level. */
+const demoting = (levels) => Object.fromEntries(Object.entries(levels).map(([from, to]) => [from, ({ children }) => h(to, null, children)]));
 /** A guide's own headings sit below the page's sections. */
-const demoted = { h2: 'h4', h3: 'h5', h4: 'h6' };
-const headingOverrides = Object.fromEntries(Object.entries(demoted).map(([from, to]) => [from, ({ children }) => h(to, null, children)]));
+const headingOverrides = demoting({ h2: 'h4', h3: 'h5', h4: 'h6' });
+/** The shared accessibility sections sit under an h3 each, so their own subsections are h4. */
+const sectionHeadingOverrides = demoting({ h3: 'h4', h4: 'h5' });
 
 function List({ items, fact }) {
   return h('ul', { 'data-fact': fact }, items.map((item, index) => h('li', { key: index }, item)));
@@ -75,11 +78,16 @@ function PageLink({ Anchor, href, children, ...props }) {
 export function ComponentDocs({ entry, blocks }) {
   const { Title, Primary, Controls, Source, Markdown, Anchor } = blocks;
   const [basic, ...others] = entry.examples;
-  const { usage, accessibility, styling } = entry;
+  const { usage, accessibility, accessibilityGuide, styling } = entry;
   // A link to another family, written as its docs path, goes to that family's Docs page. Other links stay as written.
   const guideLink = ({ href, children, ...props }) => entry.guide.links[href] === undefined
     ? h('a', { href, ...props }, children)
     : h(PageLink, { Anchor, href: entry.guide.links[href], ...props }, children);
+
+  // A link in the shared accessibility text to a docs site route opens the file that owns what the route shows.
+  const sharedLink = ({ href, children, ...props }) => accessibilityGuide.links[href] === undefined
+    ? h('a', { href, ...props }, children)
+    : h('a', { ...props, href: sourceUrl(accessibilityGuide.links[href]), target: '_blank', rel: 'noreferrer' }, children);
 
   const bodies = {
     basic: () => [
@@ -124,6 +132,11 @@ export function ComponentDocs({ entry, blocks }) {
       h('h3', { key: 'obligations-title' }, 'Obligations'),
       h(List, { key: 'obligations', items: accessibility.obligations, fact: 'accessibility.obligations' }),
       accessibility.binding.length > 0 && h(React.Fragment, { key: 'binding' }, h('h3', null, 'React binding'), h(List, { items: accessibility.binding, fact: 'binding.accessibility' })),
+      // The obligations above are this family's. What is claimed, proved and left to the consumer is the shared guide's, cut from it.
+      h('div', { key: 'shared', className: 'muxui-docs-guide', 'data-shared-guide': accessibilityGuide.id },
+        accessibilityGuide.sections.map(({ heading, markdown }) => h(React.Fragment, { key: heading }, h('h3', null, heading),
+          h(Markdown, { options: { overrides: { ...sectionHeadingOverrides, a: sharedLink } } }, markdown))),
+        h('p', { className: 'muxui-docs-caption' }, 'Full guide: ', h(SourceLink, { path: accessibilityGuide.source }))),
     ],
     'anatomy-and-styling': () => [
       h('h3', { key: 'anatomy-title' }, 'Anatomy'),

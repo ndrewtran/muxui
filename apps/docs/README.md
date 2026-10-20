@@ -19,6 +19,12 @@ over canonical catalog and guide sources; it does not own component facts.
 
 The facts behind those sections come from `../component-reference.mjs`, which turns a component record, the renderer descriptor and contract, and the package manifest into section facts, so the app authors no per-family text. A component's usage guide is related by its declared id (`muxui:guide:<slug>-usage`). A usage guide that names no family, `control-sizing-usage`, is shared guidance: it has its own Docs page and sidebar entry like the other shared guides, and `scripts/check-component-sections.mjs` fails when any such guide is unreachable. The API reference keeps the Prop and Default table until Decision 0031's TypeScript extraction supplies types. `scripts/check-component-sections.mjs` proves the section order of every built route and that each projected string equals its catalog value.
 
+The `/accessibility/` guide is the one author of the Support status and Verification text that every Storybook family page also shows. Support status holds the claim, the existing automated proof (linking the tested profile below) and the known limitations, and `scripts/check-shared-guidance.mjs` holds the built page to the same text and checks the routes and anchors it links.
+
+## Installation
+
+The Installation page (`/installation/`) states the package prerequisites from `packages/react/package.json` and the install and usage snippets from the generated package README. Its Tested profile section shows what the package records about its own testing: the `reactCompatibility.compatibilityProfile` that `packages/react/src/generate.mjs` generates from `catalog/react-r1-5/closure.json`, read through `src/lib/compatibility-profile.ts`. It lists the tested Node.js, React, React DOM and browser versions, the display profiles and what is not claimed, and says that it records testing, not support. `scripts/check-shared-guidance.mjs` holds the built page to those owners. Release-version copy belongs to the release owner and the page does not repeat the record's `version` or `publication`.
+
 ## Blocks
 
 The private Blocks section (`/blocks/`) projects the catalog's `pattern` records
