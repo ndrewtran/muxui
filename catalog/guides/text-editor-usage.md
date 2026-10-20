@@ -17,7 +17,7 @@ The Basic React TextEditor example is the simple recipe. The Advanced React Text
 
 These are two separate features.
 
-- `bubbleMenu` shows Bold, Italic, Underline, and Link over a selection. It formats the selected text.
+- `bubbleMenu` shows Bold, Italic, Underline, and Link while text is selected. It formats the selected text.
 - `onSelectionRequest` adds a bar under a selection for the application's own edits, from `selectionActions` or a Describe edits field.
 - The application's handler supplies the replacement, and the user then chooses Keep, Discard, or Try again.
 

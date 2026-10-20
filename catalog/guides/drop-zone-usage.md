@@ -12,11 +12,11 @@ Choose by what the user is doing.
 | Picking a file in a form or a compact space | FileTrigger alone |
 | Dropping or pasting items that are not only files, such as folders or text | DropZone |
 
-- Both entry points feed the same application pipeline, so write one function that takes File objects and call it from each.
+- Both entry points feed the same application pipeline, so write one function that checks the File objects and call it from each. Show what it rejects beside the area.
 - Keep the two reads separate: the drop event lists items that need an asynchronous read, while the FileTrigger reports a File array.
 - `onActivate` does not open the picker, and a click on a FileTrigger inside the drop area does not call it.
 
-The DropZone with a picker example drops and picks into one list.
+The DropZone with a picker example checks the type of dropped and picked files, shows rejections, and adds the rest to one list.
 
 ## Reading dropped items
 

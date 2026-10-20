@@ -22,7 +22,7 @@ Decide when to start using the files by what the selection costs.
 - Show filenames, rejections, and progress next to the picker, where the user chose.
 - FileTrigger does not transfer or retry anything. Start, track, cancel, and retry the transfer in the application.
 
-The FileTrigger with a confirmed upload example stages the files behind an Upload Button. The [API reference](#api-reference) lists the props Mux UI defines.
+The FileTrigger with a confirmed upload example rejects files that are not CSV beside the picker, stages the rest behind an Upload Button, and reports only that an upload was requested. The [API reference](#api-reference) lists the props Mux UI defines.
 
 ## Content
 
