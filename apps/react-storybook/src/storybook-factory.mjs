@@ -2215,6 +2215,33 @@ async function popoverBrowserProof({ canvasElement }) {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 }
 
+// HeaderNav shows its trigger only below the 40rem container query on the specimen frame, so the proof narrows
+// that frame, whatever the viewport, and restores it. A DOM click reaches a hidden trigger, so the trigger must
+// first be visible with the header's own links and Sign in hidden. The drawer then holds the links and Sign in.
+async function headerNavBrowserProof({ canvasElement }) {
+  const family = 'HeaderNav';
+  const frame = browserProofElement(canvasElement, '.muxui-storybook-header-frame', family);
+  const inlineSize = frame.style.inlineSize;
+  frame.style.inlineSize = '20rem';
+  try {
+    const trigger = await waitForVisibleBrowserElement('.muxui-header-nav__mobile-trigger', family);
+    for (const selector of ['.muxui-header-nav__secondary', '.muxui-header-nav__actions', '.muxui-header-nav__actions button']) {
+      assertBrowser(!browserElementVisible(browserProofElement(canvasElement, selector, family)), `${selector} is hidden in the narrow header`);
+    }
+    trigger.focus();
+    trigger.click();
+    const dialog = await waitForVisibleBrowserElement('.muxui-header-nav__mobile-dialog', family);
+    await waitForBrowserFocusWithin(dialog);
+    const entries = [...dialog.querySelectorAll('a, button:not(.muxui-header-nav__mobile-close-btn)')].map((node) => node.textContent?.trim());
+    assertBrowser(entries.join('|') === 'Docs|Components|Blocks|Sign in', `the drawer lists the links then Sign in, found ${entries.join('|')}`);
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+    await waitForBrowserElementGone('.muxui-header-nav__mobile-dialog');
+    await waitForBrowserFocus(trigger);
+  } finally {
+    frame.style.inlineSize = inlineSize;
+  }
+}
+
 async function timedOverlayBrowserProof({ canvasElement, family }) {
   const trigger = browserProofElement(canvasElement, 'button, [role="button"]', family);
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true }));
@@ -2499,6 +2526,7 @@ const BROWSER_PROOF_PLANS = {
 
 const HISTORICAL_BROWSER_PROOF_PLAN_NAMES = Object.freeze(Object.keys(BROWSER_PROOF_PLANS));
 BROWSER_PROOF_PLANS.IconButton = activationPlan('IconButton', '.muxui-icon-button');
+BROWSER_PROOF_PLANS.HeaderNav = headerNavBrowserProof;
 const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   AlertDialog: '.muxui-alert-dialog__trigger',
   Avatar: '.muxui-avatar',
@@ -2512,7 +2540,6 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   CheckboxField: '.muxui-checkbox-field__button',
   ColorModeToggle: '.muxui-color-mode-toggle',
   CommandPalette: '.muxui-command-palette__trigger',
-  HeaderNav: '.muxui-header-nav__mobile-trigger',
   Image: '.muxui-image',
   InputTags: '.muxui-input-tags input',
   Input: '.muxui-input',
