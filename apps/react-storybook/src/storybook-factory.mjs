@@ -695,7 +695,8 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
 /**
  * The props a named state changes from the default. The States story leaves them unset, so each state supplies its
  * own value instead of a binding default (disabled: false, defaultOpen: false, and so on) masking it, while anything
- * a user supplies, even false, empty, or the default value, wins in every row.
+ * a user supplies, even false, empty, or the default value, wins in every row. The exception is the lifecycle rows
+ * (entering, exiting, opening, closing), which drive `open` themselves, and cap Toast `duration`, to animate.
  */
 function stateDrivingProps(binding, family) {
   const defaults = normalizeDefaultArgs(binding);
@@ -1555,13 +1556,16 @@ function StateVariant({ family, state, args, available }) {
     observer.observe(section, { attributes: true, attributeFilter: ['aria-hidden'] });
     return () => observer.disconnect();
   }, []);
+  // The open row opens its trigger itself, so a user's closed value has to stop that click. Focus and drag rows have
+  // no prop a user could set to the contrary.
+  const closedByUser = args.open === false || args.defaultOpen === false;
   React.useEffect(() => {
     if (state === 'focused') focusStateTarget(stateRef.current);
     if (state === 'tag-focused') return scheduleTagFocus(stateRef.current);
     if (state === 'drop-target' || state === 'dragging') dispatchDragEnter(stateRef.current);
-    if (state !== 'open' || !INTERACTION_OPEN_FAMILIES.has(family)) return undefined;
+    if (state !== 'open' || !INTERACTION_OPEN_FAMILIES.has(family) || closedByUser) return undefined;
     return scheduleOpenInteraction(stateRef.current, family);
-  }, [family, state]);
+  }, [family, state, closedByUser]);
 
   // `args` already carry the row's state, projected by stateArgsForBinding with any user value taking precedence, so
   // this only adds what keeps the rows apart: a unique label, a lifecycle marker, and a unique landmark name.

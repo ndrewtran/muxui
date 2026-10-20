@@ -23,7 +23,8 @@ and the tests. Browser proof is proof, not teaching: every family keeps it,
 tagged `!dev` and `!autodocs` so the sidebar and autodocs leave it out while the
 served index and the audits still reach it by ID. A States story leaves unset the props its rows drive, so
 each named state shows itself and a value set in Controls still wins in every
-row.
+row. The exception is the lifecycle rows (entering, exiting, opening, closing),
+which drive `open` themselves, and cap Toast `duration`, to animate.
 
 The generator also emits one page group per catalog pattern (a Block), titled
 `Blocks/<Category>/<Pattern>`, with one story per variant, so a variant reads

@@ -1459,6 +1459,31 @@ test('every States row renders exactly the args its state projects, so a user va
   assert.deepEqual(mismatched, []);
 });
 
+test('the open row clicks its trigger open, unless the user set it closed', async () => {
+  // The click is an effect of the mounted row, which a static render cannot see.
+  const isOpen = {
+    DatePicker: (row) => row.querySelector('.muxui-date-trigger').getAttribute('aria-expanded') === 'true',
+    DateRangePicker: (row) => row.querySelector('.muxui-date-trigger').getAttribute('aria-expanded') === 'true',
+    Select: (row) => row.querySelector('.muxui-select-trigger').getAttribute('aria-expanded') === 'true',
+    CommandPalette: (row) => row.querySelector('.muxui-command-palette').hasAttribute('data-open'),
+  };
+  for (const [family, opened] of Object.entries(isOpen)) {
+    const story = createStory(currentRecord(family), 'states');
+    for (const [label, args, expected] of [
+      ['stock', story.args, true],
+      ['defaultOpen: false', { ...story.args, defaultOpen: false }, false],
+      ['open: false', { ...story.args, open: false }, false],
+    ]) {
+      await withRuntime(async ({ host, root: reactRoot }) => {
+        await act(async () => reactRoot.render(story.render(args)));
+        await settleRuntime(120);
+        const row = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'open');
+        assert.equal(opened(row), expected, `${family} open row with ${label}`);
+      });
+    }
+  }
+});
+
 test('ColorSwatchPicker read-only row ignores clicks and keeps keyboard navigation', async () => {
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createStory(currentRecord('ColorSwatchPicker'), 'states');
