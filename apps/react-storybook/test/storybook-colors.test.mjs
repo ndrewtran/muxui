@@ -1587,7 +1587,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
         }
       } finally {
         await page.evaluate((ids) => globalThis.__STORYBOOK_API__.experimental_getStatusStore('muxui/colour-audit').unset(ids),
-          [statusStory, 'muxui-react-r1-1-button--default', 'muxui-react-r1-1-button--controlled']);
+          [statusStory, 'muxui-react-r1-1-button--default']);
       }
       await page.evaluate(() => globalThis.__STORYBOOK_ADDONS_MANAGER.getChannel().emit('channelWSDisconnect', { code: 3008 }));
       await page.getByText('Server timed out', { exact: true }).waitFor();

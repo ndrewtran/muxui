@@ -39,6 +39,7 @@ import {
   renderStateCoverage,
   stateArgsForBinding,
   stateCoverageForBinding,
+  STORY_APPLICABILITY,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
@@ -289,7 +290,7 @@ test('generated metadata exposes every canonical event, part, state, and control
   assert.equal(partCount, descriptor.bindings.reduce((count, binding) => count + binding.api.parts.length, 0));
 });
 
-test('generated proof stories expose live controls, events, modes, anatomy, and browser plays', async () => {
+test('every family has live controls, events, modes, anatomy, and a hidden browser play, whichever stories it displays', async () => {
   assert.deepEqual(
     [...HISTORICAL_BROWSER_PROOF_FAMILIES].sort(),
     historicalManifest.families.map(({ family }) => family).sort(),
@@ -304,12 +305,20 @@ test('generated proof stories expose live controls, events, modes, anatomy, and 
     assert.ok(binding, `${record.family} descriptor binding`);
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
-    const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
-    for (const name of ['Controlled', 'Uncontrolled', 'Events', 'Anatomy', 'BrowserProof']) {
-      assert.equal(typeof story[name]?.render, 'function', `${record.family}/${name} render`);
-    }
-    assert.equal(typeof story.BrowserProof.play, 'function', `${record.family}/BrowserProof play`);
-    assert.equal(story.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
+    const module = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+    // Every family keeps BrowserProof, which the sidebar hides. The other proof stories are built from the factory,
+    // so each family's proof holds even where its page does not display the story.
+    assert.equal(typeof module.BrowserProof?.play, 'function', `${record.family}/BrowserProof play`);
+    assert.equal(module.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
+    assert.deepEqual(module.BrowserProof.tags, ['!dev'], `${record.family}/BrowserProof is hidden from the sidebar`);
+    const proof = { family: record.family, tranche: record.tranche, binding };
+    const story = {
+      Controlled: createControlledStory(proof),
+      Uncontrolled: createUncontrolledStory(proof),
+      Events: createEventsStory(proof),
+      Anatomy: createAnatomyStory(proof),
+    };
+    for (const [name, built] of Object.entries(story)) assert.equal(typeof built.render, 'function', `${record.family}/${name} render`);
     const pairs = controlledDefaultPairsForBinding(binding);
     pairCount += pairs.length;
     assert.deepEqual(
@@ -1469,11 +1478,10 @@ test('anatomy proof resolves every canonical part to a live DOM or executable ro
     const env = installRuntimeDom();
     const host = document.querySelector('#root');
     const root = createRoot(host);
-    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-    const tranche = record.tranche.replace('.', '-').toLowerCase();
     try {
-      const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
-      await act(async () => root.render(story.Anatomy.render(story.Anatomy.args)));
+      // Built from the factory so root-only families, whose pages omit Anatomy, still prove their parts.
+      const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding });
+      await act(async () => root.render(story.render(story.args)));
       // Toast is queued by a declarative effect and rendered by RAC's region on
       // the following task; allow that portal-like queue update to settle.
       await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, record.family === 'Toast' ? 100 : 20)));
@@ -2198,7 +2206,8 @@ test('Breadcrumbs defaults show the adapter sample while explicit empty items st
   assert.match(disabledMarkup, /aria-current="page"/u);
 });
 
-test('generated stories are stock CSF modules with default and state coverage', async () => {
+test('generated stories are stock CSF modules that display only the stories that teach something', async () => {
+  const standard = ['States', 'Controlled', 'Uncontrolled', 'Events', 'Anatomy'];
   for (const record of historicalManifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
@@ -2208,8 +2217,42 @@ test('generated stories are stock CSF modules with default and state coverage', 
     assert.match(body, /include: binding\.api\.props/);
     assert.match(body, /argTypesForBinding/);
     assert.match(body, /export const Default/);
-    assert.match(body, /export const States/);
+    assert.match(body, /export const BrowserProof/);
+    assert.match(body, /BrowserProof\.tags = \['!dev'\];/);
+
+    const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
+    const pairs = controlledDefaultPairsForBinding(binding).length > 0;
+    const expected = {
+      States: STORY_APPLICABILITY.States(binding, record.family),
+      Controlled: pairs,
+      Uncontrolled: pairs,
+      Events: binding.api.events.length > 0,
+      Anatomy: binding.api.parts.some((part) => part !== 'root'),
+    };
+    const exported = standard.filter((name) => new RegExp(`^export const ${name} =`, 'mu').test(body));
+    assert.deepEqual(exported, standard.filter((name) => expected[name]), `${record.family} displays the stories that apply to it`);
+    // The manifest the audits select pages from lists exactly what the module exports.
+    const pageNames = manifest.pageIndex.find(({ family }) => family === record.family).stories.map(({ exportName }) => exportName);
+    assert.deepEqual(pageNames.filter((name) => name === 'Default' || name === 'BrowserProof' || standard.includes(name)),
+      ['Default', ...exported, 'BrowserProof'], `${record.family} page index`);
   }
+
+  // A family without events, a controlled pair, or states beyond its default shows none of those stories.
+  const exportsOf = async (family) => {
+    const { tranche } = manifest.families.find((record) => record.family === family);
+    const slug = family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const module = await import(`../.storybook/generated/${tranche.replace('.', '-').toLowerCase()}-${slug}.stories.mjs`);
+    return Object.keys(module).filter((name) => name !== 'default').sort();
+  };
+  assert.deepEqual(await exportsOf('Text'), ['BrowserProof', 'Default'], 'Text has no events, pair, parts, or supported state');
+  const group = await exportsOf('Group');
+  assert.ok(group.includes('Anatomy') && group.includes('States'), 'Group has parts and states');
+  assert.ok(!group.includes('Events'), 'Group declares no events, so it has no Events story');
+  assert.ok(!group.includes('Controlled') && !group.includes('Uncontrolled'), 'Group has no controlled pair');
+  assert.deepEqual(await exportsOf('Button'), ['Anatomy', 'BrowserProof', 'Default', 'Events', 'Matrix', 'States']);
+  assert.ok((await exportsOf('Checkbox')).includes('Controlled'), 'a family with a controlled pair keeps the pair');
+  // A family whose named states the specimen cannot show has no States page of unavailable rows.
+  for (const family of ['Form', 'Markdown', 'Meter']) assert.ok(!(await exportsOf(family)).includes('States'), family);
 
   const buttonBinding = descriptor.bindings.find(({ export: name }) => name === 'Button');
   const buttonStory = await import('../.storybook/generated/r1-1-button.stories.mjs');

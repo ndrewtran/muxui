@@ -731,6 +731,23 @@ export function stateCoverageForBinding(binding, family) {
   }));
 }
 
+// Rows that show the component as it renders by default; the Default story already covers them.
+const BASELINE_STATES = new Set(['default', 'idle', 'visible']);
+
+/**
+ * Whether each standard story teaches something for a family. Default and BrowserProof apply to every family, so
+ * they are not listed: Default is the baseline and BrowserProof is proof, hidden from the sidebar but never dropped.
+ */
+export const STORY_APPLICABILITY = Object.freeze({
+  States: (binding, family) => stateVariantNames(binding, family)
+    .some((state) => !BASELINE_STATES.has(state) && stateIsSupported(binding, state, family)),
+  Controlled: (binding) => controlledDefaultPairsForBinding(binding).length > 0,
+  Uncontrolled: (binding) => controlledDefaultPairsForBinding(binding).length > 0,
+  Events: (binding) => eventBindingsForBinding(binding).length > 0,
+  // Every family has a root; a page of that part alone has nothing to teach.
+  Anatomy: (binding) => binding.api.parts.some((part) => part !== 'root'),
+});
+
 const e = (type, props, ...children) => React.createElement(type, props, ...children);
 
 function fallback(value, defaultValue) {

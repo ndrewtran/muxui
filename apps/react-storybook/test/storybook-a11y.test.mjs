@@ -1291,16 +1291,20 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       && isSelected({ title: 'Mux UI React/Autocomplete' }));
     const expectedFamilies = new Set(selectedFamilies ?? manifest.families.map(({ family }) => family));
     assert.ok(expectedFamilies.size > 0, 'the generated Storybook manifest must contain the current union');
+    // A family shows a States story only when it has named states to show, so the generated manifest lists which do.
+    // Default and Browser proof (hidden from the sidebar, still indexed) are proof for every family.
+    const statesFamilies = new Set(manifest.pageIndex
+      .filter(({ family, stories }) => expectedFamilies.has(family) && stories.some(({ exportName }) => exportName === 'States'))
+      .map(({ family }) => family));
     assert.equal(defaults.length, expectedFamilies.size, 'Storybook must expose one selected Default story for every family');
-    assert.equal(states.length, expectedFamilies.size, 'Storybook must expose one selected States story for every family');
+    assert.equal(states.length, statesFamilies.size, 'Storybook must expose one selected States story for every family that shows one');
     assert.equal(browserProofs.length, expectedFamilies.size, 'Storybook must expose one selected Browser proof story for every family');
     assert.deepEqual(new Set(defaults.map(storyFamily)), expectedFamilies, 'Default stories must cover every selected family');
-    assert.deepEqual(new Set(states.map(storyFamily)), expectedFamilies, 'States stories must cover every selected family');
+    assert.deepEqual(new Set(states.map(storyFamily)), statesFamilies, 'States stories must cover every family that shows one');
     assert.deepEqual(new Set(browserProofs.map(storyFamily)), expectedFamilies, 'Browser proof stories must cover every selected family');
-    assert.deepEqual(
-      new Set(defaults.map(storyFamily)),
-      new Set(states.map(storyFamily)),
-      'Default and States stories must cover the same families',
+    assert.ok(
+      [...statesFamilies].every((family) => expectedFamilies.has(family)),
+      'every States story belongs to a family with a Default story',
     );
     if (!focused || expectedFamilies.has('Autocomplete')) assert.ok(autocompleteInteraction, 'Storybook must expose the disabled-item Autocomplete interaction story');
     if (!focused || expectedFamilies.has('Link')) assert.ok(linkIconComposition, 'Storybook must expose the Link icon composition story');

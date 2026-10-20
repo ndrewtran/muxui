@@ -5,7 +5,7 @@ import { patternVariantExamples } from '../../../tooling/audits/repository-polic
 import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import { transformWithOxc } from 'vite';
 import { blockStoryExports, selectionKeyOwners } from './block-pages.mjs';
-import { adapterNames } from './storybook-factory.mjs';
+import { adapterNames, STORY_APPLICABILITY } from './storybook-factory.mjs';
 import { componentCategory } from '../../component-navigation.mjs';
 import { componentRecordCategory } from './component-categories.mjs';
 import { readComponentDocs } from './component-docs.mjs';
@@ -86,6 +86,8 @@ const blockHelperTransforms = await Promise.all(patternVariants.map(async (varia
   return transformed.code.endsWith('\n') ? transformed.code : `${transformed.code}\n`;
 }));
 
+// A family shows a standard story only where STORY_APPLICABILITY says it teaches something. BrowserProof is proof, so
+// every family keeps it and the sidebar hides it with the `!dev` tag; the audits still reach it by id in the index.
 const standardStoryDefinitions = [
   { exportName: 'Default', expression: "createStory(record, 'default')" },
   { exportName: 'States', expression: "createStory(record, 'states')" },
@@ -93,7 +95,7 @@ const standardStoryDefinitions = [
   { exportName: 'Uncontrolled', expression: 'createUncontrolledStory(record)' },
   { exportName: 'Events', expression: 'createEventsStory(record)' },
   { exportName: 'Anatomy', expression: 'createAnatomyStory(record)' },
-  { exportName: 'BrowserProof', expression: 'createBrowserProofStory(record)' },
+  { exportName: 'BrowserProof', expression: 'createBrowserProofStory(record)', tags: ['!dev'] },
 ];
 
 const familyStoryDefinitions = [
@@ -146,11 +148,14 @@ function stringLiteral(value) {
 }
 
 function storyPagesFor(record) {
-  const standard = standardStoryDefinitions.map(({ exportName, name, expression }) => ({
-    exportName,
-    name: name ?? storyNameFromExport(exportName),
-    emit: `export const ${exportName} = ${expression};`,
-  }));
+  const standard = standardStoryDefinitions
+    .filter(({ exportName }) => STORY_APPLICABILITY[exportName]?.(record.binding, record.family) ?? true)
+    .map(({ exportName, name, expression, tags }) => ({
+      exportName,
+      name: name ?? storyNameFromExport(exportName),
+      // Storybook reads tags statically, so they cannot come from the factory's return value.
+      emit: `export const ${exportName} = ${expression};${tags ? `\n${exportName}.tags = [${tags.map(stringLiteral).join(', ')}];` : ''}`,
+    }));
   const familySpecific = familyStoryDefinitions
     .filter(({ family }) => family === record.family)
     .map(({ exportName, name, source }) => ({ exportName, name, emit: source() }));
@@ -453,4 +458,5 @@ if (checkOnly) {
 }
 
 const blockHelperCount = blockPages.reduce((count, { variants }) => count + variants.length, 0);
-console.log(`React Storybook projection: ${records.length} families, ${outputs.size - canonicalStoryDefinitions.length - blockHelperCount - blockPages.length - 1} stories, ${blockHelperCount} block variants in ${blockPages.length} block pages`);
+const storyCount = records.reduce((count, record) => count + storyPagesFor(record).length, 0);
+console.log(`React Storybook projection: ${records.length} families, ${storyCount} stories, ${blockHelperCount} block variants in ${blockPages.length} block pages`);
