@@ -48,7 +48,8 @@ export function DialogUnsavedChangesExample() {
           </>
         }
       >
-        <TextField label="Report name" value={draft} onChange={setDraft} />
+        {/* Read-only while saving, so an edit made during the request is not lost. */}
+        <TextField label="Report name" value={draft} onChange={setDraft} readOnly={saving} />
       </Dialog>
     </>
   );

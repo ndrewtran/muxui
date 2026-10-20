@@ -23,4 +23,4 @@ A Tooltip describes its trigger. It does not name it, so a trigger that shows on
 
 ## Common mistake
 
-Putting something the user needs only in a Tooltip. It opens on hover or keyboard focus after a delay, so the user may never see it. Keep essential instructions visible in the page.
+Putting something the user needs only in a Tooltip. It opens on hover after a delay, or on keyboard focus, so a user who does neither may never see it. Keep essential instructions visible in the page.

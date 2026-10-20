@@ -20,7 +20,7 @@ A Dialog is dismissable by default, so Escape, an outside press, and a close but
 - Keep the default unless closing would lose data or interrupt a pending side effect, such as unsaved edits or a running save.
 - When you suppress dismissal, give the Dialog a named exit in the close slot, such as Cancel or Discard changes.
 
-The Dialog with unsaved changes example renames a report. While the name is unchanged, Escape and an outside press close the Dialog. Once the name changes, only Discard changes and Save close it. While the save runs, the Dialog stays open until the save finishes.
+The Dialog with unsaved changes example renames a report. While the name is unchanged, Escape and an outside press close the Dialog. Once the name changes, only Discard changes and Save close it. While the save runs, the field is read-only and the Dialog stays open until the save finishes.
 
 ## A Dialog that is not dismissable
 

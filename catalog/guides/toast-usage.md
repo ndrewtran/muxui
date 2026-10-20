@@ -39,7 +39,7 @@ useToast returns a manager. Its add method takes a message and the options `titl
 
 ## Declarative toasts
 
-Mounting Toast enqueues one notification, and it is meant for a result that has already happened. A later render that changes its message, title, variant, or className updates the visible toast in place: it adds no toast, does not restart the timer, and does not call `onDismiss`. The Toast updated in place example shows a second Save updating the first result, with the pending state on the Save Button instead of in a toast.
+Mounting Toast enqueues one notification, and it is meant for a result that has already happened. A later render that changes its message, title, variant, or className updates the visible toast in place: the content inside the toast that is already shown changes, and no new toast element appears. The update does not restart the timer and does not call `onDismiss`. The Toast updated in place example shows a second Save updating the first result, with the pending state on the Save Button instead of in a toast.
 
 ## Timing
 
