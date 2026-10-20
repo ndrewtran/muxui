@@ -14,6 +14,8 @@ Use ProgressBar for communicating task progress. Keep its Mux UI-owned props and
 
 - Name the task on the bar and keep that label the same from start to finish, such as Upload report.
 - Write the phase and the result in text beside the bar, such as Waiting for the server, Uploading, and Uploaded. The application owns that text.
+- Say how it ended in that text too, such as Failed at 72% or Cancelled. A bar stops where the work stopped and shows no failure of its own.
+- Treat 100% as the end of the transfer, not as success. The application decides whether the task worked, and says so beside the bar.
 - Leave the value text alone. The bar shows Loading while indeterminate and the percent otherwise.
 
 ## Common mistake
@@ -22,4 +24,4 @@ Changing the label with the phase, from Uploading to Uploaded. The label names t
 
 ## States
 
-ProgressBar is indeterminate when `value` is omitted and determinate when it is a number, including zero. While indeterminate it shows the text Loading; otherwise it shows the percent of the range. The text is built in, so a translated `label` does not translate it. ProgressBar keeps no task state: the application changes `value` and decides what to show once the work finishes. The ProgressBar states example compares waiting, not started, in progress, and complete, each with a stable label and its phase in the text beside it.
+ProgressBar is indeterminate when `value` is omitted and determinate when it is a number, including zero. While indeterminate it shows the text Loading; otherwise it shows the percent of the range. The text is built in, so a translated `label` does not translate it. ProgressBar keeps no task state: the application changes `value` and decides what to show once the work finishes. The ProgressBar states example compares waiting, not started, and in progress, then an uploaded file, a file the server rejected at 100%, a failed upload, and a cancelled one, each with a stable label and its phase or outcome in the text beside it.

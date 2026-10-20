@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:toast-result-and-failure-react",
+  "kind": "example",
+  "name": "Toast result and inline failure",
+  "summary": "Report a finished save in a success toast, and keep a failed save beside its Button with the error and a retry, with the pending state on the Button.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:toast#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/toast/examples/react/result-and-failure.tsx"
+}

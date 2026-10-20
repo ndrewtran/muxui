@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:aa258ce73e2c130fadc633f3c692544b6a1ecb0a5cb2a7f6a9e347fbf6ce65b7 -->
+<!-- @generated-content-sha256: sha256:7140b779ae0cc08af0fed6bc4bf08f5b11cfbc325a9139637b69ace4f627e4e5 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -209,6 +209,7 @@ Public parts: `root`, `trigger`, `popup`, `list`, `item`, `section`, `header`, `
 
 - Existing items and controlled or uncontrolled string ID selections remain supported. ListBox.Root aliases ListBox; Section, Header, and Item compose static collections.
 - Options come from items or from children: when both are supplied, children take precedence and items are not rendered.
+- With selectionMode single, pressing the selected item again clears the selection, so a ListBox can end with nothing selected.
 - Items require stable string IDs. Supply textValue for rich children so typeahead has an unambiguous text value. Sections are named by Header or title, or by aria-label when no visible header is present.
 - layout=stack navigates along the orientation. layout=grid uses actual item positions for two-dimensional arrow navigation; consumer CSS or style determines the columns and dimensions. Orientation is vertical by default.
 - Root disabled state disables every compound item and suppresses selection/action callbacks. A child disabled=false cannot re-enable an item under a disabled root.

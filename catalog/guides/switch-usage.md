@@ -11,7 +11,13 @@ Use Switch to apply a setting, such as Notifications. Use [Checkbox](/components
 - A standalone Switch applies its setting as soon as it is toggled, so save in the change handler and add no Save Button.
 - A Switch inside a staged form takes effect when the form is saved, and the setting stays as it was until then.
 
-The Switch that saves on change example shows the first. The SwitchField in a form example, on the [SwitchField](/components/switch-field/) page, shows the second.
+A save is a request, and it can fail.
+
+- Move the Switch at once, then confirm it when the request succeeds or put it back when the request fails.
+- Switch has no pending state. Show the request in text beside it, and ignore changes until the request settles.
+- When a save fails, show the error beside the Switch with `invalid` and `errorMessage`, so the user can see the setting did not change.
+
+The Switch that saves on change example shows the first, with a request that can fail. The SwitchField in a form example, on the [SwitchField](/components/switch-field/) page, shows the second.
 
 ## Naming
 
