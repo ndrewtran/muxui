@@ -1124,7 +1124,7 @@
 
 .muxui-header-nav__logo-link:focus-visible,
 .muxui-header-nav__nav-btn:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
