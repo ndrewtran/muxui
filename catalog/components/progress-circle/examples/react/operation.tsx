@@ -6,7 +6,7 @@ type Phase = 'idle' | 'running' | 'done';
 const status: Record<Phase, string> = {
   idle: 'Ready to sync.',
   running: 'Syncing.',
-  done: 'Sync complete.',
+  done: 'Synced 12 files.',
 };
 
 export function ProgressCircleOperationExample() {
@@ -20,12 +20,13 @@ export function ProgressCircleOperationExample() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
       <Button onActivate={() => setPhase('running')} disabled={phase === 'running'}>Sync</Button>
-      {phase === 'idle' ? null : (
-        <ProgressCircle.Root value={phase === 'done' ? 100 : null} size="sm" label="Sync progress">
+      {/* The circle shows only while the work runs. When it ends, the result replaces it. */}
+      {phase === 'running' ? (
+        <ProgressCircle.Root value={null} size="sm" label="Sync progress">
           <ProgressCircle.Track />
         </ProgressCircle.Root>
-      )}
-      {/* The progress circle does not announce the change; the application's own status text does. */}
+      ) : null}
+      {/* The application's own status text, a separate status region, carries the phase and the result. */}
       <p role="status" style={{ margin: 0 }}>{status[phase]}</p>
     </div>
   );

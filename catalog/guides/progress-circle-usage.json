@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:progress-circle-usage",
+  "kind": "guide",
+  "name": "ProgressCircle usage",
+  "summary": "Use ProgressCircle through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "progress-circle",
+    "react",
+    "progress"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/progress-circle-usage.md"
+}

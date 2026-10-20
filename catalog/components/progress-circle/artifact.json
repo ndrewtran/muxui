@@ -10,7 +10,9 @@
       "Showing completion for a task with a known or unknown progress value."
     ],
     "avoidWhen": [
-      "For long-running activity without a meaningful completion measure or for linear comparisons.",
+      "For long-running activity without a meaningful completion measure.",
+      "For linear comparisons across tasks; use ProgressBar.",
+      "For a reading that is not a task; use Meter.",
       "When the loading transition itself must be announced without a separate status or live region."
     ]
   },

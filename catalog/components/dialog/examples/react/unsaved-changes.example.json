@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:dialog-unsaved-changes-react",
+  "kind": "example",
+  "name": "Dialog with unsaved changes",
+  "summary": "Let Escape and an outside press close a Dialog while nothing has changed, then close it only through Discard changes or Save once the name has changed or the save is running.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:dialog#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/dialog/examples/react/unsaved-changes.tsx"
+}

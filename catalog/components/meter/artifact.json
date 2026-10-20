@@ -7,10 +7,11 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Showing a non-changing measurement"
+      "Showing a reading within a known range, such as storage used"
     ],
     "avoidWhen": [
-      "Showing task completion progress"
+      "Showing task completion progress; use ProgressBar",
+      "Showing progress in a compact space; use ProgressCircle"
     ]
   },
   "anatomy": [

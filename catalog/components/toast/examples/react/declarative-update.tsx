@@ -1,28 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button, Toast, ToastProvider } from '@muxui/react';
 
-function SaveStatus() {
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+function SaveControls() {
+  const [saving, setSaving] = useState(false);
+  const [version, setVersion] = useState(0);
+  const [shown, setShown] = useState(false);
 
-  // Stand in for the application's request.
-  useEffect(() => {
-    if (status !== 'saving') return;
-    const timer = setTimeout(() => setStatus('saved'), 1500);
-    return () => clearTimeout(timer);
-  }, [status]);
+  async function save() {
+    setSaving(true);
+    // Stand in for the application's request.
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setSaving(false);
+    setVersion((current) => current + 1);
+    setShown(true);
+  }
 
   return (
     <>
-      <Button disabled={status !== 'idle'} onActivate={() => setStatus('saving')}>
+      {/* Work in progress stays beside the control that started it. */}
+      <Button pending={saving} onActivate={save}>
         Save
       </Button>
-      {status === 'idle' ? null : (
+      {/* The toast reports a result that has already happened. Saving again while it is visible updates it in place. */}
+      {shown ? (
         <Toast
           title="Project"
-          message={status === 'saving' ? 'Saving' : 'Saved'}
-          onDismiss={() => setStatus('idle')}
+          variant="success"
+          message={`Saved as version ${version}`}
+          onDismiss={() => setShown(false)}
         />
-      )}
+      ) : null}
     </>
   );
 }
@@ -30,7 +37,7 @@ function SaveStatus() {
 export function ToastDeclarativeUpdateExample() {
   return (
     <ToastProvider>
-      <SaveStatus />
+      <SaveControls />
     </ToastProvider>
   );
 }

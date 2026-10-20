@@ -1564,6 +1564,34 @@
     {
       "family": "guide",
       "path": "catalog/guides/tag-select-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/command-palette/examples/react/async-commands.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/dialog/examples/react/unsaved-changes.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/lightbox/examples/react/controls.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/modes.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/preview-trigger/examples/react/link-or-control.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/activity-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/progress-circle-usage.json"
     }
   ]
 }

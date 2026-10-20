@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:preview-trigger-link-or-control-react",
+  "kind": "example",
+  "name": "PreviewTrigger on a link or a separate control",
+  "summary": "Put a preview on an item's link when it only adds detail, or on a separate named control beside the link when people should find the preview without hovering.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:preview-trigger#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/preview-trigger/examples/react/link-or-control.tsx"
+}

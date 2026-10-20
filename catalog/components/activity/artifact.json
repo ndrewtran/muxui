@@ -8,9 +8,11 @@
   "category": "ai-agent",
   "intent": {
     "useWhen": [
-      "Present caller-owned task statuses as dense rows with aggregate and item disclosures."
+      "Listing the statuses of several tasks as dense rows, with details a row can expand."
     ],
     "avoidWhen": [
+      "Showing how far one task has got; use ProgressBar.",
+      "Reporting one result that needs no follow-up; use Toast.",
       "Executing remote tasks, managing backend state or simulating assistant processing."
     ]
   },

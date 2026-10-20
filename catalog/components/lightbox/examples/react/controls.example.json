@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:lightbox-controls-react",
+  "kind": "example",
+  "name": "Lightbox with viewer controls",
+  "summary": "Show Close, Previous, Next, and a one-line Caption in a Lightbox of several photos, and keep essential detail in the content.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:lightbox#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/lightbox/examples/react/controls.tsx"
+}

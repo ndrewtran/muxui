@@ -7,10 +7,11 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Communicating task progress"
+      "Showing how far a task has got, or that it is waiting, such as an upload"
     ],
     "avoidWhen": [
-      "Showing a static measurement"
+      "Showing a static measurement; use Meter",
+      "Showing progress in a compact space; use ProgressCircle"
     ]
   },
   "anatomy": [
