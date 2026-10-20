@@ -378,8 +378,6 @@ function setSelectedState(args, props, family, preserveExplicit) {
 // States a specimen cannot show honestly, each with its reason. The matrix labels them unavailable rather than
 // rendering a stand-in that looks like another state.
 const STATE_LIMITATIONS = Object.freeze({
-  ...Object.fromEntries(['sm', 'md', 'lg', 'full'].map((radius) => [`Image:radius-${radius}`,
-    'the colour audit accepts only a transparent image, so a radius has nothing visible to round'])),
   'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
   'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
 });
@@ -476,6 +474,11 @@ function stateIsSupported(binding, state, family) {
       return family === 'InputTags';
     case 'external':
       return props.has('external');
+    case 'radiussm':
+    case 'radiusmd':
+    case 'radiuslg':
+    case 'radiusfull':
+      return family === 'Image' && props.has('radius');
     case 'light':
     case 'dark':
       return family === 'ColorModeToggle' && props.has('mode');
@@ -635,6 +638,15 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       break;
     case 'external':
       if (props.has('external')) args.external = true;
+      break;
+    case 'radiussm':
+    case 'radiusmd':
+    case 'radiuslg':
+    case 'radiusfull':
+      if (family === 'Image' && props.has('radius')) {
+        args.radius = state.slice('radius-'.length);
+        args.style = { ...args.style, ...IMAGE_RADIUS_FRAME };
+      }
       break;
     case 'light':
     case 'dark':
@@ -869,6 +881,8 @@ function ImagePreview({ onLoad, ...args }) {
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 // Truncated image data: the browser fires an error event instead of loading it.
 const BROKEN_IMAGE_SRC = 'data:image/png;base64,AAAA';
+// The transparent pixel draws nothing for a radius to round, so the radius rows fill the image box with a token.
+const IMAGE_RADIUS_FRAME = Object.freeze({ background: 'var(--muxui-semantic-surface-strong)' });
 const TAG_SELECT_SAMPLE_ITEMS = [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }];
 const LIGHTBOX_SAMPLE_ITEMS = [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }];
 const COLLECTION_SAMPLE_ITEMS = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }];

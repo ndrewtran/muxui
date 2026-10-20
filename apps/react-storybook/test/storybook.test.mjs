@@ -1281,11 +1281,17 @@ test('Menu uses the triggered composition for open-state stories and keeps the p
 });
 
 test('Image shows fallback recovery and final failure, and names the source it ended on', async () => {
-  const { document: states } = stateSections('Image');
-  // Recovery has specimens; only the radius rows are labelled unavailable, with their reason.
-  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
-  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['radius-sm', 'radius-md', 'radius-lg', 'radius-full']);
-  assert.ok(unavailable.every((node) => /because the colour audit accepts only a transparent image/u.test(node.textContent)));
+  const { document: states, sections } = stateSections('Image');
+  // Every row has a specimen. A radius row frames the transparent image in a token fill, so the rounding shows.
+  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  for (const radius of ['sm', 'md', 'lg', 'full']) {
+    const framed = sections.get(`radius-${radius}`).querySelector('img');
+    assert.ok(framed.classList.contains(`muxui-image--radius-${radius}`), radius);
+    assert.equal(framed.style.background, 'var(--muxui-semantic-surface-strong)', `${radius} row paints the image box with a token`);
+  }
+  assert.equal(sections.get('fallback').querySelector('img').style.background, '', 'the other rows stay unframed');
+  // A radius the user sets wins in every row.
+  assert.ok(stateSections('Image', { ...createStory(currentRecord('Image'), 'states').args, radius: 'lg' }).sections.get('radius-sm').querySelector('img').classList.contains('muxui-image--radius-lg'));
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createStory(currentRecord('Image'), 'states');
