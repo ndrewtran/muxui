@@ -103,24 +103,6 @@ export function usageGuideId(componentId) {
 }
 
 /**
- * The families a guide links to. A guide links to another family by its docs path, such as
- * `[Checkbox](/components/checkbox/)`, which is that family's page on the docs site. Storybook resolves
- * the same link to the family's Docs page. A guide links to a family page, never to a section of it.
- * @param {string} markdown
- * @returns {string[]} The family slugs, in order of first appearance.
- */
-export function linkedFamilies(markdown) {
-  /** @type {string[]} */
-  const slugs = [];
-  for (const [, target] of markdown.matchAll(/\]\((\/components\/[^)\s]*)\)/gu)) {
-    const slug = /^\/components\/([a-z0-9-]+)\/$/u.exec(target)?.[1];
-    if (slug === undefined) throw new Error(`The guide link ${target} must be a family page path such as /components/checkbox/.`);
-    if (!slugs.includes(slug)) slugs.push(slug);
-  }
-  return slugs;
-}
-
-/**
  * @param {readonly TokenRequirement[]} requirements
  * @returns {{ prefix?: string, tokens: readonly TokenRequirement[] }[]}
  */

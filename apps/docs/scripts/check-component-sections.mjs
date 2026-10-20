@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
+import { linkedFamilies } from '../../guide-links.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
@@ -148,12 +149,11 @@ for (const component of listComponents()) {
 	);
 
 	// A guide links to another family by its docs path, and the built page keeps that link to a built family page.
-	// The link targets are read from the guide file here, not through the shared projection.
 	if (guides.length === 1) {
 		const guideSource = canonicalCatalog.getArtifact({ id: guides[0], platform: 'web.react', detail: 'full' }).data.artifact.source.content;
-		const expectedLinks = [...readFileSync(resolve(repositoryRoot, guideSource), 'utf8').matchAll(/\]\((\/components\/[a-z0-9-]+\/)\)/gu)].map(([, target]) => target);
+		const expectedLinks = linkedFamilies(readFileSync(resolve(repositoryRoot, guideSource), 'utf8')).map((linked) => `/components/${linked}/`);
 		const guideNode = elements(section('usage')).find((node) => attributeValue(node, 'data-guide-id') === guides[0]);
-		const renderedLinks = elements(guideNode).filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href')).filter((href) => href?.startsWith('/components/'));
+		const renderedLinks = [...new Set(elements(guideNode).filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href')).filter((href) => href?.startsWith('/components/')))];
 		assert(JSON.stringify(renderedLinks) === JSON.stringify(expectedLinks), `${route} guide links to ${renderedLinks.join(', ') || 'no family'}, expected ${expectedLinks.join(', ') || 'none'}.`);
 		for (const target of expectedLinks) assert(existsSync(resolve(docsDist, target.slice(1), 'index.html')), `${route} guide links to ${target}, which is not built.`);
 		guideLinks += expectedLinks.length;

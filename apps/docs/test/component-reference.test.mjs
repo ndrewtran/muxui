@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
-import { componentReference, linkedFamilies, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 
 const requirement = (token, extra = {}) => ({ token, requirement: 'required', ...extra });
 const record = ({ requirements = [requirement('component.card.background')], obligations = ['Expose state'], binding = obligations, intent } = {}) => ({
@@ -108,14 +108,5 @@ test('package facts verify the descriptor, renderer contract and stylesheet agai
     assert.throws(() => readReactPackageFacts(root), /is not muxui-react-r1-6-contract-v1/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test('a guide links to another family by its docs path, and nothing else counts as a family link', () => {
-  const guide = 'Use [Checkbox](/components/checkbox/) or [CheckboxGroup](/components/checkbox-group/), then [Checkbox again](/components/checkbox/). See the [API](#api-reference), [Themes](/themes/), and [the web](https://example.com/components/x/).';
-  assert.deepEqual(linkedFamilies(guide), ['checkbox', 'checkbox-group']);
-  assert.deepEqual(linkedFamilies('No links.'), []);
-  for (const target of ['/components/checkbox', '/components/checkbox/#mixed-state', '/components/Checkbox/', '/components/']) {
-    assert.throws(() => linkedFamilies(`[Checkbox](${target})`), /must be a family page path/u, target);
   }
 });

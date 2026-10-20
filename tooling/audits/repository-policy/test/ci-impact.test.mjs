@@ -497,6 +497,7 @@ test('the inputs a Storybook Docs page embeds plan generation and the Docs page 
     'catalog/guides/number-field-usage.json',
     'catalog/patterns/poster-grid/artifact.json',
     'apps/component-reference.mjs',
+    'apps/guide-links.mjs',
   ];
   for (const path of embedded) {
     const result = await plan([path]);

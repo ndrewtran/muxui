@@ -91,7 +91,9 @@ Name an alternative as a link. Write the family's docs path, such as
 family page. Storybook has no such route, so its Docs page resolves the same
 link to the family's Docs page. A link names a family page, never a section of
 it, so Storybook generation and `pnpm --filter @muxui/docs check:docs` reject a
-fragment, a missing trailing slash, and a family that has no page.
+fragment, a missing trailing slash, and a family that has no page. Write the link
+in Markdown, not HTML; a link title is fine, and a link inside a code sample is
+only text.
 
 Links within the same guide, such as `[API reference](#api-reference)`, and
 links to external pages stay as written. Relative paths such as `../checkbox/`

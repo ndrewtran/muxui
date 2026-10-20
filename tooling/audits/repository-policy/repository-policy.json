@@ -109,6 +109,7 @@
   "affectedPathConsumers": {
     "apps/component-navigation.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/component-reference.mjs": ["@muxui/docs", "@muxui/react-storybook"],
+    "apps/guide-links.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/scale/src/": ["@muxui/docs"]
   },
   "generationPrerequisites": {
@@ -215,7 +216,8 @@
     ],
     "componentNavigationPaths": [
       "apps/component-navigation.mjs",
-      "apps/component-reference.mjs"
+      "apps/component-reference.mjs",
+      "apps/guide-links.mjs"
     ],
     "reactStylePrefixes": [
       "packages/react/src/styles/",

@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { authoredPatternReference } from './authored-pattern-reference.mjs';
-import { componentReference, linkedFamilies, readReactPackageFacts } from '../../component-reference.mjs';
+import { componentReference, readReactPackageFacts } from '../../component-reference.mjs';
+import { linkedFamilies } from '../../guide-links.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
