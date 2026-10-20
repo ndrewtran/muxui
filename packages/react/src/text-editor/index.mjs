@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Extension, getText, getTextSerializersFromSchema } from '@tiptap/core';
-import { closeHistory } from '@tiptap/pm/history';
+import { closeHistory, isHistoryTransaction } from '@tiptap/pm/history';
 import { Fragment, Slice } from '@tiptap/pm/model';
 import { AllSelection, Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
@@ -575,6 +575,35 @@ function plainTextNodes(schema, text, marks) {
   return nodes;
 }
 
+const textLength = (doc) => getText(doc, { blockSeparator: '\n\n', textSerializers: getTextSerializersFromSchema(doc.type.schema) }).length;
+
+/** An edit fits when it leaves the text within `limit` or no longer than it was, so an over-limit document can be edited down. */
+function fitsLimit(before, after, limit) {
+  if (limit === undefined) return true;
+  const length = textLength(after);
+  return length <= limit || length <= textLength(before);
+}
+
+// Marks the transaction that applies the controlled value, which the parent owns and the limit never refuses.
+const EXTERNAL_VALUE = 'muxuiExternalValue';
+
+/** Refuses an edit past the limit before it applies, so it never reaches the document, onChange, or undo history. */
+function characterLimitFilter(limitRef) {
+  return Extension.create({
+    name: 'muxuiCharacterLimit',
+    addProseMirrorPlugins() {
+      return [new Plugin({
+        key: new PluginKey('muxuiCharacterLimit'),
+        // Undo and redo only revisit states the filter already accepted.
+        filterTransaction: (transaction, state) => !transaction.docChanged
+          || isHistoryTransaction(transaction)
+          || transaction.getMeta(EXTERNAL_VALUE) === true
+          || fitsLimit(state.doc, transaction.doc, limitRef.current),
+      })];
+    },
+  });
+}
+
 /**
  * Builds one closed history event that replaces the range or inserts after it, or returns null when the
  * content is invalid, cannot be placed, or would exceed the character limit.
@@ -612,8 +641,8 @@ function buildEdit(editor, { from, to }, mode, content, limit) {
     return null;
   }
   if (!transaction.docChanged) return null;
-  // Mirrors the length `TextEditor` enforces in onUpdate, so a rejected edit is never applied and reverted.
-  if (limit !== undefined && getText(transaction.doc, { blockSeparator: '\n\n', textSerializers: getTextSerializersFromSchema(schema) }).length > limit) return null;
+  // The same rule the editor's transaction filter applies, so a refused edit reports false rather than being dropped.
+  if (!fitsLimit(state.doc, transaction.doc, limit)) return null;
   return { transaction, range };
 }
 
@@ -1122,7 +1151,8 @@ function CharactersLeft({ editor, limit }) {
     () => editor?.getText().length ?? 0,
     () => 0,
   );
-  return `${Math.max(0, limit - length)} characters left`;
+  const left = Math.max(0, limit - length);
+  return `${left} ${left === 1 ? 'character' : 'characters'} left`;
 }
 
 /** Rich editing through Mux-owned document and command values; Tiptap stays internal. */
@@ -1146,7 +1176,6 @@ export const TextEditor = React.forwardRef(function TextEditor({
   const composingRef = React.useRef(false);
   const [, requestControlledReconciliation] = React.useReducer((revision) => revision + 1, 0);
   const initialContent = value === undefined ? initial : normalizeTextEditorDocument(value);
-  const last = React.useRef(initialContent);
   const onChangeRef = React.useRef(onChange);
   const limitRef = React.useRef(limit);
   const callbacksRef = React.useRef({ onGenerate, onLinkRequest, onImageRequest, onColorRequest });
@@ -1179,15 +1208,10 @@ export const TextEditor = React.forwardRef(function TextEditor({
       Image,
       Placeholder.configure({ placeholder }),
       selectionRangePainter().extension,
+      characterLimitFilter(limitRef),
     ],
     onUpdate: ({ editor: instance }) => {
       const next = normalizeTextEditorDocument(instance.getJSON());
-      if (limitRef.current !== undefined && instance.getText().length > limitRef.current) {
-        // Undo the edit quietly: Tiptap 3 takes an options object here, and a boolean would still emit an update.
-        instance.commands.setContent(last.current, { emitUpdate: false });
-        return;
-      }
-      last.current = next;
       onChangeRef.current?.(next);
       if (controlledValueRef.current !== undefined) requestControlledReconciliation();
     },
@@ -1211,8 +1235,7 @@ export const TextEditor = React.forwardRef(function TextEditor({
     const next = normalizeTextEditorDocument(external);
     const current = normalizeTextEditorDocument(editor.getJSON());
     if (JSON.stringify(next) !== JSON.stringify(current)) {
-      last.current = next;
-      editor.commands.setContent(next, { emitUpdate: false });
+      editor.chain().setMeta(EXTERNAL_VALUE, true).setContent(next, { emitUpdate: false }).run();
     }
   }, [editor]);
 

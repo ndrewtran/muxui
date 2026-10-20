@@ -365,9 +365,9 @@ test('TextEditor blockquote Backspace and leading code block ArrowUp follow Tipt
 
 // Tiptap 3 reads setContent's second argument as an options object, so a boolean
 // still emitted an update, and setEditable emits one by default. Real typing
-// proves the limit revert, mount, read-only toggles and external value changes
+// proves refused over-limit edits, mount, read-only toggles and external value changes
 // stay out of onChange, and the characters-left hint follows every edit.
-test('TextEditor limit reverts over-limit edits without reporting them and keeps the hint live', { timeout: 60_000 }, async () => {
+test('TextEditor limit refuses over-limit edits without reporting them and keeps the hint live', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;
   try {
@@ -403,14 +403,14 @@ test('TextEditor limit reverts over-limit edits without reporting them and keeps
     assert.equal(await hint('limit-uncontrolled'), left(0));
     for (const character of 'fg') {
       await page.keyboard.type(character);
-      assert.equal(await shown('limit-uncontrolled'), 'abcde', `${character} is undone`);
-      assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde'], `undoing ${character} is not reported`);
+      assert.equal(await shown('limit-uncontrolled'), 'abcde', `${character} is refused`);
+      assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde'], `refusing ${character} is not reported`);
       assert.equal(await hint('limit-uncontrolled'), left(0));
     }
     await page.keyboard.press('Backspace');
     assert.equal(await shown('limit-uncontrolled'), 'abcd');
     assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd']);
-    assert.equal(await hint('limit-uncontrolled'), left(1));
+    assert.equal(await hint('limit-uncontrolled'), '1 character left');
     await page.locator('#limit-toggle-readonly').click();
     await page.locator('#limit-toggle-readonly').click();
     assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd'], 'read-only toggles are not reported');
@@ -423,9 +423,9 @@ test('TextEditor limit reverts over-limit edits without reporting them and keeps
     assert.equal(await hint('limit-controlled'), left(0));
     for (const character of 'fg') {
       await page.keyboard.type(character);
-      assert.equal(await shown('limit-controlled'), 'abcde', `${character} is undone`);
+      assert.equal(await shown('limit-controlled'), 'abcde', `${character} is refused`);
       assert.equal(await text('[data-testid="limit-controlled-value"]'), 'abcde');
-      assert.deepEqual(await calls('limit-controlled'), ['abcd', 'abcde'], `undoing ${character} is not reported`);
+      assert.deepEqual(await calls('limit-controlled'), ['abcd', 'abcde'], `refusing ${character} is not reported`);
       assert.equal(await hint('limit-controlled'), left(0));
     }
 

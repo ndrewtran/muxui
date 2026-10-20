@@ -5,6 +5,7 @@ import { act } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { closeHistory } from '@tiptap/pm/history';
 import { JSDOM } from 'jsdom';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.mjs';
 import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
@@ -216,6 +217,93 @@ test('TextEditor reconciles controlled edits without requiring a parent rerender
     await act(async () => root?.unmount());
     restore();
     dom.window.close();
+  }
+});
+
+// Mounts a plain-text editor with a character limit; edits go through Tiptap commands, each its own undo step.
+const limitDocument = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });
+async function mountLimitEditor({ limit, ...props }) {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const root = createRoot(document.querySelector('#root'));
+  const changes = [];
+  const render = (next) => act(async () => root.render(React.createElement(TextEditor, {
+    limit, toolbar: false, 'aria-label': 'Limited', onChange: (value) => changes.push(value.content[0].content?.[0].text ?? ''), ...props, ...next,
+  })));
+  await render();
+  const { editor } = document.querySelector('.ProseMirror');
+  const edit = (command) => act(async () => {
+    command(editor.commands);
+    editor.view.dispatch(closeHistory(editor.state.tr));
+  });
+  return {
+    changes,
+    render,
+    text: () => editor.getText(),
+    hint: () => document.querySelector('.muxui-text-editor__hint').textContent,
+    // Types at the end of the text, or removes the last `count` characters.
+    insert: (characters) => edit((commands) => commands.insertContentAt(editor.state.doc.content.size - 1, characters)),
+    remove: (count) => edit((commands) => commands.deleteRange({ from: editor.state.doc.content.size - 1 - count, to: editor.state.doc.content.size - 1 })),
+    undo: () => act(async () => { editor.commands.undo(); }),
+    async close() {
+      await act(async () => root.unmount());
+      restore();
+      dom.window.close();
+    },
+  };
+}
+
+test('TextEditor refuses an over-limit edit before it applies, so one Undo reverts the last real edit', async () => {
+  const t = await mountLimitEditor({ limit: 5, defaultValue: limitDocument('abc') });
+  try {
+    assert.equal(t.hint(), '2 characters left');
+    await t.insert('de');
+    assert.equal(t.text(), 'abcde');
+    assert.equal(t.hint(), '0 characters left');
+    await t.insert('f');
+    assert.equal(t.text(), 'abcde', 'the over-limit insert never applies');
+    assert.deepEqual(t.changes, ['abcde'], 'and is not reported');
+    await t.undo();
+    assert.equal(t.text(), 'abc', 'one Undo reverts the insert before it, not the refused one');
+    assert.equal(t.hint(), '2 characters left');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor lets an over-limit document be edited down but never longer', async () => {
+  const t = await mountLimitEditor({ limit: 5, defaultValue: limitDocument('abcdefgh') });
+  try {
+    assert.equal(t.hint(), '0 characters left');
+    await t.insert('x');
+    assert.equal(t.text(), 'abcdefgh', 'an over-limit document does not grow');
+    await t.remove(1);
+    assert.equal(t.text(), 'abcdefg', 'an edit that shortens it applies while it is still over the limit');
+    await t.insert('x');
+    assert.equal(t.text(), 'abcdefg');
+    await t.remove(2);
+    assert.equal(t.text(), 'abcde');
+    await t.undo();
+    assert.equal(t.text(), 'abcdefg', 'Undo returns to the over-limit text it came from');
+    await t.remove(3);
+    assert.equal(t.text(), 'abcd');
+    assert.equal(t.hint(), '1 character left');
+    await t.insert('x');
+    assert.equal(t.text(), 'abcdx', 'an edit that fits applies once the document is within the limit');
+    assert.deepEqual(t.changes, ['abcdefg', 'abcde', 'abcdefg', 'abcd', 'abcdx']);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor shows a controlled value longer than the limit as given', async () => {
+  const t = await mountLimitEditor({ limit: 5, value: limitDocument('abc') });
+  try {
+    await t.render({ value: limitDocument('abcdefgh') });
+    assert.equal(t.text(), 'abcdefgh');
+    assert.deepEqual(t.changes, [], 'the parent set it, so onChange stays quiet');
+  } finally {
+    await t.close();
   }
 });
 
