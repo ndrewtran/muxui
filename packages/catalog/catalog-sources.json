@@ -1592,6 +1592,50 @@
     {
       "family": "guide",
       "path": "catalog/guides/progress-circle-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/checkbox-group/examples/react/orientation.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/form/examples/react/inline-validation.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/form/examples/react/native-validation.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input/examples/react/label-row.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/search-field/examples/react/filter-list.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/search-field/examples/react/remote-search.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-area/examples/react/form.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/checkbox-field-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/input-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/radio-field-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/text-area-usage.json"
     }
   ]
 }

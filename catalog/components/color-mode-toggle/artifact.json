@@ -10,7 +10,8 @@
       "Allowing users to choose a light or dark presentation for the application."
     ],
     "avoidWhen": [
-      "When the product supports one fixed color scheme."
+      "When the product supports one fixed color scheme.",
+      "For a setting other than the color scheme; use Switch."
     ]
   },
   "anatomy": [
@@ -63,7 +64,11 @@
         "mode sets the displayed mode and is still written to the document root and storage; the toggle does not change it, so the application updates mode.",
         "The toggle does not listen for later changes to the operating system preference or to localStorage.",
         "Unmounting the toggle leaves data-muxui-color-scheme on the document root.",
-        "Each ColorModeToggle keeps its own mode, so several toggles stay in step only when they share mode and onModeChange."
+        "Each ColorModeToggle keeps its own mode, so several toggles stay in step only when they share mode and onModeChange.",
+        "The icon shows the active scheme, not the one a press would select: a sun-like icon in light mode and a moon-like icon in dark mode.",
+        "The default name is Toggle dark mode. Keep it, or give a name that does not change with the mode.",
+        "To write the current mode beside the icon, control the toggle with mode and onModeChange and write the text from that state.",
+        "A controlled toggle restores no saved mode, so the application chooses the starting mode."
       ],
       "accessibility": [
         "Reads bounded localStorage and prefers-color-scheme defaults without accessing browser globals during SSR.",

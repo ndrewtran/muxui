@@ -10,7 +10,8 @@
       "Collecting a paragraph or other multiline text value."
     ],
     "avoidWhen": [
-      "For short single-line values or structured rich text."
+      "For a short single-line value; use TextField.",
+      "For formatted or structured rich text; use TextEditor."
     ]
   },
   "anatomy": [
@@ -70,7 +71,15 @@
         }
       },
       "behavior": [
-        "Uses native textarea attributes and shared Mux field validation semantics."
+        "Uses native textarea attributes and shared Mux field validation semantics.",
+        "Root owns the field: value, defaultValue, and onChange go on TextArea.Root, and Root's onChange receives the new string, not an event.",
+        "Root also takes size, disabled, invalid, required, and readOnly.",
+        "TextArea.TextArea is the native textarea, so name, rows, maxLength, and placeholder go on it.",
+        "A named TextArea submits its text; the name goes on TextArea.TextArea, not Root.",
+        "TextArea.TextArea also takes the native onChange, which receives the change event and runs alongside Root's.",
+        "maxLength stops input at the limit and shows no message. TextArea has no character counter and does not grow with its text.",
+        "TextArea.Description is linked to the textarea.",
+        "TextArea.Error appears only while the field is invalid, and is linked to the textarea."
       ],
       "accessibility": [
         "Uses native textarea attributes and shared Mux field validation semantics."

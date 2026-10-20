@@ -296,7 +296,7 @@ test('a guide link to another family names that family Docs page in the manager'
       if (slugs.length > 0) linked.set(family, anchors.filter((node) => node.getAttribute('href').startsWith('?path=')).map((node) => [node.textContent, node.getAttribute('href')]));
     }
     // The pilot families link to their alternatives by name.
-    assert.deepEqual(linked.get('Checkbox'), [['CheckboxGroup', `?path=/docs/${docsId('checkbox-group')}`]]);
+    assert.deepEqual(linked.get('Checkbox'), [['Switch', `?path=/docs/${docsId('switch')}`], ['CheckboxField', `?path=/docs/${docsId('checkbox-field')}`], ['CheckboxGroup', `?path=/docs/${docsId('checkbox-group')}`]]);
     assert.deepEqual(linked.get('Switch'), [['Checkbox', `?path=/docs/${docsId('checkbox')}`], ['SwitchField', `?path=/docs/${docsId('switch-field')}`]]);
     assert.deepEqual(linked.get('Select'), [['SelectNative', `?path=/docs/${docsId('select-native')}`], ['ComboBox', `?path=/docs/${docsId('combo-box')}`]]);
     assert.deepEqual(linked.get('SelectNative'), [['Select', `?path=/docs/${docsId('select')}`], ['ComboBox', `?path=/docs/${docsId('combo-box')}`]]);

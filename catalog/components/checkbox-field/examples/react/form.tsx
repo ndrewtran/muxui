@@ -16,6 +16,7 @@ export function CheckboxFieldFormExample() {
   }
 
   return (
+    // noValidate keeps the browser's own check from running first, so the application decides when the error shows.
     <form noValidate onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--muxui-reference-dimension-space-xs)' }}>
         <CheckboxField.Root

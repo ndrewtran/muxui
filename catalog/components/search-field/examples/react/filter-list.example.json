@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:search-field-filter-list-react",
+  "kind": "example",
+  "name": "SearchField filtering a list",
+  "summary": "Filter a list already in memory on every change, which is cheap enough to follow each keystroke.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:search-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 4
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/search-field/examples/react/filter-list.tsx"
+}

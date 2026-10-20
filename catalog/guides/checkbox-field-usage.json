@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:checkbox-field-usage",
+  "kind": "guide",
+  "name": "CheckboxField usage",
+  "summary": "Use CheckboxField through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "checkbox-field",
+    "react",
+    "forms"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/checkbox-field-usage.md"
+}
