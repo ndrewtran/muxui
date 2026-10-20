@@ -479,12 +479,11 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
-  const pickerColor = React.useContext(ColorPickerStateContext)?.color;
   const valueColor = value === null ? null : colorValue(value, 'ColorField');
   const defaultColor = colorValue(defaultValue, 'ColorField');
   // React Aria parses typed hex into rgb. onChange converts it to the colour space of the value, the enclosing
-  // ColorPicker's colour, or defaultValue, the way ColorArea resolves it; rgb with none of them.
-  const space = (valueColor ?? pickerColor ?? defaultColor)?.getColorSpace() ?? 'rgb';
+  // ColorPicker, or defaultValue, the way ColorArea resolves it; rgb with none of them.
+  const space = valueColor?.getColorSpace() ?? pickerState.space ?? defaultColor?.getColorSpace() ?? 'rgb';
   return React.createElement(AriaColorField, {
     ...props, ref, name, value: valueColor, defaultValue: defaultColor,
     onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toFormat(space).toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
@@ -515,24 +514,25 @@ function editDescribesColor(edit, color) {
 }
 
 // Hex and rgb cannot hold the hue of black, white, and grays, and hsl cannot hold the saturation of black, so a
-// control driven by a value, or by its ColorPicker, remembers the color of its last edit, with the value that edit
+// ColorPicker, or a control driven by a value, remembers the color of its last edit, with the value that edit
 // started from. The memory shows while the value describes it. A value equal to the one the edit started from may
 // only be waiting to accept the edit, so only a new value decides: one that still describes the edit adopts it, any
-// other forgets it. Returns the color to show, and a function that remembers an edit.
+// other forgets it. An edit the memory already describes, such as an alpha change a child reports in the value's
+// space, keeps the richer memory. Returns the color to show, and a function that remembers an edit.
 function useRememberedEdit(driven) {
   const [edit, setEdit] = React.useState(null);
   const describes = edit && driven && editDescribesColor(edit.color, driven);
   if (edit && driven && !sameColor(driven, edit.received)) setEdit(describes ? { ...edit, received: driven } : null);
   return [
     describes ? edit.color.withChannelValue('alpha', driven.alpha) : driven,
-    (color) => { if (driven) setEdit({ color, received: driven }); },
+    (color) => { if (driven && !(describes && editDescribesColor(edit.color, color))) setEdit({ color, received: driven }); },
   ];
 }
 
 // Colour controls forward no untyped props; upstream props such as onChangeEnd,
 // xChannel, or colorSpace would bypass the Mux UI guards and string values.
 // The area always edits saturation (x) and brightness (y) in HSB and converts each edit back to the
-// colour space of its value, or of the enclosing ColorPicker's colour, so it emits the same CSS string
+// colour space of its value, or of the enclosing ColorPicker, so it emits the same CSS string
 // as ColorSlider: rgba() for hex and rgb values, hsla() for hsl and hsb values.
 export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorArea');
@@ -543,11 +543,11 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
   const valueColor = colorValue(value, 'ColorArea');
   const defaultColor = colorValue(defaultValue, 'ColorArea');
   // A value or the picker's colour drives the area; otherwise React Aria keeps the HSB colour itself.
-  const driven = valueColor ?? pickerColorState?.color;
-  const sourceColor = driven ?? defaultColor;
-  const space = sourceColor?.getColorSpace() ?? 'rgb';
-  // The area remembers its edits in HSB, which keeps the hue and saturation that hex, rgb, and hsl lose at black and grays.
-  const [areaColor, rememberEdit] = useRememberedEdit(driven);
+  // A controlled area remembers its edits in HSB, which keeps the hue and saturation that hex, rgb, and hsl
+  // lose at black and grays; a picker remembers the edit for the areas inside it.
+  const [valueShown, rememberEdit] = useRememberedEdit(valueColor);
+  const driven = valueShown ?? pickerColorState?.color;
+  const space = valueColor?.getColorSpace() ?? pickerState.space ?? defaultColor?.getColorSpace() ?? 'rgb';
   const labelId = React.useId();
   const labelledby = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
   const assignAreaRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
@@ -559,20 +559,19 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
   };
   return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
     label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
-    // The area writes the picker's colour itself, in the picker's space, so it clears the context.
+    // The area writes its edit to the picker itself, so it clears the context.
     React.createElement(ColorAreaContext.Provider, { value: null }, React.createElement(AriaColorArea, {
       ref: assignAreaRef,
-      value: areaColor,
+      value: driven,
       defaultValue: driven ? undefined : defaultColor,
       colorSpace: 'hsb',
       xChannel: 'saturation',
       yChannel: 'brightness',
       onChange: (next) => {
         if (effectiveDisabled || effectiveReadOnly) return;
-        const edited = next.toFormat(space);
         rememberEdit(next);
-        pickerColorState?.setColor(edited);
-        onChange?.(edited.toString());
+        pickerColorState?.setColor(next);
+        onChange?.(next.toFormat(space).toString());
       },
       isDisabled: effectiveDisabled,
       'aria-label': ariaLabel,
@@ -619,10 +618,11 @@ export const ColorSlider = /* @__PURE__ */ (() => {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
     const color = colorValue(value, 'ColorSlider');
     const defaultColor = colorValue(defaultValue, 'ColorSlider');
-    // Inside a ColorPicker, React Aria drives the slider with the picker's colour.
-    const pickerColor = React.useContext(ColorPickerStateContext)?.color;
-    assertColorSliderChannel(channel, colorSpace, pickerColor ?? color ?? defaultColor);
     const pickerState = React.useContext(ColorPickerContext);
+    // Inside a ColorPicker, React Aria drives the slider with the picker's colour, which may be a nested control's
+    // remembered edit in another space, so the slider reads it in the picker's space unless colorSpace says otherwise.
+    const space = colorSpace ?? pickerState.space;
+    assertColorSliderChannel(channel, space, color ?? defaultColor);
     const effectiveDisabled = disabled || pickerState.disabled;
     const effectiveReadOnly = readOnly || pickerState.readOnly;
     const preventReadOnlyInteraction = (event) => {
@@ -636,7 +636,7 @@ export const ColorSlider = /* @__PURE__ */ (() => {
       React.createElement(AriaColorSlider, {
         ref: assignSliderRef,
         channel,
-        colorSpace,
+        colorSpace: space,
         value: color,
         defaultValue: defaultColor,
         onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
@@ -672,11 +672,11 @@ export const ColorWheel = /* @__PURE__ */ (() => {
     const valueColor = colorValue(value, 'ColorWheel');
     const defaultColor = colorValue(defaultValue, 'ColorWheel');
     // React Aria edits the hue in hsl (or hsb). onChange converts it to the colour space of the value, the
-    // enclosing ColorPicker's colour, or defaultValue, the way ColorArea resolves it; hsl with none of them.
-    const driven = valueColor ?? pickerColor;
-    const space = (driven ?? defaultColor)?.getColorSpace() ?? 'hsl';
-    // The wheel remembers its edits in hsl, which keeps the hue of the grays that hex and rgb lose.
-    const [wheelColor, rememberEdit] = useRememberedEdit(driven);
+    // enclosing ColorPicker, or defaultValue, the way ColorArea resolves it; hsl with none of them.
+    const space = valueColor?.getColorSpace() ?? pickerState.space ?? defaultColor?.getColorSpace() ?? 'hsl';
+    // A controlled wheel remembers its edits in hsl, which keeps the hue of the grays that hex and rgb lose;
+    // a picker remembers the edit for the wheels inside it.
+    const [valueShown, rememberEdit] = useRememberedEdit(valueColor);
     const preventReadOnlyInteraction = (event) => {
       if (effectiveReadOnly) {
         event.preventDefault();
@@ -688,7 +688,7 @@ export const ColorWheel = /* @__PURE__ */ (() => {
       ref: assignWheelRef,
       outerRadius,
       innerRadius,
-      value: wheelColor,
+      value: valueShown ?? pickerColor,
       defaultValue: defaultColor,
       onChange: (next) => {
         if (effectiveDisabled || effectiveReadOnly) return;
@@ -720,17 +720,21 @@ export const ColorPicker = React.forwardRef(function ColorPicker({ value, defaul
   const labelled = Boolean(props['aria-label'] || props['aria-labelledby']);
   const valueColor = colorValue(value, 'ColorPicker');
   const defaultColor = colorValue(defaultValue, 'ColorPicker');
-  // Whichever child edits, the picker keeps and reports its color in the space of its value, or of defaultValue
-  // (rgb with neither), so its children read that space after every edit. It holds an uncontrolled color itself.
+  // Whichever child edits, the picker reports and keeps its color in the space of its value, or of defaultValue
+  // (rgb with neither), and holds an uncontrolled color itself. Children read that space from the context.
   const space = (valueColor ?? defaultColor)?.getColorSpace() ?? 'rgb';
   const [held, setHeld] = React.useState(() => defaultColor ?? parseColor('#000000'));
+  // The picker also remembers the edit at full precision, in the child's own space, and feeds it back to the
+  // children while it still describes the color, so a hue slider can move off a gray in a hex picker.
+  const [pickerColor, rememberEdit] = useRememberedEdit(valueColor ?? held);
   const onPickerChange = (next) => {
     if (disabled || readOnly) return;
     const edited = next.toFormat(space);
+    rememberEdit(next);
     setHeld(edited);
     onChange?.(edited.toString());
   };
-  return React.createElement('div', { ...props, ref, role: labelled ? 'group' : undefined, 'aria-disabled': (labelled && disabled) || undefined, 'data-disabled': disabled || undefined, 'data-readonly': readOnly || undefined, className: classNames('muxui-color-picker', className) }, React.createElement(AriaColorPicker, { value: valueColor ?? held, onChange: onPickerChange }, React.createElement(ColorPickerContext.Provider, { value: { disabled, readOnly } }, children)));
+  return React.createElement('div', { ...props, ref, role: labelled ? 'group' : undefined, 'aria-disabled': (labelled && disabled) || undefined, 'data-disabled': disabled || undefined, 'data-readonly': readOnly || undefined, className: classNames('muxui-color-picker', className) }, React.createElement(AriaColorPicker, { value: pickerColor, onChange: onPickerChange }, React.createElement(ColorPickerContext.Provider, { value: { disabled, readOnly, space } }, children)));
 });
 ColorPicker.displayName = 'ColorPicker';
 

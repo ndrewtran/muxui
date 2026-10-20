@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ColorField, ColorPicker, ColorSlider, ColorSwatchPicker, ColorWheel } from '../src/collections.mjs';
+import { parseColor } from 'react-aria-components';
+import { ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatchPicker, ColorWheel } from '../src/collections.mjs';
 import { createDom } from './support/dom.mjs';
 
 // Every color control's onChange returns a CSS string in the color space of its value, or of an enclosing
@@ -182,3 +183,44 @@ test('a controlled ColorWheel forgets a remembered hue when the value changes to
     assert.equal(input.value, '0', 'the gray is the value again, without the old hue');
   });
 });
+
+// Hex and rgb cannot hold the hue of black, white, and grays, so the picker remembers the last edit of whichever
+// nested control made it. A hue slider then moves off an achromatic color, and a sibling area edits in its hue.
+function HuePicker({ initial, controlled, colorSpace, log }) {
+  const [value, setValue] = React.useState(initial);
+  const onChange = (next) => { log(next); setValue(next); };
+  return React.createElement(ColorPicker, controlled ? { value, onChange } : { defaultValue: initial, onChange: log },
+    React.createElement(ColorArea, { 'aria-label': 'Area' }),
+    React.createElement(ColorSlider, { 'aria-label': 'Hue', channel: 'hue', colorSpace }));
+}
+
+for (const colorSpace of ['hsl', 'hsb']) {
+  for (const [name, initial, same] of [['black', '#000000', 'rgba(0, 0, 0, 1)'], ['white', '#ffffff', 'rgba(255, 255, 255, 1)'], ['gray', '#808080', 'rgba(128, 128, 128, 1)']]) {
+    for (const controlled of [false, true]) {
+      test(`a ${colorSpace} hue ColorSlider moves off ${name} in a ${controlled ? 'controlled' : 'uncontrolled'} hex ColorPicker, then the area edits in that hue`, async () => {
+        const emitted = [];
+        await withRoot(React.createElement(HuePicker, { initial, controlled, colorSpace, log: (next) => emitted.push(next) }), async ({ container }) => {
+          const slider = container.querySelector('.muxui-color-slider input[type="range"]');
+          const [x, y] = container.querySelectorAll('.muxui-color-area input[type="range"]');
+          await act(async () => slider.focus());
+          const hues = [];
+          for (let press = 0; press < 3; press += 1) {
+            await act(async () => keyPress(slider, 'ArrowRight'));
+            hues.push(slider.value);
+          }
+          assert.deepEqual(hues, ['1', '2', '3'], 'the thumb moves instead of snapping back to 0');
+          assert.deepEqual(new Set(emitted), new Set([same]), 'the picker still reports its own hex color space');
+          // Full saturation and brightness: the area adds chroma to the remembered hue.
+          await act(async () => x.focus());
+          for (let press = 0; press < 10; press += 1) await act(async () => keyPress(x, 'End'));
+          await act(async () => y.focus());
+          for (let press = 0; press < 10; press += 1) await act(async () => keyPress(y, 'PageUp'));
+          assert.deepEqual([x.value, y.value], ['100', '100']);
+          const hue = parseColor(emitted.at(-1)).toFormat('hsb').getChannelValue('hue');
+          assert.ok(Math.abs(hue - 3) < 2, `the area edits in the slider's hue 3, not ${hue} (${emitted.at(-1)})`);
+          assert.equal(slider.value, '3', 'the slider keeps its thumb');
+        });
+      });
+    }
+  }
+}
