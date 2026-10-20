@@ -164,7 +164,12 @@ test('every family Docs page runs the continuous reference sections in order, pr
     );
     // The route the guide links to the tested profile opens the file that owns it, which exists.
     assert.deepEqual(entry.accessibilityGuide.links, { '/installation/#tested-profile': 'catalog/react-r1-5/closure.json' }, `${family} shared accessibility links`);
-    for (const source of Object.values(entry.accessibilityGuide.links)) assert.ok(read(source), `${family} ${source} exists`);
+    // The guide's sentence promises the tested browser and display profiles, so that file's compatibility record holds both.
+    for (const source of Object.values(entry.accessibilityGuide.links)) {
+      const { browserMatrix } = JSON.parse(read(source)).compatibility;
+      assert.ok(typeof browserMatrix.browser === 'string' && browserMatrix.browser !== '', `${family} ${source} has the tested browser`);
+      assert.ok(Array.isArray(browserMatrix.profiles) && browserMatrix.profiles.length > 0 && browserMatrix.profiles.every((profile) => typeof profile === 'string' && profile !== ''), `${family} ${source} has display profiles`);
+    }
     const guideCaption = shared.querySelector('.muxui-docs-caption');
     assert.equal(guideCaption.textContent, `Full guide: ${accessibilityGuide.source.content}`, `${family} shared accessibility caption`);
     assert.equal(guideCaption.querySelector('a').getAttribute('href'), githubUrl(accessibilityGuide.source.content), `${family} link to the full accessibility guide`);

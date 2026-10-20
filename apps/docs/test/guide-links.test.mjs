@@ -167,7 +167,7 @@ test('the accessibility guide names the existing automated proof and its limits 
   const guide = readFileSync(resolve(root, 'catalog/guides/accessibility.md'), 'utf8');
   const flat = (markdown) => markdown.replace(/\s+/gu, ' ');
   const [support] = accessibilityGuideSections(guide);
-  const subsection = (heading) => flat(support.markdown.split(/^### /mu).find((part) => part.startsWith(`${heading}\n`)));
+  const subsection = (heading) => flat(support.markdown.split(/^### /mu).find((part) => part.startsWith(`${heading}\n`))).trim();
 
   // Automated proof states no version, so it cannot drift from the record: it links the tested profile Installation renders,
   // and its prose names the record's non-claims, which this fails on until the guide follows a change to them.
@@ -175,6 +175,9 @@ test('the accessibility guide names the existing automated proof and its limits 
   assert.deepEqual(reactCompatibilityProfile.notClaimed, ['assistive technology', 'zoom', 'locale', `browsers outside ${reactCompatibilityProfile.browser}`]);
   assert.match(proof, /axe in one browser, over a fixed set of display profiles, and package tests of keyboard and focus behavior\./u);
   assert.match(proof, /Assistive technology, zoom, locale, and other browsers are not claimed\./u);
+  // The link promises only what both places it leads hold, the tested browser and display profiles: Installation renders them
+  // (checked on the built page) and Storybook opens the closure record (checked in the Docs page test), which has no non-claims.
+  assert.match(proof, /The \[tested profile\]\(\/installation\/#tested-profile\) lists the tested browser and display profiles\.$/u);
   assert.doesNotMatch(proof, /\d|Chrome|axe \d/u, 'the automated proof states no browser or tool version');
   assert.deepEqual(linkedSiteRoutes(support.markdown), ['/installation/#tested-profile']);
   assert.match(readFileSync(resolve(root, 'apps/docs/src/components/InstallationGuide.astro'), 'utf8'), /<h2 id="tested-profile">/u);

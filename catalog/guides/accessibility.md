@@ -21,8 +21,8 @@ React promotion (`S1.0`), is deferred, not complete.
 The existing automated proof is axe in one browser, over a fixed set of display
 profiles, and package tests of keyboard and focus behavior. Assistive
 technology, zoom, locale, and other browsers are not claimed. The
-[tested profile](/installation/#tested-profile) lists the browser, the display
-profiles, and everything that is not claimed.
+[tested profile](/installation/#tested-profile) lists the tested browser and
+display profiles.
 
 ### Known limitations
 

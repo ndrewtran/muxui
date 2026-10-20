@@ -27,6 +27,7 @@ const readPage = (route) => {
 const words = (value) => value.replace(/[‘’]/gu, "'").replaceAll('`', '').replace(/\s+/gu, ' ').trim();
 // What a reader sees of a section's Markdown: no heading marks, link targets or code ticks.
 const plain = (markdown) => words(markdown.replace(/^#{1,6} /gmu, '').replace(/\[([^\]]+)\]\([^)]*\)/gu, '$1'));
+const closure = JSON.parse(readText('catalog/react-r1-5/closure.json')).compatibility;
 const slugify = (value) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
 
 // The accessibility guide page renders the sections Storybook cuts from the same file, in the same words, and the
@@ -48,7 +49,14 @@ const slugify = (value) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-'
 		for (const route of linkedSiteRoutes(markdown)) {
 			const [path, fragment] = route.split('#');
 			assert(elements(title.parentNode).some((node) => node.tagName === 'a' && attributeValue(node, 'href') === route), `/accessibility/ "${heading}" does not link ${route}.`);
-			assert(fragment === undefined || ids(readPage(path.replace(/^\/|\/$/gu, ''))).has(fragment), `${route} names a heading that is not built.`);
+			const target = fragment === undefined ? undefined : elements(readPage(path.replace(/^\/|\/$/gu, ''))).find((node) => attributeValue(node, 'id') === fragment);
+			assert(fragment === undefined || target !== undefined, `${route} names a heading that is not built.`);
+			// The sentence that links the tested profile promises the tested browser and display profiles, so that section renders them.
+			if (route === '/installation/#tested-profile') {
+				const profileText = textContent(target.parentNode);
+				assert(profileText.includes(closure.browserMatrix.browser), `${route} does not show the tested browser the guide promises.`);
+				for (const profile of closure.browserMatrix.profiles) assert(profileText.includes(profile), `${route} does not show the display profile ${profile} the guide promises.`);
+			}
 		}
 	}
 	// The page's own anchors, such as the pointer from Keyboard and focus to Known limitations, reach a heading.
@@ -60,7 +68,6 @@ const slugify = (value) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-'
 
 // Installation renders the tested profile from the compatibility record the package generates, and says nothing the record does not.
 {
-	const closure = JSON.parse(readText('catalog/react-r1-5/closure.json')).compatibility;
 	const manifest = JSON.parse(readText('packages/react/package.json'));
 	const { reactCompatibility } = await import(pathToFileURL(resolve(repositoryRoot, 'packages/react/generated/compatibility.mjs')).href);
 	const root = readPage('installation');
