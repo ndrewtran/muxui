@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:form-inline-validation-react",
+  "kind": "example",
+  "name": "Form with inline validation",
+  "summary": "Use aria validation so the application decides when a field is invalid, showing the error once the user leaves it and checking again on submit.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:form#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/form/examples/react/inline-validation.tsx"
+}

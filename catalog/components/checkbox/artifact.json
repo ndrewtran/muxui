@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Selecting or clearing an option"
+      "Selecting or clearing an option that takes effect when a form is submitted or an action is applied",
+      "Applying a preference as soon as it is toggled, when it is one of several options chosen together"
     ],
     "avoidWhen": [
-      "Choosing exactly one option from a set"
+      "Choosing exactly one option from a set; use RadioGroup",
+      "Turning a single setting on or off as soon as it is toggled; use Switch",
+      "Showing a description or error message beside the option; use CheckboxField"
     ]
   },
   "anatomy": [

@@ -15,6 +15,7 @@ export function RadioFieldOptionsExample() {
   return (
     <form noValidate onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--muxui-reference-dimension-space-xs)' }}>
+        {/* invalid on the group marks every option, and RadioGroup has no error part, so each enabled option renders the message. */}
         <RadioGroup label="Plan" name="plan" value={plan} onChange={setPlan} invalid={attempted && plan === ''}>
           <RadioField.Root value="monthly">
             <RadioField.Button>

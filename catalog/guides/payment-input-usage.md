@@ -16,4 +16,21 @@ Digits past the last group are dropped. To work with the digits, remove the spac
 
 ## Errors
 
-The application checks the number, marks the field invalid, and renders the error part with its message. The example shows an error from a length check. Use sample numbers like these, not real card numbers, in examples and tests. The [API reference](#api-reference) lists the props Mux UI defines.
+The application checks the number, marks the field invalid, and renders the error part with its message. Use sample numbers like these, not real card numbers, in examples and tests. The [API reference](#api-reference) lists the props Mux UI defines.
+
+- Check on submit first, so a number still being typed is not judged.
+- After a failed check, recheck on every edit so the message clears once the number is complete, as the PaymentInput formatting example does with a length check.
+- Show your own checks in the error part, and a failure from the payment provider as its own message. Formatting never produces an error.
+
+## Card icon
+
+CardIcon is decoration: one generic card glyph, marked `aria-hidden`, that looks the same for every card type. The card type is detected from the leading digits and recorded as `data-card-type` metadata, or set with `cardType`, but PaymentInput renders no card brand. Sending the number to a payment provider and handling its response belong to the application.
+
+## Content
+
+- Label the field Card number and set `autoComplete="cc-number"` on the input, as the examples do.
+- Word the error as what is missing, such as Enter all the digits on the card.
+
+## Common mistake
+
+Sending the callback value to a payment provider as it is. It includes spaces, so remove them in the application first.

@@ -10,7 +10,9 @@
       "Toggling a persistent mode or option"
     ],
     "avoidWhen": [
-      "Triggering a one-time immediate action"
+      "Triggering a one-time immediate action; use Button",
+      "Turning a setting on or off on a settings surface; use Switch",
+      "Selecting an option to submit with a form; use Checkbox"
     ]
   },
   "anatomy": [

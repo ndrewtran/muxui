@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:text-area-usage",
+  "kind": "guide",
+  "name": "TextArea usage",
+  "summary": "Use TextArea through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "text-area",
+    "react",
+    "forms"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/text-area-usage.md"
+}

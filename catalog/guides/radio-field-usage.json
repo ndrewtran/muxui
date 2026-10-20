@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:radio-field-usage",
+  "kind": "guide",
+  "name": "RadioField usage",
+  "summary": "Use RadioField through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "radio-field",
+    "react",
+    "forms"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/radio-field-usage.md"
+}

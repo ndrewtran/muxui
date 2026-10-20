@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Collecting a short, single-line text value."
+      "Collecting a short, single-line text value with the parts of the field laid out individually."
     ],
     "avoidWhen": [
-      "For multiline content, numeric ranges, or a predefined choice."
+      "For a standard labelled field; use TextField.",
+      "For multiline content; use TextArea.",
+      "For a number or a range; use NumberField or Slider.",
+      "For a predefined choice; use Select."
     ]
   },
   "anatomy": [

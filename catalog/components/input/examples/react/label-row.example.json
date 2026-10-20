@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:input-label-row-react",
+  "kind": "example",
+  "name": "Input with an action in the label row",
+  "summary": "Place an action beside the label by composing the Input parts yourself.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:input#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/input/examples/react/label-row.tsx"
+}

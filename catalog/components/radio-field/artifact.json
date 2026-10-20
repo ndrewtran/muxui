@@ -7,10 +7,12 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Capturing one choice from a mutually exclusive set of options."
+      "Capturing one choice from a mutually exclusive set of options.",
+      "Showing a description or an error beside an option of a RadioGroup."
     ],
     "avoidWhen": [
-      "For independent settings or when several choices may be selected."
+      "For options that are only a label; use the RadioGroup options list.",
+      "For independent settings or when several choices may be selected; use CheckboxGroup."
     ]
   },
   "anatomy": [

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-area-form-react",
+  "kind": "example",
+  "name": "TextArea in a form",
+  "summary": "Keep the text in state on Root, put the name and a justified maxLength on the textarea, show a consumer-owned count, and read the named value on submit.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text-area#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text-area/examples/react/form.tsx"
+}

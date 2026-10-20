@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:form-native-validation-react",
+  "kind": "example",
+  "name": "Form with native validation",
+  "summary": "Let the browser check required and typed fields when the form is submitted, with each field's own message replacing the browser's wording.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:form#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/form/examples/react/native-validation.tsx"
+}

@@ -189,7 +189,8 @@
       "slug": "input",
       "examples": [
         "catalog/components/input/examples/react/basic.tsx",
-        "catalog/components/input/examples/react/form.tsx"
+        "catalog/components/input/examples/react/form.tsx",
+        "catalog/components/input/examples/react/label-row.tsx"
       ],
       "export": {
         "module": ".",
@@ -420,7 +421,8 @@
       "family": "TextArea",
       "slug": "text-area",
       "examples": [
-        "catalog/components/text-area/examples/react/basic.tsx"
+        "catalog/components/text-area/examples/react/basic.tsx",
+        "catalog/components/text-area/examples/react/form.tsx"
       ],
       "export": {
         "module": ".",

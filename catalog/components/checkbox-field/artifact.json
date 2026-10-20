@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Capturing an independent option that can be selected alongside other options."
+      "Capturing an independent option that can be selected alongside other options.",
+      "Showing a description or an error message beside the option, such as a required choice."
     ],
     "avoidWhen": [
-      "For mutually exclusive choices or an immediate setting toggle."
+      "For mutually exclusive choices; use RadioGroup.",
+      "For an immediate setting toggle; use SwitchField.",
+      "For an option that needs only a label; use Checkbox."
     ]
   },
   "anatomy": [
