@@ -50,12 +50,16 @@ parameter, so the page authors no per-family text. The live preview stays the
 adapter Default story and the API reference stays Storybook's Controls table;
 canonical examples appear as static source, not as extra stories. The
 Accessibility section also carries the shared accessibility guide's Support
-status and Verification sections, cut from `catalog/guides/accessibility.md` by
-heading (`accessibilityGuideSections` in `../guide-links.mjs`, over marked's parsed tokens), with a
-link to the full guide. Storybook has no guide pages, so the link is the guide's
-source, as for a family's usage guide. The docs site renders the same file whole
-at `/accessibility/`, and `apps/docs/scripts/check-shared-guidance.mjs` holds
-that page to the same words.
+status (the claim, the existing automated proof and the known limitations) and
+Verification sections, cut from `catalog/guides/accessibility.md` by heading
+(`accessibilityGuideSections` in `../guide-links.mjs`, over marked's parsed
+tokens), with a link to the full guide. Storybook has no guide pages, so that
+link is the guide's source, as for a family's usage guide, and a docs site route
+the text links, such as the tested profile on `/installation/`, opens the file
+that owns it (`siteRouteSources` in `src/component-docs.mjs`; an unlisted route
+fails generation). The docs site renders the same file whole at
+`/accessibility/`, and `apps/docs/scripts/check-shared-guidance.mjs` holds that
+page to the same words.
 `test/component-docs.test.mjs` renders every family's entry and checks the
 section order and each projected fact against the catalog. An edit to a file the
 page embeds (a family's catalog record, canonical example or usage guide, the

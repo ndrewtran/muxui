@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { posix, resolve } from 'node:path';
 import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
-import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies } from '../../guide-links.mjs';
+import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies, linkedSiteRoutes } from '../../guide-links.mjs';
 
 /**
  * The docs entry of every component family: the catalog facts its Storybook
@@ -63,6 +63,29 @@ export function guideLinks(markdown, docsPages) {
 }
 
 /**
+ * Where a docs site route that the shared accessibility guide links leads in Storybook, which has no such page: the
+ * file that owns what the route shows, opened on GitHub like a guide's own source. The tested profile on Installation
+ * is the compatibility record in the React closure. A route that is not named here fails generation instead of
+ * rendering a link that goes nowhere.
+ */
+const siteRouteSources = Object.freeze({ '/installation/': 'catalog/react-r1-5/closure.json' });
+
+/**
+ * @param {readonly { markdown: string }[]} sections
+ * @param {string} repositoryRoot
+ * @returns {Record<string, string>} The repository file each linked route leads to, by link target.
+ */
+export function siteLinks(sections, repositoryRoot) {
+  return Object.fromEntries(sections.flatMap(({ markdown }) => linkedSiteRoutes(markdown)).map((route) => {
+    const source = siteRouteSources[route.split('#')[0]];
+    if (source === undefined || !existsSync(resolve(repositoryRoot, source))) {
+      throw new Error(`The accessibility guide links ${route}, which Storybook can open only when siteRouteSources names the file that owns it.`);
+    }
+    return [route, source];
+  }));
+}
+
+/**
  * @param {object} input
  * @param {string} input.repositoryRoot
  * @param {readonly string[]} input.componentIds Canonical component ids, such as `muxui:component:button`.
@@ -87,11 +110,13 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
   };
   if (!guides.has(accessibilityGuideId)) throw new Error(`The canonical catalog has no ${accessibilityGuideId} guide.`);
   const accessibility = await readGuide(accessibilityGuideId);
+  const accessibilitySections = accessibilityGuideSections(accessibility.body);
   const accessibilityGuide = {
     id: accessibilityGuideId,
     name: accessibility.record.name,
     source: accessibility.record.source.content,
-    sections: accessibilityGuideSections(accessibility.body),
+    sections: accessibilitySections,
+    links: siteLinks(accessibilitySections, repositoryRoot),
   };
   const entries = new Map();
   for (const id of componentIds) {

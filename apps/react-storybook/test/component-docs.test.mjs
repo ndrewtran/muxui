@@ -12,7 +12,7 @@ import { buildTheme } from '../.storybook/theme.mjs';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
 import { linkedFamilies } from '../../guide-links.mjs';
-import { guideLinks } from '../src/component-docs.mjs';
+import { guideLinks, siteLinks } from '../src/component-docs.mjs';
 
 const h = React.createElement;
 const appRoot = resolve(import.meta.dirname, '..');
@@ -162,6 +162,9 @@ test('every family Docs page runs the continuous reference sections in order, pr
       ['Support status', 'Verification'].map((heading) => guideSection(accessibilityFile, heading)),
       `${family} shared accessibility text`,
     );
+    // The route the guide links to the tested profile opens the file that owns it, which exists.
+    assert.deepEqual(entry.accessibilityGuide.links, { '/installation/#tested-profile': 'catalog/react-r1-5/closure.json' }, `${family} shared accessibility links`);
+    for (const source of Object.values(entry.accessibilityGuide.links)) assert.ok(read(source), `${family} ${source} exists`);
     const guideCaption = shared.querySelector('.muxui-docs-caption');
     assert.equal(guideCaption.textContent, `Full guide: ${accessibilityGuide.source.content}`, `${family} shared accessibility caption`);
     assert.equal(guideCaption.querySelector('a').getAttribute('href'), githubUrl(accessibilityGuide.source.content), `${family} link to the full accessibility guide`);
@@ -290,15 +293,34 @@ test('the shared accessibility sections render through Storybook\'s own Markdown
   await withStorybookBlocks(async ({ Markdown }) => {
     const raw = read('catalog/guides/accessibility.md');
     const shared = staticDocs(await familyEntry('Dialog'), { Markdown }).querySelector('[data-shared-guide]');
-    // One paragraph and one h3 per section, with the guide's code span kept, and no guide heading brought along.
+    // One h3 per section, the guide's own subsections one level below, and no other heading.
     assert.deepEqual(texts(shared.querySelectorAll('h3')), ['Support status', 'Verification']);
+    assert.deepEqual(texts(shared.querySelectorAll('h4')), ['Automated proof', 'Known limitations']);
+    assert.equal(shared.querySelectorAll('h1, h2, h5, h6').length, 0);
+    // Every paragraph is the guide's, in its words, with its code span and link kept.
+    const plain = (markdown) => markdown.split(/\n\n+/u).filter((block) => !block.startsWith('#'))
+      .map((block) => block.replace(/\[([^\]]+)\]\([^)]+\)/gu, '$1').replaceAll('`', '').replace(/\s+/gu, ' '));
     assert.deepEqual(
       texts(shared.querySelectorAll('p:not(.muxui-docs-caption)')).map((text) => text.replace(/\s+/gu, ' ')),
-      ['Support status', 'Verification'].map((heading) => guideSection(raw, heading).replaceAll('`', '').replace(/\s+/gu, ' ')),
+      ['Support status', 'Verification'].flatMap((heading) => plain(guideSection(raw, heading))),
     );
     assert.deepEqual(texts(shared.querySelectorAll('code')), ['S1.0']);
-    assert.equal(shared.querySelectorAll('h1, h2, h4').length, 0);
+    // The tested profile link leaves Storybook for the file that owns the profile, and the guide link follows it.
+    const links = [...shared.querySelectorAll('a')].map((node) => [node.textContent, node.getAttribute('href'), node.getAttribute('target')]);
+    assert.deepEqual(links, [
+      ['tested profile', githubUrl('catalog/react-r1-5/closure.json'), '_blank'],
+      ['catalog/guides/accessibility.md', githubUrl('catalog/guides/accessibility.md'), '_blank'],
+    ]);
   });
+});
+
+test('a site route in the shared accessibility text opens its owner file, and a route with none fails generation', () => {
+  assert.deepEqual(
+    siteLinks([{ markdown: 'See the [tested profile](/installation/#tested-profile) and [again](/installation/#tested-profile).' }, { markdown: 'No links.' }], repositoryRoot),
+    { '/installation/#tested-profile': 'catalog/react-r1-5/closure.json' },
+  );
+  assert.deepEqual(siteLinks([{ markdown: 'Only [an anchor](#top) and [the web](https://example.com/).' }], repositoryRoot), {});
+  assert.throws(() => siteLinks([{ markdown: 'See [Themes](/themes/).' }], repositoryRoot), /links \/themes\/, which Storybook can open only when siteRouteSources names the file that owns it/u);
 });
 
 test('guide links resolve to Storybook Docs pages and fail on a family without one', () => {

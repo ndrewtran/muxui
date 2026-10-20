@@ -14,8 +14,23 @@ requires an accessible name.
 React exports are experimental, and Mux UI makes no assistive-technology
 support claim for the React prerelease. The manual and assistive-technology
 evidence that Decision 0022 requires before any such claim, and before stable
-React promotion (`S1.0`), is deferred, not complete. Automated accessibility,
-keyboard, and focus checks still apply.
+React promotion (`S1.0`), is deferred, not complete.
+
+### Automated proof
+
+The existing automated proof is axe in one browser, over a fixed set of display
+profiles, and package tests of keyboard and focus behavior. Assistive
+technology, zoom, locale, and other browsers are not claimed. The
+[tested profile](/installation/#tested-profile) lists the browser, the display
+profiles, and everything that is not claimed.
+
+### Known limitations
+
+A Dialog cannot return focus to the element that was focused when it opened if
+that element was removed while the Dialog was open. Focus then moves to the
+nearest ancestor recorded at opening that is still connected and focusable, but
+only when focus would otherwise be on the document body. With no such ancestor,
+focus stays on the document body.
 
 ## Names and relationships
 
@@ -35,11 +50,9 @@ application-only visual state.
 
 Collection, overlay, disclosure, and editor components preserve their declared
 keyboard behavior. Dialog dismissal restores focus to the element that was
-focused when it opened, usually its trigger. If that element was removed while
-the Dialog was open, focus moves to the nearest ancestor recorded at opening
-that is still connected and focusable; with none, focus stays on the document
-body. Collection components expose the selection and action events declared by
-their binding.
+focused when it opened, usually its trigger; [Known limitations](#known-limitations)
+covers the case where that element is gone. Collection components expose the
+selection and action events declared by their binding.
 
 ## Verification
 

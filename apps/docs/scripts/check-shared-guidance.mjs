@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'parse5';
-import { accessibilityGuideSections } from '../../guide-links.mjs';
+import { accessibilityGuideSections, linkedSiteRoutes } from '../../guide-links.mjs';
 import { attributeValue, elements, textContent } from './html-tree.mjs';
 
 // Two shared pages carry content that another surface shows too. This reads the built pages against their owners, not
@@ -25,16 +25,36 @@ const readPage = (route) => {
 };
 // The Markdown pipeline curls apostrophes and drops code-span backticks, so compare words only.
 const words = (value) => value.replace(/[‘’]/gu, "'").replaceAll('`', '').replace(/\s+/gu, ' ').trim();
+// What a reader sees of a section's Markdown: no heading marks, link targets or code ticks.
+const plain = (markdown) => words(markdown.replace(/^#{1,6} /gmu, '').replace(/\[([^\]]+)\]\([^)]*\)/gu, '$1'));
 const slugify = (value) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
 
-// The accessibility guide page renders the sections Storybook cuts from the same file, in the same words.
+// The accessibility guide page renders the sections Storybook cuts from the same file, in the same words, and the
+// routes and anchors they link reach a built page and heading.
 {
 	const root = readPage('accessibility');
-	for (const { heading, markdown } of accessibilityGuideSections(readText('catalog/guides/accessibility.md'))) {
+	const ids = (page) => new Set(elements(page).map((node) => attributeValue(node, 'id')).filter((id) => id !== undefined));
+	const sections = accessibilityGuideSections(readText('catalog/guides/accessibility.md'));
+	for (const { heading, markdown } of sections) {
 		const title = elements(root).find((node) => node.tagName === 'h2' && attributeValue(node, 'id') === slugify(heading));
 		assert(title !== undefined && textContent(title) === heading, `/accessibility/ has no "${heading}" section.`);
 		const body = textContent(title.parentNode).replace(heading, '');
-		assert(words(body) === words(markdown), `/accessibility/ "${heading}" differs from the guide text that Storybook shows.`);
+		assert(words(body) === plain(markdown), `/accessibility/ "${heading}" differs from the guide text that Storybook shows.`);
+		// Each subsection Storybook shows under it is a heading of the same section on this page.
+		const subsections = [...markdown.matchAll(/^### (.+)$/gmu)].map(([, text]) => text);
+		const rendered = elements(title.parentNode).filter((node) => node.tagName === 'h3').map((node) => textContent(node));
+		assert(JSON.stringify(rendered) === JSON.stringify(subsections), `/accessibility/ "${heading}" subsections are ${rendered.join(', ') || 'none'}, expected ${subsections.join(', ') || 'none'}.`);
+		// A route the section links is built and holds the heading the link names.
+		for (const route of linkedSiteRoutes(markdown)) {
+			const [path, fragment] = route.split('#');
+			assert(elements(title.parentNode).some((node) => node.tagName === 'a' && attributeValue(node, 'href') === route), `/accessibility/ "${heading}" does not link ${route}.`);
+			assert(fragment === undefined || ids(readPage(path.replace(/^\/|\/$/gu, ''))).has(fragment), `${route} names a heading that is not built.`);
+		}
+	}
+	// The page's own anchors, such as the pointer from Keyboard and focus to Known limitations, reach a heading.
+	const pageIds = ids(root);
+	for (const link of elements(root).filter((node) => node.tagName === 'a' && attributeValue(node, 'href')?.startsWith('#') && attributeValue(node, 'href').length > 1)) {
+		assert(pageIds.has(attributeValue(link, 'href').slice(1)), `/accessibility/ links ${attributeValue(link, 'href')}, which no heading has.`);
 	}
 }
 
