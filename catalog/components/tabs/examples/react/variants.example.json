@@ -3,7 +3,7 @@
   "id": "muxui:example:tabs-variants-react",
   "kind": "example",
   "name": "Tabs variants",
-  "summary": "Compare the supported underline, pill, segment, and overflow variants.",
+  "summary": "Compare the underline, pill, segment, and overflow variants in the contexts where each reads well.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:tabs#web.react",

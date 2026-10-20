@@ -7,10 +7,11 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Showing a page location within a hierarchy"
+      "Showing a page location within a hierarchy",
+      "Letting people climb back to an ancestor page"
     ],
     "avoidWhen": [
-      "Replacing primary navigation"
+      "Replacing primary navigation; use HeaderNav or Sidebar"
     ]
   },
   "anatomy": [

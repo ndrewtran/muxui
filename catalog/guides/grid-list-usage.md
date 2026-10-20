@@ -2,9 +2,26 @@
 
 Use the Mux UI GridList contract and provide an accessible name.
 
+## GridList or other collections
+
+- Use GridList to open or select items shown as rows or cards.
+- Use [Table](/components/table/) for data that people compare across columns.
+- Use [Tree](/components/tree/) for nested data.
+
 ## Stack or grid
 
 The default `layout="stack"` is a vertical list of single-line rows, built from the `items` array. Set `layout="grid"` for card-like items that flow into columns, and compose each card with `GridList.Item` children instead of `items`.
+
+## Opening or selecting items
+
+Choose by what a click on an item should do.
+
+| A click should | Set |
+| --- | --- |
+| Open the item | `onAction` and `selectionMode="none"`. A click or Enter opens it. |
+| Select items for a bulk action | `selectionMode="multiple"` and no `onAction`. A click toggles the item. Put Open in a nested Button or Link. |
+
+GridList defaults to single selection. With `onAction` and a selection mode both set, a click opens an item only while nothing is selected, and Space starts a selection. After that, a click changes the selection instead of opening an item. The GridList that opens or selects items example shows each case.
 
 ## Composing cards
 
@@ -32,4 +49,13 @@ Put any aspect ratio on the media inside the item, such as an `Image`: its `widt
 
 ## When to virtualize
 
-GridList mounts every item. Wrap a grid of hundreds of cards in a Virtualizer, which mounts only the visible rows; see the Virtualizer usage guide.
+GridList mounts every item, so a very long grid costs more to render. Whether a grid of hundreds of cards needs a [Virtualizer](/components/virtualizer/) depends on measured rendering cost, not on a card count. Wrap the grid when mounting every card is measurably slow. The Virtualizer usage guide compares the stack and grid layouts.
+
+## Content
+
+- Make each item's title a short noun phrase, such as Release brief, and set it as `textValue`.
+- Keep a card's actions few and named by their result, such as Open.
+
+## Common mistake
+
+Setting `onAction` together with a selection mode and expecting a click to select. The click opens the item while nothing is selected, so choose opening or selecting as the table above does.

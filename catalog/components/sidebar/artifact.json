@@ -7,10 +7,12 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Providing persistent navigation alongside the main application content."
+      "Providing persistent navigation alongside the main application content, for many destinations or grouped pages."
     ],
     "avoidWhen": [
-      "For primary top-level navigation or a short list of contextual links."
+      "Primary top-level navigation of a few destinations; use HeaderNav.",
+      "A short list of contextual links; use Link.",
+      "Browsing items in a data hierarchy, such as files; use Tree."
     ]
   },
   "anatomy": [
@@ -138,8 +140,9 @@
         "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the one mounted last, whatever shortcut changes happened since; only that Provider prevents the default.",
         "The shortcut yields to a control outside Sidebar that handles the chord itself; only targets inside a Root or Toggle are taken before they can stop it.",
         "Inside a Provider, a MobileTrigger whose header layout hides while its drawer is open closes the drawer and moves focus to the matching column link, else the current link, a Toggle, or Root; a Root that layout hides while it holds focus hands focus to the rendered menu button.",
-        "A folded header is clipped to the rail, so a text-only header shows only its first word; give it a leading mark.",
-        "When Root sets its own id, Toggle's aria-controls names the generated id until hydration."
+        "A folded header is clipped to the rail, so only what fits in the rail's width stays visible; give the header a compact leading mark.",
+        "When Root sets its own id, Toggle's aria-controls names the generated id until hydration.",
+        "AccountCard's built-in Account options button currently has no action, and AccountMenu is independent styled content that nothing connects to that button."
       ],
       "accessibility": [
         "A nested group without a link uses native disclosure semantics; a group that is also a link pairs it with a toggle button that reports aria-expanded and controls the nested list.",

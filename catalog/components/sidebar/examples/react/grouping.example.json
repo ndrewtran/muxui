@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:sidebar-grouping-react",
+  "kind": "example",
+  "name": "Sidebar flat links or a group",
+  "summary": "Compare the same destinations as flat links and as one shallow Roadmap group that starts open on the current page.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:sidebar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/sidebar/examples/react/grouping.tsx"
+}

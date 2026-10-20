@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:table-scrolling-react",
+  "kind": "example",
+  "name": "Table in a scroll container",
+  "summary": "Keep every column of a wide Table for comparison, with a minimum width on the Table and a wrapper that scrolls horizontally.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:table#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/table/examples/react/scrolling.tsx"
+}

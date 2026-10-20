@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:menu-grouped-react",
+  "kind": "example",
+  "name": "Menu for secondary commands",
+  "summary": "Keep the main action beside a menu that groups the secondary commands in named sections.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:menu#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/menu/examples/react/grouped.tsx"
+}

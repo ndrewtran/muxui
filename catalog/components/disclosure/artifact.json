@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Progressively revealing related content"
+      "Progressively revealing related content",
+      "Hiding optional detail about one thing that most people can skip"
     ],
     "avoidWhen": [
-      "Navigating to a different page"
+      "Navigating to a different page; use Link",
+      "Related sections that people read together or compare; use DisclosureGroup",
+      "Alternative views of one subject shown one at a time; use Tabs"
     ]
   },
   "anatomy": [

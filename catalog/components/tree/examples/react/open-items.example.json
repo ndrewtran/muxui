@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tree-open-items-react",
+  "kind": "example",
+  "name": "Tree that opens items",
+  "summary": "Open an item on a click and expand a branch with its chevron only, for rows that hold pages.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tree#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/tree/examples/react/open-items.tsx"
+}

@@ -1,8 +1,8 @@
 import { Button, ToggleButton, Toolbar } from '@muxui/react';
 export function BasicToolbarExample() {
   return <Toolbar aria-label="Document actions">
-    <Button variant="neutral">Save</Button>
+    <Button>Save</Button>
     <ToggleButton>Preview</ToggleButton>
-    <Button variant="ghost">Share</Button>
+    <Button>Share</Button>
   </Toolbar>;
 }

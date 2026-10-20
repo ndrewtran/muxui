@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:breadcrumbs-long-path-react",
+  "kind": "example",
+  "name": "Breadcrumbs for a long path",
+  "summary": "Keep every level of a six-level path and let the list wrap in a narrow container.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:breadcrumbs#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/breadcrumbs/examples/react/long-path.tsx"
+}

@@ -7,10 +7,11 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Providing the primary navigation for a site or application shell."
+      "Providing the primary navigation for a site or application shell, with a few top-level destinations and actions."
     ],
     "avoidWhen": [
-      "For persistent secondary navigation or a dense product sidebar."
+      "Persistent secondary navigation or a dense product sidebar; use Sidebar.",
+      "Showing where the current page sits in a hierarchy; use Breadcrumbs."
     ]
   },
   "anatomy": [

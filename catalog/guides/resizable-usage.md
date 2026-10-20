@@ -2,6 +2,11 @@
 
 Use Resizable to let people resize adjacent panels. Panel sizes are percentages of the container.
 
+## Resizable or Separator
+
+- Use Resizable when people drag the boundary between panels.
+- Use [Separator](/components/separator/) for a fixed line between regions.
+
 ## Composition
 
 Resizable's children alternate Panel, Handle, Panel, with a Panel at each end. Each Handle names the Panels on either side of it and has its own accessible name, and every Panel and Handle has a unique id. Panels can set minimum and maximum sizes, which must leave room for all the panels to add up to 100 percent. The Resizable with three panels example has two handles and bounds on each panel.
@@ -19,3 +24,12 @@ A horizontal Resizable fills the width of its container. A vertical one fills th
 onSizesChange runs on every change while a handle is dragged. onSizesCommit runs when a drag that changed the sizes ends normally, and after each keyboard change, so save sizes in onSizesCommit.
 
 A drag that is interrupted does not commit. The interruptions are a pointer cancel, lost pointer capture, a window resize, and the Resizable becoming disabled or read-only. If the interrupted drag had changed the sizes, onSizesChange runs once more with the sizes from before the drag, unless they no longer form a valid layout. A drag that never changed the sizes, or that ended back at its starting sizes, has nothing to restore. Unmounting during a drag reports nothing. A controlled parent that shows other sizes than the drag last proposed, or than it started from before its first change, ends the drag silently, so cancelling it restores nothing.
+
+## Content
+
+- Name each Handle for the two panels it resizes, such as Resize preview and editor.
+- Give each Panel a minimum size that keeps its content usable.
+
+## Common mistake
+
+Saving sizes in onSizesChange. It runs on every change while a handle is dragged, so it saves on every pointer move. Save in onSizesCommit.

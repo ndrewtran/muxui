@@ -7,10 +7,12 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Managing a set of related disclosures"
+      "Managing a set of related disclosures",
+      "Related sections that people may read together or compare, such as FAQ answers"
     ],
     "avoidWhen": [
-      "Unrelated independent panels"
+      "Unrelated independent panels; use Disclosure",
+      "Alternative views of one subject shown one at a time; use Tabs"
     ]
   },
   "anatomy": [
