@@ -23,4 +23,4 @@ The date and the open state are separate, so the application can control either 
 
 ## Common mistake
 
-Using DatePicker for a birthday or another distant date. The calendar opens near today, so people page through months to reach it. Use DateField so they can type the date.
+Expecting people to page the calendar month by month to a known distant date, such as a birthday. An empty DatePicker opens at the current month. Use DateField, which shows no calendar to page.
