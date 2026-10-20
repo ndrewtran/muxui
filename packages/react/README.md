@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:d1a862549ba53c915d1863f51c0fcf05416d29921ec359fb72701013267d0eb6 -->
+<!-- @generated-content-sha256: sha256:aa258ce73e2c130fadc633f3c692544b6a1ecb0a5cb2a7f6a9e347fbf6ce65b7 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -222,7 +222,7 @@ Public parts: `root`, `section`, `header`, `item`.
 
 - Arrow keys move between items.
 - Controlled and uncontrolled Core key selections are supported.
-- With onAction set and selectionMode single or multiple, a click or Enter on an item runs the action while nothing is selected, and Space starts a selection. Once an item is selected, a click or Enter changes the selection instead of running the action.
+- With onAction set and selectionMode single or multiple, a click or Enter on an item runs the action while nothing is selected, and Space starts a selection. Once an item is selected, a click changes the selection instead of running the action, and Enter runs no action.
 - GridList.Item composes static items with a stable string id; supply textValue for rich children so typeahead and the item name stay unambiguous. When children are present, items is ignored.
 - Root disabled state disables every GridList.Item and suppresses selection and action callbacks. A child disabled=false cannot re-enable an item under a disabled root. Data-backed onAction returns the normalized item; compound onAction returns identity fields id, key, and value.
 - In the default vertical stack, Up and Down arrows move between items and Left and Right arrows reach controls nested in the focused item. With layout=grid or orientation=horizontal, arrow keys move between items by their rendered positions, mirrored in right-to-left, and Tab and Shift+Tab move through the nested controls of the focused item. layout=grid lays items out in auto-fill columns of at least 10rem whose content wraps; orientation=horizontal scrolls along the inline axis. The default column tracks have no specificity, so a plain class or inline style on the GridList sets grid-template-columns whatever the stylesheet order.

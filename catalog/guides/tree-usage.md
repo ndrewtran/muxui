@@ -15,9 +15,9 @@ Choose by what a click on a parent row should do.
 | The rows are | Set |
 | --- | --- |
 | Only for browsing | Keep the default `expansionTrigger="row"`. A click anywhere on a parent row expands or collapses it. |
-| Opening a resource, with `onAction` | `expansionTrigger="chevron"`. Only the chevron expands, and a click on the row opens. |
+| Opening a resource | `selectionMode="none"`, `onAction`, and `expansionTrigger="chevron"`. Only the chevron expands, and a click on the row opens. |
 
-With the default, a click on a parent row runs `onAction` and also expands or collapses the row. In both modes, the Right arrow expands a focused parent row. The Tree that opens items example uses the chevron.
+Tree defaults to single selection, where a click runs `onAction` only while nothing is selected. After that, a click on a row changes the selection and runs no action, whichever expansion mode is set, so set `selectionMode="none"` for a tree whose rows open. Row expansion still expands or collapses the row on every click, which is why the chevron suits rows that open. In both modes, the Right arrow expands a focused parent row. The Tree that opens items example uses all three settings.
 
 ## Item ids
 

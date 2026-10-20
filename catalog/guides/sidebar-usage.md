@@ -35,7 +35,7 @@ The column fills the height of its container, so place it in one that has a heig
 
 - Label each destination with a short noun, such as Inbox.
 - Give each top-level item an icon. Without one, a folded rail shows only the first character of the item's label.
-- Give a text-only header a leading mark, because a folded rail shows only its first word.
+- Folded, header content is clipped to the rail, so give the header a compact leading mark that fits in it.
 
 ## Common mistake
 

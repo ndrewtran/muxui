@@ -14,7 +14,7 @@ A vertical Separator is a thin line that takes the height of its parent. Place i
 ## Content
 
 - Place a Separator between groups that differ, such as two sets of links, not between every item.
-- A Separator draws a one-pixel line and adds no space around it, so set the spacing in the layout around it.
+- A horizontal Separator is an `hr`, which keeps the browser's default block margins, so account for them or override them with a class when you space the layout.
 
 ## Common mistake
 
