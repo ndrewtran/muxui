@@ -1172,16 +1172,18 @@ function CommandPalettePreview({
 
 Object.assign(ADAPTERS, {
   // Root owns open state, Trigger and Close own disabled and activation, and the shell nests
-  // Backdrop > Popup > Content as in the canonical example.
+  // Backdrop > Popup > Content as in the canonical example. The confirm action is the application's own
+  // danger Button beside Cancel, and the title names the object, the description states the consequence.
   AlertDialog: ({ open, defaultOpen, onOpenChange, disabled, onActivate }) => e(MuxUI.AlertDialog.Root, { open, defaultOpen, onOpenChange },
-    e(MuxUI.AlertDialog.Trigger, { disabled, onActivate }, 'Delete item'),
+    e(MuxUI.AlertDialog.Trigger, { disabled, onActivate }, 'Delete report'),
     e(MuxUI.AlertDialog.Backdrop, null,
       e(MuxUI.AlertDialog.Popup, null,
         e(MuxUI.AlertDialog.Content, null,
-          e(MuxUI.AlertDialog.Title, null, 'Delete item?'),
-          e(MuxUI.AlertDialog.Description, null, 'This action cannot be undone.'),
+          e(MuxUI.AlertDialog.Title, null, 'Delete Quarterly report?'),
+          e(MuxUI.AlertDialog.Description, null, 'The report and its 12 comments are deleted. This cannot be undone.'),
           e(MuxUI.AlertDialog.Actions, null,
             e(MuxUI.AlertDialog.Close, { disabled, onActivate }, 'Cancel'),
+            e(MuxUI.Button, { variant: 'danger', disabled, onActivate }, 'Delete report'),
           ),
         ),
       ),
@@ -1214,7 +1216,8 @@ Object.assign(ADAPTERS, {
   ),
   ColorModeToggle: (args) => e(ColorModeTogglePreview, args),
   CommandPalette: (args) => e(CommandPalettePreview, args),
-  // One list of links fills the header and the drawer. href and current belong to the first link.
+  // One list of links fills the header and the drawer. href and current belong to the first link. Sign in sits
+  // in the header from 40rem wide, and below it the drawer holds it under the links.
   HeaderNav: ({ href, current, ...root }) => {
     const navigation = [
       e(MuxUI.HeaderNav.NavButton, { key: 'docs', href: fallback(href, '#docs'), current }, 'Docs'),
@@ -1222,7 +1225,7 @@ Object.assign(ADAPTERS, {
       e(MuxUI.HeaderNav.NavButton, { key: 'blocks', href: '#blocks' }, 'Blocks'),
     ];
     // HeaderNav has no breakpoint of its own. Like the catalog's responsive example, the frame is a size
-    // container (preview.css) and the links show from 40rem wide, so the header fits a narrow viewport.
+    // container (preview.css), the links and Sign in show from 40rem wide, and the drawer trigger shows below it.
     return e('div', { className: 'muxui-storybook-header-frame' },
       e(MuxUI.HeaderNav.Root, root,
         e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
@@ -1230,8 +1233,13 @@ Object.assign(ADAPTERS, {
           className: 'muxui-storybook-header-links',
           'aria-label': `${root['aria-label'] ?? 'Header navigation'} secondary`,
         }, navigation),
-        e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, null, 'Sign in')),
-        e(MuxUI.HeaderNav.MobileTrigger, null, navigation),
+        e(MuxUI.HeaderNav.Actions, { className: 'muxui-storybook-header-actions' }, e(MuxUI.Button, null, 'Sign in')),
+        e('div', { className: 'muxui-storybook-header-menu' },
+          e(MuxUI.HeaderNav.MobileTrigger, null,
+            navigation,
+            e('div', { className: 'muxui-storybook-header-drawer-actions' }, e(MuxUI.Button, null, 'Sign in')),
+          ),
+        ),
       ),
     );
   },
@@ -1289,8 +1297,8 @@ Object.assign(ADAPTERS, {
   },
   Sidebar: (args) => e(SidebarPreview, args),
   SwitchField: (args) => e(MuxUI.SwitchField.Root, { ...args },
-    e(MuxUI.SwitchField.Button, { disabled: args.disabled }, 'Enabled', e(MuxUI.SwitchField.Thumb)),
-    e(MuxUI.SwitchField.Description, null, 'Enable updates'),
+    e(MuxUI.SwitchField.Button, { disabled: args.disabled }, 'Notifications', e(MuxUI.SwitchField.Thumb)),
+    e(MuxUI.SwitchField.Description, null, 'Send product updates by email.'),
     e(MuxUI.SwitchField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
   // Items and label come from the story. One resolver names both the popup options and the selected tags, the
@@ -2207,6 +2215,33 @@ async function popoverBrowserProof({ canvasElement }) {
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 }
 
+// HeaderNav shows its trigger only below the 40rem container query on the specimen frame, so the proof narrows
+// that frame, whatever the viewport, and restores it. A DOM click reaches a hidden trigger, so the trigger must
+// first be visible with the header's own links and Sign in hidden. The drawer then holds the links and Sign in.
+async function headerNavBrowserProof({ canvasElement }) {
+  const family = 'HeaderNav';
+  const frame = browserProofElement(canvasElement, '.muxui-storybook-header-frame', family);
+  const inlineSize = frame.style.inlineSize;
+  frame.style.inlineSize = '20rem';
+  try {
+    const trigger = await waitForVisibleBrowserElement('.muxui-header-nav__mobile-trigger', family);
+    for (const selector of ['.muxui-header-nav__secondary', '.muxui-header-nav__actions', '.muxui-header-nav__actions button']) {
+      assertBrowser(!browserElementVisible(browserProofElement(canvasElement, selector, family)), `${selector} is hidden in the narrow header`);
+    }
+    trigger.focus();
+    trigger.click();
+    const dialog = await waitForVisibleBrowserElement('.muxui-header-nav__mobile-dialog', family);
+    await waitForBrowserFocusWithin(dialog);
+    const entries = [...dialog.querySelectorAll('a, button:not(.muxui-header-nav__mobile-close-btn)')].map((node) => node.textContent?.trim());
+    assertBrowser(entries.join('|') === 'Docs|Components|Blocks|Sign in', `the drawer lists the links then Sign in, found ${entries.join('|')}`);
+    document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+    await waitForBrowserElementGone('.muxui-header-nav__mobile-dialog');
+    await waitForBrowserFocus(trigger);
+  } finally {
+    frame.style.inlineSize = inlineSize;
+  }
+}
+
 async function timedOverlayBrowserProof({ canvasElement, family }) {
   const trigger = browserProofElement(canvasElement, 'button, [role="button"]', family);
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true }));
@@ -2491,6 +2526,7 @@ const BROWSER_PROOF_PLANS = {
 
 const HISTORICAL_BROWSER_PROOF_PLAN_NAMES = Object.freeze(Object.keys(BROWSER_PROOF_PLANS));
 BROWSER_PROOF_PLANS.IconButton = activationPlan('IconButton', '.muxui-icon-button');
+BROWSER_PROOF_PLANS.HeaderNav = headerNavBrowserProof;
 const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   AlertDialog: '.muxui-alert-dialog__trigger',
   Avatar: '.muxui-avatar',
@@ -2504,7 +2540,6 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   CheckboxField: '.muxui-checkbox-field__button',
   ColorModeToggle: '.muxui-color-mode-toggle',
   CommandPalette: '.muxui-command-palette__trigger',
-  HeaderNav: '.muxui-header-nav__mobile-trigger',
   Image: '.muxui-image',
   InputTags: '.muxui-input-tags input',
   Input: '.muxui-input',

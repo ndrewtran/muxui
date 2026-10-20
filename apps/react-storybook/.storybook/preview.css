@@ -137,19 +137,29 @@ main.muxui-storybook-surface {
   padding: 1.5rem;
 }
 
-/* HeaderNav specimen: the links show once the frame is 40rem wide, as in the catalog's responsive example. */
+/* HeaderNav specimen: the links and Sign in show once the frame is 40rem wide and the drawer trigger shows below it, as in the catalog's responsive example. */
 .muxui-storybook-header-frame {
   container-type: inline-size;
   inline-size: 100%;
 }
 
-.muxui-storybook-header-links {
+.muxui-storybook-header-links,
+.muxui-storybook-header-actions {
   display: none;
 }
 
+.muxui-storybook-header-drawer-actions {
+  padding: var(--muxui-semantic-layout-inset-small);
+}
+
 @container (min-width: 40rem) {
-  .muxui-storybook-header-links {
+  .muxui-storybook-header-links,
+  .muxui-storybook-header-actions {
     display: flex;
+  }
+
+  .muxui-storybook-header-menu {
+    display: none;
   }
 }
 
