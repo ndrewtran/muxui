@@ -86,19 +86,34 @@ uses those ids.
 
 ## Link to another family
 
-Name an alternative as a link. Write the family's docs path, such as
-`[Checkbox](/components/checkbox/)`. The docs site serves that path as the
-family page. Storybook has no such route, so its Docs page resolves the same
-link to the family's Docs page. A link names a family page, never a section of
-it, so Storybook generation and `pnpm --filter @muxui/docs check:docs` reject a
-fragment, a missing trailing slash, and a family that has no page. Write the link
-in Markdown, not HTML; a link title is fine, and a link inside a code sample is
-only text.
+Name an alternative as a link, in this one form: an inline Markdown link to the
+family's docs path, with an optional double-quoted title.
+
+```md
+[Checkbox](/components/checkbox/)
+[Checkbox](/components/checkbox/ "Select an option")
+```
+
+The docs site serves that path as the family page. Storybook has no such route,
+so its Docs page resolves the same link to the family's Docs page. A link names
+a family page, never a section of it.
+
+Storybook's renderer reads fewer link forms than the docs site does, so no
+other form is accepted: not a reference-style, collapsed or shortcut link, an
+angle-bracket destination, a single-quoted or parenthesized title, spaces
+inside the parentheses, or an HTML anchor. Storybook generation and
+`pnpm --filter @muxui/docs check:docs` fail on those, and on a fragment, a
+missing trailing slash, and a family that has no page. A link inside a code
+sample or an HTML comment is only text.
 
 Links within the same guide, such as `[API reference](#api-reference)`, and
 links to external pages stay as written. Relative paths such as `../checkbox/`
 resolve against the page that shows the guide, which differs by surface, so
 they do not reach the same family on both.
+
+Mux UI does not compose its Storybook. In a composed Storybook, such as one
+added as a ref or one under a manager on another origin, a family link falls
+back to a native link that reloads only the preview frame.
 
 ## Verify the projection
 

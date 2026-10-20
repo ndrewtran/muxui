@@ -374,16 +374,59 @@ test('a family link in standalone Docs is a real link that keeps the hosting bas
   }, standalone.window);
 });
 
-test('a titled family link is resolved and keeps its title', async () => {
+/** A family guide whose body is `markdown`, with the Docs page of Checkbox as the only family it can link to. */
+const guideEntry = async (markdown, links) => {
   const entry = await familyEntry('Switch');
-  const markdown = 'Use [Checkbox](/components/checkbox/ "Select an option") to select an option.';
-  const titled = { ...entry, guide: { ...entry.guide, markdown, links: guideLinks(markdown, new Map([['muxui:component:checkbox', `?path=/docs/${docsId('checkbox')}`]])) } };
-  const frame = managerFrame();
-  await withStorybookBlocks(async () => {
-    const page = await renderDocs({ entry: titled, window: frame });
-    const checkbox = page.link('Checkbox');
-    assert.equal(checkbox.getAttribute('href'), `?path=/docs/${docsId('checkbox')}`);
-    assert.equal(checkbox.getAttribute('title'), 'Select an option');
-    await page.unmount();
-  }, frame);
+  return { ...entry, guide: { ...entry.guide, markdown, links } };
+};
+const checkboxPage = () => new Map([['muxui:component:checkbox', `?path=/docs/${docsId('checkbox')}`]]);
+
+// The one form a guide may use to link a family, as the contribution guide documents it. The parser accepts exactly these,
+// and the real renderer must resolve every one of them.
+const acceptedForms = [
+  ['an inline link', '[Checkbox](/components/checkbox/)', null],
+  ['an inline link with a double-quoted title', '[Checkbox](/components/checkbox/ "Select an option")', 'Select an option'],
+  ['a code span as the name', '[`Checkbox`](/components/checkbox/)', null],
+  ['emphasis in the name', '[**Check**box](/components/checkbox/)', null],
+  ['a list item', '- [Checkbox](/components/checkbox/ "Select an option")', 'Select an option'],
+  ['a table cell', '| Use |\n| --- |\n| [Checkbox](/components/checkbox/) |', null],
+];
+
+test('every accepted family link form is resolved by the real renderer and opens the Docs page', async () => {
+  for (const [form, markdown, title] of acceptedForms) {
+    const frame = managerFrame();
+    await withStorybookBlocks(async () => {
+      assert.deepEqual(linkedFamilies(markdown), ['checkbox'], `${form} is accepted`);
+      const entry = await guideEntry(markdown, guideLinks(markdown, checkboxPage()));
+      const page = await renderDocs({ entry, window: frame });
+      const links = [...frame.document.querySelectorAll('[data-guide-id] a')].filter((node) => node.getAttribute('href') !== null && !node.getAttribute('href').startsWith('https://github.com/'));
+      assert.equal(links.length, 1, `${form} renders one link`);
+      assert.equal(links[0].getAttribute('href'), `?path=/docs/${docsId('checkbox')}`, `${form} resolves to the family Docs page`);
+      assert.equal(links[0].textContent, 'Checkbox', `${form} keeps its name`);
+      assert.equal(links[0].getAttribute('title'), title, `${form} keeps its title`);
+      await act(async () => page.click(links[0]));
+      assert.deepEqual(page.sent, [['navigateUrl', `?path=/docs/${docsId('checkbox')}`]], `${form} opens the Docs page in the manager`);
+      await page.unmount();
+    }, frame);
+  }
+});
+
+test('the family link forms the parser rejects are not ones the real renderer resolves', async () => {
+  // Even with the Docs page ready, Storybook leaves these as text or as an unresolved link.
+  const rejected = {
+    'a collapsed reference': '[Checkbox][]\n\n[Checkbox]: /components/checkbox/',
+    'a shortcut reference': '[Checkbox]\n\n[Checkbox]: /components/checkbox/',
+    'a parenthesized title': '[Checkbox](/components/checkbox/ (Setting))',
+    'an HTML anchor with spaces in its href': '<a href=" /components/checkbox/ ">Checkbox</a>',
+  };
+  for (const [form, markdown] of Object.entries(rejected)) {
+    assert.throws(() => linkedFamilies(markdown), /Write an inline link/u, `${form} is rejected`);
+    const frame = managerFrame();
+    await withStorybookBlocks(async ({ Markdown }) => {
+      const entry = await guideEntry(markdown, { '/components/checkbox/': `?path=/docs/${docsId('checkbox')}` });
+      const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks: { ...blocks, Markdown } }))).window.document;
+      const resolved = [...page.querySelectorAll('[data-guide-id] a')].filter((node) => node.getAttribute('href')?.startsWith('?path='));
+      assert.deepEqual(resolved, [], `${form} is not a resolved link`);
+    }, frame);
+  }
 });
