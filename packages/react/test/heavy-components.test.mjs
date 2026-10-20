@@ -5,6 +5,7 @@ import { act } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { closeHistory, undoDepth } from '@tiptap/pm/history';
 import { JSDOM } from 'jsdom';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.mjs';
 import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
@@ -216,6 +217,130 @@ test('TextEditor reconciles controlled edits without requiring a parent rerender
     await act(async () => root?.unmount());
     restore();
     dom.window.close();
+  }
+});
+
+// Mounts a plain-text editor with a character limit; edits go through Tiptap commands, each its own undo step.
+const limitDocument = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: text ? [{ type: 'text', text }] : undefined }] });
+async function mountLimitEditor({ limit, ...props }) {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const root = createRoot(document.querySelector('#root'));
+  const changes = [];
+  const render = (next) => act(async () => root.render(React.createElement(TextEditor, {
+    limit, toolbar: false, 'aria-label': 'Limited', onChange: (value) => changes.push(value.content[0].content?.[0].text ?? ''), ...props, ...next,
+  })));
+  await render();
+  const pm = document.querySelector('.ProseMirror');
+  const { editor } = pm;
+  const edit = (command) => act(async () => {
+    command(editor.commands);
+    editor.view.dispatch(closeHistory(editor.state.tr));
+  });
+  return {
+    changes,
+    render,
+    text: () => editor.getText(),
+    html: () => editor.getHTML(),
+    undoSteps: () => undoDepth(editor.state),
+    hint: () => document.querySelector('.muxui-text-editor__hint').textContent,
+    // Types at the end of the text, or removes the last `count` characters.
+    insert: (characters) => edit((commands) => commands.insertContentAt(editor.state.doc.content.size - 1, characters)),
+    remove: (count) => edit((commands) => commands.deleteRange({ from: editor.state.doc.content.size - 1 - count, to: editor.state.doc.content.size - 1 })),
+    undo: () => act(async () => { editor.commands.undo(); }),
+    // Plain text pasted at the caret, through ProseMirror's paste handler, so Tiptap's paste rules run.
+    paste: (text) => act(async () => {
+      const event = new window.Event('paste', { bubbles: true, cancelable: true });
+      event.clipboardData = { types: ['text/plain'], getData: (type) => (type === 'text/plain' ? text : '') };
+      pm.dispatchEvent(event);
+    }),
+    async close() {
+      await act(async () => root.unmount());
+      restore();
+      dom.window.close();
+    },
+  };
+}
+
+test('TextEditor refuses an over-limit edit before it applies, so one Undo reverts the last real edit', async () => {
+  const t = await mountLimitEditor({ limit: 5, defaultValue: limitDocument('abc') });
+  try {
+    assert.equal(t.hint(), '2 characters left');
+    await t.insert('de');
+    assert.equal(t.text(), 'abcde');
+    assert.equal(t.hint(), '0 characters left');
+    await t.insert('f');
+    assert.equal(t.text(), 'abcde', 'the over-limit insert never applies');
+    assert.deepEqual(t.changes, ['abcde'], 'and is not reported');
+    await t.undo();
+    assert.equal(t.text(), 'abc', 'one Undo reverts the insert before it, not the refused one');
+    assert.equal(t.hint(), '2 characters left');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor lets an over-limit document be edited down but never longer', async () => {
+  const t = await mountLimitEditor({ limit: 5, defaultValue: limitDocument('abcdefgh') });
+  try {
+    assert.equal(t.hint(), '0 characters left');
+    await t.insert('x');
+    assert.equal(t.text(), 'abcdefgh', 'an over-limit document does not grow');
+    await t.remove(1);
+    assert.equal(t.text(), 'abcdefg', 'an edit that shortens it applies while it is still over the limit');
+    await t.insert('x');
+    assert.equal(t.text(), 'abcdefg');
+    await t.remove(2);
+    assert.equal(t.text(), 'abcde');
+    await t.undo();
+    assert.equal(t.text(), 'abcdefg', 'Undo returns to the over-limit text it came from');
+    await t.remove(3);
+    assert.equal(t.text(), 'abcd');
+    assert.equal(t.hint(), '1 character left');
+    await t.insert('x');
+    assert.equal(t.text(), 'abcdx', 'an edit that fits applies once the document is within the limit');
+    assert.deepEqual(t.changes, ['abcdefg', 'abcde', 'abcdefg', 'abcd', 'abcdx']);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor accepts a paste that fits once its paste rules apply, and Undo reverts it in one step', async () => {
+  const t = await mountLimitEditor({ limit: 3, defaultValue: limitDocument('') });
+  try {
+    await t.paste('**abc**');
+    assert.equal(t.html(), '<p><strong>abc</strong></p>', 'the delimiters become bold, leaving three characters');
+    assert.equal(t.changes.length, 1, 'onChange runs once');
+    await t.undo();
+    assert.equal(t.text(), '', 'one Undo reverts the whole paste');
+    assert.equal(t.undoSteps(), 0);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor refuses a paste that stays over the limit without a history step or onChange', async () => {
+  const t = await mountLimitEditor({ limit: 3, defaultValue: limitDocument('ab') });
+  try {
+    await t.paste('**abc**');
+    assert.equal(t.text(), 'ab', 'bold abc would still be longer than the limit');
+    await t.paste('abcdefgh');
+    assert.equal(t.text(), 'ab');
+    assert.deepEqual(t.changes, []);
+    assert.equal(t.undoSteps(), 0);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor shows a controlled value longer than the limit as given', async () => {
+  const t = await mountLimitEditor({ limit: 5, value: limitDocument('abc') });
+  try {
+    await t.render({ value: limitDocument('abcdefgh') });
+    assert.equal(t.text(), 'abcdefgh');
+    assert.deepEqual(t.changes, [], 'the parent set it, so onChange stays quiet');
+  } finally {
+    await t.close();
   }
 });
 

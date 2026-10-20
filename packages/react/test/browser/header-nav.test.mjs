@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
-// The HeaderNav logo link draws the same themed keyboard focus ring as the NavButtons, not the
-// browser's default outline, in light and dark. Runs in every engine named by
+// The HeaderNav logo link draws the same keyboard focus ring as the NavButtons, taken from the
+// focus-ring role rather than the browser's default outline, in light and dark. Runs in every engine named by
 // MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -50,7 +50,7 @@ for (const engine of browserEngines()) {
 
           const read = (locator) => locator.evaluate((node) => {
             const probe = document.createElement('span');
-            probe.style.outlineColor = 'var(--muxui-semantic-color-color-60)';
+            probe.style.outlineColor = 'var(--muxui-semantic-focus-ring)';
             node.parentElement.append(probe);
             const ring = getComputedStyle(probe).outlineColor;
             probe.remove();
@@ -75,7 +75,7 @@ for (const engine of browserEngines()) {
           assert.equal(focusedLogo.outlineStyle, 'solid', 'the ring is the Mux outline, not the browser default');
           assert.equal(focusedLogo.outlineWidth, '2px');
           assert.equal(focusedLogo.outlineOffset, '2px');
-          assert.equal(focusedLogo.outlineColor, focusedLogo.ring, 'the ring takes the themed color token');
+          assert.equal(focusedLogo.outlineColor, focusedLogo.ring, 'the ring takes the focus-ring role');
 
           await tab.keyboard.press('Tab');
           const focusedNav = await read(navButton);
@@ -83,6 +83,12 @@ for (const engine of browserEngines()) {
           for (const key of ['outlineStyle', 'outlineWidth', 'outlineOffset', 'outlineColor']) {
             assert.equal(focusedLogo[key], focusedNav[key], `the logo link and NavButton share ${key}`);
           }
+
+          // A theme that overrides only the focus ring moves both rings.
+          await tab.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-focus-ring', 'rgb(1, 2, 3)'));
+          assert.equal((await read(navButton)).outlineColor, 'rgb(1, 2, 3)');
+          await tab.keyboard.press('Shift+Tab');
+          assert.equal((await read(logo)).outlineColor, 'rgb(1, 2, 3)');
           assert.deepEqual(errors, []);
           await tab.close();
         });

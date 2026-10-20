@@ -448,3 +448,66 @@ test('focus, choice geometry, and validation text have independent semantic over
     await browser.close();
   }
 });
+
+test('the focus-ring role alone moves the Sidebar and TextEditor focus rings', { timeout: 30_000 }, async () => {
+  const css = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
+  // Each ring is an outline, except the Sidebar search field, which draws a 2px shadow.
+  const rings = [
+    ['a.muxui-sidebar__nav-link', 'outline'],
+    ['button.muxui-sidebar__nav-toggle', 'outline'],
+    ['button.muxui-sidebar__search-button', 'outline'],
+    ['input.muxui-sidebar__search-input', 'shadow'],
+    ['button.muxui-text-editor__btn', 'outline'],
+    ['select.muxui-text-editor__select', 'outline'],
+    ['input.muxui-text-editor__selection-input', 'outline'],
+  ];
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>
+      <a class="muxui-sidebar__nav-link" href="#">Link</a>
+      <button class="muxui-sidebar__nav-toggle">Toggle</button>
+      <button class="muxui-sidebar__search-button">Search</button>
+      <input class="muxui-sidebar__search-input" aria-label="Search">
+      <button class="muxui-text-editor__btn">Bold</button>
+      <select class="muxui-text-editor__select" aria-label="Font"><option>Inter</option></select>
+      <input class="muxui-text-editor__selection-input" aria-label="Describe edits">
+    </body></html>`);
+    const focusRing = async (selector, kind) => {
+      // A key press makes the next focus a keyboard focus, so :focus-visible matches.
+      await page.keyboard.press('Escape');
+      return page.locator(selector).evaluate((element, shape) => {
+        element.focus();
+        const style = getComputedStyle(element);
+        return shape === 'outline' ? { drawn: style.outlineStyle === 'solid', color: style.outlineColor } : { drawn: style.boxShadow !== 'none', color: style.boxShadow };
+      }, kind);
+    };
+    const token = (name) => page.evaluate((property) => {
+      const probe = document.createElement('span');
+      probe.style.color = `var(${property})`;
+      document.body.append(probe);
+      const { color } = getComputedStyle(probe);
+      probe.remove();
+      return color;
+    }, name);
+    for (const mode of ['light', 'dark']) {
+      await page.evaluate((scheme) => {
+        document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
+        document.documentElement.style.removeProperty('--muxui-semantic-focus-ring');
+      }, mode);
+      const brand = await token('--muxui-semantic-color-color-60');
+      for (const [selector, kind] of rings) {
+        const ring = await focusRing(selector, kind);
+        assert.ok(ring.drawn, `${mode}: ${selector} draws a ring on keyboard focus`);
+        assert.ok(ring.color.includes(brand), `${mode}: ${selector} keeps the brand colour by default`);
+      }
+      await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-focus-ring', 'rgb(1, 2, 3)'));
+      for (const [selector, kind] of rings) {
+        const ring = await focusRing(selector, kind);
+        assert.ok(ring.color.includes('rgb(1, 2, 3)'), `${mode}: ${selector} follows the focus-ring role`);
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+});

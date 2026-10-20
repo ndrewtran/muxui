@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:d75bc89c2a0d8bfaf3d070790652d07da4f67098d7625215d83511a7f84cb73d -->
+<!-- @generated-content-sha256: sha256:d48064de645c7ca3089e370deb5d6ee2f002e3d5d6865a346d744c53dc89e299 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -333,7 +333,7 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Applications may compose loading content, Empty, Footer, and custom Item content.
 - Enter during IME composition, or cancelled by Input onKeyDown, does not activate a command.
 - Input defaults autoFocus to true when the palette opens.
-- Collection is the React Aria Components Collection: it renders the Item and Section elements inside it and adds no element or class of its own.
+- Collection takes items and a render function that returns an Item or Section element for each, and adds no element or class of its own.
 - Shortcut displays key text, with each key in a kbd element, and registers no keyboard shortcut.
 - Shortcut is aria-hidden by default.
 - LoadMoreItem is a presentational div that loads nothing and tracks no scrolling, so the application owns pagination.
