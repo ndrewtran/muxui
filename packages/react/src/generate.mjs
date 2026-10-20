@@ -470,6 +470,7 @@ export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteIt
 export declare const Autocomplete: React.ForwardRefExoticComponent<AutocompleteProps & React.RefAttributes<HTMLDivElement>>;
 `;
 const collectionsTypes = `
+/** A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color. */
 export type MuxUIColorValue = string;
 export type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';
 /** Channels must belong to colorSpace, or, when colorSpace is omitted, to the space of an enclosing ColorPicker's color, otherwise value or defaultValue. */
