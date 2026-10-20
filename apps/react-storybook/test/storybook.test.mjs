@@ -1325,6 +1325,79 @@ test('Image shows fallback recovery and final failure, and names the source it e
   });
 });
 
+test('every States story leaves its named states unmasked by binding defaults', () => {
+  // Each row's own props must reach it: a stock States story that kept `disabled: false` would hide the disabled row.
+  const masked = [];
+  for (const binding of descriptorSource.bindings) {
+    const family = binding.export;
+    const stock = storyArgsForBinding(binding, 'states', family);
+    for (const { name, args } of stateCoverageForBinding(binding, family)) {
+      const shown = stateArgsForBinding(binding, name, family, stock);
+      for (const [prop, value] of Object.entries(args)) {
+        if (typeof value === 'object' || typeof value === 'function') continue;
+        if (Object.hasOwn(shown, prop) && shown[prop] !== value) masked.push(`${family}/${name}: ${prop} is ${String(shown[prop])}, not ${String(value)}`);
+      }
+    }
+  }
+  assert.deepEqual(masked, []);
+});
+
+test('named states render their public state in sampled families, and a supplied value still wins', () => {
+  const sampled = [
+    ['TagSelect', 'disabled', 'disabled', '.muxui-tag-select[data-disabled]'],
+    ['TagSelect', 'invalid', 'invalid', '.muxui-tag-select[data-invalid]'],
+    ['RadioField', 'disabled', 'disabled', '.muxui-radio-field[data-disabled]'],
+    ['RadioField', 'invalid', 'invalid', '.muxui-radio-field__error'],
+    ['Checkbox', 'indeterminate', 'indeterminate', '.muxui-checkbox[data-indeterminate]'],
+    ['Checkbox', 'disabled', 'disabled', '.muxui-checkbox[data-disabled]'],
+    ['TextField', 'read-only', 'readOnly', 'input[readonly]'],
+    ['Button', 'pending', 'pending', '.muxui-button[data-pending]'],
+    ['Switch', 'disabled', 'disabled', '.muxui-switch[data-disabled]'],
+  ];
+  for (const [family, state, prop, selector] of sampled) {
+    const { args } = createStory(currentRecord(family), 'states');
+    assert.equal(Object.hasOwn(args, prop), false, `${family} States story leaves ${prop} to its rows`);
+    const { sections } = stateSections(family);
+    assert.ok(sections.get(state).querySelector(selector), `${family} ${state} row shows ${state}`);
+    for (const [name, row] of sections) {
+      if (name !== state && !['disabled', 'invalid'].includes(name)) assert.equal(row.querySelector(selector), null, `${family} ${state} does not leak into ${name}`);
+    }
+    // An explicit false is the user's value, so it wins even over the row that names the state.
+    const overridden = stateSections(family, { ...args, [prop]: false }).sections;
+    assert.equal(overridden.get(state).querySelector(selector), null, `${family} ${prop}: false wins in the ${state} row`);
+  }
+});
+
+test('ColorSwatchPicker read-only row ignores clicks and keeps keyboard navigation', async () => {
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createStory(currentRecord('ColorSwatchPicker'), 'states');
+    assert.equal(Object.hasOwn(story.args, 'readOnly'), false, 'the States story leaves readOnly to the row');
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await settleRuntime(60);
+    const row = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'read-only');
+    assert.equal(row.querySelector('.muxui-color-swatch-picker').getAttribute('aria-readonly'), 'true');
+    const items = [...row.querySelectorAll('[role="option"]')];
+    const selected = () => items.map((item) => item.getAttribute('aria-selected'));
+    const before = selected();
+    await act(async () => items[1].click());
+    assert.deepEqual(selected(), before, 'a click does not select a swatch in the read-only row');
+    // The row still takes focus and moves it with the arrow keys, where a disabled picker would not.
+    await act(async () => items[0].focus());
+    await act(async () => items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })));
+    assert.equal(document.activeElement, items[1], 'ArrowRight moves focus to the next swatch');
+    assert.deepEqual(selected(), before, 'moving focus does not select');
+
+    // A readOnly the user sets, even false, wins in every row, so the same click then selects.
+    await act(async () => reactRoot.render(React.cloneElement(story.render({ ...story.args, readOnly: false }), { key: 'user-override' })));
+    await settleRuntime(60);
+    const overridden = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'read-only');
+    assert.equal(overridden.querySelector('.muxui-color-swatch-picker').hasAttribute('aria-readonly'), false);
+    const [, second] = overridden.querySelectorAll('[role="option"]');
+    await act(async () => second.click());
+    assert.equal(second.getAttribute('aria-selected'), 'true');
+  });
+});
+
 test('Link without a destination renders disabled even when disabled is false', () => {
   const link = (args) => new JSDOM(renderToStaticMarkup(renderFamily('Link', args))).window.document.querySelector('.muxui-link');
   assert.equal(link({}).localName, 'a', 'the default specimen has a destination');
@@ -1620,8 +1693,8 @@ test('default and state stories use uncontrolled pairs without collapsing state 
       if (!binding.api.props.includes(controlled) || !binding.api.props.includes(uncontrolled)) continue;
       assert.equal(defaultArgs[controlled], undefined, `${family} default ${controlled}`);
       assert.notEqual(defaultArgs[uncontrolled], undefined, `${family} default ${uncontrolled}`);
+      // The States story never sets the controlled prop, and leaves unset the uncontrolled default a row drives.
       assert.equal(stateArgs[controlled], undefined, `${family} states ${controlled}`);
-      assert.notEqual(stateArgs[uncontrolled], undefined, `${family} states ${uncontrolled}`);
     }
   }
 

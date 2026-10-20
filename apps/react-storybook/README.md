@@ -21,7 +21,9 @@ channels, and Anatomy when it declares a part other than `root`. The rule is
 `STORY_APPLICABILITY` in `src/storybook-factory.mjs`, shared by the generator
 and the tests. Browser proof is proof, not teaching: every family keeps it,
 tagged `!dev` so the sidebar hides it while the served index and the audits
-still reach it by ID.
+still reach it by ID. A States story leaves unset the props its rows drive, so
+each named state shows itself and a value set in Controls still wins in every
+row.
 
 The generator also emits one page group per catalog pattern (a Block), titled
 `Blocks/<Category>/<Pattern>`, with one story per variant, so a variant reads

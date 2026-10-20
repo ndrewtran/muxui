@@ -678,16 +678,10 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
   return args;
 }
 
-// Specimens whose named states must override binding defaults (disabled: false, defaultOpen: false, and so on).
-// Other families keep the existing precedence until their States pages pass the Storybook audit with it. Dialog
-// (a truly open modal blocks the lifecycle states) stays off the list.
-const NAMED_STATE_FAMILIES = new Set([
-  'Avatar', 'Card', 'ColorModeToggle', 'DropZone', 'GridList', 'HeaderNav', 'InputTags', 'Link', 'ListBox', 'Menu', 'ProgressCircle', 'Separator', 'Sidebar',
-]);
-
 /**
- * The props a named state changes from the default. A named family's States story leaves them unset, so each state
- * supplies its own value, while anything a user supplies, even false, empty, or the default value, wins in every row.
+ * The props a named state changes from the default. The States story leaves them unset, so each state supplies its
+ * own value instead of a binding default (disabled: false, defaultOpen: false, and so on) masking it, while anything
+ * a user supplies, even false, empty, or the default value, wins in every row.
  */
 function stateDrivingProps(binding, family) {
   const defaults = normalizeDefaultArgs(binding);
@@ -703,10 +697,8 @@ function stateDrivingProps(binding, family) {
 export function storyArgsForBinding(binding, variant, family) {
   if (variant === 'default') return normalizeDefaultArgs(binding);
   if (variant === 'states') {
-    const args = normalizeDefaultArgs(binding);
-    if (!NAMED_STATE_FAMILIES.has(family)) return args;
     const driving = stateDrivingProps(binding, family);
-    return Object.fromEntries(Object.entries(args).filter(([name]) => !driving.has(name)));
+    return Object.fromEntries(Object.entries(normalizeDefaultArgs(binding)).filter(([name]) => !driving.has(name)));
   }
   return stateArgsForBinding(binding, variant, family);
 }
@@ -1890,7 +1882,6 @@ function anatomyArgsForBinding(record, sourceArgs) {
     ];
   }
   if (record.family === 'CodeBlock') args.mode = 'diff';
-  if (record.family === 'PromptComposer') args.error = 'Unable to send. Try again.';
   if (record.family === 'Message') args.defaultSourcesExpanded = true;
   if (record.family === 'Dialog') args.actions = e(MuxUI.Button, null, 'Confirm');
   return args;
