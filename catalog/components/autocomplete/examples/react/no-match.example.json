@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:autocomplete-no-match-react",
+  "kind": "example",
+  "name": "Autocomplete with no-match help",
+  "summary": "Show your own message when the typed text matches no suggestion, since Autocomplete closes its list silently.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:autocomplete#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/autocomplete/examples/react/no-match.tsx"
+}

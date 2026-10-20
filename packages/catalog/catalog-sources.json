@@ -1536,6 +1536,34 @@
     {
       "family": "guide",
       "path": "catalog/guides/switch-field-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/autocomplete/examples/react/no-match.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/color-picker/examples/react/presets.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/combo-box/examples/react/submitted.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input-tags/examples/react/placement.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/list-box/examples/react/rich.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tag-select/examples/react/many.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/tag-select-usage.json"
     }
   ]
 }

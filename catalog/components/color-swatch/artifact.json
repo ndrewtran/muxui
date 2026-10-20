@@ -7,10 +7,11 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Showing a color preview"
+      "Showing a color, or a two-tone pair such as a theme, as a preview"
     ],
     "avoidWhen": [
-      "Editing a color"
+      "Editing a color; use ColorPicker",
+      "Choosing from preset colors; use ColorSwatchPicker"
     ]
   },
   "anatomy": [

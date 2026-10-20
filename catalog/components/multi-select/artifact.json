@@ -7,10 +7,14 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Selecting several values from a collection while keeping the field compact."
+      "Selecting several values from a collection while keeping the field compact",
+      "Searching a longer collection, or clearing or selecting all of it"
     ],
     "avoidWhen": [
-      "For one choice, free-form tags, or a short list that can remain visible."
+      "One choice; use Select",
+      "Chosen values that must stay visible; use TagSelect",
+      "Free-form tags; use InputTags",
+      "A short list that can stay visible; use CheckboxGroup"
     ]
   },
   "anatomy": [

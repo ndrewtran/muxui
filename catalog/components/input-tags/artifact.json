@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Collecting multiple user-entered values that should remain visible as chips."
+      "Collecting several typed values that stay visible as removable chips",
+      "Applying rules to typed values, such as no duplicates, a limit, or a validator"
     ],
     "avoidWhen": [
-      "For one scalar value or a closed set of predefined options."
+      "A single value; use TextField",
+      "Choosing from predefined options; use TagSelect",
+      "Plain text tokens edited in place without rules; use TokenField"
     ]
   },
   "anatomy": [

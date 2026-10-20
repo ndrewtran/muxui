@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:input-tags-placement-react",
+  "kind": "example",
+  "name": "InputTags placement with long tags",
+  "summary": "Compare inline and below placement in a narrow container with long tags, and see which keeps the input on one row.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:input-tags#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/input-tags/examples/react/placement.tsx"
+}
