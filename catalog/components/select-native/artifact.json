@@ -10,7 +10,8 @@
       "Using native option, optgroup, keyboard, form, and reset behavior with Mux field styling."
     ],
     "avoidWhen": [
-      "Requiring a custom popup listbox or collection-driven selection model; use Select."
+      "Requiring a custom popup listbox or collection-driven selection model; use Select.",
+      "Filtering a long list as the user types; use ComboBox."
     ]
   },
   "anatomy": [

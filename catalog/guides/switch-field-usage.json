@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:switch-field-usage",
+  "kind": "guide",
+  "name": "SwitchField usage",
+  "summary": "Use SwitchField through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "switch-field",
+    "react",
+    "forms"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/switch-field-usage.md"
+}

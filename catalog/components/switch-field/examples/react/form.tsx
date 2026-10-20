@@ -10,7 +10,7 @@ export function SwitchFieldFormExample() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAttempted(true);
-    // An off switch adds no entry, so only an on switch appears here.
+    // The switch takes effect only on Save. An off switch adds no entry, so only an on switch appears here.
     const entries = [...new FormData(event.currentTarget)].map(([name, value]) => `${name}=${String(value)}`);
     setSubmitted(entries.join(', ') || 'Nothing submitted');
   }
@@ -31,11 +31,11 @@ export function SwitchFieldFormExample() {
             <SwitchField.Thumb />
             Notifications
           </SwitchField.Button>
-          <SwitchField.Description>Submitted as notifications=on while the switch is on.</SwitchField.Description>
+          <SwitchField.Description>Send product updates by email.</SwitchField.Description>
           <SwitchField.Error>Notifications must be on.</SwitchField.Error>
         </SwitchField.Root>
         <div>
-          <Button type="submit">Submit</Button>
+          <Button type="submit">Save</Button>
         </div>
         {submitted ? <p>Submitted: {submitted}</p> : null}
       </div>

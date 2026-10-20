@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:button-hierarchy-react",
+  "kind": "example",
+  "name": "Button emphasis in groups",
+  "summary": "Pair one primary Button with lower-emphasis neighbours, and give destructive Buttons the danger family.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 4
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/button/examples/react/hierarchy.tsx"
+}
