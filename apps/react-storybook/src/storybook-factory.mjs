@@ -1563,18 +1563,10 @@ function StateVariant({ family, state, args, available }) {
     return scheduleOpenInteraction(stateRef.current, family);
   }, [family, state]);
 
+  // `args` already carry the row's state, projected by stateArgsForBinding with any user value taking precedence, so
+  // this only adds what keeps the rows apart: a unique label, a lifecycle marker, and a unique landmark name.
   const variantArgs = { ...args };
   if (family === 'DataDiff') variantArgs.label = `${args.label ?? 'Proposed token cleanup'} ${state}`;
-  if (family === 'Activity') {
-    if (state === 'running' || state === 'failed') variantArgs.status = state;
-  }
-  if (family === 'Message' && state === 'streaming') variantArgs.streaming = true;
-  if (family === 'PromptComposer' && state === 'error') variantArgs.error = 'Unable to send. Try again.';
-  if (family === 'DataDiff' && state === 'mixed') variantArgs.defaultSelectedIds = ['added'];
-  if (family === 'CodeBlock') {
-    if (state === 'diff') variantArgs.mode = 'diff';
-    if (state === 'wrap') variantArgs.wrap = true;
-  }
   const lifecycleAttribute = LIFECYCLE_ATTRIBUTES[state];
   const activeLifecycleState = React.useContext(LifecycleSelectionContext);
   const marker = OVERLAY_FAMILIES.has(family) ? lifecycleMarker(family, state) : undefined;
@@ -1585,7 +1577,7 @@ function StateVariant({ family, state, args, available }) {
   // Mux UI's nav/group adapters unique accessible names without adding a prop
   // to the public API or changing the controls contract.
   if (family === 'Breadcrumbs' || family === 'Group' || family === 'HeaderNav') {
-    variantArgs['aria-label'] = `${family} ${state}`;
+    variantArgs['aria-label'] = `${args['aria-label'] ?? family} ${state}`;
   }
   const labelId = `muxui-storybook-state-${family}-${state.replaceAll(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
   const rendered = !available

@@ -87,7 +87,8 @@ const blockHelperTransforms = await Promise.all(patternVariants.map(async (varia
 }));
 
 // A family shows a standard story only where STORY_APPLICABILITY says it teaches something. BrowserProof is proof, so
-// every family keeps it and the sidebar hides it with the `!dev` tag; the audits still reach it by id in the index.
+// every family keeps it and the `!dev` and `!autodocs` tags hide it from the sidebar and autodocs; the audits still reach it
+// by id in the index.
 const standardStoryDefinitions = [
   { exportName: 'Default', expression: "createStory(record, 'default')" },
   { exportName: 'States', expression: "createStory(record, 'states')" },
@@ -95,7 +96,7 @@ const standardStoryDefinitions = [
   { exportName: 'Uncontrolled', expression: 'createUncontrolledStory(record)' },
   { exportName: 'Events', expression: 'createEventsStory(record)' },
   { exportName: 'Anatomy', expression: 'createAnatomyStory(record)' },
-  { exportName: 'BrowserProof', expression: 'createBrowserProofStory(record)', tags: ['!dev'] },
+  { exportName: 'BrowserProof', expression: 'createBrowserProofStory(record)', tags: ['!dev', '!autodocs'] },
 ];
 
 const familyStoryDefinitions = [

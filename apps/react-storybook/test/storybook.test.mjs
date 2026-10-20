@@ -310,7 +310,7 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     // so each family's proof holds even where its page does not display the story.
     assert.equal(typeof module.BrowserProof?.play, 'function', `${record.family}/BrowserProof play`);
     assert.equal(module.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
-    assert.deepEqual(module.BrowserProof.tags, ['!dev'], `${record.family}/BrowserProof is hidden from the sidebar`);
+    assert.deepEqual(module.BrowserProof.tags, ['!dev', '!autodocs'], `${record.family}/BrowserProof is left out of the sidebar and autodocs`);
     const proof = { family: record.family, tranche: record.tranche, binding };
     const story = {
       Controlled: createControlledStory(proof),
@@ -1385,6 +1385,80 @@ test('named states render their public state in sampled families, and a supplied
   }
 });
 
+test('a value the user sets wins over a named state at render time, even false, empty, or the default', () => {
+  const rows = (family, args) => stateSections(family, { ...createStory(currentRecord(family), 'states').args, ...args }).sections;
+  const streaming = (sections) => sections.get('streaming').querySelector('.muxui-message').hasAttribute('data-streaming');
+  assert.equal(streaming(rows('Message', {})), true);
+  assert.equal(streaming(rows('Message', { streaming: false })), false);
+
+  const codeBlock = (sections, row) => sections.get(row).querySelector('.muxui-code-block');
+  const codeStock = rows('CodeBlock', {});
+  assert.equal(codeBlock(codeStock, 'wrap').getAttribute('data-wrap'), 'true');
+  assert.equal(codeBlock(codeStock, 'diff').getAttribute('data-mode'), 'diff');
+  const codeOverridden = rows('CodeBlock', { wrap: false, mode: 'code' });
+  assert.equal(codeBlock(codeOverridden, 'wrap').hasAttribute('data-wrap'), false, 'wrap: false wins in the wrap row');
+  assert.equal(codeBlock(codeOverridden, 'diff').getAttribute('data-mode'), 'code', 'a mode equal to the default wins in the diff row');
+
+  const composerError = (sections) => sections.get('error').querySelector('.muxui-prompt-composer-error');
+  assert.equal(composerError(rows('PromptComposer', {})).textContent, 'Unable to send. Try again.');
+  assert.equal(composerError(rows('PromptComposer', { error: '' })), null, 'an empty error wins in the error row');
+
+  const selectAll = (sections) => sections.get('mixed').querySelector('.muxui-data-diff-selection input').getAttribute('aria-checked');
+  assert.equal(selectAll(rows('DataDiff', {})), 'mixed');
+  assert.equal(selectAll(rows('DataDiff', { defaultSelectedIds: [] })), 'false', 'an empty selection wins in the mixed row');
+});
+
+test('every States row renders exactly the args its state projects, so a user value reaches it', () => {
+  // The rows are projected by stateArgsForBinding, which lets an explicit user value win. A row that rendered
+  // anything other than renderFamily(projected args) would have set state values again at render time.
+  const neutralOf = (value, control, name) => typeof value === 'boolean' ? false
+    : Array.isArray(value) ? []
+    // A blank image source is not a neutral value.
+    : typeof value === 'string' && control === 'text' && !/src/iu.test(name) ? '' : undefined;
+  const fragment = (html) => new JSDOM(`<div id="host">${html}</div>`).window.document.getElementById('host');
+  // Strips only what the matrix adds to keep rows apart: generated ids, lifecycle markers, row labels.
+  const comparable = (html, family, state) => html
+    .replace(/ (?:id|for|aria-labelledby|aria-describedby|aria-controls|aria-owns|name|form|aria-activedescendant|data-collection|data-key)="[^"]*"/gu, '')
+    .replace(/_R_\w*_|react-aria[\w-]*/gu, '#')
+    .replace(/muxui-storybook-lifecycle-[a-z0-9-]*/gu, '')
+    .replace(/<span hidden="" aria-hidden="true"><\/span>/gu, '')
+    .replace(/ class=" *"/gu, '')
+    .replace(/class="([^"]*?) +"/gu, 'class="$1"')
+    .replace(`Proposed token cleanup ${state}`, 'Proposed token cleanup')
+    .replace(['Breadcrumbs', 'Group', 'HeaderNav'].includes(family) ? / aria-label="[^"]*"/gu : /$^/u, '');
+  const lifecycle = new Set(['entering', 'opening', 'exiting', 'closing']);
+  const mismatched = [];
+  let compared = 0;
+  for (const binding of descriptorSource.bindings) {
+    const family = binding.export;
+    const record = { family, tranche: 'x', binding };
+    const base = storyArgsForBinding(binding, 'default', family);
+    const stock = storyArgsForBinding(binding, 'states', family);
+    const controls = argTypesForBinding(binding);
+    const wrap = (element) => family === 'Toast' ? React.createElement(ToastProvider, null, element) : element;
+    // Lifecycle rows animate open themselves, and unavailable rows render no specimen.
+    for (const { name, args } of stateCoverageForBinding(binding, family).filter(({ name: state }) => !lifecycle.has(state))) {
+      // Override each prop this row drives with an explicit neutral value: false, empty, or the default.
+      const user = { ...stock };
+      for (const prop of new Set([...Object.keys(args), ...Object.keys(base)])) {
+        if (typeof args[prop] === 'function' || JSON.stringify(args[prop]) === JSON.stringify(base[prop])) continue;
+        const neutral = neutralOf(args[prop] ?? base[prop], controls[prop]?.control, prop);
+        if (neutral !== undefined) user[prop] = neutral;
+      }
+      const section = [...fragment(renderToStaticMarkup(wrap(renderStateCoverage(record, user)))).querySelectorAll('.muxui-storybook-state')]
+        .find((node) => node.querySelector('h3').textContent === name);
+      if (section.querySelector('[data-muxui-storybook-state="unavailable"]')) continue;
+      section.querySelector('h3').remove();
+      const actual = comparable((section.querySelector('[data-muxui-storybook-popup-room]') ?? section).innerHTML, family, name);
+      const expected = comparable(fragment(renderToStaticMarkup(wrap(renderFamily(family, stateArgsForBinding(binding, name, family, user))))).innerHTML, family, name);
+      compared += 1;
+      if (actual !== expected) mismatched.push(`${family}/${name}`);
+    }
+  }
+  assert.ok(compared > 300, `compared ${compared} rows`);
+  assert.deepEqual(mismatched, []);
+});
+
 test('ColorSwatchPicker read-only row ignores clicks and keeps keyboard navigation', async () => {
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createStory(currentRecord('ColorSwatchPicker'), 'states');
@@ -2308,7 +2382,7 @@ test('generated stories are stock CSF modules that display only the stories that
     assert.match(body, /argTypesForBinding/);
     assert.match(body, /export const Default/);
     assert.match(body, /export const BrowserProof/);
-    assert.match(body, /BrowserProof\.tags = \['!dev'\];/);
+    assert.match(body, /BrowserProof\.tags = \['!dev', '!autodocs'\];/);
 
     const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
     const pairs = controlledDefaultPairsForBinding(binding).length > 0;
