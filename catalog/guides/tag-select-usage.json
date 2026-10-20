@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:tag-select-usage",
+  "kind": "guide",
+  "name": "TagSelect usage",
+  "summary": "Use TagSelect through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "tag-select",
+    "react",
+    "selection"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/tag-select-usage.md"
+}

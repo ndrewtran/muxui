@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:combo-box-submitted-react",
+  "kind": "example",
+  "name": "ComboBox and Autocomplete submitted values",
+  "summary": "Put a ComboBox and an Autocomplete over the same records and see that the ComboBox submits the selected ID while the Autocomplete submits the suggestion's value or the typed text.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:combo-box#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/combo-box/examples/react/submitted.tsx"
+}

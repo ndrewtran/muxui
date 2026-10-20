@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:color-picker-presets-react",
+  "kind": "example",
+  "name": "ColorPicker with presets",
+  "summary": "Add preset swatches to a ColorPicker beside exact entry, so both edit one color.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:color-picker#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/color-picker/examples/react/presets.tsx"
+}

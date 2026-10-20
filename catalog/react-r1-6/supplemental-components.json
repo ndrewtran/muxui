@@ -203,6 +203,7 @@
       "examples": [
         "catalog/components/input-tags/examples/react/basic.tsx",
         "catalog/components/input-tags/examples/react/form.tsx",
+        "catalog/components/input-tags/examples/react/placement.tsx",
         "catalog/components/input-tags/examples/react/validation.tsx"
       ],
       "export": {
@@ -387,7 +388,8 @@
       "family": "TagSelect",
       "slug": "tag-select",
       "examples": [
-        "catalog/components/tag-select/examples/react/basic.tsx"
+        "catalog/components/tag-select/examples/react/basic.tsx",
+        "catalog/components/tag-select/examples/react/many.tsx"
       ],
       "export": {
         "module": ".",

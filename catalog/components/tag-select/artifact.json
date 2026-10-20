@@ -7,10 +7,12 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Selecting several predefined values with visible removable tags."
+      "Selecting several predefined values that stay visible as removable tags"
     ],
     "avoidWhen": [
-      "For free-form values, one choice, or a collection too large for a compact field."
+      "Free-form values; use InputTags",
+      "One choice; use ComboBox",
+      "Many selected values that would overwhelm the field; use MultiSelect"
     ]
   },
   "anatomy": [

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:list-box-rich-react",
+  "kind": "example",
+  "name": "Rich scrollable ListBox with multiple selection",
+  "summary": "Give each option a title and a detail line, select several, and let the list scroll once its options pass its maximum height.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:list-box#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 11
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/list-box/examples/react/rich.tsx"
+}
