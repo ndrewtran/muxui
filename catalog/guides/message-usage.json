@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:message-usage",
+  "kind": "guide",
+  "name": "Message usage",
+  "summary": "Portable usage guidance for Message.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "message",
+    "react",
+    "conversation"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/message-usage.md"
+}

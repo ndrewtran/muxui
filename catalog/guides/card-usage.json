@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:card-usage",
+  "kind": "guide",
+  "name": "Card usage",
+  "summary": "Portable usage guidance for Card.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "card",
+    "react",
+    "surface"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/card-usage.md"
+}

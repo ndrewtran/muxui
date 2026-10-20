@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:avatar-usage",
+  "kind": "guide",
+  "name": "Avatar usage",
+  "summary": "Portable usage guidance for Avatar.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "avatar",
+    "react",
+    "identity"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/avatar-usage.md"
+}

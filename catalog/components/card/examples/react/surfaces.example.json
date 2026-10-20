@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:card-surfaces-react",
+  "kind": "example",
+  "name": "Card surfaces",
+  "summary": "Compare the outlined, filled, and elevated surfaces, with outlined for ordinary boundaries and elevated used once.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:card#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/card/examples/react/surfaces.tsx"
+}

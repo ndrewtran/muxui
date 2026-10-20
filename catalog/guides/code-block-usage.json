@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:code-block-usage",
+  "kind": "guide",
+  "name": "CodeBlock usage",
+  "summary": "Portable usage guidance for CodeBlock.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "code-block",
+    "react",
+    "code"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/code-block-usage.md"
+}

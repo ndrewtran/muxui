@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:drop-zone-with-picker-react",
+  "kind": "example",
+  "name": "DropZone with a picker",
+  "summary": "Put a named FileTrigger inside a DropZone, and send dropped files and picked files through one type check into one list, with rejections shown beside the control.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:drop-zone#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/drop-zone/examples/react/with-picker.tsx"
+}

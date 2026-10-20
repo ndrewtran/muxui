@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:image-fit-react",
+  "kind": "example",
+  "name": "Image fit",
+  "summary": "Compare cover and contain for one wide diagram in a square box, to see what cropping loses.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:image#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/image/examples/react/fit.tsx"
+}

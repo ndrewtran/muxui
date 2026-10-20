@@ -38,3 +38,25 @@ When adapting an existing icon-button implementation, use `onActivate` for
 activation and `disabled` / `pending` for state. Mux adds Button's existing
 variant choices, uses its own square sizing, and shows a static pending
 indicator. No additional CSS or package dependency is required.
+
+## Choosing a variant
+
+Choose the variant from where the icon sits and what it does, as for [Button](/components/button/).
+
+- `ghost`, the default, is for supporting actions such as Close, Search, or Settings beside other content.
+- `neutral` is a supporting action that needs a visible fill to stand apart from its surroundings.
+- `primary` is for one clear local primary action, such as Send beside a text field.
+- `danger-ghost` and `danger-neutral` are for destructive actions, only where visible context says what they affect, such as the row of the item they remove.
+- For a destructive main action, use a Button with visible text instead.
+
+The IconButton prominence example shows a ghost toolbar, a primary Send, and a destructive Remove beside its item.
+
+## Content
+
+- Name the result with a verb phrase, such as Close panel or Search projects.
+- When the same icon repeats across items, put the item in each name, as in Remove Quarterly report.
+- For an unfamiliar icon, add a [Tooltip](/components/tooltip/) that says the same words.
+
+## Common mistake
+
+Styling a lone icon as destructive, such as a red trash icon in a toolbar with nothing visible that says what it deletes. The color does not state the consequence. Place the icon in the row of the item it removes, or use a Button with visible text.

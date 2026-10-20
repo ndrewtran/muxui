@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:avatar-fallbacks-react",
+  "kind": "example",
+  "name": "Avatar fallbacks",
+  "summary": "Use a short abbreviation in the person's own script, and a generic glyph when no useful abbreviation exists.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:avatar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/avatar/examples/react/fallbacks.tsx"
+}

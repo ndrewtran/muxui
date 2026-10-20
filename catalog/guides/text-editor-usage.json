@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:text-editor-usage",
+  "kind": "guide",
+  "name": "TextEditor usage",
+  "summary": "Portable usage guidance for TextEditor.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "text-editor",
+    "react",
+    "rich-text"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/text-editor-usage.md"
+}

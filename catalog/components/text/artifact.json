@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Applying Mux display, heading, title, label, body, expressive, or mono typography to text content."
+      "Applying Mux display, heading, title, label, body, expressive, or mono typography to text content.",
+      "Building a page hierarchy of title, section headings, body text, and labels, with the heading level chosen apart from the look."
     ],
     "avoidWhen": [
-      "Creating a layout wrapper, interactive control, or new typography treatment."
+      "Creating a layout wrapper or a new typography treatment.",
+      "Making something that can be pressed; use Button or Link.",
+      "Naming a field that has its own label or label prop; use that."
     ]
   },
   "anatomy": [

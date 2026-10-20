@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:image-usage",
+  "kind": "guide",
+  "name": "Image usage",
+  "summary": "Portable usage guidance for Image.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "image",
+    "react",
+    "media"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/image-usage.md"
+}

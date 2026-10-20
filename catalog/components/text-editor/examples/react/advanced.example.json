@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-editor-advanced-react",
+  "kind": "example",
+  "name": "Advanced React TextEditor",
+  "summary": "Pair the advanced editing controls with the application's own link, image, and generate handlers.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text-editor#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text-editor/examples/react/advanced.tsx"
+}

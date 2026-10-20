@@ -8,10 +8,13 @@
   "category": "ai-agent",
   "intent": {
     "useWhen": [
-      "Reviewing proposed additions, removals, and updates to a small scalar table before requesting their application."
+      "Reviewing proposed additions, removals, and updates to a small scalar table before requesting their application.",
+      "Letting a user choose which proposed changes to request."
     ],
     "avoidWhen": [
-      "Computing a generic data diff, editing arbitrary records, or automatically applying patches or backend writes."
+      "Computing a generic data diff, editing arbitrary records, or automatically applying patches or backend writes.",
+      "Reviewing changes to lines of code; use CodeBlock in diff mode.",
+      "Showing a table that has no proposed changes; use Table."
     ]
   },
   "anatomy": [

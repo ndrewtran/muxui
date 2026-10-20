@@ -10,7 +10,9 @@
       "Showing a compact person or workspace image with fallback content."
     ],
     "avoidWhen": [
-      "Managing identity data, image processing, or stacked avatar collections."
+      "Managing identity data, image processing, or stacked avatar collections.",
+      "Showing a photo, screenshot, or illustration; use Image.",
+      "Opening a larger view of a picture; use Lightbox."
     ]
   },
   "anatomy": [

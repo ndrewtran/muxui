@@ -7,10 +7,14 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Presenting two or more related actions as one visual group."
+      "Presenting two or more related actions as one visual group.",
+      "Joining tightly related peer actions on the same object into one attached strip."
     ],
     "avoidWhen": [
-      "For unrelated actions or a navigation list."
+      "For unrelated actions or a navigation list.",
+      "Attaching actions that differ in prominence or consequence, such as Save beside Delete; keep them spaced.",
+      "Choosing one or more options with a pressed state; use ToggleButtonGroup.",
+      "Moving between controls with the arrow keys; use Toolbar."
     ]
   },
   "anatomy": [
