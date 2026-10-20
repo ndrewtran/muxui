@@ -1,4 +1,4 @@
-import { HeaderNav } from '@muxui/react';
+import { Button, HeaderNav } from '@muxui/react';
 
 const links = [
   { href: '/docs', label: 'Docs' },
@@ -15,19 +15,25 @@ const navigation = links.map(({ href, label }) => (
 export function ResponsiveHeaderNavExample() {
   return (
     <div className="header-frame">
-      {/* From 40rem wide the links show; below it the drawer trigger shows. */}
+      {/* From 40rem wide the links and Sign in show; below it the drawer trigger shows, and the drawer holds both. */}
       <style>{`
         .header-frame {
           container-type: inline-size;
           inline-size: 100%;
         }
 
-        .header-links {
+        .header-links,
+        .header-actions {
           display: none;
         }
 
+        .header-drawer-actions {
+          padding: var(--muxui-semantic-layout-inset-small);
+        }
+
         @container (min-width: 40rem) {
-          .header-links {
+          .header-links,
+          .header-actions {
             display: flex;
           }
 
@@ -39,8 +45,17 @@ export function ResponsiveHeaderNavExample() {
       <HeaderNav.Root>
         <HeaderNav.Logo href="/">Mux</HeaderNav.Logo>
         <HeaderNav.Secondary className="header-links">{navigation}</HeaderNav.Secondary>
+        <HeaderNav.Actions className="header-actions">
+          <Button>Sign in</Button>
+        </HeaderNav.Actions>
         <div className="header-menu">
-          <HeaderNav.MobileTrigger>{navigation}</HeaderNav.MobileTrigger>
+          <HeaderNav.MobileTrigger>
+            {navigation}
+            {/* The essential action that no longer fits in the header follows the links. */}
+            <div className="header-drawer-actions">
+              <Button>Sign in</Button>
+            </div>
+          </HeaderNav.MobileTrigger>
         </div>
       </HeaderNav.Root>
     </div>

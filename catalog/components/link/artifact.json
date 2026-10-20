@@ -7,10 +7,10 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Navigating to another location"
+      "Navigating to another location, such as a page, a section, or a file"
     ],
     "avoidWhen": [
-      "Triggering an immediate action"
+      "Triggering an immediate action; use Button"
     ]
   },
   "anatomy": [

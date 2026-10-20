@@ -2,6 +2,14 @@
 
 Use the Mux UI Virtualizer contract. The default stack layout renders its own fixed-height rows and needs an accessible name on the Virtualizer. Grid layout virtualizes a GridList, which carries the name instead.
 
+## When to virtualize
+
+Decide from measured rendering cost, not from an item count. No count always needs a Virtualizer, and a short list is simpler without one.
+
+- Virtualize a long list or grid that people scan continuously, once mounting every item measurably slows the page.
+- Page the data instead when people work through discrete sets, such as search results. Each page stays short, so it needs no Virtualizer.
+- Choose the layout by the rows. Stack suits rows of a predictable height, because it does not measure them. Grid measures each row, so cards of different heights work.
+
 ## Stack layout
 
 The default stack layout is a list of the items you give it, in rows placed a fixed distance apart. Its rows cannot be selected, and it does not virtualize children or another collection such as a Table or Tree; use grid layout for a GridList. Height and row height are in pixels and overscan counts whole rows, and the Behavior section lists the valid values.
@@ -42,3 +50,12 @@ Give the GridList a block size, such as `style={{ blockSize: '40rem' }}`, so it 
 ## Page layout and breakpoints
 
 Mux UI has no breakpoint or responsive layout API. React Aria provides no breakpoint-based page-layout styling API, and React Spectrum's responsive layout is not part of Mux UI. Page and breakpoint layout stays standard CSS, separate from this API. The Virtualizer only receives the numbers you derive, such as `maxColumns`.
+
+## Content
+
+- Keep each stack row's content to the lines that fit the row height, such as a title and one line of detail.
+- Give every item a stable string `id`.
+
+## Common mistake
+
+Putting content taller than `itemHeight` in a stack row. Rows are not measured, so the content overflows into the next row. Raise `itemHeight` to fit the content, as the Virtualizer with taller rows example does.

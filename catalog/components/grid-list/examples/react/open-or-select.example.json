@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:grid-list-open-or-select-react",
+  "kind": "example",
+  "name": "GridList that opens or selects items",
+  "summary": "Open items on a click with no selection, or select items for a bulk action with Open as a nested Button.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:grid-list#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/grid-list/examples/react/open-or-select.tsx"
+}

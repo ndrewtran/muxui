@@ -1712,6 +1712,34 @@
     {
       "family": "guide",
       "path": "catalog/guides/text-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/breadcrumbs/examples/react/long-path.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/grid-list/examples/react/open-or-select.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/menu/examples/react/grouped.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/grouping.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/table/examples/react/scrolling.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toolbar/examples/react/vertical-controls.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tree/examples/react/open-items.example.json"
     }
   ]
 }

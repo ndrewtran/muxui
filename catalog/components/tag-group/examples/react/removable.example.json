@@ -3,7 +3,7 @@
   "id": "muxui:example:tag-group-removable-react",
   "kind": "example",
   "name": "Removable TagGroup",
-  "summary": "Remove tags by id from a list held in state, with a message when none are left.",
+  "summary": "Remove an applied filter by id from a list held in state, update the results in the same step, and show a message when no filters are left.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:tag-group#web.react",

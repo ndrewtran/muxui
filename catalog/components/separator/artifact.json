@@ -10,7 +10,8 @@
       "Visually or semantically separating content"
     ],
     "avoidWhen": [
-      "Decorating without a meaningful boundary"
+      "Decorating without a meaningful boundary",
+      "A divider that people drag to resize panels; use Resizable"
     ]
   },
   "anatomy": [

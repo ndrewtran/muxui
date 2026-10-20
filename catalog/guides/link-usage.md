@@ -2,6 +2,16 @@
 
 Use Link for navigating to another location. Keep its Mux UI-owned props and accessible name semantics intact.
 
+## Link or Button
+
+- Use Link to go to another location, such as a page, a section, or a file. It needs an `href`.
+- Use [Button](/components/button/) to do something, such as Save or Delete, where there is no destination.
+
+## Content
+
+- Write link text that names the destination, such as Release notes, not Click here.
+- Keep the text short enough to read on its own, apart from the sentence around it.
+
 Compose consumer-supplied icons as Link children: put a leading decorative icon before the text and a trailing decorative icon after it. Inline SVG icons should use `currentColor`, `1em` width and height, `aria-hidden="true"`, and `focusable="false"`.
 
 An icon-only Link still needs an accessible name, such as `aria-label`. A decorative icon does not name the link.
@@ -9,3 +19,7 @@ An icon-only Link still needs an accessible name, such as `aria-label`. A decora
 ## Destination
 
 A Link needs a non-empty `href` to be enabled. Without one, or with an empty one, it is disabled even when `disabled` is false. Its `onActivate` callback runs in addition to following the `href` and cannot stand in for one. The Link without a destination example shows the disabled result.
+
+## Common mistake
+
+Using a Link as an action, with `onActivate` and no `href`. The Link is then disabled and does nothing. Use [Button](/components/button/) for an immediate action.

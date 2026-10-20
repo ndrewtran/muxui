@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:vertical-controls-react",
+  "kind": "example",
+  "name": "Vertical controls",
+  "summary": "Stack Buttons and ToggleButtons in a column with the vertical orientation, with the width set on the wrapper around the group.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:toolbar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/toolbar/examples/react/vertical-controls.tsx"
+}

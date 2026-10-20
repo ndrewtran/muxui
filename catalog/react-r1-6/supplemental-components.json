@@ -369,6 +369,7 @@
       "slug": "sidebar",
       "examples": [
         "catalog/components/sidebar/examples/react/basic.tsx",
+        "catalog/components/sidebar/examples/react/grouping.tsx",
         "catalog/components/sidebar/examples/react/responsive.tsx"
       ],
       "export": {
