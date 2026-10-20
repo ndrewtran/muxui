@@ -162,11 +162,17 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced an
     for (const mode of ['system', 'data-reduced-motion', 'data-muxui-motion']) {
       await page.reload(); await page.waitForFunction(() => window.ready); await page.waitForTimeout(50);
       await activate(page);
-      await page.waitForFunction(selector => [...document.querySelectorAll(selector)].some(node => node.getAnimations().length > 0), selector);
+      // Pause the animations as they appear, so only the preference change can end them, not a slow runner letting them finish.
+      await page.waitForFunction(selector => {
+        const running = [...document.querySelectorAll(selector)].flatMap(node => node.getAnimations());
+        for (const animation of running) animation.pause();
+        return running.length > 0;
+      }, selector);
       if (mode === 'system') await page.emulateMedia({ reducedMotion: 'reduce' });
       else await page.evaluate(mode => document.querySelector('#scope').setAttribute(mode, mode === 'data-muxui-motion' ? 'reduced' : ''), mode);
-      await page.waitForTimeout(30);
-      assert.equal(await page.evaluate(selector => [...document.querySelectorAll(selector)].reduce((count, node) => count + node.getAnimations().length, 0), selector), 0, mode);
+      // A system preference reaches components on the next frame, after emulateMedia resolves.
+      const animationCount = () => page.evaluate(selector => [...document.querySelectorAll(selector)].reduce((count, node) => count + node.getAnimations().length, 0), selector);
+      await page.waitForFunction(selector => [...document.querySelectorAll(selector)].every(node => node.getAnimations().length === 0), selector, { timeout: 5_000 }).catch(async () => { assert.equal(await animationCount(), 0, mode); });
       await settled(page);
       assert.deepEqual(await page.evaluate(() => [window.observers.size, window.mediaListeners.size]), context.subscriptions, mode);
       const starts = await page.evaluate(() => window.motionStarts.length);

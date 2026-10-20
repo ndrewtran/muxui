@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -248,13 +248,18 @@ async function startStorybook(signal) {
   await new Promise((done) => reservation.listen(0, '127.0.0.1', done));
   const { port } = reservation.address();
   await new Promise((done) => reservation.close(done));
+  // Servers that start together share one Storybook cache directory, and each deletes the manager bundle there at startup,
+  // which crashes a sibling that is still writing it (ENOENT). Give every server its own cache.
+  const cacheDir = await mkdtemp(resolve(tmpdir(), 'muxui-storybook-cache-'));
   const child = spawn('pnpm', ['exec', 'storybook', 'dev', '--ci', '--host', '127.0.0.1', '--port', String(port)], {
     cwd: appRoot, stdio: ['ignore', 'pipe', 'pipe'], env: {
       ...process.env,
       BROWSER: 'none',
+      CACHE_DIR: cacheDir,
       NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import=${storybookNetworkFixture}`.trim(),
     },
   });
+  child.once('close', () => rm(cacheDir, { recursive: true, force: true }).catch(() => {}));
   let output = '';
   for (const stream of [child.stdout, child.stderr]) stream.on('data', (chunk) => { output = (output + chunk).slice(-12000); });
   let stopPromise;
