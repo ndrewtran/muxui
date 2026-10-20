@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import CodeBlock from './CodeBlock.astro';
 import GuideMarkup from './GuideMarkup.astro';
 import { canonicalRepositoryRoot } from '../lib/catalog.ts';
+import { reactCompatibilityProfile as tested } from '../lib/compatibility-profile.ts';
 
 const packageManifest: unknown = JSON.parse(
 	readFileSync(resolve(canonicalRepositoryRoot, 'packages/react/package.json'), 'utf8'),
@@ -54,7 +55,7 @@ if (!installExample || !tsxExample || !tarballExample) {
 
 	<CodeBlock id="installation-shell-code" code={installExample} lang="bash" label="shell" />
 
-	<p>All exports are experimental, and Mux UI makes no assistive-technology support claim. See <a href="/lifecycle/">Lifecycle</a> and <a href="/accessibility/">Accessibility</a>.</p>
+	<p>All exports are experimental, and Mux UI makes no assistive-technology support claim. See <a href="/lifecycle/">Lifecycle</a>, <a href="/accessibility/">Accessibility</a>, and the <a href="#tested-profile">tested profile</a>.</p>
 
 	<h2 id="usage">Usage</h2>
 
@@ -65,4 +66,35 @@ if (!installExample || !tsxExample || !tarballExample) {
 	<p>To develop against an unpublished build, install the versioned local candidate from the package directory instead.</p>
 
 	<CodeBlock id="installation-tarball-code" code={tarballExample} lang="bash" label="shell" />
+
+	<h2 id="tested-profile">Tested profile</h2>
+
+	<p>Mux UI's automated checks run against this profile. It records what is tested, not what is supported, and every export stays experimental.</p>
+
+	<table data-fact="compatibility.tested">
+		<tbody>
+			<tr><th scope="row">Runtime profile</th><td><code>{tested.runtimeProfile}</code></td></tr>
+			<tr><th scope="row">Status</th><td><code>{tested.status}</code></td></tr>
+			<tr><th scope="row">Node.js</th><td><code>{tested.node}</code></td></tr>
+			<tr><th scope="row">React</th><td><code>{tested.react}</code></td></tr>
+			<tr><th scope="row">React DOM</th><td><code>{tested.reactDom}</code></td></tr>
+			<tr><th scope="row">Browser</th><td>{tested.browser}</td></tr>
+			<tr><th scope="row">axe</th><td>{tested.axe}</td></tr>
+			<tr><th scope="row">Browser test</th><td><a href={`https://github.com/ndrewtran/muxui/blob/main/${tested.testSource}`} target="_blank" rel="noreferrer">{tested.testSource}</a></td></tr>
+		</tbody>
+	</table>
+
+	<h3 id="display-profiles">Display profiles</h3>
+
+	<p>The browser test renders each profile, which sets color scheme, contrast, motion, density, and direction in that order.</p>
+
+	<ul data-fact="compatibility.displayProfiles">
+		{tested.displayProfiles.map((profile) => <li><code>{profile}</code></li>)}
+	</ul>
+
+	<h3 id="not-claimed">Not claimed</h3>
+
+	<ul data-fact="compatibility.notClaimed">
+		{tested.notClaimed.map((item) => <li>{item}</li>)}
+	</ul>
 </GuideMarkup>
