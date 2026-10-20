@@ -129,7 +129,7 @@ const TEXT_SELECT_PROPS = Object.freeze({
   as: ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label'],
 });
 
-// A family whose public type narrows a shared enumeration lists its own choices here.
+// A family whose public type narrows or widens a shared enumeration lists its own choices here.
 const FAMILY_SELECT_PROPS = Object.freeze({
   Button: BUTTON_SELECT_PROPS,
   IconButton: BUTTON_SELECT_PROPS,
@@ -138,6 +138,8 @@ const FAMILY_SELECT_PROPS = Object.freeze({
   Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
   ToggleButtonGroup: { selectionMode: ['single', 'multiple'] },
   Sidebar: { status: ['online', 'offline'] },
+  // SelectNative also admits a positive number, the native list's visible row count (SelectNativeProps.size).
+  SelectNative: { size: [...SELECT_PROPS.size, 4] },
 });
 
 const callbackType = { summary: 'MuxUI callback' };
@@ -376,8 +378,6 @@ function setSelectedState(args, props, family, preserveExplicit) {
 // States a specimen cannot show honestly, each with its reason. The matrix labels them unavailable rather than
 // rendering a stand-in that looks like another state.
 const STATE_LIMITATIONS = Object.freeze({
-  ...Object.fromEntries(['sm', 'md', 'lg', 'full'].map((radius) => [`Image:radius-${radius}`,
-    'the colour audit accepts only a transparent image, so a radius has nothing visible to round'])),
   'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
   'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
 });
@@ -474,6 +474,11 @@ function stateIsSupported(binding, state, family) {
       return family === 'InputTags';
     case 'external':
       return props.has('external');
+    case 'radiussm':
+    case 'radiusmd':
+    case 'radiuslg':
+    case 'radiusfull':
+      return family === 'Image' && props.has('radius');
     case 'light':
     case 'dark':
       return family === 'ColorModeToggle' && props.has('mode');
@@ -634,6 +639,15 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'external':
       if (props.has('external')) args.external = true;
       break;
+    case 'radiussm':
+    case 'radiusmd':
+    case 'radiuslg':
+    case 'radiusfull':
+      if (family === 'Image' && props.has('radius')) {
+        args.radius = state.slice('radius-'.length);
+        args.style = { ...args.style, ...IMAGE_RADIUS_FRAME };
+      }
+      break;
     case 'light':
     case 'dark':
       if (family === 'ColorModeToggle') setControlledArg(args, props, 'mode', normalizedState);
@@ -678,16 +692,11 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
   return args;
 }
 
-// Specimens whose named states must override binding defaults (disabled: false, defaultOpen: false, and so on).
-// Other families keep the existing precedence until their States pages pass the Storybook audit with it. Dialog
-// (a truly open modal blocks the lifecycle states) stays off the list.
-const NAMED_STATE_FAMILIES = new Set([
-  'Avatar', 'Card', 'ColorModeToggle', 'DropZone', 'GridList', 'HeaderNav', 'InputTags', 'Link', 'ListBox', 'Menu', 'ProgressCircle', 'Separator', 'Sidebar',
-]);
-
 /**
- * The props a named state changes from the default. A named family's States story leaves them unset, so each state
- * supplies its own value, while anything a user supplies, even false, empty, or the default value, wins in every row.
+ * The props a named state changes from the default. The States story leaves them unset, so each state supplies its
+ * own value instead of a binding default (disabled: false, defaultOpen: false, and so on) masking it, while anything
+ * a user supplies, even false, empty, or the default value, wins in every row. The exception is the lifecycle rows
+ * (entering, exiting, opening, closing), which drive `open` themselves, and cap Toast `duration`, to animate.
  */
 function stateDrivingProps(binding, family) {
   const defaults = normalizeDefaultArgs(binding);
@@ -703,10 +712,8 @@ function stateDrivingProps(binding, family) {
 export function storyArgsForBinding(binding, variant, family) {
   if (variant === 'default') return normalizeDefaultArgs(binding);
   if (variant === 'states') {
-    const args = normalizeDefaultArgs(binding);
-    if (!NAMED_STATE_FAMILIES.has(family)) return args;
     const driving = stateDrivingProps(binding, family);
-    return Object.fromEntries(Object.entries(args).filter(([name]) => !driving.has(name)));
+    return Object.fromEntries(Object.entries(normalizeDefaultArgs(binding)).filter(([name]) => !driving.has(name)));
   }
   return stateArgsForBinding(binding, variant, family);
 }
@@ -730,6 +737,23 @@ export function stateCoverageForBinding(binding, family) {
     args: stateArgsForBinding(binding, state, family),
   }));
 }
+
+// Rows that show the component as it renders by default; the Default story already covers them.
+const BASELINE_STATES = new Set(['default', 'idle', 'visible']);
+
+/**
+ * Whether each standard story teaches something for a family. Default and BrowserProof apply to every family, so
+ * they are not listed: Default is the baseline and BrowserProof is proof, hidden from the sidebar but never dropped.
+ */
+export const STORY_APPLICABILITY = Object.freeze({
+  States: (binding, family) => stateVariantNames(binding, family)
+    .some((state) => !BASELINE_STATES.has(state) && stateIsSupported(binding, state, family)),
+  Controlled: (binding) => controlledDefaultPairsForBinding(binding).length > 0,
+  Uncontrolled: (binding) => controlledDefaultPairsForBinding(binding).length > 0,
+  Events: (binding) => eventBindingsForBinding(binding).length > 0,
+  // Every family has a root; a page of that part alone has nothing to teach.
+  Anatomy: (binding) => binding.api.parts.some((part) => part !== 'root'),
+});
 
 const e = (type, props, ...children) => React.createElement(type, props, ...children);
 
@@ -858,6 +882,8 @@ function ImagePreview({ onLoad, ...args }) {
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 // Truncated image data: the browser fires an error event instead of loading it.
 const BROKEN_IMAGE_SRC = 'data:image/png;base64,AAAA';
+// The transparent pixel draws nothing for a radius to round, so the radius rows fill the image box with a token.
+const IMAGE_RADIUS_FRAME = Object.freeze({ background: 'var(--muxui-semantic-surface-strong)' });
 const TAG_SELECT_SAMPLE_ITEMS = [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }];
 const LIGHTBOX_SAMPLE_ITEMS = [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }];
 const COLLECTION_SAMPLE_ITEMS = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }];
@@ -1530,26 +1556,21 @@ function StateVariant({ family, state, args, available }) {
     observer.observe(section, { attributes: true, attributeFilter: ['aria-hidden'] });
     return () => observer.disconnect();
   }, []);
+  // The open row opens its trigger itself, so a user's closed value has to stop that click. Focus and drag rows have
+  // no prop a user could set to the contrary.
+  const closedByUser = args.open === false || args.defaultOpen === false;
   React.useEffect(() => {
     if (state === 'focused') focusStateTarget(stateRef.current);
     if (state === 'tag-focused') return scheduleTagFocus(stateRef.current);
     if (state === 'drop-target' || state === 'dragging') dispatchDragEnter(stateRef.current);
-    if (state !== 'open' || !INTERACTION_OPEN_FAMILIES.has(family)) return undefined;
+    if (state !== 'open' || !INTERACTION_OPEN_FAMILIES.has(family) || closedByUser) return undefined;
     return scheduleOpenInteraction(stateRef.current, family);
-  }, [family, state]);
+  }, [family, state, closedByUser]);
 
+  // `args` already carry the row's state, projected by stateArgsForBinding with any user value taking precedence, so
+  // this only adds what keeps the rows apart: a unique label, a lifecycle marker, and a unique landmark name.
   const variantArgs = { ...args };
   if (family === 'DataDiff') variantArgs.label = `${args.label ?? 'Proposed token cleanup'} ${state}`;
-  if (family === 'Activity') {
-    if (state === 'running' || state === 'failed') variantArgs.status = state;
-  }
-  if (family === 'Message' && state === 'streaming') variantArgs.streaming = true;
-  if (family === 'PromptComposer' && state === 'error') variantArgs.error = 'Unable to send. Try again.';
-  if (family === 'DataDiff' && state === 'mixed') variantArgs.defaultSelectedIds = ['added'];
-  if (family === 'CodeBlock') {
-    if (state === 'diff') variantArgs.mode = 'diff';
-    if (state === 'wrap') variantArgs.wrap = true;
-  }
   const lifecycleAttribute = LIFECYCLE_ATTRIBUTES[state];
   const activeLifecycleState = React.useContext(LifecycleSelectionContext);
   const marker = OVERLAY_FAMILIES.has(family) ? lifecycleMarker(family, state) : undefined;
@@ -1560,7 +1581,7 @@ function StateVariant({ family, state, args, available }) {
   // Mux UI's nav/group adapters unique accessible names without adding a prop
   // to the public API or changing the controls contract.
   if (family === 'Breadcrumbs' || family === 'Group' || family === 'HeaderNav') {
-    variantArgs['aria-label'] = `${family} ${state}`;
+    variantArgs['aria-label'] = `${args['aria-label'] ?? family} ${state}`;
   }
   const labelId = `muxui-storybook-state-${family}-${state.replaceAll(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
   const rendered = !available
@@ -1873,7 +1894,6 @@ function anatomyArgsForBinding(record, sourceArgs) {
     ];
   }
   if (record.family === 'CodeBlock') args.mode = 'diff';
-  if (record.family === 'PromptComposer') args.error = 'Unable to send. Try again.';
   if (record.family === 'Message') args.defaultSourcesExpanded = true;
   if (record.family === 'Dialog') args.actions = e(MuxUI.Button, null, 'Confirm');
   return args;

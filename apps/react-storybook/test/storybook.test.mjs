@@ -39,6 +39,7 @@ import {
   renderStateCoverage,
   stateArgsForBinding,
   stateCoverageForBinding,
+  STORY_APPLICABILITY,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
@@ -289,7 +290,7 @@ test('generated metadata exposes every canonical event, part, state, and control
   assert.equal(partCount, descriptor.bindings.reduce((count, binding) => count + binding.api.parts.length, 0));
 });
 
-test('generated proof stories expose live controls, events, modes, anatomy, and browser plays', async () => {
+test('every family has live controls, events, modes, anatomy, and a hidden browser play, whichever stories it displays', async () => {
   assert.deepEqual(
     [...HISTORICAL_BROWSER_PROOF_FAMILIES].sort(),
     historicalManifest.families.map(({ family }) => family).sort(),
@@ -304,12 +305,20 @@ test('generated proof stories expose live controls, events, modes, anatomy, and 
     assert.ok(binding, `${record.family} descriptor binding`);
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
-    const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
-    for (const name of ['Controlled', 'Uncontrolled', 'Events', 'Anatomy', 'BrowserProof']) {
-      assert.equal(typeof story[name]?.render, 'function', `${record.family}/${name} render`);
-    }
-    assert.equal(typeof story.BrowserProof.play, 'function', `${record.family}/BrowserProof play`);
-    assert.equal(story.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
+    const module = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+    // Every family keeps BrowserProof, which the sidebar hides. The other proof stories are built from the factory,
+    // so each family's proof holds even where its page does not display the story.
+    assert.equal(typeof module.BrowserProof?.play, 'function', `${record.family}/BrowserProof play`);
+    assert.equal(module.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
+    assert.deepEqual(module.BrowserProof.tags, ['!dev', '!autodocs'], `${record.family}/BrowserProof is left out of the sidebar and autodocs`);
+    const proof = { family: record.family, tranche: record.tranche, binding };
+    const story = {
+      Controlled: createControlledStory(proof),
+      Uncontrolled: createUncontrolledStory(proof),
+      Events: createEventsStory(proof),
+      Anatomy: createAnatomyStory(proof),
+    };
+    for (const [name, built] of Object.entries(story)) assert.equal(typeof built.render, 'function', `${record.family}/${name} render`);
     const pairs = controlledDefaultPairsForBinding(binding);
     pairCount += pairs.length;
     assert.deepEqual(
@@ -362,6 +371,7 @@ const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/gener
 // Truncated image data: the browser fires an error event instead of loading it.
 const AVATAR_FAILING_SRC = 'data:image/png;base64,AAAA';
 const supplementalTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/supplemental.d.ts'), 'utf8');
+const selectNativeTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/select-native.d.ts'), 'utf8');
 
 /** The string members of an exported union, read from the generated public declarations. */
 function declaredUnion(source, name) {
@@ -662,6 +672,16 @@ test('controls offer only what the public types admit and match their value kind
   assert.equal(controls('TextArea').rows.control.type, 'number');
   assert.equal(controls('Table').rows.control, 'object');
   assert.deepEqual(controls('Sidebar').status.options, ['online', 'offline']);
+  // SelectNative's size is a visual size or a positive native row count; every other family offers the visual sizes alone.
+  assert.match(selectNativeTypes, /size\?: SelectNativeVisualSize \| number;/u);
+  const [rowCount, ...unexpected] = controls('SelectNative').size.options.filter((option) => typeof option === 'number');
+  assert.deepEqual(unexpected, []);
+  assert.ok(Number.isInteger(rowCount) && rowCount > 0, 'the offered native size is a positive integer');
+  assert.deepEqual(controls('SelectNative').size.options.filter((option) => typeof option === 'string'), declaredUnion(selectNativeTypes, 'SelectNativeVisualSize'));
+  assert.deepEqual(controls('Avatar').size.options, ['sm', 'md', 'lg']);
+  const nativeList = new JSDOM(renderToStaticMarkup(renderFamily('SelectNative', { size: rowCount }))).window.document.querySelector('select');
+  assert.equal(nativeList.getAttribute('size'), String(rowCount));
+  assert.equal(nativeList.getAttribute('data-size'), 'md', 'a native row count keeps the medium visual size');
   // A control cannot edit a function, so those props stay off.
   for (const [family, name] of [['CommandPalette', 'filter'], ['CommandPalette', 'close'], ['TagSelect', 'getItemLabel'], ['Lightbox', 'renderContent'], ['InputTags', 'validate']]) {
     assert.equal(controls(family)[name].control, false, `${family}.${name}`);
@@ -1261,11 +1281,17 @@ test('Menu uses the triggered composition for open-state stories and keeps the p
 });
 
 test('Image shows fallback recovery and final failure, and names the source it ended on', async () => {
-  const { document: states } = stateSections('Image');
-  // Recovery has specimens; only the radius rows are labelled unavailable, with their reason.
-  const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
-  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['radius-sm', 'radius-md', 'radius-lg', 'radius-full']);
-  assert.ok(unavailable.every((node) => /because the colour audit accepts only a transparent image/u.test(node.textContent)));
+  const { document: states, sections } = stateSections('Image');
+  // Every row has a specimen. A radius row frames the transparent image in a token fill, so the rounding shows.
+  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+  for (const radius of ['sm', 'md', 'lg', 'full']) {
+    const framed = sections.get(`radius-${radius}`).querySelector('img');
+    assert.ok(framed.classList.contains(`muxui-image--radius-${radius}`), radius);
+    assert.equal(framed.style.background, 'var(--muxui-semantic-surface-strong)', `${radius} row paints the image box with a token`);
+  }
+  assert.equal(sections.get('fallback').querySelector('img').style.background, '', 'the other rows stay unframed');
+  // A radius the user sets wins in every row.
+  assert.ok(stateSections('Image', { ...createStory(currentRecord('Image'), 'states').args, radius: 'lg' }).sections.get('radius-sm').querySelector('img').classList.contains('muxui-image--radius-lg'));
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createStory(currentRecord('Image'), 'states');
@@ -1313,6 +1339,178 @@ test('Image shows fallback recovery and final failure, and names the source it e
     assert.equal(caption(), 'Loading the primary source.');
     await act(async () => image().dispatchEvent(new Event('load')));
     assert.equal(caption(), 'Primary source loaded.');
+  });
+});
+
+test('every States story leaves its named states unmasked by binding defaults', () => {
+  // Each row's own props must reach it: a stock States story that kept `disabled: false` would hide the disabled row.
+  const masked = [];
+  for (const binding of descriptorSource.bindings) {
+    const family = binding.export;
+    const stock = storyArgsForBinding(binding, 'states', family);
+    for (const { name, args } of stateCoverageForBinding(binding, family)) {
+      const shown = stateArgsForBinding(binding, name, family, stock);
+      for (const [prop, value] of Object.entries(args)) {
+        if (typeof value === 'object' || typeof value === 'function') continue;
+        if (Object.hasOwn(shown, prop) && shown[prop] !== value) masked.push(`${family}/${name}: ${prop} is ${String(shown[prop])}, not ${String(value)}`);
+      }
+    }
+  }
+  assert.deepEqual(masked, []);
+});
+
+test('named states render their public state in sampled families, and a supplied value still wins', () => {
+  const sampled = [
+    ['TagSelect', 'disabled', 'disabled', '.muxui-tag-select[data-disabled]'],
+    ['TagSelect', 'invalid', 'invalid', '.muxui-tag-select[data-invalid]'],
+    ['RadioField', 'disabled', 'disabled', '.muxui-radio-field[data-disabled]'],
+    ['RadioField', 'invalid', 'invalid', '.muxui-radio-field__error'],
+    ['Checkbox', 'indeterminate', 'indeterminate', '.muxui-checkbox[data-indeterminate]'],
+    ['Checkbox', 'disabled', 'disabled', '.muxui-checkbox[data-disabled]'],
+    ['TextField', 'read-only', 'readOnly', 'input[readonly]'],
+    ['Button', 'pending', 'pending', '.muxui-button[data-pending]'],
+    ['Switch', 'disabled', 'disabled', '.muxui-switch[data-disabled]'],
+  ];
+  for (const [family, state, prop, selector] of sampled) {
+    const { args } = createStory(currentRecord(family), 'states');
+    assert.equal(Object.hasOwn(args, prop), false, `${family} States story leaves ${prop} to its rows`);
+    const { sections } = stateSections(family);
+    assert.ok(sections.get(state).querySelector(selector), `${family} ${state} row shows ${state}`);
+    for (const [name, row] of sections) {
+      if (name !== state && !['disabled', 'invalid'].includes(name)) assert.equal(row.querySelector(selector), null, `${family} ${state} does not leak into ${name}`);
+    }
+    // An explicit false is the user's value, so it wins even over the row that names the state.
+    const overridden = stateSections(family, { ...args, [prop]: false }).sections;
+    assert.equal(overridden.get(state).querySelector(selector), null, `${family} ${prop}: false wins in the ${state} row`);
+  }
+});
+
+test('a value the user sets wins over a named state at render time, even false, empty, or the default', () => {
+  const rows = (family, args) => stateSections(family, { ...createStory(currentRecord(family), 'states').args, ...args }).sections;
+  const streaming = (sections) => sections.get('streaming').querySelector('.muxui-message').hasAttribute('data-streaming');
+  assert.equal(streaming(rows('Message', {})), true);
+  assert.equal(streaming(rows('Message', { streaming: false })), false);
+
+  const codeBlock = (sections, row) => sections.get(row).querySelector('.muxui-code-block');
+  const codeStock = rows('CodeBlock', {});
+  assert.equal(codeBlock(codeStock, 'wrap').getAttribute('data-wrap'), 'true');
+  assert.equal(codeBlock(codeStock, 'diff').getAttribute('data-mode'), 'diff');
+  const codeOverridden = rows('CodeBlock', { wrap: false, mode: 'code' });
+  assert.equal(codeBlock(codeOverridden, 'wrap').hasAttribute('data-wrap'), false, 'wrap: false wins in the wrap row');
+  assert.equal(codeBlock(codeOverridden, 'diff').getAttribute('data-mode'), 'code', 'a mode equal to the default wins in the diff row');
+
+  const composerError = (sections) => sections.get('error').querySelector('.muxui-prompt-composer-error');
+  assert.equal(composerError(rows('PromptComposer', {})).textContent, 'Unable to send. Try again.');
+  assert.equal(composerError(rows('PromptComposer', { error: '' })), null, 'an empty error wins in the error row');
+
+  const selectAll = (sections) => sections.get('mixed').querySelector('.muxui-data-diff-selection input').getAttribute('aria-checked');
+  assert.equal(selectAll(rows('DataDiff', {})), 'mixed');
+  assert.equal(selectAll(rows('DataDiff', { defaultSelectedIds: [] })), 'false', 'an empty selection wins in the mixed row');
+});
+
+test('every States row renders exactly the args its state projects, so a user value reaches it', () => {
+  // The rows are projected by stateArgsForBinding, which lets an explicit user value win. A row that rendered
+  // anything other than renderFamily(projected args) would have set state values again at render time.
+  const neutralOf = (value, control, name) => typeof value === 'boolean' ? false
+    : Array.isArray(value) ? []
+    // A blank image source is not a neutral value.
+    : typeof value === 'string' && control === 'text' && !/src/iu.test(name) ? '' : undefined;
+  const fragment = (html) => new JSDOM(`<div id="host">${html}</div>`).window.document.getElementById('host');
+  // Strips only what the matrix adds to keep rows apart: generated ids, lifecycle markers, row labels.
+  const comparable = (html, family, state) => html
+    .replace(/ (?:id|for|aria-labelledby|aria-describedby|aria-controls|aria-owns|name|form|aria-activedescendant|data-collection|data-key)="[^"]*"/gu, '')
+    .replace(/_R_\w*_|react-aria[\w-]*/gu, '#')
+    .replace(/muxui-storybook-lifecycle-[a-z0-9-]*/gu, '')
+    .replace(/<span hidden="" aria-hidden="true"><\/span>/gu, '')
+    .replace(/ class=" *"/gu, '')
+    .replace(/class="([^"]*?) +"/gu, 'class="$1"')
+    .replace(`Proposed token cleanup ${state}`, 'Proposed token cleanup')
+    .replace(['Breadcrumbs', 'Group', 'HeaderNav'].includes(family) ? / aria-label="[^"]*"/gu : /$^/u, '');
+  const lifecycle = new Set(['entering', 'opening', 'exiting', 'closing']);
+  const mismatched = [];
+  let compared = 0;
+  for (const binding of descriptorSource.bindings) {
+    const family = binding.export;
+    const record = { family, tranche: 'x', binding };
+    const base = storyArgsForBinding(binding, 'default', family);
+    const stock = storyArgsForBinding(binding, 'states', family);
+    const controls = argTypesForBinding(binding);
+    const wrap = (element) => family === 'Toast' ? React.createElement(ToastProvider, null, element) : element;
+    // Lifecycle rows animate open themselves, and unavailable rows render no specimen.
+    for (const { name, args } of stateCoverageForBinding(binding, family).filter(({ name: state }) => !lifecycle.has(state))) {
+      // Override each prop this row drives with an explicit neutral value: false, empty, or the default.
+      const user = { ...stock };
+      for (const prop of new Set([...Object.keys(args), ...Object.keys(base)])) {
+        if (typeof args[prop] === 'function' || JSON.stringify(args[prop]) === JSON.stringify(base[prop])) continue;
+        const neutral = neutralOf(args[prop] ?? base[prop], controls[prop]?.control, prop);
+        if (neutral !== undefined) user[prop] = neutral;
+      }
+      const section = [...fragment(renderToStaticMarkup(wrap(renderStateCoverage(record, user)))).querySelectorAll('.muxui-storybook-state')]
+        .find((node) => node.querySelector('h3').textContent === name);
+      if (section.querySelector('[data-muxui-storybook-state="unavailable"]')) continue;
+      section.querySelector('h3').remove();
+      const actual = comparable((section.querySelector('[data-muxui-storybook-popup-room]') ?? section).innerHTML, family, name);
+      const expected = comparable(fragment(renderToStaticMarkup(wrap(renderFamily(family, stateArgsForBinding(binding, name, family, user))))).innerHTML, family, name);
+      compared += 1;
+      if (actual !== expected) mismatched.push(`${family}/${name}`);
+    }
+  }
+  assert.ok(compared > 300, `compared ${compared} rows`);
+  assert.deepEqual(mismatched, []);
+});
+
+test('the open row clicks its trigger open, unless the user set it closed', async () => {
+  // The click is an effect of the mounted row, which a static render cannot see.
+  const isOpen = {
+    DatePicker: (row) => row.querySelector('.muxui-date-trigger').getAttribute('aria-expanded') === 'true',
+    DateRangePicker: (row) => row.querySelector('.muxui-date-trigger').getAttribute('aria-expanded') === 'true',
+    Select: (row) => row.querySelector('.muxui-select-trigger').getAttribute('aria-expanded') === 'true',
+    CommandPalette: (row) => row.querySelector('.muxui-command-palette').hasAttribute('data-open'),
+  };
+  for (const [family, opened] of Object.entries(isOpen)) {
+    const story = createStory(currentRecord(family), 'states');
+    for (const [label, args, expected] of [
+      ['stock', story.args, true],
+      ['defaultOpen: false', { ...story.args, defaultOpen: false }, false],
+      ['open: false', { ...story.args, open: false }, false],
+    ]) {
+      await withRuntime(async ({ host, root: reactRoot }) => {
+        await act(async () => reactRoot.render(story.render(args)));
+        await settleRuntime(120);
+        const row = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'open');
+        assert.equal(opened(row), expected, `${family} open row with ${label}`);
+      });
+    }
+  }
+});
+
+test('ColorSwatchPicker read-only row ignores clicks and keeps keyboard navigation', async () => {
+  await withRuntime(async ({ host, root: reactRoot }) => {
+    const story = createStory(currentRecord('ColorSwatchPicker'), 'states');
+    assert.equal(Object.hasOwn(story.args, 'readOnly'), false, 'the States story leaves readOnly to the row');
+    await act(async () => reactRoot.render(story.render(story.args)));
+    await settleRuntime(60);
+    const row = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'read-only');
+    assert.equal(row.querySelector('.muxui-color-swatch-picker').getAttribute('aria-readonly'), 'true');
+    const items = [...row.querySelectorAll('[role="option"]')];
+    const selected = () => items.map((item) => item.getAttribute('aria-selected'));
+    const before = selected();
+    await act(async () => items[1].click());
+    assert.deepEqual(selected(), before, 'a click does not select a swatch in the read-only row');
+    // The row still takes focus and moves it with the arrow keys, where a disabled picker would not.
+    await act(async () => items[0].focus());
+    await act(async () => items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })));
+    assert.equal(document.activeElement, items[1], 'ArrowRight moves focus to the next swatch');
+    assert.deepEqual(selected(), before, 'moving focus does not select');
+
+    // A readOnly the user sets, even false, wins in every row, so the same click then selects.
+    await act(async () => reactRoot.render(React.cloneElement(story.render({ ...story.args, readOnly: false }), { key: 'user-override' })));
+    await settleRuntime(60);
+    const overridden = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === 'read-only');
+    assert.equal(overridden.querySelector('.muxui-color-swatch-picker').hasAttribute('aria-readonly'), false);
+    const [, second] = overridden.querySelectorAll('[role="option"]');
+    await act(async () => second.click());
+    assert.equal(second.getAttribute('aria-selected'), 'true');
   });
 });
 
@@ -1469,11 +1667,10 @@ test('anatomy proof resolves every canonical part to a live DOM or executable ro
     const env = installRuntimeDom();
     const host = document.querySelector('#root');
     const root = createRoot(host);
-    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-    const tranche = record.tranche.replace('.', '-').toLowerCase();
     try {
-      const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
-      await act(async () => root.render(story.Anatomy.render(story.Anatomy.args)));
+      // Built from the factory so root-only families, whose pages omit Anatomy, still prove their parts.
+      const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding });
+      await act(async () => root.render(story.render(story.args)));
       // Toast is queued by a declarative effect and rendered by RAC's region on
       // the following task; allow that portal-like queue update to settle.
       await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, record.family === 'Toast' ? 100 : 20)));
@@ -1612,8 +1809,8 @@ test('default and state stories use uncontrolled pairs without collapsing state 
       if (!binding.api.props.includes(controlled) || !binding.api.props.includes(uncontrolled)) continue;
       assert.equal(defaultArgs[controlled], undefined, `${family} default ${controlled}`);
       assert.notEqual(defaultArgs[uncontrolled], undefined, `${family} default ${uncontrolled}`);
+      // The States story never sets the controlled prop, and leaves unset the uncontrolled default a row drives.
       assert.equal(stateArgs[controlled], undefined, `${family} states ${controlled}`);
-      assert.notEqual(stateArgs[uncontrolled], undefined, `${family} states ${uncontrolled}`);
     }
   }
 
@@ -2198,7 +2395,8 @@ test('Breadcrumbs defaults show the adapter sample while explicit empty items st
   assert.match(disabledMarkup, /aria-current="page"/u);
 });
 
-test('generated stories are stock CSF modules with default and state coverage', async () => {
+test('generated stories are stock CSF modules that display only the stories that teach something', async () => {
+  const standard = ['States', 'Controlled', 'Uncontrolled', 'Events', 'Anatomy'];
   for (const record of historicalManifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
@@ -2208,8 +2406,42 @@ test('generated stories are stock CSF modules with default and state coverage', 
     assert.match(body, /include: binding\.api\.props/);
     assert.match(body, /argTypesForBinding/);
     assert.match(body, /export const Default/);
-    assert.match(body, /export const States/);
+    assert.match(body, /export const BrowserProof/);
+    assert.match(body, /BrowserProof\.tags = \['!dev', '!autodocs'\];/);
+
+    const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
+    const pairs = controlledDefaultPairsForBinding(binding).length > 0;
+    const expected = {
+      States: STORY_APPLICABILITY.States(binding, record.family),
+      Controlled: pairs,
+      Uncontrolled: pairs,
+      Events: binding.api.events.length > 0,
+      Anatomy: binding.api.parts.some((part) => part !== 'root'),
+    };
+    const exported = standard.filter((name) => new RegExp(`^export const ${name} =`, 'mu').test(body));
+    assert.deepEqual(exported, standard.filter((name) => expected[name]), `${record.family} displays the stories that apply to it`);
+    // The manifest the audits select pages from lists exactly what the module exports.
+    const pageNames = manifest.pageIndex.find(({ family }) => family === record.family).stories.map(({ exportName }) => exportName);
+    assert.deepEqual(pageNames.filter((name) => name === 'Default' || name === 'BrowserProof' || standard.includes(name)),
+      ['Default', ...exported, 'BrowserProof'], `${record.family} page index`);
   }
+
+  // A family without events, a controlled pair, or states beyond its default shows none of those stories.
+  const exportsOf = async (family) => {
+    const { tranche } = manifest.families.find((record) => record.family === family);
+    const slug = family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const module = await import(`../.storybook/generated/${tranche.replace('.', '-').toLowerCase()}-${slug}.stories.mjs`);
+    return Object.keys(module).filter((name) => name !== 'default').sort();
+  };
+  assert.deepEqual(await exportsOf('Text'), ['BrowserProof', 'Default'], 'Text has no events, pair, parts, or supported state');
+  const group = await exportsOf('Group');
+  assert.ok(group.includes('Anatomy') && group.includes('States'), 'Group has parts and states');
+  assert.ok(!group.includes('Events'), 'Group declares no events, so it has no Events story');
+  assert.ok(!group.includes('Controlled') && !group.includes('Uncontrolled'), 'Group has no controlled pair');
+  assert.deepEqual(await exportsOf('Button'), ['Anatomy', 'BrowserProof', 'Default', 'Events', 'Matrix', 'States']);
+  assert.ok((await exportsOf('Checkbox')).includes('Controlled'), 'a family with a controlled pair keeps the pair');
+  // A family whose named states the specimen cannot show has no States page of unavailable rows.
+  for (const family of ['Form', 'Markdown', 'Meter']) assert.ok(!(await exportsOf(family)).includes('States'), family);
 
   const buttonBinding = descriptor.bindings.find(({ export: name }) => name === 'Button');
   const buttonStory = await import('../.storybook/generated/r1-1-button.stories.mjs');
