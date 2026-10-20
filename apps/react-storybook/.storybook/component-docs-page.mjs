@@ -23,7 +23,7 @@ const docsSections = Object.freeze([
 
 /** A guide's own headings sit below the page's sections. */
 const demoted = { h2: 'h4', h3: 'h5', h4: 'h6' };
-const guideOverrides = Object.fromEntries(Object.entries(demoted).map(([from, to]) => [from, ({ children }) => h(to, null, children)]));
+const headingOverrides = Object.fromEntries(Object.entries(demoted).map(([from, to]) => [from, ({ children }) => h(to, null, children)]));
 
 function List({ items, fact }) {
   return h('ul', { 'data-fact': fact }, items.map((item, index) => h('li', { key: index }, item)));
@@ -42,6 +42,10 @@ export function ComponentDocs({ entry, blocks }) {
   const { Title, Primary, Controls, Source, Markdown, Anchor } = blocks;
   const [basic, ...others] = entry.examples;
   const { usage, accessibility, styling } = entry;
+  // A link to another family, written as its docs path, goes to that family's Docs page. Other links stay as written.
+  const guideLink = ({ href, children, ...props }) => entry.guide.links[href] === undefined
+    ? h('a', { href, ...props }, children)
+    : h(Anchor, { href: entry.guide.links[href] }, children);
 
   const bodies = {
     basic: () => [
@@ -61,7 +65,7 @@ export function ComponentDocs({ entry, blocks }) {
       entry.guide && h('div', { key: 'guide', className: 'muxui-docs-guide', 'data-guide-id': entry.guide.id },
         h('h3', null, 'Related usage guidance'),
         h('p', { className: 'muxui-docs-caption' }, `${entry.guide.name}: `, h(SourceLink, { path: entry.guide.source })),
-        h(Markdown, { options: { overrides: guideOverrides } }, entry.guide.markdown)),
+        h(Markdown, { options: { overrides: { ...headingOverrides, a: guideLink } } }, entry.guide.markdown)),
     ],
     behavior: () => entry.behavior.length > 0
       ? h(List, { items: entry.behavior, fact: 'binding.behavior' })

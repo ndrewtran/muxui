@@ -316,9 +316,12 @@ const blockStoryId = (page) => `muxui-block-${page.slug}`;
 const blockStoryFilename = (page) => `block-${page.slug}.stories.mjs`;
 
 // The Docs page of each family shows its catalog facts, with the Block pages that use it linked by their first variant story.
+const componentIds = records.map(({ binding }) => binding.binding.slice(0, binding.binding.indexOf('#')));
 const componentDocs = await readComponentDocs({
   repositoryRoot,
-  componentIds: records.map(({ binding }) => binding.binding.slice(0, binding.binding.indexOf('#'))),
+  componentIds,
+  // A guide's links to other families resolve to these pages.
+  docsPages: new Map(records.map((record, index) => [componentIds[index], `?path=/docs/${storyId(record)}--docs`])),
   blocks: blockPages.map((page) => ({
     pattern: page.pattern,
     family: page.family,

@@ -38,27 +38,65 @@ The projections find examples differently:
 
 - The docs component page and the query API read every registered example of
   the component binding.
-- Storybook builds component pages from the React descriptor. Only the
-  examples listed in `canonicalStoryDefinitions` in
-  `apps/react-storybook/src/generate-stories.mjs`, one per family, also appear
-  as stories, so add a new component example there to show it in Storybook.
+- Storybook builds component pages from the React descriptor. A family's Docs
+  page shows the source of every registered example as static text, with the
+  live Default story above the first, and embeds the family's usage guide.
+  Only the examples listed in `canonicalStoryDefinitions` in
+  `apps/react-storybook/src/generate-stories.mjs`, one per family, also run as
+  named stories, so list a new example there only when it must run in
+  Storybook.
 - Blocks are created with `scaffoldPattern`, as `catalog/AGENTS.md` describes.
   Docs and Storybook each show every variant example of a pattern.
 
 ## Write guidance
 
 Narrative guidance belongs under `catalog/guides/`: a `<slug>.json` record
-whose `source` names the `<slug>.md` file. The docs application reads these
-records and renders them; it does not become a second normative source.
+whose `source` names the `<slug>.md` file. The docs application and each
+family's Storybook Docs page read these records and render them; neither
+becomes a second normative source.
 
 Give a component's guide the id `muxui:guide:<component-slug>-usage` and the
 name `<Component> usage`, as in `button-usage.json`. The docs component page
-shows the guide with that id. A guide with any other id, such as
-`control-sizing-usage`, which names no component, appears in the docs only after
-`apps/docs` adds a page route and sidebar entry for it. `src/pages/[guide].astro`,
-`astro.config.mjs`, and `src/components/PageTitle.astro` (its Source link) list
-the current ones, and the docs check fails a shared usage guide that has no page.
-The query API serves every registered guide.
+and the family's Storybook Docs page show the guide with that id. A guide with
+any other id, such as `control-sizing-usage`, which names no component, appears
+in the docs only after `apps/docs` adds a page route and sidebar entry for it.
+`src/pages/[guide].astro`, `astro.config.mjs`, and
+`src/components/PageTitle.astro` (its Source link) list the current ones, and
+the docs check fails a shared usage guide that has no page. The query API
+serves every registered guide.
+
+## Shape a component guide
+
+Write a family's guide at the depth the family needs. When they apply, cover
+these in this order, each under its own heading:
+
+- When to use the family and when to avoid it. These are `intent.useWhen` and
+  `intent.avoidWhen` in the component record, with the alternative named after
+  a semicolon, such as "Navigating to another location; use Link".
+- Which variant or alternative to choose, led by the task rather than the
+  prop.
+- Content constraints, such as how to label the control.
+- One common mistake.
+- An example where it helps, as a registered example the guide names.
+
+Write each fact as one bullet of about two lines or fewer, in plain words and
+without implementation detail. Do not title a section after a page section
+(Usage, Behavior, Examples, Accessibility), because the docs page already
+uses those ids.
+
+## Link to another family
+
+Name an alternative as a link. Write the family's docs path, such as
+`[Checkbox](/components/checkbox/)`. The docs site serves that path as the
+family page. Storybook has no such route, so its Docs page resolves the same
+link to the family's Docs page. A link names a family page, never a section of
+it, so Storybook generation and `pnpm --filter @muxui/docs check:docs` reject a
+fragment, a missing trailing slash, and a family that has no page.
+
+Links within the same guide, such as `[API reference](#api-reference)`, and
+links to external pages stay as written. Relative paths such as `../checkbox/`
+resolve against the page that shows the guide, which differs by surface, so
+they do not reach the same family on both.
 
 ## Verify the projection
 

@@ -8,6 +8,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { guideLinks } from '../src/component-docs.mjs';
 
 const h = React.createElement;
 const appRoot = resolve(import.meta.dirname, '..');
@@ -199,14 +200,25 @@ test('every family Docs page runs the continuous reference sections in order, pr
   }
 });
 
-test('a usage guide shows without its front matter or title, and its headings sit below the page sections', async () => {
-  // Storybook's own Markdown block needs a document at import, so give it one for this test only.
+/** Runs `run` with Storybook's own Markdown block, which needs a document at import, so give it one for the run only. */
+async function withMarkdownBlock(run) {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
   const globals = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator };
   const previous = Object.fromEntries(Object.keys(globals).map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
   try {
     const { Markdown } = await import('@storybook/addon-docs/blocks');
+    await run(Markdown);
+  } finally {
+    for (const [key, descriptor] of Object.entries(previous)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+}
+
+test('a usage guide shows without its front matter or title, and its headings sit below the page sections', async () => {
+  await withMarkdownBlock(async (Markdown) => {
     // Some guide files open with front matter and every one with a title; the shown body keeps neither.
     let withFrontMatter = 0;
     for (const { family, tranche } of manifest.families) {
@@ -235,10 +247,46 @@ test('a usage guide shows without its front matter or title, and its headings si
     assert.ok(shown.querySelector('table'), 'the guide table renders');
     // Only the eleven sections are h2 on the page.
     assert.deepEqual(texts(page.querySelectorAll('h2')), sections.filter(([id]) => id !== 'used-in-blocks' || page.querySelector('#used-in-blocks')).map(([, title]) => title));
-  } finally {
-    for (const [key, descriptor] of Object.entries(previous)) {
-      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
-      else delete globalThis[key];
+  });
+});
+
+test('guide links resolve to Storybook Docs pages and fail on a family without one', () => {
+  const pages = new Map([['muxui:component:checkbox', '?path=/docs/muxui-react-r1-1-checkbox--docs']]);
+  const guide = 'Use [Checkbox](/components/checkbox/), [again](/components/checkbox/), the [API](#api-reference), or [the site](https://example.com/).';
+  assert.deepEqual(guideLinks(guide, pages), { '/components/checkbox/': '?path=/docs/muxui-react-r1-1-checkbox--docs' });
+  assert.deepEqual(guideLinks('No links here.', pages), {});
+  assert.throws(() => guideLinks('[Switch](/components/switch/)', pages), /\/components\/switch\/, which has no Storybook Docs page/u);
+  assert.throws(() => guideLinks('[Checkbox](/components/checkbox)', pages), /must be a family page path/u);
+  assert.throws(() => guideLinks('[Mixed state](/components/checkbox/#mixed-state)', pages), /must be a family page path/u);
+});
+
+test('a guide link to another family opens that family Docs page', async () => {
+  const slugOf = (family) => family.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+  // The Docs page of a family is its first story's group id, taken from the manifest rather than rebuilt from the tranche.
+  const docsPage = (slug) => {
+    const { family } = manifest.families.find(({ family: name }) => slugOf(name) === slug);
+    return `?path=/docs/${manifest.pageIndex.find((page) => page.family === family).stories[0].id.split('--')[0]}--docs`;
+  };
+  await withMarkdownBlock(async (Markdown) => {
+    const linked = new Map();
+    for (const { family, tranche } of manifest.families) {
+      const { default: meta } = await import(`../.storybook/generated/${tranche.replaceAll('.', '-').toLowerCase()}-${slugOf(family)}.stories.mjs`);
+      const entry = meta.parameters.muxuiReference;
+      if (entry.guide === null) continue;
+      const slugs = [...read(entry.guide.source).matchAll(/\]\(\/components\/([a-z0-9-]+)\/\)/gu)].map(([, slug]) => slug);
+      const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks: { ...blocks, Markdown } }))).window.document;
+      const anchors = [...page.querySelectorAll('[data-guide-id] a')];
+      assert.deepEqual(
+        anchors.filter((node) => !node.getAttribute('href').startsWith('#') && !node.getAttribute('href').startsWith('http')).map((node) => node.getAttribute('href')),
+        slugs.map(docsPage),
+        `${family} guide links`,
+      );
+      if (slugs.length > 0) linked.set(family, anchors.filter((node) => node.getAttribute('href').startsWith('?path=')).map((node) => [node.textContent, node.getAttribute('href')]));
     }
-  }
+    // The pilot families link to their alternatives by name.
+    assert.deepEqual(linked.get('Checkbox'), [['CheckboxGroup', docsPage('checkbox-group')]]);
+    assert.deepEqual(linked.get('Switch'), [['Checkbox', docsPage('checkbox')], ['SwitchField', docsPage('switch-field')]]);
+    assert.deepEqual(linked.get('Select'), [['SelectNative', docsPage('select-native')], ['ComboBox', docsPage('combo-box')]]);
+    assert.deepEqual(linked.get('SelectNative'), [['Select', docsPage('select')], ['ComboBox', docsPage('combo-box')]]);
+  });
 });
