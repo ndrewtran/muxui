@@ -296,7 +296,7 @@
 }
 
 .muxui-text-editor__btn:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
@@ -407,7 +407,7 @@
 }
 
 .muxui-text-editor__select:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
@@ -507,7 +507,7 @@
 }
 
 .muxui-text-editor__selection-input:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
 }
 

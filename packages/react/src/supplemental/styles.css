@@ -2341,7 +2341,7 @@
 
 .muxui-sidebar__search-input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--muxui-semantic-color-color-60);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-ring);
 }
 
 
@@ -2404,7 +2404,7 @@
 }
 
 .muxui-sidebar__nav-link:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
@@ -2574,7 +2574,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-sidebar__nav-toggle:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
@@ -3067,7 +3067,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-sidebar__search-button:focus-visible {
-  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
 }
 
@@ -3162,7 +3162,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
   /* The rule above would otherwise outrank the base :focus ring. */
   :scope .muxui-sidebar__search-input:focus {
-    box-shadow: 0 0 0 2px var(--muxui-semantic-color-color-60);
+    box-shadow: 0 0 0 2px var(--muxui-semantic-focus-ring);
   }
 }
 
