@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:command-palette-async-commands-react",
+  "kind": "example",
+  "name": "CommandPalette commands that take time",
+  "summary": "Show a running command on its row, keep the palette open when a command fails with the failure and a retry cue on the row, and close it when a command succeeds.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:command-palette#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 4
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/command-palette/examples/react/async-commands.tsx"
+}

@@ -1,6 +1,24 @@
 # AlertDialog usage
 
-Use AlertDialog to confirm an action that cannot be undone or that needs explicit acknowledgement. It is a modal alert, and its guidance lists routine choices, non-blocking notices, and forms with several fields as cases to avoid.
+Use AlertDialog to confirm an action that cannot be undone or that needs explicit acknowledgement. It is a modal alert, so keep it for decisions that need to stop the user.
+
+## AlertDialog or an alternative
+
+- Use AlertDialog when the user must confirm before the action goes ahead.
+- Use [Dialog](/components/dialog/) for a task with several fields or a longer flow.
+- Use [Toast](/components/toast/) to report a result without blocking the task.
+
+## Writing the confirmation
+
+- Name the object in the title, such as Delete Quarterly report?
+- State the consequence in the description, such as The report and its 12 comments are deleted.
+- Label the confirm action with the verb and the object, such as Delete report, beside a Cancel.
+- Give a destructive confirm action the `danger` variant, as [Button](/components/button/) does for Delete in a confirmation. The Close part with text renders as a `neutral` Button, which suits Cancel.
+- A confirmation that destroys nothing keeps the default `primary` variant.
+
+## Common mistake
+
+Asking Are you sure? with OK and Cancel. The user cannot tell what is lost or what OK does. Say it in the title and on the confirm action instead.
 
 ## Cancel and confirm
 

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:activity-usage",
+  "kind": "guide",
+  "name": "Activity usage",
+  "summary": "Use Activity through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "activity",
+    "react",
+    "status"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/activity-usage.md"
+}

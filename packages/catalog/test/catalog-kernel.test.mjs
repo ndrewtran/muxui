@@ -282,7 +282,7 @@ test('examples section orders by authored preference, not artifact ID', () => {
   // popover-anchored-react sorts before popover-basic-react by ID but has preference 1.
   assert.deepEqual(
     response.data.value.map(({ id }) => id),
-    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react', 'muxui:example:popover-non-dismissable-react'],
+    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react', 'muxui:example:popover-non-dismissable-react', 'muxui:example:popover-modes-react'],
   );
 });
 

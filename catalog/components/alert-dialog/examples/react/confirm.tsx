@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { AlertDialog, Button } from '@muxui/react';
 
 // Stands in for the application's request. The first request fails so both outcomes can be tried.
-function deleteItem(attempt: number) {
+function deleteReport(attempt: number) {
   return new Promise<void>((resolve, reject) => {
     setTimeout(() => (attempt === 1 ? reject(new Error('The server did not respond.')) : resolve()), 800);
   });
@@ -28,11 +28,11 @@ export function ConfirmAlertDialogExample() {
     setError(null);
     try {
       attempts.current += 1;
-      await deleteItem(attempts.current);
-      setOutcome('The item was deleted.');
+      await deleteReport(attempts.current);
+      setOutcome('Quarterly report was deleted.');
       setOpen(false);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The item was not deleted.');
+      setError(reason instanceof Error ? reason.message : 'Quarterly report was not deleted.');
     } finally {
       setPending(false);
     }
@@ -41,16 +41,16 @@ export function ConfirmAlertDialogExample() {
   return (
     <>
       <AlertDialog.Root open={open} onOpenChange={handleOpenChange}>
-        <AlertDialog.Trigger>Delete item</AlertDialog.Trigger>
+        <AlertDialog.Trigger>Delete report</AlertDialog.Trigger>
         <AlertDialog.Backdrop>
           <AlertDialog.Popup>
             <AlertDialog.Content>
-              <AlertDialog.Title>Delete item?</AlertDialog.Title>
-              <AlertDialog.Description>This action cannot be undone.</AlertDialog.Description>
+              <AlertDialog.Title>Delete Quarterly report?</AlertDialog.Title>
+              <AlertDialog.Description>The report and its 12 comments are deleted. This cannot be undone.</AlertDialog.Description>
               {error === null ? null : <p>{error}</p>}
               <AlertDialog.Actions>
                 <AlertDialog.Close disabled={pending}>Cancel</AlertDialog.Close>
-                <Button pending={pending} onActivate={confirm}>Delete</Button>
+                <Button variant="danger" pending={pending} onActivate={confirm}>Delete report</Button>
               </AlertDialog.Actions>
             </AlertDialog.Content>
           </AlertDialog.Popup>

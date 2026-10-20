@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:popover-modes-react",
+  "kind": "example",
+  "name": "Popover modes",
+  "summary": "Keep details non-modal so the page stays usable, and keep the default modal Popover for a small interaction the user finishes, such as a rename.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:popover#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/popover/examples/react/modes.tsx"
+}

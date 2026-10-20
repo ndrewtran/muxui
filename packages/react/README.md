@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:d48064de645c7ca3089e370deb5d6ee2f002e3d5d6865a346d744c53dc89e299 -->
+<!-- @generated-content-sha256: sha256:6c9f11c8818899775e839d4c5067b1b9c420d3d4a05e998b46ae97350072f385 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -395,7 +395,7 @@ Public parts: `trigger`, `root`, `content`.
 
 ### Tooltip
 
-- A Tooltip opens on pointer hover and on keyboard focus, after its delay.
+- A Tooltip opens on pointer hover after its delay, and opens at once on keyboard focus.
 - Only one Tooltip is open at a time.
 - Escape closes the open Tooltip.
 - A Tooltip renders in a portal.

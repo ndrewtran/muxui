@@ -10,7 +10,9 @@
       "Confirming an action that cannot be undone or needs explicit acknowledgement."
     ],
     "avoidWhen": [
-      "For routine choices, non-blocking notices, or forms with several fields."
+      "For routine choices that need no confirmation.",
+      "For a notice that does not block the task; use Toast.",
+      "For collecting several fields or running a longer task; use Dialog."
     ]
   },
   "anatomy": [
@@ -33,7 +35,7 @@
   "accessibility": {
     "nameRequired": true,
     "obligations": [
-      "Escape and backdrop dismissal follow React Aria modal semantics.",
+      "Escape closes the dialog, and pressing the backdrop does not.",
       "Close returns focus to the trigger."
     ]
   },

@@ -10,7 +10,8 @@
       "Providing fast keyboard access to a broad or frequently used command set."
     ],
     "avoidWhen": [
-      "For a short list of visible actions that does not need search."
+      "For a short list of visible actions that does not need search; use Menu.",
+      "For filtering the values of a form field; use ComboBox."
     ]
   },
   "anatomy": [
