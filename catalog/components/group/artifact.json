@@ -7,10 +7,14 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Labeling or grouping related controls"
+      "Labeling or grouping related controls",
+      "Laying out a row of related controls that wraps to fit, under one name"
     ],
     "avoidWhen": [
-      "Replacing a form fieldset with a legend"
+      "Replacing a form fieldset with a legend",
+      "Joining Buttons into one attached or vertical strip; use ButtonGroup.",
+      "Choices that share a selected value; use CheckboxGroup or RadioGroup.",
+      "Moving between controls with the arrow keys; use Toolbar."
     ]
   },
   "anatomy": [

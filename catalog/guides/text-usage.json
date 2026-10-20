@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:text-usage",
+  "kind": "guide",
+  "name": "Text usage",
+  "summary": "Portable usage guidance for Text.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "text",
+    "react",
+    "typography"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/text-usage.md"
+}

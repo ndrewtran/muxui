@@ -4,13 +4,13 @@ export function AttachedButtonGroupExample() {
   return (
     <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
       <ButtonGroup attached aria-label="Document actions">
-        <Button>Save</Button>
-        <Button>Share</Button>
-        <Button disabled>Export</Button>
+        <Button variant="neutral">Copy</Button>
+        <Button variant="neutral">Share</Button>
+        <Button variant="neutral" disabled>Export</Button>
       </ButtonGroup>
       <ButtonGroup attached orientation="vertical" aria-label="Page order">
-        <Button>Move up</Button>
-        <Button>Move down</Button>
+        <Button variant="neutral">Move up</Button>
+        <Button variant="neutral">Move down</Button>
       </ButtonGroup>
     </div>
   );

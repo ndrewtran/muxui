@@ -5,7 +5,7 @@
   "name": "DropZone",
   "summary": "Accepts files dragged or pasted into a bounded drop target.",
   "lifecycle": "experimental",
-  "intent": { "useWhen": ["Collecting files by drag and drop or paste"], "avoidWhen": ["Selecting a file from a native picker only"] },
+  "intent": { "useWhen": ["Collecting files by drag and drop or paste", "An upload area that also offers a clearly named picker, with a FileTrigger inside the drop area"], "avoidWhen": ["Selecting a file from a native picker only; use FileTrigger"] },
   "anatomy": ["root", "content"],
   "states": ["idle", "drop-target", "focused", "disabled"],
   "accessibility": { "nameRequired": false, "obligations": ["Expose a keyboard- and pointer-operable drop target.", "Expose disabled state and focus indication."] },

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:button-group-usage",
+  "kind": "guide",
+  "name": "ButtonGroup usage",
+  "summary": "Portable usage guidance for ButtonGroup.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "button-group",
+    "react",
+    "actions"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/button-group-usage.md"
+}

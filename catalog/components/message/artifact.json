@@ -8,10 +8,13 @@
   "category": "ai-agent",
   "intent": {
     "useWhen": [
-      "Present caller-updated conversation content with compact actions, source disclosure and follow-up callbacks."
+      "Showing one turn of a conversation, with its author, content, and optional actions, sources, and follow-ups.",
+      "Showing content that the application updates, such as a reply as it arrives."
     ],
     "avoidWhen": [
-      "Executing remote tasks, managing backend state or simulating assistant processing."
+      "Executing remote tasks, managing backend state or simulating assistant processing.",
+      "Writing the next message; use PromptComposer.",
+      "Showing a short notice that is not part of a conversation; use Toast."
     ]
   },
   "anatomy": [

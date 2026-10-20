@@ -8,10 +8,14 @@
   "category": "ai-agent",
   "intent": {
     "useWhen": [
-      "Compose local multiline messages with native validation and caller-owned send, model, file and suggestion actions."
+      "Writing a message that the application sends, with Enter to send and Shift+Enter for a new line.",
+      "Offering optional suggestions, attachments, a model choice, or dictation beside the text, each wired by the application."
     ],
     "avoidWhen": [
-      "Executing remote tasks, managing backend state or simulating assistant processing."
+      "Executing remote tasks, managing backend state or simulating assistant processing.",
+      "Entering multiline text that is saved with a form; use TextArea.",
+      "Editing formatted content; use TextEditor.",
+      "Showing messages that were already sent; use Message."
     ]
   },
   "anatomy": [

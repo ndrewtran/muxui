@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:data-diff-usage",
+  "kind": "guide",
+  "name": "DataDiff usage",
+  "summary": "Portable usage guidance for DataDiff.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "data-diff",
+    "react",
+    "review"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/data-diff-usage.md"
+}

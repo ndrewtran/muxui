@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:icon-button-prominence-react",
+  "kind": "example",
+  "name": "IconButton prominence in context",
+  "summary": "Keep supporting icons ghost, give one local primary action primary, and place a destructive icon beside the item it removes.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:icon-button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/icon-button/examples/react/prominence.tsx"
+}

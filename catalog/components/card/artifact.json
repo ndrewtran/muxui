@@ -7,10 +7,15 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Grouping related content, metadata, and actions into a single surface."
+      "Grouping related content, metadata, and actions into a single surface.",
+      "Making a whole item selectable or activatable as one control, with Card.Button."
     ],
     "avoidWhen": [
-      "For page-level layout, dense data tables, or a standalone action."
+      "For page-level layout.",
+      "Dense rows and columns of data; use Table.",
+      "A standalone action; use Button.",
+      "A section the user expands and collapses; use Disclosure.",
+      "Navigating to another page from the card; use Link inside Card.Root."
     ]
   },
   "anatomy": [

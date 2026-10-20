@@ -7,11 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "A compact action is represented by one icon, such as close, search, or settings."
+      "A compact action is represented by one icon, such as close, search, or settings.",
+      "A supporting action in a toolbar, field, or row, where the surrounding content shows what it affects."
     ],
     "avoidWhen": [
       "The action needs visible text; use Button.",
-      "Navigating to a destination; use Link."
+      "Navigating to a destination; use Link.",
+      "Switching a mode on or off, with a pressed state; use ToggleButton."
     ]
   },
   "anatomy": [

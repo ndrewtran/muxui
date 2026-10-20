@@ -3,7 +3,7 @@
   "id": "muxui:example:button-group-attached-react",
   "kind": "example",
   "name": "Attached ButtonGroup",
-  "summary": "Join Buttons into one horizontal and one vertical strip, with one child disabled by its own prop.",
+  "summary": "Join tightly related peer Buttons into one horizontal and one vertical strip, with one child disabled by its own prop.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:button-group#web.react",

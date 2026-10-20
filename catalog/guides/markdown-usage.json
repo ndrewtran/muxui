@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:markdown-usage",
+  "kind": "guide",
+  "name": "Markdown usage",
+  "summary": "Portable usage guidance for Markdown.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "markdown",
+    "react",
+    "content"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/markdown-usage.md"
+}

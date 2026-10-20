@@ -7,10 +7,13 @@
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Presenting an image while preserving native image dimensions, loading, and events."
+      "Presenting an image while preserving native image dimensions, loading, and events.",
+      "Showing a photo, screenshot, diagram, or illustration in a box with a declared width and height."
     ],
     "avoidWhen": [
-      "Cropping, editing, or processing image content."
+      "Cropping, editing, or processing image content.",
+      "Showing a compact picture of a person or workspace; use Avatar.",
+      "Opening a larger view of a picture; use Lightbox."
     ]
   },
   "anatomy": [

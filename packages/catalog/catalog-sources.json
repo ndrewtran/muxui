@@ -1636,6 +1636,82 @@
     {
       "family": "guide",
       "path": "catalog/guides/text-area-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/avatar/examples/react/fallbacks.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/card/examples/react/surfaces.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/drop-zone/examples/react/with-picker.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/file-trigger/examples/react/staged.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/icon-button/examples/react/prominence.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/image/examples/react/fit.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/markdown/examples/react/host-page.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-editor/examples/react/advanced.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/avatar-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/button-group-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/card-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/code-block-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/data-diff-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/image-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/markdown-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/message-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/prompt-composer-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/text-editor-usage.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/text-usage.json"
     }
   ]
 }

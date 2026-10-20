@@ -5,7 +5,7 @@
   "name": "FileTrigger",
   "summary": "Opens a native file picker and reports selected files.",
   "lifecycle": "experimental",
-  "intent": { "useWhen": ["Selecting one or more local files"], "avoidWhen": ["Receiving files by drag and drop"] },
+  "intent": { "useWhen": ["Selecting one or more local files", "A clearly named picker, alone for compact selection or inside a DropZone for an upload area"], "avoidWhen": ["Receiving files by drag and drop; use DropZone", "Uploading, tracking, or retrying files; FileTrigger only reports the selection, and the application owns the transfer"] },
   "anatomy": ["root", "input"],
   "states": ["idle", "focused", "disabled"],
   "accessibility": { "nameRequired": false, "obligations": ["Expose a keyboard-operable file picker trigger.", "Keep the native input hidden from the visual layout while retaining its native picker semantics."] },

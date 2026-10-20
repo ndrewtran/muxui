@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:markdown-host-page-react",
+  "kind": "example",
+  "name": "Markdown under a host heading",
+  "summary": "Start an embedded document below the host page's headings, and see which syntax Markdown keeps and which it leaves as text or drops.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:markdown#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/markdown/examples/react/host-page.tsx"
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:prompt-composer-usage",
+  "kind": "guide",
+  "name": "PromptComposer usage",
+  "summary": "Portable usage guidance for PromptComposer.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "prompt-composer",
+    "react",
+    "conversation"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/prompt-composer-usage.md"
+}

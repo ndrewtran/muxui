@@ -1,7 +1,9 @@
 import { Markdown } from '@muxui/react/markdown';
 
+// Heading depth is rendered as written, so this document starts at ## under the host page's h1.
+// Markdown adds no heading ids, so the #summary link needs an element with that id on the host page.
 const source = [
-  '# Release notes',
+  '## Release notes',
   '',
   'Read the [changelog](/changelog) or [jump to the summary](#summary).',
   '',
