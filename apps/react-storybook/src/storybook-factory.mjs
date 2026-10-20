@@ -129,7 +129,7 @@ const TEXT_SELECT_PROPS = Object.freeze({
   as: ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label'],
 });
 
-// A family whose public type narrows a shared enumeration lists its own choices here.
+// A family whose public type narrows or widens a shared enumeration lists its own choices here.
 const FAMILY_SELECT_PROPS = Object.freeze({
   Button: BUTTON_SELECT_PROPS,
   IconButton: BUTTON_SELECT_PROPS,
@@ -138,6 +138,8 @@ const FAMILY_SELECT_PROPS = Object.freeze({
   Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
   ToggleButtonGroup: { selectionMode: ['single', 'multiple'] },
   Sidebar: { status: ['online', 'offline'] },
+  // SelectNative also admits a positive number, the native list's visible row count (SelectNativeProps.size).
+  SelectNative: { size: [...SELECT_PROPS.size, 4] },
 });
 
 const callbackType = { summary: 'MuxUI callback' };

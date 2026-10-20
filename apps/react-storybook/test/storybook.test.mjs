@@ -371,6 +371,7 @@ const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/gener
 // Truncated image data: the browser fires an error event instead of loading it.
 const AVATAR_FAILING_SRC = 'data:image/png;base64,AAAA';
 const supplementalTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/supplemental.d.ts'), 'utf8');
+const selectNativeTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/select-native.d.ts'), 'utf8');
 
 /** The string members of an exported union, read from the generated public declarations. */
 function declaredUnion(source, name) {
@@ -671,6 +672,16 @@ test('controls offer only what the public types admit and match their value kind
   assert.equal(controls('TextArea').rows.control.type, 'number');
   assert.equal(controls('Table').rows.control, 'object');
   assert.deepEqual(controls('Sidebar').status.options, ['online', 'offline']);
+  // SelectNative's size is a visual size or a positive native row count; every other family offers the visual sizes alone.
+  assert.match(selectNativeTypes, /size\?: SelectNativeVisualSize \| number;/u);
+  const [rowCount, ...unexpected] = controls('SelectNative').size.options.filter((option) => typeof option === 'number');
+  assert.deepEqual(unexpected, []);
+  assert.ok(Number.isInteger(rowCount) && rowCount > 0, 'the offered native size is a positive integer');
+  assert.deepEqual(controls('SelectNative').size.options.filter((option) => typeof option === 'string'), declaredUnion(selectNativeTypes, 'SelectNativeVisualSize'));
+  assert.deepEqual(controls('Avatar').size.options, ['sm', 'md', 'lg']);
+  const nativeList = new JSDOM(renderToStaticMarkup(renderFamily('SelectNative', { size: rowCount }))).window.document.querySelector('select');
+  assert.equal(nativeList.getAttribute('size'), String(rowCount));
+  assert.equal(nativeList.getAttribute('data-size'), 'md', 'a native row count keeps the medium visual size');
   // A control cannot edit a function, so those props stay off.
   for (const [family, name] of [['CommandPalette', 'filter'], ['CommandPalette', 'close'], ['TagSelect', 'getItemLabel'], ['Lightbox', 'renderContent'], ['InputTags', 'validate']]) {
     assert.equal(controls(family)[name].control, false, `${family}.${name}`);
