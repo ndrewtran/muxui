@@ -22,7 +22,7 @@ A Toolbar holds commands of equal weight, so give its Buttons no variant. Keep t
 
 Set `orientation` to `vertical` to stack the controls in a column, each filling the Toolbar's width, with Up and Down moving between them.
 
-The application owns the Toolbar's width and where it sits. A Toolbar is a block, so in a block parent it fills the parent's width, and in a flex row it takes the width of its controls. Give the parent a width, as the Vertical controls example does, and the controls stretch to it.
+The application owns the Toolbar's width and where it sits. A Toolbar is a block, so in a block parent it fills the parent's width, and in a flex row it takes the width of its controls. Give the parent a width, as the vertical Toolbar in the Toolbar with a separate action example does, and the controls stretch to it.
 
 ## Content
 

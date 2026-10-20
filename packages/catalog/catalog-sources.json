@@ -1735,10 +1735,6 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/toolbar/examples/react/vertical-controls.example.json"
-    },
-    {
-      "family": "example",
       "path": "catalog/components/tree/examples/react/open-items.example.json"
     }
   ]
