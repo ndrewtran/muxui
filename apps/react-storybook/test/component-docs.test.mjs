@@ -63,6 +63,9 @@ function guideBody(raw) {
   return afterFrontMatter.slice(titleAt + 1).join('\n').trim();
 }
 
+/** The body of a guide's `## <heading>` section, split on the heading lines rather than by the projection under test. */
+const guideSection = (raw, heading) => raw.split(/^## /mu).find((part) => part.startsWith(`${heading}\n`)).slice(heading.length + 1).trim();
+
 /** The generated story modules the Docs pages read, one per family, with the catalog record each projects. */
 async function families() {
   return Promise.all(manifest.families.map(async ({ family, tranche }) => {
@@ -81,6 +84,10 @@ test('every family Docs page runs the continuous reference sections in order, pr
   const blockStories = manifest.pageIndex.filter(({ family }) => manifest.patterns.some((pattern) => pattern.family === family)).flatMap(({ stories }) => stories);
   const all = await families();
   assert.equal(all.length, manifest.count);
+  // The shared accessibility guide, whose support and verification sections every family page carries.
+  const accessibilityGuide = canonicalCatalog.getArtifact({ id: 'muxui:guide:accessibility', platform: 'web.react', detail: 'full' }).data.artifact;
+  const accessibilityFile = read(accessibilityGuide.source.content);
+  assert.equal(`sha256:${createHash('sha256').update(accessibilityFile).digest('hex')}`, accessibilityGuide.source.contentDigest, 'the accessibility guide file matches its record');
 
   for (const { family, slug, meta, artifact, usedIn, examples } of all) {
     const entry = meta.parameters.muxuiReference;
@@ -145,6 +152,20 @@ test('every family Docs page runs the continuous reference sections in order, pr
       `${family} binding accessibility`,
     );
 
+    // The guide's support status and verification follow the family's obligations, word for word from the guide file, with a link to all of it.
+    const shared = section('accessibility').querySelector('[data-shared-guide]');
+    assert.equal(shared.getAttribute('data-shared-guide'), accessibilityGuide.id, `${family} shared accessibility guide`);
+    assert.equal(section('accessibility').lastElementChild, shared, `${family} shared accessibility guide comes after the family obligations`);
+    assert.deepEqual(texts(shared.querySelectorAll('h3')), ['Support status', 'Verification'], `${family} shared accessibility headings`);
+    assert.deepEqual(
+      texts(shared.querySelectorAll('[data-block="markdown"]')),
+      ['Support status', 'Verification'].map((heading) => guideSection(accessibilityFile, heading)),
+      `${family} shared accessibility text`,
+    );
+    const guideCaption = shared.querySelector('.muxui-docs-caption');
+    assert.equal(guideCaption.textContent, `Full guide: ${accessibilityGuide.source.content}`, `${family} shared accessibility caption`);
+    assert.equal(guideCaption.querySelector('a').getAttribute('href'), githubUrl(accessibilityGuide.source.content), `${family} link to the full accessibility guide`);
+
     // Examples: the canonical examples after the first, each with its exact source.
     assert.deepEqual(
       texts(section('examples').querySelectorAll('pre')),
@@ -205,6 +226,16 @@ test('every family Docs page runs the continuous reference sections in order, pr
 });
 
 /**
+ * The Docs page as static markup, under the theme and style cache that Storybook's own Markdown block needs for the
+ * code spans every page now shows. `extra` replaces the stand-in blocks, such as with the real Markdown.
+ */
+const staticDocs = (entry, extra = {}) => new JSDOM(renderToStaticMarkup(h(
+  CacheProvider,
+  { value: createCache({ key: 'muxui-static' }) },
+  h(ThemeProvider, { theme: convert(buildTheme('light')) }, h(ComponentDocs, { entry, blocks: { ...blocks, ...extra } })),
+))).window.document;
+
+/**
  * Runs `run` with Storybook's own blocks, which need a document at import, so give them one for the run only.
  * The window is a standalone page unless one is given, such as a manager's preview frame.
  */
@@ -242,7 +273,7 @@ test('a usage guide shows without its front matter or title, and its headings si
     const { default: meta } = await import('../.storybook/generated/r1-3-virtualizer.stories.mjs');
     const raw = read(meta.parameters.muxuiReference.guide.source);
 
-    const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry: meta.parameters.muxuiReference, blocks: { ...blocks, Markdown } }))).window.document;
+    const page = staticDocs(meta.parameters.muxuiReference, { Markdown });
     const shown = page.querySelector('[data-guide-id]');
     assert.equal(shown.querySelectorAll('h1, h2, h3').length, 1, 'only the guidance heading remains above h4');
     assert.equal(shown.querySelector('h3').textContent, 'Related usage guidance');
@@ -252,6 +283,21 @@ test('a usage guide shows without its front matter or title, and its headings si
     assert.ok(shown.querySelector('table'), 'the guide table renders');
     // Only the eleven sections are h2 on the page.
     assert.deepEqual(texts(page.querySelectorAll('h2')), sections.filter(([id]) => id !== 'used-in-blocks' || page.querySelector('#used-in-blocks')).map(([, title]) => title));
+  });
+});
+
+test('the shared accessibility sections render through Storybook\'s own Markdown as the guide wrote them', async () => {
+  await withStorybookBlocks(async ({ Markdown }) => {
+    const raw = read('catalog/guides/accessibility.md');
+    const shared = staticDocs(await familyEntry('Dialog'), { Markdown }).querySelector('[data-shared-guide]');
+    // One paragraph and one h3 per section, with the guide's code span kept, and no guide heading brought along.
+    assert.deepEqual(texts(shared.querySelectorAll('h3')), ['Support status', 'Verification']);
+    assert.deepEqual(
+      texts(shared.querySelectorAll('p:not(.muxui-docs-caption)')).map((text) => text.replace(/\s+/gu, ' ')),
+      ['Support status', 'Verification'].map((heading) => guideSection(raw, heading).replaceAll('`', '').replace(/\s+/gu, ' ')),
+    );
+    assert.deepEqual(texts(shared.querySelectorAll('code')), ['S1.0']);
+    assert.equal(shared.querySelectorAll('h1, h2, h4').length, 0);
   });
 });
 
@@ -289,7 +335,7 @@ test('a guide link to another family names that family Docs page in the manager'
       const entry = await familyEntry(family);
       if (entry.guide === null) continue;
       const slugs = linkedFamilies(read(entry.guide.source));
-      const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks: { ...blocks, Markdown } }))).window.document;
+      const page = staticDocs(entry, { Markdown });
       const anchors = [...page.querySelectorAll('[data-guide-id] a')];
       const hrefs = anchors.map((node) => node.getAttribute('href')).filter((href) => !href.startsWith('#') && !href.startsWith('http'));
       assert.deepEqual([...new Set(hrefs)], slugs.map((slug) => `?path=/docs/${docsId(slug)}`), `${family} guide links`);
@@ -424,7 +470,7 @@ test('the family link forms the parser rejects are not ones the real renderer re
     const frame = managerFrame();
     await withStorybookBlocks(async ({ Markdown }) => {
       const entry = await guideEntry(markdown, { '/components/checkbox/': `?path=/docs/${docsId('checkbox')}` });
-      const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks: { ...blocks, Markdown } }))).window.document;
+      const page = staticDocs(entry, { Markdown });
       const resolved = [...page.querySelectorAll('[data-guide-id] a')].filter((node) => node.getAttribute('href')?.startsWith('?path='));
       assert.deepEqual(resolved, [], `${form} is not a resolved link`);
     }, frame);

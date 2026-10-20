@@ -48,11 +48,18 @@ record through the canonical query API and `../component-reference.mjs`, and
 embeds the result in the family's story module as the `muxuiReference`
 parameter, so the page authors no per-family text. The live preview stays the
 adapter Default story and the API reference stays Storybook's Controls table;
-canonical examples appear as static source, not as extra stories.
+canonical examples appear as static source, not as extra stories. The
+Accessibility section also carries the shared accessibility guide's Support
+status and Verification sections, cut from `catalog/guides/accessibility.md` by
+heading (`accessibilityGuideSections` in `../component-reference.mjs`), with a
+link to the full guide. Storybook has no guide pages, so the link is the guide's
+source, as for a family's usage guide. The docs site renders the same file whole
+at `/accessibility/`, and `apps/docs/scripts/check-shared-guidance.mjs` holds
+that page to the same words.
 `test/component-docs.test.mjs` renders every family's entry and checks the
 section order and each projected fact against the catalog. An edit to a file the
-page embeds (a family's catalog record, canonical example or usage guide, a
-pattern record, or `apps/component-reference.mjs`) plans Storybook generation
+page embeds (a family's catalog record, canonical example or usage guide, the
+accessibility guide, a pattern record, or `apps/component-reference.mjs`) plans Storybook generation
 and that test, not the browser audit.
 
 ```sh

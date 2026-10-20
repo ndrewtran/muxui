@@ -102,6 +102,38 @@ export function usageGuideId(componentId) {
   return `muxui:guide:${componentId.slice(componentId.lastIndexOf(':') + 1)}-usage`;
 }
 
+/** The id of the shared accessibility guide, the one author of the support and verification text below. */
+export const accessibilityGuideId = 'muxui:guide:accessibility';
+
+/** The guide sections a family page carries beside its own obligations. The guide keeps the rest. */
+const familyAccessibilityHeadings = ['Support status', 'Verification'];
+
+/**
+ * The shared accessibility guide's support status (what is claimed, proved and deferred) and verification (what the
+ * consumer tests), cut from the guide's Markdown by heading so the guide stays their only author. A family page shows
+ * them under its obligations and links the full guide. Fails when the guide drops or repeats one of the headings.
+ * @param {string} markdown The guide file.
+ * @returns {{ heading: string, markdown: string }[]} In page order, each without its heading line.
+ */
+export function accessibilityGuideSections(markdown) {
+  /** @type {{ heading: string, lines: string[] }[]} */
+  const sections = [];
+  let fenced = false;
+  for (const line of markdown.split('\n')) {
+    if (/^\s*(?:```|~~~)/u.test(line)) fenced = !fenced;
+    const heading = fenced ? undefined : /^## (.+?)\s*$/u.exec(line)?.[1];
+    if (heading !== undefined) sections.push({ heading, lines: [] });
+    else sections.at(-1)?.lines.push(line);
+  }
+  return familyAccessibilityHeadings.map((heading) => {
+    const matches = sections.filter((section) => section.heading === heading);
+    if (matches.length !== 1) throw new Error(`The accessibility guide must have exactly one "${heading}" section, found ${matches.length}.`);
+    const body = matches[0].lines.join('\n').trim();
+    if (body === '') throw new Error(`The accessibility guide's "${heading}" section is empty.`);
+    return { heading, markdown: body };
+  });
+}
+
 /**
  * @param {readonly TokenRequirement[]} requirements
  * @returns {{ prefix?: string, tokens: readonly TokenRequirement[] }[]}

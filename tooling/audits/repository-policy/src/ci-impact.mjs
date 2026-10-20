@@ -27,6 +27,8 @@ const componentReferencePath = 'apps/component-reference.mjs';
 const guideLinksPath = 'apps/guide-links.mjs';
 // A family's own usage guide, which its Storybook Docs page shows: `<family-slug>-usage.md` and its record.
 const familyUsageGuidePath = /^catalog\/guides\/([a-z0-9-]+)-usage\.(?:md|json)$/u;
+// The shared accessibility guide, whose support status and verification sections every family's Docs page shows.
+const accessibilityGuidePath = /^catalog\/guides\/accessibility\.(?:md|json)$/u;
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
 const tailwindFixture = 'tests/fixtures/tailwind-consumer';
 
@@ -1434,13 +1436,15 @@ export async function buildPullRequestImpact({
     // Guides compile into the catalog that @muxui/tooling queries and renders,
     // and docs renders every guide. No renderer or Storybook page runs a guide,
     // so per-family usage guides need no family route. A family's own usage
-    // guide is shown on its Storybook Docs page, which plans the Docs page test.
+    // guide is shown on its Storybook Docs page, which plans the Docs page test, and so is the accessibility
+    // guide on every family page.
     if (path.startsWith('catalog/guides/')) {
       plan.catalog = true;
       plan.docs = true;
       plan.packageChecks.add('@muxui/tooling');
       const usageGuide = familyUsageGuidePath.exec(path);
       if (usageGuide && recordForSlug(records, usageGuide[1])) addComponentDocsProof(plan);
+      if (accessibilityGuidePath.test(path)) addComponentDocsProof(plan);
       plan.reasons.push(`${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
       continue;
     }

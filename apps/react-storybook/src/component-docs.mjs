@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { posix, resolve } from 'node:path';
-import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { accessibilityGuideId, accessibilityGuideSections, componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 import { linkedFamilies } from '../../guide-links.mjs';
 
 /**
@@ -15,7 +15,8 @@ import { linkedFamilies } from '../../guide-links.mjs';
  * The generator embeds each entry in its family's story module as the
  * `muxuiReference` parameter, so the browser reads plain JSON and never the
  * catalog. Nothing here is authored: every string comes from the catalog
- * record, an example file, a guide file, or the renderer descriptor.
+ * record, an example file, a guide file, or the renderer descriptor. Every
+ * entry also carries the same sections of the shared accessibility guide.
  */
 
 // The workspace root declares @muxui/catalog, the same canonical query API the docs application reads.
@@ -75,6 +76,23 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
   const installationGuide = posix.join(posix.dirname(packageFacts.manifestPath), 'README.md');
   if (!existsSync(resolve(repositoryRoot, installationGuide))) throw new Error(`The React package installation guidance is missing: ${installationGuide}.`);
   const text = (path) => readFile(resolve(repositoryRoot, path), 'utf8');
+  /** A guide's record and file, which must agree on the file's digest. */
+  const readGuide = async (guideId) => {
+    const { artifact: record } = detail({ id: guideId });
+    const body = await text(record.source.content);
+    if (record.source.contentDigest !== undefined && `sha256:${createHash('sha256').update(body).digest('hex')}` !== record.source.contentDigest) {
+      throw new Error(`${guideId} source content does not match its catalog digest.`);
+    }
+    return { record, body };
+  };
+  if (!guides.has(accessibilityGuideId)) throw new Error(`The canonical catalog has no ${accessibilityGuideId} guide.`);
+  const accessibility = await readGuide(accessibilityGuideId);
+  const accessibilityGuide = {
+    id: accessibilityGuideId,
+    name: accessibility.record.name,
+    source: accessibility.record.source.content,
+    sections: accessibilityGuideSections(accessibility.body),
+  };
   const entries = new Map();
   for (const id of componentIds) {
     const { artifact, usedIn = [] } = detail({ id });
@@ -85,11 +103,7 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
     let guide = null;
     const guideId = usageGuideId(id);
     if (guides.has(guideId)) {
-      const { artifact: record } = detail({ id: guideId });
-      const body = await text(record.source.content);
-      if (record.source.contentDigest !== undefined && `sha256:${createHash('sha256').update(body).digest('hex')}` !== record.source.contentDigest) {
-        throw new Error(`${guideId} source content does not match its catalog digest.`);
-      }
+      const { record, body } = await readGuide(guideId);
       const markdown = guideMarkdown(body);
       guide = { id: guideId, name: record.name, source: record.source.content, markdown, links: guideLinks(markdown, docsPages) };
     }
@@ -98,6 +112,7 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
       artifact,
       reference,
       guide,
+      accessibilityGuide,
       installationGuide,
       examples: await Promise.all(examples.map(async ({ name, summary, source }) => ({ name, summary, source: source.content, code: await text(source.content) }))),
       usedIn: usedIn.map(({ id: pattern, roles }) => {
@@ -110,7 +125,7 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
   return entries;
 }
 
-function entryFor({ artifact, reference, guide, installationGuide, examples, usedIn }) {
+function entryFor({ artifact, reference, guide, accessibilityGuide, installationGuide, examples, usedIn }) {
   return {
     id: artifact.id,
     name: artifact.name,
@@ -120,6 +135,7 @@ function entryFor({ artifact, reference, guide, installationGuide, examples, use
     examples,
     usedIn,
     guide,
+    accessibilityGuide,
     ...reference,
   };
 }
