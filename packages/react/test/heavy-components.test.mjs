@@ -5,7 +5,7 @@ import { act } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { closeHistory } from '@tiptap/pm/history';
+import { closeHistory, undoDepth } from '@tiptap/pm/history';
 import { JSDOM } from 'jsdom';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.mjs';
 import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
@@ -221,7 +221,7 @@ test('TextEditor reconciles controlled edits without requiring a parent rerender
 });
 
 // Mounts a plain-text editor with a character limit; edits go through Tiptap commands, each its own undo step.
-const limitDocument = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });
+const limitDocument = (text) => ({ type: 'doc', content: [{ type: 'paragraph', content: text ? [{ type: 'text', text }] : undefined }] });
 async function mountLimitEditor({ limit, ...props }) {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -231,7 +231,8 @@ async function mountLimitEditor({ limit, ...props }) {
     limit, toolbar: false, 'aria-label': 'Limited', onChange: (value) => changes.push(value.content[0].content?.[0].text ?? ''), ...props, ...next,
   })));
   await render();
-  const { editor } = document.querySelector('.ProseMirror');
+  const pm = document.querySelector('.ProseMirror');
+  const { editor } = pm;
   const edit = (command) => act(async () => {
     command(editor.commands);
     editor.view.dispatch(closeHistory(editor.state.tr));
@@ -240,11 +241,19 @@ async function mountLimitEditor({ limit, ...props }) {
     changes,
     render,
     text: () => editor.getText(),
+    html: () => editor.getHTML(),
+    undoSteps: () => undoDepth(editor.state),
     hint: () => document.querySelector('.muxui-text-editor__hint').textContent,
     // Types at the end of the text, or removes the last `count` characters.
     insert: (characters) => edit((commands) => commands.insertContentAt(editor.state.doc.content.size - 1, characters)),
     remove: (count) => edit((commands) => commands.deleteRange({ from: editor.state.doc.content.size - 1 - count, to: editor.state.doc.content.size - 1 })),
     undo: () => act(async () => { editor.commands.undo(); }),
+    // Plain text pasted at the caret, through ProseMirror's paste handler, so Tiptap's paste rules run.
+    paste: (text) => act(async () => {
+      const event = new window.Event('paste', { bubbles: true, cancelable: true });
+      event.clipboardData = { types: ['text/plain'], getData: (type) => (type === 'text/plain' ? text : '') };
+      pm.dispatchEvent(event);
+    }),
     async close() {
       await act(async () => root.unmount());
       restore();
@@ -291,6 +300,34 @@ test('TextEditor lets an over-limit document be edited down but never longer', a
     await t.insert('x');
     assert.equal(t.text(), 'abcdx', 'an edit that fits applies once the document is within the limit');
     assert.deepEqual(t.changes, ['abcdefg', 'abcde', 'abcdefg', 'abcd', 'abcdx']);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor accepts a paste that fits once its paste rules apply, and Undo reverts it in one step', async () => {
+  const t = await mountLimitEditor({ limit: 3, defaultValue: limitDocument('') });
+  try {
+    await t.paste('**abc**');
+    assert.equal(t.html(), '<p><strong>abc</strong></p>', 'the delimiters become bold, leaving three characters');
+    assert.equal(t.changes.length, 1, 'onChange runs once');
+    await t.undo();
+    assert.equal(t.text(), '', 'one Undo reverts the whole paste');
+    assert.equal(t.undoSteps(), 0);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor refuses a paste that stays over the limit without a history step or onChange', async () => {
+  const t = await mountLimitEditor({ limit: 3, defaultValue: limitDocument('ab') });
+  try {
+    await t.paste('**abc**');
+    assert.equal(t.text(), 'ab', 'bold abc would still be longer than the limit');
+    await t.paste('abcdefgh');
+    assert.equal(t.text(), 'ab');
+    assert.deepEqual(t.changes, []);
+    assert.equal(t.undoSteps(), 0);
   } finally {
     await t.close();
   }

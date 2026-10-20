@@ -587,18 +587,34 @@ function fitsLimit(before, after, limit) {
 // Marks the transaction that applies the controlled value, which the parent owns and the limit never refuses.
 const EXTERNAL_VALUE = 'muxuiExternalValue';
 
-/** Refuses an edit past the limit before it applies, so it never reaches the document, onChange, or undo history. */
+/**
+ * Refuses an edit past the limit before it applies, so it never reaches the document, onChange, or undo history.
+ * Paste rules shorten the text after the edit (`**abc**` becomes bold `abc`), so an edit that does not fit as it
+ * arrives is replayed once to judge the finished text.
+ */
 function characterLimitFilter(limitRef) {
+  // The edit being replayed, so its own filter pass and the transactions appended to it are not replayed again.
+  let replaying = null;
   return Extension.create({
     name: 'muxuiCharacterLimit',
     addProseMirrorPlugins() {
       return [new Plugin({
         key: new PluginKey('muxuiCharacterLimit'),
-        // Undo and redo only revisit states the filter already accepted.
-        filterTransaction: (transaction, state) => !transaction.docChanged
-          || isHistoryTransaction(transaction)
-          || transaction.getMeta(EXTERNAL_VALUE) === true
-          || fitsLimit(state.doc, transaction.doc, limitRef.current),
+        filterTransaction(transaction, state) {
+          if (transaction === replaying) return true;
+          // Undo and redo only revisit states the filter already accepted.
+          if (!transaction.docChanged || isHistoryTransaction(transaction) || transaction.getMeta(EXTERNAL_VALUE) === true) return true;
+          const limit = limitRef.current;
+          if (fitsLimit(state.doc, transaction.doc, limit)) return true;
+          if (replaying) return false;
+          // Replaying runs the paste rules twice. They swap their stored paste event after a match, and no rule here reads it.
+          replaying = transaction;
+          try {
+            return fitsLimit(state.doc, state.applyTransaction(transaction).state.doc, limit);
+          } finally {
+            replaying = null;
+          }
+        },
       })];
     },
   });

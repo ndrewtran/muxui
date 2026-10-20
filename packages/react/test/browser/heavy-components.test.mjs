@@ -415,6 +415,24 @@ test('TextEditor limit refuses over-limit edits without reporting them and keeps
     await page.locator('#limit-toggle-readonly').click();
     assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd'], 'read-only toggles are not reported');
 
+    // A paste is judged after its paste rules run: `**ab**` is six characters pasted but bold "ab" once formatted.
+    const pasteOver = async (name, text) => {
+      await page.locator(`#${name}`).click();
+      await page.keyboard.press(`${selectAllModifier}+A`);
+      await page.evaluate(({ id, pasted }) => {
+        const data = new DataTransfer();
+        data.setData('text/plain', pasted);
+        document.getElementById(id).dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      }, { id: name, pasted: text });
+    };
+    await pasteOver('limit-uncontrolled', '**ab**');
+    assert.equal(await shown('limit-uncontrolled'), 'ab');
+    assert.equal(await text('[data-testid="limit-uncontrolled"] .ProseMirror strong'), 'ab');
+    assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd', 'ab']);
+    await pasteOver('limit-uncontrolled', 'abcdefgh');
+    assert.equal(await shown('limit-uncontrolled'), 'ab', 'a paste that stays over the limit is refused whole');
+    assert.deepEqual(await calls('limit-uncontrolled'), ['abcd', 'abcde', 'abcd', 'ab']);
+
     // Controlled: an over-limit edit leaves the editor and the parent on the last accepted value.
     await typeAtEnd('limit-controlled', 'de');
     assert.equal(await shown('limit-controlled'), 'abcde');
