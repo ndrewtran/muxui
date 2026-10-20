@@ -4,10 +4,15 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import React from 'react';
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { CacheProvider, ThemeProvider, convert, createCache } from 'storybook/theming';
+import { buildTheme } from '../.storybook/theme.mjs';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { linkedFamilies } from '../../guide-links.mjs';
+import { guideLinks } from '../src/component-docs.mjs';
 
 const h = React.createElement;
 const appRoot = resolve(import.meta.dirname, '..');
@@ -199,14 +204,26 @@ test('every family Docs page runs the continuous reference sections in order, pr
   }
 });
 
-test('a usage guide shows without its front matter or title, and its headings sit below the page sections', async () => {
-  // Storybook's own Markdown block needs a document at import, so give it one for this test only.
-  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' });
-  const globals = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator };
+/**
+ * Runs `run` with Storybook's own blocks, which need a document at import, so give them one for the run only.
+ * The window is a standalone page unless one is given, such as a manager's preview frame.
+ */
+async function withStorybookBlocks(run, window = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' }).window) {
+  const globals = { window, document: window.document, navigator: window.navigator };
   const previous = Object.fromEntries(Object.keys(globals).map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
   try {
-    const { Markdown } = await import('@storybook/addon-docs/blocks');
+    await run(await import('@storybook/addon-docs/blocks'));
+  } finally {
+    for (const [key, descriptor] of Object.entries(previous)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
+}
+
+test('a usage guide shows without its front matter or title, and its headings sit below the page sections', async () => {
+  await withStorybookBlocks(async ({ Markdown }) => {
     // Some guide files open with front matter and every one with a title; the shown body keeps neither.
     let withFrontMatter = 0;
     for (const { family, tranche } of manifest.families) {
@@ -235,10 +252,181 @@ test('a usage guide shows without its front matter or title, and its headings si
     assert.ok(shown.querySelector('table'), 'the guide table renders');
     // Only the eleven sections are h2 on the page.
     assert.deepEqual(texts(page.querySelectorAll('h2')), sections.filter(([id]) => id !== 'used-in-blocks' || page.querySelector('#used-in-blocks')).map(([, title]) => title));
-  } finally {
-    for (const [key, descriptor] of Object.entries(previous)) {
-      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
-      else delete globalThis[key];
+  });
+});
+
+test('guide links resolve to Storybook Docs pages and fail on a family without one', () => {
+  const pages = new Map([['muxui:component:checkbox', '?path=/docs/muxui-react-r1-1-checkbox--docs']]);
+  const guide = 'Use [Checkbox](/components/checkbox/), [again](/components/checkbox/ "Group"), the [API](#api-reference), or [the site](https://example.com/).';
+  assert.deepEqual(guideLinks(guide, pages), { '/components/checkbox/': '?path=/docs/muxui-react-r1-1-checkbox--docs' });
+  assert.deepEqual(guideLinks('No links here.', pages), {});
+  assert.throws(() => guideLinks('[Switch](/components/switch/ "Setting")', pages), /\/components\/switch\/, which has no Storybook Docs page/u);
+  assert.throws(() => guideLinks('[Checkbox](/components/checkbox "Group")', pages), /must be a family page path/u);
+  assert.throws(() => guideLinks('[Mixed state](/components/checkbox/#mixed-state)', pages), /must be a family page path/u);
+});
+
+const slugOf = (family) => family.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+/** The Docs page of a family is its first story's group id, taken from the manifest rather than rebuilt from the tranche. */
+const docsId = (slug) => {
+  const { family } = manifest.families.find(({ family: name }) => slugOf(name) === slug);
+  return `${manifest.pageIndex.find((page) => page.family === family).stories[0].id.split('--')[0]}--docs`;
+};
+/** A preview frame hosted by a Storybook manager: the iframe the manager names, inside a same-origin parent. */
+const managerFrame = () => {
+  const manager = new JSDOM('<!doctype html><html><body><iframe id="storybook-preview-iframe"></iframe></body></html>', { url: 'http://localhost/storybook/' });
+  return manager.window.document.getElementById('storybook-preview-iframe').contentWindow;
+};
+const familyEntry = async (name) => {
+  const { tranche } = manifest.families.find(({ family }) => family === name);
+  const { default: meta } = await import(`../.storybook/generated/${tranche.replaceAll('.', '-').toLowerCase()}-${slugOf(name)}.stories.mjs`);
+  return meta.parameters.muxuiReference;
+};
+
+test('a guide link to another family names that family Docs page in the manager', async () => {
+  await withStorybookBlocks(async ({ Markdown }) => {
+    const linked = new Map();
+    for (const { family } of manifest.families) {
+      const entry = await familyEntry(family);
+      if (entry.guide === null) continue;
+      const slugs = linkedFamilies(read(entry.guide.source));
+      const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks: { ...blocks, Markdown } }))).window.document;
+      const anchors = [...page.querySelectorAll('[data-guide-id] a')];
+      const hrefs = anchors.map((node) => node.getAttribute('href')).filter((href) => !href.startsWith('#') && !href.startsWith('http'));
+      assert.deepEqual([...new Set(hrefs)], slugs.map((slug) => `?path=/docs/${docsId(slug)}`), `${family} guide links`);
+      if (slugs.length > 0) linked.set(family, anchors.filter((node) => node.getAttribute('href').startsWith('?path=')).map((node) => [node.textContent, node.getAttribute('href')]));
     }
+    // The pilot families link to their alternatives by name.
+    assert.deepEqual(linked.get('Checkbox'), [['CheckboxGroup', `?path=/docs/${docsId('checkbox-group')}`]]);
+    assert.deepEqual(linked.get('Switch'), [['Checkbox', `?path=/docs/${docsId('checkbox')}`], ['SwitchField', `?path=/docs/${docsId('switch-field')}`]]);
+    assert.deepEqual(linked.get('Select'), [['SelectNative', `?path=/docs/${docsId('select-native')}`], ['ComboBox', `?path=/docs/${docsId('combo-box')}`]]);
+    assert.deepEqual(linked.get('SelectNative'), [['Select', `?path=/docs/${docsId('select')}`], ['ComboBox', `?path=/docs/${docsId('combo-box')}`]]);
+  }, managerFrame());
+});
+
+/**
+ * Renders a Docs page into `window` with Storybook's real Markdown and Anchor blocks, and a manager channel that records what it is sent.
+ * Clicks are recorded, then cancelled so the DOM does not try to navigate.
+ */
+async function renderDocs({ entry, window }) {
+  const sent = [];
+  const clicks = [];
+  const { Markdown, AnchorMdx, DocsContext } = await import('@storybook/addon-docs/blocks');
+  window.document.addEventListener('click', (event) => {
+    clicks.push({ href: event.target.closest('a')?.getAttribute('href'), prevented: event.defaultPrevented });
+    event.preventDefault();
+  });
+  const container = window.document.body.appendChild(window.document.createElement('div'));
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const root = createRoot(container);
+  // The styled Anchor needs the theme and a style cache that the Docs container supplies in Storybook.
+  await act(async () => root.render(h(
+    CacheProvider,
+    { value: createCache({ key: 'muxui-test', container: window.document.head }) },
+    h(
+      ThemeProvider,
+      { theme: convert(buildTheme('light')) },
+      h(
+        DocsContext.Provider,
+        { value: { channel: { emit: (...message) => sent.push(message) } } },
+        h(ComponentDocs, { entry, blocks: { ...blocks, Markdown, Anchor: AnchorMdx } }),
+      ),
+    ),
+  )));
+  const click = (node) => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const link = (text) => [...container.querySelectorAll('a')].find((node) => node.textContent === text);
+  return { sent, clicks, click, link, unmount: () => act(async () => root.unmount()) };
+}
+
+test('a family link in a manager frame navigates the manager through the real Anchor', async () => {
+  const frame = managerFrame();
+  await withStorybookBlocks(async () => {
+    const page = await renderDocs({ entry: await familyEntry('Switch'), window: frame });
+    const checkbox = page.link('Checkbox');
+    assert.equal(checkbox.getAttribute('href'), `?path=/docs/${docsId('checkbox')}`);
+    await act(async () => page.click(checkbox));
+    assert.deepEqual(page.sent, [['navigateUrl', `?path=/docs/${docsId('checkbox')}`]], 'the manager is sent the family Docs page');
+    assert.equal(page.clicks[0].prevented, true, 'the Anchor leaves the navigation to the manager');
+    await page.unmount();
+  }, frame);
+});
+
+test('a family link in standalone Docs is a real link that keeps the hosting base path', async () => {
+  const standalone = new JSDOM('<!doctype html><html><body></body></html>', {
+    url: `http://localhost/docs-site/storybook/iframe.html?viewMode=docs&id=muxui-react-r1-2-switch--docs&globals=colorScheme:dark&args=size:lg`,
+  });
+  await withStorybookBlocks(async () => {
+    const entry = await familyEntry('Switch');
+    const page = await renderDocs({ entry, window: standalone.window });
+    const checkbox = page.link('Checkbox');
+    // Same frame, same base path and globals, the family's id, and none of the previous page's args.
+    assert.equal(checkbox.getAttribute('href'), `/docs-site/storybook/iframe.html?viewMode=docs&id=${docsId('checkbox')}&globals=colorScheme%3Adark`);
+    await act(async () => page.click(checkbox));
+    assert.deepEqual(page.sent, [], 'there is no manager to send to');
+    assert.equal(page.clicks[0].prevented, false, 'the click is left to the browser');
+    await page.unmount();
+
+    // A Block link on a family page takes the same route, to the story view.
+    const button = await familyEntry('Button');
+    const blocksPage = await renderDocs({ entry: button, window: standalone.window });
+    const block = blocksPage.link(button.usedIn[0].name);
+    assert.equal(block.getAttribute('href'), `/docs-site/storybook/iframe.html?viewMode=story&id=${button.usedIn[0].storyId}&globals=colorScheme%3Adark`);
+    await blocksPage.unmount();
+  }, standalone.window);
+});
+
+/** A family guide whose body is `markdown`, with the Docs page of Checkbox as the only family it can link to. */
+const guideEntry = async (markdown, links) => {
+  const entry = await familyEntry('Switch');
+  return { ...entry, guide: { ...entry.guide, markdown, links } };
+};
+const checkboxPage = () => new Map([['muxui:component:checkbox', `?path=/docs/${docsId('checkbox')}`]]);
+
+// The one form a guide may use to link a family, as the contribution guide documents it. The parser accepts exactly these,
+// and the real renderer must resolve every one of them.
+const acceptedForms = [
+  ['an inline link', '[Checkbox](/components/checkbox/)', null],
+  ['an inline link with a double-quoted title', '[Checkbox](/components/checkbox/ "Select an option")', 'Select an option'],
+  ['a code span as the name', '[`Checkbox`](/components/checkbox/)', null],
+  ['emphasis in the name', '[**Check**box](/components/checkbox/)', null],
+  ['a list item', '- [Checkbox](/components/checkbox/ "Select an option")', 'Select an option'],
+  ['a table cell', '| Use |\n| --- |\n| [Checkbox](/components/checkbox/) |', null],
+];
+
+test('every accepted family link form is resolved by the real renderer and opens the Docs page', async () => {
+  for (const [form, markdown, title] of acceptedForms) {
+    const frame = managerFrame();
+    await withStorybookBlocks(async () => {
+      assert.deepEqual(linkedFamilies(markdown), ['checkbox'], `${form} is accepted`);
+      const entry = await guideEntry(markdown, guideLinks(markdown, checkboxPage()));
+      const page = await renderDocs({ entry, window: frame });
+      const links = [...frame.document.querySelectorAll('[data-guide-id] a')].filter((node) => node.getAttribute('href') !== null && !node.getAttribute('href').startsWith('https://github.com/'));
+      assert.equal(links.length, 1, `${form} renders one link`);
+      assert.equal(links[0].getAttribute('href'), `?path=/docs/${docsId('checkbox')}`, `${form} resolves to the family Docs page`);
+      assert.equal(links[0].textContent, 'Checkbox', `${form} keeps its name`);
+      assert.equal(links[0].getAttribute('title'), title, `${form} keeps its title`);
+      await act(async () => page.click(links[0]));
+      assert.deepEqual(page.sent, [['navigateUrl', `?path=/docs/${docsId('checkbox')}`]], `${form} opens the Docs page in the manager`);
+      await page.unmount();
+    }, frame);
+  }
+});
+
+test('the family link forms the parser rejects are not ones the real renderer resolves', async () => {
+  // Even with the Docs page ready, Storybook leaves these as text or as an unresolved link.
+  const rejected = {
+    'a collapsed reference': '[Checkbox][]\n\n[Checkbox]: /components/checkbox/',
+    'a shortcut reference': '[Checkbox]\n\n[Checkbox]: /components/checkbox/',
+    'a parenthesized title': '[Checkbox](/components/checkbox/ (Setting))',
+    'an HTML anchor with spaces in its href': '<a href=" /components/checkbox/ ">Checkbox</a>',
+  };
+  for (const [form, markdown] of Object.entries(rejected)) {
+    assert.throws(() => linkedFamilies(markdown), /Write an inline link/u, `${form} is rejected`);
+    const frame = managerFrame();
+    await withStorybookBlocks(async ({ Markdown }) => {
+      const entry = await guideEntry(markdown, { '/components/checkbox/': `?path=/docs/${docsId('checkbox')}` });
+      const page = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks: { ...blocks, Markdown } }))).window.document;
+      const resolved = [...page.querySelectorAll('[data-guide-id] a')].filter((node) => node.getAttribute('href')?.startsWith('?path='));
+      assert.deepEqual(resolved, [], `${form} is not a resolved link`);
+    }, frame);
   }
 });

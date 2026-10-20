@@ -23,7 +23,7 @@ const docsSections = Object.freeze([
 
 /** A guide's own headings sit below the page's sections. */
 const demoted = { h2: 'h4', h3: 'h5', h4: 'h6' };
-const guideOverrides = Object.fromEntries(Object.entries(demoted).map(([from, to]) => [from, ({ children }) => h(to, null, children)]));
+const headingOverrides = Object.fromEntries(Object.entries(demoted).map(([from, to]) => [from, ({ children }) => h(to, null, children)]));
 
 function List({ items, fact }) {
   return h('ul', { 'data-fact': fact }, items.map((item, index) => h('li', { key: index }, item)));
@@ -37,11 +37,49 @@ function SourceLink({ path, children = path }) {
   return h('a', { href: sourceUrl(path), target: '_blank', rel: 'noreferrer' }, children);
 }
 
+/** True when a Storybook manager hosts this frame, so it can open another page. A server render has no frame and assumes one. */
+function hasManager() {
+  if (typeof window === 'undefined') return true;
+  try {
+    return window.parent !== window && window.parent.document.getElementById('storybook-preview-iframe')?.contentWindow === window;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The address, in this frame, of a manager page such as `?path=/docs/<id>`. It is built from the current address, so the
+ * hosting base path and the globals stay when Docs is served on its own (iframe.html) under a subpath.
+ */
+function standaloneAddress(managerHref) {
+  const [, viewMode, id] = /^\?path=\/(docs|story)\/([^&#]+)/u.exec(managerHref) ?? [];
+  if (id === undefined) return managerHref;
+  const address = new URL(window.location.href);
+  address.searchParams.set('viewMode', viewMode);
+  address.searchParams.set('id', id);
+  address.searchParams.delete('args');
+  return `${address.pathname}${address.search}`;
+}
+
+/**
+ * A link to another Storybook page, given as its manager address. The manager's Anchor opens the page in the whole
+ * Storybook and swallows the click, which does nothing without a manager. Docs served on their own get a real link instead.
+ */
+function PageLink({ Anchor, href, children, ...props }) {
+  return hasManager()
+    ? h(Anchor, { href, ...props }, children)
+    : h('a', { href: standaloneAddress(href), ...props }, children);
+}
+
 /** The catalog facts of a family, laid out as the continuous reference. Everything it shows comes from `entry`. */
 export function ComponentDocs({ entry, blocks }) {
   const { Title, Primary, Controls, Source, Markdown, Anchor } = blocks;
   const [basic, ...others] = entry.examples;
   const { usage, accessibility, styling } = entry;
+  // A link to another family, written as its docs path, goes to that family's Docs page. Other links stay as written.
+  const guideLink = ({ href, children, ...props }) => entry.guide.links[href] === undefined
+    ? h('a', { href, ...props }, children)
+    : h(PageLink, { Anchor, href: entry.guide.links[href], ...props }, children);
 
   const bodies = {
     basic: () => [
@@ -61,7 +99,7 @@ export function ComponentDocs({ entry, blocks }) {
       entry.guide && h('div', { key: 'guide', className: 'muxui-docs-guide', 'data-guide-id': entry.guide.id },
         h('h3', null, 'Related usage guidance'),
         h('p', { className: 'muxui-docs-caption' }, `${entry.guide.name}: `, h(SourceLink, { path: entry.guide.source })),
-        h(Markdown, { options: { overrides: guideOverrides } }, entry.guide.markdown)),
+        h(Markdown, { options: { overrides: { ...headingOverrides, a: guideLink } } }, entry.guide.markdown)),
     ],
     behavior: () => entry.behavior.length > 0
       ? h(List, { items: entry.behavior, fact: 'binding.behavior' })
@@ -74,7 +112,7 @@ export function ComponentDocs({ entry, blocks }) {
         h('p', { className: 'muxui-docs-caption' }, 'Canonical React example, static source: ', h(SourceLink, { path: example.source }))))
       : h('p', null, 'No additional named examples are declared for this component yet.'),
     'used-in-blocks': () => h('ul', null, entry.usedIn.map(({ name, storyId, roles }) => h('li', { key: storyId },
-      h(Anchor, { href: `?path=/story/${storyId}` }, name),
+      h(PageLink, { Anchor, href: `?path=/story/${storyId}` }, name),
       h('span', { className: 'muxui-docs-roles' }, roles.map(({ role, requirement }) => requirement === 'optional' ? `${role} (optional)` : role).join(', '))))),
     // The existing Controls table is the API reference: it lists the props and edits them live.
     'api-reference': () => h(Controls),

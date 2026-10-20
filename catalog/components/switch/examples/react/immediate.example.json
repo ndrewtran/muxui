@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:switch-immediate-react",
+  "kind": "example",
+  "name": "Switch that saves on change",
+  "summary": "Save a standalone setting in the change handler, with the setting named by a noun and its effect in the description.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:switch#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/switch/examples/react/immediate.tsx"
+}

@@ -3,11 +3,12 @@
   "id": "muxui:component:switch-field",
   "kind": "component",
   "name": "SwitchField",
-  "summary": "Toggle an immediate setting with a boolean switch and supporting validation text.",
+  "summary": "Toggle a setting with a boolean switch and supporting validation text.",
   "lifecycle": "experimental",
   "intent": {
     "useWhen": [
-      "Toggling a setting that takes effect immediately and has a clear on or off state."
+      "Toggling a standalone setting that takes effect as soon as it is toggled.",
+      "Toggling a setting inside a staged form, which takes effect when the form is saved."
     ],
     "avoidWhen": [
       "For actions that require confirmation or choices with more than two states."
@@ -73,6 +74,7 @@
         "Root owns the state: checked or defaultChecked sets it.",
         "onChange receives the new boolean, not a DOM event.",
         "An on switch submits its name and value; an off switch submits nothing.",
+        "SwitchField saves nothing itself: the application saves in onChange, or reads the named value when its form submits.",
         "A disabled switch ignores toggles and submits nothing.",
         "A read-only switch ignores toggles and still submits while on.",
         "Button is a label that wraps the switch input, not an action button, and its ref is the label element.",

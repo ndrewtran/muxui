@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { posix, resolve } from 'node:path';
 import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { linkedFamilies } from '../../guide-links.mjs';
 
 /**
  * The docs entry of every component family: the catalog facts its Storybook
@@ -46,13 +47,29 @@ function guideMarkdown(source) {
 }
 
 /**
+ * A guide links to another family by its docs path, such as `/components/checkbox/`. Storybook has no such
+ * route, so each link resolves to the family's Docs page, which the Docs page renders from this map.
+ * @param {string} markdown
+ * @param {ReadonlyMap<string, string>} docsPages The Docs page of each family, by component id.
+ * @returns {Record<string, string>} The Docs page of every family the guide links to, by link target.
+ */
+export function guideLinks(markdown, docsPages) {
+  return Object.fromEntries(linkedFamilies(markdown).map((slug) => {
+    const page = docsPages.get(`muxui:component:${slug}`);
+    if (page === undefined) throw new Error(`The guide links to /components/${slug}/, which has no Storybook Docs page.`);
+    return [`/components/${slug}/`, page];
+  }));
+}
+
+/**
  * @param {object} input
  * @param {string} input.repositoryRoot
  * @param {readonly string[]} input.componentIds Canonical component ids, such as `muxui:component:button`.
+ * @param {ReadonlyMap<string, string>} input.docsPages The Docs page of each family, such as `?path=/docs/muxui-react-r1-1-button--docs`, by component id.
  * @param {readonly { pattern: string, family: string, storyId: string }[]} input.blocks Each Block page with the id of its first variant story.
  * @returns {Promise<Map<string, ReturnType<typeof entryFor>>>}
  */
-export async function readComponentDocs({ repositoryRoot, componentIds, blocks }) {
+export async function readComponentDocs({ repositoryRoot, componentIds, docsPages, blocks }) {
   const packageFacts = readReactPackageFacts(repositoryRoot);
   const guides = guideIds();
   const installationGuide = posix.join(posix.dirname(packageFacts.manifestPath), 'README.md');
@@ -73,7 +90,8 @@ export async function readComponentDocs({ repositoryRoot, componentIds, blocks }
       if (record.source.contentDigest !== undefined && `sha256:${createHash('sha256').update(body).digest('hex')}` !== record.source.contentDigest) {
         throw new Error(`${guideId} source content does not match its catalog digest.`);
       }
-      guide = { id: guideId, name: record.name, source: record.source.content, markdown: guideMarkdown(body) };
+      const markdown = guideMarkdown(body);
+      guide = { id: guideId, name: record.name, source: record.source.content, markdown, links: guideLinks(markdown, docsPages) };
     }
 
     entries.set(id, entryFor({

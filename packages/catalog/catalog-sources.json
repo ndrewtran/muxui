@@ -1524,6 +1524,18 @@
     {
       "family": "guide",
       "path": "catalog/guides/payment-input-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/button/examples/react/hierarchy.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/switch/examples/react/immediate.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/switch-field-usage.json"
     }
   ]
 }

@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
+import { linkedFamilies } from '../../guide-links.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
@@ -88,6 +89,7 @@ function codeTexts(root) {
 
 let routes = 0;
 let projectedStrings = 0;
+let guideLinks = 0;
 for (const component of listComponents()) {
 	const slug = component.id.slice(component.id.lastIndexOf(':') + 1);
 	const route = `/components/${slug}/`;
@@ -145,6 +147,17 @@ for (const component of listComponents()) {
 		JSON.stringify(guides) === JSON.stringify(guideIds.has(`muxui:guide:${slug}-usage`) ? [`muxui:guide:${slug}-usage`] : []),
 		`${route} relates the wrong usage guide.`,
 	);
+
+	// A guide links to another family by its docs path, and the built page keeps that link to a built family page.
+	if (guides.length === 1) {
+		const guideSource = canonicalCatalog.getArtifact({ id: guides[0], platform: 'web.react', detail: 'full' }).data.artifact.source.content;
+		const expectedLinks = linkedFamilies(readFileSync(resolve(repositoryRoot, guideSource), 'utf8')).map((linked) => `/components/${linked}/`);
+		const guideNode = elements(section('usage')).find((node) => attributeValue(node, 'data-guide-id') === guides[0]);
+		const renderedLinks = [...new Set(elements(guideNode).filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href')).filter((href) => href?.startsWith('/components/')))];
+		assert(JSON.stringify(renderedLinks) === JSON.stringify(expectedLinks), `${route} guide links to ${renderedLinks.join(', ') || 'no family'}, expected ${expectedLinks.join(', ') || 'none'}.`);
+		for (const target of expectedLinks) assert(existsSync(resolve(docsDist, target.slice(1), 'index.html')), `${route} guide links to ${target}, which is not built.`);
+		guideLinks += expectedLinks.length;
+	}
 
 	// Behavior, events, accessibility.
 	assertList(section('behavior'), 'binding.behavior', binding.behavior ?? [], route);
@@ -236,4 +249,4 @@ for (const id of sharedUsageGuides) {
 	);
 }
 
-console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);
+console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values; ${guideLinks} guide links to other families reach a built family page; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);

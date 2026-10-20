@@ -24,6 +24,7 @@ const catalogExampleTypesTestFile = 'test/catalog-examples-types.test.mjs';
 const patternManifestPath = 'packages/catalog/catalog-sources.json';
 const componentDocsTestFile = 'test/component-docs.test.mjs';
 const componentReferencePath = 'apps/component-reference.mjs';
+const guideLinksPath = 'apps/guide-links.mjs';
 // A family's own usage guide, which its Storybook Docs page shows: `<family-slug>-usage.md` and its record.
 const familyUsageGuidePath = /^catalog\/guides\/([a-z0-9-]+)-usage\.(?:md|json)$/u;
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
@@ -1233,8 +1234,8 @@ export async function buildPullRequestImpact({
     if (config.componentNavigationPaths?.includes(path)) {
       plan.docs = true;
       storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
-      // The reference also projects every Storybook Docs page entry.
-      if (path === componentReferencePath) addComponentDocsProof(plan);
+      // The reference and the guide link reader also project every Storybook Docs page entry.
+      if (path === componentReferencePath || path === guideLinksPath) addComponentDocsProof(plan);
       plan.reasons.push(`${path} is shared by the docs and every component Storybook page`);
       continue;
     }

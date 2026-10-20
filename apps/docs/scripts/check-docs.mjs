@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { authoredPatternReference } from './authored-pattern-reference.mjs';
 import { componentReference, readReactPackageFacts } from '../../component-reference.mjs';
+import { linkedFamilies } from '../../guide-links.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
@@ -94,6 +95,10 @@ for (const guide of guides) {
 	assert(sourceText.trim().length > 0, `The guide ${guide.id} source is empty.`);
 	if (guide.source.contentDigest !== undefined) {
 		assert(`sha256:${createHash('sha256').update(sourceText).digest('hex')}` === guide.source.contentDigest, `The guide ${guide.id} source digest is stale.`);
+	}
+	// A link to another family is its docs path, which both the docs site and Storybook resolve.
+	for (const slug of linkedFamilies(sourceText)) {
+		assert(slugs.includes(slug), `The guide ${guide.id} links to /components/${slug}/, which is not a component page.`);
 	}
 }
 

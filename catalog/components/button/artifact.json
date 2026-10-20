@@ -6,8 +6,12 @@
   "summary": "Triggers an immediate action.",
   "lifecycle": "experimental",
   "intent": {
-    "useWhen": ["Triggering an immediate action"],
-    "avoidWhen": ["Navigating to another location"]
+    "useWhen": ["Triggering an immediate action", "Submitting or resetting a form, with the native submit or reset type"],
+    "avoidWhen": [
+      "Navigating to another location; use Link",
+      "Showing only an icon with no visible text; use IconButton",
+      "Switching a persistent setting on or off; use Switch"
+    ]
   },
   "anatomy": ["root", "label"],
   "states": ["idle", "pending", "disabled"],
