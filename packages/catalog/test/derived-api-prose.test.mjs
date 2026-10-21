@@ -80,6 +80,7 @@ const GUIDES = {
   meter: { native: ['aria-label', 'aria-labelledby'] },
   link: { native: ['aria-label', 'currentColor', '1em', 'aria-hidden="true"', 'focusable="false"'] },
   disclosure: {},
+  'toggle-button': {},
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;

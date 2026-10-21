@@ -1,0 +1,182 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:toggle-button",
+  "binding": "web.react",
+  "export": "ToggleButton",
+  "api": {
+    "props": [
+      "selected",
+      "defaultSelected",
+      "disabled",
+      "size"
+    ],
+    "events": [
+      "change",
+      "activate"
+    ],
+    "defaults": {
+      "defaultSelected": false,
+      "disabled": false
+    },
+    "propDetails": {
+      "selected": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the ToggleButton is on, when the caller controls it."
+      },
+      "defaultSelected": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the ToggleButton starts on, when it controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the ToggleButton: it can be neither focused nor toggled."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "selected",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the new selected state."
+      },
+      "activate": {
+        "prop": "onActivate",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "event",
+              "type": {
+                "kind": "reference",
+                "name": "ToggleButtonActivationEvent"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports an activation of the ToggleButton."
+      }
+    },
+    "types": {
+      "ButtonPointerType": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "mouse"
+            },
+            {
+              "kind": "literal",
+              "value": "pen"
+            },
+            {
+              "kind": "literal",
+              "value": "touch"
+            },
+            {
+              "kind": "literal",
+              "value": "keyboard"
+            },
+            {
+              "kind": "literal",
+              "value": "virtual"
+            },
+            {
+              "kind": "undefined"
+            }
+          ]
+        }
+      },
+      "ToggleButtonActivationEvent": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "activate"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "pointerType",
+              "type": {
+                "kind": "reference",
+                "name": "ButtonPointerType"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "target",
+              "type": {
+                "kind": "host",
+                "name": "HTMLButtonElement"
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "What a ToggleButton's `onActivate` reports for one activation."
+      }
+    }
+  }
+}

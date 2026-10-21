@@ -632,7 +632,8 @@ export const ToggleButton: ForwardRefExoticComponent<ToggleButtonProps & RefAttr
   ...props
 }, ref) {
   const inheritedSize = React.useContext(ToggleButtonSizeContext);
-  const resolvedSize = normalizeToggleButtonSize(size ?? inheritedSize);
+  // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and an inherited size is none.
+  const resolvedSize = normalizeToggleButtonSize(size == null ? inheritedSize : size);
   return React.createElement(AriaToggleButton, {
     // React Aria passes the native attributes it does not own through to the <button>; its pointer
     // handler types name another element where React's name HTMLButtonElement.
