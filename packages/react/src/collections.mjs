@@ -90,12 +90,15 @@ import {
   parseColor,
   useLocale,
   TokenFieldValue,
+  PopoverContext,
+  RootMenuTriggerStateContext,
 } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { parseDate } from '@internationalized/date';
 import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
+import { createFocusManager } from 'react-aria/private/focus/FocusScope';
 import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
 import { RadioGroupMotion, RadioMotionIndicator } from './radio-motion.mjs';
@@ -1102,6 +1105,31 @@ const CollectionTrigger = React.forwardRef(function CollectionTrigger({ children
   }, children);
 });
 
+const useMenuLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+// Tab leaves an open menu: the whole menu tree closes, which makes the rest of the page interactive again, and focus goes to
+// the first of `origins` that is still in the page and takes it (the trigger, else the element focused as the menu opened,
+// else its anchor). The browser then moves on from there by its own rules, so Tab's default action is left alone.
+function leaveMenuOnTab(menuTrigger, origins, shiftKey) {
+  flushSync(() => menuTrigger.close());
+  for (const origin of origins) {
+    if (!origin?.isConnected || origin === origin.ownerDocument.body) continue;
+    origin.focus({ preventScroll: true });
+    // A Toolbar may hand focus on to the control it last held, so focus anywhere in it counts.
+    const toolbar = origin.closest('[role="toolbar"]');
+    const focused = origin.ownerDocument.activeElement;
+    if (focused !== origin && !toolbar?.contains(focused)) continue;
+    // A Toolbar sends Tab out of itself by focusing its last control (first for Shift+Tab) before the default action, but
+    // it ignores keys from a portalled menu, so the menu does the same.
+    if (toolbar) {
+      const toolbarFocus = createFocusManager({ current: toolbar });
+      if (shiftKey) toolbarFocus.focusFirst();
+      else toolbarFocus.focusLast();
+    }
+    return;
+  }
+}
+
 export const Menu = /*#__PURE__*/ (() => {
   const Menu = React.forwardRef(function Menu(props, ref) {
     accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'Menu');
@@ -1111,6 +1139,8 @@ export const Menu = /*#__PURE__*/ (() => {
 
   const MenuContext = React.createContext({ disabled: false });
   const MenuSubmenuContext = React.createContext(false);
+  // The element a popup is anchored to, for the list inside it.
+  const MenuAnchorContext = React.createContext(null);
 
   const MenuRoot = React.forwardRef(function MenuRoot({ open, defaultOpen = false, onOpenChange, onAction, onSelect, disabled = false, shouldCloseOnSelect = true, className, children, ...props }, ref) {
     const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
@@ -1136,7 +1166,8 @@ export const Menu = /*#__PURE__*/ (() => {
   const MenuPopup = /*#__PURE__*/ React.forwardRef(function MenuPopup({ children, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, className, ...props }, ref) {
     const submenu = React.useContext(MenuSubmenuContext);
     const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, { placement: submenu ? 'end-top' : 'bottom-start', offset: 4, crossOffset: 0, shouldFlip: true, containerPadding: 12 }, 'Menu.Popup');
-    return React.createElement(PopoverMotion, { ...props, ...geometry, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) }, children);
+    return React.createElement(PopoverMotion, { ...props, ...geometry, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) },
+      React.createElement(MenuAnchorContext.Provider, { value: anchorRef ?? null }, children));
   });
 
   const MenuList = React.forwardRef(function MenuList({ items = [], children, disabled = false, shouldCloseOnSelect, onAction, onSelect, className, standalone = false, ...props }, ref) {
@@ -1145,8 +1176,31 @@ export const Menu = /*#__PURE__*/ (() => {
     const normalized = normalizeItems(items);
     const hasChildren = children !== undefined && children !== null;
     const disabledKeys = new Set(normalized.filter((item) => effectiveDisabled || item.disabled).map((item) => item.id));
+    // Tab leaves an open menu, as it does for a menu button. Only the root list handles it, since a submenu's Tab bubbles
+    // to it through the React tree.
+    const popover = React.useContext(PopoverContext);
+    const menuTrigger = React.useContext(RootMenuTriggerStateContext);
+    const anchorRef = React.useContext(MenuAnchorContext);
+    // A menu with no trigger button, opened from another control, gives focus back to that control: the one focused as each
+    // opening starts, before focus moves into the menu. The list stays mounted while the menu exits, so this follows the
+    // open state, not the mount; focus already inside a menu popup is the menu's own, as when StrictMode replays the effect
+    // after focus moved in, so it never replaces the opener.
+    const opener = React.useRef(null);
+    const menuOpen = menuTrigger?.isOpen ?? false;
+    useMenuLayoutEffect(() => {
+      if (!menuOpen) opener.current = null;
+      else if (!document.activeElement?.closest('.muxui-menu-popup')) opener.current = document.activeElement;
+    }, [menuOpen]);
     const menu = React.createElement(AriaMenu, {
       ...props,
+      // The list's own Tab handling moves focus back into the list, so the handler must run after it, which `render` allows.
+      render: popover?.trigger === 'MenuTrigger' ? (domProps) => React.createElement('div', {
+        ...domProps,
+        onKeyDown: (event) => {
+          domProps.onKeyDown?.(event);
+          if (event.key === 'Tab') leaveMenuOnTab(menuTrigger, [popover.triggerRef.current, opener.current, anchorRef?.current], event.shiftKey);
+        },
+      }) : undefined,
       items: hasChildren ? undefined : normalized,
       disabledKeys,
       shouldCloseOnSelect: shouldCloseOnSelect ?? context.shouldCloseOnSelect ?? true,
