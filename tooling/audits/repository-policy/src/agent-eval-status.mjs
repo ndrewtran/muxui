@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { mergeDerivedApis } from '@muxui/schema';
+import { readRuntimeSources, runtimeSourceFor } from '../../../../packages/react/src/runtime-sources.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const snapshot = JSON.parse(await readFile(
@@ -11,21 +12,12 @@ const generatedClosure = JSON.parse((await readFile(
   resolve(repositoryRoot, 'packages/react/generated/r1-5-closure.json'),
   'utf8',
 )).replace(/^\/\/ @generated-from:.*\n\/\/ @generated-content-sha256:.*\n/u, ''));
-const runtimeSourcePaths = [
-  'packages/react/src/button.ts',
-  'packages/react/src/components.ts',
-  'packages/react/src/fields.mjs',
-  'packages/react/src/collections.mjs',
-  'packages/react/src/overlays.mjs',
-];
-const runtimeSources = new Map(await Promise.all(runtimeSourcePaths.map(async (path) => (
-  [path, await readFile(resolve(repositoryRoot, path), 'utf8')]
-))));
+// The registry modules are read here, from the shared list; the expected values below come from
+// the catalog and these sources, never from the generated closure they are compared with.
+const runtimeSources = await readRuntimeSources(repositoryRoot);
 const slugForFamily = (family) => family === 'Modal'
   ? 'dialog'
   : family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-const runtimeSourceFor = (exportName) => [...runtimeSources.entries()]
-  .find(([, source]) => new RegExp(`export\\s+const\\s+${exportName}\\b`, 'u').test(source))?.[0] ?? null;
 const stableValue = (value) => {
   if (Array.isArray(value)) return value.map(stableValue);
   if (value && typeof value === 'object') {
@@ -68,7 +60,7 @@ const families = await Promise.all(snapshot.families.map(async (familyEntry) => 
         states: artifact.states,
         api: binding?.api ?? null,
         parts: artifact.anatomy,
-        runtimeSource: runtimeSourceFor(artifact.name),
+        runtimeSource: runtimeSourceFor(runtimeSources, artifact.name) ?? null,
       },
       export: { name: artifact.name, module: '.', kind: 'component' },
       lifecycle: {
