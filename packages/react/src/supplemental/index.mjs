@@ -1160,7 +1160,8 @@ const HeaderNav = {
       const wanted = handoff.current;
       handoff.current = null;
       if (!wanted?.root) return;
-      const controls = () => [...wanted.root.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')].filter((node) => !node.disabled && node.getAttribute('tabindex') !== '-1');
+      // Hidden copies drop out first, so the matching link is the visible one even when a hidden link shares its destination.
+      const controls = () => [...wanted.root.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')].filter((node) => !node.disabled && node.getAttribute('tabindex') !== '-1' && !sidebarUnreachable(node));
       sidebarHandoff(() => {
         const all = controls();
         return [all.find((node) => wanted.href !== null && node.getAttribute('href') === wanted.href), ...all, wanted.root];

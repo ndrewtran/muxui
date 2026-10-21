@@ -112,10 +112,12 @@ const h = React.createElement;
 const links = [['#docs', 'Docs'], ['#components', 'Components']];
 const navigation = links.map(([href, label]) => h(HeaderNav.NavButton, { key: href, href }, label));
 const trigger = h('div', { className: 'menu' }, h(HeaderNav.MobileTrigger, null, navigation, h(Button, null, 'Sign in')));
-// 'plain-logo': nothing in the header takes focus once the trigger is hidden.
+// 'plain-logo': nothing in the header takes focus once the trigger is hidden. 'duplicate': a narrow-only copy of
+// the Docs link comes first in the header, then the wide copy the drawer's link should hand focus to.
 const header = {
   links: [h(HeaderNav.Logo, { href: '#home' }, 'Mux'), h(HeaderNav.Secondary, { className: 'links' }, navigation), trigger],
   'plain-logo': [h(HeaderNav.Logo, null, 'Mux'), trigger],
+  duplicate: [h(HeaderNav.Logo, { href: '#home' }, 'Mux'), h(HeaderNav.Secondary, { className: 'compact' }, h(HeaderNav.NavButton, { href: '#docs' }, 'Docs')), h(HeaderNav.Secondary, { className: 'links' }, navigation), trigger],
 }[new URLSearchParams(location.search).get('variant') ?? 'links'];
 createRoot(document.getElementById('root')).render(h('div', { id: 'frame', className: 'frame' }, h(HeaderNav.Root, null, ...header)));
 `;
@@ -125,7 +127,7 @@ const drawerPage = () => pageShell({
   head: `<link rel="stylesheet" href="/generated/styles.css"><style>
     .frame { container-type: inline-size; inline-size: 24rem; }
     .links { display: none; }
-    @container (min-width: 40rem) { .links { display: flex; } .menu { display: none; } }
+    @container (min-width: 40rem) { .links { display: flex; } .compact, .menu { display: none; } }
   </style>`,
   bodyAttributes: 'style="margin: 24px; background: var(--muxui-semantic-surface-canvas)"',
   body: '<div id="root"></div>',
@@ -208,6 +210,19 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.evaluate(() => document.activeElement.getAttribute('tabindex')), '-1', `${engine}: the root is focusable by script only`);
           await tab.keyboard.press('Escape');
           assert.equal((await focused(tab)).body, false, `${engine}: Escape leaves focus off the body`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // A hidden header link with the drawer link's destination does not stand in for the visible one.
+      {
+        const { context, tab, dialog } = await open('duplicate');
+        try {
+          await dialog.getByRole('link', { name: 'Docs' }).focus();
+          await widen(tab);
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await pollUntil(tab, () => document.activeElement?.closest('.links') !== null && document.activeElement.textContent === 'Docs' && document.activeElement.getClientRects().length > 0, undefined, { message: `${engine}: focus moves to the visible Docs link, not past the hidden copy to the logo`, report: () => document.activeElement?.outerHTML.slice(0, 100) });
         } finally {
           await context.close();
         }
