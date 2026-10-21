@@ -1,5 +1,6 @@
 import { parse as parseJavaScript } from 'acorn';
 import * as cssTree from 'css-tree';
+import { stripTypeScriptTypes } from 'node:module';
 import path from 'node:path';
 
 function fail(code, message) {
@@ -29,11 +30,42 @@ function astSignature(value) {
   return JSON.stringify(stableAst(value));
 }
 
-function parseModule(source, sourcePath, side) {
+/** A React runtime module: plain `.mjs` or TypeScript `.ts` under `packages/react/src` (Decision 0031), never a declaration file. */
+export function isReactModuleSource(path) {
+  return path.startsWith('packages/react/src/') && /\.(?:mjs|ts)$/u.test(path) && !path.endsWith('.d.ts');
+}
+
+// Node's type stripper blanks erasable TypeScript syntax in place, so the JavaScript keeps
+// its positions. It warns once per process that it is experimental; this call expects that.
+function stripTypes(source) {
+  const emitWarning = process.emitWarning;
+  process.emitWarning = (warning, ...rest) => (
+    String(warning?.message ?? warning).startsWith('stripTypeScriptTypes') ? undefined : emitWarning.call(process, warning, ...rest)
+  );
   try {
-    return parseJavaScript(source, { ecmaVersion: 'latest', sourceType: 'module' });
+    return stripTypeScriptTypes(source, { mode: 'strip' });
+  } finally {
+    process.emitWarning = emitWarning;
+  }
+}
+
+function parseModule(source, sourcePath, side) {
+  const typeScript = sourcePath.endsWith('.ts');
+  try {
+    const javaScript = typeScript ? stripTypes(source) : source;
+    const program = parseJavaScript(javaScript, { ecmaVersion: 'latest', sourceType: 'module' });
+    // A type-only edit leaves the JavaScript unchanged but can change the published
+    // declarations, so the stripped type text joins the module's AST signature.
+    if (typeScript) {
+      // Stripping keeps the length; if it ever did not, the whole source counts.
+      const removed = javaScript.length === source.length
+        ? source.split('').filter((character, index) => character !== javaScript[index]).join('')
+        : source;
+      program.typeText = removed.replace(/\s+/gu, ' ');
+    }
+    return program;
   } catch (error) {
-    fail('SOURCE_PARSE', `cannot parse ${side} JavaScript for ${sourcePath}: ${error.message}`);
+    fail('SOURCE_PARSE', `cannot parse ${side} ${typeScript ? 'TypeScript' : 'JavaScript'} for ${sourcePath}: ${error.message}`);
   }
 }
 
@@ -467,7 +499,7 @@ function resolveLocalModule(importerPath, specifier, sourcePaths) {
   if (typeof specifier !== 'string' || !specifier.startsWith('.')) return null;
   const base = normalizedPath(path.posix.join(path.posix.dirname(importerPath), specifier));
   const candidates = [base];
-  if (!path.posix.extname(base)) candidates.push(`${base}.mjs`, `${base}/index.mjs`);
+  if (!path.posix.extname(base)) candidates.push(`${base}.mjs`, `${base}.ts`, `${base}/index.mjs`);
   return candidates.find((candidate) => sourcePaths.has(candidate)) ?? null;
 }
 

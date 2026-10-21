@@ -813,7 +813,7 @@ try {
   const generatedEntries = entries.filter((entry) => entry.startsWith('package/generated/'));
   const publicJsTargets = Object.values(packedManifest.exports)
     .map((target) => (typeof target === 'string' ? target : target.default))
-    .filter((target) => target.endsWith('.mjs'))
+    .filter((target) => /\.m?js$/u.test(target))
     .map((target) => `package/${target.slice(2)}`);
   const guidanceJsonFiles = ['descriptor.json', 'release.json', 'r1-5-closure.json', 'r1-6-contract.json']
     .map((name) => `generated/${name}`)
@@ -837,7 +837,7 @@ try {
   console.log(`R1 exit public-surface leak scan passed for ${upstreamNames.length} upstream names across ${generatedEntries.filter((entry) => entry.endsWith('.d.ts')).length} declarations, ${publicJsTargets.length} public entries, README, and ${guidanceJsonFiles.length + guidanceModules.length} guidance projections`);
 
   // `sideEffects: ["*.css"]` holds only while no packed JS module runs code at import time.
-  const packedModules = generatedEntries.filter((entry) => entry.endsWith('.mjs'));
+  const packedModules = generatedEntries.filter((entry) => /\.m?js$/u.test(entry));
   const sideEffectFindings = packedModules.flatMap((entry) => findModuleSideEffects(readArchiveFile(archive, entry)).map((finding) => `${entry}: ${finding}`));
   if (sideEffectFindings.length !== 0) fail('R1_EXIT_PACK_SIDE_EFFECTS_INVALID', sideEffectFindings.join('; '));
   console.log(`R1 exit side-effect scan passed for ${packedModules.length} packed JS modules`);
@@ -1056,7 +1056,7 @@ try {
       tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readRepositoryFile('catalog/tokens/default-theme.json') },
       stylesheets: packedGenerated.filter(({ path }) => path.endsWith('.css')),
       lucide: { version: lucideVersion, integrity: lucideIntegrity },
-      modules: packedGenerated.filter(({ path }) => path.endsWith('.mjs')),
+      modules: packedGenerated.filter(({ path }) => /\.m?js$/u.test(path)),
     }),
   });
   // The lockfile, token source, and evidence indexes were read from the worktree; bind them to the commit.

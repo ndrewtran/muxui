@@ -5,7 +5,7 @@ import { appendFile, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
-import { analyzeReactSourceChange, analyzeReactStyleChange, localModuleImports } from './component-source-impact.mjs';
+import { analyzeReactSourceChange, analyzeReactStyleChange, isReactModuleSource, localModuleImports } from './component-source-impact.mjs';
 import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from './ci-reuse.mjs';
 import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
@@ -489,14 +489,14 @@ async function reactModuleSources(baseRef) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const fullPath = resolve(directory, entry.name);
       if (entry.isDirectory()) await visit(fullPath);
-      else if (entry.isFile() && entry.name.endsWith('.mjs')) currentFiles.push(fullPath);
+      else if (entry.isFile() && isReactModuleSource(`packages/react/src/${entry.name}`)) currentFiles.push(fullPath);
     }
   }
   await visit(root);
   const basePaths = git(['ls-tree', '-r', '--name-only', baseRef, '--', 'packages/react/src'], { allowFailure: true });
   if (basePaths.status !== 0) throw new Error(`MUXUI_CI_IMPACT_BASE_SOURCE_MISSING: cannot list React source at ${baseRef}`);
   const paths = new Set([
-    ...basePaths.stdout.toString('utf8').split('\n').filter((path) => path.endsWith('.mjs')),
+    ...basePaths.stdout.toString('utf8').split('\n').filter(isReactModuleSource),
     ...currentFiles.map((file) => file.slice(repositoryRoot.length + 1).replaceAll('\\', '/')),
   ]);
   return Object.fromEntries(await Promise.all([...paths].map(async (path) => [
@@ -1134,7 +1134,7 @@ export async function buildPullRequestImpact({
   // browser entries, apps, catalog inputs). A deleted module's referencing
   // files are routed through their own owners as though they changed.
   const routedPaths = [...changed];
-  for (const path of changed.filter((candidate) => candidate.startsWith('packages/react/src/') && candidate.endsWith('.mjs'))) {
+  for (const path of changed.filter(isReactModuleSource)) {
     if (await readHeadText(path) !== null) continue;
     for (const reference of await findReferences(path.slice('packages/react/'.length))) {
       if (routedPaths.includes(reference) || reference.startsWith('packages/react/src/')) continue;
@@ -1265,7 +1265,7 @@ export async function buildPullRequestImpact({
       continue;
     }
 
-    if (path.startsWith('packages/react/src/') && path.endsWith('.mjs')) {
+    if (isReactModuleSource(path)) {
       plan.reactProjectionCheck = true;
       plan.reasons.push(`${path} is React runtime or compiler source; AST ownership determines the affected families`);
       continue;
@@ -1529,7 +1529,7 @@ export async function buildPullRequestImpact({
     plan.reasons.push(...plan.fullReasons.map((reason) => `full workspace proof: ${reason}`));
   }
 
-  const reactSourcePaths = changed.filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.mjs'));
+  const reactSourcePaths = changed.filter(isReactModuleSource);
   // The projection compiler and every local module it imports (at base or
   // head) shape every generated family, as do its canonical catalog inputs.
   const generatorModules = new Set([reactGeneratorPath]);
@@ -1673,7 +1673,7 @@ export async function buildPullRequestImpact({
       // The runtime package boundary fields apply to every workspace manifest.
       if (!reactPackageWideChanges(before, after).pagesAffected) continue;
     }
-    if (path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path)) continue;
+    if (isReactModuleSource(path) || (path.startsWith('packages/react/src/') && path.endsWith('.css'))) continue;
     changedPackages.add(owner.name);
   }
   for (const { name, via, scope } of workspaceDependentRoutes(packages, [...changedPackages].sort())) {
@@ -2506,12 +2506,12 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
   const records = needsMetadata ? await generatedReactRecords() : [];
   const pageIndex = needsMetadata ? await generatedStoryIndex() : [];
   const patterns = needsMetadata ? await patternParticipants(repositoryRoot) : [];
-  const reactSourceChanged = changedPaths.some((path) => path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path));
+  const reactSourceChanged = changedPaths.some((path) => isReactModuleSource(path) || (path.startsWith('packages/react/src/') && path.endsWith('.css')));
   const moduleSources = reactSourceChanged ? await reactModuleSources(mergeBase) : {};
   // Any route that selects React families (source, CSS, catalog records) needs the test sources.
   const componentTestSources = needsMetadata ? await reactTestSources() : {};
   const reactModuleDeleted = (await Promise.all(changedPaths
-    .filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.mjs'))
+    .filter(isReactModuleSource)
     .map(async (path) => await currentText(path) === null))).some(Boolean);
   // Deleted modules can be referenced from test helpers, so their references
   // need the same helper scan as a helper change.

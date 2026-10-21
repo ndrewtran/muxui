@@ -78,7 +78,8 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   // Deep default imports keep unbundled Node consumers off the full icon barrel.
   // Which icons a file uses is not inventoried: Lucide is the default icon source.
   const sourceRoot = resolve(packageRoot, 'src');
-  const sourceFiles = (await readdir(sourceRoot, { recursive: true })).filter((file) => file.endsWith('.mjs') && file !== 'generate.mjs');
+  const sourceFiles = (await readdir(sourceRoot, { recursive: true }))
+    .filter((file) => /\.(?:mjs|ts)$/u.test(file) && !file.endsWith('.d.ts') && file !== 'generate.mjs');
   let lucideImports = 0;
   for (const file of sourceFiles.sort()) {
     const source = await readFile(resolve(sourceRoot, file), 'utf8');

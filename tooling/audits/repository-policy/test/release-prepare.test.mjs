@@ -330,7 +330,7 @@ test('bundle retention maps module ids to packages and rejects retained heavy mo
 test('the React package declares only stylesheets as side effects and generated modules have none', () => {
   assert.deepEqual(manifest.sideEffects, ['*.css']);
   const generatedRoot = join(packageRoot, 'generated');
-  const modules = readdirSync(generatedRoot).filter((name) => name.endsWith('.mjs'));
+  const modules = readdirSync(generatedRoot).filter((name) => /\.m?js$/u.test(name));
   assert.ok(modules.length > 0);
   for (const name of modules) assert.deepEqual(findModuleSideEffects(readFileSync(join(generatedRoot, name), 'utf8')), [], name);
 });

@@ -51,7 +51,7 @@ function assertProofNamespace(parsed, reference) {
     return 'test';
   }
   if (parsed.path.startsWith('packages/react/src/')) {
-    assert(/\.mjs$/u.test(parsed.path), `PROOF_NAMESPACE:${reference}`);
+    assert(/\.(?:mjs|ts)$/u.test(parsed.path) && !parsed.path.endsWith('.d.ts'), `PROOF_NAMESPACE:${reference}`);
     assert(Boolean(parsed.lines || parsed.anchor), `PROOF_LOCATOR:${reference}`);
     assert(!(parsed.lines && parsed.anchor), `PROOF_LOCATOR:${reference}`);
     return 'runtime';

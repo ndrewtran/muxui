@@ -1402,6 +1402,26 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
   assert.ok(!generator.reactTestFiles.includes('test/motion-package-boundary.test.mjs'), 'the full React check already runs it');
 });
 
+test('a TypeScript React source takes the runtime source route; a declaration file does not', async () => {
+  const treePath = 'packages/react/src/tree.ts';
+  const typed = records.map((record) => (record.family === 'Tree' ? { ...record, source: treePath } : record));
+  const before = 'export const Tree = (props: { label: string }): string => props.label;\n';
+  const after = before.replace('props.label;', 'props.label.trim();');
+  const result = await plan([treePath], {
+    records: typed,
+    textSnapshots: { [treePath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [collectionsPath]: 'export const TagGroup = () => null;', [treePath]: { before, after } },
+  });
+  assert.deepEqual(result.reactFamilies, ['Tree']);
+  assert.equal(result.reactProjectionCheck, true);
+  assert.ok(result.reactTestFiles.includes('test/motion-package-boundary.test.mjs'));
+  assert.ok(result.reasons.includes(`${treePath} is React runtime or compiler source; AST ownership determines the affected families`));
+
+  const declarations = await plan(['packages/react/src/supplemental/index.d.ts']);
+  assert.equal(declarations.reactPackageFull, true);
+  assert.ok(!declarations.reasons.some((reason) => reason.includes('AST ownership')));
+});
+
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
   const result = await plan([collectionsPath, '.github/CODEOWNERS'], treeRuntimeChange);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });

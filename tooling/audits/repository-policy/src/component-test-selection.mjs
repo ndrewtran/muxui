@@ -68,7 +68,7 @@ function familyRoute(record, available) {
 function sourceRoute(record) {
   const source = record.source ?? '';
   if (source.endsWith('/supplemental/index.mjs')) return SUPPLEMENTAL_TESTS;
-  const sourceName = source.split('/').at(-1)?.replace(/\.mjs$/u, '');
+  const sourceName = source.split('/').at(-1)?.replace(/\.(?:mjs|ts)$/u, '');
   return SOURCE_ROUTES[sourceName] ?? [];
 }
 
