@@ -24,12 +24,14 @@ export class ApiExtractionError extends Error {
 }
 
 /**
- * The host types a Mux UI-owned prop may reach, each one exact type: a DOM library
+ * The host types a Mux UI-owned prop may reach, each one exact type: a DOM or Intl library
  * name, or `React.<Name>` from @types/react. It grows per tranche, only by what a moved
- * component needs: HTMLButtonElement for Button's and IconButton's activation target,
- * and React.ReactNode for the content props of SelectNative, Message, and Activity.
+ * component needs: HTMLButtonElement for the activation target of Button, IconButton, and
+ * ToggleButton, React.ReactNode for the content props of SelectNative, Message, Activity,
+ * Disclosure, Meter, and ProgressBar, HTMLAnchorElement for Link's activation target, and
+ * NumberFormatOptions (written `Intl.NumberFormatOptions`) for Meter's formatOptions.
  */
-export const HOST_ALLOWLIST = Object.freeze(['HTMLButtonElement', 'React.ReactNode']);
+export const HOST_ALLOWLIST = Object.freeze(['HTMLButtonElement', 'React.ReactNode', 'HTMLAnchorElement', 'NumberFormatOptions']);
 
 // A namespace or wildcard would admit every type under it.
 const EXACT_HOST_TYPE = /^(?:React\.)?[A-Z][A-Za-z0-9]*$/u;

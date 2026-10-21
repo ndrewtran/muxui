@@ -80,25 +80,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "value",
-          "minValue",
-          "maxValue",
-          "label"
-        ],
-        "events": [],
-        "parts": [
-          "root",
-          "label",
-          "track",
-          "fill"
-        ],
-        "defaults": {
-          "minValue": 0,
-          "maxValue": 100
-        }
-      },
       "behavior": [
         "Determinate values are clamped to the range",
         "Omitted value produces an indeterminate progressbar",

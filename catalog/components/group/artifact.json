@@ -82,27 +82,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "disabled",
-          "invalid",
-          "readOnly",
-          "role",
-          "aria-label"
-        ],
-        "events": [],
-        "parts": [
-          "root",
-          "label",
-          "content"
-        ],
-        "defaults": {
-          "disabled": false,
-          "invalid": false,
-          "readOnly": false,
-          "role": "group"
-        }
-      },
       "behavior": [
         "disabled sets aria-disabled and data-disabled on the group root, and invalid sets aria-invalid and data-invalid.",
         "readOnly sets only data-readonly on the group root.",

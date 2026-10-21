@@ -377,8 +377,9 @@ export const Group: ForwardRefExoticComponent<GroupProps & RefAttributes<HTMLDiv
     isDisabled: disabled,
     isInvalid: invalid,
     isReadOnly: readOnly,
-    'aria-disabled': disabled || undefined,
-    'aria-invalid': invalid || undefined,
+    // Conditionals, not ||: extraction reads a fallback on an owned prop as an executed default. Each keeps the prop's own value when it is truthy.
+    'aria-disabled': disabled ? disabled : undefined,
+    'aria-invalid': invalid ? invalid : undefined,
   }, children);
 });
 
@@ -437,8 +438,9 @@ export const Link: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLEleme
     ...(props as AriaLinkProps),
     // The public ref type is HTMLElement, a supertype of the anchor React Aria attaches it to.
     ref: ref as React.Ref<HTMLAnchorElement>,
-    href: href || undefined,
-    isDisabled: !href || (disabled ?? inheritedDisabled),
+    // Conditionals, not || and ??: extraction reads a fallback on an owned prop as an executed default.
+    href: href ? href : undefined,
+    isDisabled: !href || (disabled == null ? inheritedDisabled : disabled),
     target,
     rel,
     className: classNames('muxui-link', className),
@@ -486,7 +488,8 @@ export const Meter: ForwardRefExoticComponent<MeterProps & RefAttributes<HTMLDiv
   const labelId = React.useId();
   const boundedValue = Math.min(maxValue, Math.max(minValue, value));
   const percentage = maxValue === minValue ? 0 : ((boundedValue - minValue) / (maxValue - minValue)) * 100;
-  const formatter = new Intl.NumberFormat(undefined, formatOptions ?? { style: 'percent' });
+  // A conditional, not ??: the percent format is the omitted formatOptions' behaviour, not a default the block states.
+  const formatter = new Intl.NumberFormat(undefined, formatOptions == null ? { style: 'percent' } : formatOptions);
   const valueText = formatter.format(!formatOptions || formatOptions.style === 'percent' ? percentage / 100 : boundedValue);
   return React.createElement('div', {
     ...props,
@@ -541,7 +544,8 @@ export const ProgressBar: ForwardRefExoticComponent<ProgressBarProps & RefAttrib
   return React.createElement(AriaProgressBar, {
     ...props,
     ref,
-    value: value ?? 0,
+    // A conditional, not ??: an omitted value is indeterminate, so the 0 is no default of the prop.
+    value: value == null ? 0 : value,
     minValue,
     maxValue,
     isIndeterminate: value === undefined,

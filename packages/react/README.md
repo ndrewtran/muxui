@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:d7c6a10516c816450b3fdf161d718b42c94a8ea00e0739e9bfd8105b9d36944a -->
+<!-- @generated-content-sha256: sha256:ba99ef4a76b3340669b182152e1446cb3f1e7dfe45639b2dcd7dc118e417573b -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -136,7 +136,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | FileTrigger | experimental | . | .muxui-file-trigger | children, acceptedFileTypes, allowsMultiple, acceptDirectory, defaultCamera, disabled, onSelect, className |
 | Form | experimental | . | .muxui-form | validationBehavior, validationErrors, method, action, onSubmit, onReset |
 | GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
-| Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
+| Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
@@ -148,7 +148,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
 | Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect, children, open, defaultOpen, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
-| Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions, aria-label, aria-labelledby |
+| Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |

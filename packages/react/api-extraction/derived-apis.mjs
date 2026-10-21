@@ -22,6 +22,12 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'activity', name: 'Activity', source: 'packages/react/src/supplemental/activity.ts' },
   { slug: 'data-diff', name: 'DataDiff', source: 'packages/react/src/supplemental/data-diff.ts' },
   { slug: 'checkbox', name: 'Checkbox', source: 'packages/react/src/components.ts' },
+  { slug: 'separator', name: 'Separator', source: 'packages/react/src/components.ts' },
+  { slug: 'disclosure-group', name: 'DisclosureGroup', source: 'packages/react/src/components.ts' },
+  { slug: 'group', name: 'Group', source: 'packages/react/src/components.ts' },
+  { slug: 'progress-bar', name: 'ProgressBar', source: 'packages/react/src/components.ts' },
+  { slug: 'meter', name: 'Meter', source: 'packages/react/src/components.ts' },
+  { slug: 'link', name: 'Link', source: 'packages/react/src/components.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

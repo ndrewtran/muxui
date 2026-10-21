@@ -75,18 +75,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "orientation"
-        ],
-        "events": [],
-        "parts": [
-          "root"
-        ],
-        "defaults": {
-          "orientation": "horizontal"
-        }
-      },
       "behavior": [
         "Orientation controls the logical axis",
         "A semantic separator is exposed to assistive technology",

@@ -1,0 +1,63 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:meter",
+  "binding": "web.react",
+  "export": "Meter",
+  "api": {
+    "props": [
+      "value",
+      "minValue",
+      "maxValue",
+      "label",
+      "formatOptions"
+    ],
+    "events": [],
+    "defaults": {
+      "value": 0,
+      "minValue": 0,
+      "maxValue": 100
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The reading, clamped to the range."
+      },
+      "minValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The bottom of the range."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The top of the range."
+      },
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": true,
+        "description": "The visible name of what is measured. Meter renders it unless aria-label or aria-labelledby names the Meter."
+      },
+      "formatOptions": {
+        "type": {
+          "kind": "host",
+          "name": "NumberFormatOptions"
+        },
+        "required": false,
+        "description": "How the value text is formatted. Omitted, it formats the position in the range as a percentage."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

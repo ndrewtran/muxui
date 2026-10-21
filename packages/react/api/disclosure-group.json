@@ -1,0 +1,88 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:disclosure-group",
+  "binding": "web.react",
+  "export": "DisclosureGroup",
+  "api": {
+    "props": [
+      "expandedIds",
+      "defaultExpandedIds",
+      "multiple",
+      "disabled"
+    ],
+    "events": [
+      "expandedChange"
+    ],
+    "defaults": {
+      "defaultExpandedIds": [],
+      "multiple": true,
+      "disabled": false
+    },
+    "propDetails": {
+      "expandedIds": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The ids of the open Disclosures, when the caller controls them."
+      },
+      "defaultExpandedIds": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The ids of the Disclosures that start open, when the group controls itself."
+      },
+      "multiple": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Lets several Disclosures stay open at once. Turn it off to keep at most one open."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables every Disclosure in the group."
+      }
+    },
+    "eventDetails": {
+      "expandedChange": {
+        "prop": "onExpandedChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "expandedIds",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the ids of the open Disclosures, as an array of strings."
+      }
+    },
+    "types": {}
+  }
+}

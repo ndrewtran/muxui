@@ -77,26 +77,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "href",
-          "disabled",
-          "current",
-          "target",
-          "rel"
-        ],
-        "events": [
-          "activate"
-        ],
-        "parts": [
-          "root",
-          "label"
-        ],
-        "defaults": {
-          "disabled": false,
-          "current": false
-        }
-      },
       "behavior": [
         "Enter activates an enabled link",
         "Disabled links suppress navigation and remain perceivable",
