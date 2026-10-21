@@ -114,6 +114,8 @@ const GUIDES = {
   'date-range-picker': { native: ['YYYY-MM-DD'] },
   // autoComplete and inputMode are native input attributes TextField forwards; event.target.value and the setter are the change handler's JavaScript.
   'text-field': { native: ['autoComplete', 'inputMode', 'event.target.value', 'onChange={setName}'] },
+  // preventDefault is the native keydown event's method the guide tells the input props to call.
+  'search-field': { native: ['preventDefault'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

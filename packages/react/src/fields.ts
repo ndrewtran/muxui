@@ -1093,7 +1093,7 @@ export const SearchField: ForwardRefExoticComponent<SearchFieldProps & RefAttrib
   readOnly = false,
   required = false,
   invalid = false,
-  size,
+  size = 'md',
   validationBehavior: _validationBehavior,
   name,
   placeholder,

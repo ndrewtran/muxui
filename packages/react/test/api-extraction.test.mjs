@@ -387,16 +387,16 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'checkbox-group.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'select-native.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'tooltip.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'checkbox-group.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'search-field.json', 'select-native.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'tooltip.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json'], 'the element a trigger prop takes');
-  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['checkbox-group.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'tooltip.json'], 'content that renders something');
+  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['checkbox-group.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'search-field.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
   assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json'], 'the files FileTrigger selects, and the File a DropZone item reads');
-  // The input attributes TextField's inputProps takes, as FieldInputProps omits them: the element, its attributes, and the Omit of those.
-  assert.deepEqual(reached.get('HTMLInputElement'), ['text-field.json'], 'the element whose attributes inputProps takes');
-  assert.deepEqual(reached.get(hostEntryKey(INPUT_ATTRIBUTES)), ['text-field.json'], 'the attributes of the inner input');
-  assert.deepEqual(reached.get(hostEntryKey(OMITTED_INPUT_ATTRIBUTES)), ['text-field.json'], 'the inner input\'s attributes less the 23 the field owns');
+  // The input attributes TextField's and SearchField's inputProps take, as FieldInputProps omits them: the element, its attributes, and the Omit of those.
+  assert.deepEqual(reached.get('HTMLInputElement'), ['search-field.json', 'text-field.json'], 'the element whose attributes inputProps takes');
+  assert.deepEqual(reached.get(hostEntryKey(INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the attributes of the inner input');
+  assert.deepEqual(reached.get(hostEntryKey(OMITTED_INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the inner input\'s attributes less the 23 the field owns');
   // DropZone's drop items: a file item reads a File or its text, a text item lists its formats, a directory its entries.
   const dropItems = [
     [host('Promise', host('File')), 'a file item\'s read'],
@@ -442,7 +442,7 @@ test('the input props the runtime strips are the ones FieldInputProps omits and 
   assert.deepEqual(stripped.slice(1), OWNED_INPUT_PROPS);
   const entry = HOST_ALLOWLIST.find((candidate) => typeof candidate === 'object' && candidate.name === 'Omit' && hostEntryKey(candidate.typeArguments[0]) === hostEntryKey(INPUT_ATTRIBUTES));
   assert.deepEqual(entry.typeArguments[1].members.map(({ value }) => value), OWNED_INPUT_PROPS);
-  for (const slug of ['text-field']) {
+  for (const slug of ['text-field', 'search-field']) {
     const { api } = JSON.parse(readFileSync(resolve(packageRoot, 'api', `${slug}.json`), 'utf8'));
     assert.deepEqual(api.types.FieldInputProps.type, OMITTED_INPUT_ATTRIBUTES, `${slug} inputProps`);
   }
