@@ -469,7 +469,7 @@ test('motion compositions preserve references and regenerate spring CSS from the
 });
 
 test('modal transition overrides from the previous contract are rejected with a clear diagnostic', () => {
-  assert.equal(source.tokenContractVersion, '6.0.0');
+  assert.equal(source.tokenContractVersion, '7.0.0');
   for (const [id, visualDuration] of [
     ['semantic.motion.modal-transition', 'semantic.motion.modal-enter-duration'],
     ['semantic.motion.modal-dismiss-transition', 'semantic.motion.exit-duration'],

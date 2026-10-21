@@ -1203,6 +1203,265 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
   }
 });
 
+test('R1.3 TagGroup resolves colours and variants, and rejects unknown ones', () => {
+  const tags = (props) => [...renderToString(React.createElement(TagGroup, { label: 'Tags', ...props })).matchAll(/data-color="(\w+)" data-variant="(\w+)"/gu)].map(([, color, variant]) => `${color} ${variant}`);
+  assert.deepEqual(tags({ items: ['One'] }), ['neutral soft']);
+  assert.deepEqual(tags({ items: ['One', { id: 'two', label: 'Two', color: 'red' }], color: 'brand', variant: 'dot' }), ['brand dot', 'red dot'], 'an item colour wins over the group colour');
+  assert.throws(() => tags({ items: ['One'], color: 'crimson' }), /TagGroup color must be one of/u);
+  assert.throws(() => tags({ items: ['One'], variant: 'filled' }), /TagGroup variant must be one of/u);
+  assert.throws(() => tags({ items: [{ id: 'one', label: 'One', color: 'crimson' }] }), /TagGroup item color must be one of/u);
+});
+
+test('R1.3 TagGroup selects tags and reports the selected ids as a Set', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const items = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }, { id: 'three', label: 'Three', disabled: true }];
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  // A new key remounts the group, so each scenario starts from its own defaults.
+  const render = (key, props) => act(async () => root.render(React.createElement(TagGroup, { key, label: 'Tags', items, ...props })));
+  const reports = [];
+  try {
+    await render('none', { onSelectionChange: (keys) => reports.push([...keys]) });
+    await act(async () => tag('One').click());
+    assert.deepEqual([selected(), reports], [[], []], 'tags are not selectable by default');
+
+    // From an empty selection a press selects, a second press clears it, and the next press selects again.
+    for (const selectionMode of ['single', 'multiple']) {
+      reports.length = 0;
+      await render(`empty-${selectionMode}`, { selectionMode, onSelectionChange: (keys) => reports.push([...keys]) });
+      await act(async () => tag('One').click());
+      await act(async () => tag('One').click());
+      await act(async () => tag('One').click());
+      assert.deepEqual([reports, selected()], [[['one'], [], ['one']], ['One']], `${selectionMode}: selects from empty, clears, and selects again`);
+    }
+
+    await render('single', { selectionMode: 'single', defaultSelectedKeys: new Set(['one']), onSelectionChange: (keys) => reports.push([...keys]) });
+    assert.deepEqual(selected(), ['One']);
+    await act(async () => tag('Two').click());
+    assert.deepEqual([selected(), reports.at(-1)], [['Two'], ['two']], 'single selection replaces the selected tag');
+    await act(async () => tag('Three').click());
+    assert.deepEqual(selected(), ['Two'], 'a disabled tag cannot be selected');
+
+    // A controlled group shows only what it is given; the application applies the reported Set.
+    reports.length = 0;
+    await render('controlled', { selectionMode: 'multiple', selectedKeys: new Set(['one']), onSelectionChange: (keys) => reports.push(keys) });
+    await act(async () => tag('Two').click());
+    assert.ok(reports[0] instanceof Set);
+    assert.deepEqual([...reports[0]], ['one', 'two']);
+    assert.deepEqual(selected(), ['One'], 'a controlled group waits for selectedKeys');
+
+    reports.length = 0;
+    await render('disabled', { selectionMode: 'multiple', defaultSelectedKeys: new Set(['one']), disabled: true, onSelectionChange: (keys) => reports.push(keys) });
+    await act(async () => tag('Two').click());
+    assert.deepEqual([selected(), reports], [['One'], []], 'a disabled group does not select or report');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 TagGroup with onAction runs it while nothing is selected and selects once something is', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const log = [];
+  try {
+    await act(async () => root.render(React.createElement(TagGroup, {
+      label: 'Tags', items: ['One', 'Two'], selectionMode: 'multiple',
+      onAction: (item) => log.push(['action', item.id]), onSelectionChange: (keys) => log.push(['select', [...keys]]),
+    })));
+    await act(async () => tag('One').click());
+    assert.deepEqual([log, selected()], [[['action', 'One']], []], 'a press runs the action while nothing is selected');
+
+    // Space selects even with an action, and from then on a press toggles selection instead of running the action.
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('One').focus(); });
+    await act(async () => tag('One').dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })));
+    await act(async () => tag('One').dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true })));
+    await act(async () => tag('Two').click());
+    assert.deepEqual([log.slice(1), selected()], [[['select', ['One']], ['select', ['One', 'Two']]], ['One', 'Two']]);
+
+    // Clearing the selection hands a press back to the action.
+    await act(async () => tag('One').click());
+    await act(async () => tag('Two').click());
+    await act(async () => tag('Two').click());
+    assert.deepEqual([log.at(-1), selected()], [['action', 'Two'], []]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 TagGroup drops a removed tag from its own selection', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const log = [];
+  // The application owns the items; the group owns the selection.
+  function Filters() {
+    const [items, setItems] = React.useState(['One', 'Two']);
+    return React.createElement(TagGroup, {
+      label: 'Tags', items, selectionMode: 'multiple', defaultSelectedKeys: new Set(['One']),
+      onRemove: (removed) => setItems((current) => current.filter((item) => !removed.some(({ id }) => id === item))),
+      onAction: (item) => log.push(['action', item.id]),
+      onSelectionChange: (keys) => log.push(['select', [...keys]]),
+    });
+  }
+  try {
+    await act(async () => root.render(React.createElement(Filters)));
+    assert.deepEqual(selected(), ['One']);
+    await act(async () => tag('One').querySelector('.muxui-tag-remove').click());
+    assert.deepEqual([[...container.querySelectorAll('.muxui-tag')].map((node) => node.textContent), selected(), log], [['Two'], [], []]);
+
+    // The selection is empty, so a press runs the action rather than toggling a lingering 'One'.
+    await act(async () => tag('Two').click());
+    assert.deepEqual(log, [['action', 'Two']]);
+
+    // Space selects, and the report holds only the current tag.
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('Two').focus(); });
+    await act(async () => tag('Two').dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })));
+    await act(async () => tag('Two').dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true })));
+    await act(async () => tag('Two').click());
+    assert.deepEqual(log.slice(1), [['select', ['Two']], ['select', []]]);
+
+    // Emptied again, presses go back to the action.
+    await act(async () => tag('Two').click());
+    assert.deepEqual(log.at(-1), ['action', 'Two']);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+// Dispatches a key to the focused element the way a browser delivers it: keydown, then keyup.
+async function pressKey(name, init = {}) {
+  const target = document.activeElement;
+  await act(async () => { target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true, ...init })); });
+  await act(async () => { target.dispatchEvent(new KeyboardEvent('keyup', { key: name, bubbles: true, cancelable: true, ...init })); });
+}
+
+test('R1.3 TagGroup keeps React Aria range selection in an uncontrolled multiple group', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  try {
+    await act(async () => root.render(React.createElement(TagGroup, { label: 'Tags', items: ['One', 'Two', 'Three'], selectionMode: 'multiple' })));
+    await act(async () => tag('One').click());
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('One').focus(); });
+    await pressKey('ArrowRight', { shiftKey: true });
+    await pressKey('ArrowRight', { shiftKey: true });
+    assert.deepEqual(selected(), ['One', 'Two', 'Three'], 'Shift+Right extends from the anchor');
+    await pressKey('ArrowLeft', { shiftKey: true });
+    assert.deepEqual(selected(), ['One', 'Two'], 'Shift+Left shrinks back toward the anchor');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 TagGroup keeps select-all in an uncontrolled multiple group', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const reports = [];
+  const render = (items) => act(async () => root.render(React.createElement(TagGroup, {
+    label: 'Tags', items, selectionMode: 'multiple', onSelectionChange: (keys) => reports.push([...keys]),
+  })));
+  try {
+    await render(['One', 'Two', 'Three']);
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('One').focus(); });
+    await pressKey('a', { ctrlKey: true });
+    assert.deepEqual([selected(), reports.at(-1)], [['One', 'Two', 'Three'], ['One', 'Two', 'Three']], 'the application gets the ids');
+
+    // A tag added after select-all is selected too, and no report is made for it.
+    await render(['One', 'Two', 'Three', 'Four']);
+    assert.deepEqual([selected(), reports.length], [['One', 'Two', 'Three', 'Four'], 1]);
+
+    // Shift+Right from select-all selects only the tag it lands on.
+    await pressKey('ArrowRight', { shiftKey: true });
+    assert.deepEqual(selected(), ['Two']);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 TagGroup hands the application a copy of the selection', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const reports = [];
+  try {
+    await act(async () => root.render(React.createElement(TagGroup, {
+      label: 'Tags', items: ['One', 'Two'], selectionMode: 'multiple',
+      // A callback that empties the Set it is given must not empty the group.
+      onSelectionChange: (keys) => { reports.push([...keys]); keys.clear(); },
+    })));
+    await act(async () => tag('One').click());
+    assert.deepEqual(selected(), ['One']);
+    await act(async () => tag('Two').click());
+    assert.deepEqual([selected(), reports], [['One', 'Two'], [['One'], ['One', 'Two']]]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 TagGroup applies defaultSelectedKeys to items that arrive after mount', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const render = (items) => act(async () => root.render(React.createElement(TagGroup, {
+    label: 'Tags', items, selectionMode: 'multiple', defaultSelectedKeys: new Set(['One']),
+  })));
+  try {
+    await render([]);
+    await render(['One', 'Two']);
+    assert.deepEqual(selected(), ['One'], 'a default waits for its item; it is not a removal');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 TagGroup forgets a removed tag that was only a range anchor', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const render = (items) => act(async () => root.render(React.createElement(TagGroup, { label: 'Tags', items, selectionMode: 'multiple' })));
+  try {
+    await render(['One', 'Two', 'Three', 'Four']);
+    await act(async () => tag('One').click());
+    await act(async () => tag('Two').click());
+    await act(async () => tag('Two').click());
+    assert.deepEqual(selected(), ['One']);
+
+    // Two is deselected but may still anchor the range. Removing it must not leave a stale anchor behind.
+    await render(['One', 'Three', 'Four']);
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('One').focus(); });
+    await pressKey('ArrowRight', { shiftKey: true });
+    await pressKey('ArrowRight', { shiftKey: true });
+    assert.deepEqual(selected(), ['One', 'Three', 'Four'], 'Shift+Right extends from One across the remaining tags');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 collections keep disabled items inert and preserve composite anatomy', async () => {
   const env = createDom();
   const container = document.querySelector('#root');

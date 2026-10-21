@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:7140b779ae0cc08af0fed6bc4bf08f5b11cfbc325a9139637b69ace4f627e4e5 -->
+<!-- @generated-content-sha256: sha256:6db79f93d404718c9f4e96936030f441b762e822625a6b868c3d8809481d336d -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -171,7 +171,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
 | Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
 | Tabs | experimental | . | .muxui-tabs | aria-label, aria-labelledby, items, value, defaultValue, keyboardActivation, disabled, size, orientation, variant |
-| TagGroup | experimental | . | .muxui-tag-group | label, aria-label, aria-labelledby, items, disabled |
+| TagGroup | experimental | . | .muxui-tag-group | label, aria-label, aria-labelledby, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |

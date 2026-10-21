@@ -2110,6 +2110,17 @@
 }
 
 .muxui-tag {
+  /* Neutral is the default colour. A colour block below swaps in that colour's tokens. */
+  --muxui-tag-text: var(--muxui-component-taggroup-tag-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-tag-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-neutral-dot);
+  --muxui-tag-fill: var(--muxui-component-taggroup-tag-background);
+  --muxui-tag-fill-hover: var(--muxui-semantic-action-neutral-background-hover);
+  --muxui-tag-fill-pressed: var(--muxui-semantic-action-neutral-background-pressed);
+  --muxui-tag-edge: color-mix(in srgb, var(--muxui-semantic-surface-strong) 20%, transparent);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-neutral-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-neutral-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-tag-selected-text);
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
@@ -2118,11 +2129,9 @@
   padding-block: 0;
   padding-inline: var(--muxui-semantic-layout-inset-small);
   border: 0;
-  outline: 1px solid var(--muxui-semantic-border-strong);
-  outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  background-color: var(--muxui-component-taggroup-tag-background);
-  color: var(--muxui-component-taggroup-tag-foreground);
+  background-color: var(--muxui-tag-fill);
+  color: var(--muxui-tag-text);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -2132,54 +2141,349 @@
   user-select: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
-    outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
+.muxui-tag[data-color='brand'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-brand-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-brand-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-brand-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-brand-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-brand-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-brand-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-brand-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='success'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-success-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-success-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-success-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-success-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-success-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-success-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-success-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='warning'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-warning-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-warning-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-warning-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-warning-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-warning-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-warning-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-warning-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='error'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-error-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-error-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-error-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-error-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-error-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-error-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-error-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='red'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-red-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-red-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-red-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-red-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-red-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-red-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-red-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='orange'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-orange-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-orange-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-orange-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-orange-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-orange-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-orange-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-orange-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='amber'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-amber-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-amber-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-amber-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-amber-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-amber-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-amber-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-amber-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='yellow'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-yellow-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-yellow-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-yellow-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-yellow-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-yellow-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-yellow-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-yellow-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='lime'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-lime-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-lime-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-lime-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-lime-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-lime-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-lime-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-lime-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='green'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-green-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-green-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-green-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-green-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-green-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-green-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-green-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='emerald'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-emerald-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-emerald-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-emerald-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-emerald-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-emerald-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-emerald-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-emerald-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='teal'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-teal-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-teal-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-teal-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-teal-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-teal-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-teal-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-teal-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='bluegreen'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-bluegreen-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-bluegreen-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-bluegreen-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-bluegreen-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-bluegreen-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-bluegreen-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-bluegreen-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='cyan'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-cyan-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-cyan-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-cyan-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-cyan-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-cyan-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-cyan-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-cyan-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='sky'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-sky-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-sky-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-sky-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-sky-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-sky-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-sky-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-sky-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
+}
+
+.muxui-tag[data-color='indigo'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-indigo-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-indigo-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-indigo-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-indigo-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-indigo-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-indigo-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-indigo-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='violet'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-violet-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-violet-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-violet-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-violet-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-violet-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-violet-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-violet-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='purple'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-purple-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-purple-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-purple-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-purple-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-purple-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-purple-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-purple-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='fuchsia'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-fuchsia-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-fuchsia-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-fuchsia-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-fuchsia-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-fuchsia-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-fuchsia-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-fuchsia-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='pink'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-pink-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-pink-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-pink-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-pink-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-pink-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-pink-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-pink-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+.muxui-tag[data-color='rose'] {
+  --muxui-tag-text: var(--muxui-component-taggroup-rose-foreground);
+  --muxui-tag-text-strong: var(--muxui-component-taggroup-rose-strong-foreground);
+  --muxui-tag-dot: var(--muxui-component-taggroup-rose-dot);
+  --muxui-tag-weak: var(--muxui-component-taggroup-rose-tint-weak);
+  --muxui-tag-heavy: var(--muxui-component-taggroup-rose-tint-heavy);
+  --muxui-tag-selected-background: var(--muxui-component-taggroup-rose-selected-background);
+  --muxui-tag-selected-text: var(--muxui-component-taggroup-rose-selected-foreground);
+  --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
+}
+
+/*
+ * A hue's fills and outline edge mix its two basis tints, weak and heavy, as
+ * a * weak + b * heavy; the percentages below are a and b. The basis tints hold each
+ * scheme's alpha (weak 10% light and 25% dark, heavy 40% and 50%), so the scheme
+ * weights stay in the tokens. The mixes give soft 12% light and 20% dark, outline 8%
+ * and 14%, dot 10% and 16%, strong 24% and 34%, and the outline edge 32% and 40%.
+ * Hover adds 6 points and pressed 12, except strong pressed in dark, which adds 11 so its
+ * label keeps 4.5:1 on the lightest hues under theme presets.
+ */
+.muxui-tag[data-color]:not([data-color='neutral']) {
+  --muxui-tag-edge: color-mix(in srgb, var(--muxui-tag-weak) 0%, var(--muxui-tag-heavy) 80%);
+}
+
+.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='soft'] {
+  --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 40%, var(--muxui-tag-heavy) 20%);
+  --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 28%, var(--muxui-tag-heavy) 38%);
+  --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 16%, var(--muxui-tag-heavy) 56%);
+}
+
+.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='outline'] {
+  --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 32%, var(--muxui-tag-heavy) 12%);
+  --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 20%, var(--muxui-tag-heavy) 30%);
+  --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 8%, var(--muxui-tag-heavy) 48%);
+}
+
+.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='dot'] {
+  --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 28%, var(--muxui-tag-heavy) 18%);
+  --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 16%, var(--muxui-tag-heavy) 36%);
+  --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 4%, var(--muxui-tag-heavy) 54%);
+}
+
+.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='strong'] {
+  --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 32%, var(--muxui-tag-heavy) 52%);
+  --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 20%, var(--muxui-tag-heavy) 70%);
+  --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 0%, var(--muxui-tag-heavy) 90%);
+}
+
+.muxui-tag[data-variant='outline'] {
+  /* An inset shadow, so the outline stays free for focus. */
+  box-shadow: inset 0 0 0 1px var(--muxui-tag-edge);
+}
+
+.muxui-tag[data-variant='dot'] {
+  color: var(--muxui-component-taggroup-tag-foreground);
+}
+
+.muxui-tag[data-variant='dot']::before {
+  content: '';
+  flex: none;
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  border-radius: 50%;
+  background-color: var(--muxui-tag-dot);
+}
+
+.muxui-tag[data-variant='strong'] {
+  color: var(--muxui-tag-text-strong);
+}
+
+/* Neutral steps its strong fill up one weight from the neutral action background. */
+.muxui-tag[data-color='neutral'][data-variant='strong'] {
+  --muxui-tag-fill: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
+  --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
+  --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 20%, transparent);
+}
+
 .muxui-tag[data-hovered]:not([data-selected], [data-disabled]) {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--muxui-semantic-surface-strong) 3%, transparent),
-    color-mix(in srgb, var(--muxui-semantic-surface-strong) 3%, transparent)
-  );
-  outline-color: var(--muxui-semantic-border-indicator);
+  background-color: var(--muxui-tag-fill-hover);
 }
 
 .muxui-tag[data-pressed]:not([data-selected], [data-disabled]) {
+  background-color: var(--muxui-tag-fill-pressed);
+}
+
+.muxui-tag[data-selected]:not([data-disabled]) {
+  --muxui-tag-dot: currentcolor;
+  background-color: var(--muxui-tag-selected-background);
+  box-shadow: none;
+  color: var(--muxui-tag-selected-text);
+}
+
+.muxui-tag[data-selected][data-hovered]:not([data-disabled]) {
   background-image: linear-gradient(
-    color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
-    color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+    color-mix(in srgb, var(--muxui-tag-selected-overlay) 10%, transparent),
+    color-mix(in srgb, var(--muxui-tag-selected-overlay) 10%, transparent)
   );
 }
 
-.muxui-tag[data-focused] {
-  outline-color: var(--muxui-semantic-focus-ring);
-}
-
-.muxui-tag[data-focus-visible] {
-  box-shadow:
-    0 0 0 2px var(--muxui-semantic-focus-inner),
-    0 0 0 4px var(--muxui-semantic-focus-ring);
-}
-
-.muxui-tag[data-selected] {
-  background-color: var(--muxui-semantic-selection-track);
-  outline-color: var(--muxui-semantic-selection-track);
-  color: var(--muxui-semantic-action-foreground);
-}
-
-.muxui-tag[data-selected][data-hovered] {
-  background-color: var(--muxui-semantic-color-color-50);
-  outline-color: var(--muxui-semantic-color-color-50);
-  color: var(--muxui-component-taggroup-selected-foreground-hover);
+.muxui-tag[data-selected][data-pressed]:not([data-disabled]) {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-tag-selected-overlay) 18%, transparent),
+    color-mix(in srgb, var(--muxui-tag-selected-overlay) 18%, transparent)
+  );
 }
 
 .muxui-tag[data-disabled] {
+  --muxui-tag-dot: currentcolor;
   background-color: var(--muxui-semantic-surface-hover);
-  outline-color: var(--muxui-semantic-border-strong);
+  box-shadow: none;
   color: var(--muxui-component-taggroup-tag-foreground);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.muxui-tag[data-focus-visible],
+.muxui-tag:focus-visible {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
 }
 
 .muxui-tag-remove {
@@ -2574,13 +2878,13 @@
     opacity: 1;
   }
 
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag)[data-selected],
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag)[aria-selected='true'] {
+  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[data-selected],
+  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[aria-selected='true'] {
     background: Highlight;
     color: HighlightText;
   }
 
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag):focus-visible {
+  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row):focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
@@ -2592,10 +2896,29 @@
     box-shadow: none;
   }
 
-  .muxui-tag[data-selected][data-hovered] {
+  .muxui-tag[data-variant='outline'] {
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
+
+  .muxui-tag[data-variant='dot']::before {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
+
+  .muxui-tag[data-selected] {
     background: Highlight !important;
     color: HighlightText !important;
-    outline-color: Highlight !important;
+  }
+
+  .muxui-tag[data-selected][data-variant='dot']::before {
+    background-color: HighlightText;
+  }
+
+  .muxui-tag[data-focus-visible],
+  .muxui-tag:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 
   .muxui-list-box-item[data-selected],
@@ -3285,13 +3608,6 @@
   :scope .muxui-color-swatch {
     border-color: var(--muxui-semantic-color-neutral-default-88);
   }
-}
-
-.muxui-tag[data-focus-visible],
-.muxui-tag:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--muxui-focus-ring-inner),
-    0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
 .muxui-toolbar > .muxui-button:focus-visible {

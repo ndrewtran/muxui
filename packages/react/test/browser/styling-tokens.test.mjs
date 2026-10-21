@@ -169,7 +169,7 @@ test('immediate action labels and selection marks retain contrast in every inter
     React.createElement(CheckboxField.Root, { defaultChecked: true },
       React.createElement(CheckboxField.Button, null,
         React.createElement(CheckboxField.Indicator), 'Selected field choice')),
-    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-selected': true }, 'Selected tag')));
+    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-color': 'brand', 'data-selected': true }, 'Selected tag')));
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
@@ -244,7 +244,7 @@ test('immediate action labels and selection marks retain contrast in every inter
       await assertTextContrast('.muxui-checkbox-field__indicator svg', '.muxui-checkbox-field__indicator', 'selected CheckboxField mark', mode, 'hover');
 
       await tag.evaluate((element) => element.setAttribute('data-hovered', ''));
-      await waitForTokenProperty(page, '#selected-tag', 'color', 'component.taggroup.selected-foreground-hover');
+      await waitForTokenProperty(page, '#selected-tag', 'color', 'component.taggroup.brand-selected-foreground');
       await assertTextContrast('#selected-tag', '#selected-tag', 'selected TagGroup item', mode, 'hover');
     }
 

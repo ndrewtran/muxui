@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tag-group-colours-react",
+  "kind": "example",
+  "name": "Coloured TagGroup",
+  "summary": "Colour status and category tags, and compare the soft, outline, dot, and strong variants.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tag-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/tag-group/examples/react/colours.tsx"
+}

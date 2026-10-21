@@ -13,7 +13,7 @@ export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
 // The token contract version this module accepts. The package must not import the
 // canonical theme (it is not packed), so authoring.test.mjs asserts this equals
 // catalog/tokens/default-theme.json's tokenContractVersion.
-const TOKEN_CONTRACT_VERSION = '6.0.0';
+const TOKEN_CONTRACT_VERSION = '7.0.0';
 const DOCUMENT_KEYS = ['schema', 'id', 'source', 'tokenContractVersion', 'modes', 'overrides', 'scale'];
 const MODE_AXES = ['colorScheme', 'contrast', 'motion', 'density', 'direction'];
 const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'curvature'];

@@ -5,9 +5,9 @@ id: muxui:guide:token-migration
 # Token contract migration
 
 The current versions are `schemaVersion` and `tokenContractVersion` in the
-`muxui:token:default-theme` source. Token contract `6.0.0` changed the meaning
-of the spring-bearing transition tokens, described below. Token contract
-`5.2.0` added two component-owned DataDiff change backgrounds derived from
+`muxui:token:default-theme` source. Token contract `7.0.0` replaced the
+TagGroup colour tokens, and `6.0.0` changed the meaning of the spring-bearing
+transition tokens; both are described below. Token contract `5.2.0` added two component-owned DataDiff change backgrounds derived from
 existing status accents, `5.1.0` added the separate CodeBlock change
 backgrounds, and `5.0.0`
 added typed easing and transition compositions while retaining the `4.0.0`
@@ -38,6 +38,23 @@ settings:
   }
 }
 ```
+
+Token contract `7.0.0` is a breaking change to the TagGroup component tokens.
+Tags take a colour (neutral, brand, the status colours, and 17 hue families) and
+a variant, and a selected tag keeps its label colour while hovered, so
+`component.taggroup.selected-foreground-hover` is removed. An authoring
+document that overrides it is rejected as an unknown token
+(`MUXUI_THEME_OVERRIDE_UNKNOWN`, or `MUXUI_TOKEN_OVERRIDE_UNKNOWN` from the
+compiler); override the selected label of the colour, such as
+`component.taggroup.brand-selected-foreground`, instead.
+`component.taggroup.tag-background` now aliases the translucent
+`semantic.action.neutral-background` rather than `semantic.surface.subtle`, so
+neutral tags paint over any surface. The new tokens are
+`component.taggroup.<colour>-foreground`, `-strong-foreground`, `-dot`,
+`-tint-weak`, `-tint-heavy`, `-selected-background`, and `-selected-foreground`
+for each colour, the `neutral-dot` and `neutral-selected-*` roles, and the
+shared `selected-overlay-scheme` and `selected-overlay-light`. Authoring
+documents declare `7.0.0`.
 
 Token contract `6.0.0` is a breaking change to transition tokens. The
 interaction, state, dismiss, reveal, content-resize, modal, and modal-dismiss

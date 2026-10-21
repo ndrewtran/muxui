@@ -69,8 +69,8 @@ test('documents, sources and Scale generation stay on the canonical token contra
 });
 
 test('authoring documents written for the previous contract version are rejected', () => {
-  assert.equal(source.tokenContractVersion, '6.0.0');
-  assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '5.2.0', overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID/u);
+  assert.equal(source.tokenContractVersion, '7.0.0');
+  assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '6.0.0', overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID/u);
 });
 
 test('authoring documents that override a removed motion easing token are rejected', () => {
