@@ -23,6 +23,7 @@ import {
   ListBoxItem as AriaListBoxItem,
   ListBoxSection as AriaListBoxSection,
   Link as AriaLink,
+  MenuTrigger as AriaMenuTrigger,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
   OverlayTriggerStateContext,
@@ -58,6 +59,7 @@ import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
+import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
@@ -1137,6 +1139,8 @@ const HeaderNav = {
 /* Sidebar */
 // Folding state lives in Sidebar.Provider so Root, Toggle, and the shortcut share it. Without a Provider every part renders as before.
 const SidebarContext = React.createContext(null);
+// AccountCard shares its element with AccountMenu so the menu can anchor to the card.
+const SidebarAccountContext = React.createContext(null);
 function useSidebarPart(part) { const context = React.useContext(SidebarContext); if (!context) throw new Error(`Sidebar.${part} must be used inside Sidebar.Provider`); return context; }
 const SIDEBAR_EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
 const sidebarShortcutModifier = (event) => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey);
@@ -1402,8 +1406,30 @@ const Sidebar = {
   Section: React.forwardRef(function SidebarSection({ label, className, children, ...props }, ref) { const labelId = React.useId(); return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, h('span', { id: labelId, className: 'muxui-sidebar__section-label' }, label), h('ul', { className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId }, children)); }),
   NavItem: function SidebarNavItem({ children, ...props }) { return h(SidebarNavNode, { ...props, label: children }); },
   NavButton: React.forwardRef(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-btn', current && 'muxui-sidebar__nav-btn--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', 'aria-hidden': true }), props.children); }),
-  AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children); }),
-  AccountMenu: React.forwardRef(function SidebarAccountMenu(props, ref) { return nativePart('div', 'muxui-sidebar__account-menu', props, ref); }),
+  AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) {
+    const sidebar = React.useContext(SidebarContext);
+    const card = React.useRef(null);
+    React.useImperativeHandle(ref, () => card.current);
+    const [open, setOpen] = React.useState(false);
+    // A folded rail hides the options button, so a menu left open has nothing to anchor to or return focus to:
+    // close it and hand focus to a Toggle, else Root.
+    const collapsed = Boolean(sidebar?.collapsed);
+    useIsomorphicLayoutEffect(() => {
+      if (!collapsed || !open) return;
+      setOpen(false);
+      sidebarHandoff(() => [...sidebar.toggles, ...sidebar.roots], sidebar.roots, (active) => active.closest('[role="menu"]'));
+    }, [collapsed]);
+    // The options button exists to open the AccountMenu child, so a card without one has no button.
+    const hasMenu = React.Children.toArray(children).length > 0;
+    const content = h('div', { ...props, ref: card, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), hasMenu && h(IconButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
+    return hasMenu ? h(SidebarAccountContext.Provider, { value: card }, h(AriaMenuTrigger, { isOpen: open && !collapsed, onOpenChange: setOpen }, content)) : content;
+  }),
+  AccountMenu: React.forwardRef(function SidebarAccountMenu({ className, ...props }, ref) {
+    const card = React.useContext(SidebarAccountContext);
+    if (!card) throw new Error('Sidebar.AccountMenu must be used inside Sidebar.AccountCard');
+    // The popup opens from the card, not the small button, so it lines up with the card's edge.
+    return h(Menu.Popup, { anchorRef: card, placement: 'top-start' }, h(Menu.List, { ...props, ref, className: cx('muxui-sidebar__account-menu', className) }));
+  }),
   MobileTrigger: function SidebarMobileTrigger({ children, logo }) {
     const sidebar = React.useContext(SidebarContext);
     const [open, setOpen] = React.useState(false);

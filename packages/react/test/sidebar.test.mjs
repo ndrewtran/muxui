@@ -59,6 +59,16 @@ test('Sidebar Toggle requires a Provider', () => {
   assert.throws(() => renderToString(h(Sidebar.Toggle, null)), /Sidebar\.Toggle must be used inside Sidebar\.Provider/u);
 });
 
+test('Sidebar AccountCard shows its options button only with an AccountMenu, and AccountMenu requires the card', () => {
+  const account = (...children) => renderToString(h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, ...children)));
+  assert.doesNotMatch(account(), /Account options/u);
+  const withMenu = account(h(Sidebar.AccountMenu, { items: ['Profile'] }));
+  const [button] = withMenu.match(/<button[^>]*>/u) ?? [];
+  assert.ok(button?.includes('aria-label="Account options"') && button.includes('aria-expanded="false"') && button.includes('aria-haspopup'), 'the button names the menu and reports it closed');
+  assert.doesNotMatch(withMenu, /role="menu"/u, 'a closed menu renders nothing');
+  assert.throws(() => renderToString(h(Sidebar.AccountMenu, { items: ['Profile'] })), /Sidebar\.AccountMenu must be used inside Sidebar\.AccountCard/u);
+});
+
 const nav = (...items) => h(Sidebar.Root, null, h(Sidebar.NavList, null, ...items));
 // Lucide icons are covered by their own test; keep their path data out of the pinned markup.
 const withoutSvgPaths = (html) => html.replace(/<svg[^>]*lucide[^>]*>.*?<\/svg>/gu, '<svg/>');

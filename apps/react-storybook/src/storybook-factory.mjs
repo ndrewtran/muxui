@@ -1076,8 +1076,9 @@ const SIDEBAR_SAMPLE_ITEMS = [{ href: '#now', label: 'Now' }, { href: '#next', l
 /**
  * The flat Sidebar props belong to different parts. Provider owns folding. Root owns hideBorder and density.
  * The first NavItem takes label, href, current, external, badge, and icon; the Roadmap group takes items and
- * its open state. Search, AccountCard, and FeatureCard take their own props. One navigation fills the column
- * and the mobile drawer, and the consumer owns the FeatureCard, so dismissing it removes it here.
+ * its open state. Search, AccountCard, and FeatureCard take their own props, and onAction belongs to the
+ * AccountMenu inside the card. One navigation fills the column and the mobile drawer, and the consumer owns the
+ * FeatureCard, so dismissing it removes it here.
  */
 function SidebarPreview({
   collapsed, defaultCollapsed, onCollapsedChange, shortcut,
@@ -1085,7 +1086,7 @@ function SidebarPreview({
   items, expanded, defaultExpanded, onExpandedChange,
   placeholder, value, onChange,
   name, email, avatarSrc, status,
-  onDismiss,
+  onAction, onDismiss,
   ...root
 }) {
   const [dismissed, setDismissed] = React.useState(false);
@@ -1104,8 +1105,11 @@ function SidebarPreview({
       e(MuxUI.Sidebar.Search, { placeholder: fallback(placeholder, 'Search'), value, onChange }),
       e(MuxUI.Sidebar.Divider),
       navigation,
-      e(MuxUI.Sidebar.AccountCard, { name: fallback(name, 'Sample user'), email: fallback(email, 'sample@example.com'), avatarSrc, status }),
-      e(MuxUI.Sidebar.AccountMenu, null, 'Account'),
+      e(MuxUI.Sidebar.AccountCard, { name: fallback(name, 'Sample user'), email: fallback(email, 'sample@example.com'), avatarSrc, status },
+        e(MuxUI.Sidebar.AccountMenu, { onAction },
+          e(MuxUI.Menu.Item, { id: 'profile' }, 'Profile'),
+          e(MuxUI.Menu.Separator),
+          e(MuxUI.Menu.Item, { id: 'sign-out' }, 'Sign out'))),
       dismissed ? null : e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => { onDismiss?.(); setDismissed(true); } }),
     ),
     e(MuxUI.Sidebar.MobileTrigger, { logo: 'Field team' }, navigation),

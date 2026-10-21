@@ -2713,13 +2713,10 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 
 
+/* The menu is a shared Menu surface; it is at least as wide as the card it opens from. */
 .muxui-sidebar__account-menu {
-  min-width: 16.5rem;
-  border-radius: var(--muxui-semantic-shape-feature-card-radius);
-  background: var(--muxui-semantic-color-neutral-12);
-  box-shadow: 0 4px 24px var(--muxui-component-sidebar-shadow-color);
-  border: 1px solid var(--muxui-semantic-color-neutral-20);
-  overflow: hidden;
+  box-sizing: border-box;
+  min-inline-size: var(--trigger-width, 10rem);
 }
 
 
@@ -3207,13 +3204,6 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   :scope .muxui-sidebar__account-trigger:hover {
     background: var(--muxui-semantic-color-neutral-20);
     color: var(--muxui-semantic-color-neutral-100);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-sidebar__account-menu {
-    background: var(--muxui-semantic-color-neutral-16);
-    border-color: var(--muxui-semantic-color-neutral-22);
   }
 }
 

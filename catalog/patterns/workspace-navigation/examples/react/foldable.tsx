@@ -49,7 +49,9 @@ const navigation = (
         </Sidebar.Section>
       </Sidebar.NavList>
     </nav>
-    <Sidebar.AccountCard name="Sample user" email="sample@example.com" />
+    <Sidebar.AccountCard name="Sample user" email="sample@example.com">
+      <Sidebar.AccountMenu items={['Profile', 'Sign out']} />
+    </Sidebar.AccountCard>
   </>
 );
 

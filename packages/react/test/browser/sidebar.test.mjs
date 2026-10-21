@@ -21,6 +21,7 @@ const params = new URLSearchParams(location.search);
 const Icon = ({ className }) => h('svg', { className, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, 'aria-hidden': true }, h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }));
 window.__changes = [];
 window.__vetoed = [];
+window.__actions = [];
 // A control outside Sidebar that handles the fold chord itself, with and without stopping its propagation.
 const veto = (id, stop) => h('button', { type: 'button', id, onKeyDown: (event) => {
   if (event.key.toLowerCase() !== 'b' || !(event.metaKey || event.ctrlKey)) return;
@@ -66,7 +67,7 @@ function Shell() {
           h(Sidebar.NavItem, { href: '#overview', icon: Icon, badge: '12', current: true }, 'Overview'),
           h(Sidebar.NavItem, { icon: Icon, items: [{ href: '#now', label: 'Now' }, { href: '#next', label: 'Next' }] }, 'Roadmap'))),
       h(Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => {} }),
-      h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' })),
+      h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' }, h(Sidebar.AccountMenu, { items: ['Profile', 'Sign out'] }))),
     h('main', { className: 'main' },
       params.get('toggle') !== 'none' && h(Sidebar.Toggle, { size: 'sm', disabled: params.get('toggle') === 'disabled' }),
       veto('veto', true),
@@ -96,7 +97,20 @@ function Responsive() {
         pages()))),
     h('button', { type: 'button', id: 'outside' }, 'Outside'));
 }
-createRoot(document.getElementById('root')).render(h(params.get('layout') === 'rwd' ? Responsive : Shell));
+// The account card at the foot of the column, whose options button opens the account menu.
+function Account() {
+  return h(Sidebar.Provider, { shortcut: 'b' },
+    h('div', { className: 'shell' },
+      h(Sidebar.Root, { 'aria-label': 'Account' },
+        h(Sidebar.NavList, { 'aria-label': 'Account pages' }, h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home')),
+        h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' },
+          h(Sidebar.AccountMenu, { onAction: (item) => window.__actions.push(item.id) },
+            h(Menu.Item, { id: 'profile' }, 'Profile'),
+            h(Menu.Separator),
+            h(Menu.Item, { id: 'sign-out' }, 'Sign out')))),
+      h('main', { className: 'main' }, h(Sidebar.Toggle), h('button', { type: 'button', id: 'outside' }, 'Outside'))));
+}
+createRoot(document.getElementById('root')).render(h({ rwd: Responsive, account: Account }[params.get('layout')] ?? Shell));
 // An editable control inside a shadow root: the document only sees its host.
 const host = document.createElement('div');
 host.id = 'shadow-host';
@@ -1434,6 +1448,107 @@ for (const engine of browserEngines()) {
       const whole = { top: true, bottom: true, left: true, right: true };
       const expected = Object.fromEntries(['light', 'dark'].flatMap((scheme) => ['implicit', 'compact'].flatMap((name) => ['link', 'toggle'].map((part) => [`${scheme} ${name} ${part}`, whole]))));
       assert.deepEqual(rings, expected, `${engine}: the Button group's link and toggle rings are painted on every side, in both schemes`);
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+for (const engine of browserEngines()) {
+  test(`Sidebar AccountCard opens its AccountMenu by pointer and keyboard in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs', 'src/collections.mjs'],
+      pages: { '/sidebar.html': page },
+      modules: { '/sidebar-entry.mjs': entry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar.html`, 'aside');
+      for (const scheme of ['light', 'dark']) {
+        const label = (message) => `${engine} ${scheme}: ${message}`;
+        const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+        try {
+          const tab = await context.newPage();
+          const errors = [];
+          tab.on('pageerror', (error) => errors.push(error.message));
+          tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+          await tab.goto(`${url}/sidebar.html?layout=account&scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.locator('aside').waitFor({ timeout: 15_000 });
+          const button = tab.getByRole('button', { name: 'Account options' });
+          const menu = tab.getByRole('menu');
+          // Focus returns once the menu has finished leaving, so wait for it instead of reading it at once.
+          const focusReturns = (message) => pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-sidebar__account-trigger'), null, { message, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          const focusInMenu = () => tab.evaluate(() => Boolean(document.activeElement?.closest('[role="menu"]')));
+          const actions = () => tab.evaluate(() => window.__actions);
+
+          assert.ok(await button.getAttribute('aria-haspopup'), label('the options button announces a popup'));
+          assert.equal(await button.getAttribute('aria-expanded'), 'false', label('the menu starts closed'));
+          assert.equal(await menu.count(), 0, label('a closed menu renders nothing'));
+
+          // Pointer: the button opens the menu beside the card, the menu is named by the button, and Escape closes it.
+          await button.click();
+          await menu.waitFor({ timeout: 5000 });
+          assert.equal(await button.getAttribute('aria-expanded'), 'true', label('the button reports the open menu'));
+          assert.equal(await tab.getByRole('menu', { name: 'Account options' }).count(), 1, label('the menu is named by its button'));
+          assert.deepEqual(await tab.getByRole('menuitem').allTextContents(), ['Profile', 'Sign out'], label('the menu lists its items'));
+          const geometry = await tab.evaluate(() => {
+            const card = document.querySelector('.muxui-sidebar__account-card').getBoundingClientRect();
+            const list = document.querySelector('[role="menu"]').getBoundingClientRect();
+            return { cardLeft: card.left, cardTop: card.top, cardWidth: card.width, left: list.left, bottom: list.bottom, width: list.width, viewport: innerWidth };
+          });
+          assert.ok(Math.abs(geometry.left - geometry.cardLeft) < 1.5, label(`the menu lines up with the card's start edge (${geometry.left} against ${geometry.cardLeft})`));
+          assert.ok(geometry.width >= geometry.cardWidth - 1, label(`the menu is at least as wide as the card (${geometry.width} against ${geometry.cardWidth})`));
+          assert.ok(geometry.bottom <= geometry.cardTop + 1, label('the menu opens above the card at the foot of the column'));
+          await tab.waitForFunction(() => document.querySelector('[role="menu"]')?.closest('.muxui-menu-popup') && getComputedStyle(document.querySelector('[role="menu"]')).opacity === '1');
+          assert.ok(await focusInMenu(), label('focus moves into the open menu'));
+          await tab.keyboard.press('Escape');
+          await menu.waitFor({ state: 'detached', timeout: 5000 });
+          await focusReturns(label('Escape closes the menu and returns focus to the button'));
+          assert.equal(await button.getAttribute('aria-expanded'), 'false', label('the button reports the closed menu'));
+
+          // Keyboard: Enter opens, arrows move, Enter chooses and closes, and focus returns to the button.
+          await tab.locator('#outside').focus();
+          await tab.keyboard.press('Shift+Tab');
+          await tab.keyboard.press('Shift+Tab');
+          await tab.locator('.muxui-sidebar__account-trigger').focus();
+          await tab.keyboard.press('Enter');
+          await menu.waitFor({ timeout: 5000 });
+          const focusedItem = () => tab.evaluate(() => document.activeElement?.closest('[role="menuitem"]')?.textContent ?? null);
+          assert.equal(await focusedItem(), 'Profile', label('Enter on the button focuses the first item'));
+          await tab.keyboard.press('ArrowDown');
+          assert.equal(await focusedItem(), 'Sign out', label('ArrowDown moves to the next item'));
+          await tab.keyboard.press('ArrowUp');
+          await tab.keyboard.press('Enter');
+          await menu.waitFor({ state: 'detached', timeout: 5000 });
+          assert.deepEqual(await actions(), ['profile'], label('Enter on an item runs the menu action'));
+          await focusReturns(label('choosing an item returns focus to the button'));
+
+          // Clicking an item chooses it too, and clicking elsewhere only closes the menu.
+          await button.click();
+          await menu.waitFor({ timeout: 5000 });
+          await tab.getByRole('menuitem', { name: 'Sign out' }).click();
+          await menu.waitFor({ state: 'detached', timeout: 5000 });
+          assert.deepEqual(await actions(), ['profile', 'sign-out'], label('a clicked item runs the menu action'));
+          await button.click();
+          await menu.waitFor({ timeout: 5000 });
+          await tab.mouse.click(600, 300);
+          await menu.waitFor({ state: 'detached', timeout: 5000 });
+          assert.deepEqual(await actions(), ['profile', 'sign-out'], label('dismissing the menu runs no action'));
+
+          // Folding the sidebar hides the button, so it closes a menu left open.
+          await button.click();
+          await menu.waitFor({ timeout: 5000 });
+          await tab.keyboard.press(await tab.evaluate(() => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform) ? 'Meta+b' : 'Control+b')));
+          await menu.waitFor({ state: 'detached', timeout: 5000 });
+          assert.equal(await tab.locator('aside[data-collapsed]').count(), 1, label('the chord folded the sidebar'));
+          await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-sidebar__toggle'), null, { message: label('focus moves to Toggle, not the page body'), report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          assert.deepEqual(errors, [], label('the page logged no errors'));
+        } finally {
+          await context.close();
+        }
+      }
     } finally {
       await browser?.close();
       await close();

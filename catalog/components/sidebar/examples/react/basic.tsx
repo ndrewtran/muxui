@@ -1,4 +1,4 @@
-import { Sidebar } from "@muxui/react";
+import { Menu, Sidebar } from "@muxui/react";
 
 const icon = (path: string) => ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -24,7 +24,13 @@ export function BasicSidebarExample() {
           <Sidebar.NavItem icon={Roadmap} items={[{ href: "#now", label: "Now" }, { href: "#next", label: "Next" }, { href: "#later", label: "Later" }]}>Roadmap</Sidebar.NavItem>
           <Sidebar.NavItem href="#settings" icon={Settings}>Settings</Sidebar.NavItem>
         </Sidebar.NavList>
-        <Sidebar.AccountCard name="Sample user" email="sample@example.com" />
+        <Sidebar.AccountCard name="Sample user" email="sample@example.com">
+          <Sidebar.AccountMenu>
+            <Menu.Item id="profile">Profile</Menu.Item>
+            <Menu.Separator />
+            <Menu.Item id="sign-out">Sign out</Menu.Item>
+          </Sidebar.AccountMenu>
+        </Sidebar.AccountCard>
       </Sidebar.Root>
     </div>
   );

@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { Sidebar } from '@muxui/react';
+import { Menu, Sidebar } from '@muxui/react';
 
 const toggleRef = createRef<HTMLButtonElement>();
 const sectionRef = createRef<HTMLLIElement>();
@@ -53,3 +53,21 @@ const compact = <Sidebar.Root aria-label="Workspace" density="compact" />;
 const wrongDensity = <Sidebar.Root aria-label="Workspace" density="dense" />;
 void compact;
 void wrongDensity;
+
+// The Account options button opens the AccountMenu child, which takes Menu items or a list of items.
+const accountRef = createRef<HTMLDivElement>();
+const account = (
+  <Sidebar.AccountCard name="Ada" email="ada@example.com" status="online">
+    <Sidebar.AccountMenu ref={accountRef} aria-label="Account" onAction={(item) => void item?.id}>
+      <Menu.Item id="profile">Profile</Menu.Item>
+      <Menu.Separator />
+      <Menu.Item id="sign-out">Sign out</Menu.Item>
+    </Sidebar.AccountMenu>
+  </Sidebar.AccountCard>
+);
+const accountItems = <Sidebar.AccountMenu items={[{ id: 'profile', label: 'Profile' }]} />;
+void account;
+void accountItems;
+// @ts-expect-error The card needs the name it shows.
+const nameless = <Sidebar.AccountCard email="ada@example.com" />;
+void nameless;

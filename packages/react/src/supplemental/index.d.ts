@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import type { IconButtonProps } from '@muxui/react';
+import type { IconButtonProps, MenuListProps } from '@muxui/react';
 
 export type SupplementalActivation = {
   type: 'activate';
@@ -364,8 +364,10 @@ export declare const Sidebar: {
   Section: React.ForwardRefExoticComponent<SidebarSectionProps & React.RefAttributes<HTMLLIElement>>;
   NavItem: React.ComponentType<SidebarNavItemProps>;
   NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
+  /** Shows the account. With an `AccountMenu` child, its Account options button opens that menu; without one the card has no button. */
   AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;
-  AccountMenu: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`. Only valid inside `AccountCard`. */
+  AccountMenu: React.ForwardRefExoticComponent<MenuListProps & React.RefAttributes<HTMLDivElement>>;
   MobileTrigger: React.ComponentType<{ children?: React.ReactNode; logo?: React.ReactNode }>;
   FeatureCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { title?: string; description?: string; dismissLabel?: string; onDismiss?: () => void } & React.RefAttributes<HTMLDivElement>>;
 };

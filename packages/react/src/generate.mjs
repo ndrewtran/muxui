@@ -887,6 +887,7 @@ const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplem
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
 const generatedSupplementalSource = supplementalSource
   .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'")
+  .replaceAll("from '../collections.mjs'", "from './collections.mjs'")
   .replaceAll("from '../dialog-motion.mjs'", "from './dialog-motion.mjs'")
   .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
   .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
