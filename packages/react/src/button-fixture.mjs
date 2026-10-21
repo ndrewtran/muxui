@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from './button.mjs';
+import { Button } from './button.ts';
 
 export function R1ButtonFixture({ disabled = false, pending = false, onPress }) {
   const [pressCount, setPressCount] = useState(0);

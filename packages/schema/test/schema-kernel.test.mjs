@@ -447,9 +447,10 @@ test('E-G0.1-01 negative: unknown, duplicate, invalid-relation, and unowned fiel
 });
 
 test('E-G0.5-01: discriminated binding branches retain exact required-field diagnostics', () => {
+  // `api` is optional here: a binding may take it from a derived API source
+  // instead (Decision 0031), and the compiler's merge requires exactly one.
   const supportedRequiredPaths = [
     '$/lifecycle',
-    '$/api',
     '$/behavior',
     '$/accessibility',
     '$/tokenRecipe',

@@ -3,6 +3,7 @@ import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
+import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
@@ -116,9 +117,10 @@ const SELECT_PROPS = Object.freeze({
   variant: ['neutral', 'success', 'warning', 'danger'],
 });
 
+// Button's finite values come from its derived API (Decision 0031), in source order.
 const BUTTON_SELECT_PROPS = Object.freeze({
-  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'],
-  size: ['sm', 'md', 'lg'],
+  variant: Object.freeze([...buttonApi.api.propDetails.variant.enum]),
+  size: Object.freeze([...buttonApi.api.propDetails.size.enum]),
 });
 
 const TEXT_SELECT_PROPS = Object.freeze({
@@ -2699,8 +2701,8 @@ export function createBrowserProofStory(record) {
   };
 }
 
-const BUTTON_MATRIX_VARIANTS = Object.freeze(['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse']);
-const BUTTON_MATRIX_SIZES = Object.freeze(['sm', 'md', 'lg']);
+const BUTTON_MATRIX_VARIANTS = BUTTON_SELECT_PROPS.variant;
+const BUTTON_MATRIX_SIZES = BUTTON_SELECT_PROPS.size;
 
 /** Render every adopted Button axis combination in one compact inspection story. */
 export function createButtonMatrixStory(record) {
@@ -2711,7 +2713,7 @@ export function createButtonMatrixStory(record) {
     argTypes: argTypesForBinding(record.binding),
     parameters: {
       controls: { disable: true },
-      muxuiButtonMatrix: { combinations: 21 },
+      muxuiButtonMatrix: { combinations: BUTTON_MATRIX_VARIANTS.length * BUTTON_MATRIX_SIZES.length },
     },
     render: (args = {}) => e(
       'div',

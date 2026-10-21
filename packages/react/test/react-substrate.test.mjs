@@ -51,7 +51,13 @@ test('direct publication fails closed while the package is private', () => {
 
 test('generated public types do not expose substrate APIs', async () => {
   const types = await readFile(resolve(packageRoot, 'generated/index.d.ts'), 'utf8');
-  assert.doesNotMatch(types, /react-aria-components|react-stately|@internationalized\/date|isPending|isDisabled|isSelected|isExpanded|onPress/u);
-  assert.match(types, /export (?:interface|type) ButtonProps/u);
+  // Button's types are tsc's declarations of src/button.ts, which the index names.
+  const buttonTypes = await readFile(resolve(packageRoot, 'generated/button.d.ts'), 'utf8');
+  for (const surface of [types, buttonTypes]) {
+    assert.doesNotMatch(surface, /react-aria-components|react-stately|@internationalized\/date|isPending|isDisabled|isSelected|isExpanded|onPress/u);
+  }
+  assert.match(types, /^export type \{ ButtonActivationEvent, ButtonPointerType, ButtonProps \} from '\.\/button\.js';$/mu);
+  assert.match(types, /^export \{ Button \} from '\.\/button\.js';$/mu);
+  assert.match(buttonTypes, /export (?:interface|type) ButtonProps/u);
   assert.match(types, /export (?:interface|type) DialogProps/u);
 });

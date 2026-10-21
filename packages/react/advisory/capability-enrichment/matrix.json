@@ -584,7 +584,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/button/artifact.json#bindings/web.react",
-          "packages/react/src/button.mjs#Button"
+          "packages/react/src/button.ts#Button"
         ],
         "rac": [
           "packages/react-aria-components/src/Button.tsx:36-94,105-200",

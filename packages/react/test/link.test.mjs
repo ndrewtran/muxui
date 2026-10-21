@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { Breadcrumb, Breadcrumbs as AriaBreadcrumbs, LinkContext } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { Button } from '../src/button.mjs';
+import { Button } from '../src/button.ts';
 import { Breadcrumbs, Link } from '../src/components.mjs';
 import { GridList, Table, Tree } from '../src/collections.mjs';
 import { createDom } from './support/dom.mjs';

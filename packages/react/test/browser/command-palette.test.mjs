@@ -10,7 +10,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { CommandPalette } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
@@ -41,7 +41,7 @@ const page = pageShell({
 for (const engine of browserEngines()) {
   test(`CommandPalette Trigger and Input show keyboard focus in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/button.mjs', 'src/supplemental/index.mjs'],
+      entries: ['src/button.ts', 'src/supplemental/index.mjs'],
       pages: { '/command-palette.html': page },
       modules: { '/command-palette-entry.mjs': entry },
     });

@@ -1,4 +1,5 @@
 import type * as React from 'react';
+import type { ButtonActivationEvent, ButtonProps } from '@muxui/react';
 export type LightboxKey = string | number;
 export type LightboxItem = { key: LightboxKey; label?: string };
 export type LightboxRenderContext = { key: LightboxKey; index: number; count: number };
@@ -17,13 +18,13 @@ export interface LightboxProps extends React.HTMLAttributes<HTMLDivElement> {
   swipeNavigation?: boolean;
 }
 export declare function Lightbox(props: LightboxProps): React.ReactElement;
-export type LightboxTriggerProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'onClick'> & { itemKey: LightboxKey; disabled?: boolean; pending?: boolean; showTextWhileLoading?: boolean; variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse'; size?: 'sm' | 'md' | 'lg'; onActivate?: (event: { readonly type: 'activate'; readonly pointerType: 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined; readonly target: HTMLButtonElement }) => void };
+export type LightboxTriggerProps = ButtonProps & { itemKey: LightboxKey };
 export declare const LightboxTrigger: React.ForwardRefExoticComponent<LightboxTriggerProps & React.RefAttributes<HTMLButtonElement>>;
 export declare function LightboxBackdrop(props: React.HTMLAttributes<HTMLDivElement> & { dismissable?: boolean }): React.ReactElement | null;
 export declare function LightboxPopup(props: React.HTMLAttributes<HTMLDivElement>): React.ReactElement | null;
 export declare function LightboxContent(props: React.HTMLAttributes<HTMLDivElement> & { renderContent?: (context: LightboxContentRenderContext) => React.ReactNode }): React.ReactElement | null;
 export declare const LightboxCaption: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLParagraphElement> & React.RefAttributes<HTMLParagraphElement>>;
-export type LightboxControlActivation = { readonly type: 'activate'; readonly pointerType: 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined; readonly target: HTMLButtonElement };
+export type LightboxControlActivation = ButtonActivationEvent;
 export type LightboxControlProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { disabled?: boolean; onActivate?: (event: LightboxControlActivation) => void };
 export declare function LightboxPrevious(props: LightboxControlProps): React.ReactElement;
 export declare function LightboxNext(props: LightboxControlProps): React.ReactElement;

@@ -10,12 +10,14 @@ import {
   canonicalJson,
   compilePlatformSafetyRequirementSets,
   contentRevision,
+  mergeDerivedApis,
   parseJsonStrict,
   patternCategoryGroups,
   patternGroup,
   patternRevision,
   sha256Digest,
   validateCatalogRecords,
+  validateDerivedApi,
   validateFamily,
   validatePatternCategories,
 } from '@muxui/schema';
@@ -75,6 +77,7 @@ function validateSourceManifest(manifest) {
     || Object.keys(manifest).some((key) => ![
       'schema',
       'commandRegistryPath',
+      'derivedApiSources',
       'pageBudgetProfilePath',
       'patternCategoriesPath',
       'platformSafetyContractPath',
@@ -100,6 +103,18 @@ function validateSourceManifest(manifest) {
   assertRelativePath(manifest.pageBudgetProfilePath, 'pageBudgetProfilePath');
   assertRelativePath(manifest.patternCategoriesPath, 'patternCategoriesPath');
   assertRelativePath(manifest.platformSafetyContractPath, 'platformSafetyContractPath');
+  if (manifest.derivedApiSources !== undefined) {
+    if (
+      manifest.derivedApiSources === null
+      || typeof manifest.derivedApiSources !== 'object'
+      || Array.isArray(manifest.derivedApiSources)
+    ) {
+      throw new Error('MUXUI_CATALOG_SOURCE_INVALID: derivedApiSources must map binding ids to directories');
+    }
+    for (const [bindingId, directory] of Object.entries(manifest.derivedApiSources)) {
+      assertRelativePath(directory, `derivedApiSources/${bindingId}`);
+    }
+  }
   for (const [index, entry] of manifest.records.entries()) {
     if (
       entry === null
@@ -125,6 +140,10 @@ function validateSourceManifest(manifest) {
   return {
     schema: manifest.schema,
     commandRegistryPath: manifest.commandRegistryPath,
+    ...(manifest.derivedApiSources === undefined ? {} : {
+      derivedApiSources: Object.fromEntries(Object.entries(manifest.derivedApiSources)
+        .sort(([left], [right]) => compareText(left, right))),
+    }),
     pageBudgetProfilePath: manifest.pageBudgetProfilePath,
     patternCategoriesPath: manifest.patternCategoriesPath,
     platformSafetyContractPath: manifest.platformSafetyContractPath,
@@ -233,6 +252,28 @@ function bindingProfiles(bindingId, binding) {
     .sort(compareText);
 }
 
+/**
+ * The derived API documents for a component (Decision 0031): for each binding
+ * the manifest's `derivedApiSources` names, the `<slug>.json` in that
+ * directory, when it exists. A missing file means the binding authors its api.
+ */
+async function readDerivedApis(repositoryRoot, manifest, record) {
+  const slug = record.id.slice('muxui:component:'.length);
+  const found = [];
+  for (const [bindingId, directory] of Object.entries(manifest.derivedApiSources ?? {})) {
+    const path = posix.join(directory, `${slug}.json`);
+    let bytes;
+    try {
+      bytes = await readFile(resolve(repositoryRoot, path), 'utf8');
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
+    found.push({ bindingId, path, bytes, document: validateDerivedApi(parseJsonStrict(bytes)) });
+  }
+  return found;
+}
+
 export async function compileCatalog({
   repositoryRoot,
   sourceManifestPath = 'packages/catalog/catalog-sources.json',
@@ -303,12 +344,22 @@ export async function compileCatalog({
         : parseJsonStrict(baselineOccurrencesBytes);
       validateSourceCrosswalk(record, { baselineOccurrences });
     }
+    const derivedApis = record.kind === 'component'
+      ? await readDerivedApis(repositoryRoot, manifest, record)
+      : [];
+    // The bundle carries the merged record; content revisions fold the authored one.
+    const merged = record.kind === 'component'
+      ? mergeDerivedApis(record, Object.fromEntries(derivedApis.map(({ bindingId, document }) => [bindingId, document])))
+      : record;
+    if (derivedApis.length > 0) validateFamily(entry.family, merged);
     loaded.push({
       entry,
-      record,
+      record: merged,
+      authored: record,
       recordBytes,
       sourceBytes,
       baselineOccurrencesBytes,
+      derivedApis,
     });
   }
 
@@ -358,8 +409,8 @@ export async function compileCatalog({
     throw new SchemaValidationError('MUXUI_RELATION_INVALID', [...importIssues, ...contentIssues]);
   }
 
-  const artifacts = loaded.map(({ entry, record, sourceBytes }) => {
-    const revision = contentRevision(entry.family, record, { sourceBytes });
+  const artifacts = loaded.map(({ entry, record, authored, sourceBytes, derivedApis }) => {
+    const revision = contentRevision(entry.family, authored, { sourceBytes });
     const tokenRequirementSets = record.kind === 'component'
       ? Object.fromEntries(Object.entries(record.bindings)
         .filter(([, binding]) => binding.strategy !== 'unsupported')
@@ -413,7 +464,7 @@ export async function compileCatalog({
       : {};
     const bindingContentRevisions = record.kind === 'component'
       ? Object.fromEntries(
-        Object.entries(record.bindings)
+        Object.entries(authored.bindings)
           .map(([bindingId, binding]) => [bindingId, bindingContentRevision(binding)]),
       )
       : {};
@@ -446,6 +497,12 @@ export async function compileCatalog({
           content: record.source,
           contentDigest: sha256Digest(sourceBytes),
         }),
+        ...(derivedApis.length === 0 ? {} : {
+          derivedApis: Object.fromEntries(derivedApis.map(({ bindingId, path, bytes }) => [
+            bindingId,
+            { path, digest: sha256Digest(bytes) },
+          ])),
+        }),
       },
       record,
     };
@@ -457,7 +514,7 @@ export async function compileCatalog({
     pageBudgetProfileDigest: sha256Digest(pageBudgetProfileBytes),
     patternCategoriesDigest: sha256Digest(patternCategoriesBytes),
     platformSafetyContractDigest: canonicalDigest(platformSafetyContract),
-    inputs: loaded.map(({ entry, record, recordBytes, sourceBytes, baselineOccurrencesBytes }) => ({
+    inputs: loaded.map(({ entry, record, recordBytes, sourceBytes, baselineOccurrencesBytes, derivedApis }) => ({
       path: entry.path,
       digest: sha256Digest(recordBytes),
       ...(record.source === undefined ? {} : {
@@ -467,6 +524,13 @@ export async function compileCatalog({
       ...(entry.baselineOccurrencesPath === undefined ? {} : {
         baselineOccurrencesPath: entry.baselineOccurrencesPath,
         baselineOccurrencesDigest: sha256Digest(baselineOccurrencesBytes),
+      }),
+      ...(derivedApis.length === 0 ? {} : {
+        derivedApis: derivedApis.map(({ bindingId, path, bytes }) => ({
+          binding: bindingId,
+          path,
+          digest: sha256Digest(bytes),
+        })),
       }),
     })),
   });

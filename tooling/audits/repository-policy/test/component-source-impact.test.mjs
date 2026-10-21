@@ -642,3 +642,41 @@ test('unknown and global selectors fail while formatting-only CSS is a semantic 
   assert.equal(noOp.theme, false);
   assert.match(noOp.reason, /semantically unchanged/u);
 });
+
+test('TypeScript React sources parse after type stripping and route like .mjs modules', () => {
+  const buttonPath = 'packages/react/src/button.ts';
+  const iconButtonPath = 'packages/react/src/supplemental/icon-button.mjs';
+  const records = [
+    { family: 'Button', export: 'Button', slug: 'button', source: buttonPath, parts: ['root'] },
+    { family: 'IconButton', export: 'IconButton', slug: 'icon-button', source: iconButtonPath, parts: ['root'] },
+  ];
+  const before = "export interface ButtonOwnProps { size?: 'sm' | 'md'; }\nexport const Button = ({ size = 'md' }: ButtonOwnProps): string => size;\n";
+  const runtimeEdit = before.replace("size = 'md'", "size = 'sm'");
+  const iconButtonSource = "import { Button } from '../button.ts'; export const IconButton = () => Button({ size: 'sm' });";
+  const moduleSources = (after) => ({
+    [buttonPath]: { before, after },
+    [iconButtonPath]: { before: iconButtonSource, after: iconButtonSource },
+  });
+  const warnings = [];
+  const onWarning = (warning) => warnings.push(warning.message);
+  process.on('warning', onWarning);
+  try {
+    const runtime = analyzeReactSourceChange({ records, sourcePath: buttonPath, before, after: runtimeEdit, moduleSources: moduleSources(runtimeEdit) });
+    assert.deepEqual(runtime.families, ['Button', 'IconButton'], 'a .ts import resolves for the consumer graph');
+
+    // A type-only edit leaves the stripped JavaScript unchanged, but the published declarations move.
+    const typeEdit = before.replace("'sm' | 'md'", "'sm' | 'md' | 'lg'");
+    const declarations = analyzeReactSourceChange({ records, sourcePath: buttonPath, before, after: typeEdit, moduleSources: moduleSources(typeEdit) });
+    assert.ok(declarations.families.includes('Button'), declarations.reason);
+
+    const formatting = analyzeReactSourceChange({ records, sourcePath: buttonPath, before, after: before.replace('size?:', 'size?: '), moduleSources: moduleSources(before) });
+    assert.deepEqual(formatting.families, []);
+  } finally {
+    process.off('warning', onWarning);
+  }
+  assert.deepEqual(warnings.filter((message) => /stripTypeScriptTypes/u.test(message)), [], 'stripping types warns nothing');
+  assert.throws(
+    () => analyzeReactSourceChange({ records, sourcePath: buttonPath, before, after: 'export const Button = (: ;' }),
+    /cannot parse head TypeScript for packages\/react\/src\/button\.ts/u,
+  );
+});

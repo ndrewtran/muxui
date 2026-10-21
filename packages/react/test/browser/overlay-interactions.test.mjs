@@ -6,7 +6,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, useToast } from '/src/overlays.mjs';
-  import { Button } from '/src/button.mjs';
+  import { Button } from '/src/button.ts';
   import '/generated/styles.css';
   const h = React.createElement;
 

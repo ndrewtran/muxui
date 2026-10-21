@@ -125,12 +125,12 @@ const blockPages = [
 
 // Workspace links mirror the real package.json files.
 const packages = [
-  { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
+  { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, devDependencies: { '@muxui/react': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*' }, devDependencies: { '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
   { name: '@muxui/figma', path: 'tooling/generators/figma', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { check: 'check' } } },
-  { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:browser': 'node --test --test-concurrency=1 test/browser/*.test.mjs', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
+  { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:browser': 'node --test --test-concurrency=1 test/browser/*.test.mjs', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
   { name: '@muxui/react-playground', path: 'apps/react-playground', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'check' } } },
-  { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
+  { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, devDependencies: { '@muxui/catalog': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
   { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:evidence': 'check:evidence' } } },
   { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && check' } } },
   { name: '@muxui/schema', path: 'packages/schema', manifest: { dependencies: {}, scripts: { generate: 'generate', check: 'check' } } },
@@ -1402,12 +1402,78 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
   assert.ok(!generator.reactTestFiles.includes('test/motion-package-boundary.test.mjs'), 'the full React check already runs it');
 });
 
+test('a TypeScript React source takes the runtime source route; a declaration file does not', async () => {
+  const treePath = 'packages/react/src/tree.ts';
+  const typed = records.map((record) => (record.family === 'Tree' ? { ...record, source: treePath } : record));
+  const before = 'export const Tree = (props: { label: string }): string => props.label;\n';
+  const after = before.replace('props.label;', 'props.label.trim();');
+  const result = await plan([treePath], {
+    records: typed,
+    textSnapshots: { [treePath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [collectionsPath]: 'export const TagGroup = () => null;', [treePath]: { before, after } },
+  });
+  assert.deepEqual(result.reactFamilies, ['Tree']);
+  assert.equal(result.reactProjectionCheck, true);
+  assert.ok(result.reactTestFiles.includes('test/motion-package-boundary.test.mjs'));
+  assert.ok(result.reasons.includes(`${treePath} is React runtime or compiler source; AST ownership determines the affected families`));
+
+  const declarations = await plan(['packages/react/src/supplemental/index.d.ts']);
+  assert.equal(declarations.reactPackageFull, true);
+  assert.ok(!declarations.reasons.some((reason) => reason.includes('AST ownership')));
+});
+
+test('the catalog generates after React: catalog inputs still plan React proof and React output plans the catalog check', async () => {
+  // The real manifests carry the edge: the catalog's devDependency on React orders generation.
+  const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+  const manifest = (name) => workspacePackages.find((item) => item.name === name).manifest;
+  assert.equal(manifest('@muxui/catalog').devDependencies['@muxui/react'], 'workspace:*');
+  assert.equal(manifest('@muxui/react').devDependencies?.['@muxui/catalog'], undefined);
+  assert.equal(manifest('@muxui/react-storybook').devDependencies['@muxui/catalog'], 'workspace:*');
+  for (const fixture of ['@muxui/catalog', '@muxui/react', '@muxui/react-storybook']) {
+    assert.deepEqual(
+      packages.find(({ name }) => name === fixture).manifest.devDependencies,
+      Object.fromEntries(Object.entries(manifest(fixture).devDependencies ?? {}).filter(([name]) => name.startsWith('@muxui/'))),
+      `the ${fixture} fixture mirrors its workspace devDependencies`,
+    );
+  }
+
+  // catalog/ inputs React reads directly keep their React routes without a workspace edge.
+  const record = await plan(['catalog/components/tree/artifact.json']);
+  assert.deepEqual(record.reactFamilies, ['Tree']);
+  assert.equal(record.catalog, true);
+  assert.deepEqual(record.packageChecks, ['@muxui/figma', '@muxui/react-playground', '@muxui/tooling'], 'the catalog route runs the catalog check once');
+  assert.equal((await plan(['catalog/react-r1-6/supplemental-components.json'])).reactPackageFull, true);
+  assert.equal((await plan(['catalog/tokens/default-theme.json'])).reactTheme, true);
+
+  // React output reaches the catalog check through the devDependency edge.
+  const runtime = await plan([collectionsPath], treeRuntimeChange);
+  assert.equal(runtime.catalog, false);
+  assert.ok(runtime.packageChecks.includes('@muxui/catalog'));
+  assert.ok(runtime.reasons.includes('@muxui/catalog has a workspace devDependency on changed @muxui/react; run its package check'));
+  assert.ok(executionCommands(runtime, { packages }).some(({ args }) => args.join(' ') === '--filter @muxui/catalog run check'));
+  // The edge stops there: tooling and Storybook keep their own routes.
+  assert.ok(!runtime.packageChecks.includes('@muxui/tooling'));
+});
+
+test('a derived API routes like its family\'s component record', async () => {
+  const path = 'packages/react/api/tree.json';
+  const derived = await plan([path]);
+  const record = await plan(['catalog/components/tree/artifact.json']);
+  for (const field of ['reactFamilies', 'storyFamilies', 'catalog', 'docs', 'storyTooling', 'storyUnitTests', 'packageChecks']) {
+    assert.deepEqual(derived[field], record[field], field);
+  }
+  assert.ok(derived.reasons.includes(`${path} is the derived API of Tree; validate it like the canonical component record`));
+  assert.equal(needsStorybookGeneration([path], {}), true);
+  await assert.rejects(plan(['packages/react/api/missing.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: packages\/react\/api\/missing\.json/u);
+});
+
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
   const result = await plan([collectionsPath, '.github/CODEOWNERS'], treeRuntimeChange);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
   // Docs, Scale, Figma, and the playground depend on React at runtime, so they
   // run whole (with the browser checks) while React and Storybook keep the Tree
   // family scope. The family's browser test runs in the browser group, not the component check.
+  // The catalog compiles React's derived APIs (Decision 0031), so it runs its own check.
   assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium', 'react', 'browser-chromium-only', 'storybook-component']);
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
@@ -1419,6 +1485,7 @@ test('scoped plans split into independent groups that each repeat the generation
   assert.deepEqual(groups[1].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check'],
+    ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/figma', 'run', 'check'],
     ['--filter', '@muxui/react-playground', 'run', 'check'],
     ['--filter', '@muxui/react-storybook', 'run', 'generate:check'],
@@ -1896,7 +1963,8 @@ test('a React-test-only group generates the React closure it imports in its own 
   assert.deepEqual(groupIds(groups), ['browser-chromium-only']);
   const [generation, check] = groups[0].commands;
   assert.equal(generation.prerequisite, true);
-  assert.deepEqual(generationFilters(generation), ['@muxui/catalog', '@muxui/react', '@muxui/schema', '@muxui/tokens']);
+  // React no longer depends on the catalog; the catalog depends on React (Decision 0031).
+  assert.deepEqual(generationFilters(generation), ['@muxui/react', '@muxui/schema', '@muxui/tokens']);
   assert.equal(check.args.at(-1), testFile);
 });
 
@@ -2860,6 +2928,39 @@ test('a deleted React module still named outside React source routes to each ref
   assert.match(unowned.notices[0], /^scripts\/unowned\.mjs has no owner route/u);
 });
 
+test('a changed React module only files outside React source import routes to their owners', async () => {
+  // PR #342: the Button fixture's import moves from ./button.mjs to ./button.ts. The fixture is no
+  // family's source and no React module imports it; the playground and a React test do.
+  const fixturePath = 'packages/react/src/button-fixture.mjs';
+  const before = "import React from 'react';\nimport { Button } from './button.mjs';\nexport function R1ButtonFixture() { return React.createElement(Button); }\n";
+  const after = before.replace("'./button.mjs'", "'./button.ts'");
+  const changed = (references) => plan([fixturePath], {
+    packages: workspacePackages,
+    textSnapshots: { [fixturePath]: { before, after } },
+    moduleSources: {
+      ...generatorModuleSources,
+      [fieldsPath]: 'export const NumberField = () => null;',
+      [collectionsPath]: 'export const Tree = () => null;',
+      'packages/react/src/button.mjs': { before: 'export const Button = () => null;', after: null },
+      'packages/react/src/button.ts': { before: null, after: 'export const Button = (): null => null;' },
+      [fixturePath]: { before, after },
+    },
+    findReferences: async (needle) => {
+      assert.equal(needle, 'src/button-fixture.mjs');
+      return references;
+    },
+  });
+
+  const routed = await changed(['apps/react-playground/src/main.jsx', 'packages/react/test/fixture.test.mjs']);
+  assert.deepEqual(routed.packageChecks, ['@muxui/react-playground']);
+  assert.ok(routed.reactTestFiles.includes('test/fixture.test.mjs'));
+  assert.deepEqual(routed.reactFamilies, []);
+  assert.ok(routed.reasons.includes('apps/react-playground/src/main.jsx references changed packages/react/src/button-fixture.mjs; validate its owner'));
+
+  // With no file importing it, the changed module is still unowned.
+  await assert.rejects(changed([]), /MUXUI_CI_IMPACT_SOURCE_OWNERSHIP: changed module packages\/react\/src\/button-fixture\.mjs has no canonical family source or resolvable React importer/u);
+});
+
 test('modules the React projection compiler imports take the compiler route', async () => {
   const after = 'export function assertContracts() { return true; }';
   const result = await plan([contractsPath], {
@@ -3179,15 +3280,16 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   const generatorInput = await route('catalog/react-r1-6/supplemental-components.json');
   assert.equal(generatorInput.reactPackageFull, true);
   assert.equal(generatorInput.policy, true);
-  // Every React family changes, so React's runtime dependents run too.
+  // Every React family changes, so React's runtime dependents run too, and the
+  // catalog that compiles React's derived APIs runs its check.
   assert.equal(generatorInput.docs && generatorInput.scale, true);
-  assert.deepEqual(generatorInput.packageChecks, ['@muxui/figma', '@muxui/react-playground']);
+  assert.deepEqual(generatorInput.packageChecks, ['@muxui/catalog', '@muxui/figma', '@muxui/react-playground']);
 
   // R1.0 inputs are also read by schema tests and Storybook unit tests.
   const upstreamExports = await route('catalog/react-r1-0/upstream-exports.json');
   assert.equal(upstreamExports.reactPackageFull, true);
   assert.equal(upstreamExports.policy, true);
-  assert.deepEqual(upstreamExports.packageChecks, ['@muxui/figma', '@muxui/react-playground', '@muxui/schema']);
+  assert.deepEqual(upstreamExports.packageChecks, ['@muxui/catalog', '@muxui/figma', '@muxui/react-playground', '@muxui/schema']);
   assert.deepEqual(upstreamExports.storyUnitTests, [{ file: 'test/storybook.test.mjs' }]);
 
   const capability = await route('catalog/capabilities/query-baseline.json');

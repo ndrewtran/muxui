@@ -1,11 +1,16 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { rmSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
 import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
+import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, compatibilityUpstream } from './r1-contracts.mjs';
+import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 import { readSupplementalMapping } from './supplemental-mapping.mjs';
 
@@ -13,6 +18,39 @@ const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const generatedRoot = resolve(packageRoot, 'generated');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
+const checking = process.argv.includes('--check');
+const listing = process.argv.includes('--list-outputs');
+// --list-outputs is a read-only query; pairing it with --check would silently skip the drift check.
+if (listing && checking) {
+  throw new Error('MUXUI_REACT_GENERATE_ARGS_INVALID: --list-outputs and --check are mutually exclusive');
+}
+
+// TypeScript sources ship as the .js and .d.ts that tsc emits from them (Decision 0031 item 2).
+// --check emits into a fresh directory under build/, so it never rewrites build/ts, and
+// --list-outputs names the outputs without running tsc.
+const typeScriptSources = (await readdir(resolve(packageRoot, 'src'), { recursive: true }))
+  .map((file) => file.replaceAll('\\', '/'))
+  .filter((file) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
+  .sort()
+  .map((file) => `packages/react/src/${file}`);
+async function emitTypeScript() {
+  if (listing || typeScriptSources.length === 0) return null;
+  await mkdir(resolve(packageRoot, 'build'), { recursive: true });
+  const outDir = checking ? await mkdtemp(resolve(packageRoot, 'build/ts-check-')) : resolve(packageRoot, 'build/ts');
+  if (checking) process.on('exit', () => rmSync(outDir, { recursive: true, force: true }));
+  else await rm(outDir, { recursive: true, force: true });
+  const tsc = resolve(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin/tsc');
+  const build = spawnSync(process.execPath, [tsc, '-p', 'tsconfig.build.json', '--outDir', outDir], { cwd: packageRoot, encoding: 'utf8' });
+  if (build.status !== 0) throw new Error(`MUXUI_REACT_TYPESCRIPT_BUILD_FAILED:\n${build.stdout}${build.stderr}`);
+  const emitted = new Map(await Promise.all(typeScriptSources.map(async (source) => {
+    const stem = resolve(outDir, source.slice('packages/react/src/'.length).replace(/\.ts$/u, ''));
+    return [source, { js: await readFile(`${stem}.js`, 'utf8'), declarations: await readFile(`${stem}.d.ts`, 'utf8') }];
+  })));
+  return { outDir, emitted };
+}
+const typeScriptBuild = await emitTypeScript();
+// Decision 0031: a moved component's web.react API comes from its source, merged into its record on read.
+const derivedApis = await deriveApis({ packageRoot, repositoryRoot, declarationRoot: typeScriptBuild?.outDir });
 // The exact React Aria Components pin; the generated compatibility record and README follow it.
 const racVersion = manifest.dependencies['react-aria-components'];
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
@@ -30,7 +68,7 @@ const r11Slugs = ['button', 'breadcrumbs', 'checkbox', 'disclosure', 'disclosure
 const r12Slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field'];
 const r13Slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
 const r14Slugs = ['drop-zone', 'file-trigger', 'dialog', 'popover', 'preview-trigger', 'toast', 'tooltip'];
-const buttonSource = await readFile(resolve(packageRoot, 'src/button.mjs'), 'utf8');
+const buttonSource = await readFile(resolve(packageRoot, 'src/button.ts'), 'utf8');
 const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
@@ -49,8 +87,7 @@ const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motio
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
 const motionGeometrySource = await readFile(resolve(packageRoot, 'src/motion-geometry.mjs'), 'utf8');
 const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-components.mjs'), 'utf8');
-const candidateMotionSource = (await readFile(resolve(packageRoot, 'src/supplemental/candidate-motion.mjs'), 'utf8'))
-  .replaceAll("from '../motion.mjs'", "from './motion.mjs'");
+const candidateMotionSource = await readFile(resolve(packageRoot, 'src/supplemental/candidate-motion.mjs'), 'utf8');
 const popoverMotionSource = await readFile(resolve(packageRoot, 'src/popover-motion.mjs'), 'utf8');
 const tabsMotionSource = await readFile(resolve(packageRoot, 'src/tabs-motion.mjs'), 'utf8');
 const rangeSelectionMotionSource = await readFile(resolve(packageRoot, 'src/range-selection-motion.mjs'), 'utf8');
@@ -69,20 +106,20 @@ const authoredStyleSources = await Promise.all([
 ].map((fileName) => readFile(resolve(packageRoot, 'src/styles', fileName), 'utf8')));
 const authoredCss = authoredStyleSources.map((source) => source.trim()).join('\n\n');
 const runtimeSources = {
-  'packages/react/src/button.mjs': buttonSource,
+  'packages/react/src/button.ts': buttonSource,
   'packages/react/src/components.mjs': componentSource,
   'packages/react/src/fields.mjs': fieldsSource,
   'packages/react/src/collections.mjs': collectionsSource,
   'packages/react/src/overlays.mjs': overlaysSource,
 };
-const buttonArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8'));
+const buttonArtifact = withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8')), derivedApis);
 const componentArtifacts = [
   buttonArtifact,
   ...await Promise.all([
     'breadcrumbs', 'checkbox', 'disclosure', 'disclosure-group', 'group', 'link', 'meter', 'progress-bar', 'separator', 'toggle-button',
     'autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field',
     ...r13Slugs, ...r14Slugs,
-  ].map(async (slug) => JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8')))),
+  ].map(async (slug) => withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8')), derivedApis))),
 ];
 if (componentArtifacts.length !== 53 || new Set(componentArtifacts.map(({ id }) => id)).size !== 53) {
   throw new Error('MUXUI_REACT_R1_COMPONENT_ALLOCATION_DRIFT');
@@ -92,7 +129,7 @@ const allCatalogArtifacts = (await Promise.all(
     .filter((entry) => entry.isDirectory())
     .map(async ({ name }) => {
       try {
-        return JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${name}/artifact.json`), 'utf8'));
+        return withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${name}/artifact.json`), 'utf8')), derivedApis);
       } catch {
         return undefined;
       }
@@ -140,6 +177,12 @@ function sha256(value) {
 
 function generatedText(source, body, open = '//', close = '') {
   return `${open} @generated-from: ${source}${close}\n${open} @generated-content-sha256: sha256:${sha256(body)}${close}\n${body}`;
+}
+
+// A shipped module's relative imports name flat generated/ files; the output map later
+// proves each target ships.
+function shippedModule(sourcePath, body, lang) {
+  return generatedText(sourcePath, flattenImports(sourcePath, body, lang));
 }
 
 // Decision 0031 item 15: every shipped rule sits in one of these layers, in this order.
@@ -379,28 +422,15 @@ const compatibility = {
   support: 'unproved; R1.5 React exports only',
 };
 const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
-const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.mjs';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
+const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
+// Button's types are tsc's declarations of src/button.ts (Decision 0031); the index names
+// them, so the module's other exports (usePendingSubmitProps) stay private.
 const typesBody = `import type * as React from 'react';
+import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
 
-export type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;
+export { Button } from './button.js';
+export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
 export type ComponentPointerType = ButtonPointerType;
-export interface ButtonActivationEvent {
-  readonly type: 'activate';
-  readonly pointerType: ButtonPointerType;
-  readonly target: HTMLButtonElement;
-}
-export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'> {
-  children?: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-  pending?: boolean;
-  showTextWhileLoading?: boolean;
-  variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';
-  size?: 'sm' | 'md' | 'lg';
-  style?: React.CSSProperties;
-  onActivate?: (event: ButtonActivationEvent) => void;
-}
-export declare const Button: React.ForwardRefExoticComponent<ButtonProps & React.RefAttributes<HTMLButtonElement>>;
 export interface BreadcrumbItem { id?: string; label: React.ReactNode; href?: string; disabled?: boolean; }
 export interface BreadcrumbsProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className' | 'aria-label'> { items?: BreadcrumbItem[]; className?: string; 'aria-label': string; onNavigate?: (item: BreadcrumbItem) => void; }
 export declare const Breadcrumbs: React.ForwardRefExoticComponent<BreadcrumbsProps & React.RefAttributes<HTMLElement>>;
@@ -885,18 +915,6 @@ const r15ClosureRecord = {
 const supplementalSource = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8').catch(() => '');
 const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8').catch(() => '');
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
-const generatedSupplementalSource = supplementalSource
-  .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'")
-  .replaceAll("from '../collections.mjs'", "from './collections.mjs'")
-  .replaceAll("from '../dialog-motion.mjs'", "from './dialog-motion.mjs'")
-  .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
-  .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
-  .replaceAll("from '../overlays.mjs'", "from './overlays.mjs'")
-  .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
-  .replaceAll("from '../button.mjs'", "from './button.mjs'");
-const flatIconButtonImport = (source) => source
-  .replaceAll("from './supplemental/icon-button.mjs'", "from './icon-button.mjs'")
-  .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'");
 const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(async (entry) => {
   const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
   const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
@@ -909,16 +927,7 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
     module: entry.export.module,
     styleSource: entry.styleSource,
     artifact,
-    sourceText: sourceText
-      .replaceAll("from '../button.mjs'", "from './button.mjs'")
-      .replaceAll("from '../collections.mjs'", "from './collections.mjs'")
-      .replaceAll("from '../overlays.mjs'", "from './overlays.mjs'")
-      .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'")
-      .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
-      .replaceAll("from '../motion-geometry.mjs'", "from './motion-geometry.mjs'")
-      .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
-      .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
-      .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'"),
+    sourceText,
     style,
     subpath: entry.export.module !== '.',
   };
@@ -1069,7 +1078,6 @@ const outputs = new Map([
   ['compatibility.mjs', generatedText('packages/react/src/generate.mjs', compatibilityBody)],
   ['index.mjs', generatedText('packages/react/src/generate.mjs', currentIndexBody)],
   ['index.d.ts', generatedText('packages/react/src/generate.mjs', currentTypesBody)],
-  ['button.mjs', generatedText('packages/react/src/button.mjs', buttonSource)],
   ['testing.mjs', generatedText('packages/react/src/generate.mjs', testingBody)],
   ['styles.css', generatedCss('packages/react/src/generate.mjs', layeredStylesCss)],
   ['themes.mjs', generatedText('packages/react/src/generate.mjs', themeRuntimeBody)],
@@ -1081,71 +1089,81 @@ const outputs = new Map([
   ['release.json.provenance', provenance('release.json', release)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
-  ['supplemental.mjs', generatedText('packages/react/src/supplemental/index.mjs', `${generatedSupplementalSource}`)],
-  ['supplemental.d.ts', generatedText('packages/react/src/supplemental/index.d.ts', `${supplementalTypesSource}`)],
+  ['supplemental.mjs', shippedModule('packages/react/src/supplemental/index.mjs', supplementalSource)],
+  ['supplemental.d.ts', shippedModule('packages/react/src/supplemental/index.d.ts', supplementalTypesSource)],
   ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', layeredSupplementalCss)],
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
-  ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],
-  ['grid-list-item-context.mjs', generatedText('packages/react/src/grid-list-item-context.mjs', gridListItemContextSource)],
-  ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
-  ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
-  ['fields.mjs', generatedText('packages/react/src/fields.mjs', flatIconButtonImport(fieldsSource))],
-  ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
-  ['calendar-selection-motion.mjs', generatedText('packages/react/src/calendar-selection-motion.mjs', calendarSelectionMotionSource)],
-  ['color-slider-motion.mjs', generatedText('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
-  ['color-wheel-motion.mjs', generatedText('packages/react/src/color-wheel-motion.mjs', colorWheelMotionSource)],
-  ['listbox-motion.mjs', generatedText('packages/react/src/listbox-motion.mjs', listBoxMotionSource)],
-  ['tree-motion.mjs', generatedText('packages/react/src/tree-motion.mjs', treeMotionSource)],
-  ['grid-list-motion.mjs', generatedText('packages/react/src/grid-list-motion.mjs', gridListMotionSource)],
-  ['menu-motion.mjs', generatedText('packages/react/src/menu-motion.mjs', menuMotionSource)],
-  ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
-  ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
-  ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
-  ['motion-geometry.mjs', generatedText('packages/react/src/motion-geometry.mjs', motionGeometrySource)],
-  ['motion-components.mjs', generatedText('packages/react/src/motion-components.mjs', motionComponentsSource)],
-  ['candidate-motion.mjs', generatedText('packages/react/src/supplemental/candidate-motion.mjs', candidateMotionSource)],
-  ['code-block-highlight.mjs', generatedText('packages/react/src/supplemental/code-block-highlight.mjs', await readFile(resolve(packageRoot, 'src/supplemental/code-block-highlight.mjs'), 'utf8'))],
-  ['popover-motion.mjs', generatedText('packages/react/src/popover-motion.mjs', popoverMotionSource)],
-  ['tabs-motion.mjs', generatedText('packages/react/src/tabs-motion.mjs', flatIconButtonImport(tabsMotionSource))],
-  ['range-selection-motion.mjs', generatedText('packages/react/src/range-selection-motion.mjs', rangeSelectionMotionSource)],
-  ['radio-motion.mjs', generatedText('packages/react/src/radio-motion.mjs', radioMotionSource)],
-  ['slider-motion.mjs', generatedText('packages/react/src/slider-motion.mjs', sliderMotionSource)],
-  ['toggle-button-group-motion.mjs', generatedText('packages/react/src/toggle-button-group-motion.mjs', toggleButtonGroupMotionSource)],
-  ['collections.mjs', generatedText('packages/react/src/collections.mjs', flatIconButtonImport(collectionsSource))],
-  ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', flatIconButtonImport(overlaysSource))],
-  ['overlay-positioning.mjs', generatedText('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],
+  ['choice-context.mjs', shippedModule('packages/react/src/choice-context.mjs', choiceContextSource)],
+  ['grid-list-item-context.mjs', shippedModule('packages/react/src/grid-list-item-context.mjs', gridListItemContextSource)],
+  ['toggle-button-context.mjs', shippedModule('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
+  ['components.mjs', shippedModule('packages/react/src/components.mjs', componentSource)],
+  ['fields.mjs', shippedModule('packages/react/src/fields.mjs', fieldsSource)],
+  ['calendar-height-motion.mjs', shippedModule('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
+  ['calendar-selection-motion.mjs', shippedModule('packages/react/src/calendar-selection-motion.mjs', calendarSelectionMotionSource)],
+  ['color-slider-motion.mjs', shippedModule('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
+  ['color-wheel-motion.mjs', shippedModule('packages/react/src/color-wheel-motion.mjs', colorWheelMotionSource)],
+  ['listbox-motion.mjs', shippedModule('packages/react/src/listbox-motion.mjs', listBoxMotionSource)],
+  ['tree-motion.mjs', shippedModule('packages/react/src/tree-motion.mjs', treeMotionSource)],
+  ['grid-list-motion.mjs', shippedModule('packages/react/src/grid-list-motion.mjs', gridListMotionSource)],
+  ['menu-motion.mjs', shippedModule('packages/react/src/menu-motion.mjs', menuMotionSource)],
+  ['date-popover-motion.mjs', shippedModule('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
+  ['dialog-motion.mjs', shippedModule('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
+  ['motion.mjs', shippedModule('packages/react/src/motion.mjs', motionSource)],
+  ['motion-geometry.mjs', shippedModule('packages/react/src/motion-geometry.mjs', motionGeometrySource)],
+  ['motion-components.mjs', shippedModule('packages/react/src/motion-components.mjs', motionComponentsSource)],
+  ['candidate-motion.mjs', shippedModule('packages/react/src/supplemental/candidate-motion.mjs', candidateMotionSource)],
+  ['code-block-highlight.mjs', shippedModule('packages/react/src/supplemental/code-block-highlight.mjs', await readFile(resolve(packageRoot, 'src/supplemental/code-block-highlight.mjs'), 'utf8'))],
+  ['popover-motion.mjs', shippedModule('packages/react/src/popover-motion.mjs', popoverMotionSource)],
+  ['tabs-motion.mjs', shippedModule('packages/react/src/tabs-motion.mjs', tabsMotionSource)],
+  ['range-selection-motion.mjs', shippedModule('packages/react/src/range-selection-motion.mjs', rangeSelectionMotionSource)],
+  ['radio-motion.mjs', shippedModule('packages/react/src/radio-motion.mjs', radioMotionSource)],
+  ['slider-motion.mjs', shippedModule('packages/react/src/slider-motion.mjs', sliderMotionSource)],
+  ['toggle-button-group-motion.mjs', shippedModule('packages/react/src/toggle-button-group-motion.mjs', toggleButtonGroupMotionSource)],
+  ['collections.mjs', shippedModule('packages/react/src/collections.mjs', collectionsSource)],
+  ['overlays.mjs', shippedModule('packages/react/src/overlays.mjs', overlaysSource)],
+  ['overlay-positioning.mjs', shippedModule('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],
 ]);
 for (const source of [...currentSubpathRecords, ...currentEagerRecords]) {
-  outputs.set(`${source.slug}.mjs`, generatedText(source.source, source.sourceText));
+  outputs.set(`${source.slug}.mjs`, shippedModule(source.source, source.sourceText));
   const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');
   const typesSource = await readFile(resolve(repositoryRoot, typesPath), 'utf8').catch(() => null);
-  if (typesSource) outputs.set(`${source.slug}.d.ts`, generatedText(typesPath, typesSource));
+  if (typesSource) outputs.set(`${source.slug}.d.ts`, shippedModule(typesPath, typesSource));
 }
+for (const source of typeScriptSources) {
+  const emitted = typeScriptBuild?.emitted.get(source);
+  const name = flatModuleName(source);
+  outputs.set(name, emitted ? shippedModule(source, emitted.js, 'js') : '');
+  outputs.set(name.replace(/\.js$/u, '.d.ts'), emitted ? shippedModule(source, emitted.declarations, 'dts') : '');
+}
+assertFlatImports(outputs);
 const readme = generatedText('packages/react/src/generate.mjs', `${readmeBody}${readmeGuidance}`, '<!--', ' -->');
 
-// --list-outputs is a read-only query; pairing it with --check would silently skip the drift check.
-if (process.argv.includes('--list-outputs') && process.argv.includes('--check')) {
-  throw new Error('MUXUI_REACT_GENERATE_ARGS_INVALID: --list-outputs and --check are mutually exclusive');
-}
-if (process.argv.includes('--list-outputs')) {
+if (listing) {
   // Release preparation derives the exact packed generated/ file set from this map.
   console.log(JSON.stringify([...outputs.keys()].sort()));
-} else if (process.argv.includes('--check')) {
+} else if (checking) {
   for (const [name, expected] of outputs) {
     if (await readFile(resolve(generatedRoot, name), 'utf8').catch(() => null) !== expected) {
       throw new Error(`MUXUI_REACT_GENERATED_DRIFT: generated/${name}`);
     }
   }
+  const unexpected = (await readdir(generatedRoot).catch(() => [])).filter((name) => !outputs.has(name));
+  if (unexpected.length > 0) throw new Error(`MUXUI_REACT_GENERATED_DRIFT: generated/${unexpected[0]} is not a generator output`);
   if (await readFile(resolve(packageRoot, 'README.md'), 'utf8').catch(() => null) !== readme) {
     throw new Error('MUXUI_REACT_GENERATED_DRIFT: README.md');
   }
 } else {
   await mkdir(generatedRoot, { recursive: true });
   for (const [name, expected] of outputs) await writeFile(resolve(generatedRoot, name), expected);
+  // A file the map no longer names (a moved component's old .mjs) must not ship.
+  for (const name of await readdir(generatedRoot)) {
+    if (!outputs.has(name)) await rm(resolve(generatedRoot, name), { recursive: true, force: true });
+  }
   await writeFile(resolve(packageRoot, 'README.md'), readme);
 }
 
-if (!process.argv.includes('--list-outputs')) {
+if (!listing) {
+  await syncDerivedApis({ packageRoot, documents: derivedApis, checking });
   console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');
 }

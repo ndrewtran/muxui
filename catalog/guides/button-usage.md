@@ -10,11 +10,9 @@ For React, import `Button` from `@muxui/react` and provide visible content
 or an accessible label. Use `pending` while an immediate action is in flight;
 pending Buttons remain focusable but do not activate again.
 
-React Buttons support the finite `variant` values `primary`, `neutral`, `ghost`,
-`danger`, `danger-neutral`, `danger-ghost`, and `inverse`, along with the `size`
-values `sm`, `md`, and `lg`. They default to `primary` and `md`. Express a
-destructive action with one of the `danger` variants; there is no separate
-`tone` property.
+The [API reference](#api-reference) lists the `variant` and `size` values and
+their defaults, derived from the React source. Express a destructive action with
+one of the `danger` variants; there is no separate `tone` property.
 
 ## Choosing a variant
 

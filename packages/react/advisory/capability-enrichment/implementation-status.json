@@ -222,7 +222,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/button.mjs",
+          "path": "packages/react/src/button.ts",
           "lines": null,
           "anchor": "#Button"
         }
@@ -266,7 +266,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/button.mjs",
+          "path": "packages/react/src/button.ts",
           "lines": null,
           "anchor": "#Button"
         }
@@ -300,7 +300,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/button.mjs",
+          "path": "packages/react/src/button.ts",
           "lines": null,
           "anchor": "#Button"
         }
@@ -334,7 +334,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/button.mjs",
+          "path": "packages/react/src/button.ts",
           "lines": null,
           "anchor": "#Button"
         }

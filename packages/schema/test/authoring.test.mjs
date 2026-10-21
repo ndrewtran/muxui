@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import {
+  DERIVED_API_FIELDS,
   SchemaValidationError,
   authoringMetadata,
   authoringMetadataDigest,
@@ -146,6 +147,7 @@ test('E-G0.5-02: every declared revision axis matches its digest preimage member
     'pattern-spec': listed.revision === revisionOf(variant) ? Object.keys(variant) : [],
   };
   const declarations = validateAuthoringMetadata();
+  const derivedOnlyApiFields = new Set(DERIVED_API_FIELDS.map((field) => `#/properties/api/properties/${field}`));
 
   for (const declaration of declarations.filter(({ family }) => family === 'example')) {
     const field = firstProperty(declaration.schemaPointer);
@@ -182,7 +184,12 @@ test('E-G0.5-02: every declared revision axis matches its digest preimage member
       const inBindingSpec = bindingSpecFields.has(rootField)
         || definitionField !== null
         || bindingSpecFields.has(finalProperty(declaration.schemaPointer));
-      expected = ['binding-content', ...(inBindingSpec ? ['binding-spec'] : [])];
+      // Decision 0031: the compiler folds the authored binding into its content
+      // revision, and only a derived block carries the typed api details, so
+      // they move the binding spec alone.
+      expected = derivedOnlyApiFields.has(declaration.schemaPointer)
+        ? ['binding-spec']
+        : ['binding-content', ...(inBindingSpec ? ['binding-spec'] : [])];
     }
     assert.deepEqual(
       declaration.revisionAxes,

@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { createCatalogApi } from '@muxui/catalog';
 import { compileCatalog } from '@muxui/catalog/compiler';
-import { canonicalJson, loadFieldOwnershipRegistry } from '@muxui/schema';
+import { canonicalJson, loadFieldOwnershipRegistry, mergeDerivedApis } from '@muxui/schema';
 import {
   AuthoringPolicyError,
   affectedClosure,
@@ -45,7 +45,15 @@ async function buildBaseline() {
   const compiled = await compileCatalog({ repositoryRoot });
   // Frozen copies, so no test can change what the others read. Tests clone a record before changing it.
   const { sourceRevision, artifacts } = deepFreeze(structuredClone(compiled.bundle));
-  const component = artifacts.find(({ id }) => id === 'muxui:component:button');
+  const button = artifacts.find(({ id }) => id === 'muxui:component:button');
+  // Button's web.react API is derived from its React source (Decision 0031). The bundle holds the
+  // merged record; authoring reads the authored record, with each derived block in the revision context.
+  const component = deepFreeze({
+    ...button,
+    record: JSON.parse(await readFile(resolve(repositoryRoot, button.source.record), 'utf8')),
+  });
+  const derivedApis = Object.fromEntries(await Promise.all(Object.entries(button.source.derivedApis ?? {})
+    .map(async ([bindingId, { path }]) => [bindingId, JSON.parse(await readFile(resolve(repositoryRoot, path), 'utf8'))])));
   const exampleArtifacts = artifacts.filter(({ kind }) => kind === 'example');
   const exampleSources = {};
   for (const artifact of exampleArtifacts) {
@@ -64,6 +72,7 @@ async function buildBaseline() {
       exampleSources,
       tokenRequirementSets: component.tokenRequirementSets,
       platformSafetyRequirementSets: component.platformSafetyRequirementSets,
+      derivedApis,
     }),
   };
 }
@@ -89,6 +98,7 @@ async function temporaryCatalogRepository() {
       resolve(temporaryRoot, 'packages/catalog'),
       { recursive: true },
     ),
+    cp(resolve(repositoryRoot, 'packages/react/api'), resolve(temporaryRoot, 'packages/react/api'), { recursive: true }),
     cp(
       resolve(repositoryRoot, 'packages/tooling/command-registry.json'),
       resolve(temporaryRoot, 'packages/tooling/command-registry.json'),
@@ -128,7 +138,7 @@ function applyCase(record, change) {
 }
 
 test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and repair stay canonical', async () => {
-  const { context, component } = await setup();
+  const { context, component, revisionContext } = await setup();
   const sourcePath = component.source.record;
   const sourceBefore = await readFile(resolve(repositoryRoot, sourcePath), 'utf8');
   const { schemaVersion: _schemaVersion, id: _id, kind: _kind, ...decisions } =
@@ -158,9 +168,10 @@ test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and re
     });
     assert.equal(retrieved.type, 'artifact.detail');
     assert.equal(retrieved.data.artifact.source.record, sourcePath);
+    // Retrieval returns the compiled record, with the derived web.react API merged in.
     assert.equal(canonicalJson(Object.fromEntries(
       Object.keys(preview.record).map((key) => [key, retrieved.data.artifact[key]]),
-    )), canonicalJson(preview.record));
+    )), canonicalJson(mergeDerivedApis(preview.record, revisionContext.derivedApis)));
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
@@ -183,15 +194,17 @@ test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and re
     '#/properties/summary',
   );
 
-  const missingBindingApi = structuredClone(preview.record);
-  delete missingBindingApi.bindings['web.react'].api;
+  // Button's web.react API is derived, so restating it in the record is the error now.
+  const restatedBindingApi = structuredClone(preview.record);
+  restatedBindingApi.bindings['web.react'].api = { props: [], events: [], parts: [], defaults: {} };
   const bindingDiagnosis = diagnoseCanonicalSource({
     context,
     family: 'component',
-    record: missingBindingApi,
+    record: restatedBindingApi,
     recordPath: sourcePath,
   });
   assert.equal(bindingDiagnosis.diagnostics[0].details.source.path, '$/bindings/web.react/api');
+  assert.match(bindingDiagnosis.diagnostics[0].message, /remove the authored api/u);
   assert.deepEqual(bindingDiagnosis.diagnostics[0].details.owner, {
     name: 'binding-contract',
     schema: 'binding.schema.json',
@@ -342,6 +355,203 @@ test('E-G0.5-02: revision explainer lists the normalized inputs behind each dige
   );
 });
 
+test('Decision 0031: a derived API change is classified like an authored one and moves only the binding spec', async () => {
+  const { component, revisionContext } = await setup();
+  const authored = component.record;
+  assert.equal(authored.bindings['web.react'].api, undefined, 'Button authors no web.react api');
+  const derived = {
+    schema: 'muxui-derived-api-v1',
+    generatedFrom: 'packages/react/src/button.ts',
+    component: 'muxui:component:button',
+    binding: 'web.react',
+    export: 'Button',
+    api: {
+      props: ['disabled', 'variant'],
+      events: [],
+      defaults: {},
+      propDetails: {
+        disabled: { type: { kind: 'boolean' }, required: false },
+        variant: { type: { kind: 'string' }, required: false },
+      },
+      eventDetails: {},
+      types: {},
+    },
+  };
+  const narrowed = structuredClone(derived);
+  narrowed.api.props = ['variant'];
+  delete narrowed.api.propDetails.disabled;
+  const result = semanticDiff({
+    before: authored,
+    after: authored,
+    revisionContext: {
+      ...revisionContext,
+      before: { derivedApis: { 'web.react': derived } },
+      after: { derivedApis: { 'web.react': narrowed } },
+    },
+  });
+  assert.deepEqual(result.changes.map(({ path, operation, effect, revisionAxes }) => ({ path, operation, effect, revisionAxes })), [
+    { path: '$/bindings/web.react/api/propDetails/disabled', operation: 'remove', effect: 'incompatible', revisionAxes: ['binding-spec'] },
+    { path: '$/bindings/web.react/api/props/0', operation: 'remove', effect: 'incompatible', revisionAxes: ['binding-spec'] },
+  ]);
+  assert.equal(result.effect, 'incompatible');
+  assert.equal(result.revisions.contentRevision.changed, false);
+  assert.equal(result.revisions.bindings['web.react'].bindingContentRevision.changed, false);
+  assert.equal(result.revisions.bindings['web.react'].bindingSpecRevision.changed, true);
+
+  const axes = explainRevisions({
+    family: 'component',
+    record: authored,
+    bindingId: 'web.react',
+    ...revisionContext,
+    derivedApis: { 'web.react': derived },
+  }).axes;
+  const inputs = (name) => axes.find((axis) => axis.name === name).normalizedInputs.map(({ path }) => path);
+  assert.ok(inputs('bindingSpecRevision').includes('$/binding/api/propDetails/disabled/required'));
+  assert.equal(inputs('contentRevision').some((path) => path.startsWith('$/bindings/web.react/api')), false);
+  assert.equal(inputs('bindingContentRevision').some((path) => path.startsWith('$/api')), false);
+  // Without its derived block the binding has no api at all.
+  assert.throws(
+    () => semanticDiff({ before: authored, after: authored, revisionContext: { ...revisionContext, derivedApis: {} } }),
+    /needs an authored api or a derived API source/u,
+  );
+
+  // Source diagnosis reads which bindings the compiled catalog derived.
+  const { context } = await setup();
+  const withDerivedApis = (derivedApis) => ({
+    ...context,
+    catalogBundle: {
+      ...context.catalogBundle,
+      artifacts: context.catalogBundle.artifacts.map((artifact) => {
+        if (artifact.id !== component.id) return artifact;
+        const { derivedApis: _derivedApis, ...source } = artifact.source;
+        return { ...artifact, source: derivedApis === undefined ? source : { ...source, derivedApis } };
+      }),
+    },
+  });
+  const derivedContext = withDerivedApis({ 'web.react': { path: 'packages/react/api/button.json' } });
+  const authoredContext = withDerivedApis(undefined);
+  const diagnose = (record, diagnosisContext) => diagnoseCanonicalSource({
+    context: diagnosisContext,
+    family: 'component',
+    record,
+    recordPath: component.source.record,
+  });
+  assert.equal(diagnose(authored, derivedContext).valid, true);
+  const restated = structuredClone(authored);
+  restated.bindings['web.react'].api = { props: [], events: [], parts: [], defaults: {} };
+  for (const [record, diagnosisContext, message] of [
+    [restated, derivedContext, 'remove the authored api'],
+    [authored, authoredContext, 'needs an authored api or a derived API source'],
+  ]) {
+    const diagnosis = diagnose(record, diagnosisContext);
+    assert.equal(diagnosis.valid, false);
+    assert.equal(diagnosis.diagnostics[0].details.source.path, '$/bindings/web.react/api');
+    assert.match(diagnosis.diagnostics[0].message, new RegExp(message, 'u'));
+    assert.equal(diagnosis.diagnostics[0].details.owner.name, 'binding-contract');
+  }
+});
+
+test('Decision 0031: adding a required derived prop or event is incompatible, and a description edit is editorial', async () => {
+  const { component, revisionContext } = await setup();
+  const authored = component.record;
+  const derived = {
+    schema: 'muxui-derived-api-v1',
+    generatedFrom: 'packages/react/src/button.ts',
+    component: 'muxui:component:button',
+    binding: 'web.react',
+    export: 'Button',
+    api: {
+      props: ['variant', 'config'],
+      events: ['activate'],
+      defaults: {},
+      propDetails: {
+        variant: { type: { kind: 'string' }, required: false, description: 'The recipe.' },
+        // config?: { label: string }
+        config: { type: { kind: 'object', members: [{ name: 'label', type: { kind: 'string' }, required: true, readonly: false }] }, required: false },
+      },
+      eventDetails: {
+        activate: {
+          prop: 'onActivate',
+          type: { kind: 'function', parameters: [{ name: 'event', type: { kind: 'reference', name: 'ActivationEvent' }, required: true }], returns: { kind: 'void' } },
+          required: false,
+        },
+      },
+      types: {
+        ActivationEvent: {
+          type: { kind: 'object', members: [{ name: 'pointer', type: { kind: 'string' }, required: true, readonly: true, description: 'The pointer.' }] },
+        },
+      },
+    },
+  };
+  const diff = (edit) => {
+    const after = structuredClone(derived);
+    edit(after.api);
+    return semanticDiff({
+      before: authored,
+      after: authored,
+      revisionContext: { ...revisionContext, before: { derivedApis: { 'web.react': derived } }, after: { derivedApis: { 'web.react': after } } },
+    });
+  };
+  const summary = (result) => result.changes.map(({ path, operation, effect }) => `${operation} ${path.replace('$/bindings/web.react/api/', '')} ${effect}`);
+
+  const addProp = (required) => (api) => {
+    api.props.push('label');
+    api.propDetails.label = { type: { kind: 'string' }, required };
+  };
+  assert.deepEqual(summary(diff(addProp(false))), ['add propDetails/label compatible', 'add props/2 compatible']);
+  const requiredProp = diff(addProp(true));
+  assert.deepEqual(summary(requiredProp), ['add propDetails/label incompatible', 'add props/2 incompatible']);
+  assert.deepEqual([requiredProp.effect, requiredProp.versionEffect], ['incompatible', 'major']);
+  const addEvent = (required) => (api) => {
+    api.events.push('dismiss');
+    api.eventDetails.dismiss = { prop: 'onDismiss', type: { kind: 'function', parameters: [], returns: { kind: 'void' } }, required };
+  };
+  assert.equal(diff(addEvent(false)).effect, 'compatible');
+  assert.deepEqual(summary(diff(addEvent(true))), ['add eventDetails/dismiss incompatible', 'add events/1 incompatible']);
+
+  // So is a required member added to an object type a prop or event reaches, inline or named.
+  const id = (required) => ({ name: 'id', type: { kind: 'string' }, required, readonly: false });
+  const inline = (required) => diff((api) => api.propDetails.config.type.members.push(id(required)));
+  assert.deepEqual(summary(inline(true)), ['add propDetails/config/type/members/1 incompatible']);
+  assert.deepEqual([inline(true).effect, inline(true).versionEffect], ['incompatible', 'major']);
+  assert.equal(inline(false).effect, 'compatible');
+  const named = (required) => diff((api) => api.types.ActivationEvent.type.members.push(id(required)));
+  assert.deepEqual(summary(named(true)), ['add types/ActivationEvent/type/members/1 incompatible']);
+  assert.equal(named(false).effect, 'compatible');
+
+  // A description is editorial wherever it sits, though the block, and so the spec revision, changes.
+  const described = diff((api) => {
+    api.propDetails.variant.description = 'The visual recipe.';
+    api.eventDetails.activate.description = 'Fires on activation.';
+    api.types.ActivationEvent.type.members[0].description = 'The pointer that activated it.';
+  });
+  assert.equal(described.changes.length, 4);
+  assert.ok(described.changes.every(({ effect }) => effect === 'editorial'), summary(described).join('\n'));
+  assert.deepEqual([described.effect, described.versionEffect], ['editorial', 'patch']);
+  assert.equal(described.revisions.bindings['web.react'].bindingSpecRevision.changed, true);
+  // Beside a real change, the entry classifies by that change.
+  const retyped = diff((api) => {
+    api.propDetails.variant.description = 'The visual recipe.';
+    api.propDetails.variant.type = { kind: 'number' };
+  });
+  assert.equal(retyped.effect, 'incompatible');
+});
+
+test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
+  const { context } = await setup();
+  const recordPath = 'catalog/components/icon-button/artifact.json';
+  const record = JSON.parse(await readFile(resolve(repositoryRoot, recordPath), 'utf8'));
+  const diagnose = (candidate) => diagnoseCanonicalSource({ context, family: 'component', record: candidate, recordPath });
+  assert.equal(diagnose(record).valid, true, 'IconButton authors its web.react api');
+  const typed = structuredClone(record);
+  typed.bindings['web.react'].api.propDetails = {};
+  const diagnosis = diagnose(typed);
+  assert.equal(diagnosis.valid, false);
+  assert.deepEqual(diagnosis.diagnostics.map(({ message, details }) => [details.source.path, message]), [
+    ['$/bindings/web.react/api/propDetails', 'The canonical source is invalid: is derived only and cannot be authored'],
+  ]);
+  assert.throws(() => mergeDerivedApis(typed), /\$\/bindings\/web\.react\/api\/propDetails is derived only/u);
+});
 test('E-G0.5-02: revision explanations distinguish absent and empty containers on every axis', async () => {
   const { component, revisionContext } = await setup();
 
@@ -379,8 +589,10 @@ test('E-G0.5-02: revision explanations distinguish absent and empty containers o
     [],
   );
 
-  const specAfter = structuredClone(component.record);
-  specAfter.bindings['web.react'].api.defaults.emptyContract = {};
+  // Button's web.react API is derived, so the spec axis takes its empty container from the derived block.
+  const derivedAfter = structuredClone(revisionContext.derivedApis['web.react']);
+  derivedAfter.api.props.push('emptyContract');
+  derivedAfter.api.propDetails.emptyContract = { type: { kind: 'object', members: [] }, required: false };
   const specBeforeAxis = explainRevisions({
     family: 'component',
     record: component.record,
@@ -389,23 +601,15 @@ test('E-G0.5-02: revision explanations distinguish absent and empty containers o
   }).axes.find(({ name }) => name === 'bindingSpecRevision');
   const specAfterAxis = explainRevisions({
     family: 'component',
-    record: specAfter,
+    record: component.record,
     bindingId: 'web.react',
     ...revisionContext,
+    derivedApis: { 'web.react': derivedAfter },
   }).axes.find(({ name }) => name === 'bindingSpecRevision');
+  const emptyMembers = '$/binding/api/propDetails/emptyContract/type/members';
   assert.notEqual(specBeforeAxis.digest, specAfterAxis.digest);
-  assert.equal(
-    specBeforeAxis.normalizedInputs.some(
-      ({ path }) => path === '$/binding/api/defaults/emptyContract',
-    ),
-    false,
-  );
-  assert.deepEqual(
-    specAfterAxis.normalizedInputs.find(
-      ({ path }) => path === '$/binding/api/defaults/emptyContract',
-    ).value,
-    {},
-  );
+  assert.equal(specBeforeAxis.normalizedInputs.some(({ path }) => path === emptyMembers), false);
+  assert.deepEqual(specAfterAxis.normalizedInputs.find(({ path }) => path === emptyMembers).value, []);
 });
 
 test('E-G0.5-03: autofix is preview-only and denies every product-meaning category', async () => {
@@ -585,10 +789,11 @@ test('E-R1.5-02: every React family and example source passes canonical diagnosi
     components.map(({ id }) => `${id}#web.react`).sort(),
   );
   for (const artifact of [...components, ...examples]) {
+    // The source record, which a derived API (Decision 0031) completes only in the compiled catalog.
     const diagnosis = diagnoseCanonicalSource({
       context,
       family: artifact.kind,
-      record: artifact.record,
+      record: JSON.parse(await readFile(resolve(repositoryRoot, artifact.source.record), 'utf8')),
       recordPath: artifact.source.record,
     });
     assert.equal(diagnosis.valid, true, artifact.id);

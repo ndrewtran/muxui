@@ -10,7 +10,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { Menu } from '/src/collections.mjs';
 
 const h = React.createElement;
@@ -36,7 +36,7 @@ const page = pageShell({
 for (const engine of browserEngines()) {
   test(`Menu.Trigger shows keyboard focus in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/button.mjs', 'src/collections.mjs'],
+      entries: ['src/button.ts', 'src/collections.mjs'],
       pages: { '/menu.html': page },
       modules: { '/menu-entry.mjs': entry },
     });

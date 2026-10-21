@@ -229,7 +229,8 @@ test('current Storybook default stories render through their published package r
 
 test('uses standard generation scripts and checks drift in an isolated projection', async () => {
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
-  assert.equal(packageManifest.scripts.generate, 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/generate-stories.mjs');
+  // The prerequisites are the app's workspace dependencies: React and the catalog the component docs query.
+  assert.equal(packageManifest.scripts.generate, 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react-storybook^... && node src/generate-stories.mjs');
   assert.equal(packageManifest.scripts['generate:check'], 'node src/generate-stories.mjs --check');
   assert.equal(packageManifest.scripts.storybook, 'pnpm generate && pnpm exec storybook dev -p 6006');
   assert.equal(packageManifest.scripts.build, 'pnpm generate && storybook build --output-dir dist');
@@ -1666,6 +1667,7 @@ test('Button Matrix statically covers every finite visual tuple and States keeps
   ].join('/'));
   assert.equal(buttons.length, 21, 'Button Matrix renders all finite variants and sizes');
   assert.equal(new Set(tuples).size, 21, 'Button Matrix tuples are unique');
+  assert.equal(matrix.parameters.muxuiButtonMatrix.combinations, 21, 'the matrix counts the derived variants and sizes');
   assert.deepEqual(new Set(tuples), new Set(
     ['sm', 'md', 'lg'].flatMap((size) => ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'].map((variant) => `${variant}/${size}`)),
   ));

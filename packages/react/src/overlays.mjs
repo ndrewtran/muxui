@@ -7,7 +7,7 @@ import { useInteractOutside } from 'react-aria/useInteractOutside';
 import { getInteractionModality } from 'react-aria/private/interactions/useFocusVisible';
 import { isFocusable } from 'react-aria/private/utils/isFocusable';
 import { runAfterTransition } from 'react-aria/private/utils/runAfterTransition';
-import { Button as MuxUIButton } from './button.mjs';
+import { Button as MuxUIButton } from './button.ts';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
   ButtonContext as AriaButtonContext,

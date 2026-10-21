@@ -126,6 +126,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/tokens
     devDependencies:
+      '@muxui/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
       '@storybook/addon-a11y':
         specifier: 10.5.10
         version: 10.5.10(storybook@10.5.10(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8))
@@ -190,6 +193,10 @@ importers:
       '@muxui/tokens':
         specifier: workspace:*
         version: link:../tokens
+    devDependencies:
+      '@muxui/react':
+        specifier: workspace:*
+        version: link:../react
 
   packages/react:
     dependencies:
@@ -239,9 +246,6 @@ importers:
         specifier: 4.5.0
         version: 4.5.0
     devDependencies:
-      '@muxui/catalog':
-        specifier: workspace:*
-        version: link:../catalog
       '@muxui/schema':
         specifier: workspace:*
         version: link:../schema

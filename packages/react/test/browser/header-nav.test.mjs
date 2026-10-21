@@ -105,7 +105,7 @@ for (const engine of browserEngines()) {
 const drawerEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { HeaderNav } from '/src/supplemental/index.mjs';
 
 const h = React.createElement;
@@ -137,7 +137,7 @@ const drawerPage = () => pageShell({
 for (const engine of browserEngines()) {
   test(`HeaderNav closes an open drawer when layout hides its trigger and keeps focus in the header in ${engine}`, { timeout: 180_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs', 'src/button.mjs'],
+      entries: ['src/supplemental/index.mjs', 'src/button.ts'],
       pages: { '/header-nav-drawer.html': drawerPage },
       modules: { '/header-nav-drawer-entry.mjs': drawerEntry },
     });

@@ -491,6 +491,11 @@ test('capability-enrichment status is a deterministic, advisory-only traceabilit
   unrelatedProof.families[0].dimensions.requiredWorkflows.decisions[0].proofRefs = ['package.json'];
   await assert.rejects(() => buildStatus(unrelatedProof), /PROOF_NAMESPACE/u);
 
+  // Runtime proof names a .mjs or .ts module; a hand-written declaration file is not runtime.
+  const declarationProof = structuredClone(matrix);
+  declarationProof.families[0].dimensions.requiredWorkflows.decisions[0].proofRefs = ['packages/react/src/supplemental/index.d.ts:1'];
+  await assert.rejects(() => buildStatus(declarationProof), /PROOF_NAMESPACE/u);
+
   const changedDisposition = structuredClone(matrix);
   changedDisposition.families[0].dimensions.requiredWorkflows.decisions[0].disposition = 'defer';
   await assert.rejects(() => buildStatus(changedDisposition), /IMPLEMENTED_COUNT/u);

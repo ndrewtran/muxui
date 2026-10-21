@@ -5,7 +5,7 @@ import { appendFile, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
-import { analyzeReactSourceChange, analyzeReactStyleChange, localModuleImports } from './component-source-impact.mjs';
+import { analyzeReactSourceChange, analyzeReactStyleChange, isReactModuleSource, localModuleImports } from './component-source-impact.mjs';
 import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from './ci-reuse.mjs';
 import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
@@ -29,6 +29,8 @@ const guideLinksPath = 'apps/guide-links.mjs';
 const familyUsageGuidePath = /^catalog\/guides\/([a-z0-9-]+)-usage\.(?:md|json)$/u;
 // The shared accessibility guide, whose support status and verification sections every family's Docs page shows.
 const accessibilityGuidePath = /^catalog\/guides\/accessibility\.(?:md|json)$/u;
+// A family's derived web.react API (Decision 0031), which the catalog merges into its component record.
+const derivedApiPath = /^packages\/react\/api\/([a-z0-9-]+)\.json$/u;
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
 const tailwindFixture = 'tests/fixtures/tailwind-consumer';
 
@@ -431,6 +433,16 @@ function addComponentDocsProof(plan) {
   addStoryUnitTest(plan, { file: componentDocsTestFile });
 }
 
+// A change to a family's compiled component record: its React and Storybook
+// proof, the catalog, the docs that render every record, and its Docs page.
+function routeComponentRecord(plan, record) {
+  plan.reactFamilies.add(record.family);
+  plan.storyFamilies.add(record.export ?? record.family);
+  plan.catalog = true;
+  plan.docs = true;
+  addComponentDocsProof(plan);
+}
+
 function storybookPageOwners(path, pageIndex) {
   return pageIndex.filter((page) => page.storyFile === path);
 }
@@ -489,14 +501,14 @@ async function reactModuleSources(baseRef) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const fullPath = resolve(directory, entry.name);
       if (entry.isDirectory()) await visit(fullPath);
-      else if (entry.isFile() && entry.name.endsWith('.mjs')) currentFiles.push(fullPath);
+      else if (entry.isFile() && isReactModuleSource(`packages/react/src/${entry.name}`)) currentFiles.push(fullPath);
     }
   }
   await visit(root);
   const basePaths = git(['ls-tree', '-r', '--name-only', baseRef, '--', 'packages/react/src'], { allowFailure: true });
   if (basePaths.status !== 0) throw new Error(`MUXUI_CI_IMPACT_BASE_SOURCE_MISSING: cannot list React source at ${baseRef}`);
   const paths = new Set([
-    ...basePaths.stdout.toString('utf8').split('\n').filter((path) => path.endsWith('.mjs')),
+    ...basePaths.stdout.toString('utf8').split('\n').filter(isReactModuleSource),
     ...currentFiles.map((file) => file.slice(repositoryRoot.length + 1).replaceAll('\\', '/')),
   ]);
   return Object.fromEntries(await Promise.all([...paths].map(async (path) => [
@@ -765,11 +777,13 @@ function dependentFacingPackage(path, packages, config) {
 // routes plan the React theme and Storybook theme and chrome proofs. An edge
 // is scoped when either its upstream or the originally changed package lists
 // the dependent, so tokens -> catalog -> React keeps React at its theme proof.
-// React's catalog devDependency serves only its prepack script: React source
-// and tests never import @muxui/catalog, and the React catalog and component
-// routes already plan the canonical inputs React reads directly.
+// The catalog's devDependency on React orders generation: the catalog compiles
+// React's derived APIs (Decision 0031), so it is unscoped and a React source
+// change plans the catalog check. Storybook's catalog devDependency only
+// generates the bundle its component docs query; the catalog routes already
+// plan the Storybook proofs a catalog change needs.
 const scopedDependents = {
-  '@muxui/catalog': ['@muxui/react'],
+  '@muxui/catalog': ['@muxui/react-storybook'],
   '@muxui/react': ['@muxui/react-storybook'],
   '@muxui/tokens': ['@muxui/react', '@muxui/react-storybook'],
 };
@@ -1134,12 +1148,27 @@ export async function buildPullRequestImpact({
   // browser entries, apps, catalog inputs). A deleted module's referencing
   // files are routed through their own owners as though they changed.
   const routedPaths = [...changed];
-  for (const path of changed.filter((candidate) => candidate.startsWith('packages/react/src/') && candidate.endsWith('.mjs'))) {
-    if (await readHeadText(path) !== null) continue;
-    for (const reference of await findReferences(path.slice('packages/react/'.length))) {
+  const reactSourcePaths = changed.filter(isReactModuleSource);
+  const importsBySide = reactSourcePaths.length === 0 ? { before: new Map(), after: new Map() } : {
+    before: localModuleImports(moduleSources, 'before'),
+    after: localModuleImports(moduleSources, 'after'),
+  };
+  const importedModules = new Set(['before', 'after'].flatMap((side) => [...importsBySide[side].values()].flat()));
+  // A changed module that is no family's source and that no React module imports
+  // (a fixture such as button-fixture.mjs, which the playground and a test import)
+  // reaches nothing through React source. Its referencing files route through their
+  // owners, as a deletion's do; with none it stays unowned, and the source analysis
+  // below fails.
+  const externallyImported = new Set();
+  for (const path of reactSourcePaths) {
+    const deleted = await readHeadText(path) === null;
+    if (!deleted && (importedModules.has(path) || records.some((record) => record.source === path))) continue;
+    const references = await findReferences(path.slice('packages/react/'.length));
+    if (!deleted && references.length > 0) externallyImported.add(path);
+    for (const reference of references) {
       if (routedPaths.includes(reference) || reference.startsWith('packages/react/src/')) continue;
       routedPaths.push(reference);
-      plan.reasons.push(`${reference} references deleted ${path}; validate its owner`);
+      plan.reasons.push(`${reference} references ${deleted ? 'deleted' : 'changed'} ${path}; validate its owner`);
     }
   }
 
@@ -1265,7 +1294,18 @@ export async function buildPullRequestImpact({
       continue;
     }
 
-    if (path.startsWith('packages/react/src/') && path.endsWith('.mjs')) {
+    // React generation writes the derived API from the family's source; it
+    // reaches users only through the merged catalog record, so it routes like one.
+    const derivedApi = derivedApiPath.exec(path);
+    if (derivedApi) {
+      const record = recordForSlug(records, derivedApi[1]);
+      if (!record) throw new Error(`MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: ${path} names no canonical React component ${derivedApi[1]}`);
+      routeComponentRecord(plan, record);
+      plan.reasons.push(`${path} is the derived API of ${record.family}; validate it like the canonical component record`);
+      continue;
+    }
+
+    if (isReactModuleSource(path)) {
       plan.reactProjectionCheck = true;
       plan.reasons.push(`${path} is React runtime or compiler source; AST ownership determines the affected families`);
       continue;
@@ -1368,12 +1408,7 @@ export async function buildPullRequestImpact({
       const parts = path.split('/');
       const record = parts[2] ? recordForSlug(records, parts[2]) : null;
       if (record && /\/artifact\.json$/u.test(path)) {
-        plan.reactFamilies.add(record.family);
-        plan.storyFamilies.add(record.export ?? record.family);
-        plan.catalog = true;
-        // Docs render every component record.
-        plan.docs = true;
-        addComponentDocsProof(plan);
+        routeComponentRecord(plan, record);
         plan.reasons.push(`${path} changes the canonical component record for ${record.family}`);
       } else if (/\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)) {
         const owners = routeCatalogExample(path, pageIndex);
@@ -1529,14 +1564,9 @@ export async function buildPullRequestImpact({
     plan.reasons.push(...plan.fullReasons.map((reason) => `full workspace proof: ${reason}`));
   }
 
-  const reactSourcePaths = changed.filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.mjs'));
   // The projection compiler and every local module it imports (at base or
   // head) shape every generated family, as do its canonical catalog inputs.
   const generatorModules = new Set([reactGeneratorPath]);
-  const importsBySide = reactSourcePaths.length === 0 ? { before: new Map(), after: new Map() } : {
-    before: localModuleImports(moduleSources, 'before'),
-    after: localModuleImports(moduleSources, 'after'),
-  };
   for (const side of ['before', 'after']) {
     const imports = importsBySide[side];
     const queue = [reactGeneratorPath];
@@ -1562,6 +1592,10 @@ export async function buildPullRequestImpact({
   const baseImporters = new Set([...importsBySide.before.values()].flat());
   for (const path of reactSourcePaths) {
     if (generatorModules.has(path)) continue;
+    if (externallyImported.has(path)) {
+      plan.reasons.push(`${path} is imported only outside React source; the files that reference it validate the change`);
+      continue;
+    }
     const headSource = await readHeadText(path);
     // A deleted module that no base module imported cannot change any family;
     // the React package check regenerates and tests the package without it.
@@ -1673,7 +1707,7 @@ export async function buildPullRequestImpact({
       // The runtime package boundary fields apply to every workspace manifest.
       if (!reactPackageWideChanges(before, after).pagesAffected) continue;
     }
-    if (path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path)) continue;
+    if (isReactModuleSource(path) || (path.startsWith('packages/react/src/') && path.endsWith('.css'))) continue;
     changedPackages.add(owner.name);
   }
   for (const { name, via, scope } of workspaceDependentRoutes(packages, [...changedPackages].sort())) {
@@ -1729,6 +1763,8 @@ export async function buildPullRequestImpact({
   // Every catalog input compiles into the catalog that @muxui/tooling queries
   // and renders, so its tests and dense goldens run.
   if (plan.catalog) plan.packageChecks.add('@muxui/tooling');
+  // The catalog route runs the catalog check that React's devDependency edge also plans.
+  if (plan.catalog) plan.packageChecks.delete('@muxui/catalog');
   // The full React check already runs the React package check.
   if (plan.reactPackageFull) plan.packageChecks.delete('@muxui/react');
   plan.packageChecks = [...plan.packageChecks].sort();
@@ -1744,6 +1780,7 @@ export function needsStorybookGeneration(paths, config, {
   packages = [], lockfileImporters = [], reactPackagePagesAffected = false, patternManifestChanged = false,
 } = {}) {
   const sourceNeedsMetadata = paths.some((path) => path.startsWith('packages/react/src/')
+    || derivedApiPath.test(path)
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
     || (path.startsWith('catalog/components/') && (/\/artifact\.json$/u.test(path)
       || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))
@@ -2178,10 +2215,10 @@ function plannedCommands(plan, {
 
   // Every group repeats this generation in its own fresh runner. Only skip
   // what metadata preparation already generated earlier in this same process:
-  // `@muxui/react-storybook generate` covers `@muxui/react...` plus itself.
+  // `@muxui/react-storybook generate` covers its workspace dependencies plus itself.
   let generationPackages = plan.generationPackages ?? scopedGenerationPackages(plan, packages);
   if (metadataPrepared) {
-    const preparedNames = new Set(['@muxui/react-storybook', ...dependencyClosure(packages, ['@muxui/react']).map(({ name }) => name)]);
+    const preparedNames = new Set(dependencyClosure(packages, ['@muxui/react-storybook']).map(({ name }) => name));
     generationPackages = generationPackages.filter((name) => !preparedNames.has(name));
   }
   if (generationPackages.length > 0) {
@@ -2506,12 +2543,12 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
   const records = needsMetadata ? await generatedReactRecords() : [];
   const pageIndex = needsMetadata ? await generatedStoryIndex() : [];
   const patterns = needsMetadata ? await patternParticipants(repositoryRoot) : [];
-  const reactSourceChanged = changedPaths.some((path) => path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path));
+  const reactSourceChanged = changedPaths.some((path) => isReactModuleSource(path) || (path.startsWith('packages/react/src/') && path.endsWith('.css')));
   const moduleSources = reactSourceChanged ? await reactModuleSources(mergeBase) : {};
   // Any route that selects React families (source, CSS, catalog records) needs the test sources.
   const componentTestSources = needsMetadata ? await reactTestSources() : {};
   const reactModuleDeleted = (await Promise.all(changedPaths
-    .filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.mjs'))
+    .filter(isReactModuleSource)
     .map(async (path) => await currentText(path) === null))).some(Boolean);
   // Deleted modules can be referenced from test helpers, so their references
   // need the same helper scan as a helper change.

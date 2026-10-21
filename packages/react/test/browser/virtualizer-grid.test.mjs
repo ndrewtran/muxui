@@ -22,7 +22,7 @@ import React from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { GridList, Virtualizer } from '/src/collections.mjs';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { Link } from '/src/components.mjs';
 
 const h = React.createElement;
@@ -227,7 +227,7 @@ function analyze({ view, rows }, overscan = 2) {
 for (const engine of browserEngines()) {
   test(`Virtualizer layout="grid" in ${engine}`, { timeout: 900_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/collections.mjs', 'src/button.mjs', 'src/components.mjs'],
+      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.mjs'],
       pages: { '/virtualizer-grid.html': page },
       modules: { '/virtualizer-grid-entry.mjs': entry },
     });

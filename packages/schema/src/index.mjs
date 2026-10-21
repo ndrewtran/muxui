@@ -50,6 +50,13 @@ export {
 } from './canonical.mjs';
 export { loadFieldOwnershipRegistry } from './field-ownership.mjs';
 export {
+  DERIVED_API_FIELDS,
+  DERIVED_API_SCHEMA,
+  authoredApiIssues,
+  mergeDerivedApis,
+  validateDerivedApi,
+} from './derived-api.mjs';
+export {
   classifySchemaChange,
   negotiateSchemaVersion,
   parseSchemaVersion,

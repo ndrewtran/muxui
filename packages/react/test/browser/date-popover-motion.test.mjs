@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
-import { Button } from '../../src/button.mjs';
+import { Button } from '../../src/button.ts';
 import { DatePicker, DateRangePicker } from '../../src/fields.mjs';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';

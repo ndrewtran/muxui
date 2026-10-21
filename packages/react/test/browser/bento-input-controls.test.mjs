@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { TextField, SearchField } from '../../src/fields.mjs';
-import { Button } from '../../src/button.mjs';
+import { Button } from '../../src/button.ts';
 import { IconButton } from '../../src/supplemental/icon-button.mjs';
 import { CommandPalette, useCommandPalette } from '../../src/supplemental/index.mjs';
 import { ColorSwatch } from '../../src/collections.mjs';
@@ -162,7 +162,7 @@ test('Bento input and control host contracts in a real browser', { timeout: 90_0
   const entry = `import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { TextField, SearchField } from '/src/fields.mjs';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { IconButton } from '/src/supplemental/icon-button.mjs';
 import { CommandPalette, useCommandPalette } from '/src/supplemental/index.mjs';
 import { ColorSwatch } from '/src/collections.mjs';
@@ -171,7 +171,7 @@ ${InputControlsFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFixture));`;
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(InputControlsFixture))}</div>`, entry: '/bento-input-controls-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/fields.mjs', 'src/button.mjs', 'src/supplemental/index.mjs'],
+    entries: ['src/fields.mjs', 'src/button.ts', 'src/supplemental/index.mjs'],
     pages: { '/bento-input-controls.html': html },
     modules: { '/bento-input-controls-entry.mjs': entry },
   });

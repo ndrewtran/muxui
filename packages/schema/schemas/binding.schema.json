@@ -7,7 +7,7 @@
   "allOf": [{
     "oneOf": [
       {
-      "required": ["schemaVersion", "lifecycle", "strategy", "api", "behavior", "accessibility", "tokenRecipe", "platformSafety", "runtimeProfiles"],
+      "required": ["schemaVersion", "lifecycle", "strategy", "behavior", "accessibility", "tokenRecipe", "platformSafety", "runtimeProfiles"],
       "properties": { "strategy": {
         "enum": ["direct", "adapted", "native-alternative"],
         "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
@@ -61,6 +61,7 @@
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content"] }
     },
     "api": {
+      "description": "An implemented binding's API. Authored here, or omitted when the catalog source manifest names a derived API source for the binding (Decision 0031); the compiler then merges the derived block, which alone carries propDetails, eventDetails, and types.",
       "type": "object",
       "additionalProperties": false,
       "required": ["props", "events", "parts", "defaults"],
@@ -97,6 +98,30 @@
           "type": "object",
           "additionalProperties": true,
           "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
+        },
+        "propDetails": {
+          "description": "Derived only: each prop's type in the derived-api.schema.json grammar.",
+          "type": "object",
+          "x-muxui-authoring": {
+            "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+            "revisionAxes": ["binding-spec"]
+          }
+        },
+        "eventDetails": {
+          "description": "Derived only: each event's on<Event> prop and callback signature.",
+          "type": "object",
+          "x-muxui-authoring": {
+            "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+            "revisionAxes": ["binding-spec"]
+          }
+        },
+        "types": {
+          "description": "Derived only: the Mux UI-owned named types the details reference.",
+          "type": "object",
+          "x-muxui-authoring": {
+            "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+            "revisionAxes": ["binding-spec"]
+          }
         }
       }
     },

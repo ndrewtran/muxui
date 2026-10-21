@@ -457,7 +457,7 @@ test('Popover dismissable false still closes through a close-slot button in its 
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
-  const { Button: MuxUIButton } = await import('../src/button.mjs');
+  const { Button: MuxUIButton } = await import('../src/button.ts');
   const changes = [];
   const popover = (props, closeButton = React.createElement(AriaButton, { slot: 'close', id: 'close-action' }, 'Done')) => React.createElement(Popover, {
     'aria-label': 'Actions',

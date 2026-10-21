@@ -110,7 +110,8 @@
     "apps/component-navigation.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/component-reference.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/guide-links.mjs": ["@muxui/docs", "@muxui/react-storybook"],
-    "apps/scale/src/": ["@muxui/docs"]
+    "apps/scale/src/": ["@muxui/docs"],
+    "catalog/": ["@muxui/react"]
   },
   "generationPrerequisites": {
     "@muxui/repository-policy": ["@muxui/react"]

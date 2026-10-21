@@ -33,6 +33,11 @@ test('default component routing retains shared source and integrity coverage', (
   assert.ok(selected.includes('test/styling-tokens.test.mjs'));
 });
 
+test('a TypeScript source routes to the same source group as its .mjs predecessor', () => {
+  const typeScriptButton = { ...records[0], source: 'packages/react/src/button.ts' };
+  assert.deepEqual(selectComponentTestFiles([typeScriptButton], availableFiles), selectComponentTestFiles([records[0]], availableFiles));
+});
+
 test('focused routing selects Tree and TagSelect behavior without unrelated source groups', () => {
   for (const family of ['Tree', 'TagSelect']) {
     const record = records.find((candidate) => candidate.family === family);

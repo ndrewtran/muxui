@@ -20,12 +20,20 @@ test('anatomy validation names the family and field of each structural error', (
   rejects({ ...valid, parts: [{ ...valid.parts[0], bind: ['paint'] }] }, /button\.root\.bind: must list bind groups/u);
 });
 
-test('axes come from the catalog record and React types, with the catalog default first', () => {
+test('axes come from the catalog record and its derived API or React types, with the catalog default first', () => {
   assert.deepEqual(catalogAxes(syntheticAnatomy(), { catalogRecord, reactTypes }), [{ prop: 'variant', name: 'Variant', values: ['primary', 'ghost'] }]);
   const axisError = (anatomy, sources, pattern) => assert.throws(() => catalogAxes(anatomy, sources), (error) => error instanceof AnatomyError && pattern.test(error.message));
   axisError({ ...syntheticAnatomy(), axes: ['size'] }, { catalogRecord, reactTypes }, /button\.axes\.size: is not a web\.react prop in the catalog record/u);
   axisError(syntheticAnatomy(), { catalogRecord, reactTypes: reactTypes.replace("'ghost'", "'other'").replace("'primary' | ", '') }, /catalog default primary is not a React value/u);
   axisError(syntheticAnatomy(), { catalogRecord: { ...catalogRecord, id: 'muxui:component:link' }, reactTypes }, /catalog record id must be muxui:component:button/u);
+  // A derived API (Decision 0031) supplies the finite values; the React types are not read for it.
+  const derivedRecord = structuredClone(catalogRecord);
+  derivedRecord.bindings['web.react'].api.propDetails = {
+    variant: { type: { kind: 'union', members: [] }, required: false, enum: ['ghost', 'primary', 'danger'] },
+  };
+  assert.deepEqual(catalogAxes(syntheticAnatomy(), { catalogRecord: derivedRecord, reactTypes: '' }), [{ prop: 'variant', name: 'Variant', values: ['primary', 'ghost', 'danger'] }]);
+  derivedRecord.bindings['web.react'].api.propDetails.variant.enum = [true, false];
+  axisError(syntheticAnatomy(), { catalogRecord: derivedRecord, reactTypes }, /ButtonProps\.variant has no finite string values in its derived API/u);
   const { variants } = resolveAnatomy(syntheticAnatomy(), { catalogRecord, reactTypes });
   assert.deepEqual(variants.slice(0, 2).map(({ key, name }) => [key, name]), [
     ['variant=primary,state=rest', 'Variant=primary, State=rest'],

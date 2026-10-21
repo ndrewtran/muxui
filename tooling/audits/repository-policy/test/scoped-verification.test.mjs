@@ -369,4 +369,9 @@ test('shared app source selects its declared consumers without a workspace depen
   assert.deepEqual(selected('apps/component-navigation.mjs'), ['@muxui/docs', '@muxui/react-storybook']);
   assert.deepEqual(selected('apps/component-reference.mjs'), ['@muxui/docs', '@muxui/react-storybook']);
   assert.deepEqual(selected('apps/guide-links.mjs'), ['@muxui/docs', '@muxui/react-storybook']);
+  // React generation reads catalog/ although the catalog depends on React (Decision 0031),
+  // and React output reaches the catalog through that devDependency.
+  const catalogInput = selected('catalog/components/button/artifact.json');
+  assert.ok(catalogInput.includes('@muxui/catalog') && catalogInput.includes('@muxui/react'), catalogInput.join(', '));
+  assert.ok(selected('packages/react/src/button.ts').includes('@muxui/catalog'));
 });
