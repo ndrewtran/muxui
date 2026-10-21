@@ -882,8 +882,9 @@ function ImagePreview({ onLoad, ...args }) {
     e('figcaption', null, IMAGE_OUTCOMES[outcome === 'error' && !hasFallback ? 'failed' : outcome]),
   );
 }
-// A single transparent pixel loads as an image without painting a colour the audits cannot verify.
-const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+// A single transparent pixel loads as an image without painting a colour the audits cannot verify. It is a PNG data URL,
+// the only kind the colour audit verifies.
+const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 // Truncated image data: the browser fires an error event instead of loading it.
 const BROKEN_IMAGE_SRC = 'data:image/png;base64,AAAA';
 /**

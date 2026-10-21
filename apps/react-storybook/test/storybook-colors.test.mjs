@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createServer as createHttpServer } from 'node:http';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -379,7 +380,7 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
   try {
     const page = await browser.newPage();
     const foreground = graphs.light['semantic.content.strong'].value;
-    const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
     const opaquePixel = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='red'/%3E%3C/svg%3E";
     await page.setContent(`<style>
       body { color:${foreground}; background:${graphs.light['semantic.surface.canvas'].value} }
@@ -515,6 +516,44 @@ test('Storybook colour audit verifies an image only when every decoded pixel is 
       assert.equal(pixels.find(({ rgba }) => rgba === `${channels(strong).join(',')},1`).count, 2, `${scheme}: canonical and avatar both paint the strong colour`);
     }
   } finally { await browser.close(); }
+});
+
+test('Storybook colour audit leaves a served image unverified even when its Content-DPR header shrinks its size', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  let server;
+  try {
+    const page = await browser.newPage();
+    const pale = graphs.light['reference.color.bluegreen-20'].value;
+    const [red, green, blue] = [1, 3, 5].map((start) => Number.parseInt(pale.slice(start, start + 2), 16));
+    // The same off-palette checkerboard as the srcset case: each 2 by 2 block averages back to the pale colour.
+    const png = Buffer.from(await page.evaluate(({ red, green, blue }) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 16;
+      canvas.height = 16;
+      const context = canvas.getContext('2d');
+      for (let index = 0; index < 256; index += 1) {
+        const [x, y] = [index % 16, Math.floor(index / 16)];
+        context.fillStyle = `rgb(${red + ((x + y) % 2 ? -8 : 8)}, ${green}, ${blue})`;
+        context.fillRect(x, y, 1, 1);
+      }
+      return canvas.toDataURL('image/png').split(',')[1];
+    }, { red, green, blue }), 'base64');
+    // Served from the page's own origin, so the canvas is not tainted and only the header can change the size.
+    server = createHttpServer((request, response) => {
+      if (request.url === '/checker.png') response.writeHead(200, { 'content-type': 'image/png', 'content-dpr': '2' }).end(png);
+      else response.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><img id="served" width="16" height="16" src="/checker.png">');
+    });
+    await new Promise((done) => server.listen(0, '127.0.0.1', done));
+    await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    await page.locator('#served').evaluate((image) => image.decode());
+    assert.equal(await page.locator('#served').evaluate((image) => image.naturalWidth), 8, 'Content-DPR halves the reported size');
+    const report = await page.evaluate(collectStorybookPaints, { tokens: graphs.light });
+    assert.ok(report.media.some((source) => source.endsWith('/checker.png')), 'the served image stays unverified media');
+    assert.deepEqual(report.paints.filter(({ property }) => property === 'image-pixel'), []);
+  } finally {
+    await browser.close();
+    server?.close();
+  }
 });
 
 test('Storybook colour audit accepts dynamic color data only on marked Mux paint parts', async () => {

@@ -196,11 +196,12 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
 
   // The distinct opaque pixel colours of a small decoded image, or null when its pixels cannot be read. A fully
   // transparent image has none, so it paints nothing. naturalWidth and naturalHeight are corrected for the density of
-  // a srcset or picture candidate, so a canvas sized to them resamples the bitmap and averages its real pixels into
-  // other colours; such an image is left unverified.
+  // a srcset or picture candidate, or of a served image's Content-DPR header, so a canvas sized to them resamples the
+  // bitmap and averages its real pixels into other colours. Only an img whose whole PNG is in its own data URL, with no
+  // candidates, has no header or source choice that can change its size; every other image is left unverified.
   function decodedPixelColours(element) {
     if (element.localName !== 'img' || !element.complete || !element.naturalWidth || !element.naturalHeight) return null;
-    if (element.srcset || element.sizes || element.closest('picture')) return null;
+    if (!element.currentSrc.startsWith('data:image/png') || element.srcset || element.sizes || element.closest('picture')) return null;
     if (element.naturalWidth * element.naturalHeight > maxAuditedImagePixels) return null;
     try {
       const canvas = document.createElement('canvas');

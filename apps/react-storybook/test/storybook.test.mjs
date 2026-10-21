@@ -1386,7 +1386,7 @@ test('Image shows fallback recovery and final failure, and names the source it e
     assert.equal(caption('fallback'), 'Loading the primary source.');
     await fail('fallback');
     assert.equal(row('fallback').querySelector('img').hasAttribute('data-fallback'), true);
-    assert.match(row('fallback').querySelector('img').getAttribute('src'), /^data:image\/gif/u, 'the working fallback is the verified transparent pixel');
+    assert.match(row('fallback').querySelector('img').getAttribute('src'), /^data:image\/png/u, 'the working fallback is the verified transparent pixel');
     await settleRuntime(20);
     assert.equal(caption('fallback'), 'Primary source failed; using fallbackSrc.');
 

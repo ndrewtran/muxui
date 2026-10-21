@@ -17,8 +17,8 @@ const posters: Poster[] = [
   { id: 'poster-12', title: 'A Last Sample Title', year: 2011 },
 ];
 
-// Placeholder artwork: an empty SVG over a token surface. Use your poster URL as src.
-const posterSrc = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')}`;
+// Placeholder artwork: a transparent PNG over a token surface. Use your poster URL as src.
+const posterSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 export function PosterGridCssGridExample() {
   return (

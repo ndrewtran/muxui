@@ -34,8 +34,8 @@ const posters: Poster[] = Array.from({ length: 1000 }, (_, index) => {
   };
 });
 
-// Placeholder artwork: an empty SVG over a token surface. Use your poster URL as src.
-const posterSrc = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')}`;
+// Placeholder artwork: a transparent PNG over a token surface. Use your poster URL as src.
+const posterSrc = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNgAAIAAAUAAen63NgAAAAASUVORK5CYII=';
 
 // Container breakpoints: 2 columns below 40rem, 4 from 40rem, 6 from 64rem, the same
 // thresholds as a CSS @container. The first render, on the server and when hydrating,
