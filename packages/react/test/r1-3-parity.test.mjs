@@ -70,7 +70,7 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
       assert.doesNotMatch(typeSurface, /\b(?:description|errorMessage)\??\s*:/u, `${name} must not expose unsupported validation messaging`);
     }
     const rejectedProps = {
-      RadioGroup: ['description', 'errorMessage'],
+      RadioGroup: ['description'],
       TagGroup: ['description', 'errorMessage', 'readOnly', 'required', 'invalid'],
       TokenField: ['description', 'errorMessage', 'required', 'invalid'],
     }[name];

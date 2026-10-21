@@ -1333,7 +1333,7 @@ export const Select = /*#__PURE__*/ (() => {
 })();
 
 export const RadioGroup = /*#__PURE__*/ (() => {
-  const component = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+  const component = React.forwardRef(function RadioGroup({ label, errorMessage, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
     const labelId = React.useId();
     // The visible label text labels the group, so the two cannot drift apart.
@@ -1352,7 +1352,9 @@ export const RadioGroup = /*#__PURE__*/ (() => {
         React.createElement(RadioMotionIndicator, { renderProps }),
         option.label ?? option.value)))
       : children;
-    const group = React.createElement(AriaRadioGroup, { ref, name, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
+    const group = React.createElement(AriaRadioGroup, { ref, name, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent,
+      // Inside the group, so RAC wires it into the group's aria-describedby and shows it only while the group is invalid.
+      errorMessage === undefined ? null : React.createElement(AriaFieldError, { className: 'muxui-field-error muxui-radio-group-error' }, errorMessage));
     const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref }, group);
     const content = label === undefined
       ? motionGroup

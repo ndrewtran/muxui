@@ -262,6 +262,44 @@ test('RadioField inherits group size and selection context through Mux RadioGrou
   }
 });
 
+test('RadioGroup shows its group error once, only while invalid, and links it to the group', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    const field = (value, label) => React.createElement(RadioField.Root, { value }, React.createElement(RadioField.Button, null,
+      React.createElement(RadioField.Indicator, null, React.createElement(RadioField.Dot)), label));
+    const renderGroup = (props) => React.createElement(RadioGroup, { label: 'Plan', errorMessage: 'Choose a plan', ...props },
+      field('monthly', 'Monthly'), field('yearly', 'Yearly'));
+    root = createRoot(host);
+    await act(async () => root.render(renderGroup({})));
+    assert.equal(host.querySelector('.muxui-field-error'), null, 'a valid group shows no error');
+
+    await act(async () => root.render(renderGroup({ invalid: true })));
+    const group = host.querySelector('[role="radiogroup"]');
+    const errors = [...host.querySelectorAll('.muxui-field-error')];
+    assert.equal(errors.length, 1, 'the message shows once, not once per option');
+    assert.equal(errors[0].textContent, 'Choose a plan');
+    assert.ok(group.contains(errors[0]), 'the error sits inside the group');
+    assert.ok(group.getAttribute('aria-describedby')?.split(' ').includes(errors[0].id), 'the group is described by its error');
+    assert.equal(group.getAttribute('data-invalid'), 'true');
+
+    await act(async () => root.render(renderGroup({ invalid: false })));
+    assert.equal(host.querySelector('.muxui-field-error'), null, 'the error leaves with the invalid state');
+    assert.equal(group.getAttribute('aria-describedby')?.split(' ').some((id) => host.ownerDocument.getElementById(id)?.textContent === 'Choose a plan') ?? false, false, 'and nothing describes the group with it');
+
+    // An options list shows the same single error after the options.
+    await act(async () => root.render(React.createElement(RadioGroup, { label: 'Plan', invalid: true, errorMessage: 'Choose a plan', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] })));
+    assert.equal(host.querySelectorAll('.muxui-field-error').length, 1);
+    assert.equal(host.querySelector('[role="radiogroup"]').lastElementChild.className.includes('muxui-radio-group-error'), true);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
 test('R1.1 MuxUI labels, checkbox indicator states, and breadcrumb current normalization are accessible', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);

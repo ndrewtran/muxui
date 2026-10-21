@@ -395,8 +395,8 @@ void comboBoxChildren;
 // @ts-expect-error RadioGroup does not expose generic field descriptions.
 const radioGroupDescription = <RadioGroup label="Plan" description="Unsupported" />;
 void radioGroupDescription;
-// @ts-expect-error RadioGroup does not expose generic field errors.
-const radioGroupErrorMessage = <RadioGroup label="Plan" errorMessage="Unsupported" />;
+// The group error is a node, like CheckboxGroup's, and shows once for the whole group.
+const radioGroupErrorMessage = <RadioGroup label="Plan" invalid errorMessage={<em>Choose a plan</em>} />;
 void radioGroupErrorMessage;
 const radioGroupName = <RadioGroup label="Plan" name="plan" />;
 void radioGroupName;
