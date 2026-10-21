@@ -8,6 +8,7 @@ import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
+import { indexSignatureCompatible } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -154,6 +155,19 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
       encoding: 'utf8',
     });
     assert.equal(strictTypecheck.status, 0, `strict consumer: ${strictTypecheck.stdout}\n${strictTypecheck.stderr}`);
+
+    // A props type a consumer could pass where `T extends Record<string, unknown>` is required before
+    // the moves still can, with and without exactOptionalPropertyTypes. TypeScript 6 rejects an
+    // interface there and an intersection with one; TypeScript 7 accepts both, so this runs tsc 6.
+    const { indexSignatureCompatible: recordedCompatible } = JSON.parse(await readFile(resolve(packageRoot, 'test/fixtures/public-declaration-kinds.json'), 'utf8'));
+    for (const exactOptionalPropertyTypes of [false, true]) {
+      const compatible = indexSignatureCompatible({ directory: consumer, specifier: '@muxui/react', names: recordedCompatible, exactOptionalPropertyTypes, tsc });
+      assert.deepEqual(
+        recordedCompatible.filter((name) => !compatible.includes(name)),
+        [],
+        `types no longer assignable to Record<string, unknown> (exactOptionalPropertyTypes ${exactOptionalPropertyTypes})`,
+      );
+    }
 
     // Decision 0031: the packed declarations carry each derived API. The same reader runs over
     // them; names, types, enum members, and required flags match the committed derived file.
