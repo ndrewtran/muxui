@@ -112,6 +112,8 @@ const GUIDES = {
   'date-picker': { native: ['YYYY-MM-DD'] },
   // YYYY-MM-DD is the value format, which the types state as strings.
   'date-range-picker': { native: ['YYYY-MM-DD'] },
+  // autoComplete and inputMode are native input attributes TextField forwards; event.target.value and the setter are the change handler's JavaScript.
+  'text-field': { native: ['autoComplete', 'inputMode', 'event.target.value', 'onChange={setName}'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

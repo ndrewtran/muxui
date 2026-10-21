@@ -49,7 +49,7 @@ const FUNCTION_PROPS = new Set(['close', 'filter', 'sort', 'groupBy', 'getGroupT
 const TEXT_VALUE_CONTEXT_PROPS = new Set(['placeholder', 'type']);
 const NUMBER_PROPS = new Set([
   'closeDelay', 'delay', 'duration', 'height', 'itemHeight', 'maxLength', 'maxValue',
-  'minLength', 'minValue', 'overscan', 'step', 'width',
+  'minValue', 'overscan', 'step', 'width',
 ]);
 
 const NUMBER_VALUE_CONTEXT_PROPS = new Set(['max', 'min', 'step']);

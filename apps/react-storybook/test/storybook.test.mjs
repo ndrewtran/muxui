@@ -1836,7 +1836,7 @@ test('anatomy proof resolves every canonical part to a live DOM or executable ro
 test('control inference and composition adapters preserve canonical values', () => {
   const textFieldBinding = descriptor.bindings.find(({ export: name }) => name === 'TextField');
   const textFieldArgTypes = argTypesForBinding(textFieldBinding);
-  for (const name of ['label', 'aria-label', 'value', 'defaultValue', 'name', 'placeholder']) {
+  for (const name of ['label', 'value', 'defaultValue', 'name', 'placeholder']) {
     assert.equal(textFieldArgTypes[name].control, 'text', name);
   }
 
