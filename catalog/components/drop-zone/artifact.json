@@ -14,12 +14,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": ["children", "disabled", "onDrop", "onActivate", "className", "aria-label", "aria-labelledby"],
-        "events": ["drop", "activate"],
-        "parts": ["root", "content"],
-        "defaults": { "disabled": false }
-      },
       "behavior": [
         "Pointer, keyboard, and clipboard input all reach the same onDrop callback.",
         "onDrop receives the dropped items as a list of file, directory, and text items, not a File array.",

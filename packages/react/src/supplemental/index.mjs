@@ -60,7 +60,7 @@ import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
 import { Menu } from '../collections.mjs';
-import { Tooltip } from '../overlays.mjs';
+import { Tooltip } from '../overlays.ts';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { Button as MuxUIButton, usePendingSubmitProps } from '../button.ts';

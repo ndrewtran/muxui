@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { Dialog, Popover, Tooltip, PreviewTrigger } from '../../src/overlays.mjs';
+import { Dialog, Popover, Tooltip, PreviewTrigger } from '../../src/overlays.ts';
 import { AlertDialog } from '../../src/supplemental/index.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
@@ -74,7 +74,7 @@ async function withFixture(run, direction = 'ltr') {
   const html = pageShell({ attributes: `dir="${direction}" lang="${direction === 'rtl' ? 'ar' : 'en'}"`, body: `<div id="root">${renderToString(React.createElement(OverlayFixture))}</div>`, entry: '/overlay-fixture.mjs' });
   const entry = `import React from 'react';
     import { hydrateRoot } from 'react-dom/client';
-    import { Dialog, Popover, Tooltip, PreviewTrigger } from '/packages/react/src/overlays.mjs';
+    import { Dialog, Popover, Tooltip, PreviewTrigger } from '/packages/react/src/overlays.ts';
     import { AlertDialog } from '/packages/react/src/supplemental/index.mjs';
     import '/packages/react/generated/styles.css';
     ${StatefulPopoverContent.toString()}
@@ -88,7 +88,7 @@ async function withFixture(run, direction = 'ltr') {
   const { url, close } = await startServer({
     root: 'repository',
     aliasReact: true,
-    entries: ['packages/react/src/overlays.mjs', 'packages/react/src/supplemental/index.mjs'],
+    entries: ['packages/react/src/overlays.ts', 'packages/react/src/supplemental/index.mjs'],
     pages: { '/overlay-fixture.html': html },
     modules: { '/overlay-fixture.mjs': entry },
   });

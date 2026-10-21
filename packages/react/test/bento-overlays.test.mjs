@@ -8,7 +8,7 @@ import { createDom } from './support/dom.mjs';
 const installDom = (markup) => createDom(markup, { globals: ['File', 'Blob', 'FileReader'], layoutStubs: true });
 
 const moduleEnvironment = installDom();
-const { Dialog, Popover, PreviewTrigger, Tooltip } = await import('../src/overlays.mjs');
+const { Dialog, Popover, PreviewTrigger, Tooltip } = await import('../src/overlays.ts');
 const { AlertDialog } = await import('../src/supplemental/index.mjs');
 moduleEnvironment.restore();
 const h = React.createElement;

@@ -1,0 +1,240 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:tooltip",
+  "binding": "web.react",
+  "export": "Tooltip",
+  "api": {
+    "props": [
+      "content",
+      "trigger",
+      "delay",
+      "closeDelay",
+      "placement",
+      "offset",
+      "crossOffset",
+      "shouldFlip",
+      "containerPadding",
+      "open",
+      "defaultOpen",
+      "disabled"
+    ],
+    "events": [
+      "openChange"
+    ],
+    "defaults": {
+      "delay": 500,
+      "closeDelay": 0,
+      "placement": "top",
+      "offset": 0,
+      "crossOffset": 0,
+      "shouldFlip": true,
+      "containerPadding": 12,
+      "defaultOpen": false,
+      "disabled": false
+    },
+    "propDetails": {
+      "content": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": true,
+        "description": "What the tooltip says. It is required, and a blank string does not count."
+      },
+      "trigger": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactElement"
+        },
+        "required": true,
+        "description": "The focusable element the tooltip describes."
+      },
+      "delay": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How long a hover waits before the tooltip opens, in milliseconds. Keyboard focus opens it at once."
+      },
+      "closeDelay": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How long the tooltip stays open after the pointer leaves, in milliseconds."
+      },
+      "placement": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIPlacement"
+        },
+        "required": false,
+        "enum": [
+          "top",
+          "bottom",
+          "start",
+          "end",
+          "top-start",
+          "top-end",
+          "bottom-start",
+          "bottom-end",
+          "start-top",
+          "start-bottom",
+          "end-top",
+          "end-bottom"
+        ],
+        "description": "Where the tooltip opens against its trigger or anchorRef. start and end follow the locale direction."
+      },
+      "offset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The distance in pixels between the tooltip and its trigger, along the placement's side."
+      },
+      "crossOffset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The shift in pixels along the side the tooltip is placed against."
+      },
+      "shouldFlip": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the tooltip moves to the opposite side when the placed side has no room."
+      },
+      "containerPadding": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The least distance in pixels between the tooltip and the edge of the viewport. Must not be negative."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the tooltip is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the tooltip starts open, when it controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the tooltip: it does not open, and an open one closes. The trigger stays operable."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the tooltip opening or closing."
+      }
+    },
+    "types": {
+      "MuxUIPlacement": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "top"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "start"
+            },
+            {
+              "kind": "literal",
+              "value": "end"
+            },
+            {
+              "kind": "literal",
+              "value": "top-start"
+            },
+            {
+              "kind": "literal",
+              "value": "top-end"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-start"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-end"
+            },
+            {
+              "kind": "literal",
+              "value": "start-top"
+            },
+            {
+              "kind": "literal",
+              "value": "start-bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "end-top"
+            },
+            {
+              "kind": "literal",
+              "value": "end-bottom"
+            }
+          ]
+        },
+        "description": "How a floating overlay is placed beside its trigger."
+      }
+    }
+  }
+}

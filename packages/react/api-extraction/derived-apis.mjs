@@ -32,6 +32,13 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'toggle-button', name: 'ToggleButton', source: 'packages/react/src/components.ts' },
   { slug: 'breadcrumbs', name: 'Breadcrumbs', source: 'packages/react/src/components.ts' },
   { slug: 'resizable', name: 'Resizable', source: 'packages/react/src/supplemental/resizable.ts' },
+  { slug: 'file-trigger', name: 'FileTrigger', source: 'packages/react/src/overlays.ts' },
+  { slug: 'drop-zone', name: 'DropZone', source: 'packages/react/src/overlays.ts' },
+  { slug: 'tooltip', name: 'Tooltip', source: 'packages/react/src/overlays.ts' },
+  { slug: 'preview-trigger', name: 'PreviewTrigger', source: 'packages/react/src/overlays.ts' },
+  { slug: 'popover', name: 'Popover', source: 'packages/react/src/overlays.ts' },
+  { slug: 'toast', name: 'Toast', source: 'packages/react/src/overlays.ts' },
+  { slug: 'dialog', name: 'Dialog', source: 'packages/react/src/overlays.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

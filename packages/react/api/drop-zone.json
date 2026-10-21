@@ -1,0 +1,377 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:drop-zone",
+  "binding": "web.react",
+  "export": "DropZone",
+  "api": {
+    "props": [
+      "disabled"
+    ],
+    "events": [
+      "drop",
+      "activate"
+    ],
+    "defaults": {
+      "disabled": false
+    },
+    "propDetails": {
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the DropZone: it accepts no drop and reports no activation."
+      }
+    },
+    "eventDetails": {
+      "drop": {
+        "prop": "onDrop",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "event",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDropEvent"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the items a drop, a paste, or a keyboard selection supplies. The items are file, directory, and text items rather than a File array, and they are read asynchronously."
+      },
+      "activate": {
+        "prop": "onActivate",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "event",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDropActivateEvent"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports an activation of the DropZone's own hidden button. A click on a control inside it, such as a FileTrigger, reports none."
+      }
+    },
+    "types": {
+      "MuxUIDirectoryDropItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "kind",
+              "type": {
+                "kind": "literal",
+                "value": "directory"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "name",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "getEntries",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "host",
+                  "name": "AsyncIterable",
+                  "typeArguments": [
+                    {
+                      "kind": "reference",
+                      "name": "MuxUIDropItem"
+                    }
+                  ]
+                }
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "A dropped directory."
+      },
+      "MuxUIDropActivateEvent": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "activate"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "x",
+              "type": {
+                "kind": "number"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "y",
+              "type": {
+                "kind": "number"
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "What an activation of the drop target reports."
+      },
+      "MuxUIDropEvent": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "drop"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "x",
+              "type": {
+                "kind": "number"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "y",
+              "type": {
+                "kind": "number"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "dropOperation",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDropOperation"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "items",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "MuxUIDropItem"
+                },
+                "readonly": false
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "What a drop reports."
+      },
+      "MuxUIDropItem": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIFileDropItem"
+            },
+            {
+              "kind": "reference",
+              "name": "MuxUIDirectoryDropItem"
+            },
+            {
+              "kind": "reference",
+              "name": "MuxUITextDropItem"
+            }
+          ]
+        },
+        "description": "One item a drop carries."
+      },
+      "MuxUIDropOperation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "copy"
+            },
+            {
+              "kind": "literal",
+              "value": "link"
+            },
+            {
+              "kind": "literal",
+              "value": "move"
+            },
+            {
+              "kind": "literal",
+              "value": "cancel"
+            }
+          ]
+        },
+        "description": "What a drop does with what it carries: copies, links, or moves it, or is cancelled."
+      },
+      "MuxUIFileDropItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "kind",
+              "type": {
+                "kind": "literal",
+                "value": "file"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "type",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "name",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "getFile",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "host",
+                  "name": "Promise",
+                  "typeArguments": [
+                    {
+                      "kind": "host",
+                      "name": "File"
+                    }
+                  ]
+                }
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "getText",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "host",
+                  "name": "Promise",
+                  "typeArguments": [
+                    {
+                      "kind": "string"
+                    }
+                  ]
+                }
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "A dropped file."
+      },
+      "MuxUITextDropItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "kind",
+              "type": {
+                "kind": "literal",
+                "value": "text"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "types",
+              "type": {
+                "kind": "host",
+                "name": "ReadonlySet",
+                "typeArguments": [
+                  {
+                    "kind": "string"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "getText",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "type",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "host",
+                  "name": "Promise",
+                  "typeArguments": [
+                    {
+                      "kind": "string"
+                    }
+                  ]
+                }
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "Dropped text, in each of the formats it carries."
+      }
+    }
+  }
+}

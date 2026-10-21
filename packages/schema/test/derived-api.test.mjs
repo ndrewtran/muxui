@@ -179,3 +179,45 @@ test('a record holds caller-keyed values, and the names its values reach are def
     rejects(() => validateDerivedApi(invalid), /api\/types\/Values\/type/u);
   }
 });
+
+test('a host type may carry type arguments, and the names and never they hold are checked like any type', () => {
+  const application = (...typeArguments) => ({ kind: 'host', name: 'AsyncIterable', typeArguments });
+  const withItems = (...typeArguments) => {
+    const document = derived();
+    document.api.props.push('items');
+    document.api.propDetails.items = { type: application(...typeArguments), required: false };
+    return document;
+  };
+  const excluded = { kind: 'host', name: 'Exclude', typeArguments: [{ kind: 'host', name: 'React.ReactNode' }, { kind: 'union', members: [{ kind: 'null' }, { kind: 'undefined' }, { kind: 'boolean' }] }] };
+  const document = derived();
+  document.api.props.push('title');
+  document.api.propDetails.title = { type: excluded, required: false };
+  validateDerivedApi(document);
+
+  // A Mux UI-owned type reached only through an argument is reached: it must be defined, and defined means used.
+  const reached = withItems({ kind: 'reference', name: 'Item' });
+  rejects(() => validateDerivedApi(reached), /Item is referenced but not defined/u);
+  reached.api.types.Item = { type: { kind: 'object', members: [{ name: 'id', type: { kind: 'string' }, required: true, readonly: true }] } };
+  validateDerivedApi(reached);
+  const orphan = withItems({ kind: 'string' });
+  orphan.api.types.Item = reached.api.types.Item;
+  rejects(() => validateDerivedApi(orphan), /Item is defined but no prop or event reaches it/u);
+
+  // A name reached through a nested application is reached too, and never is out of place inside an argument.
+  const nested = withItems({ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'reference', name: 'Item' }] });
+  rejects(() => validateDerivedApi(nested), /Item is referenced but not defined/u);
+  rejects(() => validateDerivedApi(withItems({ kind: 'never' })), /propDetails\/items\/type\/typeArguments\/0 never is only an optional object member's type/u);
+  rejects(() => validateDerivedApi(withItems({ kind: 'union', members: [{ kind: 'string' }, { kind: 'never' }] })), /propDetails\/items\/type\/typeArguments\/0\/members\/1 never is only/u);
+
+  // The schema: an application has at least one argument, as an array of types, and no other key.
+  for (const mutate of [
+    (type) => { type.typeArguments = []; },
+    (type) => { type.typeArguments = { kind: 'string' }; },
+    (type) => { type.typeArguments = [{ kind: 'symbol' }]; },
+    (type) => { type.typeArguments = [{ kind: 'string' }]; type.arguments = true; },
+  ]) {
+    const invalid = withItems({ kind: 'string' });
+    mutate(invalid.api.propDetails.items.type);
+    rejects(() => validateDerivedApi(invalid), /api\/propDetails\/items\/type/u);
+  }
+});

@@ -447,7 +447,7 @@ test('capability-enrichment status is a deterministic, advisory-only traceabilit
   const dropZoneRuntime = statusEntries
     .find(([, entry]) => entry.family === 'DropZone' && entry.dimension === 'requiredWorkflows')?.[1].runtime[0];
   assert.deepEqual(dropZoneRuntime, {
-    path: 'packages/react/src/overlays.mjs',
+    path: 'packages/react/src/overlays.ts',
     lines: '97-129',
     anchor: '#DropZone',
   });

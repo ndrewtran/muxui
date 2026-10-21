@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
-import { ApiExtractionError, HOST_ALLOWLIST, extractApis } from '../api-extraction/extract.mjs';
+import { ApiExtractionError, HOST_ALLOWLIST, extractApis, hostEntryKey } from '../api-extraction/extract.mjs';
 
 // Synthetic fixtures for the closed grammar (Decision 0031 item 3). They sit under the
 // package's ignored build/ directory so `react` resolves to the package's own types.
@@ -150,7 +150,8 @@ test('every construct outside the grammar fails with the component, prop, and re
   const cases = [
     ['  bad?: any;', '', /Thing\.bad: any is not in the grammar/u],
     ['  bad?: unknown;', '', /Thing\.bad: unknown is not in the grammar/u],
-    ['  bad?: Array<string>;', '', /Thing\.bad -> Array: generic type arguments are not in the grammar/u],
+    // An application of a host generic is read only when it is an exact allowlist entry.
+    ['  bad?: Array<string>;', '', /Thing\.bad -> Array: Array<string> is not an application on the host allowlist/u],
     ['  onBad?: <T>(value: T) => void;', '', /Thing\.onBad: a generic function is not in the grammar/u],
     ['  bad?: Box;', 'export type Box<T = string> = { value: T };\n', /Thing\.bad -> Box: Box is generic/u],
     ["  bad?: string extends number ? 'a' : 'b';", '', /Thing\.bad: a conditional type is not in the grammar/u],
@@ -163,7 +164,7 @@ test('every construct outside the grammar fails with the component, prop, and re
     ['  bad?: [string, number];', '', /Thing\.bad: a tuple type is not in the grammar/u],
     ['  bad?: { read(): string };', '', /Thing\.bad\.read: only property signatures are in the grammar/u],
     ['  bad?: keyof ThingEvent;', event, /Thing\.bad: a type operator other than readonly T\[\] is not in the grammar/u],
-    ['  bad?: React.ReactElement;', '', /Thing\.bad -> React\.ReactElement: React\.ReactElement is outside @muxui\/react and not in the host allowlist/u],
+    ['  bad?: React.CSSProperties;', '', /Thing\.bad -> React\.CSSProperties: React\.CSSProperties is outside @muxui\/react and not in the host allowlist/u],
     // A dependency reached through a Mux UI-owned type is rejected too, naming the whole chain.
     ['  onActivate?: (event: Wrapped) => void;', 'export interface Wrapped { readonly style: React.CSSProperties; }\n',
       /Thing\.onActivate\(event\) -> Wrapped\.style -> React\.CSSProperties: React\.CSSProperties is outside @muxui\/react/u],
@@ -204,8 +205,8 @@ test('the host allowlist is exact: a namespace or wildcard entry is too broad, a
   const label = extract({ declarations: ownProps('  label?: React.ReactNode;'), hostAllowlist: ['React.ReactNode'] });
   assert.deepEqual(label.propDetails.label.type, { kind: 'host', name: 'React.ReactNode' });
   rejects(ownProps('  label?: React.ReactNode;\n  element?: React.ReactElement;'), /Thing\.element -> React\.ReactElement: .*not in the host allowlist/u, { hostAllowlist: ['React.ReactNode'] });
-  // An allowlisted host type with type arguments is still generic.
-  rejects(ownProps('  anchor?: React.RefObject<HTMLElement>;'), /Thing\.anchor -> React\.RefObject: generic type arguments/u, { hostAllowlist: ['React.RefObject', 'HTMLElement'] });
+  // An allowlisted host type with type arguments is a different type: only an exact application is admitted.
+  rejects(ownProps('  anchor?: React.RefObject<HTMLElement>;'), /Thing\.anchor -> React\.RefObject: React\.RefObject<HTMLElement> is not an application on the host allowlist/u, { hostAllowlist: ['React.RefObject', 'HTMLElement'] });
 });
 
 test('a DOM or Intl type is admitted by its exact allowlist entry alone', () => {
@@ -224,11 +225,147 @@ test('a DOM or Intl type is admitted by its exact allowlist entry alone', () => 
   rejects(ownProps('  onActivate?: (event: ThingEvent) => void;', event), /Thing\.onActivate\(event\) -> ThingEvent\.target -> HTMLButtonElement: HTMLButtonElement is outside @muxui\/react and not in the host allowlist/u, { hostAllowlist: allowlist });
 });
 
-/** Every host type a derived type reaches, by name. */
+// The applications of host generics the overlays use (Decision 0031 E2), written as they serialize.
+const host = (name, ...typeArguments) => ({ kind: 'host', name, ...(typeArguments.length > 0 ? { typeArguments } : {}) });
+const keyword = (kind) => ({ kind });
+const E2_ALLOWLIST = Object.freeze([
+  'React.ReactNode',
+  'React.ReactElement',
+  'File',
+  host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }),
+  host('Promise', host('File')),
+  host('Promise', keyword('string')),
+  host('ReadonlySet', keyword('string')),
+  host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }),
+]);
+
+const dropItem = `export interface MuxUIDropItem {
+  readonly kind: 'directory';
+  readonly getFile?: () => Promise<File>;
+  readonly getEntries?: () => AsyncIterable<MuxUIDropItem>;
+}
+export interface MuxUIFileDropItem { readonly kind: 'file'; }
+`;
+
+test('an exact host application is serialized with its arguments, and a Mux UI-owned argument is recorded', () => {
+  const api = extract({
+    declarations: ownProps(`  title?: Exclude<React.ReactNode, null | undefined | boolean>;
+  trigger?: React.ReactElement;
+  files?: File[];
+  text?: Promise<string>;
+  types?: ReadonlySet<string>;
+  items?: AsyncIterable<MuxUIDropItem>;`, dropItem),
+    hostAllowlist: E2_ALLOWLIST,
+  });
+  const types = Object.fromEntries(Object.entries(api.propDetails).map(([prop, { type }]) => [prop, type]));
+  assert.deepEqual(types, {
+    title: host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }),
+    trigger: host('React.ReactElement'),
+    files: { kind: 'array', element: host('File'), readonly: false },
+    text: host('Promise', keyword('string')),
+    types: host('ReadonlySet', keyword('string')),
+    items: host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }),
+  });
+  // The Mux UI-owned argument's definition enters types, and its own host applications are read the same way.
+  assert.deepEqual(Object.keys(api.types), ['MuxUIDropItem']);
+  const members = Object.fromEntries(api.types.MuxUIDropItem.type.members.map(({ name, type }) => [name, type]));
+  assert.deepEqual(members.getFile, { kind: 'function', parameters: [], returns: host('Promise', host('File')) });
+  assert.deepEqual(members.getEntries, { kind: 'function', parameters: [], returns: host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }) });
+});
+
+test('an allowlist entry is a bare name or an exact application, and nothing broader', () => {
+  const entries = [
+    // A namespace or a wildcard, as a name or as the head of an application.
+    [{ kind: 'host', name: 'React', typeArguments: [keyword('string')] }, /too broad/u],
+    [{ kind: 'host', name: 'Prom*se', typeArguments: [keyword('string')] }, /too broad/u],
+    [{ kind: 'host', name: 'promise', typeArguments: [keyword('string')] }, /too broad/u],
+    // No arguments is the bare name, which is written as a string.
+    [{ kind: 'host', name: 'Promise', typeArguments: [] }, /has no type arguments; write the bare name as a string/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: keyword('string') }, /has no type arguments/u],
+    [{ kind: 'host', name: 'Promise' }, /is not written as exactly kind, name, typeArguments/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: [keyword('string')], extra: true }, /is not written as exactly kind, name, typeArguments/u],
+    // Arguments are serialized types of the closed few, each with no key beyond its form.
+    [{ kind: 'host', name: 'Promise', typeArguments: ['string'] }, /has a type argument that is not a serialized type/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'array', element: keyword('string'), readonly: false }] }, /has a "array" type argument/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'string', extra: 1 }] }, /holds a string type that is not written as exactly kind/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'reference', name: 'muxui*' }] }, /does not name one Mux UI-owned type/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'host', name: 'File*' }] }, /too broad/u],
+    [{ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'union', members: [keyword('string')] }] }, /a union with fewer than two members/u],
+    [{ kind: 'union', members: [keyword('string'), keyword('number')] }, /is not a name or an exact application of a host type/u],
+    [null, /is not a name or an exact application of a host type/u],
+  ];
+  for (const [entry, pattern] of entries) rejects(ownProps('  label?: string;'), pattern, { hostAllowlist: [entry] });
+  // A valid application does not widen the bare name: Promise<string> admits no plain Promise.
+  rejects(ownProps('  pending?: Promise;'), /Thing\.pending -> Promise: Promise is outside @muxui\/react and not in the host allowlist/u, { hostAllowlist: [host('Promise', keyword('string'))] });
+});
+
+test('only an application equal to an allowlist entry, arguments in order, is admitted', () => {
+  const cases = [
+    // An argument, or the application, that is not on the list.
+    ['  bad?: Promise<number>;', '', /Thing\.bad -> Promise: Promise<number> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, string>;', '', /Thing\.bad -> Record: Record<string, string> is not an application on the host allowlist/u],
+    ['  bad?: Omit<MuxUIFileDropItem, \'kind\'>;', dropItem, /Thing\.bad -> Omit: Omit<MuxUIFileDropItem, "kind"> is not an application on the host allowlist/u],
+    ['  bad?: Promise<Promise<File>>;', '', /Thing\.bad -> Promise: Promise<Promise<File>> is not an application on the host allowlist/u],
+    ['  bad?: Promise<Date>;', '', /Thing\.bad -> Promise<0> -> Date: Date is outside @muxui\/react and not in the host allowlist/u],
+    // Wrong arity.
+    ['  bad?: Promise<File, string>;', '', /Thing\.bad -> Promise: Promise<File, string> is not an application on the host allowlist/u],
+    // A narrower excluded set, and the same members reordered, are other types.
+    ['  bad?: Exclude<React.ReactNode, null>;', '', /Thing\.bad -> Exclude: Exclude<React\.ReactNode, null> is not an application on the host allowlist/u],
+    ['  bad?: Exclude<React.ReactNode, boolean | null | undefined>;', '', /Thing\.bad -> Exclude: Exclude<React\.ReactNode, boolean \| null \| undefined> is not an application/u],
+    ['  bad?: Exclude<React.ReactNode, null | undefined | boolean | string>;', '', /Thing\.bad -> Exclude: .* is not an application on the host allowlist/u],
+    // A plain-only entry takes no arguments.
+    ['  bad?: React.ReactElement<{ a: string }>;', '', /Thing\.bad -> React\.ReactElement: React\.ReactElement<object> is not an application on the host allowlist/u],
+    ['  bad?: File<string>;', '', /Thing\.bad -> File: File<string> is not an application on the host allowlist/u],
+    // A Mux UI-owned argument that is not the pinned one.
+    ['  bad?: AsyncIterable<MuxUIFileDropItem>;', dropItem, /Thing\.bad -> AsyncIterable: AsyncIterable<MuxUIFileDropItem> is not an application on the host allowlist/u],
+    // The grammar still decides every argument.
+    ['  bad?: Promise<string extends number ? File : File>;', '', /Thing\.bad -> Promise<0>: a conditional type is not in the grammar/u],
+    ['  bad?: Promise<any>;', '', /Thing\.bad -> Promise<0>: any is not in the grammar/u],
+    // A ref is not catalog data.
+    ['  bad?: React.RefObject<Element | null>;', '', /Thing\.bad -> React\.RefObject<0> -> Element: Element is outside @muxui\/react and not in the host allowlist/u],
+    ['  bad?: React.Ref<HTMLButtonElement>;', '', /Thing\.bad -> React\.Ref<0> -> HTMLButtonElement: HTMLButtonElement is outside/u],
+  ];
+  for (const [members, extra, pattern] of cases) rejects(ownProps(members, extra), pattern, { hostAllowlist: E2_ALLOWLIST });
+  // Each entry on its own admits exactly its application: removing it rejects the same source.
+  const source = ownProps('  text?: Promise<string>;');
+  assert.deepEqual(extract({ declarations: source, hostAllowlist: [host('Promise', keyword('string'))] }).propDetails.text.type, host('Promise', keyword('string')));
+  rejects(source, /Thing\.text -> Promise: Promise<string> is not an application/u, { hostAllowlist: [host('Promise', host('File')), 'File'] });
+});
+
+test('a Mux UI-owned type that shadows a host name or an argument is never the host type', () => {
+  // A local Promise is Mux UI-owned, so it takes no type arguments, whatever it is named.
+  rejects(ownProps('  bad?: Promise<File>;', 'export interface Promise<T> { readonly value: T }\n'),
+    /Thing\.bad -> Promise: Promise is a Mux UI-owned type; it takes no type arguments/u, { hostAllowlist: E2_ALLOWLIST });
+  // A local File inside the real Promise serializes as a Mux UI-owned reference, not the host File.
+  rejects(ownProps('  bad?: Promise<File>;', 'export interface File { readonly name: string }\n'),
+    /Thing\.bad -> Promise: Promise<File> is not an application on the host allowlist/u, { hostAllowlist: E2_ALLOWLIST });
+  // The same name is still a plain reference to the Mux UI-owned type.
+  const local = extract({ declarations: ownProps('  chosen?: File;', 'export interface File { readonly name: string }\n'), hostAllowlist: E2_ALLOWLIST });
+  assert.deepEqual(local.propDetails.chosen.type, { kind: 'reference', name: 'File' });
+});
+
+test('a host type merged with a package declaration is no host type: declare global and module augmentation fail', () => {
+  const global = "declare global { interface File { readonly extra: string } }\nexport {};\n";
+  const bare = ownProps('  chosen?: File;', global);
+  const applied = ownProps('  pending?: Promise<File>;', global);
+  const merged = /also has a declaration in @muxui\/react \(a global augmentation or merged declaration\)/u;
+  rejects(bare, new RegExp(`Thing\\.chosen -> File: File ${merged.source}`, 'u'), { hostAllowlist: E2_ALLOWLIST });
+  rejects(applied, new RegExp(`Thing\\.pending -> Promise<0> -> File: File ${merged.source}`, 'u'), { hostAllowlist: E2_ALLOWLIST });
+  // Augmenting the react module merges into @types/react's ReactElement the same way.
+  rejects(ownProps('  trigger?: React.ReactElement;', "declare module 'react' { interface ReactElement { readonly extra: string } }\n"),
+    new RegExp(`Thing\\.trigger -> React\\.ReactElement: ReactElement ${merged.source}`, 'u'), { hostAllowlist: E2_ALLOWLIST });
+  // Without the augmentation the same sources extract.
+  assert.deepEqual(extract({ declarations: ownProps('  chosen?: File;'), hostAllowlist: E2_ALLOWLIST }).propDetails.chosen.type, host('File'));
+});
+
+/**
+ * Every host type a derived type reaches, as its allowlist key: a bare host type by name, an
+ * application as its serialized form. An application's arguments are reached too.
+ */
 function hostTypes(value, found = new Set()) {
   if (Array.isArray(value)) value.forEach((item) => hostTypes(item, found));
   else if (value !== null && typeof value === 'object') {
-    if (value.kind === 'host') found.add(value.name);
+    if (value.kind === 'host') found.add(hostEntryKey(value.typeArguments === undefined ? value.name : value));
     Object.values(value).forEach((item) => hostTypes(item, found));
   }
   return found;
@@ -241,12 +378,23 @@ test('the shipped allowlist holds exactly the host types the committed derived A
       reached.set(name, [...(reached.get(name) ?? []), file]);
     }
   }
-  assert.deepEqual([...reached.keys()].sort(), [...HOST_ALLOWLIST].sort());
+  assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'disclosure.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json'], 'caller-supplied content');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'dialog.json', 'disclosure.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json', 'toast.json', 'tooltip.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json'], 'the element a trigger prop takes');
+  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['dialog.json', 'toast.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json'], 'Meter\'s formatOptions, written Intl.NumberFormatOptions');
+  assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json'], 'the files FileTrigger selects, and the File a DropZone item reads');
+  // DropZone's drop items: a file item reads a File or its text, a text item lists its formats, a directory its entries.
+  const dropItems = [
+    [host('Promise', host('File')), 'a file item\'s read'],
+    [host('Promise', keyword('string')), 'a file or text item\'s text'],
+    [host('ReadonlySet', keyword('string')), 'the formats a text item lists'],
+    [host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }), 'a directory item\'s entries'],
+  ];
+  for (const [entry, reason] of dropItems) assert.deepEqual(reached.get(hostEntryKey(entry)), ['drop-zone.json'], reason);
 });
 
 test('defaults come from the executable source: literals and top-level constants the component reads', () => {

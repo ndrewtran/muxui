@@ -28,7 +28,7 @@ test('component selectors stay Mux UI-owned', async () => {
     const slug = name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`).replace(/^-/, '');
     assert.match(css, new RegExp(`\\.muxui-${slug}(?:\\b|[-_])`));
   }
-  assert.match(await readFile(resolve(import.meta.dirname, '../generated/overlays.mjs'), 'utf8'), /muxui-file-trigger/u);
+  assert.match(await readFile(resolve(import.meta.dirname, '../generated/overlays.js'), 'utf8'), /muxui-file-trigger/u);
   assert.match(css, /\.muxui-checkbox-indicator/);
   assert.match(css, /data-indeterminate/);
   assert.match(css, /semantic-feedback-invalid/);
@@ -338,8 +338,8 @@ function undeclaredProps(types, name, props) {
 }
 
 test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
-  // The index names the types of Button and the R1.1 families from tsc's declarations of src/button.ts and src/components.ts.
-  const types = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts'].map((name) => readFile(resolve(import.meta.dirname, '../generated', name), 'utf8')))).join('\n');
+  // The index names the types of Button, the R1.1 families, and the overlays from tsc's declarations of src/button.ts, src/components.ts, and src/overlays.ts.
+  const types = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'overlays.d.ts'].map((name) => readFile(resolve(import.meta.dirname, '../generated', name), 'utf8')))).join('\n');
   const apis = {};
   for (const [name, render] of Object.entries(minimalRenders)) {
     const api = await catalogApi(kebab(name));

@@ -6,9 +6,11 @@ import type { ButtonActivationEvent, ButtonProps, ButtonSize, ButtonVariant } fr
 
 /**
  * The props Mux UI defines for IconButton; the catalog's web.react API is derived
- * from this interface (Decision 0031).
+ * from this type (Decision 0031).
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-interface IconButtonOwnProps {
+type IconButtonOwnProps = {
   /** Applies the native disabled attribute: the IconButton is neither focusable nor activatable. */
   disabled?: boolean;
   /** Marks an action in flight: a static indicator replaces the icon, and the IconButton stays focusable and named but does not activate. */
@@ -19,7 +21,7 @@ interface IconButtonOwnProps {
   size?: ButtonSize;
   /** Requests the IconButton's one immediate action. */
   onActivate?: (event: ButtonActivationEvent) => void;
-}
+};
 
 // The required accessible name stays in the host part of the props: a native attribute
 // IconButton checks, not a prop it defines.
