@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { anatomies } from '../src/anatomy/index.mjs';
-import { AnatomyError, catalogAxes, loadAnatomySources, resolveAnatomy, validateAnatomyShape } from '../src/anatomy.mjs';
+import { AnatomyError, catalogAxes, importedModules, loadAnatomySources, resolveAnatomy, validateAnatomyShape } from '../src/anatomy.mjs';
 import { catalogRecord, reactTypes, syntheticAnatomy } from './support.mjs';
 
 const rejects = (anatomy, pattern) => assert.throws(() => validateAnatomyShape(anatomy), (error) => error instanceof AnatomyError && pattern.test(error.message));
@@ -56,6 +56,22 @@ test('an axis the catalog states no default for leads with the anatomy\'s defaul
   for (const axisDefaults of [{ size: 'md' }, { variant: 1 }, ['ghost'], null]) {
     rejects({ ...syntheticAnatomy(), axisDefaults }, /button\.axisDefaults: must map listed axes to string values/u);
   }
+});
+
+test('the modules a declaration file imports are read from its declarations, not from text that only looks like one', () => {
+  const declarations = [
+    "import type * as React from 'react';",
+    "import type { ControlSize } from './fields.js';",
+    "export { Button } from './button.js';",
+    "export type { TabsProps } from './collections-types.js';",
+    "export * from './overlays.js';",
+    "import { reactCompatibility } from './compatibility.mjs';",
+    // Negative controls: a specifier in a comment, a block comment, and a string is not an import.
+    "/** Example: import X from './example-only.js'; */",
+    "// export * from './comment-only.js';",
+    "export const note = \"import X from './string-only.js'\";",
+  ].join('\n');
+  assert.deepEqual(importedModules(declarations), ['fields', 'button', 'collections-types', 'overlays']);
 });
 
 test('the six admitted anatomies validate against the canonical catalog and generated React types', async () => {

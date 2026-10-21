@@ -10,6 +10,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { mergeDerivedApis, parseJsonStrict } from '@muxui/schema';
+import { parseAst } from 'vite';
 
 export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
@@ -276,6 +277,18 @@ export function catalogAxes(anatomy, { catalogRecord, reactTypes }) {
 const reactPackage = resolve(import.meta.dirname, '../node_modules/@muxui/react');
 
 /**
+ * The names of the sibling modules a declaration file imports or re-exports from in its top-level
+ * import and export declarations (`./fields.js` is `fields`). The file is parsed, so a specifier that
+ * only appears in a comment or a string is not one.
+ */
+export function importedModules(declarations) {
+  const specifiers = parseAst(declarations, { lang: 'dts' }).body
+    .filter(({ type }) => type === 'ImportDeclaration' || type === 'ExportNamedDeclaration' || type === 'ExportAllDeclaration')
+    .map(({ source }) => source?.value);
+  return [...new Set(specifiers.flatMap((specifier) => /^\.\/([\w-]+)\.js$/u.exec(specifier ?? '')?.slice(1) ?? []))];
+}
+
+/**
  * Load a family's catalog record, with its derived web.react API merged in as
  * the catalog compiles it, and the published prop types of the React package entry and of the modules it imports.
  */
@@ -291,8 +304,7 @@ export async function loadAnatomySources(anatomy) {
   });
   // The entry names the declarations of the TypeScript modules it imports, so a shared alias such as
   // ControlSize is declared in one of them and not in the entry.
-  const modules = [...new Set([...entryTypes.matchAll(/\bfrom '\.\/([\w-]+)\.js'/gu)].map(([, name]) => name))];
-  const moduleTypes = await Promise.all(modules.map((name) => readFile(resolve(dirname(typesPath), `${name}.d.ts`), 'utf8')));
+  const moduleTypes = await Promise.all(importedModules(entryTypes).map((name) => readFile(resolve(dirname(typesPath), `${name}.d.ts`), 'utf8')));
   return { catalogRecord, reactTypes: [entryTypes, ...moduleTypes].join('\n') };
 }
 
