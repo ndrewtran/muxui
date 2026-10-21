@@ -1158,11 +1158,13 @@ export async function buildPullRequestImpact({
   // (a fixture such as button-fixture.mjs, which the playground and a test import)
   // reaches nothing through React source. Its referencing files route through their
   // owners, as a deletion's do; with none it stays unowned, and the source analysis
-  // below fails.
+  // below fails. The projection compiler is the exception: it takes the compiler route
+  // below, which validates every React family, and its path, src/generate.mjs, also names
+  // every other package's own generator, so a reference search would route their owners.
   const externallyImported = new Set();
   for (const path of reactSourcePaths) {
     const deleted = await readHeadText(path) === null;
-    if (!deleted && (importedModules.has(path) || records.some((record) => record.source === path))) continue;
+    if (!deleted && (path === reactGeneratorPath || importedModules.has(path) || records.some((record) => record.source === path))) continue;
     const references = await findReferences(path.slice('packages/react/'.length));
     if (!deleted && references.length > 0) externallyImported.add(path);
     for (const reference of references) {
@@ -1313,6 +1315,14 @@ export async function buildPullRequestImpact({
 
     if (path === 'packages/react/package.json') {
       requireScopedEntrypoint(plan, packages, 'react');
+      // The manifest can be routed unchanged, as a file that names a changed module (a script
+      // runs publish-guard.mjs). It then has no base and head snapshots to compare, and the
+      // React package check validates what it names.
+      if (!changed.includes(path)) {
+        plan.packageChecks.add('@muxui/react');
+        plan.reasons.push(`${path} names a changed React module in a script; run the React package check`);
+        continue;
+      }
       const impact = reactPackageWideChanges(reactPackageBefore, reactPackageAfter);
       if (impact.pagesAffected) {
         plan.reactPackageFull = true;

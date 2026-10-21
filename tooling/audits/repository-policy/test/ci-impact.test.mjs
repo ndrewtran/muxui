@@ -2973,6 +2973,43 @@ test('modules the React projection compiler imports take the compiler route', as
   assert.equal(result.reactProjectionCheck, false);
 });
 
+test('an unchanged React manifest that names a changed module routes the React package check', async () => {
+  // A script runs publish-guard.mjs, which no React module imports. Routing the unchanged
+  // manifest as though it had changed failed the plan with MUXUI_CI_IMPACT_JSON_INVALID.
+  const guardPath = 'packages/react/src/publish-guard.mjs';
+  const before = "throw new Error('Use the release workflow to publish @muxui/react.');\n";
+  const after = `// Blocks a manual publish.\n${before}`;
+  const result = await plan([guardPath], {
+    packages: workspacePackages,
+    textSnapshots: { [guardPath]: { before, after } },
+    moduleSources: { ...generatorModuleSources, [guardPath]: { before, after } },
+    findReferences: async (needle) => {
+      assert.equal(needle, 'src/publish-guard.mjs');
+      return ['packages/react/package.json', 'packages/react/test/react-substrate.test.mjs'];
+    },
+  });
+  assert.ok(result.packageChecks.includes('@muxui/react'));
+  assert.ok(result.reactTestFiles.includes('test/react-substrate.test.mjs'));
+  assert.equal(result.reactPackageFull, false);
+  assert.ok(result.reasons.includes('packages/react/package.json names a changed React module in a script; run the React package check'));
+});
+
+test('the changed projection compiler takes the compiler route, not those of the files that name it', async () => {
+  // A search for src/generate.mjs also finds every other package's generator and the retained
+  // evidence logs; the compiler route already validates every React family, so they add nothing.
+  const before = generatorModuleSources[generatePath];
+  const after = `${before}\nexport const changed = true;`;
+  const planned = (references) => plan([generatePath], {
+    packages: workspacePackages,
+    textSnapshots: { [generatePath]: { before, after } },
+    moduleSources: { ...generatorModuleSources, [generatePath]: { before, after } },
+    findReferences: async () => references,
+  });
+  const result = await planned(['packages/react/package.json', 'packages/catalog/package.json', 'tests/evidence/archive/g0.5/validation/pnpm-check.txt']);
+  assert.equal(result.reactPackageFull, true);
+  assert.deepEqual(result, await planned([]));
+});
+
 function playgroundLockfile(withRenderer) {
   return [
     "lockfileVersion: '9.0'",
