@@ -244,7 +244,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), [...HOST_ALLOWLIST].sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json'], 'caller-supplied content');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'disclosure.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json'], 'caller-supplied content');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json'], 'Meter\'s formatOptions, written Intl.NumberFormatOptions');
 });

@@ -1,0 +1,84 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:disclosure",
+  "binding": "web.react",
+  "export": "Disclosure",
+  "api": {
+    "props": [
+      "title",
+      "expanded",
+      "defaultExpanded",
+      "disabled",
+      "id"
+    ],
+    "events": [
+      "expandedChange"
+    ],
+    "defaults": {
+      "defaultExpanded": false,
+      "disabled": false
+    },
+    "propDetails": {
+      "title": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": true,
+        "description": "The content of the trigger button, which names the section."
+      },
+      "expanded": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Disclosure is open, when the caller controls it. Inside a DisclosureGroup the group owns expansion and this is ignored."
+      },
+      "defaultExpanded": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Disclosure starts open, when it controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the Disclosure: it can be neither opened nor closed."
+      },
+      "id": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "Identifies the Disclosure. A DisclosureGroup's expanded ids refer to it."
+      }
+    },
+    "eventDetails": {
+      "expandedChange": {
+        "prop": "onExpandedChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "expanded",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the Disclosure opening or closing."
+      }
+    },
+    "types": {}
+  }
+}
