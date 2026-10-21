@@ -1,17 +1,50 @@
 import React from 'react';
+import type { ForwardRefExoticComponent, HTMLAttributes, ReactElement, ReactNode, RefAttributes } from 'react';
 import { Lexer } from 'marked';
 
-export const MARKDOWN_SOURCE_LIMIT = 100_000;
-export const MARKDOWN_LINE_LIMIT = 10_000;
-export const MARKDOWN_LINE_LENGTH_LIMIT = 10_000;
-export const MARKDOWN_DEPTH_LIMIT = 32;
-export const MARKDOWN_NODE_LIMIT = 10_000;
+// Annotated `: number`: inferred, each would be declared as its literal, narrower than the type consumers have.
+/** Longest accepted source, in UTF-16 code units. */
+export const MARKDOWN_SOURCE_LIMIT: number = 100_000;
+/** Most lines accepted in a source. A trailing newline starts a final blank line. */
+export const MARKDOWN_LINE_LIMIT: number = 10_000;
+/** Longest accepted single line, in UTF-16 code units. */
+export const MARKDOWN_LINE_LENGTH_LIMIT: number = 10_000;
+/** Deepest accepted nesting of block and inline structure. */
+export const MARKDOWN_DEPTH_LIMIT: number = 32;
+/** Most parsed nodes accepted. */
+export const MARKDOWN_NODE_LIMIT: number = 10_000;
 const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
 const LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 const SCHEME = /^[A-Za-z][A-Za-z\d+.-]*:/u;
-const cx = (...values) => values.filter(Boolean).join(' ');
+const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
 
-function safeUrl(value, protocols, baseUrl, allowFragment = false) {
+/**
+ * The props Mux UI defines for Markdown; the catalog's web.react API is derived from this
+ * type (Decision 0031). It is a type literal, as the props were before the move.
+ */
+type MarkdownOwnProps = {
+  /** The Markdown to render. Raw HTML is dropped, and a source over one of the exported limits is replaced by invalidFallback. */
+  source: string;
+  /** The absolute HTTP(S) URL, with no username or password, that relative links and images resolve against. Without it, relative links and images are not allowed. */
+  baseUrl?: string;
+  /** What replaces the whole content when baseUrl is invalid or the source fails a limit. */
+  invalidFallback?: ReactNode;
+};
+
+export type MarkdownProps = HTMLAttributes<HTMLDivElement> & MarkdownOwnProps;
+
+// A table cell as the renderer reads it: only its inline tokens.
+type MarkdownCell = { tokens?: MarkdownToken[] };
+// A marked token as the renderer reads it: the fields it reads, each optional because the renderer checks it
+// before use. Every token marked produces fits, as its own Token union is closed shapes plus an open one.
+type MarkdownToken = {
+  type: string; raw?: string; text?: string; href?: string; lang?: string; depth?: number; ordered?: boolean;
+  tokens?: MarkdownToken[]; items?: MarkdownToken[]; header?: MarkdownCell[]; rows?: MarkdownCell[][];
+};
+// One rendered inline piece: text, or an element.
+type Piece = string | ReactElement;
+
+function safeUrl(value: unknown, protocols: ReadonlySet<string>, baseUrl?: string, allowFragment = false): string | undefined {
   if (typeof value !== 'string' || value.length === 0 || value.trim() !== value) return undefined;
   for (let index = 0; index < value.length; index += 1) {
     const code = value.charCodeAt(index);
@@ -34,7 +67,7 @@ function safeUrl(value, protocols, baseUrl, allowFragment = false) {
 }
 
 // A trailing newline starts a final blank line, so it counts as a line like CodeBlock's.
-function bounded(source) {
+function bounded(source: unknown): string | undefined {
   if (typeof source !== 'string') return 'MARKDOWN_INVALID_SOURCE_TYPE';
   if (source.length > MARKDOWN_SOURCE_LIMIT) return 'MARKDOWN_SOURCE_LIMIT_EXCEEDED';
   let lines = 1;
@@ -52,8 +85,8 @@ function bounded(source) {
   return undefined;
 }
 
-function childTokens(token) {
-  const groups = [];
+function childTokens(token: MarkdownToken): MarkdownToken[][] {
+  const groups: MarkdownToken[][] = [];
   if (Array.isArray(token.tokens)) groups.push(token.tokens);
   if (token.type === 'list' && Array.isArray(token.items)) {
     for (const item of token.items) if (item) groups.push([item]);
@@ -66,10 +99,10 @@ function childTokens(token) {
   return groups;
 }
 
-function assertBounds(tokens) {
+function assertBounds(tokens: MarkdownToken[]): number {
   let count = 0;
-  const seen = new Set();
-  const visit = (group, depth) => {
+  const seen = new Set<MarkdownToken>();
+  const visit = (group: MarkdownToken[], depth: number): void => {
     if (depth > MARKDOWN_DEPTH_LIMIT) throw new Error('MARKDOWN_DEPTH_LIMIT_EXCEEDED');
     for (const token of group) {
       if (!token || typeof token !== 'object') continue;
@@ -85,9 +118,9 @@ function assertBounds(tokens) {
   return count;
 }
 
-function inline(tokens, baseUrl, depth = 0) {
+function inline(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined, depth = 0): Piece[] {
   if (depth > MARKDOWN_DEPTH_LIMIT) throw new Error('MARKDOWN_DEPTH_LIMIT_EXCEEDED');
-  const output = [];
+  const output: (Piece | Piece[])[] = [];
   for (const [index, token] of (tokens ?? []).entries()) {
     const key = `${depth}-${index}`;
     if (token.type === 'html') {
@@ -120,7 +153,7 @@ function inline(tokens, baseUrl, depth = 0) {
     if (Array.isArray(token.tokens)) output.push(inline(token.tokens, baseUrl, depth + 1));
     else if (typeof token.text === 'string') output.push(token.text);
   }
-  const merged = [];
+  const merged: Piece[] = [];
   for (const value of output.flat()) {
     if (typeof value === 'string' && typeof merged.at(-1) === 'string') merged[merged.length - 1] += value;
     else merged.push(value);
@@ -128,14 +161,15 @@ function inline(tokens, baseUrl, depth = 0) {
   return merged;
 }
 
-function blocks(tokens, baseUrl, depth = 0, counter = { value: 0 }) {
+function blocks(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined, depth = 0, counter = { value: 0 }): ReactElement[] {
   if (depth > MARKDOWN_DEPTH_LIMIT) throw new Error('MARKDOWN_DEPTH_LIMIT_EXCEEDED');
   return (tokens ?? []).flatMap((token, index) => {
     const key = `${depth}-${index}`;
     if (token.type === 'space' || token.type === 'html' || token.type === 'def') return [];
     counter.value += 1;
     if (counter.value > MARKDOWN_NODE_LIMIT) throw new Error('MARKDOWN_NODE_LIMIT_EXCEEDED');
-    if (token.type === 'heading') return React.createElement(`h${Math.min(6, Math.max(1, token.depth))}`, { key }, inline(token.tokens, baseUrl, depth + 1));
+    // A heading token always has a depth.
+    if (token.type === 'heading') return React.createElement(`h${Math.min(6, Math.max(1, token.depth!))}`, { key }, inline(token.tokens, baseUrl, depth + 1));
     if (token.type === 'paragraph' || token.type === 'text') return React.createElement('p', { key }, inline(token.tokens ?? [{ type: 'text', text: token.text }], baseUrl, depth + 1));
     if (token.type === 'code') {
       if (!(typeof token.raw === 'string' && (token.raw.startsWith('```') || token.raw.startsWith('~~~')))) {
@@ -155,8 +189,8 @@ function blocks(tokens, baseUrl, depth = 0, counter = { value: 0 }) {
   });
 }
 
-/** Renders a bounded, non-HTML Markdown subset through React nodes. */
-export const Markdown = React.forwardRef(function Markdown({ source, baseUrl, invalidFallback = 'Content unavailable', className, dangerouslySetInnerHTML: _dangerous, ...props }, ref) {
+/** Renders a bounded Markdown subset. Raw HTML and unsafe URLs are removed. */
+export const Markdown: ForwardRefExoticComponent<MarkdownProps & RefAttributes<HTMLDivElement>> = React.forwardRef<HTMLDivElement, MarkdownProps>(function Markdown({ source, baseUrl, invalidFallback = 'Content unavailable', className, dangerouslySetInnerHTML: _dangerous, ...props }, ref) {
   const failure = bounded(source);
   const safeBase = safeUrl(baseUrl, HTTP_PROTOCOLS);
   const rootProps = { ...props, ref, className: cx('muxui-markdown', className) };

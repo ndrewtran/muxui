@@ -49,7 +49,7 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * a host generic, written as the serialized `{ kind: 'host', name, typeArguments }` it
  * extracts to. It grows per tranche, only by what a moved component needs: HTMLButtonElement
  * for the activation target of Button, IconButton, and ToggleButton, React.ReactNode for the
- * content props of SelectNative, Message, Activity, Disclosure, Meter, and ProgressBar,
+ * content props of SelectNative, Message, Activity, Disclosure, Meter, and ProgressBar (and the Markdown fallback and the Lightbox render function's result),
  * HTMLAnchorElement for Link's activation target, NumberFormatOptions (written
  * `Intl.NumberFormatOptions`) for Meter's formatOptions, File for FileTrigger's selection,
  * React.ReactElement for the trigger of Tooltip, Dialog, Popover, and PreviewTrigger, and the

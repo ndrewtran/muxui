@@ -14,7 +14,7 @@ test('client effects discard stale source, language, mode, and unmount completio
       if (!url.endsWith('/code-block-highlight.mjs')) return next(url, context);
       return { format: 'module', shortCircuit: true, source: 'export function highlightCodeDocuments(sources, language) { return new Promise((resolve) => globalThis.highlightCalls.push({sources, language, resolve})); }' };
     } });
-    const { CodeBlock } = await import('./src/supplemental/code-block.mjs');
+    const { CodeBlock } = await import('./src/supplemental/code-block.ts');
     const { restore } = createDom();
     const root = createRoot(document.querySelector('#root'));
     const render = async (props) => act(async () => root.render(React.createElement(CodeBlock, props)));

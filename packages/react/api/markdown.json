@@ -1,0 +1,44 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/markdown/index.ts",
+  "component": "muxui:component:markdown",
+  "binding": "web.react",
+  "export": "Markdown",
+  "api": {
+    "props": [
+      "source",
+      "baseUrl",
+      "invalidFallback"
+    ],
+    "events": [],
+    "defaults": {
+      "invalidFallback": "Content unavailable"
+    },
+    "propDetails": {
+      "source": {
+        "type": {
+          "kind": "string"
+        },
+        "required": true,
+        "description": "The Markdown to render. Raw HTML is dropped, and a source over one of the exported limits is replaced by invalidFallback."
+      },
+      "baseUrl": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The absolute HTTP(S) URL, with no username or password, that relative links and images resolve against. Without it, relative links and images are not allowed."
+      },
+      "invalidFallback": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "What replaces the whole content when baseUrl is invalid or the source fails a limit."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

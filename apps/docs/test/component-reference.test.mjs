@@ -88,7 +88,7 @@ test('package facts verify the descriptor, renderer contract and stylesheet agai
       { binding: 'muxui:component:card#web.react', export: 'Card', module: '.' },
       { binding: 'muxui:component:markdown#web.react', export: 'Markdown', module: './markdown' },
     ] };
-    const contract = { schema: 'muxui-react-r1-6-contract-v1', components: [{ slug: 'markdown', source: 'packages/react/src/markdown/index.mjs' }] };
+    const contract = { schema: 'muxui-react-r1-6-contract-v1', components: [{ slug: 'markdown', source: 'packages/react/src/markdown/index.ts' }] };
     const files = (overrides = {}) => {
       write('packages/react/package.json', overrides.manifest ?? manifest);
       write('packages/react/generated/descriptor.json', overrides.descriptor ?? descriptor);
@@ -99,7 +99,7 @@ test('package facts verify the descriptor, renderer contract and stylesheet agai
     files();
     const facts = readReactPackageFacts(root);
     assert.deepEqual(facts.bindings.get('muxui:component:markdown#web.react'), { export: 'Markdown', specifier: '@muxui/react/markdown' });
-    assert.equal(facts.runtimeSources.get('markdown'), 'packages/react/src/markdown/index.mjs');
+    assert.equal(facts.runtimeSources.get('markdown'), 'packages/react/src/markdown/index.ts');
     files({ manifest: { ...manifest, exports: { '.': {}, './styles.css': {} } } });
     assert.throws(() => readReactPackageFacts(root), /imports from \.\/markdown, which packages\/react\/package\.json does not export/u);
     files({ manifest: { ...manifest, exports: { '.': {}, './markdown': {} } } });

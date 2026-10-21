@@ -50,40 +50,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "mode",
-          "source",
-          "before",
-          "after",
-          "language",
-          "filename",
-          "lineNumbers",
-          "copyable",
-          "wrap"
-        ],
-        "events": [
-          "copy"
-        ],
-        "parts": [
-          "root",
-          "header",
-          "filename",
-          "copy",
-          "pre",
-          "code",
-          "line",
-          "number",
-          "marker",
-          "status"
-        ],
-        "defaults": {
-          "mode": "code",
-          "lineNumbers": true,
-          "copyable": true,
-          "wrap": false
-        }
-      },
       "behavior": [
         "mode=code (the default) requires source; mode=diff requires before and after. These input modes are mutually exclusive. The native div host attributes, ref, and native onCopy ClipboardEvent are preserved; children and dangerouslySetInnerHTML are not supported.",
         "language selects a bundled Shiki grammar by name or alias and remains the displayed header metadata when filename is absent; filename otherwise labels the listing. Client effects load the private highlighter lazily. SSR and the initial client render are escaped plain pre/code; missing, plain/text/ansi, unknown languages, loading, failures, and over-budget inputs stay plain without an error UI. Code is never executed and no source is sent remotely. Newlines, tabs, CRLF, lone CR, and trailing blank lines are retained.",

@@ -97,7 +97,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/code-block.mjs",
+      "runtimeSource": "packages/react/src/supplemental/code-block.ts",
       "styleSource": "packages/react/src/supplemental/code-block.css"
     },
     {
@@ -231,7 +231,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/lightbox.mjs",
+      "runtimeSource": "packages/react/src/supplemental/lightbox.ts",
       "styleSource": "packages/react/src/supplemental/lightbox.css"
     },
     {
@@ -247,7 +247,7 @@
         "module": "./markdown",
         "isolation": "subpath-only"
       },
-      "runtimeSource": "packages/react/src/markdown/index.mjs",
+      "runtimeSource": "packages/react/src/markdown/index.ts",
       "styleSource": "packages/react/src/markdown/markdown.css"
     },
     {

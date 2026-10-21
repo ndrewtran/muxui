@@ -9,7 +9,7 @@ import {
   LightboxPopup,
   LightboxPrevious,
   LightboxTrigger,
-} from '../../src/supplemental/lightbox.mjs';
+} from '../../src/supplemental/lightbox.ts';
 
 const h = React.createElement;
 const items = [

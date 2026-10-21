@@ -47,7 +47,7 @@
     },
     "./markdown": {
       "types": "./generated/markdown.d.ts",
-      "default": "./generated/markdown.mjs"
+      "default": "./generated/markdown.js"
     }
   },
   "scripts": {

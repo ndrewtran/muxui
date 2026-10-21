@@ -397,8 +397,8 @@ test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, @muxui
     ['a react subpath', "import { x } from 'react/jsx-dev-runtime';", "an import of 'react/jsx-dev-runtime'"],
     ['a @muxui/react subpath', "import { x } from '@muxui/react/text-editor';", "a subpath import of '@muxui/react/text-editor'"],
     ['a path under the markdown subpath', "import { x } from '@muxui/react/markdown/internal';", "a subpath import of '@muxui/react/markdown/internal'"],
-    ['the generated markdown file', "import { x } from '@muxui/react/generated/markdown.mjs';", "a subpath import of '@muxui/react/generated/markdown.mjs'"],
-    ['the markdown subpath with an extension', "import { x } from '@muxui/react/markdown.mjs';", "a subpath import of '@muxui/react/markdown.mjs'"],
+    ['the generated markdown file', "import { x } from '@muxui/react/generated/markdown.js';", "a subpath import of '@muxui/react/generated/markdown.js'"],
+    ['the markdown subpath with an extension', "import { x } from '@muxui/react/markdown.js';", "a subpath import of '@muxui/react/markdown.js'"],
     ['a lookalike of the markdown subpath', "import { x } from '@muxui/react-markdown';", "an import of '@muxui/react-markdown'"],
   ]) {
     const issues = issuesFor(text);

@@ -9,7 +9,7 @@ const before = source.replace('research', 'inbox').replace('  if (!panel.visible
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { CodeBlock } from '/src/supplemental/code-block.mjs';
+import { CodeBlock } from '/src/supplemental/code-block.ts';
 const root = createRoot(document.querySelector('#root'));
 window.formSubmissions = 0;
 document.querySelector('form').addEventListener('submit', (event) => { event.preventDefault(); window.formSubmissions++; });
@@ -27,7 +27,7 @@ const fixture = pageShell({
 });
 
 test('CodeBlock copied feedback expires from fulfillment and follows actual-button mouse and touch departure', { timeout: 120_000 }, async () => {
-  const server = await startServer({ entries: ['src/supplemental/code-block.mjs'], pages: { '/code-block.html': fixture }, modules: { '/code-block-entry.mjs': entry } });
+  const server = await startServer({ entries: ['src/supplemental/code-block.ts'], pages: { '/code-block.html': fixture }, modules: { '/code-block-entry.mjs': entry } });
   const browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 800, height: 600 }, hasTouch: true });
   try {
@@ -110,7 +110,7 @@ test('CodeBlock copied feedback expires from fulfillment and follows actual-butt
 });
 
 test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change semantics work in an isolated browser', { timeout: 120_000 }, async () => {
-  const server = await startServer({ entries: ['src/supplemental/code-block.mjs'], pages: { '/code-block.html': fixture }, modules: { '/code-block-entry.mjs': entry } });
+  const server = await startServer({ entries: ['src/supplemental/code-block.ts'], pages: { '/code-block.html': fixture }, modules: { '/code-block-entry.mjs': entry } });
   const browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
   try {
