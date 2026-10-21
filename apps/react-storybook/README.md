@@ -28,7 +28,11 @@ which drive `open` themselves, and cap Toast `duration`, to animate. A lifecycle
 selector mounts one of those rows at a time, so one overlay is open at once; a
 Dialog is modal, so its open row is one of them too. A value the user sets for
 `open`, before or after mount, drives that row like a controlled Dialog; unset,
-the row keeps its own close button and trigger. The colour audit verifies a small
+the row keeps its own close button and trigger. Dialog, AlertDialog,
+CommandPalette, and Lightbox are modal, so their States rows hold at most one
+open modal: a supplied `open` or `defaultOpen` drives the selected lifecycle row
+(the open row, for the three without a selector) and every other row keeps its
+own state. Popovers are not modal, so a supplied value still wins in every row. The colour audit verifies a small
 image whose whole PNG is in its own `data:` URL, with no `srcset` or `picture`,
 when every pixel is transparent or a canonical token colour, which is how the
 Avatar loaded row shows a real picture. Any other image, such as a served file or

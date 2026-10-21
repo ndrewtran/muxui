@@ -890,6 +890,29 @@ test('Controls changed on the mounted States story drive the Dialog open row', a
   });
 });
 
+test('a supplied open mounts one modal across a modal family States rows, and every popover row still follows it', async () => {
+  const modalCount = () => [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-exiting]')).length;
+  for (const family of ['Dialog', 'AlertDialog', 'CommandPalette', 'Lightbox']) {
+    await withRuntime(async ({ root: reactRoot }) => {
+      const record = currentRecord(family);
+      const stock = createStory(record, 'states').args;
+      // The rows that would each open a modal: Dialog closed and focused, AlertDialog closed, focused and disabled, and so on.
+      await act(async () => reactRoot.render(renderStateCoverage(record, { ...stock, open: true })));
+      await settleRuntime(80);
+      assert.equal(modalCount(), 1, `${family}: one modal for a supplied open`);
+    });
+  }
+  // Popovers are not modal, so the supplied value still opens the closed and focused rows too.
+  await withRuntime(async ({ root: reactRoot }) => {
+    const record = currentRecord('Popover');
+    await act(async () => reactRoot.render(renderStateCoverage(record, { ...createStory(record, 'states').args, open: true })));
+    await settleRuntime(80);
+    const expanded = [...document.querySelectorAll('.muxui-storybook-state')]
+      .filter((row) => row.querySelector('[aria-expanded="true"]')).map((row) => row.querySelector('h3').textContent);
+    assert.ok(expanded.includes('closed') && expanded.includes('open'), `Popover rows opened: ${expanded.join(', ')}`);
+  });
+});
+
 test('DropZone disabled row renders a disabled drop zone and the other rows stay enabled', () => {
   const { document: states, sections } = stateSections('DropZone');
   assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);

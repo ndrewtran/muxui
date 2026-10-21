@@ -1639,16 +1639,38 @@ function StateVariant({ family, state, args, available, controlledOpen }) {
   return marker ? e(OverlayHost, { marker }, stateContent) : stateContent;
 }
 
+/**
+ * Dialog, AlertDialog, CommandPalette, and Lightbox are modal: an open one takes focus and makes everything outside it
+ * inert, so a second open one leaves focus on the body and no row reachable. Their States rows therefore never hold
+ * more than one open modal. The Dialog's lifecycle selector mounts one row at a time, and for the others it is the
+ * open row. An explicit `open` or `defaultOpen` drives that row, and every other row keeps its own state instead of
+ * copying the value. Popovers and the other families are not modal, so a supplied value still wins in every row.
+ */
+const MODAL_OPEN_FAMILIES = new Set(['Dialog', 'AlertDialog', 'CommandPalette', 'Lightbox']);
+
+function hostsOpenModal(family, state) {
+  return family === 'Dialog' ? isLifecycleState(family, state) : state === 'open';
+}
+
 export function renderStateCoverage(record, args = storyArgsForBinding(record.binding, 'states', record.family)) {
   const variants = stateCoverageForBinding(record.binding, record.family);
-  const stateMatrix = e('div', { className: 'muxui-storybook-states' }, variants.map(({ name }) => e(StateVariant, {
-    key: name,
-    family: record.family,
-    state: name,
-    available: stateIsSupported(record.binding, name, record.family),
-    args: stateArgsForBinding(record.binding, name, record.family, args),
-    controlledOpen: args.open,
-  })));
+  const stateMatrix = e('div', { className: 'muxui-storybook-states' }, variants.map(({ name, args: own }) => {
+    const rowArgs = stateArgsForBinding(record.binding, name, record.family, args);
+    if (MODAL_OPEN_FAMILIES.has(record.family) && !hostsOpenModal(record.family, name)) {
+      for (const prop of ['open', 'defaultOpen']) {
+        if (Object.hasOwn(own, prop)) rowArgs[prop] = own[prop];
+        else delete rowArgs[prop];
+      }
+    }
+    return e(StateVariant, {
+      key: name,
+      family: record.family,
+      state: name,
+      available: stateIsSupported(record.binding, name, record.family),
+      args: rowArgs,
+      controlledOpen: args.open,
+    });
+  }));
   const lifecycleStates = variants.map(({ name }) => name).filter((name) => isLifecycleState(record.family, name));
   return lifecycleStates.length > 0
     ? e('div', { className: 'muxui-storybook-lifecycle-showcase' }, e(LifecycleSelection, {

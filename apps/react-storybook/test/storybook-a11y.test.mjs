@@ -554,6 +554,51 @@ async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
   });
 }
 
+// Their States rows can each open a modal, so only one may ever be open there.
+const MODAL_STATE_FAMILIES = Object.freeze(['Dialog', 'AlertDialog', 'CommandPalette', 'Lightbox']);
+
+/**
+ * Controls set `open` to false and then true on the mounted States story. Exactly one modal mounts, it holds keyboard
+ * focus, and Tab and Shift+Tab stay inside it. Several open modals would each make the others inert and leave focus
+ * on the body, which aria-expanded alone would not show.
+ */
+async function assertModalControlsOpen(page, baseUrl, story, scheme) {
+  const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+  await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, scheme);
+  await waitForDocumentAnimations(page);
+  await waitForLifecycleReadiness(page);
+
+  const openModals = () => page.evaluate(() => [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')]
+    .filter((modal) => !modal.closest('[data-exiting]')).length);
+  const focusInsideTheModal = () => page.evaluate(() => {
+    const modals = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-exiting]'));
+    return modals.length === 1 && modals[0].contains(document.activeElement);
+  });
+  const setOpen = (open) => page.evaluate(([storyId, updatedArgs]) => {
+    window.__STORYBOOK_ADDONS_CHANNEL__.emit('updateStoryArgs', { storyId, updatedArgs });
+  }, [story.id, { open }]);
+  const assertOneFocusedModal = async (label) => {
+    await page.waitForFunction(() => {
+      const modals = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-exiting]'));
+      return modals.length === 1 && modals[0].contains(document.activeElement);
+    }, undefined, { timeout: storyTimeoutMs }).catch(async () => {
+      assert.fail(`${scheme} ${story.id} ${label}: expected one open modal holding focus, found ${await openModals()} (focus inside: ${await focusInsideTheModal()})`);
+    });
+    for (const key of ['Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Shift+Tab', 'Shift+Tab', 'Shift+Tab']) {
+      await page.keyboard.press(key);
+      assert.equal(await focusInsideTheModal(), true, `${scheme} ${story.id} ${label}: ${key} left the modal`);
+    }
+  };
+
+  await assertOneFocusedModal('on load');
+  await setOpen(false);
+  await page.waitForFunction(() => ![...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')]
+    .some((modal) => !modal.closest('[data-exiting]')), undefined, { timeout: storyTimeoutMs });
+  await setOpen(true);
+  await assertOneFocusedModal('after open false then true');
+}
+
 async function assertDialogLifecycleDismissal(page, baseUrl, story, scheme) {
   const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
   await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
@@ -815,6 +860,10 @@ async function runA11yWorker({
             await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
             coverage.push(`${scheme}:dialog-state-dismissal`);
           }
+          if (story.name === 'States' && MODAL_STATE_FAMILIES.includes(family)) {
+            await assertModalControlsOpen(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:modal-controls-open:${family}`);
+          }
         } catch (error) {
           const failure = { scheme, id: story.id, family: storyFamily(story) };
           if (signal.aborted || error?.name === 'AssertionError') {
@@ -942,6 +991,10 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
             await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
             coverage.push(`${scheme}:dialog-state-dismissal:${story.id}`);
           }
+          if (story.name === 'States' && MODAL_STATE_FAMILIES.includes(family)) {
+            await assertModalControlsOpen(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:modal-controls-open:${story.id}`);
+          }
         } catch (error) {
           recordPageFailure(failures, { scheme, id: story.id, family }, error, { signal });
         }
@@ -966,6 +1019,7 @@ function expectedSelectedPageCoverage(stories, schemes) {
     ...(story.name === 'Variant × size' ? [`${scheme}:button-matrix:${story.id}`] : []),
     ...(story.name === 'States' && INTERACTION_OPEN_LOCATORS[storyFamily(story)] ? [`${scheme}:open-portal:${story.id}`] : []),
     ...(story.name === 'States' && storyFamily(story) === 'Dialog' ? [`${scheme}:dialog-state-dismissal:${story.id}`] : []),
+    ...(story.name === 'States' && MODAL_STATE_FAMILIES.includes(storyFamily(story)) ? [`${scheme}:modal-controls-open:${story.id}`] : []),
   ])).sort();
 }
 
@@ -1346,6 +1400,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       ...(autocompleteInteraction ? [`${scheme}:autocomplete-keyboard`] : []),
       ...(buttonMatrix ? [`${scheme}:button-matrix`] : []),
       ...(expectedFamilies.has('Dialog') ? [`${scheme}:dialog-state-dismissal`] : []),
+      ...MODAL_STATE_FAMILIES.filter((family) => statesFamilies.has(family)).map((family) => `${scheme}:modal-controls-open:${family}`),
       ...[...defaults, ...states, ...(linkIconComposition ? [linkIconComposition] : [])].map((story) => `${scheme}:axe:${story.id}`),
       ...browserProofs.map((story) => `${scheme}:browser-proof:${story.id}`),
     ])).sort();
