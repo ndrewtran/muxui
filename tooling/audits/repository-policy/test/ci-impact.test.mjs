@@ -288,6 +288,16 @@ test('Tree browser-proof edits select their exact test file without story or fam
   assert.equal(result.tailwind, false);
 });
 
+test('a deleted React test file is not run, and its owner package is checked instead', async () => {
+  const retired = 'packages/react/test/retired-parity.test.mjs';
+  const deleted = await plan([retired], { textSnapshots: { [retired]: { before: 'before\n', after: null } } });
+  assert.deepEqual(deleted.reactTestFiles, []);
+  assert.deepEqual(deleted.packageChecks, ['@muxui/react']);
+  // A test with no snapshot, or one edited in place, still runs.
+  assert.deepEqual((await plan([retired])).reactTestFiles, ['test/retired-parity.test.mjs']);
+  assert.deepEqual((await plan([retired], edited(retired))).reactTestFiles, ['test/retired-parity.test.mjs']);
+});
+
 test('a canonical NumberField sizing example selects only its exact generated story page', async () => {
   const result = await plan([sizingExamplePath]);
 

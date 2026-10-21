@@ -1340,8 +1340,14 @@ export async function buildPullRequestImpact({
     if (path.startsWith('packages/react/test/')) {
       const testPath = path.slice('packages/react/'.length);
       if (testPath.endsWith('.test.mjs')) {
-        plan.reactTestFiles.add(testPath);
-        plan.reasons.push(`${path} is React proof code; run only the changed test file`);
+        if (await readHeadText(path) === null && await readBaseText(path) !== null) {
+          // A retired test has nothing to run; the React package check runs the rest.
+          plan.packageChecks.add('@muxui/react');
+          plan.reasons.push(`${path} was deleted; run the React package check`);
+        } else {
+          plan.reactTestFiles.add(testPath);
+          plan.reasons.push(`${path} is React proof code; run only the changed test file`);
+        }
       } else if (testPath === 'test/tsconfig.json' || testPath.endsWith('.tsx')) {
         // Only the React package check (and component checks) run this typecheck.
         plan.packageChecks.add('@muxui/react');
