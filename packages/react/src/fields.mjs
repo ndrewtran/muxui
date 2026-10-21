@@ -754,20 +754,6 @@ export const Switch = /*#__PURE__*/ (() => {
   return component;
 })();
 
-// React Aria removes a shown native error on the field's `change` event, which a text field fires only when it loses
-// focus. Pressing Submit blurs the field on mousedown, so the error leaves, the button moves up, and the click lands
-// beside it. Once the typed value passes the browser's checks, fire that `change` early so the shift happens while
-// typing instead. Errors still appear only as before, and one from `invalid` or validationErrors keeps the field
-// natively invalid until it is gone, so it is not dismissed early. Other controls fire `change` on the choice itself,
-// and a second one would reach a select's onChange twice.
-const DEFERRED_CHANGE_TYPES = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number', 'textarea']);
-
-function dismissFixedNativeError({ target }) {
-  if (DEFERRED_CHANGE_TYPES.has(target.type) && target.validity.valid && target.getAttribute('aria-invalid') === 'true') {
-    target.dispatchEvent(new Event('change', { bubbles: true }));
-  }
-}
-
 export const Form = React.forwardRef(function Form({
   children,
   className,
@@ -775,7 +761,6 @@ export const Form = React.forwardRef(function Form({
   validationErrors,
   onSubmit,
   onReset,
-  onInput,
   ...props
 }, ref) {
   return React.createElement(AriaForm, {
@@ -786,10 +771,6 @@ export const Form = React.forwardRef(function Form({
     validationErrors,
     onSubmit,
     onReset,
-    onInput: (event) => {
-      onInput?.(event);
-      if (validationBehavior === 'native') dismissFixedNativeError(event);
-    },
   }, React.createElement(MuxFormValidationContext.Provider, { value: validationErrors ?? {} }, children));
 });
 

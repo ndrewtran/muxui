@@ -9,7 +9,6 @@ const entry = `import React from 'react';
   import { Checkbox } from '/src/components.mjs';
   import { Autocomplete, CheckboxGroup, DateField, Form, NumberField, SearchField, Switch, TextField, TimeField } from '/src/fields.mjs';
   import { ColorField } from '/src/collections.mjs';
-  import { SelectNative } from '/src/supplemental/select-native.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
   window.events = [];
@@ -59,12 +58,6 @@ const entry = `import React from 'react';
       h('button', { type: 'submit' }, 'Submit')),
     'native-validation': () => h(Form, { onSubmit: submit },
       h(TextField, { label: 'Name', name: 'name', required: true, errorMessage: 'Enter your name.' }),
-      h(TextField, { label: 'Email', name: 'email', type: 'email', required: true, errorMessage: 'Enter an email address.' }),
-      h('button', { type: 'submit' }, 'Submit')),
-    'select-native': () => h(Form, { onSubmit: submit },
-      h(SelectNative, { label: 'City', name: 'city', invalid: true, onChange: (event) => log('change', event.target.value) },
-        h('option', { value: 'a' }, 'Alpha'),
-        h('option', { value: 'b' }, 'Beta')),
       h('button', { type: 'submit' }, 'Submit')),
     'color-field': function ColorFieldCase() {
       const [color, setColor] = React.useState('#336699');
@@ -74,9 +67,6 @@ const entry = `import React from 'react';
         h('button', { type: 'submit' }, 'Submit'));
     },
     'color-field-standalone': () => h(ColorField, { label: 'Accent', defaultValue: '#336699', onChange: (next) => log('change', next) }),
-    'server-error': () => h(Form, { onSubmit: submit, validationErrors: { email: 'Already registered.' } },
-      h(TextField, { label: 'Email', name: 'email', type: 'email' }),
-      h('button', { type: 'submit' }, 'Submit')),
   };
   const name = new URLSearchParams(location.search).get('case');
   createRoot(document.getElementById('root')).render(h(cases[name]));
@@ -85,7 +75,7 @@ const entry = `import React from 'react';
 async function withPage(run) {
   const html = pageShell({ body: '<div id="root"></div>', entry: '/form-fields-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.mjs', 'src/fields.mjs', 'src/collections.mjs', 'src/supplemental/select-native.mjs'],
+    entries: ['src/components.mjs', 'src/fields.mjs', 'src/collections.mjs'],
     pages: { '/form-fields.html': html },
     modules: { '/form-fields-entry.mjs': entry },
   });
@@ -204,72 +194,29 @@ test('errorMessage submits while valid and replaces the built-in message when va
     assert.equal(await name.getAttribute('data-invalid'), 'true');
     assert.equal((await name.locator('.muxui-field-error').textContent())?.trim(), 'Tell us your name');
 
-    // The error leaves as the value becomes valid, not on blur, so the click below does not land on a moved button.
+    // Commit the edit first: the error collapses on change and would move the button mid-click.
     await page.getByRole('textbox', { name: 'Name' }).fill('Andrew');
+    await page.getByRole('textbox', { name: 'Name' }).blur();
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [['submit', { email: 'a@b.co', name: 'Andrew' }]]);
     assert.equal(await name.locator('.muxui-field-error').count(), 0);
   });
 });
 
-test('a native error leaves a field once its value is valid, so the first click on Submit after a failed submit lands', { timeout: 90_000 }, async () => {
-  await withPage(async ({ page, open, events }) => {
-    await open('native-validation');
-    const errorOf = (label) => page.locator('.muxui-text-field').filter({ has: page.getByRole('textbox', { name: label }) }).locator('.muxui-field-error');
-    const submit = page.getByRole('button', { name: 'Submit' });
-    await submit.click();
-    await errorOf('Name').waitFor();
-    await errorOf('Email').waitFor();
-
-    // Each error goes while its field is still focused. Waiting for blur would move the button on mousedown.
-    await page.getByRole('textbox', { name: 'Name' }).fill('Ada');
-    await errorOf('Name').waitFor({ state: 'detached' });
-    await page.getByRole('textbox', { name: 'Email' }).fill('ada');
-    assert.equal(await errorOf('Email').count(), 1, 'a value that still fails its type keeps the error');
-    await page.getByRole('textbox', { name: 'Email' }).fill('ada@example.com');
-    await errorOf('Email').waitFor({ state: 'detached' });
-
-    await submit.click();
-    assert.deepEqual(await events(), [['submit', { name: 'Ada', email: 'ada@example.com' }]], 'the first click submitted the form');
-  });
-});
-
-test('a native error appears when a field is left or submitted, never while its value is typed', { timeout: 90_000 }, async () => {
+test('typing in a field that shows a native error broadcasts no change event until the field is left', { timeout: 90_000 }, async () => {
   await withPage(async ({ page, open }) => {
     await open('native-validation');
-    const name = page.getByRole('textbox', { name: 'Name' });
-    const email = page.getByRole('textbox', { name: 'Email' });
-    const errors = page.locator('.muxui-field-error');
-    await name.fill('Ada');
-    await email.fill('ada');
-    assert.equal(await errors.count(), 0, 'typing a valid or an unfinished value shows no error');
-    await email.blur();
-    await errors.waitFor();
-    assert.equal((await errors.allTextContents()).join(), 'Enter an email address.', 'leaving the unfinished field shows its error');
-    await name.fill('');
-    await name.fill('Ada');
-    assert.equal(await errors.count(), 1, 'editing another field does not show or clear this one');
-  });
-});
-
-test('a server error stays on the field until it is left, as before', { timeout: 90_000 }, async () => {
-  await withPage(async ({ page, open }) => {
-    await open('server-error');
-    const email = page.getByRole('textbox', { name: 'Email' });
-    const error = page.locator('.muxui-field-error');
-    await error.waitFor();
-    await email.fill('new@example.com');
-    assert.equal(await error.count(), 1, 'typing a different valid value keeps the server error showing');
-    await email.blur();
-    await error.waitFor({ state: 'detached' });
-  });
-});
-
-test('a select inside a Form reports one change per choice, even with an error showing', { timeout: 90_000 }, async () => {
-  await withPage(async ({ page, open, events }) => {
-    await open('select-native');
-    await page.getByRole('combobox', { name: 'City' }).selectOption('b');
-    assert.deepEqual(await events(), [['change', 'b']], 'the early dismissal fires change only for controls that wait for blur');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    await page.locator('.muxui-field-error').waitFor();
+    // Native listeners, such as autosave or validation, must not run mid-edit on an event the browser did not send.
+    await page.locator('form').evaluate((form) => {
+      window.changes = [];
+      form.addEventListener('change', (event) => window.changes.push(event.isTrusted));
+    });
+    await page.getByRole('textbox', { name: 'Name' }).pressSequentially('Ab');
+    assert.deepEqual(await page.evaluate(() => window.changes), [], 'no change while typing');
+    await page.getByRole('textbox', { name: 'Name' }).blur();
+    assert.deepEqual(await page.evaluate(() => window.changes), [true], 'one trusted change when the field is left');
   });
 });
 
