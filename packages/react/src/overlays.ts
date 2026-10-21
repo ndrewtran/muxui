@@ -707,10 +707,12 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
 
 /**
  * The props Mux UI defines for Popover; the catalog's web.react API is derived from this
- * interface (Decision 0031). The children fill the popover, and the accessible name is
+ * type (Decision 0031). The children fill the popover, and the accessible name is
  * the native aria-label or aria-labelledby.
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-export interface PopoverOwnProps {
+export type PopoverOwnProps = {
   /** The focusable element that opens the Popover. Pressing it toggles the Popover. */
   trigger: ReactElement;
   /** Whether the Popover is open, when the caller controls it. */
@@ -733,7 +735,7 @@ export interface PopoverOwnProps {
   modal?: boolean;
   /** Reports the Popover opening or closing. */
   onOpenChange?: (open: boolean) => void;
-}
+};
 
 export type PopoverProps = PopoverOwnProps & { children: ReactNode; className?: string; anchorRef?: RefObject<Element | null> } & OverlayAccessibleName;
 
@@ -854,10 +856,12 @@ function overlayTrigger(trigger: ReactNode, { disabled, className, markPending, 
 
 /**
  * The props Mux UI defines for PreviewTrigger; the catalog's web.react API is derived from
- * this interface (Decision 0031). The children fill the preview, and the accessible name is
+ * this type (Decision 0031). The children fill the preview, and the accessible name is
  * the native aria-label or aria-labelledby.
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-export interface PreviewTriggerOwnProps {
+export type PreviewTriggerOwnProps = {
   /** The focusable element that opens the preview. Disabling the preview leaves it operable. */
   trigger: ReactElement;
   /** How long a hover waits before the preview opens, in milliseconds. */
@@ -882,7 +886,7 @@ export interface PreviewTriggerOwnProps {
   containerPadding?: number;
   /** Reports the preview opening or closing. */
   onOpenChange?: (open: boolean) => void;
-}
+};
 
 export type PreviewTriggerProps = PreviewTriggerOwnProps & { children: ReactNode; className?: string } & OverlayAccessibleName;
 
@@ -974,9 +978,11 @@ const TooltipMotion = React.forwardRef<HTMLDivElement, AriaTooltipProps>(functio
 
 /**
  * The props Mux UI defines for Tooltip; the catalog's web.react API is derived from this
- * interface (Decision 0031). The tooltip describes its trigger and does not name it.
+ * type (Decision 0031). The tooltip describes its trigger and does not name it.
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-export interface TooltipOwnProps {
+export type TooltipOwnProps = {
   /** What the tooltip says. It is required, and a blank string does not count. */
   content: Exclude<ReactNode, null | undefined | boolean>;
   /** The focusable element the tooltip describes. */
@@ -1003,7 +1009,7 @@ export interface TooltipOwnProps {
   disabled?: boolean;
   /** Reports the tooltip opening or closing. */
   onOpenChange?: (open: boolean) => void;
-}
+};
 
 export type TooltipProps = TooltipOwnProps & { className?: string; anchorRef?: RefObject<Element | null> };
 
