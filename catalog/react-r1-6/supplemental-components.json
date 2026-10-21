@@ -169,7 +169,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/icon-button.mjs",
+      "runtimeSource": "packages/react/src/supplemental/icon-button.ts",
       "styleSource": "packages/react/src/supplemental/icon-button.css"
     },
     {

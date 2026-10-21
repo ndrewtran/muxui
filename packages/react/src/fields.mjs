@@ -45,7 +45,7 @@ import { DatePopoverMotion } from './date-popover-motion.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
-import { IconButton } from './supplemental/icon-button.mjs';
+import { IconButton } from './supplemental/icon-button.ts';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;

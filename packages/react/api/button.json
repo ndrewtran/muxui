@@ -44,37 +44,8 @@
       },
       "variant": {
         "type": {
-          "kind": "union",
-          "members": [
-            {
-              "kind": "literal",
-              "value": "primary"
-            },
-            {
-              "kind": "literal",
-              "value": "neutral"
-            },
-            {
-              "kind": "literal",
-              "value": "ghost"
-            },
-            {
-              "kind": "literal",
-              "value": "danger"
-            },
-            {
-              "kind": "literal",
-              "value": "danger-neutral"
-            },
-            {
-              "kind": "literal",
-              "value": "danger-ghost"
-            },
-            {
-              "kind": "literal",
-              "value": "inverse"
-            }
-          ]
+          "kind": "reference",
+          "name": "ButtonVariant"
         },
         "required": false,
         "enum": [
@@ -90,21 +61,8 @@
       },
       "size": {
         "type": {
-          "kind": "union",
-          "members": [
-            {
-              "kind": "literal",
-              "value": "sm"
-            },
-            {
-              "kind": "literal",
-              "value": "md"
-            },
-            {
-              "kind": "literal",
-              "value": "lg"
-            }
-          ]
+          "kind": "reference",
+          "name": "ButtonSize"
         },
         "required": false,
         "enum": [
@@ -203,6 +161,62 @@
             }
           ]
         }
+      },
+      "ButtonSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The control sizes Button and IconButton share."
+      },
+      "ButtonVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "primary"
+            },
+            {
+              "kind": "literal",
+              "value": "neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "ghost"
+            },
+            {
+              "kind": "literal",
+              "value": "danger"
+            },
+            {
+              "kind": "literal",
+              "value": "danger-neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "danger-ghost"
+            },
+            {
+              "kind": "literal",
+              "value": "inverse"
+            }
+          ]
+        },
+        "description": "The visual recipes Button and IconButton share."
       }
     }
   }

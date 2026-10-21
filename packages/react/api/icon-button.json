@@ -1,0 +1,214 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/icon-button.ts",
+  "component": "muxui:component:icon-button",
+  "binding": "web.react",
+  "export": "IconButton",
+  "api": {
+    "props": [
+      "disabled",
+      "pending",
+      "variant",
+      "size"
+    ],
+    "events": [
+      "activate"
+    ],
+    "defaults": {
+      "variant": "ghost",
+      "size": "md"
+    },
+    "propDetails": {
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Applies the native disabled attribute: the IconButton is neither focusable nor activatable."
+      },
+      "pending": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks an action in flight: a static indicator replaces the icon, and the IconButton stays focusable and named but does not activate."
+      },
+      "variant": {
+        "type": {
+          "kind": "reference",
+          "name": "ButtonVariant"
+        },
+        "required": false,
+        "enum": [
+          "primary",
+          "neutral",
+          "ghost",
+          "danger",
+          "danger-neutral",
+          "danger-ghost",
+          "inverse"
+        ],
+        "description": "Button's visual recipe, chosen by where the icon sits and what it does."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ButtonSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The square control size."
+      }
+    },
+    "eventDetails": {
+      "activate": {
+        "prop": "onActivate",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "event",
+              "type": {
+                "kind": "reference",
+                "name": "ButtonActivationEvent"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Requests the IconButton's one immediate action."
+      }
+    },
+    "types": {
+      "ButtonActivationEvent": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "activate"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "pointerType",
+              "type": {
+                "kind": "reference",
+                "name": "ButtonPointerType"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "target",
+              "type": {
+                "kind": "host",
+                "name": "HTMLButtonElement"
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "What `onActivate` reports for one activation."
+      },
+      "ButtonPointerType": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "mouse"
+            },
+            {
+              "kind": "literal",
+              "value": "pen"
+            },
+            {
+              "kind": "literal",
+              "value": "touch"
+            },
+            {
+              "kind": "literal",
+              "value": "keyboard"
+            },
+            {
+              "kind": "literal",
+              "value": "virtual"
+            },
+            {
+              "kind": "undefined"
+            }
+          ]
+        }
+      },
+      "ButtonSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The control sizes Button and IconButton share."
+      },
+      "ButtonVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "primary"
+            },
+            {
+              "kind": "literal",
+              "value": "neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "ghost"
+            },
+            {
+              "kind": "literal",
+              "value": "danger"
+            },
+            {
+              "kind": "literal",
+              "value": "danger-neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "danger-ghost"
+            },
+            {
+              "kind": "literal",
+              "value": "inverse"
+            }
+          ]
+        },
+        "description": "The visual recipes Button and IconButton share."
+      }
+    }
+  }
+}

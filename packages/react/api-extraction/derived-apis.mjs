@@ -13,6 +13,7 @@ import { extractApis } from './extract.mjs';
 /** The components whose web.react API is derived from their TypeScript source. */
 export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'button', name: 'Button', source: 'packages/react/src/button.ts' },
+  { slug: 'icon-button', name: 'IconButton', source: 'packages/react/src/supplemental/icon-button.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

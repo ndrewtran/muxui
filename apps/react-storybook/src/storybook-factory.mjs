@@ -117,12 +117,6 @@ const SELECT_PROPS = Object.freeze({
   variant: ['neutral', 'success', 'warning', 'danger'],
 });
 
-// Button's finite values come from its derived API (Decision 0031), in source order.
-const BUTTON_SELECT_PROPS = Object.freeze({
-  variant: Object.freeze([...buttonApi.api.propDetails.variant.enum]),
-  size: Object.freeze([...buttonApi.api.propDetails.size.enum]),
-});
-
 const TEXT_SELECT_PROPS = Object.freeze({
   variant: ['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono'],
   // xs exists only for label, body, expressive, and mono; the Text story maps it to sm otherwise.
@@ -132,9 +126,8 @@ const TEXT_SELECT_PROPS = Object.freeze({
 });
 
 // A family whose public type narrows or widens a shared enumeration lists its own choices here.
+// A family with a derived API (Decision 0031) offers its derived enum instead.
 const FAMILY_SELECT_PROPS = Object.freeze({
-  Button: BUTTON_SELECT_PROPS,
-  IconButton: BUTTON_SELECT_PROPS,
   Text: TEXT_SELECT_PROPS,
   Tabs: { variant: ['underline', 'pill', 'overflow', 'segment'] },
   Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
@@ -146,11 +139,11 @@ const FAMILY_SELECT_PROPS = Object.freeze({
 
 const callbackType = { summary: 'MuxUI callback' };
 
-function inferControl(name, defaults, props, family) {
+function inferControl(name, defaults, props, family, propDetails) {
   if (name.startsWith('on')) return { control: false, table: { type: callbackType } };
   if (name === 'trigger') return { control: false, table: { type: { summary: 'React element' } } };
   if (FUNCTION_PROPS.has(name)) return { control: false, table: { type: { summary: 'function' } } };
-  const options = FAMILY_SELECT_PROPS[family]?.[name] ?? SELECT_PROPS[name];
+  const options = FAMILY_SELECT_PROPS[family]?.[name] ?? propDetails?.[name]?.enum ?? SELECT_PROPS[name];
   if (options) return { control: { type: 'select' }, options };
   if (BOOLEAN_PROPS.has(name) || typeof defaults[name] === 'boolean') return { control: 'boolean' };
   if ((name === 'value' || name === 'defaultValue')
@@ -180,10 +173,10 @@ export function argTypesForBinding(binding) {
   return Object.fromEntries(binding.api.props.map((name) => [
     name,
     {
-      ...inferControl(name, defaults, binding.api.props, family),
+      ...inferControl(name, defaults, binding.api.props, family, binding.api.propDetails),
       description: `Mux UI-owned ${name} property`,
       table: {
-        ...(inferControl(name, defaults, binding.api.props, family).table ?? {}),
+        ...(inferControl(name, defaults, binding.api.props, family, binding.api.propDetails).table ?? {}),
         defaultValue: defaults[name] === undefined ? undefined : { summary: defaults[name] },
       },
     },
@@ -2701,8 +2694,9 @@ export function createBrowserProofStory(record) {
   };
 }
 
-const BUTTON_MATRIX_VARIANTS = BUTTON_SELECT_PROPS.variant;
-const BUTTON_MATRIX_SIZES = BUTTON_SELECT_PROPS.size;
+// Button's finite values come from its derived API (Decision 0031), in source order.
+const BUTTON_MATRIX_VARIANTS = Object.freeze([...buttonApi.api.propDetails.variant.enum]);
+const BUTTON_MATRIX_SIZES = Object.freeze([...buttonApi.api.propDetails.size.enum]);
 
 /** Render every adopted Button axis combination in one compact inspection story. */
 export function createButtonMatrixStory(record) {

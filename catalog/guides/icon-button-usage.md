@@ -22,15 +22,15 @@ are rejected. The icon wrapper is decorative; avoid focusable or interactive
 children. A tooltip can help explain an unfamiliar icon but does not replace
 the required accessible name.
 
-The defaults are `variant="ghost"`, `size="md"`, `disabled={false}`, and
-`pending={false}`. Variants, `onActivate`, refs, and native button/form
-attributes follow `Button`. The `sm`, `md`, and `lg`
-sizes are square, with minimum heights aligned to Mux buttons. Theme control and spacing
-tokens determine their dimensions. Use `Button` when visible text is needed.
+The [API reference](#api-reference) lists the variants, sizes, and defaults,
+derived from the React source. Variants, `onActivate`, refs, and native
+button/form attributes follow `Button`. Every size is square, with minimum
+heights aligned to Mux buttons. Theme control and spacing tokens determine
+their dimensions. Use `Button` when visible text is needed.
 
 `pending` replaces the icon with a static indicator, preserves the accessible
 name and focusability, and blocks activation without changing the button size.
-`showTextWhileLoading` is intentionally unavailable. `disabled` uses the normal
+IconButton has no `showTextWhileLoading` prop. `disabled` uses the normal
 disabled button behavior. The default `type="button"` does not submit a form;
 set `type="submit"` explicitly for a submit action.
 

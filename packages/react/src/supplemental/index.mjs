@@ -64,7 +64,7 @@ import { Tooltip } from '../overlays.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { Button as MuxUIButton, usePendingSubmitProps } from '../button.ts';
-import { IconButton } from './icon-button.mjs';
+import { IconButton } from './icon-button.ts';
 
 const h = React.createElement;
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;

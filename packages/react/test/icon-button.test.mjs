@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { NumberField } from '../src/fields.mjs';
-import { IconButton } from '../src/supplemental/icon-button.mjs';
+import { IconButton } from '../src/supplemental/icon-button.ts';
 
 const icon = React.createElement('svg', { viewBox: '0 0 24 24' }, React.createElement('title', null, 'Decorative icon'));
 

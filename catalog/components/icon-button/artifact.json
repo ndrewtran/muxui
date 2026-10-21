@@ -42,29 +42,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "aria-label",
-          "aria-labelledby",
-          "disabled",
-          "pending",
-          "variant",
-          "size"
-        ],
-        "events": [
-          "activate"
-        ],
-        "parts": [
-          "root",
-          "icon"
-        ],
-        "defaults": {
-          "disabled": false,
-          "pending": false,
-          "variant": "ghost",
-          "size": "md"
-        }
-      },
       "behavior": [
         "Composes Mux Button; onActivate, refs, form attributes, and finite variants follow Button.",
         "Renders caller-supplied icon children in a decorative wrapper.",

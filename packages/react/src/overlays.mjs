@@ -37,7 +37,7 @@ import { DialogMotion } from './dialog-motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { observeReducedMotion } from './motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
-import { IconButton } from './supplemental/icon-button.mjs';
+import { IconButton } from './supplemental/icon-button.ts';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 

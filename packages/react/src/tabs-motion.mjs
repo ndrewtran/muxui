@@ -6,7 +6,7 @@ import ChevronUpIcon from 'lucide-react/dist/esm/icons/chevron-up.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import { sameGeometry } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
-import { IconButton } from './supplemental/icon-button.mjs';
+import { IconButton } from './supplemental/icon-button.ts';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const TAB_SELECTOR = '[role="tab"]';
