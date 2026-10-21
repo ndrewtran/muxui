@@ -25,9 +25,9 @@ interface ImageOwnProps {
   fit?: ImageFit;
 }
 
-export interface ImageProps extends ImageOwnProps, Omit<ImgHTMLAttributes<HTMLImageElement>, keyof ImageOwnProps | 'className'> {
+export type ImageProps = ImageOwnProps & Omit<ImgHTMLAttributes<HTMLImageElement>, keyof ImageOwnProps | 'className'> & {
   className?: string;
-}
+};
 
 type Recovery = { key: string | null; mode: 'fallback' | 'error' | null };
 

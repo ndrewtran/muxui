@@ -50,10 +50,10 @@ interface DataDiffOwnProps {
   emptyMessage?: string;
 }
 
-export interface DataDiffProps extends DataDiffOwnProps, Omit<HTMLAttributes<HTMLDivElement>, keyof DataDiffOwnProps | 'children' | 'dangerouslySetInnerHTML'> {
+export type DataDiffProps = DataDiffOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof DataDiffOwnProps | 'children' | 'dangerouslySetInnerHTML'> & {
   children?: never;
   dangerouslySetInnerHTML?: never;
-}
+};
 
 type CheckboxProps = { checked: boolean; indeterminate?: boolean; disabled?: boolean; ref?: Ref<HTMLInputElement>; 'aria-label': string; onChange: () => void };
 

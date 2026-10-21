@@ -27,9 +27,9 @@ interface SelectNativeOwnProps {
   size?: SelectNativeVisualSize | number;
 }
 
-export interface SelectNativeProps extends SelectNativeOwnProps, Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectNativeOwnProps | 'className'> {
+export type SelectNativeProps = SelectNativeOwnProps & Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectNativeOwnProps | 'className'> & {
   className?: string;
-}
+};
 
 const h = React.createElement;
 // Keyed by the type, so a size added to it must be added here too.
