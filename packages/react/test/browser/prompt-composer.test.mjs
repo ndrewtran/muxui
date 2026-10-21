@@ -262,6 +262,14 @@ test('PromptComposer keeps the error alert at full opacity and contrast while di
       await page.evaluate(() => window.mount({ disabled: true }));
       await page.waitForFunction(() => !document.querySelector('[role="alert"]'));
       assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer-field')).opacity, 0.45, `${scheme}: a disabled composer without an error fades its controls`);
+      // The box paints canonical tokens, opaque: the hover surface disabled fields use and the ordinary border, not a translucent mix.
+      const paint = await page.evaluate(() => {
+        const token = (name) => { const probe = document.createElement('span'); probe.style.color = `var(${name})`; document.body.append(probe); const { color } = getComputedStyle(probe); probe.remove(); return color; };
+        const root = getComputedStyle(document.querySelector('form.muxui-prompt-composer'));
+        return { background: root.backgroundColor, border: root.borderTopColor, surface: token('--muxui-semantic-surface-hover'), edge: token('--muxui-semantic-border-default') };
+      });
+      assert.equal(paint.background, paint.surface, `${scheme}: the disabled box takes the hover surface token (${paint.background})`);
+      assert.equal(paint.border, paint.edge, `${scheme}: the disabled box keeps the ordinary border token (${paint.border})`);
       // An enabled composer is not faded at all.
       await page.evaluate(() => window.mount({ error: 'Request failed' }));
       await page.waitForFunction(() => document.querySelector('[role="alert"]'));
