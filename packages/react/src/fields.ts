@@ -1387,7 +1387,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
   readOnly = false,
   required = false,
   invalid = false,
-  size,
+  size = 'md',
   validationBehavior: _validationBehavior,
   name,
   className,
@@ -1422,7 +1422,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
   return React.createElement(AriaTimeField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
+    ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
     value: effectiveParsedValue,
     minValue: parsedMinValue,
     maxValue: parsedMaxValue,

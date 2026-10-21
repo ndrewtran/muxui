@@ -106,6 +106,8 @@ const GUIDES = {
   switch: { native: ['aria-label', 'aria-labelledby'] },
   // YYYY-MM-DD is the value format, which the type states as a string.
   'date-field': { native: ['YYYY-MM-DD'] },
+  // The clock formats and the rejected date-time and offset forms are strings the type states as a string.
+  'time-field': { native: ['HH:mm', '09:30:45', '2026-08-26T09:30', '09:30+10:00', 'HH:mm:ss', 'HH:mm:ss.fraction'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
