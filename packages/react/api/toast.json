@@ -1,0 +1,113 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:toast",
+  "binding": "web.react",
+  "export": "Toast",
+  "api": {
+    "props": [
+      "message",
+      "title",
+      "variant",
+      "duration"
+    ],
+    "events": [
+      "dismiss"
+    ],
+    "defaults": {
+      "variant": "neutral",
+      "duration": 5000
+    },
+    "propDetails": {
+      "message": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": true,
+        "description": "What the notification says, in one short sentence. It is required, and a blank string does not count."
+      },
+      "title": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Says what the message is about. Without one, the notification shows Notification."
+      },
+      "variant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "success"
+            },
+            {
+              "kind": "literal",
+              "value": "warning"
+            },
+            {
+              "kind": "literal",
+              "value": "danger"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "neutral",
+          "success",
+          "warning",
+          "danger"
+        ],
+        "description": "How the notification looks, by what happened. It does not change how long the notification stays."
+      },
+      "duration": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How long the notification stays, in milliseconds. 0 keeps it until it is dismissed or removed. Must be finite, not negative, and at most 2147483647. Changing it replaces the notification with a new one."
+      }
+    },
+    "eventDetails": {
+      "dismiss": {
+        "prop": "onDismiss",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the notification being dismissed, by a person or a timeout, at most once. An unmount does not call it."
+      }
+    },
+    "types": {}
+  }
+}

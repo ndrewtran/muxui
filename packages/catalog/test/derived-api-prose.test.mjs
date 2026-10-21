@@ -23,8 +23,8 @@ function bulletSubjects(markdown, heading) {
     .flatMap((subjects) => [...subjects.matchAll(/`([^`]+)`/gu)].map(([, value]) => value));
 }
 
-/** The bullet value a section marks as the default: "- `a`, the default, ...". */
-const bulletDefault = (markdown, heading) => /^- `([^`]+)`, the default,/mu.exec(section(markdown, heading))?.[1];
+/** The bullet value a section marks as the default: "- `a`, the default, ..." or "- `a` is the default, ...". */
+const bulletDefault = (markdown, heading) => /^- `([^`]+)`(?:,| is) the default,/mu.exec(section(markdown, heading))?.[1];
 
 /** The literal values a derived type admits, through named types and object arms' members named `member`. */
 function literals(type, types, member) {
@@ -60,8 +60,10 @@ test('the Button guide covers exactly the variants its derived API declares', as
   assert.match(guide, /\[API reference\]\(#api-reference\) lists the `variant` and `size` values/u);
 });
 
-// Code spans a guide may state that no derived block owns: native attributes and their
-// values, DOM and web APIs, and JavaScript values.
+// Code spans a guide may state that no derived block owns. `native` lists native attributes and
+// their values, DOM and web APIs, and JavaScript values. `declared` lists facts about a
+// declaration-only surface, such as a provider's props, that the declaration-backed reference
+// reader will check; until it exists, the list names exactly the spans no check compares.
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },
@@ -91,6 +93,8 @@ const GUIDES = {
   'preview-trigger': {},
   // aria-label names the dialog surface.
   popover: { native: ['aria-label'] },
+  // maxVisible, placement and its four values, and className are ToastProvider's props, and pending is Button's.
+  toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
@@ -134,7 +138,7 @@ test('every API name a derived component\'s guide states is in its derived API o
   const layerOrder = /^@layer reset, [^\n]+;$/mu.exec(readme)?.[0];
   assert.ok(layerOrder, 'the React README states the layer order');
 
-  for (const [slug, { native = [] }] of Object.entries(GUIDES)) {
+  for (const [slug, { native = [], declared = [] }] of Object.entries(GUIDES)) {
     const [guide, derived, record] = await Promise.all([
       read(`catalog/guides/${slug}-usage.md`),
       derivedApi(slug),
@@ -157,6 +161,7 @@ test('every API name a derived component\'s guide states is in its derived API o
       ...memberNames(api.types),
       ...memberNames(api.propDetails),
       ...native,
+      ...declared,
     ]);
     // `name="value"` or `name={value}` names a prop and, where the prop is finite, one of its values.
     const attribute = (span) => {
@@ -167,6 +172,9 @@ test('every API name a derived component\'s guide states is in its derived API o
     };
     const fences = [...guide.matchAll(/^```[a-z]*\n([\s\S]*?)^```$/gmu)].map(([, code]) => code);
     const prose = guide.replace(FENCE, '');
+    // The list names only what the guide still states.
+    const stated = new Set([...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' ')));
+    assert.deepEqual(declared.filter((span) => !stated.has(span)), [], `${slug} declares spans its guide no longer states`);
     const unchecked = [...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' '))
       .filter((span) => !checked.has(span) && !attribute(span) && span !== layerOrder && !absent.includes(span));
     assert.deepEqual(unchecked, [], `${slug} guide`);
@@ -236,6 +244,12 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.match(meter, /By default the value text is the value's position in the range as a percent/u);
   assert.match(meterApi.api.propDetails.formatOptions.description, /Omitted, it formats the position in the range as a percentage/u);
   assert.equal(Object.hasOwn(meterApi.api.defaults, 'formatOptions'), false, 'the percent format is a behaviour, not a stated default');
+
+  // Toast lists its variants, marks neutral as the default, and states the default duration.
+  const [toast, toastApi] = await Promise.all([guide('toast'), derivedApi('toast')]);
+  assert.deepEqual(bulletSubjects(toast, 'Variants'), toastApi.api.propDetails.variant.enum);
+  assert.equal(bulletDefault(toast, 'Variants'), toastApi.api.defaults.variant);
+  assert.equal(Number(/Duration is in milliseconds, and it defaults to (\d+)\./u.exec(toast)?.[1]), toastApi.api.defaults.duration);
 
   // Popover is modal by default, which its guide teaches before the non-modal choice.
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);
