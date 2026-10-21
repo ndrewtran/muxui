@@ -1181,10 +1181,16 @@ export const Menu = /*#__PURE__*/ (() => {
     const popover = React.useContext(PopoverContext);
     const menuTrigger = React.useContext(RootMenuTriggerStateContext);
     const anchorRef = React.useContext(MenuAnchorContext);
-    // A menu with no trigger button, opened from another control, gives focus back to that control: the one focused as the
-    // menu mounted, before focus moves into it.
+    // A menu with no trigger button, opened from another control, gives focus back to that control: the one focused as each
+    // opening starts, before focus moves into the menu. The list stays mounted while the menu exits, so this follows the
+    // open state, not the mount; focus already inside a menu popup is the menu's own, as when StrictMode replays the effect
+    // after focus moved in, so it never replaces the opener.
     const opener = React.useRef(null);
-    useMenuLayoutEffect(() => { opener.current = document.activeElement; }, []);
+    const menuOpen = menuTrigger?.isOpen ?? false;
+    useMenuLayoutEffect(() => {
+      if (!menuOpen) opener.current = null;
+      else if (!document.activeElement?.closest('.muxui-menu-popup')) opener.current = document.activeElement;
+    }, [menuOpen]);
     const menu = React.createElement(AriaMenu, {
       ...props,
       // The list's own Tab handling moves focus back into the list, so the handler must run after it, which `render` allows.

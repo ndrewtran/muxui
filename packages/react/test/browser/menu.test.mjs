@@ -12,6 +12,7 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 const entry = `
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Button } from '/src/button.ts';
 import { Menu, Toolbar } from '/src/collections.mjs';
@@ -35,12 +36,14 @@ const list = params.has('submenu')
     h(Menu.Submenu, { delay: 20 }, h(Menu.Item, { id: 'more' }, 'More'), h(Menu.Popup, null, h(Menu.List, { 'aria-label': 'More actions', items: ['Archive', 'Export'] }))))
   : h(Menu.List, { 'aria-label': 'Actions', items: ['Rename', 'Delete'] });
 // ?anchored opens a controlled Menu.Root from a native button, with no Menu.Trigger, anchored to a point that cannot take
-// focus; ?detach anchors it to a button instead and removes the opener once the menu is open.
+// focus; ?detach anchors it to a button instead and removes the opener once the menu is open. ?reopen adds a second opener
+// beyond a control between them, and window.__close closes the menu in one commit, for reopening it while it still exits.
 function Anchored() {
   const [open, setOpen] = React.useState(false);
   const [gone, setGone] = React.useState(false);
   const detach = params.has('detach');
   const anchor = React.useRef(null);
+  window.__close = () => flushSync(() => setOpen(false));
   React.useEffect(() => {
     if (!open || !detach) return undefined;
     const timer = setTimeout(() => setGone(true), 100);
@@ -48,6 +51,8 @@ function Anchored() {
   }, [open, detach]);
   return h(React.Fragment, null,
     !gone && h('button', { id: 'opener', type: 'button', tabIndex: 0, onClick: () => setOpen(true) }, 'Open'),
+    params.has('reopen') && h('button', { id: 'between', type: 'button', tabIndex: 0 }, 'Between'),
+    params.has('reopen') && h('button', { id: 'second', type: 'button', tabIndex: 0, onClick: () => setOpen(true) }, 'Open from here'),
     detach ? h('button', { id: 'anchor', type: 'button', tabIndex: 0, ref: anchor }, 'Anchor') : h('span', { id: 'anchor', ref: anchor }),
     h(Menu.Root, { open, onOpenChange: setOpen }, h(Menu.Popup, { anchorRef: anchor }, list)));
 }
@@ -59,12 +64,14 @@ const toolbar = h(Toolbar, { 'aria-label': 'Formatting' },
   h(Button, { id: 'toolbar-first', tabIndex: 0 }, 'Bold'),
   menu,
   h(Button, { id: 'toolbar-last', tabIndex: 0 }, 'Italic'));
-createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+const content = h(React.Fragment, null,
   h('button', { id: 'before', tabIndex: 0 }, 'Before'),
   around.before,
   params.has('anchored') ? h(Anchored) : params.has('toolbar') ? toolbar : menu,
   around.after,
-  h(Button, { id: 'reference-button', tabIndex: 0 }, 'Reference')));
+  h(Button, { id: 'reference-button', tabIndex: 0 }, 'Reference'));
+// ?strict replays effects, as React does in development.
+createRoot(document.getElementById('root')).render(params.has('strict') ? h(React.StrictMode, null, content) : content);
 `;
 
 const page = pageShell({
@@ -202,6 +209,7 @@ for (const engine of browserEngines()) {
           { name: 'a trigger inside a Toolbar', query: '?toolbar', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' }, closedToo: true },
           // No Menu.Trigger: focus returns to the native button that opened the menu, or to the anchor once that is gone.
           { name: 'a menu opened from a native button', query: '?anchored', opener: '#opener', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
+          { name: 'a menu opened from a native button under StrictMode', query: '?anchored&strict', opener: '#opener', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
           { name: 'a menu whose opener is gone, from its anchor', query: '?anchored&detach', opener: '#opener', detached: true, expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
         ];
         for (const { name, query, opener = '#menu-trigger', detached = false, closedToo = false, expected } of scenarios) {
@@ -229,6 +237,31 @@ for (const engine of browserEngines()) {
             }
           });
         }
+        // The list stays mounted while the menu exits, so a menu reopened from another control then must remember that control.
+        await t.test('Tab and Shift+Tab after a menu reopens from another control while it exits', async () => {
+          for (const key of ['Tab', 'Shift+Tab']) {
+            const label = `${engine}: ${key} after reopening from the second control`;
+            const expected = { Tab: '#reference-button', 'Shift+Tab': '#between' }[key];
+            await visit('?anchored&reopen', '#opener');
+            await open('keyboard', { opener: '#opener' });
+            // One task: the first opening closes, the second control takes focus and opens the menu again before the exit ends.
+            const handedOver = await tab.evaluate(() => {
+              window.__close();
+              const second = document.querySelector('#second');
+              second.focus();
+              const focused = document.activeElement === second;
+              second.click();
+              return focused;
+            });
+            assert.equal(handedOver, true, `${label}: the second control takes focus when the first opening closes`);
+            await tab.locator('.muxui-menu-root[data-open]').waitFor({ state: 'attached', timeout: 5000 });
+            await tab.locator('[role="menuitem"]').first().focus();
+            await pollUntil(tab, () => document.activeElement?.closest('[role="menu"]') != null, undefined, { message: `${label}: focus enters the reopened menu`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+            await tab.keyboard.press(key);
+            await anyMenu.waitFor({ state: 'detached', timeout: 5000 }).catch(async () => assert.fail(`${label} left the menu open with focus on ${await stray()}`));
+            await pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), expected, { message: `${label} moves focus to ${expected}`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          }
+        });
         // Escape is unchanged: it closes the menu and returns focus to the trigger.
         await t.test('Escape returns focus to the trigger', async () => {
           await visit('');
