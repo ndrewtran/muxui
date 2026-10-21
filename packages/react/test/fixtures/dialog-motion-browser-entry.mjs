@@ -1,6 +1,6 @@
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { Dialog } from '../../src/overlays.mjs';
+import { Dialog } from '../../src/overlays.ts';
 
 function Fixture() {
   const [open, setOpen] = React.useState(false);

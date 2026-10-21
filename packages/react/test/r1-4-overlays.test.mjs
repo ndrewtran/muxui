@@ -21,7 +21,7 @@ const {
   ToastProvider,
   Tooltip,
   useToast,
-} = await import('../src/overlays.mjs');
+} = await import('../src/overlays.ts');
 moduleEnvironment.restore();
 
 function closedOverlayTree() {
@@ -38,9 +38,10 @@ function closedOverlayTree() {
 
 test('R1.4 overlay owners use RAC lifecycle primitives and expose MuxUI names only', async () => {
   const packageRoot = resolve(import.meta.dirname, '..');
-  const source = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
+  const source = await readFile(resolve(packageRoot, 'src/overlays.ts'), 'utf8');
   const index = await readFile(resolve(packageRoot, 'generated/index.mjs'), 'utf8');
-  const types = await readFile(resolve(packageRoot, 'generated/index.d.ts'), 'utf8');
+  // The index names the overlay types; tsc declares them in overlays.d.ts, which ships beside it.
+  const types = (await Promise.all(['index.d.ts', 'overlays.d.ts'].map((name) => readFile(resolve(packageRoot, 'generated', name), 'utf8')))).join('\n');
   assert.match(source, /from 'react-aria-components'/u);
   assert.match(source, /AriaDropZone|AriaFileTrigger|AriaModalOverlay|AriaPopover|AriaPreviewTrigger|AriaTooltipTrigger|UNSTABLE_ToastRegion/u);
   assert.doesNotMatch(source, /createPortal|document\.addEventListener|window\.setTimeout|setInterval/u);
@@ -340,7 +341,7 @@ test('React Aria DropZone keeps its hidden drop button as the root\'s first gran
     const dropZone = host.querySelector('.muxui-drop-zone');
     const wrapper = dropZone.firstElementChild;
     const dropButton = wrapper?.firstElementChild;
-    const message = 'React Aria DropZone no longer renders <root><VisuallyHidden><button/></VisuallyHidden>...</root>; update DropZone\'s onActivate target check in src/overlays.mjs';
+    const message = 'React Aria DropZone no longer renders <root><VisuallyHidden><button/></VisuallyHidden>...</root>; update DropZone\'s onActivate target check in src/overlays.ts';
     assert.equal(dropButton?.tagName, 'BUTTON', message);
     assert.equal(wrapper.childElementCount, 1, message);
     assert.equal(wrapper.contains(host.querySelector('#consumer')), false, message);

@@ -11648,7 +11648,7 @@
               "testingCost": "Prove drag, paste, keyboard activation, SSR, and disabled suppression with representative file items.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11678,7 +11678,7 @@
               "testingCost": "Prove focus-visible, drag-over, disabled, forced-colors, custom-child labeling, disabled-mid-drag cancellation, and suppression of any pending onActivate work after disable.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11708,7 +11708,7 @@
               "testingCost": "Prove no value/open controller is forwarded and disabled remains the only persistent public state.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11738,7 +11738,7 @@
               "testingCost": "Prove native file and directory items, custom string/text items, paste coordinates, callback order, disabled-mid-drag and onActivate-timer suppression, and that normalized async item methods remain usable after the synchronous handler returns.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11768,7 +11768,7 @@
               "testingCost": "Prove content remains inside the target and the hidden button does not become a required public child.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11798,7 +11798,7 @@
               "testingCost": "Prove state hooks in keyboard, pointer, disabled, and forced-colors states.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11828,7 +11828,7 @@
               "testingCost": "Deferred proof must cover keyboard DnD, operation negotiation, cancellation, drag previews, and collection integration.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11858,7 +11858,7 @@
               "testingCost": "Prove negative types and runtime callback payloads contain no event target or raw transfer object.",
               "proofRefs": [
                 "catalog/components/drop-zone/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:97-129",
+                "packages/react/src/overlays.ts:97-129",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11877,7 +11877,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/drop-zone/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:97-129",
+          "packages/react/src/overlays.ts:97-129",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -11917,7 +11917,7 @@
               "testingCost": "Prove keyboard/pointer activation, accept/multiple/directory/camera attributes, SSR, and disabled behavior.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11947,7 +11947,7 @@
               "testingCost": "Prove keyboard activation, focus visibility, disabled suppression, and native input exclusion from layout/accessibility tree.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -11977,7 +11977,7 @@
               "testingCost": "Prove no picker-open controller is forwarded and repeated selections remain observable.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12007,7 +12007,7 @@
               "testingCost": "Prove in a real browser one callback per selection, same-file reselection, native cancel with no callback, a selected empty FileList producing [] when observable, multiple files, directory selection, and disabled suppression.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12037,7 +12037,7 @@
               "testingCost": "Prove exactly one hidden input, activation forwarding, and no required compound children.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12067,7 +12067,7 @@
               "testingCost": "Prove focus ring, disabled state, forced-colors, and hidden-input styling.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12097,7 +12097,7 @@
               "testingCost": "Prove capture attribute mapping and graceful behavior where browsers ignore it.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12121,7 +12121,7 @@
               "testingCost": "Deferred proof must cover permissions, directory traversal, abort/cancel, security, and browser support.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12151,7 +12151,7 @@
               "testingCost": "Prove negative types and that onSelect receives ordinary File arrays only.",
               "proofRefs": [
                 "catalog/components/file-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:132-157",
+                "packages/react/src/overlays.ts:132-157",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12170,7 +12170,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/file-trigger/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:132-157",
+          "packages/react/src/overlays.ts:132-157",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -12208,7 +12208,7 @@
           "testingCost": "Prove focus containment/restoration, nested topmost behavior, keyboard/outside dismissal, trigger unmount, portal teardown, SSR/hydration, and the current Storybook contrast obligation.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12238,7 +12238,7 @@
               "testingCost": "Prove nested topmost overlays, initial focus, trigger-backed restoration, direct-modal restoration when the prior element still exists, safe handling of a removed restore target, trigger unmount, dismissable=false with no visible close/Escape/outside-pointer dismissal or hidden assistive dismiss, programmatic controlled closure, consumer-rendered completion/exit action, disabled controls behind the modal, SSR/hydration, and forced-colors focus.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12268,7 +12268,7 @@
               "testingCost": "Prove controlled close/open, default opening, trigger-owned state, callback ordering, and no state updates after unmount.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12298,7 +12298,7 @@
               "testingCost": "Prove callback once-per-transition, that every enabled dismissal source converges on onOpenChange(false), close button/Escape/outside-pointer behavior for both dismissable values, absence of a hidden assistive dismiss when false, programmatic controlled closure, consumer-rendered completion/exit action, trigger unmount, and controlled consumer veto.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12328,7 +12328,7 @@
               "testingCost": "Prove title association, close slot, backdrop relationship, nested modal structure, and SSR/hydration output.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12358,7 +12358,7 @@
               "testingCost": "Prove open/exit class timing, visible focus, forced-colors contrast, and the known current Dialog/Modal Storybook contrast issue as a proof obligation.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12388,7 +12388,7 @@
               "testingCost": "Prove nested/topmost overlays, trigger unmount while open, exit animation teardown, scroll lock/inertness, trigger-backed restoration, direct-modal restoration when the previous element remains, safe removed-target handling, and SSR/hydration teardown.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12412,7 +12412,7 @@
               "testingCost": "Deferred proof must cover custom roots, nested scopes, shadow DOM, SSR, and restoration on container removal.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12442,7 +12442,7 @@
               "testingCost": "Prove negative types, no raw donor names, and Storybook contrast review before implementation promotion.",
               "proofRefs": [
                 "catalog/components/dialog/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:159-205",
+                "packages/react/src/overlays.ts:159-205",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12461,7 +12461,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/dialog/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:159-205",
+          "packages/react/src/overlays.ts:159-205",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -12505,7 +12505,7 @@
               "testingCost": "Prove trigger relationship, named content, Escape/outside dismissal, portal teardown, and SSR/hydration.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12535,7 +12535,7 @@
               "testingCost": "Prove names, trigger ARIA, focus entry/return, Escape, outside press, and dismissable=false behavior.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12565,7 +12565,7 @@
               "testingCost": "Prove controlled veto, default opening, trigger toggling, callback order, and unmount teardown.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12595,7 +12595,7 @@
               "testingCost": "Prove implemented event normalization, each dismissal source converges on onOpenChange(false), one callback per transition, controlled veto, no public onDismiss/reason event, and no auto-close from unrelated content clicks.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12625,7 +12625,7 @@
               "testingCost": "Prove trigger IDs, content role, portal structure, and nested content focus.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12655,7 +12655,7 @@
               "testingCost": "Prove placement markers, focus visibility, entering/exiting cleanup, forced-colors, and portal styling.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12685,7 +12685,7 @@
               "testingCost": "Prove explicit Mux defaults, finite validation, RTL start/end, shouldFlip=false without opposing-side fallback, boundary shifting/collision adjustment, container padding, and scroll/resize repositioning in a real browser.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12709,7 +12709,7 @@
               "testingCost": "Deferred proof must cover nested portals, arrows, shadow DOM, custom boundaries, and RTL placement.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12739,7 +12739,7 @@
               "testingCost": "Prove negative types, no raw donor names, and no positioning object leakage at runtime.",
               "proofRefs": [
                 "catalog/components/popover/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:207-240",
+                "packages/react/src/overlays.ts:207-240",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12758,7 +12758,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/popover/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:207-240",
+          "packages/react/src/overlays.ts:207-240",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -12804,7 +12804,7 @@
               "testingCost": "Prove hover/focus/long press, warmup/cooldown, keyboard access, interactive content, safe-area transit, and unmount teardown.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12834,7 +12834,7 @@
               "testingCost": "Prove open-to-disabled and pending-delay-to-disabled transitions cancel timers/interactions, visually close or mask the overlay, and request onOpenChange(false) exactly once; prove disabled-to-enabled stays closed when uncontrolled, controlled owner refusal can keep open=true masked then reveal after re-enable, host and forwarding custom triggers expose aria-disabled=true/data-disabled while remaining focusable unless consumer-disabled/non-focusable, non-forwarding custom components fail the focusable trigger contract, no DOM wrapper is inserted, and native disabled is never changed.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12864,7 +12864,7 @@
               "testingCost": "Prove controlled open/close, default opening, timer cancellation on controlled close, and disabled transitions.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12894,7 +12894,7 @@
               "testingCost": "Prove default/custom timing, warmup/cooldown sequencing, one false request per open/pending disable transition, disabled trigger suppression, controlled veto/masking, uncontrolled closed-after-re-enable behavior, and close-on-disable.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12924,7 +12924,7 @@
               "testingCost": "Prove trigger/content labeling, non-modal absence of underlay, interactive child reachability, and portal teardown.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12954,7 +12954,7 @@
               "testingCost": "Prove hover/focus/disabled/open/closing selectors, forced-colors contrast, and portal styling.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -12984,7 +12984,7 @@
               "testingCost": "Prove explicit Mux defaults, finite validation, shouldFlip=false without opposing-side fallback, boundary shifting/collision adjustment, RTL start/end, scroll/resize, safe-area transit, and non-modal focus in a real browser.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13008,7 +13008,7 @@
               "testingCost": "Deferred proof must cover custom containers, nested previews, pointer cancellation, animation swaps, and shadow DOM.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13038,7 +13038,7 @@
               "testingCost": "Prove negative types and no raw state/context leakage through preview callbacks or DOM props.",
               "proofRefs": [
                 "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:251-274",
+                "packages/react/src/overlays.ts:251-274",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13057,7 +13057,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/preview-trigger/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:251-274",
+          "packages/react/src/overlays.ts:251-274",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -13103,7 +13103,7 @@
               "testingCost": "Prove queue insertion, overflow beyond maxVisible, visibility cap, timeout, explicit dismissal, declarative teardown, provider unmount, observable hidden queued teardown with no user-visible effect, SSR, and hydration.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13133,7 +13133,7 @@
               "testingCost": "Prove announcement text, title fallback, region label, close keyboard access, high-contrast focus, and no duplicate announcement on rerender.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13163,7 +13163,7 @@
               "testingCost": "Prove stable manager identity, maxVisible normalization, FIFO/visibility behavior, remove idempotence, and no exposed queue state.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13193,7 +13193,7 @@
               "testingCost": "Prove overflow beyond maxVisible, timeout, close button, manager remove, visible and hidden queued removal, declarative/provider unmount, duplicate close, hover/focus pause and resume, absence of post-teardown observable state changes or user-visible effects, and at-most-once callback settlement even when hidden timeout handles remain scheduled.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13223,7 +13223,7 @@
               "testingCost": "Prove title/message association, dismiss control placement, region list structure, and multiple-toast ordering.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13253,7 +13253,7 @@
               "testingCost": "Prove variants, placement, forced-colors, focus, entering/removing state, and multiple visible toasts.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13283,7 +13283,7 @@
               "testingCost": "Prove count normalization, overflow beyond maxVisible, all placements, RTL, viewport edges, announcement order, and no post-teardown effect from hidden queued timeout handles.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13307,7 +13307,7 @@
               "testingCost": "Deferred proof must cover promise resolution/rejection, action focus, swipe cancellation, updates, deduplication, and announcement changes.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13331,7 +13331,7 @@
               "testingCost": "Deferred proof must cover queue replacement, hidden timer cancellation, provider unmount, background throttling, and callback settlement across visible and hidden toasts.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13361,7 +13361,7 @@
               "testingCost": "Prove negative types, no unstable exports in generated API, and callback payload stability.",
               "proofRefs": [
                 "catalog/components/toast/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:302-403",
+                "packages/react/src/overlays.ts:302-403",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13380,7 +13380,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/toast/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:302-403",
+          "packages/react/src/overlays.ts:302-403",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -13424,7 +13424,7 @@
               "testingCost": "Prove keyboard focus, pointer hover, delay/close, Escape, one-tooltip sequencing, portal teardown, and SSR/hydration.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13454,7 +13454,7 @@
               "testingCost": "Prove open-to-disabled and pending-delay-to-disabled transitions cancel timers/interactions, visually close or mask the overlay, and request onOpenChange(false) exactly once; prove disabled-to-enabled stays closed when uncontrolled, controlled owner refusal can keep open=true masked then reveal after re-enable, host and forwarding custom triggers expose aria-disabled=true/data-disabled while remaining focusable unless consumer-disabled/non-focusable, non-forwarding custom components fail the focusable trigger contract, aria-describedby linkage, no DOM wrapper is inserted, and native disabled is never changed.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13484,7 +13484,7 @@
               "testingCost": "Prove controlled veto, default open, timer cancellation, one-tooltip sequencing, and disabled transitions.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13514,7 +13514,7 @@
               "testingCost": "Prove default/custom timing, pointer/focus modality, Escape, one false request per open/pending disable transition, disabled trigger suppression, controlled veto/masking, uncontrolled closed-after-re-enable behavior, and close-on-disable.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13544,7 +13544,7 @@
               "testingCost": "Prove trigger linkage, role tooltip, portal teardown, focus return, and multiple tooltips sequencing.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13574,7 +13574,7 @@
               "testingCost": "Prove placement, focus/disabled contrast, forced-colors, transition cleanup, and portal styling.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13604,7 +13604,7 @@
               "testingCost": "Prove explicit Mux defaults, finite validation, shouldFlip=false without opposing-side fallback, boundary shifting/collision adjustment, RTL start/end, scroll/resize, viewport padding, and aria-describedby after repositioning in a real browser.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13628,7 +13628,7 @@
               "testingCost": "Deferred proof must cover nested providers, shadow DOM, arrows, custom boundaries, and teardown while hovered.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13658,7 +13658,7 @@
               "testingCost": "Prove negative types, no raw donor names, and stable Mux callbacks/DOM hooks only.",
               "proofRefs": [
                 "catalog/components/tooltip/artifact.json#bindings/web.react",
-                "packages/react/src/overlays.mjs:276-300",
+                "packages/react/src/overlays.ts:276-300",
                 "packages/react/test/r1-4-overlays.test.mjs",
                 "packages/react/test/types.test.tsx"
               ],
@@ -13677,7 +13677,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tooltip/artifact.json#bindings/web.react",
-          "packages/react/src/overlays.mjs:276-300",
+          "packages/react/src/overlays.ts:276-300",
           "packages/react/test/r1-4-overlays.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

@@ -36,7 +36,7 @@ const records = [
   { family: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.mjs' },
   { family: 'RangeCalendar', slug: 'range-calendar', source: 'packages/react/src/collections.mjs' },
   { family: 'Button', slug: 'button', source: 'packages/react/src/button.mjs' },
-  { family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.mjs' },
+  { family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.ts' },
 ];
 
 const inheritedStorybookEnvironmentKeys = ['MUXUI_STORYBOOK_AUDIT_EVENT', 'MUXUI_STORYBOOK_AUDIT_FORCE', 'GITHUB_EVENT_NAME'];

@@ -5,7 +5,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 // One client-rendered fixture per scenario, selected by `?scenario=`.
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
-  import { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, useToast } from '/src/overlays.mjs';
+  import { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, useToast } from '/src/overlays.ts';
   import { Button } from '/src/button.ts';
   import '/generated/styles.css';
   const h = React.createElement;
@@ -137,7 +137,7 @@ let browser;
 
 before(async () => {
   server = await startServer({
-    entries: ['src/overlays.mjs'],
+    entries: ['src/overlays.ts'],
     pages: { '/overlay-interactions.html': pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', body: '<div id="root"></div>', entry: '/overlay-interactions-entry.mjs' }) },
     modules: { '/overlay-interactions-entry.mjs': entry },
   });

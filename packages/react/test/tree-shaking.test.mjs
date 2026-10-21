@@ -15,13 +15,13 @@ test('tsc keeps the pure annotation on Disclosure\'s wrapper', () => {
   assert.match(emitted, /^export const Disclosure = \/\*#__PURE__\*\/ \(\(\) => \{$/mu);
 });
 
-/** The package modules a bundle of `import { <name> } from components.js` keeps, as paths under generated/. */
-async function bundledModules(name) {
+/** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/. */
+async function bundledModules(name, module = 'components.js') {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const directory = mkdtempSync(join(packageRoot, 'build', 'tree-shaking-'));
   try {
     const entry = join(directory, 'entry.mjs');
-    writeFileSync(entry, `export { ${name} } from '${relative(directory, resolve(generated, 'components.js')).replaceAll('\\', '/')}';\n`);
+    writeFileSync(entry, `export { ${name} } from '${relative(directory, resolve(generated, module)).replaceAll('\\', '/')}';\n`);
     const bundle = await build({
       root: directory,
       configFile: false,
@@ -53,4 +53,28 @@ test('a bundle that uses another component from components.js drops Disclosure a
   // The control: using Disclosure keeps the motion module its panel needs.
   const withDisclosure = await bundledModules('Disclosure');
   assert.ok(withDisclosure.includes('components.js') && withDisclosure.includes('motion-components.mjs'));
+});
+
+// Dialog (a pure-annotated wrapper) and Popover (a pure-annotated forwardRef) are the two overlays
+// whose motion modules only they need. Without the annotation, a bundler keeps both whenever any
+// overlay is imported, for the same reason as Disclosure above.
+test('tsc keeps the pure annotation on Dialog\'s wrapper and Popover\'s forwardRef', () => {
+  const emitted = readFileSync(resolve(generated, 'overlays.js'), 'utf8');
+  assert.match(emitted, /^export const Dialog = \/\*#__PURE__\*\/ \(\(\) => \{$/mu);
+  assert.match(emitted, /^export const Popover = \/\*#__PURE__\*\/ React\.forwardRef\(/mu);
+  assert.match(emitted, /^const PopupContent = \/\*#__PURE__\*\/ React\.forwardRef\(/mu);
+});
+
+test('a bundle that uses another overlay drops Dialog, Popover, and their motion modules', async () => {
+  const tooltipOnly = await bundledModules('Tooltip', 'overlays.js');
+  assert.ok(tooltipOnly.includes('overlays.js'));
+  assert.equal(tooltipOnly.includes('dialog-motion.mjs'), false);
+  assert.equal(tooltipOnly.includes('popover-motion.mjs'), false);
+  // The controls: using Dialog keeps the modal motion, and using Popover keeps the popover motion.
+  const withDialog = await bundledModules('Dialog', 'overlays.js');
+  assert.ok(withDialog.includes('dialog-motion.mjs'));
+  assert.equal(withDialog.includes('popover-motion.mjs'), false);
+  const withPopover = await bundledModules('Popover', 'overlays.js');
+  assert.ok(withPopover.includes('popover-motion.mjs'));
+  assert.equal(withPopover.includes('dialog-motion.mjs'), false);
 });

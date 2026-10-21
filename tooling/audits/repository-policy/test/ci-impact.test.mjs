@@ -325,7 +325,7 @@ test('generated CSF export changes select only the matching page ID', async () =
 
 test('Storybook CI family selections project substrate families through public exports', async () => {
   const recordsWithModal = [...records, {
-    family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.mjs', parts: ['root', 'trigger', 'panel'],
+    family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.ts', parts: ['root', 'trigger', 'panel'],
   }];
   const sharedStorybook = await plan(['apps/react-storybook/src/storybook-factory.mjs'], { records: recordsWithModal });
   const families = sharedStorybook.storyRuns[0].families;
@@ -337,7 +337,7 @@ test('Storybook CI family selections project substrate families through public e
   assert.ok(selected.includes('Dialog'));
   assert.ok(!selected.includes('Modal'));
 
-  const overlaysPath = 'packages/react/src/overlays.mjs';
+  const overlaysPath = 'packages/react/src/overlays.ts';
   const dialogBefore = 'export const Dialog = () => null;';
   const dialogAfter = 'export const Dialog = () => 1;';
   const sourceChange = await plan([overlaysPath], {

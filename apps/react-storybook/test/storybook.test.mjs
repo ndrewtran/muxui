@@ -300,8 +300,8 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     historicalManifest.families.map(({ family }) => family).sort(),
     'every exact manifest family has a substantive Browser Proof plan',
   );
-  // The index names the types of Button and the R1.1 families from tsc's declarations of their sources.
-  const publicTypes = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts']
+  // The index names the types of Button, the R1.1 families, and the overlays from tsc's declarations of their sources.
+  const publicTypes = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'overlays.d.ts']
     .map((name) => readFile(resolve(repositoryRoot, 'packages/react/generated', name), 'utf8')))).join('\n');
   let pairCount = 0;
   let eventCount = 0;
@@ -373,7 +373,8 @@ function currentRecord(family) {
   return { family, tranche: manifestByFamily.get(family).tranche, binding };
 }
 
-const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/index.d.ts'), 'utf8');
+// MuxUIPlacement is declared by tsc with the overlays that take it; the index only names it.
+const overlayTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/overlays.d.ts'), 'utf8');
 // Truncated image data: the browser fires an error event instead of loading it.
 const AVATAR_FAILING_SRC = 'data:image/png;base64,AAAA';
 const supplementalTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/supplemental.d.ts'), 'utf8');
@@ -686,7 +687,7 @@ test('named adapter state specimens render actual items, progress values, and or
 
 test('controls offer only what the public types admit and match their value kinds', () => {
   const controls = (family) => argTypesForBinding(currentRecord(family).binding);
-  const placements = declaredUnion(publicTypes, 'MuxUIPlacement');
+  const placements = declaredUnion(overlayTypes, 'MuxUIPlacement');
   assert.equal(placements.length, 12);
   for (const family of ['Menu', 'Popover', 'PreviewTrigger', 'Select', 'Tooltip']) {
     assert.deepEqual(controls(family).placement.options, placements, family);
@@ -1849,7 +1850,7 @@ test('control inference and composition adapters preserve canonical values', () 
   assert.equal(argTypesForBinding(dialogBinding).children.control, 'text');
   assert.deepEqual(
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Popover')).placement.options,
-    declaredUnion(publicTypes, 'MuxUIPlacement'),
+    declaredUnion(overlayTypes, 'MuxUIPlacement'),
   );
   assert.deepEqual(
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Toast')).variant.options,
