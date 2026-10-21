@@ -9,6 +9,7 @@ const SOURCE_ROUTES = Object.freeze({
   button: ['test/fixture.test.mjs'],
   components: ['test/components.test.mjs'],
   fields: ['test/fields.test.mjs', 'test/browser/form-fields.test.mjs'],
+  calendar: ['test/r1-3-parity.test.mjs'],
   collections: ['test/r1-3-parity.test.mjs'],
   overlays: ['test/r1-4-overlays.test.mjs'],
   markdown: ['test/heavy-components.test.mjs'],
