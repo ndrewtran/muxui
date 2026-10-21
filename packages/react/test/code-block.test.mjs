@@ -10,7 +10,7 @@ import { highlightCodeDocuments } from '../src/supplemental/code-block-highlight
 
 // React Aria selects its client layout hooks when the overlay module loads.
 const moduleEnvironment = installDom(new JSDOM('<!doctype html><div id="root"></div>'), { layoutStubs: true });
-const { CodeBlock } = await import('../src/supplemental/code-block.mjs');
+const { CodeBlock } = await import('../src/supplemental/code-block.ts');
 moduleEnvironment();
 
 const e = (props) => React.createElement(CodeBlock, props);

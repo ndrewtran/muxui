@@ -119,6 +119,8 @@ const GUIDES = {
   // aria-label and aria-labelledby name the field when it has no label, and {id, label, value} is the record the guide describes in words.
   autocomplete: { native: ['aria-label', 'aria-labelledby', '{id, label, value}'] },
   // The heading markers and levels, the pre element, a fragment link, and the link schemes are Markdown syntax, HTML, and URL parts.
+  // The patch markers a mistaken source starts its lines with.
+  'code-block': { native: ['+', '-'] },
   markdown: { native: ['#', '##', '###', 'h1', 'h2', 'pre', '#summary', 'http', 'https', 'mailto'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
@@ -334,6 +336,14 @@ test('the defaults and finite values the derived guides state are their derived 
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);
   assert.match(popover, /Popover is modal by default\./u);
   assert.equal(popoverApi.api.defaults.modal, true);
+
+  // CodeBlock is in code mode, shows line numbers, and scrolls long lines by default, which its guide teaches before each choice.
+  const [codeBlock, codeBlockApi] = await Promise.all([guide('code-block'), derivedApi('code-block')]);
+  assert.match(codeBlock, new RegExp(`Use ${codeBlockApi.api.defaults.mode} mode, the default, for a listing\\.`, 'u'));
+  assert.equal(codeBlockApi.api.defaults.lineNumbers, true);
+  assert.match(codeBlock, /Line numbers are on by default\./u);
+  assert.equal(codeBlockApi.api.defaults.wrap, false);
+  assert.match(codeBlock, /Long lines scroll sideways by default\. Set `wrap` to wrap them/u);
 
   // Markdown's behavior text states the fallback it renders when the content is rejected.
   const [markdownRecord, markdownApi] = await Promise.all([read('catalog/components/markdown/artifact.json').then(JSON.parse), derivedApi('markdown')]);

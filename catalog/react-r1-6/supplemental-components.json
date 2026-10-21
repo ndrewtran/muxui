@@ -97,7 +97,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/code-block.mjs",
+      "runtimeSource": "packages/react/src/supplemental/code-block.ts",
       "styleSource": "packages/react/src/supplemental/code-block.css"
     },
     {
