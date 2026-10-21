@@ -50,6 +50,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'text-field', name: 'TextField', source: 'packages/react/src/fields.ts' },
   { slug: 'search-field', name: 'SearchField', source: 'packages/react/src/fields.ts' },
   { slug: 'autocomplete', name: 'Autocomplete', source: 'packages/react/src/fields.ts' },
+  { slug: 'markdown', name: 'Markdown', source: 'packages/react/src/markdown/index.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

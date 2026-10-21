@@ -118,6 +118,8 @@ const GUIDES = {
   'search-field': { native: ['preventDefault'] },
   // aria-label and aria-labelledby name the field when it has no label, and {id, label, value} is the record the guide describes in words.
   autocomplete: { native: ['aria-label', 'aria-labelledby', '{id, label, value}'] },
+  // The heading markers and levels, the pre element, a fragment link, and the link schemes are Markdown syntax, HTML, and URL parts.
+  markdown: { native: ['#', '##', '###', 'h1', 'h2', 'pre', '#summary', 'http', 'https', 'mailto'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -332,6 +334,10 @@ test('the defaults and finite values the derived guides state are their derived 
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);
   assert.match(popover, /Popover is modal by default\./u);
   assert.equal(popoverApi.api.defaults.modal, true);
+
+  // Markdown's behavior text states the fallback it renders when the content is rejected.
+  const [markdownRecord, markdownApi] = await Promise.all([read('catalog/components/markdown/artifact.json').then(JSON.parse), derivedApi('markdown')]);
+  assert.ok(markdownRecord.bindings['web.react'].behavior.some((line) => line.includes(`defaults to the text ${markdownApi.api.defaults.invalidFallback}.`)));
 
   // DataDiff states its row kinds and its description default.
   const [dataDiff, dataDiffApi] = await Promise.all([guide('data-diff'), derivedApi('data-diff')]);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
-import { Markdown } from '../../../packages/react/generated/markdown.mjs';
+import { Markdown } from '../../../packages/react/generated/markdown.js';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
 import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
 import selectNativeApi from '../../../packages/react/api/select-native.json' with { type: 'json' };

@@ -48,10 +48,10 @@ export function startVariantServer(variant) {
     aliasReact: true,
     // The subpath comes first: an alias matches by prefix, so the package name alone would swallow it.
     alias: {
-      '@muxui/react/markdown': resolve(packageRoot, 'generated/markdown.mjs'),
+      '@muxui/react/markdown': resolve(packageRoot, 'generated/markdown.js'),
       '@muxui/react': resolve(packageRoot, 'generated/index.mjs'),
     },
-    entries: ['packages/react/generated/index.mjs', 'packages/react/generated/markdown.mjs', variant.source],
+    entries: ['packages/react/generated/index.mjs', 'packages/react/generated/markdown.js', variant.source],
     pages: {
       '/block.html': (url) => pageShell({
         attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}" data-muxui-motion="full"`,
