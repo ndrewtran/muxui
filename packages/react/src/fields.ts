@@ -1201,7 +1201,7 @@ export const CheckboxGroup: ForwardRefExoticComponent<CheckboxGroupProps & RefAt
   onChange,
   disabled = false,
   orientation = 'vertical',
-  size,
+  size = 'md',
   readOnly = false,
   required = false,
   invalid = false,

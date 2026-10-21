@@ -100,6 +100,8 @@ const GUIDES = {
   form: { native: ['required', 'type', 'pattern'] },
   // className is the native attribute the sizing example sets; the width custom property and `width` are CSS; NaN, 0, null, and Number.isNaN are JavaScript.
   'number-field': { native: ['className', '--muxui-component-number-field-width', 'width', 'NaN', '0', 'null', 'Number.isNaN', 'JSON.stringify(NaN)', 'inputMode="numeric"'] },
+  // FormData.get and FormData.getAll read the group's repeated entries.
+  'checkbox-group': { native: ['FormData.get', 'FormData.getAll'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -305,6 +307,10 @@ test('the defaults and finite values the derived guides state are their derived 
   const [form, formApi] = await Promise.all([guide('form'), derivedApi('form')]);
   assert.equal(/^- `([^`]+)` is the default\./mu.exec(section(form, 'Validation timing'))?.[1], formApi.api.defaults.validationBehavior);
   assert.deepEqual(bulletSubjects(form, 'Validation timing').sort(), [...formApi.api.propDetails.validationBehavior.enum].sort(), 'the guide covers both validation timings');
+
+  // CheckboxGroup stacks its options vertically by default, which its guide teaches before the horizontal choice.
+  const [checkboxGroup, checkboxGroupApi] = await Promise.all([guide('checkbox-group'), derivedApi('checkbox-group')]);
+  assert.equal(/Use the default (\w+) layout/u.exec(checkboxGroup)?.[1], checkboxGroupApi.api.defaults.orientation);
 
   // Popover is modal by default, which its guide teaches before the non-modal choice.
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);

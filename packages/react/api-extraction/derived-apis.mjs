@@ -41,6 +41,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'dialog', name: 'Dialog', source: 'packages/react/src/overlays.ts' },
   { slug: 'form', name: 'Form', source: 'packages/react/src/fields.ts' },
   { slug: 'number-field', name: 'NumberField', source: 'packages/react/src/fields.ts' },
+  { slug: 'checkbox-group', name: 'CheckboxGroup', source: 'packages/react/src/fields.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
