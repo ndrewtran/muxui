@@ -1118,13 +1118,62 @@ test('R1.2 readonly autocomplete only permits viewing suggestions', async () => 
   }
 });
 
-test('R1.2 autocomplete placeholder stays aligned across artifact, types, and runtime', async () => {
-  const [artifactSource, typesSource] = await Promise.all([
-    readFile(new URL('../../../catalog/components/autocomplete/artifact.json', import.meta.url), 'utf8'),
+// React DOM loads before jsdom here, so it detects text edits through its keyup value-polling fallback.
+function typeInto(input, text) {
+  input.focus();
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, text);
+  input.dispatchEvent(new KeyboardEvent('keyup', { key: text.at(-1), bubbles: true }));
+}
+
+// handleSelect and handleInputChange each return early for a disabled field, a read-only field, and (typing only) the
+// reset of the form it sits in. React Aria already stops a disabled input reporting typing, so the disabled typing
+// guard is defence in depth that no DOM event reaches; the other guards each fail this test when removed.
+test('Autocomplete ignores choosing and typing once disabled or read-only, and the echo of its own form reset', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const changes = [];
+  const selected = [];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderField = (extra) => React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'], onChange: (value) => changes.push(value), onSelect: (item) => selected.push(item), ...extra });
+    await act(async () => root.render(renderField()));
+    const input = host.querySelector('.muxui-autocomplete input');
+    await act(async () => input.focus());
+    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
+    await act(async () => root.render(renderField({ readOnly: true })));
+    await act(async () => typeInto(input, 'Syd'));
+    assert.deepEqual(changes, [], 'a read-only field reports no typing');
+    await act(async () => root.render(renderField({ disabled: true })));
+    await act(async () => typeInto(input, 'Mel'));
+    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    assert.deepEqual(changes, [], 'a disabled field reports no typing or choice');
+    assert.deepEqual(selected, [], 'a disabled field selects nothing');
+
+    // Typing in a form reports the text; the form's reset restores the default without reporting its own changes.
+    await act(async () => root.render(React.createElement(Form, null, renderField({ name: 'city', defaultValue: 'Sydney' }))));
+    const formInput = host.querySelector('form input[role="combobox"]');
+    await act(async () => typeInto(formInput, 'Mel'));
+    assert.deepEqual(changes, ['Mel']);
+    assert.equal(formInput.value, 'Mel');
+    await act(async () => host.querySelector('form').reset());
+    assert.equal(formInput.value, 'Sydney');
+    assert.deepEqual(changes, ['Mel'], 'the reset reports nothing');
+    assert.deepEqual(selected, []);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('R1.2 autocomplete placeholder stays aligned across its derived API, types, and runtime', async () => {
+  const [derivedSource, typesSource] = await Promise.all([
+    readFile(new URL('../api/autocomplete.json', import.meta.url), 'utf8'),
     readFile(new URL('../generated/fields.d.ts', import.meta.url), 'utf8'),
   ]);
-  const artifact = JSON.parse(artifactSource);
-  assert.equal(artifact.bindings['web.react'].api.props.includes('placeholder'), true);
+  assert.equal(JSON.parse(derivedSource).api.props.includes('placeholder'), true);
   assert.match(typesSource, /export type AutocompleteOwnProps = \{[^}]*?placeholder\?: string;/u);
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', placeholder: 'Search city' }));
   assert.match(server, /placeholder="Search city"/u);

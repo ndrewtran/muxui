@@ -116,6 +116,8 @@ const GUIDES = {
   'text-field': { native: ['autoComplete', 'inputMode', 'event.target.value', 'onChange={setName}'] },
   // preventDefault is the native keydown event's method the guide tells the input props to call.
   'search-field': { native: ['preventDefault'] },
+  // aria-label and aria-labelledby name the field when it has no label, and {id, label, value} is the record the guide describes in words.
+  autocomplete: { native: ['aria-label', 'aria-labelledby', '{id, label, value}'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

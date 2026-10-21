@@ -1671,16 +1671,16 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
     label,
     description,
     errorMessage,
-    items = [],
+    items,
     value,
-    defaultValue,
+    defaultValue = '',
     onChange,
     onSelect,
     disabled = false,
     readOnly = false,
     required = false,
     invalid = false,
-    size,
+    size = 'md',
     validationBehavior: _validationBehavior,
     name,
     placeholder,
@@ -1701,7 +1701,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
     // Prop-sourced entries resolve their label on every render, so items that
     // load after the value still show its label. Typed and selected entries
     // keep their own text.
-    const [storedEntry, setEntry] = React.useState<AutocompleteEntry>(() => ({ fromProp: value ?? defaultValue ?? '' }));
+    const [storedEntry, setEntry] = React.useState<AutocompleteEntry>(() => ({ fromProp: (value === undefined || value === null ? defaultValue : value) ?? '' }));
     const storedValue = storedEntry.fromProp ?? storedEntry.selected ?? storedEntry.text;
     // A controlled value that differs from the last edit came from outside.
     const entry = value !== undefined && value !== storedValue
@@ -1800,7 +1800,8 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
     }, [suggestionsOpen]);
     const filter = (textValue: string, inputValue: string) => textValue.toLocaleLowerCase().includes(inputValue.toLocaleLowerCase());
     const handleSelect = (key: Key) => {
-      if (disabled || readOnly) return;
+      if (disabled) return;
+      if (readOnly) return;
       const keyText = String(key);
       const item = filteredItems.find((candidate) => String(candidate.id) === keyText);
       if (item) {
@@ -1815,7 +1816,9 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
     };
     const handleInputChange = (next: string) => {
       clearPendingFocusRestore();
-      if (disabled || readOnly || resettingRef.current) return;
+      if (disabled) return;
+      if (readOnly) return;
+      if (resettingRef.current) return;
       externalValidation.dismiss();
       setEntry({ text: next, selected: null });
       onChange?.(next);
@@ -1860,7 +1863,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
       onInputChange: handleInputChange,
       children: CHILDREN_FOLLOW,
     }, React.createElement(AriaSearchField, {
-      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
+      ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
       // Keep RAC's name private: the hidden input below submits the value.
       name: undefined,
       className: 'muxui-autocomplete-search',
