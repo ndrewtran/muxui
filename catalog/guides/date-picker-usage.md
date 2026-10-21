@@ -14,12 +14,12 @@ Choose by how far the date is from today.
 
 ## Date and open state
 
-The date and the open state are separate, so the application can control either one or both. The Controlled date and open state example opens the calendar from a button, clears the date, and makes weekends unavailable. The unavailable-date callback receives each date as a `YYYY-MM-DD` string. The [Behavior](#behavior) section lists what choosing and clearing a date do, and the [API reference](#api-reference) lists the props.
+The date and the open state are separate, so the application can control either one or both. The Controlled date and open state example opens the calendar from a button, clears the date, and blocks weekends with `unavailableDateMatcher`, which receives each date as a `YYYY-MM-DD` string. The [Behavior](#behavior) section lists what choosing and clearing a date do, and the [API reference](#api-reference) lists the props.
 
 ## Content
 
 - Name the date by its role, such as Due date or Delivery date, not Date.
-- Say why a date cannot be chosen in the description, such as Weekends are unavailable, because an unavailable date simply cannot be selected.
+- Say why a date cannot be chosen in the description, such as Weekends cannot be chosen, because a blocked date simply cannot be selected.
 
 ## Common mistake
 

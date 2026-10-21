@@ -1,0 +1,286 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/fields.ts",
+  "component": "muxui:component:date-picker",
+  "binding": "web.react",
+  "export": "DatePicker",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "value",
+      "defaultValue",
+      "minValue",
+      "maxValue",
+      "unavailableDateMatcher",
+      "open",
+      "defaultOpen",
+      "disabled",
+      "size",
+      "readOnly",
+      "required",
+      "invalid",
+      "name"
+    ],
+    "events": [
+      "change",
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "disabled": false,
+      "size": "md",
+      "readOnly": false,
+      "required": false,
+      "invalid": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+      },
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIDateValue"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The date as YYYY-MM-DD, when the caller controls it. null keeps a controlled field empty. Any other string throws a TypeError."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The starting date as YYYY-MM-DD, when the field controls itself."
+      },
+      "minValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The earliest date, inclusive. A value before it stays visible and invalid. A minValue later than maxValue throws a TypeError."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The latest date, inclusive. A value after it stays visible and invalid."
+      },
+      "unavailableDateMatcher": {
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "date",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "boolean"
+          }
+        },
+        "required": false,
+        "description": "Returns true for a date that is unavailable, given as a YYYY-MM-DD string. An unavailable date cannot be chosen in the calendar."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the calendar is open, when the caller controls it. It is independent of the date: controlling one does not control the other."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the calendar starts open, when the picker controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ControlSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its date stays visible and focusable but cannot be changed."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required, so a form with native validation does not submit while it is empty."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named field submits YYYY-MM-DD, or an empty string while it is empty."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUIDateValue"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new date as YYYY-MM-DD, or with null when the field is cleared."
+      },
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new open state when the calendar opens or closes, including when choosing a date closes it."
+      }
+    },
+    "types": {
+      "ControlSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The shared control sizes."
+      },
+      "MuxUIDateValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A calendar date as an ISO string, `YYYY-MM-DD`, with no time or time zone."
+      }
+    }
+  }
+}
