@@ -25,17 +25,21 @@ export class ApiExtractionError extends Error {
 
 /**
  * The host types a Mux UI-owned prop may reach, each one exact type: a DOM or Intl library
- * name, or `React.<Name>` from @types/react. It grows per tranche, only by what a moved
- * component needs: HTMLButtonElement for the activation target of Button, IconButton, and
- * ToggleButton, React.ReactNode for the content props of SelectNative, Message, Activity,
- * Disclosure, Meter, and ProgressBar, HTMLAnchorElement for Link's activation target, and
- * NumberFormatOptions (written `Intl.NumberFormatOptions`) for Meter's formatOptions.
+ * name, or `React.<Name>` from @types/react, written as a string; or an exact application of
+ * a host generic, written as the serialized `{ kind: 'host', name, typeArguments }` it
+ * extracts to. It grows per tranche, only by what a moved component needs: HTMLButtonElement
+ * for the activation target of Button, IconButton, and ToggleButton, React.ReactNode for the
+ * content props of SelectNative, Message, Activity, Disclosure, Meter, and ProgressBar,
+ * HTMLAnchorElement for Link's activation target, and NumberFormatOptions (written
+ * `Intl.NumberFormatOptions`) for Meter's formatOptions.
  */
 export const HOST_ALLOWLIST = Object.freeze(['HTMLButtonElement', 'React.ReactNode', 'HTMLAnchorElement', 'NumberFormatOptions']);
 
 // A namespace or wildcard would admit every type under it.
 const EXACT_HOST_TYPE = /^(?:React\.)?[A-Z][A-Za-z0-9]*$/u;
 const NAMESPACES = new Set(['React', 'JSX', 'globalThis']);
+const REFERENCE_NAME = /^[A-Z][A-Za-z0-9]*$/u;
+const REACT_TYPES = /\/node_modules\/@types\/react\//u;
 
 const KEYWORDS = new Map([
   [SyntaxKind.StringKeyword, 'string'],
@@ -80,14 +84,91 @@ function propertyName(node, chain) {
   throw new ApiExtractionError(chain, 'a computed property name is not in the grammar');
 }
 
-/** Validates the host allowlist: each entry names one exact type. */
+const sortKeys = (value) => (Array.isArray(value)
+  ? value.map(sortKeys)
+  : value !== null && typeof value === 'object'
+    ? Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, child]) => [key, sortKeys(child)]))
+    : value);
+
+/**
+ * The key an allowlist entry matches by: a name is its own key, and an application is its
+ * serialized form with sorted object keys, so arguments match exactly and in order.
+ */
+export const hostEntryKey = (entry) => (typeof entry === 'string' ? entry : JSON.stringify(sortKeys(entry)));
+
+const SCALARS = new Set(['string', 'number', 'boolean', 'void', 'null', 'undefined']);
+
+/**
+ * Throws unless a serialized type is one an application's argument may be: a keyword, a
+ * literal, a Mux UI-owned reference, a union of those, or an exact host name or application,
+ * with no key beyond the serialized form.
+ */
+function assertSerializedType(type, entry) {
+  const fail = (message) => {
+    throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} ${message}`);
+  };
+  const shape = (...keys) => {
+    if (Object.keys(type).sort().join() !== [...keys].sort().join()) fail(`holds a ${type.kind} type that is not written as exactly ${keys.join(', ')}`);
+  };
+  if (type === null || typeof type !== 'object' || Array.isArray(type)) fail('has a type argument that is not a serialized type');
+  if (SCALARS.has(type.kind)) {
+    shape('kind');
+  } else if (type.kind === 'literal') {
+    shape('kind', 'value');
+    if (!['string', 'number', 'boolean'].includes(typeof type.value)) fail('has a literal that is not a string, number, or boolean');
+  } else if (type.kind === 'reference') {
+    shape('kind', 'name');
+    if (typeof type.name !== 'string' || !REFERENCE_NAME.test(type.name)) fail('has a reference that does not name one Mux UI-owned type');
+  } else if (type.kind === 'union') {
+    shape('kind', 'members');
+    if (!Array.isArray(type.members) || type.members.length < 2) fail('has a union with fewer than two members');
+    for (const member of type.members) assertSerializedType(member, entry);
+  } else if (type.kind === 'host') {
+    assertHostName(type.name, entry);
+    if (type.typeArguments === undefined) shape('kind', 'name');
+    else assertArguments(type, entry);
+  } else {
+    fail(`has a ${JSON.stringify(type.kind)} type argument; an argument is a keyword, literal, reference, union, or host type`);
+  }
+}
+
+function assertHostName(name, entry) {
+  if (typeof name !== 'string' || !EXACT_HOST_TYPE.test(name) || NAMESPACES.has(name)) {
+    throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} is too broad: an entry names one exact type, such as HTMLButtonElement or React.ReactNode`);
+  }
+}
+
+function assertArguments(application, entry) {
+  if (Object.keys(application).sort().join() !== 'kind,name,typeArguments') {
+    throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} holds a host application that is not written as exactly kind, name, typeArguments`);
+  }
+  if (!Array.isArray(application.typeArguments) || application.typeArguments.length === 0) {
+    throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} has no type arguments; write the bare name as a string`);
+  }
+  for (const argument of application.typeArguments) assertSerializedType(argument, entry);
+}
+
+/**
+ * Validates the host allowlist: each entry names one exact type, as a string, or one exact
+ * application of a host generic with its type arguments in order. Returns the bare names
+ * and the applications, the latter keyed by `hostEntryKey`.
+ */
 export function assertHostAllowlist(hostAllowlist) {
+  const names = new Set();
+  const applications = new Set();
   for (const entry of hostAllowlist) {
-    if (typeof entry !== 'string' || !EXACT_HOST_TYPE.test(entry) || NAMESPACES.has(entry)) {
-      throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} is too broad: an entry names one exact type, such as HTMLButtonElement or React.ReactNode`);
+    if (typeof entry === 'string') {
+      assertHostName(entry, entry);
+      names.add(entry);
+    } else if (entry !== null && typeof entry === 'object' && entry.kind === 'host') {
+      assertHostName(entry.name, entry);
+      assertArguments(entry, entry);
+      applications.add(hostEntryKey(entry));
+    } else {
+      throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} is not a name or an exact application of a host type`);
     }
   }
-  return new Set(hostAllowlist);
+  return { names, applications };
 }
 
 // One TypeScript 7 API session over a throwaway project: the declarations to read and,
@@ -124,6 +205,17 @@ function isDefaultLibrary(program, path) {
   return file !== undefined && program.isSourceFileDefaultLibrary(file);
 }
 
+/** A serialized type as TypeScript writes it, for a diagnostic. */
+function showType(type) {
+  switch (type.kind) {
+    case 'literal': return JSON.stringify(type.value);
+    case 'reference': return type.name;
+    case 'union': return type.members.map(showType).join(' | ');
+    case 'host': return type.typeArguments === undefined ? type.name : `${type.name}<${type.typeArguments.map(showType).join(', ')}>`;
+    default: return type.kind;
+  }
+}
+
 function declarationReader({ project, declarationRoot, allowed }) {
   const { checker, program } = project;
   // Named types by name, each with the symbol it was read from. A type being read (a
@@ -133,13 +225,15 @@ function declarationReader({ project, declarationRoot, allowed }) {
   const pending = new Map();
 
   // Where a referenced symbol is declared decides what it may be: Mux UI-owned when every
-  // declaration is in the package's declarations, a host type when it comes from the DOM
-  // library (which @types/react may augment) or from @types/react.
+  // declaration is in the package's declarations, a host type when every declaration comes
+  // from the default library (which @types/react may augment) or from @types/react. A
+  // package-level `declare global` that merges into a library type adds a declaration
+  // outside both, so the merged symbol is no host type.
   function hostName(symbol) {
     const paths = symbol.declarations.map(({ path }) => path);
-    if (paths.some((path) => isDefaultLibrary(program, path))) return symbol.name;
-    if (paths.length > 0 && paths.every((path) => /\/node_modules\/@types\/react\//u.test(path))) return `React.${symbol.name}`;
-    return null;
+    const library = paths.filter((path) => isDefaultLibrary(program, path));
+    if (paths.length === 0 || !paths.every((path) => library.includes(path) || REACT_TYPES.test(path))) return null;
+    return library.length > 0 ? symbol.name : `React.${symbol.name}`;
   }
 
   function namedType(symbol, chain) {
@@ -175,16 +269,33 @@ function declarationReader({ project, declarationRoot, allowed }) {
   function referenceOf(node, chain) {
     const written = entityName(node.typeName);
     const hop = `${chain} -> ${written}`;
-    if (node.typeArguments?.length) throw new ApiExtractionError(hop, 'generic type arguments are not in the grammar');
     const found = checker.getSymbolAtLocation(node.typeName);
     if (!found) throw new ApiExtractionError(hop, `${written} does not resolve`);
     const symbol = found.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
     if (symbol.flags & SymbolFlags.Enum) throw new ApiExtractionError(hop, `${written} is an enum; use a union of literals`);
     const paths = symbol.declarations.map(({ path }) => path);
-    if (paths.length > 0 && paths.every((path) => isUnder(path, declarationRoot))) return namedType(symbol, hop);
+    const applied = (node.typeArguments?.length ?? 0) > 0;
+    if (paths.length > 0 && paths.every((path) => isUnder(path, declarationRoot))) {
+      // A local interface named like a host generic is Mux UI-owned, never the host type.
+      if (applied) throw new ApiExtractionError(hop, `${symbol.name} is a Mux UI-owned type; it takes no type arguments`);
+      return namedType(symbol, hop);
+    }
     const host = hostName(symbol);
-    if (host !== null && allowed.has(host)) return { kind: 'host', name: host };
-    throw new ApiExtractionError(hop, `${host ?? written} is outside @muxui/react and not in the host allowlist`);
+    if (host === null) {
+      const merged = paths.some((path) => isUnder(path, declarationRoot));
+      throw new ApiExtractionError(hop, merged
+        ? `${symbol.name} also has a declaration in @muxui/react (a global augmentation or merged declaration); a host type is declared only in the default library or @types/react`
+        : `${written} is outside @muxui/react and not in the host allowlist`);
+    }
+    if (!applied) {
+      if (allowed.names.has(host)) return { kind: 'host', name: host };
+      throw new ApiExtractionError(hop, `${host} is outside @muxui/react and not in the host allowlist`);
+    }
+    // An application matches an entry only exactly, so the arguments are read like any type
+    // (a host argument must itself be allowlisted, a Mux UI-owned one is recorded) and then compared.
+    const application = { kind: 'host', name: host, typeArguments: node.typeArguments.map((argument, index) => typeOf(argument, `${hop}<${index}>`)) };
+    if (allowed.applications.has(hostEntryKey(application))) return application;
+    throw new ApiExtractionError(hop, `${showType(application)} is not an application on the host allowlist; an application matches an entry exactly, with the arguments in order`);
   }
 
   function literalOf(node, chain) {
@@ -382,7 +493,6 @@ function readDeclaredApi(reader, checker, sourceFile, name, part) {
 }
 
 const REACT_WRAPPERS = new Set(['forwardRef', 'memo']);
-const REACT_TYPES = /\/node_modules\/@types\/react\//u;
 
 /** Whether the callee is `forwardRef` or `memo` from @types/react, however it is imported, not a local of that name. */
 function isReactWrapper({ checker }, callee) {

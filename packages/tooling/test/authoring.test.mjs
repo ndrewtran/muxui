@@ -564,6 +564,95 @@ test('Decision 0031: adding a required derived prop or event is incompatible, an
   assert.deepEqual(summary(diff(withValues)), ['add propDetails/values compatible', 'add props/2 compatible', 'add types/Values compatible']);
 });
 
+test('Decision 0031: any change inside a host type\'s typeArguments is incompatible', async () => {
+  const { component, revisionContext } = await setup();
+  const authored = component.record;
+  const reactNode = { kind: 'host', name: 'React.ReactNode' };
+  const excluded = { kind: 'union', members: [{ kind: 'null' }, { kind: 'undefined' }, { kind: 'boolean' }] };
+  const derived = {
+    schema: 'muxui-derived-api-v1',
+    generatedFrom: 'packages/react/src/button.ts',
+    component: 'muxui:component:button',
+    binding: 'web.react',
+    export: 'Button',
+    api: {
+      props: ['title', 'items', 'item', 'other', 'bare'],
+      events: [],
+      defaults: {},
+      propDetails: {
+        // title?: Exclude<React.ReactNode, null | undefined | boolean>
+        title: { type: { kind: 'host', name: 'Exclude', typeArguments: [reactNode, excluded] }, required: false, description: 'The title.' },
+        // items?: AsyncIterable<Item>
+        items: { type: { kind: 'host', name: 'AsyncIterable', typeArguments: [{ kind: 'reference', name: 'Item' }] }, required: false },
+        item: { type: { kind: 'reference', name: 'Item' }, required: false },
+        other: { type: { kind: 'reference', name: 'Other' }, required: false },
+        bare: { type: { kind: 'host', name: 'React.ReactNode' }, required: false },
+      },
+      eventDetails: {},
+      types: {
+        Item: { type: { kind: 'object', members: [{ name: 'entries', type: { kind: 'host', name: 'Promise', typeArguments: [{ kind: 'string' }] }, required: false, readonly: true }] } },
+        Other: { type: { kind: 'string' } },
+      },
+    },
+  };
+  const diff = (edit) => {
+    const after = structuredClone(derived);
+    edit(after.api);
+    return semanticDiff({
+      before: authored,
+      after: authored,
+      revisionContext: { ...revisionContext, before: { derivedApis: { 'web.react': derived } }, after: { derivedApis: { 'web.react': after } } },
+    });
+  };
+  const summary = (result) => result.changes.map(({ path, operation, effect }) => `${operation} ${path.replace('$/bindings/web.react/api/', '')} ${effect}`);
+  const titleArguments = (api) => api.propDetails.title.type.typeArguments;
+
+  // Every kind of change under typeArguments narrows or changes what the prop accepts. The diff
+  // reads an array's objects by identity, so an edited argument is a remove and an add, and an
+  // appended argument or a new typeArguments key is an add alone: the rule is what makes that add incompatible.
+  const at = 'propDetails/title/type/typeArguments';
+  const incompatible = [
+    ['adding an excluded member', (api) => titleArguments(api)[1].members.push({ kind: 'string' }), [`add ${at}/1`, `remove ${at}/1`]],
+    ['removing an excluded member', (api) => titleArguments(api)[1].members.pop(), [`add ${at}/1`, `remove ${at}/1`]],
+    ['reordering the excluded members', (api) => titleArguments(api)[1].members.reverse(), [`add ${at}/1`, `remove ${at}/1`]],
+    ['replacing the excluded set', (api) => { titleArguments(api)[1] = { kind: 'null' }; }, [`add ${at}/1`, `remove ${at}/1`]],
+    ['replacing the first argument', (api) => { titleArguments(api)[0] = { kind: 'host', name: 'React.ReactElement' }; }, [`add ${at}/0`, `remove ${at}/0`]],
+    ['adding an argument', (api) => titleArguments(api).push({ kind: 'string' }), [`add ${at}/2`]],
+    ['removing an argument', (api) => titleArguments(api).pop(), [`remove ${at}/1`]],
+    ['dropping the arguments', (api) => { delete api.propDetails.title.type.typeArguments; }, [`remove ${at}`]],
+    ['giving a bare host type arguments', (api) => { api.propDetails.bare.type.typeArguments = [{ kind: 'string' }]; }, ['add propDetails/bare/type/typeArguments']],
+    ['swapping a Mux UI-owned argument', (api) => { api.propDetails.items.type.typeArguments[0] = { kind: 'reference', name: 'Other' }; },
+      ['add propDetails/items/type/typeArguments/0', 'remove propDetails/items/type/typeArguments/0']],
+    ['changing an application inside a named type', (api) => { api.types.Item.type.members[0].type.typeArguments[0] = { kind: 'number' }; },
+      ['add types/Item/type/members/0', 'remove types/Item/type/members/0']],
+  ];
+  for (const [name, edit, changes] of incompatible) {
+    const result = diff(edit);
+    assert.deepEqual(result.changes.map(({ path, operation }) => `${operation} ${path.replace('$/bindings/web.react/api/', '')}`), changes, name);
+    assert.deepEqual([result.effect, result.versionEffect], ['incompatible', 'major'], `${name}: ${summary(result).join(', ')}`);
+  }
+  // Each change in the paths that run under typeArguments is incompatible by itself.
+  const underArguments = incompatible.slice(0, 9).flatMap(([, edit]) => diff(edit).changes).filter(({ path }) => /\/typeArguments(?:\/|$)/u.test(path));
+  assert.equal(underArguments.length, 14);
+  assert.ok(underArguments.every(({ effect }) => effect === 'incompatible'), underArguments.map(({ path, effect }) => `${path} ${effect}`).join('\n'));
+
+  // A description edit beside the arguments is editorial, and a new prop that uses an application is compatible.
+  const described = diff((api) => { api.propDetails.title.description = 'The heading.'; });
+  assert.deepEqual(summary(described), ['replace propDetails/title/description editorial']);
+  assert.equal(described.effect, 'editorial');
+  const added = diff((api) => {
+    api.props.push('footer');
+    api.propDetails.footer = { type: { kind: 'host', name: 'Exclude', typeArguments: [reactNode, excluded] }, required: false };
+  });
+  assert.equal(added.effect, 'compatible', summary(added).join(', '));
+  // A prop named typeArguments is an ordinary prop: adding it is not a change inside a host application.
+  const named = diff((api) => {
+    api.props.push('typeArguments');
+    api.propDetails.typeArguments = { type: { kind: 'string' }, required: false };
+  });
+  assert.equal(named.effect, 'compatible', summary(named).join(', '));
+});
+
 test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
   const { context } = await setup();
   // Text is generic over its element, which the closed grammar cannot derive, so it keeps an authored api.

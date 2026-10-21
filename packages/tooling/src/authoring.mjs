@@ -817,6 +817,8 @@ function mergedRecord(family, record, revisionContext, side) {
 
 const DERIVED_ENTRY = /^(\$\/bindings\/[^/]+\/api\/(propDetails|eventDetails|types)\/[^/]+)(\/.*)?$/u;
 const DERIVED_NAME = /^\$\/bindings\/([^/]+)\/api\/(props|events)\/\d+$/u;
+// Anywhere at or inside a host type's `typeArguments`, below the derived entry's own name.
+const HOST_ARGUMENTS = /\/typeArguments(?:\/|$)/u;
 
 // In the derived grammar a `description` key is only ever documentation.
 const withoutDescriptions = (value) => {
@@ -837,7 +839,8 @@ const narrowsInput = (value) => isMember(value) && (value.required === true || v
  * entry of propDetails, eventDetails, or types that differs only in descriptions is
  * editorial (the spec revision still moves with the block). Adding a required prop or
  * event, or a required or absent (`name?: never`) member to an object type inside one
- * (inline or a named type), is incompatible.
+ * (inline or a named type), is incompatible, and so is any change inside a host type's
+ * `typeArguments`: adding, removing, replacing, or reordering an argument or a union member.
  */
 function derivedEffect(change, effect, mergedBefore, mergedAfter) {
   const entry = DERIVED_ENTRY.exec(change.path);
@@ -847,6 +850,9 @@ function derivedEffect(change, effect, mergedBefore, mergedAfter) {
     const right = valueAt(mergedAfter, entryPath);
     if (left !== undefined && right !== undefined
       && canonicalJson(withoutDescriptions(left)) === canonicalJson(withoutDescriptions(right))) return 'editorial';
+    // A host application's arguments are part of its type: adding an excluded member, say, narrows
+    // what the prop accepts, which the generic rule for an added array item would call compatible.
+    if (rest !== undefined && HOST_ARGUMENTS.test(rest)) return 'incompatible';
     if (change.operation !== 'add') return effect;
     if (rest === undefined && field !== 'types' && right?.required === true) return 'incompatible';
     if (/\/members\/\d+$/u.test(change.path) && narrowsInput(change.after)) return 'incompatible';

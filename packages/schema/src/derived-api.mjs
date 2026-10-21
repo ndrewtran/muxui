@@ -20,6 +20,7 @@ function referencedNames(type, names) {
       referencedNames(type.returns, names);
       break;
     case 'object': for (const member of type.members) referencedNames(member.type, names); break;
+    case 'host': for (const argument of type.typeArguments ?? []) referencedNames(argument, names); break;
     default: break;
   }
   return names;
@@ -41,6 +42,7 @@ function misplacedNever(type, path, found = []) {
         if (member.type.kind !== 'never' || member.required) misplacedNever(member.type, `${path}/members/${index}/type`, found);
       });
       break;
+    case 'host': (type.typeArguments ?? []).forEach((argument, index) => misplacedNever(argument, `${path}/typeArguments/${index}`, found)); break;
     default: break;
   }
   return found;
