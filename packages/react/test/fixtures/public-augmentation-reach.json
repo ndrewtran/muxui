@@ -1,5 +1,5 @@
 {
-  "recordedFrom": "c8434f62, before the TypeScript moves: reach maps each exported interface to the other exported types that took an optional key added to the interface by module augmentation (declare module '@muxui/react' { interface I { key?: string } }), read under TypeScript 6.0.3 (node test/support/declaration-surface.mjs --reach <generated directory>); an interface that reached no other type is not listed",
+  "recordedFrom": "c8434f62, before the TypeScript moves: reach maps each exported interface to the other exported types that took the key a consumer adds to the interface by module augmentation (declare module '@muxui/react' { interface I { key?: 'key' } }), read under TypeScript 6.0.3 (node test/support/declaration-surface.mjs --reach <generated directory>). A type is reached when it declares the key itself: a string index signature alone is not a reach. An entry T means every arm of T declares the key, and T/A means arm A of the union T does and its other arms do not. An interface that reached no other type is not listed",
   "reach": {
     "ButtonProps": [
       "IconButtonProps",
@@ -20,6 +20,21 @@
       "SelectRootProps",
       "TextFieldProps",
       "TimeFieldProps"
+    ],
+    "MuxUICollectionItem": [
+      "MuxUITableColumn",
+      "MuxUITableRow",
+      "MuxUITreeItem",
+      "TagGroupItem"
+    ],
+    "MuxUIDirectoryDropItem": [
+      "MuxUIDropItem/MuxUIDirectoryDropItem"
+    ],
+    "MuxUIFileDropItem": [
+      "MuxUIDropItem/MuxUIFileDropItem"
+    ],
+    "MuxUITextDropItem": [
+      "MuxUIDropItem/MuxUITextDropItem"
     ]
   }
 }

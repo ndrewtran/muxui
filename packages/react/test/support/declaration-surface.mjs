@@ -146,13 +146,17 @@ export function indexSignatureCompatible({ directory, specifier, names, exactOpt
 }
 
 /**
- * Which exported types carry the optional key a consumer adds to an exported interface by module
- * augmentation (`declare module '<specifier>' { interface I { key?: string } }`), as
- * `{ [interface]: [type, ...] }` with each list sorted and without the interface itself. An interface
- * is open to augmentation, so a props type that intersects or extends it takes the consumer's key and
- * a flat copy of its members does not. Every interface carries its own key, so one compile answers for
- * all of them. A type carries a key when every arm of it names the key; an index signature
- * does not count. `tsc` is the compiler's script and `specifier` is what the probe imports the barrel as.
+ * Which exported types a consumer's module augmentation of an exported interface reaches
+ * (`declare module '<specifier>' { interface I { key?: 'key' } }`), as `{ [interface]: [entry, ...] }`
+ * with each list sorted and without the interface itself. An interface is open to augmentation, so a
+ * props type that intersects, extends, or maps over it takes the consumer's key and a flat copy of its
+ * members does not. Every interface carries its own key, so one compile answers for all of them.
+ *
+ * A type is reached where it declares the key: its type is the key's own literal, which a string index
+ * signature does not give (an index signature alone is not a reach, but an interface that extends one
+ * and takes the key is). An entry is `T` when every arm of a union T declares it, `T/I` when only the arm
+ * that is the interface I does, and `T/*` when only some other arm does. `tsc` is the compiler's script
+ * and `specifier` is what the probe imports the barrel as.
  */
 export function augmentationReach({ directory, specifier, interfaces, types, tsc = consumerTsc() }) {
   const probe = join(directory, 'augmentation-reach-probe.ts');
@@ -160,16 +164,22 @@ export function augmentationReach({ directory, specifier, interfaces, types, tsc
   const header = [
     `import type * as Package from '${specifier}';`,
     `declare module '${specifier}' {`,
-    ...interfaces.map((name, index) => `  interface ${name} { __muxuiReach${index}?: string }`),
+    ...interfaces.map((name, index) => `  interface ${name} { __muxuiReach${index}?: '__muxuiReach${index}' }`),
     '}',
-    'type Carries<T, Key extends string> = [T extends unknown ? (string extends keyof T ? false : Key extends keyof T ? true : false) : never] extends [true] ? true : false;',
+    'type Declares<A, Key extends string> = 0 extends 1 & A ? false : Key extends keyof A ? ([Exclude<A[Key], undefined>] extends [Key] ? ([Key] extends [Exclude<A[Key], undefined>] ? true : false) : false) : false;',
+    'type Arms<T, Key extends string> = T extends unknown ? Declares<T, Key> : never;',
+    'type Is<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;',
+    'type ArmIs<T, E, Key extends string> = true extends (T extends unknown ? (Declares<T, Key> extends true ? Is<T, E> : false) : never) ? true : false;',
     'type Assert<T extends true> = T;',
   ];
-  const pairs = interfaces.flatMap((name, index) => types.filter((type) => type !== name).map((type) => ({ name, type, index })));
-  writeFileSync(probe, [
-    ...header,
-    ...pairs.map(({ type, index }, row) => `export type Probe${row} = Assert<Carries<Package.${type}, '__muxuiReach${index}'>>;`),
-  ].join('\n'));
+  const pairs = interfaces.flatMap((name, index) => types.filter((type) => type !== name).map((type) => ({ name, type, key: `'__muxuiReach${index}'` })));
+  // Three rows a pair: every arm declares the key, some arm does, and an arm that is the interface does.
+  const rows = pairs.flatMap(({ name, type, key }) => [
+    `[Arms<Package.${type}, ${key}>] extends [true] ? true : false`,
+    `true extends Arms<Package.${type}, ${key}> ? true : false`,
+    `ArmIs<Package.${type}, Package.${name}, ${key}>`,
+  ]);
+  writeFileSync(probe, [...header, ...rows.map((row, index) => `export type Probe${index} = Assert<${row}>;`)].join('\n'));
   writeFileSync(config, `${JSON.stringify({
     compilerOptions: { target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, skipLibCheck: true, noEmit: true, types: [] },
     files: ['augmentation-reach-probe.ts'],
@@ -182,9 +192,24 @@ export function augmentationReach({ directory, specifier, interfaces, types, tsc
     missed.add(Number(row) - header.length - 1);
   }
   const reach = Object.fromEntries(interfaces.map((name) => [name, []]));
-  pairs.forEach(({ name, type }, row) => { if (!missed.has(row)) reach[name].push(type); });
+  pairs.forEach(({ name, type }, index) => {
+    const [every, some, named] = [0, 1, 2].map((offset) => !missed.has(3 * index + offset));
+    const entry = every ? type : named ? `${type}/${name}` : some ? `${type}/*` : undefined;
+    if (entry !== undefined) reach[name].push(entry);
+  });
   for (const reached of Object.values(reach)) reached.sort();
   return reach;
+}
+
+/**
+ * The recorded entries (`{ [interface]: [entry, ...] }`, from the augmentation record) that `reach`
+ * (from `augmentationReach` over the same interfaces and the entries' types) no longer holds, as
+ * `interface -> entry`. An arm entry `T/I` also holds where every arm of T declares the key.
+ */
+export function lostAugmentationReach(recorded, reach) {
+  return Object.entries(recorded).flatMap(([name, entries]) => entries
+    .filter((entry) => !reach[name].includes(entry) && !reach[name].includes(entry.split('/')[0]))
+    .map((entry) => `${name} -> ${entry}`));
 }
 
 /** The names of one barrel's non-generic interfaces and type aliases, as `{ interfaces, types }`, each sorted. */

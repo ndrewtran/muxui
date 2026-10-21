@@ -11,6 +11,7 @@ import {
   augmentationReach,
   consumerTsc,
   indexSignatureCompatible,
+  lostAugmentationReach,
   tscDiagnostics,
   typeScript7Tsc,
   verifiedTypeScript6,
@@ -63,21 +64,33 @@ test('the augmentation check sees a type derived from an interface, and not a fl
     'export type Intersection = Base & { id?: string };',
     'export interface Extension extends Base { id?: string }',
     'export type Derived = Omit<Base, never> & { id?: string };',
-    'export type Union = (Base & { a?: string }) | { b?: string };',
-    'export type Indexed = Record<string, unknown>;',
+    'export type HalfUnion = (Base & { a?: string }) | { b?: string };',
+    // An index signature alone is not a reach; an interface that extends one and takes the key is.
+    'export interface Open { [key: string]: unknown }',
+    'export interface Row extends Open { id?: string }',
+    'export type FlatRow = { [key: string]: unknown; id?: string };',
+    'export type OnlyIndex = Record<string, unknown>;',
+    // A union is reached by arm: the arm that is the interface takes the key and a flattened copy of it does not.
+    "export interface TextItem { kind: 'text'; text: string }",
+    "export interface FileItem { kind: 'file'; name: string }",
+    'export type Items = TextItem | FileItem;',
+    "export type FlatItems = { kind: 'text'; text: string } | FileItem;",
   ].join('\n');
+  const types = ['Base', 'Flat', 'Intersection', 'Extension', 'Derived', 'HalfUnion', 'Open', 'Row', 'FlatRow', 'OnlyIndex', 'TextItem', 'FileItem', 'Items', 'FlatItems'];
   withProject({ 'fixture.d.ts': declarations }, (directory) => {
     for (const tsc of [consumerTsc(), typeScript7]) {
-      const reach = augmentationReach({
-        directory,
-        specifier: './fixture.js',
-        interfaces: ['Base'],
-        types: ['Base', 'Flat', 'Intersection', 'Extension', 'Derived', 'Union', 'Indexed'],
-        tsc,
-      });
-      // A mapped type over the interface (Omit) follows it, a flat copy does not, a union reaches only when
-      // every arm does, and an index signature is not a reach.
-      assert.deepEqual(reach, { Base: ['Derived', 'Extension', 'Intersection'] }, tsc);
+      const reach = augmentationReach({ directory, specifier: './fixture.js', interfaces: ['Base', 'Open', 'TextItem', 'FileItem'], types, tsc });
+      assert.deepEqual(reach, {
+        // A mapped type over the interface (Omit) follows it and a flat copy does not.
+        Base: ['Derived', 'Extension', 'HalfUnion/Base', 'Intersection'],
+        Open: ['Row'],
+        TextItem: ['Items/TextItem'],
+        FileItem: ['FlatItems/FileItem', 'Items/FileItem'],
+      }, tsc);
+      // Flattening the file arm of Items, or Row's base, loses what the record holds.
+      const recorded = { Open: ['Row'], TextItem: ['Items/TextItem'], FileItem: ['Items/FileItem'] };
+      assert.deepEqual(lostAugmentationReach(recorded, reach), []);
+      assert.deepEqual(lostAugmentationReach(recorded, { ...reach, Open: ['FlatRow'], FileItem: ['FlatItems/FileItem'] }), ['Open -> Row', 'FileItem -> Items/FileItem']);
     }
   });
 });
