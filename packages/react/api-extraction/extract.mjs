@@ -404,20 +404,21 @@ const calleeName = (callee) => (callee.kind === SyntaxKind.PropertyAccessExpress
  * bound to a top-level function declaration or a top-level const of such a form. A second
  * argument, such as memo's comparator, is never the component. Any other call fails, so no
  * default is read from a function the component does not render with. Null for any other
- * kind of expression.
+ * kind of expression. `followed` collects each top-level const the chain is read through,
+ * for the caller to check that the source never writes to it.
  */
-function componentFunction(project, sourceFile, chain, expression, seen = new Set()) {
+function componentFunction(project, sourceFile, chain, expression, seen = new Set(), followed = new Set()) {
   if (!expression) return null;
   const node = unwrap(expression);
   switch (node.kind) {
     case SyntaxKind.FunctionExpression:
     case SyntaxKind.ArrowFunction: return node;
-    case SyntaxKind.CallExpression: return wrappedFunction(project, sourceFile, chain, node, seen);
+    case SyntaxKind.CallExpression: return wrappedFunction(project, sourceFile, chain, node, seen, followed);
     default: return null;
   }
 }
 
-function wrappedFunction(project, sourceFile, chain, call, seen) {
+function wrappedFunction(project, sourceFile, chain, call, seen, followed) {
   const wrapper = calleeName(call.expression);
   if (!isReactWrapper(project, call.expression)) {
     throw new ApiExtractionError(chain, `${wrapper} is not React's forwardRef or memo; a component's defaults are read only through those wrappers, from their first argument`);
@@ -425,7 +426,7 @@ function wrappedFunction(project, sourceFile, chain, call, seen) {
   if (call.arguments.length === 0) throw new ApiExtractionError(chain, `${wrapper}() has no component function to read defaults from`);
   const argument = unwrap(call.arguments[0]);
   if (argument.kind !== SyntaxKind.Identifier) {
-    const component = componentFunction(project, sourceFile, chain, argument, seen);
+    const component = componentFunction(project, sourceFile, chain, argument, seen, followed);
     if (!component) throw new ApiExtractionError(chain, `the first argument of ${wrapper} must be a function, a forwardRef or memo call, or a top-level function or const`);
     return component;
   }
@@ -436,13 +437,49 @@ function wrappedFunction(project, sourceFile, chain, call, seen) {
   if (!constant) throw new ApiExtractionError(chain, `${argument.text} is not a top-level function declaration or const in the component's source`);
   if (seen.has(constant)) throw new ApiExtractionError(chain, `${argument.text} wraps itself`);
   seen.add(constant);
-  const component = componentFunction(project, sourceFile, chain, constant.initializer, seen);
+  followed.add(constant);
+  const component = componentFunction(project, sourceFile, chain, constant.initializer, seen, followed);
   if (!component) throw new ApiExtractionError(chain, `${argument.text} must be a function, forwardRef, or memo call`);
   return component;
 }
 
-const WRAPPERS = new Set([SyntaxKind.ParenthesizedExpression, SyntaxKind.AsExpression, SyntaxKind.SatisfiesExpression]);
+const WRAPPERS = new Set([SyntaxKind.ParenthesizedExpression, SyntaxKind.AsExpression, SyntaxKind.SatisfiesExpression, SyntaxKind.NonNullExpression, SyntaxKind.TypeAssertionExpression]);
 const unwrap = (node) => (WRAPPERS.has(node.kind) ? unwrap(node.expression) : node);
+
+/**
+ * The leaf targets an assignment writes: the target itself, or each leaf of an array or object
+ * pattern, through nesting, rest and spread elements, and `= default` initializers. A leaf is an
+ * identifier, a property or element access, or a shorthand property (`({ name } = value)`).
+ */
+function* assignmentLeaves(target) {
+  const node = unwrap(target);
+  switch (node.kind) {
+    case SyntaxKind.ObjectLiteralExpression:
+      for (const property of node.properties) {
+        if (property.kind === SyntaxKind.ShorthandPropertyAssignment) yield property;
+        else if (property.kind === SyntaxKind.PropertyAssignment) yield* assignmentLeaves(property.initializer);
+        else if (property.kind === SyntaxKind.SpreadAssignment) yield* assignmentLeaves(property.expression);
+      }
+      break;
+    case SyntaxKind.ArrayLiteralExpression:
+      for (const element of node.elements) yield* assignmentLeaves(element);
+      break;
+    case SyntaxKind.SpreadElement:
+      yield* assignmentLeaves(node.expression);
+      break;
+    // A default inside a pattern: [name = fallback] = values.
+    case SyntaxKind.BinaryExpression:
+      if (node.operatorToken.kind === SyntaxKind.EqualsToken) yield* assignmentLeaves(node.left);
+      break;
+    case SyntaxKind.OmittedExpression: break;
+    default: yield node;
+  }
+}
+
+/** The binding a leaf target names, if it names one directly. */
+const leafBinding = (checker, leaf) => (leaf.kind === SyntaxKind.ShorthandPropertyAssignment
+  ? checker.getShorthandAssignmentValueSymbol(leaf)
+  : leaf.kind === SyntaxKind.Identifier ? checker.getSymbolAtLocation(leaf) : undefined);
 
 const NOT_PRIMITIVE = Symbol('not a primitive literal');
 function primitiveLiteral(node) {
@@ -560,34 +597,9 @@ function assertNoExecutedDefaults(checker, component, name, owned) {
   const ownedAt = (node) => (node.kind === SyntaxKind.Identifier ? owned.get(checker.getSymbolAtLocation(node)?.id) : undefined);
   // The owned bindings an assignment target writes.
   function* written(target) {
-    const node = unwrap(target);
-    switch (node.kind) {
-      case SyntaxKind.Identifier:
-        if (ownedAt(node)) yield ownedAt(node);
-        break;
-      case SyntaxKind.ObjectLiteralExpression:
-        for (const property of node.properties) {
-          if (property.kind === SyntaxKind.ShorthandPropertyAssignment) {
-            const found = owned.get(checker.getShorthandAssignmentValueSymbol(property)?.id);
-            if (found) yield found;
-          } else if (property.kind === SyntaxKind.PropertyAssignment) {
-            yield* written(property.initializer);
-          } else if (property.kind === SyntaxKind.SpreadAssignment) {
-            yield* written(property.expression);
-          }
-        }
-        break;
-      case SyntaxKind.ArrayLiteralExpression:
-        for (const element of node.elements) yield* written(element);
-        break;
-      case SyntaxKind.SpreadElement:
-        yield* written(node.expression);
-        break;
-      // A default inside a destructuring assignment: [size = 'md'] = values.
-      case SyntaxKind.BinaryExpression:
-        if (node.operatorToken.kind === SyntaxKind.EqualsToken) yield* written(node.left);
-        break;
-      default: break;
+    for (const leaf of assignmentLeaves(target)) {
+      const found = owned.get(leafBinding(checker, leaf)?.id);
+      if (found) yield found;
     }
   }
   const assigned = (target) => {
@@ -633,20 +645,39 @@ function topLevelConst(project, sourceFile, identifier) {
 const MUTATORS = new Set(['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf']);
 
 /**
- * Whether the source writes to the binding or through it: an assignment, update, delete, or
- * Object mutator. `allowed` holds the assignment nodes already verified as harmless.
+ * Whether the source writes to the binding or through it: an assignment, update, delete,
+ * Object mutator, destructuring assignment, or for-in or for-of target, however deeply the
+ * pattern nests it. `allowed` holds assignment nodes already verified as harmless.
+ * `displayName` also lets `<binding>.displayName = '<string literal>'` pass anywhere in
+ * the source, since a display name never changes which function renders.
  */
-function writesThrough({ checker }, sourceFile, symbol, allowed = new Set()) {
+function writesThrough({ checker }, sourceFile, symbol, { allowed = new Set(), displayName = false } = {}) {
+  const same = (node) => node.kind === SyntaxKind.Identifier && checker.getSymbolAtLocation(node)?.id === symbol.id;
   const rooted = (target) => {
     let node = unwrap(target);
     while (node.kind === SyntaxKind.PropertyAccessExpression || node.kind === SyntaxKind.ElementAccessExpression) node = unwrap(node.expression);
-    return node.kind === SyntaxKind.Identifier && checker.getSymbolAtLocation(node)?.id === symbol.id;
+    return same(node);
+  };
+  // Whether an assignment target, or any leaf of its pattern, is the binding or a path under it.
+  const targets = (target) => {
+    for (const leaf of assignmentLeaves(target)) {
+      if (leaf.kind === SyntaxKind.ShorthandPropertyAssignment ? checker.getShorthandAssignmentValueSymbol(leaf)?.id === symbol.id : rooted(leaf)) return true;
+    }
+    return false;
+  };
+  const isDisplayNameLiteral = (node) => {
+    if (node.kind !== SyntaxKind.BinaryExpression || node.operatorToken.kind !== SyntaxKind.EqualsToken) return false;
+    const left = unwrap(node.left);
+    const right = unwrap(node.right);
+    return left.kind === SyntaxKind.PropertyAccessExpression && left.name.text === 'displayName' && same(unwrap(left.expression))
+      && (right.kind === SyntaxKind.StringLiteral || right.kind === SyntaxKind.NoSubstitutionTemplateLiteral);
   };
   const writes = (node) => {
-    if (allowed.has(node)) return false;
-    if (node.kind === SyntaxKind.BinaryExpression && isAssignmentOperator(node.operatorToken.kind) && rooted(node.left)) return true;
+    if (allowed.has(node) || (displayName && isDisplayNameLiteral(node))) return false;
+    if (node.kind === SyntaxKind.BinaryExpression && isAssignmentOperator(node.operatorToken.kind) && targets(node.left)) return true;
     if ((node.kind === SyntaxKind.PrefixUnaryExpression || node.kind === SyntaxKind.PostfixUnaryExpression) && UPDATES.has(node.operator) && rooted(node.operand)) return true;
     if (node.kind === SyntaxKind.DeleteExpression && rooted(node.expression)) return true;
+    if ((node.kind === SyntaxKind.ForInStatement || node.kind === SyntaxKind.ForOfStatement) && node.initializer.kind !== SyntaxKind.VariableDeclarationList && targets(node.initializer)) return true;
     if (node.kind === SyntaxKind.CallExpression && node.arguments.length > 0 && rooted(node.arguments[0])
       && node.expression.kind === SyntaxKind.PropertyAccessExpression && node.expression.expression.kind === SyntaxKind.Identifier
       && node.expression.expression.text === 'Object' && MUTATORS.has(node.expression.name.text)) return true;
@@ -683,9 +714,10 @@ const WRAPPER_RULE = 'an exported component\'s wrapper is called with no argumen
  *   - one final `return <const>`.
  * Anything else fails naming the component and this rule, so nothing the wrapper runs can
  * change which function renders. The source must write to neither the exported binding nor
- * a wrapper const other than through those displayName statements.
+ * a wrapper const other than through those displayName statements. A top-level const a wrapper
+ * const follows is collected in `followed` and checked by the caller like any other.
  */
-function wrappedComponent(project, sourceFile, chain, binding, call) {
+function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
   const fail = (message) => {
     throw new ApiExtractionError(chain, `${message}; ${WRAPPER_RULE}`);
   };
@@ -726,11 +758,11 @@ function wrappedComponent(project, sourceFile, chain, binding, call) {
   const components = new Map([...consts].map(([constName, declaration]) => {
     const initializer = unwrap(declaration.initializer);
     if (initializer.kind !== SyntaxKind.CallExpression) fail(`${constName} is not a forwardRef or memo call`);
-    return [constName, wrappedFunction(project, sourceFile, chain, initializer, new Set())];
+    return [constName, wrappedFunction(project, sourceFile, chain, initializer, new Set(), followed)];
   }));
   const writeTargets = [binding, ...[...consts.values()].map(({ name }) => name)];
   for (const target of writeTargets) {
-    if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(target), verified)) {
+    if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(target), { allowed: verified })) {
       fail(`the source writes to ${target.text} beyond the wrapper's displayName assignments`);
     }
   }
@@ -742,9 +774,9 @@ function wrappedComponent(project, sourceFile, chain, binding, call) {
  * source never writes to, initialized to `Object.freeze({ Root: AvatarRoot, ... })` whose
  * properties are all `Name: value` with plain names, each once, so no spread, computed key,
  * or later write can replace the part the extraction reads. An identifier value is followed
- * to a top-level const of the source.
+ * to a top-level const of the source, which is collected in `followed` for the caller to check.
  */
-function compoundPart(project, sourceFile, exported, name, part) {
+function compoundPart(project, sourceFile, exported, name, part, followed) {
   const chain = `${name}.${part}`;
   if (!exported) throw new ApiExtractionError(chain, `the source exports no ${name}`);
   const declaration = exported.node;
@@ -771,6 +803,7 @@ function compoundPart(project, sourceFile, exported, name, part) {
   if (value.kind !== SyntaxKind.Identifier) return value;
   const constant = topLevelConst(project, sourceFile, value);
   if (!constant) throw new ApiExtractionError(chain, `${value.text} is not a top-level const in the component's source`);
+  followed.add(constant);
   return constant.initializer;
 }
 
@@ -784,12 +817,22 @@ function readSourceDefaults(project, sourceFile, name, declared, part) {
   const chain = part === undefined ? name : `${name}.${part}`;
   // A compound's defaults are its part's, whatever else the export is.
   const initializer = exported?.node.initializer;
+  const followed = new Set();
   const component = part !== undefined
-    ? componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, name, part))
+    ? componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, name, part, followed), new Set(), followed)
     : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node
-      : isWrapperCall(initializer) ? wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer))
-        : componentFunction(project, sourceFile, chain, initializer);
+      : isWrapperCall(initializer) ? wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer), followed)
+        : componentFunction(project, sourceFile, chain, initializer, new Set(), followed);
   if (!component) throw new ApiExtractionError(name, `the source exports no component function${part === undefined ? '' : ` as ${name}.${part}`} to read defaults from`);
+  // The function read above is the one that renders only while every binding it was read through stays as it was.
+  // A wrapper or compound export is checked more strictly where it is read; a plain export is checked here.
+  const through = [...followed].map((declaration) => declaration.name);
+  if (part === undefined && !isWrapperCall(initializer) && exported.node.kind === SyntaxKind.VariableDeclaration) through.unshift(exported.name);
+  for (const binding of through) {
+    if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(binding), { displayName: true })) {
+      throw new ApiExtractionError(chain, `the source writes to ${binding.text}, which the component's defaults are read through, beyond a literal displayName assignment; a component is set once, so no write can change the function it renders with`);
+    }
+  }
   const [parameter] = component.parameters;
   if (parameter?.name.kind !== SyntaxKind.ObjectBindingPattern) {
     throw new ApiExtractionError(name, 'the props parameter must be an object pattern that destructures the Mux UI-owned props');

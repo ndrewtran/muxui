@@ -20,14 +20,14 @@ export interface ThingProps extends ThingOwnProps, Omit<React.ButtonHTMLAttribut
 export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLButtonElement>>;
 `;
 
-function extract({ declarations, source, hostAllowlist, files = {} }) {
+function extract({ declarations, source, hostAllowlist, files = {}, part }) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const root = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
   try {
     for (const [name, text] of Object.entries(files)) writeFileSync(join(root, name), text);
     writeFileSync(join(root, 'thing.d.ts'), declarations);
     if (source !== undefined) writeFileSync(join(root, 'thing.ts'), source);
-    const component = { name: 'Thing', declarations: join(root, 'thing.d.ts'), ...(source === undefined ? {} : { source: join(root, 'thing.ts') }) };
+    const component = { name: 'Thing', ...(part === undefined ? {} : { part }), declarations: join(root, 'thing.d.ts'), ...(source === undefined ? {} : { source: join(root, 'thing.ts') }) };
     return extractApis({ declarationRoot: root, components: [component], ...(hostAllowlist ? { hostAllowlist } : {}) }).get('Thing');
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -592,6 +592,124 @@ test('an exported component may be a zero-argument wrapper that returns one forw
   for (const [label, text, pattern] of rejections) {
     assert.throws(() => read(text), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
   }
+});
+
+// A component's render function can be replaced by writing to the object it is stored on. These
+// are the ways a source can write: an assignment, an update, a delete, an Object mutator, a
+// destructuring assignment, and a for-in or for-of target, each through any number of nested
+// patterns, rest elements, and defaults.
+const access = (name, key) => ({
+  plain: `(${name} as unknown as { ${key}: unknown }).${key}`,
+  nonNull: `(${name} as unknown as { ${key}: unknown })!.${key}`,
+  assertion: `(<{ ${key}: unknown }><unknown>${name}).${key}`,
+});
+const writeForms = (name, key) => {
+  const { plain, nonNull, assertion } = access(name, key);
+  return {
+    'an assignment': `${plain} = replacement;`,
+    'a non-null assertion': `${nonNull} = replacement;`,
+    'a type assertion': `${assertion} = replacement;`,
+    'an array pattern': `[${plain}] = [replacement];`,
+    'an object pattern': `({ a: ${plain} } = { a: replacement });`,
+    'a nested array pattern': `[[${plain}]] = [[replacement]];`,
+    'an object pattern inside an array pattern': `[{ a: ${plain} }] = [{ a: replacement }];`,
+    'an array pattern inside an object pattern': `({ a: [${plain}] } = { a: [replacement] });`,
+    'an array rest element': `[...${plain}] = [replacement];`,
+    'an object rest property': `({ ...${plain} } = { a: replacement });`,
+    'an array pattern default': `[${plain} = replacement] = [];`,
+    'an object pattern default': `({ a: ${plain} = replacement } = {});`,
+    'a for-of target': `for (${plain} of [replacement]) {}`,
+    'a for-in target': `for (${plain} in { replacement }) {}`,
+    'a for-of array pattern': `for ([${plain}] of [[replacement]]) {}`,
+    'a for-of object pattern': `for ({ a: ${plain} } of [{ a: replacement }]) {}`,
+    'a shorthand pattern property': `({ ${name} } = { ${name}: replacement });`,
+  };
+};
+
+/** The labels of the cases whose extraction does not fail with the pattern: every one is a missed write. */
+const accepted = (cases) => cases.filter(([, run, pattern]) => {
+  try {
+    run();
+    return true;
+  } catch (error) {
+    return !(error instanceof ApiExtractionError && pattern.test(error.message));
+  }
+}).map(([label]) => label);
+
+const compoundDeclarations = `${header}export interface ThingOwnProps {
+  size?: 'sm' | 'md';
+}
+export interface ThingRootProps extends ThingOwnProps, React.HTMLAttributes<HTMLSpanElement> {}
+export declare const Thing: { Root: React.ForwardRefExoticComponent<ThingRootProps & React.RefAttributes<HTMLSpanElement>> };
+`;
+
+test('a destructuring or loop target that writes through a wrapped component fails extraction', () => {
+  const declarations = ownProps("  size?: 'sm' | 'md';");
+  const render = "function ({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }";
+  const imports = "import { forwardRef } from 'react';\ndeclare const replacement: unknown;\n";
+  const wrapper = (after, inside = '') => `${imports}export const Thing = (() => {
+  const component = forwardRef(function ({ size = 'sm' }: Record<string, unknown>) { ${inside} return size; });
+  component.displayName = 'Thing';
+  return component;
+})();
+${after}`;
+  const compound = (after) => `${imports}const ThingRoot = forwardRef(${render});\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${after}`;
+  const cases = [
+    // The exported wrapper binding, a wrapper const written from its own render function, and a compound binding.
+    ...Object.entries(writeForms('Thing', 'render')).map(([label, statement]) => [`export: ${label}`, () => extract({ declarations, source: wrapper(statement) }), /Thing: the source writes to Thing beyond the wrapper's displayName assignments; /u]),
+    ...Object.entries(writeForms('component', 'render')).map(([label, statement]) => [`const: ${label}`, () => extract({ declarations, source: wrapper('', statement) }), /Thing: the source writes to component beyond the wrapper's displayName assignments; /u]),
+    ...Object.entries(writeForms('Thing', 'Root')).map(([label, statement]) => [`compound: ${label}`, () => extract({ declarations: compoundDeclarations, source: compound(statement), part: 'Root' }), /Thing\.Root: the source writes to the compound Thing after declaring it/u]),
+  ];
+  assert.deepEqual(accepted(cases), []);
+  // The same syntax writing to other bindings is not a write to the component.
+  const unrelated = "let other: unknown;\nlet rest: unknown;\n[other] = [replacement];\n({ a: other, ...rest } = { a: replacement });\nfor (other of [replacement]) {}\nfor (const item of [replacement]) { void item; }\nconst [first] = [replacement];\nvoid first;\n";
+  assert.deepEqual(extract({ declarations, source: wrapper(unrelated) }).defaults, { size: 'sm' });
+});
+
+test('every binding a component is read through is checked for writes, and only literal displayName writes pass', () => {
+  const declarations = ownProps("  size?: 'sm' | 'md';");
+  const render = "function ({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }";
+  const imports = "import { forwardRef, memo } from 'react';\ndeclare const replacement: unknown;\ndeclare const label: string;\n";
+  const through = (name, chain = 'Thing') => new RegExp(`${chain.replace('.', '\\.')}: the source writes to ${name}, which the component's defaults are read through, beyond a literal displayName assignment; `, 'u');
+  const wrapper = (before, call, after = '') => `${imports}${before}export const Thing = /*#__PURE__*/ (() => {
+  const component = ${call};
+  component.displayName = 'Thing';
+  return component;
+})();
+${after}`;
+  const plain = (before, exported, after = '') => `${imports}${before}export const Thing = ${exported};\n${after}`;
+  const outer = `const Actual = forwardRef(${render});\n`;
+  const layers = `const Inner = forwardRef(${render});\nconst Middle = memo(Inner);\n`;
+
+  // Literal displayName writes stay allowed, wherever the binding is followed from.
+  const allowed = [
+    ['a followed const through a plain memo', plain(outer, 'memo(Actual)', "Actual.displayName = 'Actual';\n")],
+    ['a followed const through a wrapper memo', wrapper(outer, 'memo(Actual)', "(Actual as { displayName?: string }).displayName = 'Actual';\n")],
+    ['every layer of a followed chain', plain(layers, 'memo(Middle)', "Inner.displayName = 'Inner';\nMiddle.displayName = 'Middle';\n")],
+    ['the plain export itself', plain('', `forwardRef(${render})`, "Thing.displayName = 'Thing';\n")],
+  ];
+  for (const [label, text] of allowed) assert.deepEqual(extract({ declarations, source: text }).defaults, { size: 'sm' }, label);
+
+  const forms = (name) => ({ ...writeForms(name, 'render'), 'a non-literal displayName': `${name}.displayName = label;`, 'an Object.assign': `Object.assign(${name}, { render: replacement });`, 'a delete': `delete (${name} as { render?: unknown }).render;` });
+  const cases = [
+    ...Object.entries(forms('Actual')).flatMap(([label, statement]) => [
+      [`plain memo: ${label}`, () => extract({ declarations, source: plain(outer, 'memo(Actual)', statement) }), through('Actual')],
+      [`wrapper memo: ${label}`, () => extract({ declarations, source: wrapper(outer, 'memo(Actual)', statement) }), through('Actual')],
+    ]),
+    // Every layer of a chain, not only the one the export names.
+    ...Object.entries(forms('Inner')).map(([label, statement]) => [`inner layer: ${label}`, () => extract({ declarations, source: plain(layers, 'memo(Middle)', statement) }), through('Inner')]),
+    ...Object.entries(forms('Middle')).map(([label, statement]) => [`middle layer: ${label}`, () => extract({ declarations, source: wrapper(layers, 'memo(Middle)', statement) }), through('Middle')]),
+    // The plain export is itself a binding the component is read through.
+    ...Object.entries(forms('Thing')).map(([label, statement]) => [`plain export: ${label}`, () => extract({ declarations, source: plain('', `forwardRef(${render})`, statement) }), through('Thing')]),
+  ];
+  // A compound part and the const its memo wraps.
+  const compound = (statement) => `${imports}const ActualRoot = forwardRef(${render});\nconst ThingRoot = memo(ActualRoot);\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${statement}`;
+  const read = (statement) => extract({ declarations: compoundDeclarations, source: compound(statement), part: 'Root' });
+  assert.deepEqual(read("ActualRoot.displayName = 'Actual';\nThingRoot.displayName = 'Root';\n").defaults, { size: 'sm' });
+  for (const name of ['ActualRoot', 'ThingRoot']) {
+    for (const [label, statement] of Object.entries(forms(name))) cases.push([`compound ${name}: ${label}`, () => read(statement), through(name, 'Thing.Root')]);
+  }
+  assert.deepEqual(accepted(cases), []);
 });
 
 test('derived API documents are validated, written, checked, pruned, and merged into their records', async () => {
