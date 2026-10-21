@@ -96,6 +96,8 @@ const GUIDES = {
   popover: { native: ['aria-label'] },
   // maxVisible, placement and its four values, and className are ToastProvider's props, and pending is Button's.
   dialog: {},
+  // The native validation rules a form checks are the browser's, not Form's.
+  form: { native: ['required', 'type', 'pattern'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -296,6 +298,11 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.deepEqual(bulletSubjects(toast, 'Variants'), toastApi.api.propDetails.variant.enum);
   assert.equal(bulletDefault(toast, 'Variants'), toastApi.api.defaults.variant);
   assert.equal(Number(/Duration is in milliseconds, and it defaults to (\d+)\./u.exec(toast)?.[1]), toastApi.api.defaults.duration);
+
+  // Form validates natively by default, which its guide marks first among the timing choices.
+  const [form, formApi] = await Promise.all([guide('form'), derivedApi('form')]);
+  assert.equal(/^- `([^`]+)` is the default\./mu.exec(section(form, 'Validation timing'))?.[1], formApi.api.defaults.validationBehavior);
+  assert.deepEqual(bulletSubjects(form, 'Validation timing').sort(), [...formApi.api.propDetails.validationBehavior.enum].sort(), 'the guide covers both validation timings');
 
   // Popover is modal by default, which its guide teaches before the non-modal choice.
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);

@@ -39,6 +39,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'popover', name: 'Popover', source: 'packages/react/src/overlays.ts' },
   { slug: 'toast', name: 'Toast', source: 'packages/react/src/overlays.ts' },
   { slug: 'dialog', name: 'Dialog', source: 'packages/react/src/overlays.ts' },
+  { slug: 'form', name: 'Form', source: 'packages/react/src/fields.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

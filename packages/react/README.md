@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:b4c8a6f548553db487a2a73d53164e71dc2c9c0554fde0ed253dcaf3147684b3 -->
+<!-- @generated-content-sha256: sha256:0a93280d765b630378fcc3e801610a6172b6cf13b6a986382a0734eba34992d3 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -134,7 +134,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DisclosureGroup | experimental | . | .muxui-disclosure-group | expandedIds, defaultExpandedIds, multiple, disabled |
 | DropZone | experimental | . | .muxui-drop-zone | disabled |
 | FileTrigger | experimental | . | .muxui-file-trigger | acceptedFileTypes, allowsMultiple, acceptDirectory, defaultCamera, disabled |
-| Form | experimental | . | .muxui-form | validationBehavior, validationErrors, method, action, onSubmit, onReset |
+| Form | experimental | . | .muxui-form | validationBehavior, validationErrors |
 | GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |

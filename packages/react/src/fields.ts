@@ -1321,7 +1321,7 @@ export const Form: ForwardRefExoticComponent<FormProps & RefAttributes<HTMLFormE
     validationErrors,
     onSubmit,
     onReset,
-  }, React.createElement(MuxFormValidationContext.Provider, { value: validationErrors ?? {} }, children));
+  }, React.createElement(MuxFormValidationContext.Provider, { value: validationErrors === undefined || validationErrors === null ? {} : validationErrors }, children));
 });
 
 Form.displayName = 'Form';
