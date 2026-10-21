@@ -3,6 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { componentTestSelection, selectComponentTestFiles } from '../src/component-test-selection.mjs';
+import { runtimeSourcePaths } from '../../../../packages/react/src/runtime-sources.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../../../../packages/react');
 
@@ -31,6 +32,13 @@ test('default component routing retains shared source and integrity coverage', (
   assert.ok(selected.includes('test/fixture.test.mjs'));
   assert.ok(selected.includes('test/style-scopes.test.mjs'));
   assert.ok(selected.includes('test/styling-tokens.test.mjs'));
+});
+
+test('every fixed-registry source module has a source test group', () => {
+  for (const source of runtimeSourcePaths) {
+    const record = { family: 'ScratchRegistryFamily', slug: 'scratch-registry-family', source };
+    assert.doesNotThrow(() => componentTestSelection([record], availableFiles, { includeSharedSource: false }), source);
+  }
 });
 
 test('a TypeScript source routes to the same source group as its .mjs predecessor', () => {

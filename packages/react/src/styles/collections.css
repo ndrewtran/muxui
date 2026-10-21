@@ -301,6 +301,8 @@
   height: 1.25rem;
   border-radius: var(--muxui-component-color-swatch-radius, var(--muxui-semantic-shape-radius-xs));
   border: 1px solid var(--muxui-semantic-border-default);
+  /* Stop the fill at the border: under it, the fill leaks through the antialiased edge of a rounded border. */
+  background-clip: padding-box;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
