@@ -11,6 +11,11 @@ async function selectModel(page, label) {
   await page.getByRole('option', { name: label, exact: true }).click();
   await page.locator('.muxui-select-popover').waitFor({ state: 'detached' });
 }
+// React Aria restores focus a frame after the popup unmounts, so wait for it instead of reading when the node detaches.
+async function assertTriggerFocused(page, trigger) {
+  await page.waitForFunction((node) => document.activeElement === node, await trigger.elementHandle(), { timeout: 5000 }).catch(() => {});
+  assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+}
 const modelValue = (page) => page.locator('.muxui-prompt-composer-model .muxui-select-value');
 const fixture = pageShell({ attributes: 'data-muxui-color-scheme="light"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css">', bodyAttributes:'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"',body:'<main style="max-width:560px;margin:auto;padding-top:280px"><div id="root"></div></main>',entry:'/prompt-entry.mjs' });
 
@@ -82,14 +87,14 @@ test('PromptComposer model Select preserves keyboard focus, caller state, reset 
     assert.equal(await page.getByRole('listbox', { name: 'Sources' }).count(), 0);
     assert.equal(await input.getAttribute('aria-activedescendant'), null);
     await page.keyboard.press('Escape'); await popup.waitFor({ state: 'detached' });
-    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    await assertTriggerFocused(page, trigger);
     assert.equal(await trigger.getAttribute('type'), 'button');
     await trigger.press('Enter'); await popup.waitFor();
     await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
     await popup.waitFor({ state: 'detached' });
     assert.equal(await modelValue(page).textContent(), 'Detailed');
     assert.deepEqual(await modelEvents(), [['model', 'b']]);
-    assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
+    await assertTriggerFocused(page, trigger);
     await selectModel(page, 'Standard');
     assert.deepEqual(await modelEvents(), [['model', 'b'], ['model', 'a']]);
 

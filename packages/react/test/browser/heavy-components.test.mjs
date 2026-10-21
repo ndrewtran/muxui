@@ -187,6 +187,8 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     assert.match(await page.getByRole('dialog').textContent(), /Second/u);
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'detached' });
+    // React Aria restores focus a frame after the popup unmounts, so wait for it instead of reading when the node detaches.
+    await page.waitForFunction(() => document.activeElement?.textContent === 'Open lightbox', undefined, { timeout: 5000 }).catch(() => {});
     assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Open lightbox');
     const disabledTrigger = page.getByRole('button', { name: 'Disabled lightbox' });
     assert.equal(await disabledTrigger.isDisabled(), true);

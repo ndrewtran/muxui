@@ -285,7 +285,7 @@ for (const engine of browserEngines()) {
           assert.ok((await tab.evaluate(readFold)).collapsed === false, 'an item leaves the column unfolded');
           assert.deepEqual(await tab.locator('aside [aria-current]').evaluateAll((nodes) => nodes.map((node) => node.textContent)), ['Overview'], 'and the current link');
           assert.equal(await trigger.count(), 1, 'and the workspace name');
-          assert.ok(await tab.evaluate(() => document.activeElement === document.querySelector('.workspace-switcher')), 'focus returns to the workspace button');
+          await expectFocusIn(tab, '.workspace-switcher', 'focus returns to the workspace button');
 
           // Enter opens it, ArrowDown moves, and Escape closes it and returns focus.
           await tab.keyboard.press('Enter');
@@ -295,7 +295,7 @@ for (const engine of browserEngines()) {
           await pollUntil(tab, () => document.activeElement?.textContent === 'Example team', undefined, { message: 'ArrowDown moves to the next item', report: () => document.activeElement?.outerHTML.slice(0, 120) });
           await tab.keyboard.press('Escape');
           await menu.waitFor({ state: 'detached' });
-          assert.ok(await tab.evaluate(() => document.activeElement === document.querySelector('.workspace-switcher')), 'Escape returns focus to the workspace button');
+          await expectFocusIn(tab, '.workspace-switcher', 'Escape returns focus to the workspace button');
 
           // The folded rail clips its header, not the menu: the popup opens whole beside the rail.
           await toggleButton(tab).click();
@@ -422,7 +422,7 @@ for (const engine of browserEngines()) {
           await tab.keyboard.press('Enter');
           await menu.waitFor({ state: 'detached' });
           assert.ok(await dialog.isVisible(), 'choosing a workspace leaves the drawer open');
-          assert.ok(await tab.evaluate(() => document.activeElement?.classList.contains('workspace-switcher')), 'focus returns to the workspace button in the drawer');
+          await expectFocusIn(tab, '[role="dialog"] .workspace-switcher', 'focus returns to the workspace button in the drawer');
           assert.deepEqual(errors, []);
         } finally {
           await context.close();

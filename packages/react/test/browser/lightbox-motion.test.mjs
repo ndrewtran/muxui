@@ -111,6 +111,8 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     const exit = exitFrames.find(({ opacity, translate }) => opacity < 1 && /-/u.test(translate));
     assert.ok(exit && exit.opacity < 1, `exit fades out: ${JSON.stringify(exitFrames)}`);
     assert.match(exit.translate, /-/u, `exit moves upward: ${JSON.stringify(exit)}`);
+    // React Aria restores focus a frame after the popup unmounts, so wait for it instead of reading when the node detaches.
+    await page.waitForFunction((node) => document.activeElement === node, await trigger.elementHandle(), { timeout: 5000 }).catch(() => {});
     assert.equal(await trigger.evaluate((node) => document.activeElement === node), true, 'Escape restores trigger focus');
 
     await trigger.click();
