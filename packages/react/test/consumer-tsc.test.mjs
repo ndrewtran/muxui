@@ -3,20 +3,20 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import test from 'node:test';
 import {
   STRICT_CONSUMER_COMPILER_OPTIONS,
+  augmentationReach,
   consumerTsc,
   indexSignatureCompatible,
+  typeScript7Tsc,
   verifiedTypeScript6,
 } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
-const require = createRequire(import.meta.url);
-const typeScript7 = resolve(dirname(require.resolve('typescript/package.json')), 'bin/tsc');
+const typeScript7 = typeScript7Tsc();
 
 /** A scratch consumer project holding `files`, with the package's @types/react linked in. */
 function withProject(files, run) {
@@ -51,6 +51,32 @@ test('the index check rejects an interface props type and an intersection with o
     for (const exactOptionalPropertyTypes of [false, true]) {
       const compatible = indexSignatureCompatible({ directory, specifier: './fixture.js', names, exactOptionalPropertyTypes });
       assert.deepEqual(compatible, ['LiteralProps', 'MappedProps'], `exactOptionalPropertyTypes ${exactOptionalPropertyTypes}`);
+    }
+  });
+});
+
+test('the augmentation check sees a type derived from an interface, and not a flat copy of it', () => {
+  const declarations = [
+    'export interface Base { label?: string }',
+    'export type Flat = { label?: string };',
+    'export type Intersection = Base & { id?: string };',
+    'export interface Extension extends Base { id?: string }',
+    'export type Derived = Omit<Base, never> & { id?: string };',
+    'export type Union = (Base & { a?: string }) | { b?: string };',
+    'export type Indexed = Record<string, unknown>;',
+  ].join('\n');
+  withProject({ 'fixture.d.ts': declarations }, (directory) => {
+    for (const tsc of [consumerTsc(), typeScript7]) {
+      const reach = augmentationReach({
+        directory,
+        specifier: './fixture.js',
+        interfaces: ['Base'],
+        types: ['Base', 'Flat', 'Intersection', 'Extension', 'Derived', 'Union', 'Indexed'],
+        tsc,
+      });
+      // A mapped type over the interface (Omit) follows it, a flat copy does not, a union reaches only when
+      // every arm does, and an index signature is not a reach.
+      assert.deepEqual(reach, { Base: ['Derived', 'Extension', 'Intersection'] }, tsc);
     }
   });
 });

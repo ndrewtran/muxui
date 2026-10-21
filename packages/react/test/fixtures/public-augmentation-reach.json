@@ -1,0 +1,25 @@
+{
+  "recordedFrom": "c8434f62, before the TypeScript moves: reach maps each exported interface to the other exported types that took an optional key added to the interface by module augmentation (declare module '@muxui/react' { interface I { key?: string } }), read under TypeScript 6.0.3 (node test/support/declaration-surface.mjs --reach <generated directory>); an interface that reached no other type is not listed",
+  "reach": {
+    "ButtonProps": [
+      "IconButtonProps",
+      "SidebarToggleProps"
+    ],
+    "FieldValidationProps": [
+      "AutocompleteProps",
+      "CheckboxGroupProps",
+      "ColorFieldProps",
+      "ComboBoxProps",
+      "DateFieldProps",
+      "DatePickerProps",
+      "DateRangePickerProps",
+      "NamedFieldProps",
+      "NumberFieldProps",
+      "SearchFieldProps",
+      "SelectProps",
+      "SelectRootProps",
+      "TextFieldProps",
+      "TimeFieldProps"
+    ]
+  }
+}

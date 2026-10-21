@@ -8,7 +8,7 @@ import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
-import { STRICT_CONSUMER_COMPILER_OPTIONS, consumerTsc, indexSignatureCompatible } from './support/declaration-surface.mjs';
+import { STRICT_CONSUMER_COMPILER_OPTIONS, augmentationReach, consumerTsc, indexSignatureCompatible, typeScript7Tsc } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -156,6 +156,20 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
         recordedCompatible.filter((name) => !compatible.includes(name)),
         [],
         `types no longer assignable to Record<string, unknown> (exactOptionalPropertyTypes ${exactOptionalPropertyTypes})`,
+      );
+    }
+
+    // A consumer's `declare module '@muxui/react' { interface FieldValidationProps { ... } }` still reaches
+    // each type it reached before the moves: a props type that flattens an interface's members instead
+    // of intersecting or extending it drops the consumer's key. The record was taken under TypeScript 6,
+    // and TypeScript 7, the package's own compiler, must agree.
+    const { reach: recordedReach } = JSON.parse(await readFile(resolve(packageRoot, 'test/fixtures/public-augmentation-reach.json'), 'utf8'));
+    for (const [label, compiler] of [['TypeScript 6', tsc], ['TypeScript 7', typeScript7Tsc()]]) {
+      const reach = augmentationReach({ directory: consumer, specifier: '@muxui/react', interfaces: Object.keys(recordedReach), types: [...new Set(Object.values(recordedReach).flat())], tsc: compiler });
+      assert.deepEqual(
+        Object.entries(recordedReach).flatMap(([name, types]) => types.filter((type) => !reach[name].includes(type)).map((type) => `${name} -> ${type}`)),
+        [],
+        `types no longer reached by a module augmentation of their interface (${label})`,
       );
     }
 
