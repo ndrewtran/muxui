@@ -1,0 +1,102 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:breadcrumbs",
+  "binding": "web.react",
+  "export": "Breadcrumbs",
+  "api": {
+    "props": [
+      "items"
+    ],
+    "events": [
+      "navigate"
+    ],
+    "defaults": {
+      "items": []
+    },
+    "propDetails": {
+      "items": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "BreadcrumbItem"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The levels of the path, from the top of the hierarchy down to the current page. The last item is the current page."
+      }
+    },
+    "eventDetails": {
+      "navigate": {
+        "prop": "onNavigate",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "BreadcrumbItem"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the item a person navigates to, unless it is disabled."
+      }
+    },
+    "types": {
+      "BreadcrumbItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Identifies the item. An item without one is identified by its position."
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": true,
+              "readonly": false,
+              "description": "What the level is called, such as the name of its page."
+            },
+            {
+              "name": "href",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Where the level leads. An item without one, and the last item, render as text."
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Makes the level text that cannot be navigated to."
+            }
+          ]
+        },
+        "description": "One level of a Breadcrumbs path."
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:005d6c6a8bedf91302bd2497f35ff818ccb5cab9b31afc5d01942b5c8ffec02a -->
+<!-- @generated-content-sha256: sha256:a333d7dd03f37fedab562a2f73acb491feef51e491ef0f3ecbf51eef1b119eea -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -106,7 +106,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
 | Avatar | experimental | . | .muxui-avatar | size |
-| Breadcrumbs | experimental | . | .muxui-breadcrumbs | items, aria-label |
+| Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
 | Calendar | experimental | . | .muxui-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |

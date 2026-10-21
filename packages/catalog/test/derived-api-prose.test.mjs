@@ -81,6 +81,7 @@ const GUIDES = {
   link: { native: ['aria-label', 'currentColor', '1em', 'aria-hidden="true"', 'focusable="false"'] },
   disclosure: {},
   'toggle-button': {},
+  breadcrumbs: {},
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
