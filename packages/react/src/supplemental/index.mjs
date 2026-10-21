@@ -1487,11 +1487,11 @@ const Sidebar = {
     const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { ref: button, hidden: !hasMenu, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
     return h(SidebarAccountContext.Provider, { value: account }, h(AriaMenuTrigger, { isOpen: open && hasMenu && !collapsed, onOpenChange: setOpen }, content));
   }),
-  AccountMenu: React.forwardRef(function SidebarAccountMenu({ className, ...props }, ref) {
+  AccountMenu: React.forwardRef(function SidebarAccountMenu({ items, children, onAction, className }, ref) {
     const account = useSidebarAccount();
     useIsomorphicLayoutEffect(() => account.register(), [account.register]);
     // The popup opens from the card, not the small button, so it lines up with the card's edge.
-    return h(Menu.Popup, { anchorRef: account.anchor, placement: 'top-start' }, h(Menu.List, { ...props, ref, className: cx('muxui-sidebar__account-menu', className) }));
+    return h(Menu.Popup, { anchorRef: account.anchor, placement: 'top-start' }, h(Menu.List, { items, onAction, ref, className: cx('muxui-sidebar__account-menu', className) }, children));
   }),
   MobileTrigger: function SidebarMobileTrigger({ children, logo }) {
     const sidebar = React.useContext(SidebarContext);

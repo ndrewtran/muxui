@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
@@ -119,6 +120,31 @@ test('Sidebar AccountCard shows its options button only while an AccountMenu is 
     assert.equal(buttons(document), 0);
     await act(async () => document.querySelector('#toggle').click());
     assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'false');
+  });
+});
+
+test('Sidebar AccountMenu declares only the props and event the catalog record lists, and ignores the rest', async () => {
+  const declaration = await readFile(new URL('../src/supplemental/index.d.ts', import.meta.url), 'utf8');
+  const declared = /SidebarAccountMenuProps = Pick<MenuListProps, ([^>]+)>/u.exec(declaration)?.[1].match(/\w+/gu);
+  assert.ok(declared, 'AccountMenu declares a narrowed Menu list type');
+  // children and className are on every part; the rest belong to this part and must be in the authored record.
+  const record = JSON.parse(await readFile(new URL('../../../catalog/components/sidebar/artifact.json', import.meta.url), 'utf8')).bindings['web.react'].api;
+  const own = declared.filter((name) => !['children', 'className'].includes(name));
+  assert.deepEqual([...own].sort(), ['items', 'onAction']);
+  for (const name of own) assert.ok(record.props.includes(name), `${name} is in the record's props`);
+  assert.ok(record.events.includes('action'), 'the record lists the action event');
+  // At runtime the menu forwards only those props, so a caller cannot reach Menu props the record does not list.
+  const chosen = [];
+  const Menus = () => h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' },
+    h(Sidebar.AccountMenu, { items: ['Profile'], onAction: (item) => chosen.push(['action', item.id]), onSelect: (item) => chosen.push(['select', item.id]), shouldCloseOnSelect: false, disabled: true }));
+  await withDom(h(Menus), async (document) => {
+    await act(async () => document.querySelector('button[aria-label="Account options"]').click());
+    const item = document.querySelector('[role="menuitem"]');
+    assert.ok(item, 'the menu opens');
+    assert.equal(item.getAttribute('aria-disabled') === null, true, 'disabled is not forwarded');
+    await act(async () => item.click());
+    assert.deepEqual(chosen, [['action', 'Profile']], 'only onAction runs');
+    assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'false', 'choosing closes the menu; shouldCloseOnSelect is not forwarded');
   });
 });
 

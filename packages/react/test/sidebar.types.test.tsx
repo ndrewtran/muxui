@@ -58,7 +58,7 @@ void wrongDensity;
 const accountRef = createRef<HTMLDivElement>();
 const account = (
   <Sidebar.AccountCard name="Ada" email="ada@example.com" status="online">
-    <Sidebar.AccountMenu ref={accountRef} aria-label="Account" onAction={(item) => void item?.id}>
+    <Sidebar.AccountMenu ref={accountRef} className="account-menu" onAction={(item) => void item?.id}>
       <Menu.Item id="profile">Profile</Menu.Item>
       <Menu.Separator />
       <Menu.Item id="sign-out">Sign out</Menu.Item>
@@ -68,6 +68,13 @@ const account = (
 const accountItems = <Sidebar.AccountMenu items={[{ id: 'profile', label: 'Profile' }]} />;
 void account;
 void accountItems;
+// AccountMenu supports items, children, onAction and className, which the catalog record lists. Nothing else of Menu's list props reaches it.
+// @ts-expect-error onSelect is not an AccountMenu prop; onAction reports the chosen item.
+const accountSelect = <Sidebar.AccountMenu items={['Profile']} onSelect={() => undefined} />;
+// @ts-expect-error The menu is not disabled on its own; the card owns its button.
+const accountDisabled = <Sidebar.AccountMenu items={['Profile']} disabled />;
+void accountSelect;
+void accountDisabled;
 // @ts-expect-error The card needs the name it shows.
 const nameless = <Sidebar.AccountCard email="ada@example.com" />;
 void nameless;

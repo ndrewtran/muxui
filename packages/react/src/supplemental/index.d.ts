@@ -353,6 +353,8 @@ export type SidebarNavItemProps = SidebarExpandedProps & {
   items?: SidebarNavEntry[];
   external?: boolean;
 };
+/** The part of Menu's list props that AccountMenu supports. The card's button names the menu and owns its open state. */
+export type SidebarAccountMenuProps = Pick<MenuListProps, 'items' | 'children' | 'onAction' | 'className'>;
 export declare const Sidebar: {
   Provider: React.ComponentType<SidebarProviderProps>;
   Root: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<HTMLElement>>;
@@ -366,8 +368,8 @@ export declare const Sidebar: {
   NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
   /** Shows the account. While an `AccountMenu` is mounted inside it, its Account options button opens that menu; without one the card has no button. */
   AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;
-  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`. Only valid inside `AccountCard`. */
-  AccountMenu: React.ForwardRefExoticComponent<MenuListProps & React.RefAttributes<HTMLDivElement>>;
+  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`, and read the chosen item from `onAction`. Only valid inside `AccountCard`. */
+  AccountMenu: React.ForwardRefExoticComponent<SidebarAccountMenuProps & React.RefAttributes<HTMLDivElement>>;
   MobileTrigger: React.ComponentType<{ children?: React.ReactNode; logo?: React.ReactNode }>;
   FeatureCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { title?: string; description?: string; dismissLabel?: string; onDismiss?: () => void } & React.RefAttributes<HTMLDivElement>>;
 };

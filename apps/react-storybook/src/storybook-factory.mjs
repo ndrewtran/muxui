@@ -1077,8 +1077,8 @@ const SIDEBAR_SAMPLE_ITEMS = [{ href: '#now', label: 'Now' }, { href: '#next', l
  * The flat Sidebar props belong to different parts. Provider owns folding. Root owns hideBorder and density.
  * The first NavItem takes label, href, current, external, badge, and icon; the Roadmap group takes items and
  * its open state. Search, AccountCard, and FeatureCard take their own props, and onAction belongs to the
- * AccountMenu inside the card. One navigation fills the column and the mobile drawer, and the consumer owns the
- * FeatureCard, so dismissing it removes it here.
+ * AccountMenu inside the card, whose own items stay its Menu.Item children here. One navigation fills the
+ * column and the mobile drawer, and the consumer owns the FeatureCard, so dismissing it removes it here.
  */
 function SidebarPreview({
   collapsed, defaultCollapsed, onCollapsedChange, shortcut,
