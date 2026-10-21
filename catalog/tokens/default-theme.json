@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "6.0.0",
+  "tokenContractVersion": "7.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -2624,31 +2624,13 @@
         }
       }
     },
-    "component.taggroup.selected-foreground-hover": {
-      "layer": "component",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Label of a hovered selected Tag; color-60-fg in light and color-50-fg in dark, keeping the label color it had before the action hover role changed.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.color-60-fg",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.color.color-50-fg"
-        }
-      }
-    },
     "component.taggroup.tag-background": {
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Fill of an unselected, enabled tag.",
+      "meaning": "Fill of an unselected, enabled neutral tag; the neutral action background.",
       "overridePolicy": "theme",
-      "alias": "semantic.surface.subtle",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-96"
-        }
-      }
+      "alias": "semantic.action.neutral-background"
     },
     "component.taggroup.tag-foreground": {
       "layer": "component",
@@ -2660,6 +2642,2367 @@
       "modes": {
         "colorScheme.dark": {
           "alias": "semantic.color.neutral-default-28"
+        }
+      }
+    },
+    "component.taggroup.neutral-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a neutral dot tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.muted"
+    },
+    "component.taggroup.neutral-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected neutral tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.surface.strong"
+    },
+    "component.taggroup.neutral-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected neutral tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.on-solid"
+    },
+    "component.taggroup.selected-overlay-scheme": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Mixed over a selected tag while hovered or pressed, for tags whose label is light in the light scheme: dark in the light scheme, light in the dark scheme.",
+      "overridePolicy": "theme",
+      "alias": "semantic.surface.strong"
+    },
+    "component.taggroup.selected-overlay-light": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Mixed over a selected tag while hovered or pressed, for tags with a dark label in both schemes: light in both.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.neutral-5"
+    },
+    "component.taggroup.brand-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a brand soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-80"
+        }
+      }
+    },
+    "component.taggroup.brand-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a brand strong tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-100"
+        }
+      }
+    },
+    "component.taggroup.brand-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a brand dot tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-60"
+        }
+      }
+    },
+    "component.taggroup.brand-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a brand tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with brand-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.color-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.color.color-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.brand-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a brand tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with brand-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.color-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.color.color-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.brand-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected brand tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.selection.track"
+    },
+    "component.taggroup.brand-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected brand tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.action.foreground"
+    },
+    "component.taggroup.success-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a success soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.success-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.success-20"
+        }
+      }
+    },
+    "component.taggroup.success-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a success strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.success-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.success-5"
+        }
+      }
+    },
+    "component.taggroup.success-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a success dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.success-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.success-40"
+        }
+      }
+    },
+    "component.taggroup.success-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a success tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with success-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.success-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.success-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.success-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a success tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with success-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.success-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.success-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.success-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected success tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.success-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.success-40"
+        }
+      }
+    },
+    "component.taggroup.success-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected success tag; the success 60 and 40 foreground pair.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.success-60-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.success-40-fg"
+        }
+      }
+    },
+    "component.taggroup.warning-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a warning soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.warning-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.warning-20"
+        }
+      }
+    },
+    "component.taggroup.warning-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a warning strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.warning-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.warning-5"
+        }
+      }
+    },
+    "component.taggroup.warning-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a warning dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.warning-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.warning-40"
+        }
+      }
+    },
+    "component.taggroup.warning-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a warning tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with warning-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.warning-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.warning-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.warning-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a warning tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with warning-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.warning-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.warning-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.warning-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected warning tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.warning-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.warning-40"
+        }
+      }
+    },
+    "component.taggroup.warning-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected warning tag; the warning 60 and 40 foreground pair.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.warning-60-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.warning-40-fg"
+        }
+      }
+    },
+    "component.taggroup.error-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a error soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.error-20"
+        }
+      }
+    },
+    "component.taggroup.error-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a error strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.error-5"
+        }
+      }
+    },
+    "component.taggroup.error-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a error dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.error-40"
+        }
+      }
+    },
+    "component.taggroup.error-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a error tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with error-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.error-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.error-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.error-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a error tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with error-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.error-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.error-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.error-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected error tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.error-40"
+        }
+      }
+    },
+    "component.taggroup.error-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected error tag; the error 60 and 40 foreground pair.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.error-60-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.error-40-fg"
+        }
+      }
+    },
+    "component.taggroup.red-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a red soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.red-20"
+        }
+      }
+    },
+    "component.taggroup.red-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a red strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.red-5"
+        }
+      }
+    },
+    "component.taggroup.red-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a red dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.red-40"
+        }
+      }
+    },
+    "component.taggroup.red-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a red tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with red-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.red-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.red-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.red-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a red tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with red-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.red-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.red-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.red-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected red tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.red-40"
+        }
+      }
+    },
+    "component.taggroup.red-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected red tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.red-100"
+        }
+      }
+    },
+    "component.taggroup.orange-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a orange soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.orange-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.orange-20"
+        }
+      }
+    },
+    "component.taggroup.orange-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a orange strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.orange-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.orange-5"
+        }
+      }
+    },
+    "component.taggroup.orange-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a orange dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.orange-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.orange-40"
+        }
+      }
+    },
+    "component.taggroup.orange-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a orange tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with orange-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.orange-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.orange-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.orange-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a orange tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with orange-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.orange-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.orange-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.orange-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected orange tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.orange-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.orange-40"
+        }
+      }
+    },
+    "component.taggroup.orange-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected orange tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.orange-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.orange-100"
+        }
+      }
+    },
+    "component.taggroup.amber-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a amber soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.amber-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.amber-20"
+        }
+      }
+    },
+    "component.taggroup.amber-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a amber strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.amber-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.amber-5"
+        }
+      }
+    },
+    "component.taggroup.amber-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a amber dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.amber-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.amber-40"
+        }
+      }
+    },
+    "component.taggroup.amber-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a amber tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with amber-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.amber-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.amber-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.amber-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a amber tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with amber-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.amber-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.amber-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.amber-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected amber tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.amber-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.amber-40"
+        }
+      }
+    },
+    "component.taggroup.amber-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected amber tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.amber-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.amber-100"
+        }
+      }
+    },
+    "component.taggroup.yellow-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a yellow soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.yellow-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.yellow-20"
+        }
+      }
+    },
+    "component.taggroup.yellow-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a yellow strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.yellow-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.yellow-5"
+        }
+      }
+    },
+    "component.taggroup.yellow-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a yellow dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.yellow-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.yellow-40"
+        }
+      }
+    },
+    "component.taggroup.yellow-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a yellow tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with yellow-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.yellow-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.yellow-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.yellow-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a yellow tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with yellow-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.yellow-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.yellow-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.yellow-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected yellow tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.yellow-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.yellow-40"
+        }
+      }
+    },
+    "component.taggroup.yellow-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected yellow tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.yellow-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.yellow-100"
+        }
+      }
+    },
+    "component.taggroup.lime-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a lime soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.lime-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.lime-20"
+        }
+      }
+    },
+    "component.taggroup.lime-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a lime strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.lime-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.lime-5"
+        }
+      }
+    },
+    "component.taggroup.lime-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a lime dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.lime-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.lime-40"
+        }
+      }
+    },
+    "component.taggroup.lime-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a lime tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with lime-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.lime-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.lime-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.lime-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a lime tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with lime-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.lime-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.lime-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.lime-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected lime tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.lime-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.lime-40"
+        }
+      }
+    },
+    "component.taggroup.lime-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected lime tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.lime-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.lime-100"
+        }
+      }
+    },
+    "component.taggroup.green-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a green soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.green-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.green-20"
+        }
+      }
+    },
+    "component.taggroup.green-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a green strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.green-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.green-5"
+        }
+      }
+    },
+    "component.taggroup.green-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a green dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.green-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.green-40"
+        }
+      }
+    },
+    "component.taggroup.green-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a green tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with green-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.green-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.green-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.green-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a green tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with green-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.green-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.green-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.green-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected green tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.green-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.green-40"
+        }
+      }
+    },
+    "component.taggroup.green-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected green tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.green-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.green-100"
+        }
+      }
+    },
+    "component.taggroup.emerald-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a emerald soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.emerald-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.emerald-20"
+        }
+      }
+    },
+    "component.taggroup.emerald-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a emerald strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.emerald-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.emerald-5"
+        }
+      }
+    },
+    "component.taggroup.emerald-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a emerald dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.emerald-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.emerald-40"
+        }
+      }
+    },
+    "component.taggroup.emerald-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a emerald tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with emerald-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.emerald-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.emerald-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.emerald-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a emerald tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with emerald-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.emerald-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.emerald-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.emerald-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected emerald tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.emerald-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.emerald-40"
+        }
+      }
+    },
+    "component.taggroup.emerald-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected emerald tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.emerald-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.emerald-100"
+        }
+      }
+    },
+    "component.taggroup.teal-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a teal soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.teal-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.teal-20"
+        }
+      }
+    },
+    "component.taggroup.teal-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a teal strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.teal-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.teal-5"
+        }
+      }
+    },
+    "component.taggroup.teal-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a teal dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.teal-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.teal-40"
+        }
+      }
+    },
+    "component.taggroup.teal-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a teal tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with teal-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.teal-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.teal-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.teal-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a teal tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with teal-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.teal-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.teal-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.teal-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected teal tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.teal-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.teal-40"
+        }
+      }
+    },
+    "component.taggroup.teal-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected teal tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.teal-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.teal-100"
+        }
+      }
+    },
+    "component.taggroup.bluegreen-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a bluegreen soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.bluegreen-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.bluegreen-20"
+        }
+      }
+    },
+    "component.taggroup.bluegreen-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a bluegreen strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.bluegreen-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.bluegreen-5"
+        }
+      }
+    },
+    "component.taggroup.bluegreen-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a bluegreen dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.bluegreen-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.bluegreen-40"
+        }
+      }
+    },
+    "component.taggroup.bluegreen-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a bluegreen tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with bluegreen-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.bluegreen-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.bluegreen-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.bluegreen-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a bluegreen tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with bluegreen-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.bluegreen-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.bluegreen-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.bluegreen-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected bluegreen tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.bluegreen-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.bluegreen-40"
+        }
+      }
+    },
+    "component.taggroup.bluegreen-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected bluegreen tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.bluegreen-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.bluegreen-100"
+        }
+      }
+    },
+    "component.taggroup.cyan-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a cyan soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.cyan-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.cyan-20"
+        }
+      }
+    },
+    "component.taggroup.cyan-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a cyan strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.cyan-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.cyan-5"
+        }
+      }
+    },
+    "component.taggroup.cyan-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a cyan dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.cyan-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.cyan-40"
+        }
+      }
+    },
+    "component.taggroup.cyan-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a cyan tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with cyan-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.cyan-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.cyan-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.cyan-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a cyan tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with cyan-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.cyan-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.cyan-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.cyan-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected cyan tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.cyan-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.cyan-40"
+        }
+      }
+    },
+    "component.taggroup.cyan-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected cyan tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.cyan-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.cyan-100"
+        }
+      }
+    },
+    "component.taggroup.sky-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a sky soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.sky-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.sky-20"
+        }
+      }
+    },
+    "component.taggroup.sky-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a sky strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.sky-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.sky-5"
+        }
+      }
+    },
+    "component.taggroup.sky-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a sky dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.sky-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.sky-40"
+        }
+      }
+    },
+    "component.taggroup.sky-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a sky tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with sky-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.sky-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.sky-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.sky-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a sky tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with sky-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.sky-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.sky-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.sky-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected sky tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.sky-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.sky-40"
+        }
+      }
+    },
+    "component.taggroup.sky-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected sky tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.sky-100",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.sky-100"
+        }
+      }
+    },
+    "component.taggroup.indigo-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a indigo soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.indigo-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.indigo-20"
+        }
+      }
+    },
+    "component.taggroup.indigo-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a indigo strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.indigo-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.indigo-5"
+        }
+      }
+    },
+    "component.taggroup.indigo-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a indigo dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.indigo-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.indigo-40"
+        }
+      }
+    },
+    "component.taggroup.indigo-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a indigo tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with indigo-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.indigo-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.indigo-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.indigo-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a indigo tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with indigo-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.indigo-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.indigo-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.indigo-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected indigo tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.indigo-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.indigo-40"
+        }
+      }
+    },
+    "component.taggroup.indigo-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected indigo tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.indigo-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.indigo-100"
+        }
+      }
+    },
+    "component.taggroup.violet-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a violet soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.violet-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.violet-20"
+        }
+      }
+    },
+    "component.taggroup.violet-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a violet strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.violet-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.violet-5"
+        }
+      }
+    },
+    "component.taggroup.violet-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a violet dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.violet-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.violet-40"
+        }
+      }
+    },
+    "component.taggroup.violet-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a violet tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with violet-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.violet-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.violet-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.violet-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a violet tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with violet-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.violet-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.violet-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.violet-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected violet tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.violet-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.violet-40"
+        }
+      }
+    },
+    "component.taggroup.violet-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected violet tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.violet-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.violet-100"
+        }
+      }
+    },
+    "component.taggroup.purple-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a purple soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.purple-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.purple-20"
+        }
+      }
+    },
+    "component.taggroup.purple-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a purple strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.purple-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.purple-5"
+        }
+      }
+    },
+    "component.taggroup.purple-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a purple dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.purple-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.purple-40"
+        }
+      }
+    },
+    "component.taggroup.purple-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a purple tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with purple-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.purple-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.purple-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.purple-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a purple tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with purple-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.purple-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.purple-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.purple-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected purple tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.purple-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.purple-40"
+        }
+      }
+    },
+    "component.taggroup.purple-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected purple tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.purple-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.purple-100"
+        }
+      }
+    },
+    "component.taggroup.fuchsia-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a fuchsia soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.fuchsia-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.fuchsia-20"
+        }
+      }
+    },
+    "component.taggroup.fuchsia-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a fuchsia strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.fuchsia-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.fuchsia-5"
+        }
+      }
+    },
+    "component.taggroup.fuchsia-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a fuchsia dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.fuchsia-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.fuchsia-40"
+        }
+      }
+    },
+    "component.taggroup.fuchsia-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a fuchsia tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with fuchsia-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.fuchsia-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.fuchsia-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.fuchsia-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a fuchsia tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with fuchsia-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.fuchsia-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.fuchsia-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.fuchsia-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected fuchsia tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.fuchsia-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.fuchsia-40"
+        }
+      }
+    },
+    "component.taggroup.fuchsia-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected fuchsia tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.fuchsia-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.fuchsia-100"
+        }
+      }
+    },
+    "component.taggroup.pink-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a pink soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.pink-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.pink-20"
+        }
+      }
+    },
+    "component.taggroup.pink-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a pink strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.pink-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.pink-5"
+        }
+      }
+    },
+    "component.taggroup.pink-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a pink dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.pink-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.pink-40"
+        }
+      }
+    },
+    "component.taggroup.pink-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a pink tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with pink-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.pink-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.pink-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.pink-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a pink tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with pink-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.pink-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.pink-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.pink-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected pink tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.pink-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.pink-40"
+        }
+      }
+    },
+    "component.taggroup.pink-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected pink tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.pink-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.pink-100"
+        }
+      }
+    },
+    "component.taggroup.rose-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a rose soft or outline tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.rose-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.rose-20"
+        }
+      }
+    },
+    "component.taggroup.rose-strong-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a rose strong tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.rose-90",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.rose-5"
+        }
+      }
+    },
+    "component.taggroup.rose-dot": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Dot before the label of a rose dot tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.rose-50",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.rose-40"
+        }
+      }
+    },
+    "component.taggroup.rose-tint-weak": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a rose tag: the hue at 10% in the light scheme and 25% in the dark scheme. Fills and the outline edge mix it with rose-tint-heavy.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.rose-50",
+        "color": "#00000000",
+        "weight": 0.1
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.rose-50",
+            "color": "#00000000",
+            "weight": 0.25
+          }
+        }
+      }
+    },
+    "component.taggroup.rose-tint-heavy": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Basis tint of a rose tag: the hue at 40% in the light scheme and 50% in the dark scheme. Fills and the outline edge mix it with rose-tint-weak.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "reference.color.rose-50",
+        "color": "#00000000",
+        "weight": 0.4
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "reference.color.rose-50",
+            "color": "#00000000",
+            "weight": 0.5
+          }
+        }
+      }
+    },
+    "component.taggroup.rose-selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of a selected rose tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.rose-60",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.rose-40"
+        }
+      }
+    },
+    "component.taggroup.rose-selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text of a selected rose tag.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.rose-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.rose-100"
         }
       }
     },

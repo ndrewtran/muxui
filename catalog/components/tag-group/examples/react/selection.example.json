@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tag-group-selection-react",
+  "kind": "example",
+  "name": "Selectable TagGroup",
+  "summary": "Select topics to narrow a list, holding the selected ids in state.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tag-group#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/tag-group/examples/react/selection.tsx"
+}

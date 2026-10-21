@@ -424,6 +424,34 @@ void tagGroupRequired;
 // @ts-expect-error TagGroup does not expose invalid.
 const tagGroupInvalid = <TagGroup label="Tags" invalid />;
 void tagGroupInvalid;
+// An item's colour overrides the group's, and selection is a Set of item ids.
+const tagGroupColours = (
+  <>
+    <TagGroup label="Tags" color="brand" variant="outline" items={[{ id: 'one', label: 'One', color: 'red' }, 'Two']} />
+    <TagGroup
+      label="Filters"
+      items={['Open', 'Urgent']}
+      selectionMode="multiple"
+      defaultSelectedKeys={new Set(['Open'])}
+      onSelectionChange={(keys) => { const ids: Set<string> = keys; void ids; }}
+      onRemove={(items) => { const colours: Array<string | undefined> = items.map((item) => item.color); void colours; }}
+    />
+    <TagGroup label="Filters" items={['Open']} selectionMode="single" selectedKeys={new Set<string>()} />
+  </>
+);
+void tagGroupColours;
+// @ts-expect-error TagGroup color is one of the named colours.
+const tagGroupColour = <TagGroup label="Tags" color="crimson" />;
+void tagGroupColour;
+// @ts-expect-error TagGroup item color is one of the named colours.
+const tagGroupItemColour = <TagGroup label="Tags" items={[{ id: 'one', color: 'crimson' }]} />;
+void tagGroupItemColour;
+// @ts-expect-error TagGroup variant is soft, outline, dot, or strong.
+const tagGroupVariant = <TagGroup label="Tags" variant="filled" />;
+void tagGroupVariant;
+// @ts-expect-error TagGroup selectedKeys is a Set of item ids.
+const tagGroupSelectedKeys = <TagGroup label="Tags" selectedKeys={['one']} />;
+void tagGroupSelectedKeys;
 // @ts-expect-error TokenField does not expose generic field descriptions.
 const tokenFieldDescription = <TokenField label="Tags" description="Unsupported" />;
 void tokenFieldDescription;

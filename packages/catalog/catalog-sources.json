@@ -1748,6 +1748,14 @@
     {
       "family": "example",
       "path": "catalog/components/toast/examples/react/result-and-failure.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tag-group/examples/react/colours.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tag-group/examples/react/selection.example.json"
     }
   ]
 }
