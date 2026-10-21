@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
+import { parseAst } from 'vite';
 import * as barrel from '../src/collections.mjs';
 import { readRuntimeSources, runtimeSourceFor } from '../src/runtime-sources.mjs';
 
@@ -45,10 +46,24 @@ test('each context and WeakMap is declared in exactly one collections module', a
   for (const [name, modules] of declaredIn) assert.equal(modules.length, 1, `${name} is declared in ${modules.join(', ')}`);
 });
 
+// The sibling modules a source imports or re-exports, by name. Parsed, so a multiline import counts.
+function siblingModules(text, lang = 'js') {
+  return parseAst(text, { lang }).body.flatMap((node) => {
+    const name = /^\.\/([\w-]+)\.\w+$/u.exec(node.source?.value ?? '')?.[1];
+    return name ? [name] : [];
+  });
+}
+
 test('a family module imports shared helpers only, never another family or the barrel', () => {
   const names = familyModules.map(moduleName);
   for (const path of familyModules) {
-    const imported = [...sources[path].matchAll(/^import .* from '\.\/([\w-]+)\.(?:mjs|js|ts)';$/gmu)].map(([, name]) => name);
-    for (const name of imported) assert.ok(!names.includes(name) && name !== 'collections', `${path} imports ${name}`);
+    for (const name of siblingModules(sources[path], path.endsWith('.ts') ? 'ts' : 'js')) {
+      assert.ok(!names.includes(name) && name !== 'collections', `${path} imports ${name}`);
+    }
   }
+});
+
+test('the sibling import guard sees multiline imports and re-exports', () => {
+  const text = "import React from 'react';\nimport {\n  ListBox,\n} from './list-box.mjs';\nexport {\n  Tree,\n} from './tree.mjs';\nimport { classNames } from './control-utils.mjs';\n";
+  assert.deepEqual(siblingModules(text), ['list-box', 'tree', 'control-utils']);
 });
