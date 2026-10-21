@@ -1126,13 +1126,19 @@ function typeInto(input, text) {
 }
 
 // handleSelect and handleInputChange each return early for a disabled field, a read-only field, and (typing only) the
-// reset of the form it sits in. React Aria already stops a disabled input reporting typing, so the disabled typing
-// guard is defence in depth that no DOM event reaches; the other guards each fail this test when removed.
+// reset of the form it sits in. A disabled input cannot be typed into, so the disabled typing guard is defence in
+// depth that no event reaches and this test does not simulate it; the other guards each fail it when removed. An
+// error thrown inside an event listener does not fail a jsdom test by itself, so the run records window errors
+// and console errors and asserts there were none.
 test('Autocomplete ignores choosing and typing once disabled or read-only, and the echo of its own form reset', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   const changes = [];
   const selected = [];
+  const reported = [];
+  const consoleError = console.error;
+  dom.window.addEventListener('error', (event) => reported.push(`window error: ${event.error?.stack ?? event.message}`));
+  console.error = (...args) => reported.push(`console.error: ${args.map(String).join(' ')}`);
   let root;
   try {
     const host = document.querySelector('#root');
@@ -1146,9 +1152,8 @@ test('Autocomplete ignores choosing and typing once disabled or read-only, and t
     await act(async () => typeInto(input, 'Syd'));
     assert.deepEqual(changes, [], 'a read-only field reports no typing');
     await act(async () => root.render(renderField({ disabled: true })));
-    await act(async () => typeInto(input, 'Mel'));
     await act(async () => document.querySelector('.muxui-autocomplete-option').click());
-    assert.deepEqual(changes, [], 'a disabled field reports no typing or choice');
+    assert.deepEqual(changes, [], 'a disabled field reports no choice');
     assert.deepEqual(selected, [], 'a disabled field selects nothing');
 
     // Typing in a form reports the text; the form's reset restores the default without reporting its own changes.
@@ -1161,7 +1166,9 @@ test('Autocomplete ignores choosing and typing once disabled or read-only, and t
     assert.equal(formInput.value, 'Sydney');
     assert.deepEqual(changes, ['Mel'], 'the reset reports nothing');
     assert.deepEqual(selected, []);
+    assert.deepEqual(reported, [], 'no interaction throws or logs an error');
   } finally {
+    console.error = consoleError;
     await act(async () => root?.unmount());
     restore();
     dom.window.close();
