@@ -16,20 +16,31 @@ const familyExports = await Promise.all(snapshot.families.map(async ({ family })
   return artifact.name;
 }));
 const declares = (text, name) => new RegExp(`export\\s+const\\s+${name}\\b`, 'u').test(text);
+// The listed files read straight from disk, so the checks below do not trust readRuntimeSources
+// (which generation and agent-eval share) to have paired each path with its own bytes.
+const directSources = Object.fromEntries(await Promise.all(runtimeSourcePaths.map(async (path) => (
+  [path, await readFile(resolve(repositoryRoot, path), 'utf8')]
+))));
+
+test('readRuntimeSources returns each listed file\'s own bytes, in list order', async () => {
+  const sources = await readRuntimeSources(repositoryRoot);
+  assert.deepEqual(Object.keys(sources), [...runtimeSourcePaths]);
+  assert.deepEqual(sources, directSources);
+});
 
 test('each canonical family is declared by exactly one registry module', async () => {
   const sources = await readRuntimeSources(repositoryRoot);
   assert.equal(familyExports.length, 53);
   for (const name of familyExports) {
-    const owners = Object.entries(sources).filter(([, text]) => declares(text, name)).map(([path]) => path);
-    assert.deepEqual(owners, [runtimeSourceFor(sources, name)], `${name} needs one owner in runtime-sources.mjs`);
+    const owners = Object.entries(directSources).filter(([, text]) => declares(text, name)).map(([path]) => path);
+    assert.equal(owners.length, 1, `${name} needs one owner in runtime-sources.mjs`);
+    assert.equal(runtimeSourceFor(sources, name), owners[0], `${name} is discovered in the wrong module`);
   }
 });
 
-test('every registry module owns at least one canonical family', async () => {
-  const sources = await readRuntimeSources(repositoryRoot);
+test('every registry module owns at least one canonical family', () => {
   for (const path of runtimeSourcePaths) {
-    assert.ok(familyExports.some((name) => declares(sources[path], name)), `${path} owns no canonical family; drop it from runtime-sources.mjs`);
+    assert.ok(familyExports.some((name) => declares(directSources[path], name)), `${path} owns no canonical family; drop it from runtime-sources.mjs`);
   }
 });
 
