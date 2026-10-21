@@ -40,7 +40,7 @@ Control the selection with `selectedKey` and `onSelectedChange`, and the open st
 
 - A `selectedKey` of `null` means nothing is selected. A Lightbox with nothing selected shows nothing, and if it is open it calls `onOpenChange(false)`.
 - If the selected item is removed and other items remain, a controlled Lightbox does not pick another item. It calls `onSelectedChange(null, null)` and, if it is open, `onOpenChange(false)`, once each.
-- Apply both by setting `selectedKey` to `null` and `open` to false, or choose another key. The Lightbox does not repeat either request while the props stay unchanged.
+- Apply both by setting `selectedKey` to `null` and `open` to false, or choose another key. The Lightbox repeats neither request while the props stay unchanged.
 - If every item is removed, the Lightbox only asks to close. It calls `onOpenChange(false)` once if it is open, and no selection callback.
 - An uncontrolled Lightbox with items left falls back to the first item and closes if it is open.
 

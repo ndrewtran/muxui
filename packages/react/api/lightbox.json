@@ -1,0 +1,279 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/lightbox.ts",
+  "component": "muxui:component:lightbox",
+  "binding": "web.react",
+  "export": "Lightbox",
+  "api": {
+    "props": [
+      "items",
+      "renderContent",
+      "selectedKey",
+      "defaultSelectedKey",
+      "open",
+      "defaultOpen",
+      "loop",
+      "swipeNavigation"
+    ],
+    "events": [
+      "selectedChange",
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "loop": false,
+      "swipeNavigation": true
+    },
+    "propDetails": {
+      "items": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "LightboxItem"
+          },
+          "readonly": true
+        },
+        "required": true,
+        "description": "The collection the Lightbox views, each item with a key that is a string or a finite number, and an optional label. If any key is invalid or repeated, the whole collection is empty, and an empty collection never opens."
+      },
+      "renderContent": {
+        "type": {
+          "kind": "reference",
+          "name": "LightboxRenderContent"
+        },
+        "required": false,
+        "description": "Renders the selected item's content, from the item and a context with its key, index, and count. LightboxContent's own render function takes precedence."
+      },
+      "selectedKey": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "LightboxKey"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The key of the selected item, when the caller controls the selection. A null selectedKey means nothing is selected."
+      },
+      "defaultSelectedKey": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "LightboxKey"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The key of the item selected at first, when the Lightbox controls the selection. Without it, or when no item has the key, the first item."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Lightbox is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Lightbox starts open, when it controls itself."
+      },
+      "loop": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether Previous and Next wrap around at the first and last item."
+      },
+      "swipeNavigation": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether swiping moves between items."
+      }
+    },
+    "eventDetails": {
+      "selectedChange": {
+        "prop": "onSelectedChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "key",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "LightboxKey"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true
+            },
+            {
+              "name": "item",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "LightboxItem"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the selection changing, with the key and its item, or null for both when nothing is selected."
+      },
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the Lightbox opening or closing."
+      }
+    },
+    "types": {
+      "LightboxItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "key",
+              "type": {
+                "kind": "reference",
+                "name": "LightboxKey"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        },
+        "description": "One item of the collection: its key, and the label that names it."
+      },
+      "LightboxKey": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "string"
+            },
+            {
+              "kind": "number"
+            }
+          ]
+        },
+        "description": "The identity of an item in the collection: a string, or a finite number."
+      },
+      "LightboxRenderContent": {
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "LightboxItem"
+              },
+              "required": true
+            },
+            {
+              "name": "context",
+              "type": {
+                "kind": "reference",
+                "name": "LightboxRenderContext"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "host",
+            "name": "React.ReactNode"
+          }
+        },
+        "description": "Renders the content of the selected item."
+      },
+      "LightboxRenderContext": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "key",
+              "type": {
+                "kind": "reference",
+                "name": "LightboxKey"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "index",
+              "type": {
+                "kind": "number"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "count",
+              "type": {
+                "kind": "number"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        },
+        "description": "Where the selected item sits in the collection: its key, its index, and the item count."
+      }
+    }
+  }
+}

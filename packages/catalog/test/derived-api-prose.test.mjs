@@ -119,6 +119,8 @@ const GUIDES = {
   // aria-label and aria-labelledby name the field when it has no label, and {id, label, value} is the record the guide describes in words.
   autocomplete: { native: ['aria-label', 'aria-labelledby', '{id, label, value}'] },
   // The heading markers and levels, the pre element, a fragment link, and the link schemes are Markdown syntax, HTML, and URL parts.
+  // null is the value a controlled selection takes to mean nothing selected, and the two calls are the requests the guide names.
+  lightbox: { native: ['null', 'onOpenChange(false)', 'onSelectedChange(null, null)'] },
   // The patch markers a mistaken source starts its lines with.
   'code-block': { native: ['+', '-'] },
   markdown: { native: ['#', '##', '###', 'h1', 'h2', 'pre', '#summary', 'http', 'https', 'mailto'] },
@@ -336,6 +338,11 @@ test('the defaults and finite values the derived guides state are their derived 
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);
   assert.match(popover, /Popover is modal by default\./u);
   assert.equal(popoverApi.api.defaults.modal, true);
+
+  // Lightbox's guide says looping is off by default.
+  const [lightbox, lightboxApi] = await Promise.all([guide('lightbox'), derivedApi('lightbox')]);
+  assert.match(lightbox, /Set `loop` to wrap around; it is off by default\./u);
+  assert.equal(lightboxApi.api.defaults.loop, false);
 
   // CodeBlock is in code mode, shows line numbers, and scrolls long lines by default, which its guide teaches before each choice.
   const [codeBlock, codeBlockApi] = await Promise.all([guide('code-block'), derivedApi('code-block')]);

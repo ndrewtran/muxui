@@ -1,7 +1,7 @@
 import React from 'react';
 import { Markdown } from '../../src/markdown/index.ts';
 import { TextEditor } from '../../src/text-editor/index.mjs';
-import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxPopup, LightboxTrigger } from '../../src/supplemental/lightbox.mjs';
+import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxPopup, LightboxTrigger } from '../../src/supplemental/lightbox.ts';
 import { Resizable, ResizableHandle, ResizablePanel } from '../../src/supplemental/resizable.ts';
 import { PaymentInput } from '../../src/supplemental/index.mjs';
 

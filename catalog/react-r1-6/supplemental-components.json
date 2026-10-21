@@ -231,7 +231,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/lightbox.mjs",
+      "runtimeSource": "packages/react/src/supplemental/lightbox.ts",
       "styleSource": "packages/react/src/supplemental/lightbox.css"
     },
     {

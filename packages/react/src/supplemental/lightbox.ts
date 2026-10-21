@@ -1,53 +1,139 @@
 import React from 'react';
+import type { ButtonHTMLAttributes, ForwardRefExoticComponent, HTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode, RefAttributes, RefObject, TouchEvent as ReactTouchEvent } from 'react';
 import { animate } from 'motion/react';
+import type { AnimationPlaybackControls, ValueAnimationTransition } from 'motion/react';
 import { Dialog, Modal, ModalOverlay } from 'react-aria-components';
+import type { DialogProps } from 'react-aria-components';
 import { Button } from '../button.ts';
+import type { ButtonActivationEvent, ButtonProps } from '../button.ts';
 import { IconButton } from './icon-button.ts';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from '../motion.mjs';
+import type { MotionSpring, MotionTransition } from '../motion.mjs';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import X from 'lucide-react/dist/esm/icons/x.mjs';
 
-const Context = React.createContext(null);
-const stacks = new WeakMap();
-const cx = (...values) => values.filter(Boolean).join(' ');
+/** The identity of an item in the collection: a string, or a finite number. */
+export type LightboxKey = string | number;
+/** One item of the collection: its key, and the label that names it. */
+export type LightboxItem = { key: LightboxKey; label?: string };
+/** Where the selected item sits in the collection: its key, its index, and the item count. */
+export type LightboxRenderContext = { key: LightboxKey; index: number; count: number };
+/** The facts LightboxContent's render function receives: the context and the selected item. */
+export type LightboxContentRenderContext = LightboxRenderContext & { item: LightboxItem };
+/** Renders the content of the selected item. */
+export type LightboxRenderContent = (item: LightboxItem, context: LightboxRenderContext) => ReactNode;
+
+// Only the root's props are derived, which is the block the catalog authored. The props of the parts
+// (LightboxTrigger's itemKey, LightboxBackdrop's dismissable, LightboxContent's renderContent, and the
+// disabled and onActivate of the trigger and the controls) are declared below and wait for per-part APIs.
+/**
+ * The props Mux UI defines for Lightbox; the catalog's web.react API is derived from this
+ * interface (Decision 0031). It is an interface, as LightboxProps was before the move.
+ */
+interface LightboxOwnProps {
+  /** The collection the Lightbox views, each item with a key that is a string or a finite number, and an optional label. If any key is invalid or repeated, the whole collection is empty, and an empty collection never opens. */
+  items: readonly LightboxItem[];
+  /** Renders the selected item's content, from the item and a context with its key, index, and count. LightboxContent's own render function takes precedence. */
+  renderContent?: LightboxRenderContent;
+  /** The key of the selected item, when the caller controls the selection. A null selectedKey means nothing is selected. */
+  selectedKey?: LightboxKey | null;
+  /** The key of the item selected at first, when the Lightbox controls the selection. Without it, or when no item has the key, the first item. */
+  defaultSelectedKey?: LightboxKey | null;
+  /** Reports the selection changing, with the key and its item, or null for both when nothing is selected. */
+  onSelectedChange?: (key: LightboxKey | null, item?: LightboxItem | null) => void;
+  /** Whether the Lightbox is open, when the caller controls it. */
+  open?: boolean;
+  /** Whether the Lightbox starts open, when it controls itself. */
+  defaultOpen?: boolean;
+  /** Reports the Lightbox opening or closing. */
+  onOpenChange?: (open: boolean) => void;
+  /** Whether Previous and Next wrap around at the first and last item. */
+  loop?: boolean;
+  /** Whether swiping moves between items. */
+  swipeNavigation?: boolean;
+}
+
+export interface LightboxProps extends LightboxOwnProps, HTMLAttributes<HTMLDivElement> {}
+
+// A mapped copy of Button's activation event: an interface is not assignable to Record<string, unknown>,
+// and this type was an object literal type before it followed Button.
+export type LightboxControlActivation = { [K in keyof ButtonActivationEvent]: ButtonActivationEvent[K] };
+export type LightboxControlProps = ButtonHTMLAttributes<HTMLButtonElement> & { disabled?: boolean; onActivate?: (event: LightboxControlActivation) => void };
+
+// ButtonProps follows Button, but its className and style are declared exactly (`?: string`),
+// where React declares them `?: string | undefined`. Under exactOptionalPropertyTypes the exact form
+// rejects a consumer's `className={undefined}`, which LightboxTrigger accepted before it followed Button,
+// so those two come from React's attributes. Omit and Pick keep the type assignable to Record<string, unknown>.
+export type LightboxTriggerProps = Omit<ButtonProps, 'className' | 'style'>
+  & Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'style'>
+  & { itemKey: LightboxKey };
+
+type Offset = Readonly<{ x: number; y: number }>;
+type MotionValues = Offset & { opacity: number };
+// A tween has no type; a spring says so, which is how progressTransition tells them apart.
+type LightboxTransition = MotionSpring | (MotionTransition & { type?: undefined });
+// The collection as the Lightbox keeps it: each item with its label settled.
+type ResolvedItem = LightboxItem & { label: string };
+type LightboxContextValue = {
+  list: ResolvedItem[];
+  selected: ResolvedItem | null;
+  visible: boolean;
+  present: boolean;
+  isExiting: boolean;
+  triggerRef: RefObject<HTMLElement | null>;
+  releaseExit: () => void;
+  loop: boolean;
+  swipeNavigation: boolean;
+  renderContent: LightboxRenderContent | null;
+  setTrigger: (node: HTMLElement | null) => void;
+  openItem: (key: LightboxKey) => void;
+  close: () => void;
+  navigate: (delta: number) => void;
+  top: () => boolean;
+  popupLabel: string;
+};
+
+const Context = React.createContext<LightboxContextValue | null>(null);
+const stacks = new WeakMap<Document, object[]>();
+const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const LIGHTBOX_ENTRY_OFFSET = Object.freeze({ x: 0, y: 120 });
 const LIGHTBOX_EXIT_OFFSET = Object.freeze({ x: 0, y: -120 });
 const LIGHTBOX_ZERO_OFFSET = Object.freeze({ x: 0, y: 0 });
-const validKey = (key) => typeof key === 'string' || (typeof key === 'number' && Number.isFinite(key));
-const token = (key) => `${typeof key}:${typeof key === 'number' && Object.is(key, -0) ? 0 : String(key)}`;
+const validKey = (key: unknown): key is LightboxKey => typeof key === 'string' || (typeof key === 'number' && Number.isFinite(key));
+const token = (key: unknown) => `${typeof key}:${typeof key === 'number' && Object.is(key, -0) ? 0 : String(key)}`;
 
-function readTranslate(element) {
+function readTranslate(element: Element): Offset {
   const value = element.ownerDocument.defaultView?.getComputedStyle(element).translate;
   const match = /^\s*(-?(?:\d+\.?\d*|\.\d+))px(?:\s+(-?(?:\d+\.?\d*|\.\d+))px)?/u.exec(String(value ?? ''));
   return match ? { x: Number(match[1]), y: Number(match[2] ?? 0) } : LIGHTBOX_ZERO_OFFSET;
 }
 
-function readOpacity(element) {
+function readOpacity(element: Element): number {
   const value = Number(element.ownerDocument.defaultView?.getComputedStyle(element).opacity);
   return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
 }
 
-function readMotionValues(element) {
+function readMotionValues(element: Element): MotionValues {
   return { opacity: readOpacity(element), ...readTranslate(element) };
 }
 
-function writeMotionValues(element, values) {
+function writeMotionValues(element: HTMLElement, values: MotionValues) {
   element.style.opacity = String(values.opacity);
   element.style.translate = `${values.x}px ${values.y}px`;
 }
 
-function cancelAnimations(element) {
+function cancelAnimations(element: Element | null | undefined) {
   if (typeof element?.getAnimations !== 'function') return;
   element.getAnimations().forEach((animation) => animation.cancel());
 }
 
-function motionTarget(isOpen, exitOffset) {
+function motionTarget(isOpen: boolean, exitOffset: Offset): MotionValues {
   return isOpen ? { opacity: 1, ...LIGHTBOX_ZERO_OFFSET } : { opacity: 0, ...exitOffset };
 }
 
-function progressTransition(transition) {
+function progressTransition(transition: LightboxTransition | null): ValueAnimationTransition<number> | null {
   if (!transition) return null;
   return transition.type === 'spring'
     ? { type: 'spring', visualDuration: transition.visualDuration, bounce: transition.bounce }
@@ -58,20 +144,22 @@ function progressTransition(transition) {
  * Keep the portaled RAC shell mounted while Motion owns its finite pixels.
  * The independent translate channel preserves Lightbox's existing centering transform.
  */
-function useLightboxMotionLifecycle({ isOpen, triggerRef, entryOffset, exitOffset, onExitComplete }) {
-  const [node, setNode] = React.useState(null);
+function useLightboxMotionLifecycle({ isOpen, triggerRef, entryOffset, exitOffset, onExitComplete }: {
+  isOpen: boolean; triggerRef: RefObject<HTMLElement | null> | undefined; entryOffset: Offset; exitOffset: Offset; onExitComplete?: (() => void) | undefined;
+}) {
+  const [node, setNode] = React.useState<HTMLElement | null>(null);
   const isOpenRef = React.useRef(Boolean(isOpen));
-  const animatedNodeRef = React.useRef(null);
-  const controlsRef = React.useRef(null);
-  const phaseRef = React.useRef(null);
+  const animatedNodeRef = React.useRef<HTMLElement | null>(null);
+  const controlsRef = React.useRef<AnimationPlaybackControls | null>(null);
+  const phaseRef = React.useRef<'entry' | 'exit' | null>(null);
   const animationIdRef = React.useRef(0);
-  const valuesRef = React.useRef(null);
-  const originalStyleRef = React.useRef(null);
+  const valuesRef = React.useRef<MotionValues | null>(null);
+  const originalStyleRef = React.useRef<{ opacity: string; opacityPriority: string; translate: string; translatePriority: string } | null>(null);
   const onExitCompleteRef = React.useRef(onExitComplete);
   isOpenRef.current = Boolean(isOpen);
   onExitCompleteRef.current = onExitComplete;
 
-  const setNodeRef = React.useCallback((element) => {
+  const setNodeRef = React.useCallback((element: HTMLElement | null) => {
     setNode(element);
     if (element && element !== animatedNodeRef.current) {
       originalStyleRef.current = {
@@ -84,7 +172,7 @@ function useLightboxMotionLifecycle({ isOpen, triggerRef, entryOffset, exitOffse
     }
   }, []);
 
-  const restoreStyle = React.useCallback((element) => {
+  const restoreStyle = React.useCallback((element: HTMLElement) => {
     const original = originalStyleRef.current;
     if (!original) return;
     if (original.opacity) element.style.setProperty('opacity', original.opacity, original.opacityPriority);
@@ -93,12 +181,12 @@ function useLightboxMotionLifecycle({ isOpen, triggerRef, entryOffset, exitOffse
     else element.style.removeProperty('translate');
   }, []);
 
-  const settle = React.useCallback((controls) => {
+  const settle = React.useCallback((controls: AnimationPlaybackControls | null) => {
     controls?.stop();
     if (controlsRef.current === controls) controlsRef.current = null;
   }, []);
 
-  const finishExit = React.useCallback((animationId) => {
+  const finishExit = React.useCallback((animationId: number) => {
     if (animationId !== animationIdRef.current || isOpenRef.current || phaseRef.current !== 'exit') return;
     phaseRef.current = null;
     controlsRef.current = null;
@@ -156,7 +244,7 @@ function useLightboxMotionLifecycle({ isOpen, triggerRef, entryOffset, exitOffse
     }
 
     let active = true;
-    const apply = (progress) => {
+    const apply = (progress: number) => {
       const values = {
         opacity: from.opacity + ((to.opacity - from.opacity) * progress),
         x: from.x + ((to.x - from.x) * progress),
@@ -195,7 +283,7 @@ function useLightboxMotionLifecycle({ isOpen, triggerRef, entryOffset, exitOffse
   return setNodeRef;
 }
 
-function renderContentBody(value, selected, renderContent, children) {
+function renderContentBody(value: LightboxContextValue, selected: ResolvedItem | null, renderContent: ((context: LightboxContentRenderContext) => ReactNode) | undefined, children: ReactNode): ReactNode {
   const context = selected ? { key: selected.key, index: value.list.indexOf(selected), count: value.list.length } : null;
   return typeof renderContent === 'function' && selected && context
     ? renderContent({ item: selected, ...context })
@@ -204,10 +292,10 @@ function renderContentBody(value, selected, renderContent, children) {
       : children;
 }
 
-function collection(items) {
+function collection(items: unknown): ResolvedItem[] {
   if (!Array.isArray(items)) return [];
   const seen = new Set();
-  const result = [];
+  const result: ResolvedItem[] = [];
   for (const item of items) {
     if (!item || !validKey(item.key)) return [];
     const itemToken = token(item.key);
@@ -219,19 +307,19 @@ function collection(items) {
   return result;
 }
 
-function direction(element) {
+function direction(element: Element | null | undefined): 'rtl' | 'ltr' {
   try {
     if (element?.ownerDocument.defaultView?.getComputedStyle(element).direction === 'rtl') return 'rtl';
   } catch { /* use document direction below */ }
   return element?.ownerDocument.documentElement.dir === 'rtl' ? 'rtl' : 'ltr';
 }
 
-function top(owner, document) {
+function top(owner: object, document: Document): boolean {
   return stacks.get(document)?.at(-1) === owner;
 }
 
 /** A controlled or uncontrolled modal media viewer with finite Mux item keys. */
-export function Lightbox({ items = [], renderContent, selectedKey, defaultSelectedKey, onSelectedChange, open, defaultOpen = false, onOpenChange, loop = false, swipeNavigation = true, children, className, ...props }) {
+export function Lightbox({ items, renderContent, selectedKey, defaultSelectedKey, onSelectedChange, open, defaultOpen = false, onOpenChange, loop = false, swipeNavigation = true, children, className, ...props }: LightboxProps): ReactElement {
   const list = React.useMemo(() => collection(items), [items]);
   const initialKey = React.useMemo(() => {
     if (defaultSelectedKey !== undefined && defaultSelectedKey !== null && validKey(defaultSelectedKey)) {
@@ -240,11 +328,11 @@ export function Lightbox({ items = [], renderContent, selectedKey, defaultSelect
     return defaultSelectedKey === null ? null : list[0]?.key;
   }, [defaultSelectedKey, list]);
   const [localOpen, setLocalOpen] = React.useState(() => Boolean(defaultOpen && initialKey !== undefined));
-  const [localKey, setLocalKey] = React.useState(initialKey);
-  const trigger = React.useRef(null);
-  const owner = React.useRef({});
-  const openReconciliationProposal = React.useRef(null);
-  const selectionReconciliationProposal = React.useRef(null);
+  const [localKey, setLocalKey] = React.useState<LightboxKey | null | undefined>(initialKey);
+  const trigger = React.useRef<HTMLElement | null>(null);
+  const owner = React.useRef<object>({});
+  const openReconciliationProposal = React.useRef<boolean | null>(null);
+  const selectionReconciliationProposal = React.useRef<string | null>(null);
   const previousSelectedKey = React.useRef(selectedKey);
   const controlledOpen = open !== undefined;
   const controlledSelection = selectedKey !== undefined;
@@ -264,7 +352,7 @@ export function Lightbox({ items = [], renderContent, selectedKey, defaultSelect
     }
   }, [controlledOpen, controlledSelection, open, selectedKey]);
 
-  const setOpen = React.useCallback((next, reconcile = false) => {
+  const setOpen = React.useCallback((next: boolean, reconcile = false) => {
     const value = Boolean(next && list.length);
     if (controlledOpen) {
       if (open === value) return;
@@ -280,7 +368,7 @@ export function Lightbox({ items = [], renderContent, selectedKey, defaultSelect
     }
   }, [controlledOpen, list.length, localOpen, onOpenChange, open, selected]);
 
-  const setSelection = React.useCallback((next, allowNull = false) => {
+  const setSelection = React.useCallback((next: LightboxKey | null, allowNull = false) => {
     const record = list.find((item) => Object.is(item.key, next));
     if (!record && !(allowNull && next === null)) return false;
     if ((controlledSelection ? selectedKey : localKey) === next) return true;
@@ -325,7 +413,7 @@ export function Lightbox({ items = [], renderContent, selectedKey, defaultSelect
     };
   }, [present]);
 
-  const navigate = React.useCallback((delta) => {
+  const navigate = React.useCallback((delta: number) => {
     if (!visible || typeof document === 'undefined' || !top(owner.current, document) || !selected || list.length < 2) return;
     const index = list.indexOf(selected);
     let next = index + delta;
@@ -350,7 +438,7 @@ export function Lightbox({ items = [], renderContent, selectedKey, defaultSelect
     setPhase((current) => current.open || !current.exiting ? current : { open: false, exiting: false });
   }, []);
 
-  const value = React.useMemo(() => ({
+  const value = React.useMemo((): LightboxContextValue => ({
     list, selected, visible, present, isExiting, triggerRef: trigger, releaseExit,
     loop: Boolean(loop), swipeNavigation: swipeNavigation !== false,
     renderContent: typeof renderContent === 'function' ? renderContent : null,
@@ -364,7 +452,7 @@ export function Lightbox({ items = [], renderContent, selectedKey, defaultSelect
   return React.createElement(Context.Provider, { value }, React.createElement('div', { ...props, className: cx('muxui-lightbox', className) }, children));
 }
 
-export const LightboxTrigger = React.forwardRef(function LightboxTrigger({
+export const LightboxTrigger: ForwardRefExoticComponent<LightboxTriggerProps & RefAttributes<HTMLButtonElement>> = React.forwardRef<HTMLButtonElement, LightboxTriggerProps>(function LightboxTrigger({
   itemKey,
   children,
   disabled = false,
@@ -373,8 +461,9 @@ export const LightboxTrigger = React.forwardRef(function LightboxTrigger({
   ...props
 }, forwardedRef) {
   const value = React.useContext(Context);
-  const ref = React.useRef(null);
-  React.useImperativeHandle(forwardedRef, () => ref.current);
+  const ref = React.useRef<HTMLButtonElement | null>(null);
+  // The ref is set by the time the handle is read.
+  React.useImperativeHandle(forwardedRef, () => ref.current!);
   const enabled = Boolean(value?.list.some((item) => Object.is(item.key, itemKey)));
   return React.createElement(Button, {
     ...props,
@@ -383,12 +472,13 @@ export const LightboxTrigger = React.forwardRef(function LightboxTrigger({
     className: cx('muxui-lightbox-trigger', className),
     onActivate: (event) => {
       onActivate?.(event);
-      if (!disabled && enabled) { value.setTrigger(ref.current); value.openItem(itemKey); }
+      // An enabled trigger has the context, since its item is in the context's list.
+      if (!disabled && enabled) { value!.setTrigger(ref.current); value!.openItem(itemKey); }
     },
   }, children);
 });
 
-export function LightboxBackdrop({ children, dismissable = true, className, ...props }) {
+export function LightboxBackdrop({ children, dismissable = true, className, ...props }: HTMLAttributes<HTMLDivElement> & { dismissable?: boolean }): ReactElement | null {
   const value = React.useContext(Context);
   const motionRef = useLightboxMotionLifecycle({
     isOpen: Boolean(value?.visible),
@@ -408,10 +498,10 @@ export function LightboxBackdrop({ children, dismissable = true, className, ...p
   }, children);
 }
 
-export function LightboxPopup({ children, className, onKeyDown, onTouchStart, onTouchEnd, onTouchCancel, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy, ...props }) {
+export function LightboxPopup({ children, className, onKeyDown, onTouchStart, onTouchEnd, onTouchCancel, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy, ...props }: HTMLAttributes<HTMLDivElement>): ReactElement | null {
   const value = React.useContext(Context);
-  const touch = React.useRef(null);
-  const localRef = React.useRef(null);
+  const touch = React.useRef<number | null>(null);
+  const localRef = React.useRef<HTMLElement | null>(null);
   const motionRef = useLightboxMotionLifecycle({
     isOpen: Boolean(value?.visible),
     triggerRef: value?.triggerRef,
@@ -419,23 +509,24 @@ export function LightboxPopup({ children, className, onKeyDown, onTouchStart, on
     exitOffset: LIGHTBOX_EXIT_OFFSET,
     onExitComplete: value?.releaseExit,
   });
-  const setRef = React.useCallback((node) => {
+  const setRef = React.useCallback((node: HTMLElement | null) => {
     motionRef(node);
     localRef.current = node;
   }, [motionRef]);
   React.useEffect(() => {
     const popup = localRef.current;
     if (!popup || !value?.visible) return undefined;
-    const handleKeyDown = (event) => {
-      onKeyDown?.(event);
+    // The native listeners below hand the caller's handlers the native event, as they did before the move.
+    const handleKeyDown = (event: KeyboardEvent) => {
+      onKeyDown?.(event as unknown as ReactKeyboardEvent<HTMLDivElement>);
       if (event.defaultPrevented || !value.top()) return;
       const rtl = direction(popup) === 'rtl';
       if (event.key === 'ArrowLeft') { event.preventDefault(); value.navigate(rtl ? 1 : -1); }
       if (event.key === 'ArrowRight') { event.preventDefault(); value.navigate(rtl ? -1 : 1); }
     };
-    const handleTouchStart = (event) => { onTouchStart?.(event); touch.current = event.touches[0]?.clientX ?? null; };
-    const handleTouchEnd = (event) => {
-      onTouchEnd?.(event);
+    const handleTouchStart = (event: TouchEvent) => { onTouchStart?.(event as unknown as ReactTouchEvent<HTMLDivElement>); touch.current = event.touches[0]?.clientX ?? null; };
+    const handleTouchEnd = (event: TouchEvent) => {
+      onTouchEnd?.(event as unknown as ReactTouchEvent<HTMLDivElement>);
       const start = touch.current; touch.current = null;
       const delta = start === null ? 0 : (event.changedTouches[0]?.clientX ?? start) - start;
       if (value.swipeNavigation && value.top() && Math.abs(delta) >= 40) {
@@ -443,7 +534,7 @@ export function LightboxPopup({ children, className, onKeyDown, onTouchStart, on
         value.navigate(rtl ? (delta < 0 ? -1 : 1) : (delta < 0 ? 1 : -1));
       }
     };
-    const handleTouchCancel = (event) => { onTouchCancel?.(event); touch.current = null; };
+    const handleTouchCancel = (event: TouchEvent) => { onTouchCancel?.(event as unknown as ReactTouchEvent<HTMLDivElement>); touch.current = null; };
     popup.addEventListener('keydown', handleKeyDown);
     popup.addEventListener('touchstart', handleTouchStart, { passive: true });
     popup.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -457,23 +548,24 @@ export function LightboxPopup({ children, className, onKeyDown, onTouchStart, on
   }, [onKeyDown, onTouchCancel, onTouchEnd, onTouchStart, value]);
   if (!value?.present) return null;
   return React.createElement(Modal, null,
+    // A caller's role reaches React Aria as written; DialogProps types it as only dialog or alertdialog.
     React.createElement(Dialog, {
       ...props,
       ref: setRef,
       className: cx('muxui-dialog', 'muxui-lightbox-popup', className),
       'aria-label': ariaLabel ?? (ariaLabelledBy ? undefined : value.popupLabel),
       'aria-labelledby': ariaLabelledBy,
-    }, children),
+    } as DialogProps & RefAttributes<HTMLElement>, children),
   );
 }
 
-export function LightboxContent({ renderContent, children, className, ...props }) {
+export function LightboxContent({ renderContent, children, className, ...props }: HTMLAttributes<HTMLDivElement> & { renderContent?: (context: LightboxContentRenderContext) => ReactNode }): ReactElement | null {
   const value = React.useContext(Context);
   const selected = value?.selected ?? null;
   const body = value?.present && selected ? renderContentBody(value, selected, renderContent, children) : children;
   const currentToken = selected ? token(selected.key) : null;
-  const [layerTokens, setLayerTokens] = React.useState([]);
-  const bodyByTokenRef = React.useRef(new Map());
+  const [layerTokens, setLayerTokens] = React.useState<string[]>([]);
+  const bodyByTokenRef = React.useRef(new Map<string, ReactNode>());
   if (value?.present && currentToken !== null) bodyByTokenRef.current.set(currentToken, body);
   const renderedTokens = React.useMemo(() => {
     if (!value?.present || currentToken === null) return [];
@@ -484,16 +576,16 @@ export function LightboxContent({ renderContent, children, className, ...props }
     body: layerToken === currentToken ? body : bodyByTokenRef.current.get(layerToken) ?? children,
   })), [body, children, currentToken, renderedTokens]);
   const layerSequence = JSON.stringify(renderedTokens);
-  const contentRef = React.useRef(null);
-  const layerNodesRef = React.useRef(new Map());
-  const layerRefCallbacks = React.useRef(new Map());
-  const newlyMountedTokensRef = React.useRef(new Set());
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+  const layerNodesRef = React.useRef(new Map<string, HTMLElement>());
+  const layerRefCallbacks = React.useRef(new Map<string, (node: HTMLElement | null) => void>());
+  const newlyMountedTokensRef = React.useRef(new Set<string>());
   const currentTokenRef = React.useRef(currentToken);
   currentTokenRef.current = currentToken;
-  const getLayerRef = React.useCallback((layerToken) => {
+  const getLayerRef = React.useCallback((layerToken: string) => {
     const existing = layerRefCallbacks.current.get(layerToken);
     if (existing) return existing;
-    const callback = (node) => {
+    const callback = (node: HTMLElement | null) => {
       if (node) {
         if (!layerNodesRef.current.has(layerToken)) newlyMountedTokensRef.current.add(layerToken);
         layerNodesRef.current.set(layerToken, node);
@@ -504,7 +596,7 @@ export function LightboxContent({ renderContent, children, className, ...props }
     layerRefCallbacks.current.set(layerToken, callback);
     return callback;
   }, []);
-  const controlsRef = React.useRef(null);
+  const controlsRef = React.useRef<AnimationPlaybackControls | null>(null);
   const animationIdRef = React.useRef(0);
   const reducedRef = React.useRef(false);
 
@@ -555,9 +647,10 @@ export function LightboxContent({ renderContent, children, className, ...props }
   useIsomorphicLayoutEffect(() => {
     const content = contentRef.current;
     if (!value?.present || currentToken === null || !content || !renderedTokens.length) return undefined;
+    // The filter drops each layer that has no node yet.
     const layers = renderedTokens
       .map((layerToken) => ({ token: layerToken, node: layerNodesRef.current.get(layerToken) }))
-      .filter(({ node }) => node);
+      .filter(({ node }) => node) as { token: string; node: HTMLElement }[];
     if (!layers.length) return undefined;
     const animationId = animationIdRef.current + 1;
     animationIdRef.current = animationId;
@@ -576,7 +669,7 @@ export function LightboxContent({ renderContent, children, className, ...props }
       newlyMountedTokensRef.current.delete(layerToken);
       if (from === 0) node.style.opacity = '0';
     });
-    const apply = (progress) => {
+    const apply = (progress: number) => {
       values.forEach(({ node, from, to }) => {
         node.style.opacity = String(from + ((to - from) * progress));
       });
@@ -644,39 +737,39 @@ export function LightboxContent({ renderContent, children, className, ...props }
   );
 }
 
-export const LightboxCaption = React.forwardRef(function LightboxCaption({ className, children, ...props }, ref) {
+export const LightboxCaption: ForwardRefExoticComponent<HTMLAttributes<HTMLParagraphElement> & RefAttributes<HTMLParagraphElement>> = React.forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(function LightboxCaption({ className, children, ...props }, ref) {
   const value = React.useContext(Context);
   return React.createElement('p', { ...props, ref, className: cx('muxui-lightbox-caption', className) }, children === undefined ? value?.selected?.label : children);
 });
 
-function NavButton({ direction: delta, children, disabled = false, onActivate, className, ...props }) {
+function NavButton({ direction: delta, children, disabled = false, onActivate, className, ...props }: LightboxControlProps & { direction: number }): ReactElement {
   const value = React.useContext(Context);
   const index = value?.selected ? value.list.indexOf(value.selected) : -1;
   const unavailable = !value || !value.visible || (!value.loop && (delta < 0 ? index <= 0 : index >= value.list.length - 1));
   const controlProps = {
     ...props,
     disabled: disabled || unavailable,
-    variant: 'ghost',
+    variant: 'ghost' as const,
     className: cx(delta < 0 ? 'muxui-lightbox-previous' : 'muxui-lightbox-next', className),
     'aria-label': props['aria-label'] ?? (delta < 0 ? 'Previous' : 'Next'),
-    onActivate: (event) => { onActivate?.(event); value?.navigate(delta); },
+    onActivate: (event: LightboxControlActivation) => { onActivate?.(event); value?.navigate(delta); },
   };
   return children === undefined || children === null
     ? React.createElement(IconButton, controlProps, React.createElement(delta < 0 ? ChevronLeft : ChevronRight, { size: 24, 'aria-hidden': 'true', focusable: 'false' }))
     : React.createElement(Button, controlProps, children);
 }
-export function LightboxPrevious(props) { return React.createElement(NavButton, { ...props, direction: -1 }); }
-export function LightboxNext(props) { return React.createElement(NavButton, { ...props, direction: 1 }); }
-export function LightboxClose({ onActivate, className, children, ...props }) {
+export function LightboxPrevious(props: LightboxControlProps): ReactElement { return React.createElement(NavButton, { ...props, direction: -1 }); }
+export function LightboxNext(props: LightboxControlProps): ReactElement { return React.createElement(NavButton, { ...props, direction: 1 }); }
+export function LightboxClose({ onActivate, className, children, ...props }: LightboxControlProps): ReactElement {
   const value = React.useContext(Context);
   const controlProps = {
     ...props,
-    size: 'sm',
-    variant: 'ghost',
+    size: 'sm' as const,
+    variant: 'ghost' as const,
     className: cx('muxui-dialog-close', 'muxui-lightbox-close', className),
     'aria-label': props['aria-label'] ?? 'Close',
     disabled: props.disabled || !value?.visible,
-    onActivate: (event) => { onActivate?.(event); value?.close(); },
+    onActivate: (event: LightboxControlActivation) => { onActivate?.(event); value?.close(); },
   };
   return children === undefined || children === null
     ? React.createElement(IconButton, controlProps, React.createElement(X, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))

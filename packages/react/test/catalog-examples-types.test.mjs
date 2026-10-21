@@ -9,7 +9,7 @@ import { patternVariantExamples } from '../../../tooling/audits/repository-polic
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
 import { flatModuleName } from '../src/flat-modules.mjs';
-import { STRICT_CONSUMER_COMPILER_OPTIONS, augmentationReach, consumerTsc, indexSignatureCompatible, lostAugmentationReach, typeScript7Tsc } from './support/declaration-surface.mjs';
+import { STRICT_CONSUMER_COMPILER_OPTIONS, augmentationReach, consumerTsc, indexSignatureCompatible, lostAugmentationReach, tscDiagnostics, typeScript7Tsc } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -147,6 +147,24 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     });
     assert.equal(strictTypecheck.status, 0, `strict consumer: ${strictTypecheck.stdout}\n${strictTypecheck.stderr}`);
 
+    // A consumer that forwards `className?: string | undefined`, or sets className or style to undefined, on a
+    // Lightbox trigger compiles under exactOptionalPropertyTypes, as it did before LightboxTriggerProps followed
+    // ButtonProps. ButtonProps declares those two exactly (`?: string`), where React declares them `| undefined`.
+    const exactDirectory = join(consumer, 'exact-optional');
+    await mkdir(exactDirectory, { recursive: true });
+    await writeFile(join(exactDirectory, 'lightbox-trigger.tsx'), `import { LightboxTrigger } from '@muxui/react';
+import type { LightboxTriggerProps } from '@muxui/react';
+
+export const props: LightboxTriggerProps = { itemKey: 'one', className: undefined, style: undefined };
+export const element = <LightboxTrigger itemKey="one" className={undefined} style={undefined}>Open</LightboxTrigger>;
+export const forwarded = (className?: string) => <LightboxTrigger itemKey="one" className={className}>Open</LightboxTrigger>;
+`);
+    const exactTsconfig = join(consumer, 'tsconfig.exact-optional.json');
+    await writeFile(exactTsconfig, `${JSON.stringify({ extends: './tsconfig.json', compilerOptions: { exactOptionalPropertyTypes: true }, include: ['exact-optional/*.tsx'] }, null, 2)}\n`);
+    for (const [label, compiler] of [['TypeScript 6', tsc], ['TypeScript 7', typeScript7Tsc()]]) {
+      assert.deepEqual(tscDiagnostics({ tsc: compiler, config: exactTsconfig, directory: consumer }), [], `a Lightbox trigger rejects an undefined className or style under exactOptionalPropertyTypes (${label})`);
+    }
+
     // A props type a consumer could pass where `T extends Record<string, unknown>` is required before
     // the moves still can, with and without exactOptionalPropertyTypes. An interface fails there, and
     // so does an intersection with one; the record was taken under TypeScript 6, which this runs.
@@ -169,6 +187,12 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     for (const [label, compiler] of [['TypeScript 6', tsc], ['TypeScript 7', typeScript7Tsc()]]) {
       const reach = augmentationReach({ directory: consumer, specifier: '@muxui/react', interfaces: Object.keys(recordedReach), types: reachedTypes, tsc: compiler });
       assert.deepEqual(lostAugmentationReach(recordedReach, reach), [], `types no longer reached by a module augmentation of their interface (${label})`);
+      // The Lightbox types that follow Button's: c8434f62 had them as flat copies, so the record holds no pair for them.
+      assert.deepEqual(
+        augmentationReach({ directory: consumer, specifier: '@muxui/react', interfaces: ['ButtonProps', 'ButtonActivationEvent'], types: ['LightboxTriggerProps', 'LightboxControlActivation'], tsc: compiler }),
+        { ButtonProps: ['LightboxTriggerProps'], ButtonActivationEvent: ['LightboxControlActivation'] },
+        `Lightbox types no longer reached by a module augmentation of Button's interfaces (${label})`,
+      );
     }
 
     // Decision 0031: the packed declarations carry each derived API. The same reader runs over

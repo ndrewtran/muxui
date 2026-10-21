@@ -62,7 +62,7 @@ async function waitForCrossfade(page) {
 }
 
 test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safely, and settles reduced scopes', { timeout: 120_000 }, async () => {
-  const { url, close } = await startServer({ entries: ['src/supplemental/lightbox.mjs'], pages: { '/lightbox-motion.html': documentHtml } });
+  const { url, close } = await startServer({ entries: ['src/supplemental/lightbox.ts'], pages: { '/lightbox-motion.html': documentHtml } });
   let browser;
   try {
     browser = await launchBrowser();
