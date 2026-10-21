@@ -64,6 +64,7 @@
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "HeaderNav has no breakpoint of its own: Secondary, Actions, and the MobileTrigger button all show at every width",
         "The application hides the parts that do not apply at a width, for example by wrapping the MobileTrigger in an element it hides",
+        "When layout stops rendering the MobileTrigger button (display: none) while its drawer is open, the drawer closes and focus moves to the header link matching the drawer's focused link, else the first visible control in the HeaderNav root, never the page body",
         "MobileTrigger shows its children in a drawer and does not copy the Secondary links, so mark the current link in each copy",
         "MobileTrigger accepts only children",
         "The open button, dialog, and close button of MobileTrigger use fixed English labels that no HeaderNav prop changes"

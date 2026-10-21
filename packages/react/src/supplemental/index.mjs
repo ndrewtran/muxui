@@ -1133,7 +1133,40 @@ const HeaderNav = {
   NavButton: React.forwardRef(function HeaderNavButton({ href, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, className: cx('muxui-header-nav__nav-btn', current && 'muxui-header-nav__nav-btn--current', className), 'aria-current': current ? 'page' : undefined }); }),
   Actions: React.forwardRef(function HeaderNavActions(props, ref) { return nativePart('div', 'muxui-header-nav__actions', props, ref); }),
   Secondary: React.forwardRef(function HeaderNavSecondary(props, ref) { return nativePart('nav', 'muxui-header-nav__secondary', props, ref); }),
-  MobileTrigger: function HeaderNavMobileTrigger({ children }) { return h(AriaDialogTrigger, null, h(IconButton, { className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children))))); },
+  MobileTrigger: function HeaderNavMobileTrigger({ children }) {
+    const [open, setOpen] = React.useState(false);
+    const latest = React.useRef(open);
+    latest.current = open;
+    const button = React.useRef(null);
+    // The drawer's focused link and dialog when layout took it away, for the header link that should receive focus next.
+    const handoff = React.useRef(null);
+    // When layout hides the trigger (the header's own links took over), an open drawer would be stranded and Escape
+    // would leave focus on the body: close it and hand focus to the header.
+    React.useEffect(() => {
+      const trigger = button.current;
+      if (!trigger || typeof ResizeObserver === 'undefined') return undefined;
+      const observer = new ResizeObserver(() => {
+        if (!latest.current || trigger.getClientRects().length > 0) return;
+        const dialog = document.activeElement?.closest('.muxui-header-nav__mobile-dialog') ?? null;
+        handoff.current = { dialog, href: dialog ? document.activeElement.closest('a[href]')?.getAttribute('href') ?? null : null, root: trigger.closest('.muxui-header-nav') };
+        setOpen(false);
+      });
+      observer.observe(trigger);
+      return () => observer.disconnect();
+    }, []);
+    // Runs after the drawer has left: the header link matching the drawer's focused link, then any visible control in the header.
+    const exit = () => {
+      const wanted = handoff.current;
+      handoff.current = null;
+      if (!wanted?.root) return;
+      const controls = () => [...wanted.root.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')].filter((node) => !node.disabled && node.getAttribute('tabindex') !== '-1');
+      sidebarHandoff(() => {
+        const all = controls();
+        return [all.find((node) => wanted.href !== null && node.getAttribute('href') === wanted.href), ...all];
+      }, new Set(), (active) => wanted.dialog?.contains(active));
+    };
+    return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen }, h(IconButton, { ref: button, className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children)))));
+  },
 };
 
 /* Sidebar */
@@ -1165,6 +1198,7 @@ function handleSidebarShortcut(event, capturing) {
 }
 const onSidebarShortcutCapture = (event) => handleSidebarShortcut(event, true);
 const onSidebarShortcutBubble = (event) => handleSidebarShortcut(event, false);
+// The focus helpers from here through SidebarDrawerExit also serve HeaderNav's drawer.
 // Focus that folding would hide: a display:none or visibility:hidden control.
 const sidebarUnreachable = (node) => node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden';
 /** Focuses the first candidate that is rendered and really takes focus, and says whether one did; a Root reached this way gets a tabindex only then. */
