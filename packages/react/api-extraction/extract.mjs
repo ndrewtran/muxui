@@ -379,18 +379,64 @@ function readDeclaredApi(reader, checker, sourceFile, name, part) {
   return { props, events, propDetails, eventDetails };
 }
 
-function componentFunction(expression) {
+const REACT_WRAPPERS = new Set(['forwardRef', 'memo']);
+const REACT_TYPES = /\/node_modules\/@types\/react\//u;
+
+/** Whether the callee is `forwardRef` or `memo` from @types/react, however it is imported, not a local of that name. */
+function isReactWrapper({ checker }, callee) {
+  const name = callee.kind === SyntaxKind.PropertyAccessExpression ? callee.name : callee;
+  const found = name.kind === SyntaxKind.Identifier ? checker.getSymbolAtLocation(name) : undefined;
+  if (!found) return false;
+  const symbol = found.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
+  return REACT_WRAPPERS.has(symbol.name) && symbol.declarations.length > 0 && symbol.declarations.every(({ path }) => REACT_TYPES.test(path));
+}
+
+const calleeName = (callee) => (callee.kind === SyntaxKind.PropertyAccessExpression && callee.expression.kind === SyntaxKind.Identifier
+  ? `${callee.expression.text}.${callee.name.text}`
+  : callee.text ?? 'this call');
+
+/**
+ * The function a component export renders with. The expression is a function expression or
+ * arrow, or a call to React's `forwardRef` or `memo` (the type checker, not the name,
+ * decides) read only through its first argument: a function, a nested wrapper, or a name
+ * bound to a top-level function declaration or a top-level const of such a form. A second
+ * argument, such as memo's comparator, is never the component. Any other call fails, so no
+ * default is read from a function the component does not render with. Null for any other
+ * kind of expression.
+ */
+function componentFunction(project, sourceFile, chain, expression, seen = new Set()) {
   if (!expression) return null;
-  switch (expression.kind) {
+  const node = unwrap(expression);
+  switch (node.kind) {
     case SyntaxKind.FunctionExpression:
-    case SyntaxKind.ArrowFunction: return expression;
-    case SyntaxKind.ParenthesizedExpression:
-    case SyntaxKind.AsExpression:
-    case SyntaxKind.SatisfiesExpression: return componentFunction(expression.expression);
-    // forwardRef(fn), memo(fn), memo(forwardRef(fn)).
-    case SyntaxKind.CallExpression: return expression.arguments.map(componentFunction).find(Boolean) ?? null;
+    case SyntaxKind.ArrowFunction: return node;
+    case SyntaxKind.CallExpression: return wrappedFunction(project, sourceFile, chain, node, seen);
     default: return null;
   }
+}
+
+function wrappedFunction(project, sourceFile, chain, call, seen) {
+  const wrapper = calleeName(call.expression);
+  if (!isReactWrapper(project, call.expression)) {
+    throw new ApiExtractionError(chain, `${wrapper} is not React's forwardRef or memo; a component's defaults are read only through those wrappers, from their first argument`);
+  }
+  if (call.arguments.length === 0) throw new ApiExtractionError(chain, `${wrapper}() has no component function to read defaults from`);
+  const argument = unwrap(call.arguments[0]);
+  if (argument.kind !== SyntaxKind.Identifier) {
+    const component = componentFunction(project, sourceFile, chain, argument, seen);
+    if (!component) throw new ApiExtractionError(chain, `the first argument of ${wrapper} must be a function, a forwardRef or memo call, or a top-level function or const`);
+    return component;
+  }
+  const declarations = project.checker.getSymbolAtLocation(argument)?.declarations ?? [];
+  const declaration = declarations.length === 1 ? declarations[0].resolve(project) : null;
+  if (declaration?.kind === SyntaxKind.FunctionDeclaration && declaration.parent === sourceFile && declaration.body) return declaration;
+  const constant = topLevelConst(project, sourceFile, argument);
+  if (!constant) throw new ApiExtractionError(chain, `${argument.text} is not a top-level function declaration or const in the component's source`);
+  if (seen.has(constant)) throw new ApiExtractionError(chain, `${argument.text} wraps itself`);
+  seen.add(constant);
+  const component = componentFunction(project, sourceFile, chain, constant.initializer, seen);
+  if (!component) throw new ApiExtractionError(chain, `${argument.text} must be a function, forwardRef, or memo call`);
+  return component;
 }
 
 const WRAPPERS = new Set([SyntaxKind.ParenthesizedExpression, SyntaxKind.AsExpression, SyntaxKind.SatisfiesExpression]);
@@ -651,10 +697,11 @@ function compoundPart(project, sourceFile, exported, name, part) {
  */
 function readSourceDefaults(project, sourceFile, name, declared, part) {
   const exported = exportedNamed(sourceFile, name);
+  const chain = part === undefined ? name : `${name}.${part}`;
   // A compound's defaults are its part's, whatever else the export is.
   const component = part !== undefined
-    ? componentFunction(compoundPart(project, sourceFile, exported, name, part))
-    : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node : componentFunction(exported?.node.initializer);
+    ? componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, name, part))
+    : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node : componentFunction(project, sourceFile, chain, exported?.node.initializer);
   if (!component) throw new ApiExtractionError(name, `the source exports no component function${part === undefined ? '' : ` as ${name}.${part}`} to read defaults from`);
   const [parameter] = component.parameters;
   if (parameter?.name.kind !== SyntaxKind.ObjectBindingPattern) {

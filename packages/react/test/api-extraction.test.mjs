@@ -238,9 +238,9 @@ test('defaults come from the executable source: literals and top-level constants
   tags?: readonly string[];
   pending?: boolean;
   onActivate?: () => void;`);
-  const source = (variantDefault = "'primary'", before = '') => `${before}const DEFAULT_SIZE = 'md' as const;
+  const source = (variantDefault = "'primary'", before = '') => `import { forwardRef } from 'react';
+${before}const DEFAULT_SIZE = 'md' as const;
 const THING_DEFAULTS = Object.freeze({ count: -2, tags: Object.freeze(['a', 'b']) });
-function forwardRef(render: unknown) { return render; }
 export const Thing = forwardRef(function Thing({
   variant = ${variantDefault},
   size = DEFAULT_SIZE,
@@ -282,6 +282,47 @@ export const Thing = forwardRef(function Thing({
   rejects(declarations, /Thing\.onActivate: an on<Event> prop has no default/u, {
     source: "export function Thing({ variant, size, count, tags, pending, onActivate = () => {} }: Record<string, unknown>) { return [variant, size, count, tags, pending, onActivate]; }\n",
   });
+});
+
+test('defaults are read only through React\'s forwardRef and memo, from their first argument', () => {
+  const declarations = ownProps("  size?: 'sm' | 'md';");
+  const imports = "import React, { forwardRef, memo } from 'react';\n";
+  // The component renders with size 'sm'; the comparator is memo's second argument and defaults 'md'.
+  const actual = "function ActualRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }\n";
+  const comparator = "({ size = 'md' }: Record<string, unknown>) => size === 'md'";
+  const read = (exported, before = '', head = imports) => extract({ declarations, source: `${head}${before}export const Thing = ${exported};\n` }).defaults;
+  const cases = [
+    [`React.memo(ActualRoot, ${comparator})`, actual],
+    [`memo(ActualRoot, ${comparator})`, actual],
+    // A wrapped wrapper, an arrow, a type argument, and parentheses or `as` around any of them.
+    ["memo(forwardRef(function ActualRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }))", ''],
+    ["React.memo<unknown>(({ size = 'sm' }: Record<string, unknown>) => size)", ''],
+    ["(memo(ActualRoot) as unknown)", actual],
+    // A top-level const bound to a wrapper resolves to that wrapper's function.
+    ['memo(Inner, Object.is)', `const Inner = forwardRef(function Inner({ size = 'sm' }: Record<string, unknown>) { return size; });\n`],
+  ];
+  for (const [exported, before] of cases) assert.deepEqual(read(exported, before), { size: 'sm' }, exported);
+  assert.deepEqual(read('React.memo(ActualRoot, Object.is)', actual, "import * as React from 'react';\n"), { size: 'sm' }, 'a namespace import');
+  assert.deepEqual(read('keep(ActualRoot)', actual, "import { memo as keep } from 'react';\n"), { size: 'sm' }, 'a renamed import');
+
+  // Any other callee, or a first argument the extraction cannot follow, fails rather than reading another argument.
+  const wrap = 'const wrap = (render: unknown, ...rest: unknown[]) => render;\n';
+  const rejections = [
+    ['wrap(ActualRoot)', wrap + actual, imports, /Thing: wrap is not React's forwardRef or memo/u],
+    [`wrap(${comparator})`, wrap, imports, /Thing: wrap is not React's forwardRef or memo/u],
+    ["forwardRef(function Thing({ size = 'sm' }: Record<string, unknown>) { return size; })", 'function forwardRef(render: unknown) { return render; }\n', '', /Thing: forwardRef is not React's forwardRef or memo/u],
+    ["React.memo(function Thing({ size = 'sm' }: Record<string, unknown>) { return size; })", 'const React = { memo: (render: unknown) => render };\n', '', /Thing: React\.memo is not React's forwardRef or memo/u],
+    ['memo(LetRoot, Object.is)', `let LetRoot = function LetRoot({ size = 'sm' }: Record<string, unknown>) { return size; };\n`, imports, /Thing: LetRoot is not a top-level function declaration or const in the component's source/u],
+    ['memo(Alias)', `${actual}const Alias = ActualRoot;\n`, imports, /Thing: Alias must be a function, forwardRef, or memo call/u],
+    ['memo(UNDECLARED)', '', imports, /Thing: UNDECLARED is not a top-level function declaration or const/u],
+    ['memo()', '', imports, /Thing: memo\(\) has no component function/u],
+    ['memo(Thing)', '', imports, /Thing: Thing wraps itself/u],
+    ['memo(...rest)', 'declare const rest: [() => null];\n', imports, /Thing: the first argument of memo must be/u],
+    [`memo(5, ${comparator})`, '', imports, /Thing: the first argument of memo must be/u],
+  ];
+  for (const [exported, before, head, pattern] of rejections) {
+    assert.throws(() => read(exported, before, head), (error) => error instanceof ApiExtractionError && pattern.test(error.message), exported);
+  }
 });
 
 test('a default the component executes outside its props parameter fails extraction', () => {
@@ -430,7 +471,7 @@ export declare const Thing: {
   Image: React.ForwardRefExoticComponent<ThingImageProps & React.RefAttributes<HTMLImageElement>>;
 };
 `;
-  const source = (exported, before = '', after = '', keyword = 'const') => `function forwardRef(render: unknown) { return render; }
+  const source = (exported, before = '', after = '', keyword = 'const') => `import React, { forwardRef, memo } from 'react';
 const ThingRoot = forwardRef(function ThingRoot({ size = 'md', ...props }: Record<string, unknown>) { return [size, props]; });
 const OtherRoot = forwardRef(function OtherRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; });
 const ThingImage = forwardRef(function ThingImage({ alt }: { alt: string }) { return alt; });
@@ -449,6 +490,10 @@ ${after}`;
   };
   const api = read('Object.freeze({ Root: ThingRoot, Image: ThingImage })');
   assert.deepEqual([api.props, api.defaults], [['size'], { size: 'md' }]);
+  // The part's component is the wrapper's first argument, not its comparator.
+  const memoized = "function ActualRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }\nconst MemoRoot = React.memo(ActualRoot, ({ size = 'md' }: Record<string, unknown>) => size === 'md');\n";
+  assert.deepEqual(read('Object.freeze({ Root: MemoRoot })', { before: memoized }).defaults, { size: 'sm' });
+  assert.deepEqual(read('Object.freeze({ Root: MemoRoot })', { before: "const MemoRoot = memo(forwardRef(function ActualRoot({ size = 'sm' }: Record<string, unknown>) { return size; }));\n" }).defaults, { size: 'sm' });
   // A part's own properties, such as its displayName, may still be set.
   assert.deepEqual(read("Object.freeze({ 'Root': ThingRoot, Image: ThingImage })", { after: "(ThingRoot as { displayName?: string }).displayName = 'Thing.Root';\n" }).defaults, { size: 'md' });
   assert.throws(() => read('Object.freeze({ Root: ThingRoot })', { part: 'Body' }), /Thing\.Body: the exported Thing has no Body part/u);
@@ -468,6 +513,9 @@ ${after}`;
     ['Object.freeze({ Root: ThingRoot })', { after: 'Object.defineProperty(Thing, \'Root\', { value: OtherRoot });\n' }, /Thing\.Root: the source writes to the compound Thing/u],
     ['Object.freeze({ Root: LetRoot })', { before: 'let LetRoot = ThingRoot;\nLetRoot = OtherRoot;\n' }, /Thing\.Root: LetRoot is not a top-level const in the component's source/u],
     ['Object.freeze({ Image: ThingImage })', {}, /Thing\.Root: the compound Thing has no Root part/u],
+    // A part reads defaults only through React's forwardRef and memo, from the first argument.
+    ['Object.freeze({ Root: LocalRoot })', { before: "const wrap = (render: unknown, ...rest: unknown[]) => render;\nconst LocalRoot = wrap(function LocalRoot({ size = 'sm' }: Record<string, unknown>) { return size; });\n" }, /Thing\.Root: wrap is not React's forwardRef or memo/u],
+    ['Object.freeze({ Root: MemoRoot })', { before: "let LetRoot = function LetRoot({ size = 'sm' }: Record<string, unknown>) { return size; };\nconst MemoRoot = memo(LetRoot, ({ size = 'md' }: Record<string, unknown>) => size === 'md');\n" }, /Thing\.Root: LetRoot is not a top-level function declaration or const/u],
     // The compound binding itself could be reassigned, and a function is no compound.
     ['Object.freeze({ Root: ThingRoot })', { keyword: 'let' }, /Thing\.Root: the compound Thing must be a top-level const/u],
     ['', { text: "export function Thing({ size = 'sm' }: Record<string, unknown>) { return size; }\n" }, /Thing\.Root: the compound Thing must be a top-level const/u],
