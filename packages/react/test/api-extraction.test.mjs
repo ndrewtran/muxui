@@ -208,6 +208,22 @@ test('the host allowlist is exact: a namespace or wildcard entry is too broad, a
   rejects(ownProps('  anchor?: React.RefObject<HTMLElement>;'), /Thing\.anchor -> React\.RefObject: generic type arguments/u, { hostAllowlist: ['React.RefObject', 'HTMLElement'] });
 });
 
+test('a DOM or Intl type is admitted by its exact allowlist entry alone', () => {
+  // Link's activation target and Meter's format options, the entries tranche 3 adds.
+  const allowlist = ['HTMLAnchorElement', 'NumberFormatOptions'];
+  const anchorEvent = event.replace('HTMLButtonElement', 'HTMLAnchorElement');
+  const api = extract({
+    declarations: ownProps('  formatOptions?: Intl.NumberFormatOptions;\n  onActivate?: (event: ThingEvent) => void;', anchorEvent),
+    hostAllowlist: allowlist,
+  });
+  assert.deepEqual(api.propDetails.formatOptions.type, { kind: 'host', name: 'NumberFormatOptions' });
+  assert.deepEqual(api.types.ThingEvent.type.members.find(({ name }) => name === 'target').type, { kind: 'host', name: 'HTMLAnchorElement' });
+  // One entry admits one type: a sibling DOM element, a sibling Intl option bag, and a generic reference stay out.
+  rejects(ownProps('  anchor?: HTMLElement;'), /Thing\.anchor -> HTMLElement: HTMLElement is outside @muxui\/react and not in the host allowlist/u, { hostAllowlist: allowlist });
+  rejects(ownProps('  dates?: Intl.DateTimeFormatOptions;'), /Thing\.dates -> Intl\.DateTimeFormatOptions: DateTimeFormatOptions is outside @muxui\/react and not in the host allowlist/u, { hostAllowlist: allowlist });
+  rejects(ownProps('  onActivate?: (event: ThingEvent) => void;', event), /Thing\.onActivate\(event\) -> ThingEvent\.target -> HTMLButtonElement: HTMLButtonElement is outside @muxui\/react and not in the host allowlist/u, { hostAllowlist: allowlist });
+});
+
 /** Every host type a derived type reaches, by name. */
 function hostTypes(value, found = new Set()) {
   if (Array.isArray(value)) value.forEach((item) => hostTypes(item, found));
@@ -522,6 +538,57 @@ ${after}`;
   ];
   for (const [exported, options, pattern] of cases) {
     assert.throws(() => read(exported, options), (error) => error instanceof ApiExtractionError && pattern.test(error.message), exported);
+  }
+});
+
+test('an exported component may be a zero-argument wrapper that returns one forwardRef or memo const', () => {
+  const declarations = ownProps("  size?: 'sm' | 'md';\n  count?: number;");
+  const imports = "import { forwardRef, memo } from 'react';\n";
+  const renderOf = (size) => `function ({ size = '${size}', count = 2, ...props }: Record<string, unknown>) { return [size, count, props]; }`;
+  const render = renderOf('sm');
+  const wrapped = (body, { before = '', head = imports, call = '(() => {\n  %BODY%\n})()', after = '', pure = true } = {}) => `${head}${before}export const Thing = ${pure ? '/*#__PURE__*/ ' : ''}${call.replace('%BODY%', body)};\n${after}`;
+  const standard = `const component = forwardRef(${render});\n  component.displayName = 'Thing';\n  return component;`;
+  const read = (text) => extract({ declarations, source: text });
+
+  // The wrapper is the shape the Disclosure and fields IIFEs share, with or without the pure annotation.
+  assert.deepEqual(read(wrapped(standard)).defaults, { size: 'sm', count: 2 });
+  assert.deepEqual(read(wrapped(standard, { pure: false })).defaults, { size: 'sm', count: 2 });
+  assert.deepEqual(read(wrapped(standard, { call: '(function () {\n  %BODY%\n})()' })).defaults, { size: 'sm', count: 2 });
+  // The returned const is read as an unwrapped component is: a memo's first argument, not its comparator.
+  assert.deepEqual(read(wrapped(`const component = memo(forwardRef(${renderOf('md')}), ({ size = 'sm' }: Record<string, unknown>) => size === 'sm');\n  component.displayName = 'Thing';\n  return component;`)).defaults, { size: 'md', count: 2 });
+  // Another const may sit beside it; the one returned supplies the defaults.
+  assert.deepEqual(read(wrapped(`const other = forwardRef(${renderOf('md')});\n  const component = forwardRef(${render});\n  other.displayName = 'Other';\n  component.displayName = 'Thing';\n  return component;`)).defaults, { size: 'sm', count: 2 });
+
+  const component = `const component = forwardRef(${render});`;
+  const rejections = [
+    ['a parameter', wrapped(standard, { call: '((flag: boolean) => {\n  %BODY%\n})(true)' }), /Thing: the wrapper is called with arguments; an exported component's wrapper is called with no arguments, takes no parameters/u],
+    ['a parameter without an argument', wrapped(standard, { call: '((flag?: boolean) => {\n  %BODY%\n})()' }), /Thing: the wrapper takes parameters; /u],
+    ['an argument', wrapped(standard, { call: '(() => {\n  %BODY%\n})(1)' }), /Thing: the wrapper is called with arguments; /u],
+    ['an expression body', wrapped('', { call: '(() => forwardRef(function Thing() { return null; }))()' }), /Thing: the wrapper has an expression body; /u],
+    ['an async wrapper', wrapped(standard, { call: '(async () => {\n  %BODY%\n})()' }), /Thing: the wrapper is generic, async, or a generator; /u],
+    ['a side-effecting statement', wrapped(`${component}\n  register(component);\n  component.displayName = 'Thing';\n  return component;`, { before: 'declare function register(value: unknown): void;\n' }),
+      /Thing: the wrapper runs a statement that is not a displayName assignment to one of its consts; /u],
+    ['a side-effecting const', wrapped(`const hit = register();\n  ${component}\n  return component;`, { before: 'declare function register(): number;\n' }), /Thing: register is not React's forwardRef or memo; /u],
+    ['a conditional return', wrapped(`${component}\n  const other = forwardRef(function Other() { return null; });\n  return flag ? component : other;`, { before: 'declare const flag: boolean;\n' }),
+      /Thing: the wrapper does not end by returning one of its consts; /u],
+    ['a return of something other than a const', wrapped(`${component}\n  return Object.freeze({ Root: component });`), /Thing: the wrapper does not end by returning one of its consts; /u],
+    ['a return of an outer binding', wrapped(`${component}\n  return outer;`, { before: 'declare const outer: unknown;\n' }), /Thing: the wrapper does not end by returning one of its consts; /u],
+    ['no return', wrapped(`${component}\n  component.displayName = 'Thing';`), /Thing: the wrapper does not end by returning one of its consts; /u],
+    ['a return before the end', wrapped(`${component}\n  return component;\n  component.displayName = 'Thing';`), /Thing: the wrapper holds a statement that is not a const, a displayName assignment, or its final return; /u],
+    ['a non-literal displayName', wrapped(`${component}\n  component.displayName = label;\n  return component;`, { before: "declare const label: string;\n" }), /Thing: the wrapper sets component\.displayName to something other than a string literal; /u],
+    ['a render assignment', wrapped(`${component}\n  component.render = () => null;\n  return component;`), /Thing: the wrapper runs a statement that is not a displayName assignment to one of its consts; /u],
+    ['a displayName assignment before its const', wrapped(`component.displayName = 'Thing';\n  ${component}\n  return component;`), /Thing: the wrapper runs a statement that is not a displayName assignment to one of its consts; /u],
+    ['a let binding', wrapped(`let component = forwardRef(${render});\n  return component;`), /Thing: the wrapper declares a binding that is not const; /u],
+    ['a var binding', wrapped(`var component = forwardRef(${render});\n  return component;`), /Thing: the wrapper declares a binding that is not const; /u],
+    ['a destructured const', wrapped(`const { component } = { component: forwardRef(${render}) };\n  return component;`), /Thing: the wrapper declares a const that is not a named, initialized binding; /u],
+    ['a const that is not a React wrapper', wrapped(`const component = ${render.replace('function (', '(').replace(') {', ') =>  {')};\n  return component;`), /Thing: component is not a forwardRef or memo call; /u],
+    ['a local forwardRef', wrapped(`${component}\n  return component;`, { head: 'function forwardRef(render: unknown) { return render; }\n' }), /Thing: forwardRef is not React's forwardRef or memo; /u],
+    ['a write after the wrapper to its export', wrapped(standard, { after: "Thing.displayName = 'Other';\n" }), /Thing: the source writes to Thing beyond the wrapper's displayName assignments; /u],
+    ['a write after the wrapper to its const through the export', wrapped(standard, { after: 'Object.defineProperty(Thing, \'render\', { value: null });\n' }), /Thing: the source writes to Thing beyond the wrapper's displayName assignments; /u],
+    ['a write to a wrapper const from its component', wrapped(`const component = forwardRef(function Thing({ size = 'sm', count = 2 }: Record<string, unknown>) { (component as { render?: unknown }).render = null; return [size, count]; });\n  return component;`), /Thing: the source writes to component beyond the wrapper's displayName assignments; /u],
+  ];
+  for (const [label, text, pattern] of rejections) {
+    assert.throws(() => read(text), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
   }
 });
 

@@ -630,14 +630,18 @@ function topLevelConst(project, sourceFile, identifier) {
 
 const MUTATORS = new Set(['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf']);
 
-/** Whether the source writes to the binding or through it: an assignment, update, delete, or Object mutator. */
-function writesThrough({ checker }, sourceFile, symbol) {
+/**
+ * Whether the source writes to the binding or through it: an assignment, update, delete, or
+ * Object mutator. `allowed` holds the assignment nodes already verified as harmless.
+ */
+function writesThrough({ checker }, sourceFile, symbol, allowed = new Set()) {
   const rooted = (target) => {
     let node = unwrap(target);
     while (node.kind === SyntaxKind.PropertyAccessExpression || node.kind === SyntaxKind.ElementAccessExpression) node = unwrap(node.expression);
     return node.kind === SyntaxKind.Identifier && checker.getSymbolAtLocation(node)?.id === symbol.id;
   };
   const writes = (node) => {
+    if (allowed.has(node)) return false;
     if (node.kind === SyntaxKind.BinaryExpression && isAssignmentOperator(node.operatorToken.kind) && rooted(node.left)) return true;
     if ((node.kind === SyntaxKind.PrefixUnaryExpression || node.kind === SyntaxKind.PostfixUnaryExpression) && UPDATES.has(node.operator) && rooted(node.operand)) return true;
     if (node.kind === SyntaxKind.DeleteExpression && rooted(node.expression)) return true;
@@ -651,6 +655,84 @@ function writesThrough({ checker }, sourceFile, symbol) {
     return found;
   };
   return writes(sourceFile);
+}
+
+const isFunctionLiteral = (node) => node.kind === SyntaxKind.ArrowFunction || node.kind === SyntaxKind.FunctionExpression;
+
+/**
+ * Whether an export's initializer is a call of a function literal, the shape of an
+ * immediately invoked wrapper such as `(() => { ... })()`, with or without a PURE annotation.
+ */
+function isWrapperCall(initializer) {
+  const node = initializer === undefined ? undefined : unwrap(initializer);
+  return node?.kind === SyntaxKind.CallExpression && isFunctionLiteral(unwrap(node.expression));
+}
+
+const WRAPPER_RULE = 'an exported component\'s wrapper is called with no arguments, takes no parameters, and its block holds only const forwardRef or memo components, `<const>.displayName = \'<string literal>\'` statements, and a final return of one of those consts';
+
+/**
+ * The function a wrapped component export renders with. A component may be initialized by a
+ * zero-argument call, optionally annotated as pure, of a zero-parameter arrow or function
+ * expression, which keeps an unused component out of a bundle with everything it imports.
+ * The wrapper body holds only:
+ *   - const declarations, each name once, each initialized by React's forwardRef or memo,
+ *     read through the first argument as for an unwrapped component;
+ *   - `<const>.displayName = '<string literal>'` statements; and
+ *   - one final `return <const>`.
+ * Anything else fails naming the component and this rule, so nothing the wrapper runs can
+ * change which function renders. The source must write to neither the exported binding nor
+ * a wrapper const other than through those displayName statements.
+ */
+function wrappedComponent(project, sourceFile, chain, binding, call) {
+  const fail = (message) => {
+    throw new ApiExtractionError(chain, `${message}; ${WRAPPER_RULE}`);
+  };
+  const wrapper = unwrap(call.expression);
+  if (call.arguments.length > 0) fail('the wrapper is called with arguments');
+  if (wrapper.parameters.length > 0) fail('the wrapper takes parameters');
+  if (wrapper.typeParameters?.length || wrapper.asteriskToken || hasModifier(wrapper, SyntaxKind.AsyncKeyword)) fail('the wrapper is generic, async, or a generator');
+  if (wrapper.body.kind !== SyntaxKind.Block) fail('the wrapper has an expression body');
+  const consts = new Map();
+  const verified = new Set();
+  let returned;
+  const { statements } = wrapper.body;
+  statements.forEach((statement, index) => {
+    if (statement.kind === SyntaxKind.VariableStatement) {
+      const { declarationList } = statement;
+      if ((declarationList.flags & NodeFlags.Const) === 0) fail('the wrapper declares a binding that is not const');
+      for (const declaration of declarationList.declarations) {
+        if (declaration.name.kind !== SyntaxKind.Identifier || !declaration.initializer) fail('the wrapper declares a const that is not a named, initialized binding');
+        if (consts.has(declaration.name.text)) fail(`the wrapper declares ${declaration.name.text} twice`);
+        consts.set(declaration.name.text, declaration);
+      }
+    } else if (statement.kind === SyntaxKind.ExpressionStatement) {
+      const assignment = unwrap(statement.expression);
+      const target = assignment.kind === SyntaxKind.BinaryExpression && assignment.operatorToken.kind === SyntaxKind.EqualsToken ? unwrap(assignment.left) : undefined;
+      const isDisplayName = target?.kind === SyntaxKind.PropertyAccessExpression && target.name.text === 'displayName'
+        && target.expression.kind === SyntaxKind.Identifier && consts.has(target.expression.text);
+      if (!isDisplayName) fail('the wrapper runs a statement that is not a displayName assignment to one of its consts');
+      const value = unwrap(assignment.right);
+      if (value.kind !== SyntaxKind.StringLiteral && value.kind !== SyntaxKind.NoSubstitutionTemplateLiteral) fail(`the wrapper sets ${target.expression.text}.displayName to something other than a string literal`);
+      verified.add(assignment);
+    } else if (statement.kind === SyntaxKind.ReturnStatement && index === statements.length - 1) {
+      returned = statement.expression === undefined ? undefined : unwrap(statement.expression);
+    } else {
+      fail('the wrapper holds a statement that is not a const, a displayName assignment, or its final return');
+    }
+  });
+  if (returned?.kind !== SyntaxKind.Identifier || !consts.has(returned.text)) fail('the wrapper does not end by returning one of its consts');
+  const components = new Map([...consts].map(([constName, declaration]) => {
+    const initializer = unwrap(declaration.initializer);
+    if (initializer.kind !== SyntaxKind.CallExpression) fail(`${constName} is not a forwardRef or memo call`);
+    return [constName, wrappedFunction(project, sourceFile, chain, initializer, new Set())];
+  }));
+  const writeTargets = [binding, ...[...consts.values()].map(({ name }) => name)];
+  for (const target of writeTargets) {
+    if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(target), verified)) {
+      fail(`the source writes to ${target.text} beyond the wrapper's displayName assignments`);
+    }
+  }
+  return components.get(returned.text);
 }
 
 /**
@@ -699,9 +781,12 @@ function readSourceDefaults(project, sourceFile, name, declared, part) {
   const exported = exportedNamed(sourceFile, name);
   const chain = part === undefined ? name : `${name}.${part}`;
   // A compound's defaults are its part's, whatever else the export is.
+  const initializer = exported?.node.initializer;
   const component = part !== undefined
     ? componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, name, part))
-    : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node : componentFunction(project, sourceFile, chain, exported?.node.initializer);
+    : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node
+      : isWrapperCall(initializer) ? wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer))
+        : componentFunction(project, sourceFile, chain, initializer);
   if (!component) throw new ApiExtractionError(name, `the source exports no component function${part === undefined ? '' : ` as ${name}.${part}`} to read defaults from`);
   const [parameter] = component.parameters;
   if (parameter?.name.kind !== SyntaxKind.ObjectBindingPattern) {
