@@ -24,7 +24,12 @@ tagged `!dev` and `!autodocs` so the sidebar and autodocs leave it out while the
 served index and the audits still reach it by ID. A States story leaves unset the props its rows drive, so
 each named state shows itself and a value set in Controls still wins in every
 row. The exception is the lifecycle rows (entering, exiting, opening, closing),
-which drive `open` themselves, and cap Toast `duration`, to animate.
+which drive `open` themselves, and cap Toast `duration`, to animate. A lifecycle
+selector mounts one of those rows at a time, so one overlay is open at once; a
+Dialog is modal, so its open row is one of them too, and it starts closed when
+the user sets `open` to false. The colour audit verifies a small decoded image when every pixel is
+transparent or a canonical token colour, which is how the Avatar loaded row shows
+a real picture; any other image stays unverified and fails the audit.
 
 The generator also emits one page group per catalog pattern (a Block), titled
 `Blocks/<Category>/<Pattern>`, with one story per variant, so a variant reads

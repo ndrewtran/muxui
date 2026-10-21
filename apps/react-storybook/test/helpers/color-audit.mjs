@@ -191,19 +191,40 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     return true;
   }
 
-  function hasVerifiedTransparentPixel(element) {
-    if (element.localName !== 'img' || !element.complete || element.naturalWidth !== 1 || element.naturalHeight !== 1) return false;
+  // The largest decoded image the audit reads pixel by pixel. A bigger one stays unverified.
+  const maxAuditedImagePixels = 4096;
+
+  // The distinct opaque pixel colours of a small decoded image, or null when its pixels cannot be read. A fully
+  // transparent image has none, so it paints nothing.
+  function decodedPixelColours(element) {
+    if (element.localName !== 'img' || !element.complete || !element.naturalWidth || !element.naturalHeight) return null;
+    if (element.naturalWidth * element.naturalHeight > maxAuditedImagePixels) return null;
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
+      canvas.width = element.naturalWidth;
+      canvas.height = element.naturalHeight;
       const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (!context) return false;
+      if (!context) return null;
       context.drawImage(element, 0, 0);
-      return context.getImageData(0, 0, 1, 1).data[3] === 0;
+      const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+      const colours = new Set();
+      for (let index = 0; index < data.length; index += 4) {
+        if (data[index + 3] !== 0) colours.add(`rgba(${data[index]}, ${data[index + 1]}, ${data[index + 2]}, ${data[index + 3] / 255})`);
+      }
+      return [...colours];
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  // An image is verified when every pixel of its decoded source is transparent or a canonical token colour, so its
+  // paint is audited like any authored colour. Anything else, such as a photo, a large or cross-origin image, or an
+  // antialiased edge, stays unverified in `media`. Display-time resampling is not audited, as for every other paint.
+  function hasVerifiedPixels(element) {
+    const colours = decodedPixelColours(element);
+    if (colours === null || !colours.every((colour) => canonical.has(normalize(colour)))) return false;
+    for (const colour of colours) add(element, '', 'image-pixel', colour);
+    return true;
   }
 
   let elements = 0;
@@ -281,7 +302,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     elements += 1;
     inspect(element);
     if (element.matches('img,video,object,embed,input[type="image"],svg image')) {
-      if (!hasVerifiedTransparentPixel(element)) {
+      if (!hasVerifiedPixels(element)) {
         media.add(`${element.localName}: ${element.currentSrc || element.src || element.data || element.getAttribute('href') || element.getAttribute('xlink:href') || '(unresolved source)'}`);
       }
     }

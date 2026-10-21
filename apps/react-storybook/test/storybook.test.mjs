@@ -22,6 +22,8 @@ import { exactLockedProblems, readLockfile } from '../../../packages/react/test/
 import {
   argTypesForBinding,
   adapterNames,
+  AVATAR_LOADED_SRC,
+  isLifecycleState,
   HISTORICAL_BROWSER_PROOF_FAMILIES,
   BROWSER_PROOF_FAMILIES,
   createAnatomyStory,
@@ -710,8 +712,11 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
   assert.equal(Object.hasOwn(storyArgs, 'size'), false, 'the States story leaves the size the rows set unset');
   const { document: states, sections } = stateSections('Avatar');
   const unavailable = [...states.querySelectorAll('[data-muxui-storybook-state="unavailable"]')];
-  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['loading', 'loaded']);
-  assert.match(unavailable[1].textContent, /Unavailable: MuxUI Avatar cannot show the loaded state here because the colour audit rejects any visible image/u);
+  // Only loading is unavailable: no public prop holds an image mid-load.
+  assert.deepEqual(unavailable.map((node) => node.closest('.muxui-storybook-state').querySelector('h3').textContent), ['loading']);
+  // The loaded row carries a real picture, so a load shows an image over the initials instead of an invisible pixel.
+  assert.equal(sections.get('loaded').querySelector('.muxui-avatar__image').getAttribute('src'), AVATAR_LOADED_SRC);
+  assert.match(AVATAR_LOADED_SRC, /^data:image\/png;base64,/u);
   for (const size of ['sm', 'md', 'lg']) assert.equal(sections.get(size).querySelector('.muxui-avatar').getAttribute('data-size'), size);
   assert.equal(sections.get('fallback').querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
   assert.match(sections.get('error').querySelector('img').getAttribute('src'), /^data:image\/png/u);
@@ -732,8 +737,8 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
     assert.equal(avatar.getAttribute('data-image-state'), 'error');
     assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, false);
   });
-  // Events seeds the one image the colour audit accepts, so load can be observed.
-  assert.match(createEventsStory(currentRecord('Avatar')).args.src, /^data:image\/gif/u);
+  // Events seeds the same picture, so load can be observed on an avatar that shows it.
+  assert.equal(createEventsStory(currentRecord('Avatar')).args.src, AVATAR_LOADED_SRC);
 });
 
 test('Card routes variant and padding to both roots and selection, pending, disabled, and activation to Card.Button', async () => {
@@ -797,16 +802,50 @@ test('Dialog specimen is a settings dialog because destructive confirmation belo
   });
 });
 
-test('Dialog open row states its limitation instead of rendering a stand-in', () => {
-  const { sections } = stateSections('Dialog');
-  const row = sections.get('open');
-  const message = row.querySelector('[data-muxui-storybook-state="unavailable"]');
-  assert.ok(message, 'Dialog/open is labelled unavailable');
-  assert.match(message.textContent, /^Unavailable: MuxUI Dialog cannot show the open state here because a truly open modal makes the whole page inert/u);
-  // Nothing else renders in the row: no closed dialog trigger.
-  assert.deepEqual([...row.children].map((node) => node.localName), ['h3', 'p']);
-  assert.ok(sections.get('closed').querySelector('.muxui-dialog-trigger'), 'the closed row still renders');
-  assert.equal(sections.get('entering').querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 0);
+test('Dialog open row is picked with the lifecycle rows and mounts one open dialog at a time', async () => {
+  const { document: states, sections } = stateSections('Dialog');
+  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 1, 'only dismissed has no public prop or interaction');
+  const select = states.querySelector('[data-muxui-storybook-lifecycle-select="Dialog"]');
+  assert.deepEqual([...select.options].map((option) => option.value), ['open', 'entering', 'exiting']);
+  assert.equal(sections.get('open').getAttribute('data-muxui-storybook-lifecycle'), 'open');
+  // The open row is the one mounted, and it starts settled rather than entering.
+  assert.equal(sections.get('open').querySelector('.muxui-storybook-transition-status').textContent, 'open: open');
+  for (const state of ['entering', 'exiting']) assert.match(sections.get(state).textContent, new RegExp(`Select ${state} to inspect`, 'u'));
+  assert.ok(sections.get('closed').querySelector('.muxui-dialog-trigger'), 'the closed row still renders its trigger');
+
+  await withRuntime(async ({ root: reactRoot }) => {
+    const modals = () => document.querySelectorAll('.muxui-dialog-backdrop').length;
+    await act(async () => reactRoot.render(renderStateCoverage(currentRecord('Dialog'))));
+    await settleRuntime(60);
+    // Open from the first frame: no closed phase, and exactly one modal even though three rows could open one.
+    assert.equal(modals(), 1);
+    const dialog = document.querySelector('.muxui-dialog.muxui-storybook-lifecycle-dialog-open');
+    assert.ok(dialog, 'the open row is the open dialog');
+    assert.equal(document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition'), 'open');
+    // The row's own close button reports the change, like a real Dialog.
+    const phase = () => document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition');
+    await act(async () => dialog.querySelector('.muxui-dialog-close').click());
+    assert.equal(phase(), 'closed');
+    // Another row replaces the open one instead of stacking a second modal.
+    const lifecycleSelect = document.querySelector('[data-muxui-storybook-lifecycle-select="Dialog"]');
+    await act(async () => {
+      lifecycleSelect.value = 'entering';
+      lifecycleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await settleRuntime(400);
+    assert.equal(modals(), 1);
+    assert.ok(document.querySelector('.muxui-dialog.muxui-storybook-lifecycle-dialog-entering'));
+    assert.equal(document.querySelector('.muxui-storybook-lifecycle-dialog-open'), null);
+  });
+
+  // A Dialog the user set closed stays closed in the open row, like every other row.
+  await withRuntime(async ({ root: reactRoot }) => {
+    const closed = { ...createStory(currentRecord('Dialog'), 'states').args, open: false };
+    await act(async () => reactRoot.render(renderStateCoverage(currentRecord('Dialog'), closed)));
+    await settleRuntime(60);
+    assert.equal(document.querySelectorAll('.muxui-dialog-backdrop').length, 0);
+    assert.equal(document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition'), 'closed');
+  });
 });
 
 test('DropZone disabled row renders a disabled drop zone and the other rows stay enabled', () => {
@@ -1426,7 +1465,6 @@ test('every States row renders exactly the args its state projects, so a user va
     .replace(/class="([^"]*?) +"/gu, 'class="$1"')
     .replace(`Proposed token cleanup ${state}`, 'Proposed token cleanup')
     .replace(['Breadcrumbs', 'Group', 'HeaderNav'].includes(family) ? / aria-label="[^"]*"/gu : /$^/u, '');
-  const lifecycle = new Set(['entering', 'opening', 'exiting', 'closing']);
   const mismatched = [];
   let compared = 0;
   for (const binding of descriptorSource.bindings) {
@@ -1437,7 +1475,7 @@ test('every States row renders exactly the args its state projects, so a user va
     const controls = argTypesForBinding(binding);
     const wrap = (element) => family === 'Toast' ? React.createElement(ToastProvider, null, element) : element;
     // Lifecycle rows animate open themselves, and unavailable rows render no specimen.
-    for (const { name, args } of stateCoverageForBinding(binding, family).filter(({ name: state }) => !lifecycle.has(state))) {
+    for (const { name, args } of stateCoverageForBinding(binding, family).filter(({ name: state }) => !isLifecycleState(family, state))) {
       // Override each prop this row drives with an explicit neutral value: false, empty, or the default.
       const user = { ...stock };
       for (const prop of new Set([...Object.keys(args), ...Object.keys(base)])) {

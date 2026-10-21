@@ -298,6 +298,15 @@ const LIFECYCLE_ATTRIBUTES = Object.freeze({
   closing: 'data-exiting',
 });
 
+/**
+ * Whether a row mounts only while the lifecycle selector has it, so one overlay is open at a time. The entering and
+ * exiting rows animate an overlay open or closed. A Dialog is modal, so its open row joins them: beside any other open
+ * dialog it would make the page, and the selector that switches rows, inert.
+ */
+export function isLifecycleState(family, state) {
+  return Object.hasOwn(LIFECYCLE_ATTRIBUTES, state) || family === 'Dialog' && state === 'open';
+}
+
 function stateVariantNames(binding, family) {
   const names = [...binding.states];
   const props = new Set(binding.api.props);
@@ -375,15 +384,7 @@ function setSelectedState(args, props, family, preserveExplicit) {
   return undefined;
 }
 
-// States a specimen cannot show honestly, each with its reason. The matrix labels them unavailable rather than
-// rendering a stand-in that looks like another state.
-const STATE_LIMITATIONS = Object.freeze({
-  'Dialog:open': 'a truly open modal makes the whole page inert, which breaks the lifecycle matrix; the entering state shows an open dialog',
-  'Avatar:loaded': 'the colour audit rejects any visible image, and the one it accepts is transparent and hides the initials. Set src in Controls to load a real one',
-});
-
 function stateIsSupported(binding, state, family) {
-  if (Object.hasOwn(STATE_LIMITATIONS, `${family}:${state}`)) return false;
   const props = new Set(binding.api.props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
@@ -552,6 +553,9 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       if (family === 'PromptComposer') args.error = 'Unable to send. Try again.';
       else if (family === 'Avatar') args.src = BROKEN_IMAGE_SRC;
       else if (family === 'Image') Object.assign(args, { src: BROKEN_IMAGE_SRC, fallbackSrc: BROKEN_IMAGE_SRC });
+      break;
+    case 'loaded':
+      if (family === 'Avatar') args.src = AVATAR_LOADED_SRC;
       break;
     case 'fallback':
       if (family === 'Avatar') args.src = '';
@@ -882,6 +886,12 @@ function ImagePreview({ onLoad, ...args }) {
 const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 // Truncated image data: the browser fires an error event instead of loading it.
 const BROKEN_IMAGE_SRC = 'data:image/png;base64,AAAA';
+/**
+ * A 48 by 48 avatar picture the colour audit can read: hard-edged, two opaque colours, no antialiasing. The background
+ * is reference.color.bluegreen-20 (#a4c7c9) and the head and shoulders are reference.color.bluegreen-70 (#02485b).
+ * Reference colours keep one value in the light and dark schemes, so every pixel is a canonical token in both.
+ */
+export const AVATAR_LOADED_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAnUlEQVR42u3XwRGAIAxE0R2rswfbsxfHqrQBHUEjCeEfcv/vxKJ124+eTwAAAAAAAID1TfNyeeEBd+F/QtQ63hohj3hLhLzirRBjA77GWyAAAAAwMoB3IAKg+ymRYsylmNMpPjT8iQEAAOAPaPkGMCW6ndNW4RYQRYl/i1Ck+DcIRYuvRShifA1CUeNLEbkB3vEliLyAKPFPCADegBOwf75jF+5iFAAAAABJRU5ErkJggg==';
 // The transparent pixel draws nothing for a radius to round, so the radius rows fill the image box with a token.
 const IMAGE_RADIUS_FRAME = Object.freeze({ background: 'var(--muxui-semantic-surface-strong)' });
 const TAG_SELECT_SAMPLE_ITEMS = [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }];
@@ -1490,15 +1500,19 @@ function LifecycleSelection({ family, states, children }) {
 
 function LifecycleTransition({ family, state, args }) {
   const isClosing = state === 'closing' || state === 'exiting';
+  // The open row has no transition to play: it mounts open, unless the user set the Dialog closed.
+  const isSettled = state === 'open';
+  const startsOpen = isClosing || isSettled && args.open !== false && args.defaultOpen !== false;
   const isToast = family === 'Toast';
-  const [open, setOpen] = React.useState(!isToast && isClosing);
+  const [open, setOpen] = React.useState(!isToast && startsOpen);
   const [toastMounted, setToastMounted] = React.useState(isClosing);
   const [toastRevision, setToastRevision] = React.useState(0);
-  const [phase, setPhase] = React.useState(isClosing ? 'open' : 'closed');
+  const [phase, setPhase] = React.useState(startsOpen ? 'open' : 'closed');
   const userInteracted = React.useRef(false);
 
   React.useEffect(() => {
     userInteracted.current = false;
+    if (isSettled) return undefined;
     const frame = scheduleFrame(() => {
       if (userInteracted.current) return;
       setPhase(isClosing ? 'exiting' : 'entering');
@@ -1525,7 +1539,7 @@ function LifecycleTransition({ family, state, args }) {
       if (reopen !== undefined) clearTimeout(reopen);
       clearTimeout(settle);
     };
-  }, [isClosing, isToast]);
+  }, [isClosing, isSettled, isToast]);
 
   const transitionArgs = { ...args };
   let rendered;
@@ -1581,7 +1595,7 @@ function StateVariant({ family, state, args, available }) {
   // this only adds what keeps the rows apart: a unique label, a lifecycle marker, and a unique landmark name.
   const variantArgs = { ...args };
   if (family === 'DataDiff') variantArgs.label = `${args.label ?? 'Proposed token cleanup'} ${state}`;
-  const lifecycleAttribute = LIFECYCLE_ATTRIBUTES[state];
+  const lifecycleRow = isLifecycleState(family, state);
   const activeLifecycleState = React.useContext(LifecycleSelectionContext);
   const marker = OVERLAY_FAMILIES.has(family) ? lifecycleMarker(family, state) : undefined;
   if (marker) {
@@ -1598,10 +1612,8 @@ function StateVariant({ family, state, args, available }) {
     ? e('p', {
       className: 'muxui-storybook-state-unavailable',
       'data-muxui-storybook-state': 'unavailable',
-    }, STATE_LIMITATIONS[`${family}:${state}`]
-      ? `Unavailable: MuxUI ${family} cannot show the ${state} state here because ${STATE_LIMITATIONS[`${family}:${state}`]}.`
-      : `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
-    : lifecycleAttribute
+    }, `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
+    : lifecycleRow
     ? activeLifecycleState === state
       ? e(LifecycleTransition, { family, state, args: variantArgs })
       : e('p', { className: 'muxui-storybook-lifecycle-inactive' }, `Select ${state} to inspect this lifecycle state.`)
@@ -1618,7 +1630,7 @@ function StateVariant({ family, state, args, available }) {
     // open. Keep those intentionally inactive fixtures out of the tab order
     // as well so the Storybook state matrix remains axe-clean.
     inert: hiddenByOverlay ? true : undefined,
-    'data-muxui-storybook-lifecycle': lifecycleAttribute ? state : undefined,
+    'data-muxui-storybook-lifecycle': lifecycleRow ? state : undefined,
   }, e('h3', { id: labelId }, state), specimen);
   return marker ? e(OverlayHost, { marker }, stateContent) : stateContent;
 }
@@ -1632,7 +1644,7 @@ export function renderStateCoverage(record, args = storyArgsForBinding(record.bi
     available: stateIsSupported(record.binding, name, record.family),
     args: stateArgsForBinding(record.binding, name, record.family, args),
   })));
-  const lifecycleStates = variants.map(({ name }) => name).filter((name) => LIFECYCLE_ATTRIBUTES[name]);
+  const lifecycleStates = variants.map(({ name }) => name).filter((name) => isLifecycleState(record.family, name));
   return lifecycleStates.length > 0
     ? e('div', { className: 'muxui-storybook-lifecycle-showcase' }, e(LifecycleSelection, {
       family: record.family,
@@ -2586,8 +2598,8 @@ export function createEventsStory(record) {
   };
   return {
     name: 'Events',
-    // An avatar reports load only once it has an image; the transparent pixel is the one the colour audit accepts.
-    args: { ...storyArgsForBinding(record.binding, 'default', record.family), ...(record.family === 'Avatar' && { src: TRANSPARENT_PIXEL }) },
+    // An avatar reports load only once it has an image.
+    args: { ...storyArgsForBinding(record.binding, 'default', record.family), ...(record.family === 'Avatar' && { src: AVATAR_LOADED_SRC }) },
     argTypes: argTypesForBinding(record.binding),
     render: (args) => renderEvents(args),
   };

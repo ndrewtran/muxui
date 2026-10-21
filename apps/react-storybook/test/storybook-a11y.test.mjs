@@ -561,10 +561,6 @@ async function assertDialogLifecycleDismissal(page, baseUrl, story, scheme) {
   await waitForDocumentAnimations(page);
   await waitForLifecycleReadiness(page);
 
-  const enteringSection = '[data-muxui-storybook-lifecycle="entering"]';
-  const enteringDialog = '.muxui-dialog.muxui-storybook-lifecycle-dialog-entering';
-  const trigger = page.locator(`${enteringSection} .muxui-dialog-trigger`);
-  const close = page.locator(`${enteringDialog} .muxui-dialog-close`);
   const waitForOpen = (selector) => page.waitForFunction((dialogSelector) => {
     const dialog = document.querySelector(dialogSelector);
     const backdrop = dialog?.closest('.muxui-dialog-backdrop');
@@ -577,37 +573,38 @@ async function assertDialogLifecycleDismissal(page, baseUrl, story, scheme) {
     undefined,
     { timeout: storyTimeoutMs },
   );
-
-  await waitForOpen(enteringDialog);
-  await close.click();
-  await waitForClosed();
-
-  for (let cycle = 0; cycle < 2; cycle += 1) {
-    await trigger.click();
-    await waitForOpen(enteringDialog);
+  // A lifecycle row's Dialog opens on its own, closes from its button, reopens from its trigger, and closes on Escape.
+  const dismissAndReopen = async (state, cycles) => {
+    const dialog = `.muxui-dialog.muxui-storybook-lifecycle-dialog-${state}`;
+    const trigger = page.locator(`[data-muxui-storybook-lifecycle="${state}"] .muxui-dialog-trigger`);
+    const close = page.locator(`${dialog} .muxui-dialog-close`);
+    await waitForOpen(dialog);
     await close.click();
     await waitForClosed();
-  }
+    for (let cycle = 0; cycle < cycles; cycle += 1) {
+      await trigger.click();
+      await waitForOpen(dialog);
+      await close.click();
+      await waitForClosed();
+    }
+    await trigger.click();
+    await waitForOpen(dialog);
+    await page.keyboard.press('Escape');
+    await waitForClosed();
+  };
+  const selectRow = async (state) => {
+    await page.locator('[data-muxui-storybook-lifecycle-select="Dialog"]').selectOption(state);
+    await page.waitForFunction((row) => document.querySelector(
+      `[data-muxui-storybook-lifecycle="${row}"] .muxui-storybook-transition-status`,
+    )?.getAttribute('data-muxui-storybook-transition') === 'open', state, { timeout: storyTimeoutMs });
+  };
 
-  await trigger.click();
-  await waitForOpen(enteringDialog);
-  await page.keyboard.press('Escape');
-  await waitForClosed();
-
-  const lifecycleSelect = page.locator('[data-muxui-storybook-lifecycle-select="Dialog"]');
-  await lifecycleSelect.selectOption('exiting');
-  await page.waitForFunction(() => document.querySelector(
-    '[data-muxui-storybook-lifecycle="exiting"] .muxui-storybook-transition-status',
-  )?.getAttribute('data-muxui-storybook-transition') === 'open', undefined, { timeout: storyTimeoutMs });
-  const exitingTrigger = page.locator('[data-muxui-storybook-lifecycle="exiting"] .muxui-dialog-trigger');
-  const exitingDialog = '.muxui-dialog.muxui-storybook-lifecycle-dialog-exiting';
-  await waitForOpen(exitingDialog);
-  await page.locator(`${exitingDialog} .muxui-dialog-close`).click();
-  await waitForClosed();
-  await exitingTrigger.click();
-  await waitForOpen(exitingDialog);
-  await page.keyboard.press('Escape');
-  await waitForClosed();
+  // The open row is the selected one on load, then the selector hands the page to each transition row in turn.
+  await dismissAndReopen('open', 1);
+  await selectRow('entering');
+  await dismissAndReopen('entering', 2);
+  await selectRow('exiting');
+  await dismissAndReopen('exiting', 0);
 }
 
 test('Storybook startup cancellation terminates its child process', { timeout: 5_000 }, async () => {
