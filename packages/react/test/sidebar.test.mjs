@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { Sidebar } from '../src/supplemental/index.mjs';
@@ -57,6 +58,119 @@ test('Sidebar density marks only a compact Root and leaves the default markup al
 
 test('Sidebar Toggle requires a Provider', () => {
   assert.throws(() => renderToString(h(Sidebar.Toggle, null)), /Sidebar\.Toggle must be used inside Sidebar\.Provider/u);
+});
+
+test('Sidebar AccountMenu requires the card, and the server markup leaves the button to hydration', async () => {
+  assert.throws(() => renderToString(h(Sidebar.AccountMenu, { items: ['Profile'] })), /Sidebar\.AccountMenu must be used inside Sidebar\.AccountCard/u);
+  // A menu registers with its card once it mounts, so the server cannot know of it. Hydration must not mismatch, and then the button is there.
+  const card = h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, h(Sidebar.AccountMenu, { items: ['Profile'] })));
+  const html = renderToString(card);
+  assert.match(html.match(/<button[^>]*Account options[^>]*>|<button[^>]*>(?=[^]*Account options)/u)?.[0] ?? '', / hidden=""/u, 'the server markup keeps the button hidden');
+  const dom = new JSDOM(`<!doctype html><div id="root">${html}</div>`);
+  const restore = installDom(dom);
+  const problems = [];
+  let root;
+  try {
+    await act(async () => { root = hydrateRoot(document.querySelector('#root'), card, { onRecoverableError: (error) => problems.push(error) }); });
+    assert.deepEqual(problems, []);
+    assert.equal(document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length, 1);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+  }
+});
+
+test('Sidebar AccountCard takes one AccountMenu, and swapping it for another is fine', async () => {
+  const card = (...children) => h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, ...children));
+  const menu = (key) => h(Sidebar.AccountMenu, { key, items: ['Profile'] });
+  // Two menus would open as two popovers over one trigger, so the second is refused, wherever it sits.
+  const reported = [];
+  const original = console.error;
+  console.error = (...args) => reported.push(args.join(' '));
+  try {
+    for (const [label, children] of [['siblings', [menu('a'), menu('b')]], ['one in a fragment', [menu('a'), h(React.Fragment, null, menu('b'))]]]) {
+      await assert.rejects(withDom(card(...children), async () => {}), /Sidebar\.AccountCard takes one Sidebar\.AccountMenu/u, label);
+    }
+  } finally {
+    console.error = original;
+  }
+  // Replacing the menu in one commit leaves one mounted at a time, so it is accepted.
+  function Swapping() {
+    const [key, setKey] = React.useState('a');
+    return h(React.Fragment, null, h('button', { id: 'swap', onClick: () => setKey('b') }, 'Swap'), card(menu(key)));
+  }
+  await withDom(h(Swapping), async (document) => {
+    await act(async () => document.querySelector('#swap').click());
+    assert.equal(document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length, 1);
+  });
+});
+
+test('Sidebar AccountCard shows its options button only while an AccountMenu is mounted', async () => {
+  // A hidden button is not shown, so it is not there for a reader or the keyboard.
+  const buttons = (document) => document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length;
+  const card = (...children) => h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, ...children));
+  const Wrapped = () => h(Sidebar.AccountMenu, { items: ['Profile'] });
+  // Children that are not an AccountMenu leave nothing for the button to open, so there is no button.
+  for (const [label, children] of [['no children', []], ['a span', [h('span', null, 'Hi')]], ['an empty fragment', [h(React.Fragment)]], ['null and false', [null, false]]]) {
+    await withDom(card(...children), async (document) => assert.equal(buttons(document), 0, label));
+  }
+  // However the menu is wrapped, it mounts inside the card, so the button appears.
+  for (const [label, children] of [['a direct child', [h(Sidebar.AccountMenu, { items: ['Profile'] })]], ['inside a fragment', [h(React.Fragment, null, h(Sidebar.AccountMenu, { items: ['Profile'] }))]], ['inside a component', [h(Wrapped)]]]) {
+    await withDom(card(...children), async (document) => assert.equal(buttons(document), 1, label));
+  }
+  // The card is a menu trigger from its first render, before its menu registers, and React Aria warns when a trigger has no button to press.
+  const problems = [];
+  const console_ = { warn: console.warn, error: console.error };
+  console.warn = console.error = (...args) => problems.push(args.join(' '));
+  try {
+    await withDom(card(h(Sidebar.AccountMenu, { items: ['Profile'] })), async () => {});
+    await withDom(card(), async () => {});
+  } finally {
+    Object.assign(console, console_);
+  }
+  assert.deepEqual(problems, [], 'mounting a card logs nothing');
+  // The button follows the menu in and out, and a menu that goes away while open takes the open state with it.
+  function Toggled() {
+    const [shown, setShown] = React.useState(false);
+    return h(React.Fragment, null, h('button', { id: 'toggle', onClick: () => setShown((value) => !value) }, 'Toggle'), card(shown && h(Sidebar.AccountMenu, { items: ['Profile'] })));
+  }
+  await withDom(h(Toggled), async (document) => {
+    assert.equal(buttons(document), 0);
+    await act(async () => document.querySelector('#toggle').click());
+    assert.equal(buttons(document), 1);
+    // Open it, drop the menu, and bring it back: it does not reopen by itself.
+    await act(async () => document.querySelector('button[aria-label="Account options"]').click());
+    assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'true');
+    await act(async () => document.querySelector('#toggle').click());
+    assert.equal(buttons(document), 0);
+    await act(async () => document.querySelector('#toggle').click());
+    assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'false');
+  });
+});
+
+test('Sidebar AccountMenu declares only the props and event the catalog record lists, and ignores the rest', async () => {
+  const declaration = await readFile(new URL('../src/supplemental/index.d.ts', import.meta.url), 'utf8');
+  const declared = /SidebarAccountMenuProps = Pick<MenuListProps, ([^>]+)>/u.exec(declaration)?.[1].match(/\w+/gu);
+  assert.ok(declared, 'AccountMenu declares a narrowed Menu list type');
+  // children and className are on every part; the rest belong to this part and must be in the authored record.
+  const record = JSON.parse(await readFile(new URL('../../../catalog/components/sidebar/artifact.json', import.meta.url), 'utf8')).bindings['web.react'].api;
+  const own = declared.filter((name) => !['children', 'className'].includes(name));
+  assert.deepEqual([...own].sort(), ['items', 'onAction']);
+  for (const name of own) assert.ok(record.props.includes(name), `${name} is in the record's props`);
+  assert.ok(record.events.includes('action'), 'the record lists the action event');
+  // At runtime the menu forwards only those props, so a caller cannot reach Menu props the record does not list.
+  const chosen = [];
+  const Menus = () => h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' },
+    h(Sidebar.AccountMenu, { items: ['Profile'], onAction: (item) => chosen.push(['action', item.id]), onSelect: (item) => chosen.push(['select', item.id]), shouldCloseOnSelect: false, disabled: true }));
+  await withDom(h(Menus), async (document) => {
+    await act(async () => document.querySelector('button[aria-label="Account options"]').click());
+    const item = document.querySelector('[role="menuitem"]');
+    assert.ok(item, 'the menu opens');
+    assert.equal(item.getAttribute('aria-disabled') === null, true, 'disabled is not forwarded');
+    await act(async () => item.click());
+    assert.deepEqual(chosen, [['action', 'Profile']], 'only onAction runs');
+    assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'false', 'choosing closes the menu; shouldCloseOnSelect is not forwarded');
+  });
 });
 
 const nav = (...items) => h(Sidebar.Root, null, h(Sidebar.NavList, null, ...items));

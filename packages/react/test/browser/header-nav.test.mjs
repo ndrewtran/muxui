@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // The HeaderNav logo link draws the same keyboard focus ring as the NavButtons, taken from the
 // focus-ring role rather than the browser's default outline, in light and dark. Runs in every engine named by
@@ -92,6 +93,151 @@ for (const engine of browserEngines()) {
           assert.deepEqual(errors, []);
           await tab.close();
         });
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+// A header whose links and drawer trigger swap by the width of their frame, as the Responsive HeaderNav example does.
+const drawerEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Button } from '/src/button.mjs';
+import { HeaderNav } from '/src/supplemental/index.mjs';
+
+const h = React.createElement;
+const links = [['#docs', 'Docs'], ['#components', 'Components']];
+const navigation = links.map(([href, label]) => h(HeaderNav.NavButton, { key: href, href }, label));
+const trigger = h('div', { className: 'menu' }, h(HeaderNav.MobileTrigger, null, navigation, h(Button, null, 'Sign in')));
+// 'plain-logo': nothing in the header takes focus once the trigger is hidden. 'duplicate': a narrow-only copy of
+// the Docs link comes first in the header, then the wide copy the drawer's link should hand focus to.
+const header = {
+  links: [h(HeaderNav.Logo, { href: '#home' }, 'Mux'), h(HeaderNav.Secondary, { className: 'links' }, navigation), trigger],
+  'plain-logo': [h(HeaderNav.Logo, null, 'Mux'), trigger],
+  duplicate: [h(HeaderNav.Logo, { href: '#home' }, 'Mux'), h(HeaderNav.Secondary, { className: 'compact' }, h(HeaderNav.NavButton, { href: '#docs' }, 'Docs')), h(HeaderNav.Secondary, { className: 'links' }, navigation), trigger],
+}[new URLSearchParams(location.search).get('variant') ?? 'links'];
+createRoot(document.getElementById('root')).render(h('div', { id: 'frame', className: 'frame' }, h(HeaderNav.Root, null, ...header)));
+`;
+
+const drawerPage = () => pageShell({
+  attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"',
+  head: `<link rel="stylesheet" href="/generated/styles.css"><style>
+    .frame { container-type: inline-size; inline-size: 24rem; }
+    .links { display: none; }
+    @container (min-width: 40rem) { .links { display: flex; } .compact, .menu { display: none; } }
+  </style>`,
+  bodyAttributes: 'style="margin: 24px; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<div id="root"></div>',
+  entry: '/header-nav-drawer-entry.mjs',
+});
+
+for (const engine of browserEngines()) {
+  test(`HeaderNav closes an open drawer when layout hides its trigger and keeps focus in the header in ${engine}`, { timeout: 180_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs', 'src/button.mjs'],
+      pages: { '/header-nav-drawer.html': drawerPage },
+      modules: { '/header-nav-drawer-entry.mjs': drawerEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/header-nav-drawer.html`, '.muxui-header-nav');
+      const open = async (variant = 'links') => {
+        const context = await browser.newContext({ viewport: { width: 900, height: 600 }, locale: 'en-US' });
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        await tab.goto(`${url}/header-nav-drawer.html?variant=${variant}`, { waitUntil: 'networkidle' });
+        await tab.locator('.muxui-header-nav__mobile-trigger').waitFor();
+        const dialog = tab.getByRole('dialog', { name: 'Navigation' });
+        await tab.locator('.muxui-header-nav__mobile-trigger').click();
+        await dialog.waitFor();
+        return { context, tab, dialog, errors };
+      };
+      const widen = (tab) => tab.evaluate(() => { document.getElementById('frame').style.inlineSize = '48rem'; });
+      // What holds focus, and whether it is rendered, so a failure says where focus went.
+      const focused = (tab) => tab.evaluate(() => {
+        const node = document.activeElement;
+        return { tag: node?.tagName, text: node?.textContent?.trim(), body: node === document.body, rendered: Boolean(node && node.getClientRects().length > 0), inHeader: Boolean(node?.closest('.muxui-header-nav')) };
+      });
+      const settledOn = (tab, text, message) => pollUntil(tab, (expected) => {
+        const node = document.activeElement;
+        return node !== document.body && node.closest('.muxui-header-nav') !== null && node.getClientRects().length > 0 && node.textContent.trim() === expected;
+      }, text, { message, report: () => ({ active: document.activeElement?.outerHTML.slice(0, 100) }) });
+
+      // Widening past the breakpoint with focus on a drawer link moves focus to the matching header link.
+      {
+        const { context, tab, dialog, errors } = await open();
+        try {
+          await dialog.getByRole('link', { name: 'Components' }).focus();
+          await widen(tab);
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await settledOn(tab, 'Components', `${engine}: focus moves to the header's Components link`);
+          assert.deepEqual(await tab.evaluate(() => document.querySelector('.muxui-header-nav__secondary').getClientRects().length > 0), true, `${engine}: the header links are the visible ones`);
+          // Escape now acts on the header, not the page body.
+          await tab.keyboard.press('Escape');
+          assert.equal((await focused(tab)).body, false, `${engine}: Escape leaves focus off the body`);
+          assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // With focus on the drawer's own controls there is no matching link, so focus goes to the first visible control in the header.
+      {
+        const { context, tab, dialog } = await open();
+        try {
+          await dialog.getByRole('button', { name: 'Close navigation' }).focus();
+          await widen(tab);
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await settledOn(tab, 'Mux', `${engine}: focus falls back to the header's first visible control, the logo link`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // A header with no visible control left once the trigger is hidden still takes focus, on the header itself.
+      {
+        const { context, tab, dialog } = await open('plain-logo');
+        try {
+          await dialog.getByRole('link', { name: 'Docs' }).focus();
+          await widen(tab);
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-header-nav'), undefined, { message: `${engine}: focus falls back to the HeaderNav root when nothing in it is focusable`, report: () => document.activeElement?.outerHTML.slice(0, 100) });
+          assert.equal(await tab.evaluate(() => document.activeElement.getAttribute('tabindex')), '-1', `${engine}: the root is focusable by script only`);
+          await tab.keyboard.press('Escape');
+          assert.equal((await focused(tab)).body, false, `${engine}: Escape leaves focus off the body`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // A hidden header link with the drawer link's destination does not stand in for the visible one.
+      {
+        const { context, tab, dialog } = await open('duplicate');
+        try {
+          await dialog.getByRole('link', { name: 'Docs' }).focus();
+          await widen(tab);
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await pollUntil(tab, () => document.activeElement?.closest('.links') !== null && document.activeElement.textContent === 'Docs' && document.activeElement.getClientRects().length > 0, undefined, { message: `${engine}: focus moves to the visible Docs link, not past the hidden copy to the logo`, report: () => document.activeElement?.outerHTML.slice(0, 100) });
+        } finally {
+          await context.close();
+        }
+      }
+
+      // Closing the drawer without a layout change still returns focus to its trigger.
+      {
+        const { context, tab, dialog } = await open();
+        try {
+          await tab.keyboard.press('Escape');
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-header-nav__mobile-trigger'), undefined, { message: `${engine}: Escape returns focus to the trigger`, report: () => document.activeElement?.outerHTML.slice(0, 100) });
+        } finally {
+          await context.close();
+        }
       }
     } finally {
       await browser?.close();

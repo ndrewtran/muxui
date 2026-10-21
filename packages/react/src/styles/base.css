@@ -1438,6 +1438,11 @@
   gap: var(--muxui-semantic-layout-content-gap);
 }
 
+/* A horizontal group wraps its options, so the group error takes a row of its own. */
+.muxui-radio-group[data-orientation='horizontal'] > .muxui-radio-group-error {
+  flex-basis: 100%;
+}
+
 .muxui-combo-control {
   display: flex;
   align-items: center;

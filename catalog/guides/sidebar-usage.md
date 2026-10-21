@@ -28,8 +28,9 @@ The column fills the height of its container, so place it in one that has a heig
 
 ## Account card and menu
 
-- AccountCard shows a name, an email, and an avatar. Its built-in Account options button currently has no action.
-- AccountMenu is independent styled content, and nothing connects it to that button. The application decides where it sits and when it shows.
+- AccountCard shows a name, an email, and an avatar.
+- Put one AccountMenu inside the card for the account's own actions, such as Profile and Sign out. The card's Account options button opens it, and Escape closes it and returns focus to the button. A card without an AccountMenu has no button.
+- Build the menu from [Menu](/components/menu/) items, and keep it to actions about the account. Navigation belongs in the column.
 
 ## Content
 

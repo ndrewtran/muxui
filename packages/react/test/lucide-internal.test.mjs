@@ -212,7 +212,7 @@ const r16IconCases = [
     ['lucide-menu', 'Open navigation'],
     ['lucide-x', 'Close navigation'],
   ]],
-  ['Sidebar', () => h(Sidebar.Root, null, h(Sidebar.Search), h(Sidebar.NavList, null, h(Sidebar.NavItem, { href: '/docs', items: [{ href: '/docs/a', label: 'A' }] }, 'Docs'), h(Sidebar.NavItem, { href: 'https://example.com', external: true }, 'External')), h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }), h(Sidebar.MobileTrigger, null, 'Menu')), ['.muxui-sidebar__mobile-menu-btn'], [
+  ['Sidebar', () => h(Sidebar.Root, null, h(Sidebar.Search), h(Sidebar.NavList, null, h(Sidebar.NavItem, { href: '/docs', items: [{ href: '/docs/a', label: 'A' }] }, 'Docs'), h(Sidebar.NavItem, { href: 'https://example.com', external: true }, 'External')), h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, h(Sidebar.AccountMenu, { items: ['Profile'] })), h(Sidebar.MobileTrigger, null, 'Menu')), ['.muxui-sidebar__mobile-menu-btn'], [
     ['lucide-search', null],
     ['lucide-chevron-down', 'Docs'],
     ['lucide-external-link', 'External'],

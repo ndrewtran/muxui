@@ -1,4 +1,5 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import {
@@ -23,6 +24,7 @@ import {
   ListBoxItem as AriaListBoxItem,
   ListBoxSection as AriaListBoxSection,
   Link as AriaLink,
+  MenuTrigger as AriaMenuTrigger,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
   OverlayTriggerStateContext,
@@ -58,6 +60,7 @@ import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
+import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
@@ -1131,12 +1134,50 @@ const HeaderNav = {
   NavButton: React.forwardRef(function HeaderNavButton({ href, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, className: cx('muxui-header-nav__nav-btn', current && 'muxui-header-nav__nav-btn--current', className), 'aria-current': current ? 'page' : undefined }); }),
   Actions: React.forwardRef(function HeaderNavActions(props, ref) { return nativePart('div', 'muxui-header-nav__actions', props, ref); }),
   Secondary: React.forwardRef(function HeaderNavSecondary(props, ref) { return nativePart('nav', 'muxui-header-nav__secondary', props, ref); }),
-  MobileTrigger: function HeaderNavMobileTrigger({ children }) { return h(AriaDialogTrigger, null, h(IconButton, { className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children))))); },
+  MobileTrigger: function HeaderNavMobileTrigger({ children }) {
+    const [open, setOpen] = React.useState(false);
+    const latest = React.useRef(open);
+    latest.current = open;
+    const button = React.useRef(null);
+    // The drawer's focused link and dialog when layout took it away, for the header link that should receive focus next.
+    const handoff = React.useRef(null);
+    // When layout hides the trigger (the header's own links took over), an open drawer would be stranded and Escape
+    // would leave focus on the body: close it and hand focus to the header.
+    React.useEffect(() => {
+      const trigger = button.current;
+      if (!trigger || typeof ResizeObserver === 'undefined') return undefined;
+      const observer = new ResizeObserver(() => {
+        if (!latest.current || trigger.getClientRects().length > 0) return;
+        const dialog = document.activeElement?.closest('.muxui-header-nav__mobile-dialog') ?? null;
+        handoff.current = { dialog, href: dialog ? document.activeElement.closest('a[href]')?.getAttribute('href') ?? null : null, root: trigger.closest('.muxui-header-nav') };
+        setOpen(false);
+      });
+      observer.observe(trigger);
+      return () => observer.disconnect();
+    }, []);
+    // Runs after the drawer has left: the header link matching the drawer's focused link, then any visible control in the
+    // header, then the header itself, which Sidebar's handoff makes focusable by script when nothing else takes focus.
+    const exit = () => {
+      const wanted = handoff.current;
+      handoff.current = null;
+      if (!wanted?.root) return;
+      // Hidden copies drop out first, so the matching link is the visible one even when a hidden link shares its destination.
+      const controls = () => [...wanted.root.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')].filter((node) => !node.disabled && node.getAttribute('tabindex') !== '-1' && !sidebarUnreachable(node));
+      sidebarHandoff(() => {
+        const all = controls();
+        return [all.find((node) => wanted.href !== null && node.getAttribute('href') === wanted.href), ...all, wanted.root];
+      }, new Set([wanted.root]), (active) => wanted.dialog?.contains(active));
+    };
+    return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen }, h(IconButton, { ref: button, className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children)))));
+  },
 };
 
 /* Sidebar */
 // Folding state lives in Sidebar.Provider so Root, Toggle, and the shortcut share it. Without a Provider every part renders as before.
 const SidebarContext = React.createContext(null);
+// AccountCard shares its element with AccountMenu so the menu can anchor to the card, and AccountMenu tells the card it is mounted.
+const SidebarAccountContext = React.createContext(null);
+function useSidebarAccount() { const account = React.useContext(SidebarAccountContext); if (!account) throw new Error('Sidebar.AccountMenu must be used inside Sidebar.AccountCard'); return account; }
 function useSidebarPart(part) { const context = React.useContext(SidebarContext); if (!context) throw new Error(`Sidebar.${part} must be used inside Sidebar.Provider`); return context; }
 const SIDEBAR_EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
 const sidebarShortcutModifier = (event) => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey);
@@ -1161,6 +1202,7 @@ function handleSidebarShortcut(event, capturing) {
 }
 const onSidebarShortcutCapture = (event) => handleSidebarShortcut(event, true);
 const onSidebarShortcutBubble = (event) => handleSidebarShortcut(event, false);
+// The focus helpers from here through SidebarDrawerExit also serve HeaderNav's drawer.
 // Focus that folding would hide: a display:none or visibility:hidden control.
 const sidebarUnreachable = (node) => node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden';
 /** Focuses the first candidate that is rendered and really takes focus, and says whether one did; a Root reached this way gets a tabindex only then. */
@@ -1402,8 +1444,52 @@ const Sidebar = {
   Section: React.forwardRef(function SidebarSection({ label, className, children, ...props }, ref) { const labelId = React.useId(); return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, h('span', { id: labelId, className: 'muxui-sidebar__section-label' }, label), h('ul', { className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId }, children)); }),
   NavItem: function SidebarNavItem({ children, ...props }) { return h(SidebarNavNode, { ...props, label: children }); },
   NavButton: React.forwardRef(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-btn', current && 'muxui-sidebar__nav-btn--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', 'aria-hidden': true }), props.children); }),
-  AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children); }),
-  AccountMenu: React.forwardRef(function SidebarAccountMenu(props, ref) { return nativePart('div', 'muxui-sidebar__account-menu', props, ref); }),
+  AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) {
+    const sidebar = React.useContext(SidebarContext);
+    const card = React.useRef(null);
+    const button = React.useRef(null);
+    React.useImperativeHandle(ref, () => card.current);
+    const [open, setOpen] = React.useState(false);
+    // Tab leaves an open menu, as it does for a menu button: the menu closes and focus moves on from the button. The
+    // browser does the moving, by its own rules for disabled controls, tabindex and radio groups, once the menu has
+    // closed (so the rest of the page is no longer inert) and focus is on the button. Tab's default action is left alone.
+    // The portalled menu's keydown bubbles here through the React tree.
+    const leaveMenu = (event) => {
+      props.onKeyDown?.(event);
+      if (event.key !== 'Tab' || !open || !event.target.closest?.('.muxui-menu-popup') || card.current.contains(event.target)) return;
+      flushSync(() => setOpen(false));
+      button.current?.focus({ preventScroll: true });
+    };
+    // A folded rail hides the options button, so a menu left open has nothing to anchor to or return focus to:
+    // close it and hand focus to a Toggle, else Root.
+    const collapsed = Boolean(sidebar?.collapsed);
+    useIsomorphicLayoutEffect(() => {
+      if (!collapsed || !open) return;
+      setOpen(false);
+      sidebarHandoff(() => [...sidebar.toggles, ...sidebar.roots], sidebar.roots, (active) => active.closest('[role="menu"]'));
+    }, [collapsed]);
+    // The options button exists to open an AccountMenu, so it shows only while one is mounted, however it is wrapped.
+    // It stays in the tree, hidden, because the menu trigger around the card warns when it has no button to press.
+    // One menu per card: two would open as two popovers over one trigger.
+    const [hasMenu, setHasMenu] = React.useState(false);
+    const registered = React.useRef(false);
+    const register = React.useCallback(() => {
+      if (registered.current) throw new Error('Sidebar.AccountCard takes one Sidebar.AccountMenu');
+      registered.current = true;
+      setHasMenu(true);
+      return () => { registered.current = false; setHasMenu(false); };
+    }, []);
+    const account = React.useMemo(() => ({ anchor: card, register }), [register]);
+    useIsomorphicLayoutEffect(() => { if (!hasMenu) setOpen(false); }, [hasMenu]);
+    const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { ref: button, hidden: !hasMenu, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
+    return h(SidebarAccountContext.Provider, { value: account }, h(AriaMenuTrigger, { isOpen: open && hasMenu && !collapsed, onOpenChange: setOpen }, content));
+  }),
+  AccountMenu: React.forwardRef(function SidebarAccountMenu({ items, children, onAction, className }, ref) {
+    const account = useSidebarAccount();
+    useIsomorphicLayoutEffect(() => account.register(), [account.register]);
+    // The popup opens from the card, not the small button, so it lines up with the card's edge.
+    return h(Menu.Popup, { anchorRef: account.anchor, placement: 'top-start' }, h(Menu.List, { items, onAction, ref, className: cx('muxui-sidebar__account-menu', className) }, children));
+  }),
   MobileTrigger: function SidebarMobileTrigger({ children, logo }) {
     const sidebar = React.useContext(SidebarContext);
     const [open, setOpen] = React.useState(false);

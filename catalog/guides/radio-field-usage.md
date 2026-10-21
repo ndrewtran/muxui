@@ -9,8 +9,8 @@ Use RadioField for an option that needs supporting content, composed from the Ro
 
 ## Group-wide requirement
 
-- RadioGroup has no error or description part of its own. A requirement on the whole group shows its message in the Error of each option, as the RadioField options example does.
-- Leave the Error off an option that cannot be chosen, such as the disabled Invoice option.
+- Show a requirement on the whole group once, in the error of the [RadioGroup](/components/radio-group/), as the RadioField options example does. Do not repeat the message in each option.
+- Keep an option's own Error for a message about that option alone.
 
 ## Content
 

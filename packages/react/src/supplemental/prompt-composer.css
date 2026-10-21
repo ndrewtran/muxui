@@ -14,7 +14,9 @@
 .muxui-prompt-composer:focus-within { border-color: var(--muxui-field-focus-border); box-shadow: var(--muxui-field-focus-glow); }
 .muxui-prompt-composer[data-invalid], .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid) { border-color: var(--muxui-semantic-feedback-invalid-border); }
 .muxui-prompt-composer[data-invalid]:focus-within, .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid):focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent); }
-.muxui-prompt-composer[data-disabled] { opacity: 0.45; background: var(--muxui-semantic-surface-hover); cursor: not-allowed; }
+/* The disabled treatment fades the controls, not the error alert, which keeps full contrast. The box takes the hover surface and keeps its border, as disabled fields do. */
+.muxui-prompt-composer[data-disabled] { background: var(--muxui-semantic-surface-hover); cursor: not-allowed; }
+.muxui-prompt-composer[data-disabled] > :is(.muxui-prompt-composer-attachments, .muxui-prompt-composer-field) { opacity: 0.45; }
 .muxui-prompt-composer-field { display: flex; align-items: flex-end; gap: var(--muxui-semantic-layout-action-gap); padding: var(--muxui-semantic-layout-inset-tight); }
 .muxui-prompt-composer-input {
   box-sizing: border-box;
@@ -63,6 +65,7 @@
 @media (forced-colors: active) {
   .muxui-prompt-composer { border-color: CanvasText; }
   .muxui-prompt-composer:focus-within { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
-  .muxui-prompt-composer[data-disabled] { opacity: 1; color: GrayText; }
+  .muxui-prompt-composer[data-disabled] { color: GrayText; }
+  .muxui-prompt-composer[data-disabled] > :is(.muxui-prompt-composer-attachments, .muxui-prompt-composer-field) { opacity: 1; }
   .muxui-prompt-composer-option[aria-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
 }

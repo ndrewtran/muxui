@@ -275,7 +275,7 @@ function defaults() {
     control('sidebar-search-default', h(Sidebar.Root, { style: { height: 'auto' } },
       h(Sidebar.Header, null, h(Sidebar.Search, { placeholder: 'Filter' })))),
     control('sidebar-account-trigger-default', h(Sidebar.Root, { style: { height: 'auto' } },
-      h(Sidebar.AccountCard, { email: 'andrew@example.com', name: 'Andrew' }))),
+      h(Sidebar.AccountCard, { email: 'andrew@example.com', name: 'Andrew' }, h(Sidebar.AccountMenu, { items: ['Profile'] })))),
     control('sidebar-feature-dismiss-default', h(Sidebar.Root, { style: { height: 'auto' } },
       h(Sidebar.FeatureCard, {
         description: 'Keep your workspace tidy.',

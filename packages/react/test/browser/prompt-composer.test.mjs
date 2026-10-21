@@ -209,3 +209,72 @@ test('PromptComposer keeps the whole suggestion menu, padding, border and gap in
     assert.deepEqual(errors, []);
   } finally { await browser.close(); await server.close(); }
 });
+
+/**
+ * What a node really shows: the product of the opacity of it and every ancestor, and its text colour's contrast against
+ * the backgrounds painted behind it, stacked down to the first opaque one. Runs in the page, where canvas resolves any
+ * CSS colour.
+ */
+function visibilityOf(selector) {
+  const node = document.querySelector(selector);
+  let opacity = 1;
+  for (let current = node; current; current = current.parentElement) opacity *= Number(getComputedStyle(current).opacity);
+  const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const pixel = (...layers) => {
+    context.clearRect(0, 0, 1, 1);
+    for (const css of layers) { context.fillStyle = css; context.fillRect(0, 0, 1, 1); }
+    return [...context.getImageData(0, 0, 1, 1).data];
+  };
+  const luminance = ([r, g, b]) => {
+    const [red, green, blue] = [r, g, b].map((value) => { const channel = value / 255; return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const layers = [];
+  for (let current = node; current; current = current.parentElement) {
+    const paint = getComputedStyle(current).backgroundColor;
+    const alpha = pixel(paint)[3];
+    if (alpha > 0) layers.unshift(paint);
+    if (alpha === 255) break;
+  }
+  const [high, low] = [luminance(pixel(getComputedStyle(node).color)), luminance(pixel(...layers))].sort((x, y) => y - x);
+  return { opacity, contrast: (high + 0.05) / (low + 0.05) };
+}
+
+test('PromptComposer keeps the error alert at full opacity and contrast while disabled, in light and dark', { timeout: 120_000 }, async () => {
+  const server = await startServer({ entries: ['src/supplemental/prompt-composer.mjs'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
+  const browser = await launchBrowser();
+  const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
+  try {
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(server.url + '/prompt.html');
+    await page.getByRole('textbox', { name: 'Draft' }).waitFor();
+    for (const scheme of ['light', 'dark']) {
+      await page.evaluate((value) => document.documentElement.setAttribute('data-muxui-color-scheme', value), scheme);
+      await page.evaluate(() => window.mount({ disabled: true, error: 'Request failed' }));
+      await page.waitForFunction(() => document.querySelector('textarea').disabled);
+      const alert = await page.evaluate(visibilityOf, '[role="alert"]');
+      const field = await page.evaluate(visibilityOf, '.muxui-prompt-composer-field');
+      assert.equal(alert.opacity, 1, `${scheme}: the disabled composer's alert is not faded (${alert.opacity})`);
+      assert.ok(alert.contrast >= 4.5, `${scheme}: the alert text keeps 4.5:1 contrast while disabled (${alert.contrast.toFixed(2)}:1)`);
+      assert.equal(field.opacity, 0.45, `${scheme}: the disabled controls are still faded (${field.opacity})`);
+      // Without an error the same treatment applies to the controls alone.
+      await page.evaluate(() => window.mount({ disabled: true }));
+      await page.waitForFunction(() => !document.querySelector('[role="alert"]'));
+      assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer-field')).opacity, 0.45, `${scheme}: a disabled composer without an error fades its controls`);
+      // The box paints canonical tokens, opaque: the hover surface disabled fields use and the ordinary border, not a translucent mix.
+      const paint = await page.evaluate(() => {
+        const token = (name) => { const probe = document.createElement('span'); probe.style.color = `var(${name})`; document.body.append(probe); const { color } = getComputedStyle(probe); probe.remove(); return color; };
+        const root = getComputedStyle(document.querySelector('form.muxui-prompt-composer'));
+        return { background: root.backgroundColor, border: root.borderTopColor, surface: token('--muxui-semantic-surface-hover'), edge: token('--muxui-semantic-border-default') };
+      });
+      assert.equal(paint.background, paint.surface, `${scheme}: the disabled box takes the hover surface token (${paint.background})`);
+      assert.equal(paint.border, paint.edge, `${scheme}: the disabled box keeps the ordinary border token (${paint.border})`);
+      // An enabled composer is not faded at all.
+      await page.evaluate(() => window.mount({ error: 'Request failed' }));
+      await page.waitForFunction(() => document.querySelector('[role="alert"]'));
+      assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer-field')).opacity, 1, `${scheme}: an enabled composer is not faded`);
+    }
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); await server.close(); }
+});

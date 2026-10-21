@@ -7,6 +7,8 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Checkbox } from '/src/components.mjs';
+  import { RadioGroup } from '/src/collections.mjs';
+  import { RadioField } from '/src/supplemental/index.mjs';
   import { Autocomplete, CheckboxGroup, DateField, Form, NumberField, SearchField, Switch, TextField, TimeField } from '/src/fields.mjs';
   import { ColorField } from '/src/collections.mjs';
   import '/generated/styles.css';
@@ -22,6 +24,16 @@ const entry = `import React from 'react';
       h(CheckboxGroup, { label: 'Alerts', name: 'alerts', required: true },
         h(Checkbox, { value: 'email' }, 'Email'),
         h(Checkbox, { value: 'sms' }, 'SMS')),
+      h('button', { type: 'submit' }, 'Submit')),
+    // RadioField options with one error on the group, as the RadioField options example recommends.
+    'radio-group': () => h(Form, { onSubmit: submit },
+      h(RadioGroup, { label: 'Plan', name: 'plan', required: true, errorMessage: 'Choose a plan to continue.' },
+        ['monthly', 'yearly'].map((value) => h(RadioField.Root, { key: value, value },
+          h(RadioField.Button, null, h(RadioField.Indicator, null, h(RadioField.Dot)), value)))),
+      h('button', { type: 'submit' }, 'Submit')),
+    // Without errorMessage the group shows the browser's own message.
+    'radio-group-native': () => h(Form, { onSubmit: submit },
+      h(RadioGroup, { label: 'Plan', name: 'plan', required: true, options: [{ value: 'monthly', label: 'Monthly' }, { value: 'yearly', label: 'Yearly' }] }),
       h('button', { type: 'submit' }, 'Submit')),
     autocomplete: () => h(Form, { onSubmit: submit },
       h(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'], onChange: (value) => log('change', value), onSelect: (item) => log('select', item?.value) }),
@@ -75,7 +87,7 @@ const entry = `import React from 'react';
 async function withPage(run) {
   const html = pageShell({ body: '<div id="root"></div>', entry: '/form-fields-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.mjs', 'src/fields.mjs', 'src/collections.mjs'],
+    entries: ['src/components.mjs', 'src/fields.mjs', 'src/collections.mjs', 'src/supplemental/index.mjs'],
     pages: { '/form-fields.html': html },
     modules: { '/form-fields-entry.mjs': entry },
   });
@@ -112,6 +124,42 @@ test('a required CheckboxGroup blocks native submission and shows its error', { 
     await page.locator('.muxui-checkbox', { hasText: 'SMS' }).click();
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [['submit', { alerts: 'sms' }]]);
+  });
+});
+
+test('a required RadioGroup blocks native submission and shows its group error once', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('radio-group');
+    const group = page.getByRole('radiogroup', { name: 'Plan' });
+    assert.equal(await page.locator('.muxui-field-error').count(), 0, 'no error before the first submit');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [], 'the browser blocks the submit');
+    await page.locator('.muxui-radio-group-error').waitFor();
+    const errors = page.locator('.muxui-field-error');
+    assert.equal(await errors.count(), 1, 'the message shows once for the group');
+    assert.equal((await errors.textContent())?.trim(), 'Choose a plan to continue.');
+    const errorId = await errors.getAttribute('id');
+    assert.ok(errorId && (await group.getAttribute('aria-describedby'))?.split(' ').includes(errorId), 'the group is described by its error');
+    assert.equal(await page.getByText('Choose a plan to continue.').count(), 1, 'no option repeats the message');
+
+    await page.locator('.muxui-radio-field__button', { hasText: 'yearly' }).click();
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [['submit', { plan: 'yearly' }]]);
+    assert.equal(await page.locator('.muxui-field-error').count(), 0, 'the error leaves once a plan is chosen');
+  });
+});
+
+test('a required RadioGroup without errorMessage shows the browser message once', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('radio-group-native');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [], 'the browser blocks the submit');
+    await page.locator('.muxui-radio-group-error').waitFor();
+    assert.equal(await page.locator('.muxui-field-error').count(), 1);
+    assert.notEqual((await page.locator('.muxui-radio-group-error').textContent())?.trim() ?? '', '', 'the default message is the browser validation message');
+    await page.getByRole('radio', { name: 'Yearly' }).evaluate((node) => node.closest('label').click());
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [['submit', { plan: 'yearly' }]]);
   });
 });
 

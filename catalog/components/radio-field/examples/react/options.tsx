@@ -15,8 +15,8 @@ export function RadioFieldOptionsExample() {
   return (
     <form noValidate onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--muxui-reference-dimension-space-xs)' }}>
-        {/* invalid on the group marks every option, and RadioGroup has no error part, so each enabled option renders the message. */}
-        <RadioGroup label="Plan" name="plan" value={plan} onChange={setPlan} invalid={attempted && plan === ''}>
+        {/* invalid on the group marks every option, and the group's own error message shows once for all of them. */}
+        <RadioGroup label="Plan" name="plan" value={plan} onChange={setPlan} invalid={attempted && plan === ''} errorMessage="Choose a plan to continue.">
           <RadioField.Root value="monthly">
             <RadioField.Button>
               <RadioField.Indicator>
@@ -25,7 +25,6 @@ export function RadioFieldOptionsExample() {
               Monthly
             </RadioField.Button>
             <RadioField.Description>Billed every month.</RadioField.Description>
-            <RadioField.Error>Choose a plan to continue.</RadioField.Error>
           </RadioField.Root>
           <RadioField.Root value="yearly">
             <RadioField.Button>
@@ -35,7 +34,6 @@ export function RadioFieldOptionsExample() {
               Yearly
             </RadioField.Button>
             <RadioField.Description>Billed once a year.</RadioField.Description>
-            <RadioField.Error>Choose a plan to continue.</RadioField.Error>
           </RadioField.Root>
           <RadioField.Root value="invoice" disabled>
             <RadioField.Button>
