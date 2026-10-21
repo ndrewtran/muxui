@@ -10,7 +10,7 @@ import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from
 import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
 import { dependencyClosure, dependencyOrder, familyRecordsFromContract } from './scoped-verification.mjs';
-import { componentTestSelection, isBrowserTestFile, testNamePattern } from './component-test-selection.mjs';
+import { componentTestSelection, isBrowserTestFile, sourceGuardTests, testNamePattern } from './component-test-selection.mjs';
 import { loadPolicy, normalizePath } from './policy.mjs';
 import { changedPatternSlugs, patternBrowserTest, patternParticipants } from './pattern-variants.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
@@ -1636,6 +1636,8 @@ export async function buildPullRequestImpact({
   if (reactSourcePaths.length > 0 && !plan.reactPackageFull && !plan.packageChecks.has('@muxui/react')) {
     plan.reactTestFiles.add(motionBoundaryTestFile);
     plan.reasons.push('React runtime source changed; verify public export bundles keep their Motion boundary');
+    // Guards on a module's text and bundles that no affected family predicts.
+    reactSourcePaths.flatMap(sourceGuardTests).forEach((file) => plan.reactTestFiles.add(file));
   }
 
   const cssPaths = changed.filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.css'));

@@ -37,6 +37,21 @@ const SOURCE_ROUTES = Object.freeze({
   'text-editor': ['test/heavy-components.test.mjs'],
 });
 
+// Guards on how the collections modules fit together and bundle. A change that only drops a pure
+// annotation affects no family, so family routing never selects them; any change to a collections
+// module does. Its modules are the barrel, the helpers the families share, and the family modules,
+// which are the SOURCE_ROUTES keys that route to the R1.3 parity group.
+const COLLECTIONS_GUARD_TESTS = Object.freeze(['test/collections-modules.test.mjs', 'test/tree-shaking.test.mjs']);
+const COLLECTIONS_SHARED_MODULES = Object.freeze(['collections', 'control-utils', 'collection-items', 'read-only-guard', 'color-context', 'collection-trigger', 'grid-virtualizer-context']);
+
+/** The guard tests a changed React source file selects whatever families it affects. */
+export function sourceGuardTests(path) {
+  const name = /^packages\/react\/src\/([\w-]+)\.(?:mjs|ts)$/u.exec(path)?.[1];
+  const collections = name !== undefined && (COLLECTIONS_SHARED_MODULES.includes(name)
+    || (Object.hasOwn(SOURCE_ROUTES, name) && SOURCE_ROUTES[name].includes('test/r1-3-parity.test.mjs')));
+  return collections ? COLLECTIONS_GUARD_TESTS : [];
+}
+
 // Tests that belong to a family but are not named for its slug. The slug-named
 // pair (`test/<slug>.test.mjs`, `test/browser/<slug>.test.mjs`) is found by
 // convention and needs no entry here.

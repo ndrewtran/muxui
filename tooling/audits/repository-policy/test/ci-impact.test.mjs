@@ -1412,6 +1412,22 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
   assert.ok(!generator.reactTestFiles.includes('test/motion-package-boundary.test.mjs'), 'the full React check already runs it');
 });
 
+test('a change to a collections module runs the collections guards even when it affects no family', async () => {
+  const sliderPath = 'packages/react/src/color-slider.mjs';
+  // Dropping the pure annotation changes no export, so no family is affected.
+  const before = 'export const ColorSlider = /* @__PURE__ */ (() => () => null)();\n';
+  const after = 'export const ColorSlider = (() => () => null)();\n';
+  const result = await plan([sliderPath], {
+    records: [...records, { family: 'ColorSlider', export: 'ColorSlider', slug: 'color-slider', source: sliderPath, parts: ['root'] }],
+    textSnapshots: { [sliderPath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [sliderPath]: { before, after } },
+  });
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.reactTestFiles, ['test/collections-modules.test.mjs', 'test/motion-package-boundary.test.mjs', 'test/tree-shaking.test.mjs']);
+  const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
+  assert.ok(commands.includes('test/collections-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
+});
+
 test('a TypeScript React source takes the runtime source route; a declaration file does not', async () => {
   const treePath = 'packages/react/src/tree.ts';
   const typed = records.map((record) => (record.family === 'Tree' ? { ...record, source: treePath } : record));
