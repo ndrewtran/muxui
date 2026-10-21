@@ -1260,7 +1260,7 @@ export const Switch: ForwardRefExoticComponent<SwitchProps & RefAttributes<HTMLD
     errorMessage,
     required = false,
     invalid = false,
-    size,
+    size = 'md',
     validationBehavior: _validationBehavior,
     name,
     value,
@@ -1271,7 +1271,7 @@ export const Switch: ForwardRefExoticComponent<SwitchProps & RefAttributes<HTMLD
   }, ref) {
     assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Switch');
     const resolvedSize = normalizeChoiceControlSize(size, 'Switch');
-    const visibleLabel = label ?? children;
+    const visibleLabel = label === undefined || label === null ? children : label;
     return React.createElement(AriaSwitchField, {
       ...props,
       ref,

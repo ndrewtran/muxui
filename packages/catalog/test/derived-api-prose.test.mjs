@@ -102,6 +102,8 @@ const GUIDES = {
   'number-field': { native: ['className', '--muxui-component-number-field-width', 'width', 'NaN', '0', 'null', 'Number.isNaN', 'JSON.stringify(NaN)', 'inputMode="numeric"'] },
   // FormData.get and FormData.getAll read the group's repeated entries.
   'checkbox-group': { native: ['FormData.get', 'FormData.getAll'] },
+  // aria-label and aria-labelledby name the Switch when it has no label.
+  switch: { native: ['aria-label', 'aria-labelledby'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
