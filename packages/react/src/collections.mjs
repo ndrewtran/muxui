@@ -90,6 +90,8 @@ import {
   parseColor,
   useLocale,
   TokenFieldValue,
+  PopoverContext,
+  RootMenuTriggerStateContext,
 } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
@@ -1145,8 +1147,24 @@ export const Menu = /*#__PURE__*/ (() => {
     const normalized = normalizeItems(items);
     const hasChildren = children !== undefined && children !== null;
     const disabledKeys = new Set(normalized.filter((item) => effectiveDisabled || item.disabled).map((item) => item.id));
+    // Tab leaves an open menu, as it does for a menu button: the whole menu tree closes and focus moves on from the trigger.
+    // Closing first makes the rest of the page interactive again, and focusing the trigger lets the browser do the moving,
+    // by its own rules for disabled controls, tabindex and radio groups, so Tab's default action is left alone. Only the
+    // root list handles it, since a submenu's Tab bubbles to it through the React tree.
+    const popover = React.useContext(PopoverContext);
+    const menuTrigger = React.useContext(RootMenuTriggerStateContext);
     const menu = React.createElement(AriaMenu, {
       ...props,
+      // The list's own Tab handling moves focus back into the list, so the handler must run after it, which `render` allows.
+      render: popover?.trigger === 'MenuTrigger' ? (domProps) => React.createElement('div', {
+        ...domProps,
+        onKeyDown: (event) => {
+          domProps.onKeyDown?.(event);
+          if (event.key !== 'Tab') return;
+          flushSync(() => menuTrigger.close());
+          popover.triggerRef.current?.focus({ preventScroll: true });
+        },
+      }) : undefined,
       items: hasChildren ? undefined : normalized,
       disabledKeys,
       shouldCloseOnSelect: shouldCloseOnSelect ?? context.shouldCloseOnSelect ?? true,

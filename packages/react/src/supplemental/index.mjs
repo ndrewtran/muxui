@@ -1,5 +1,4 @@
 import React from 'react';
-import { flushSync } from 'react-dom';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import {
@@ -1447,19 +1446,8 @@ const Sidebar = {
   AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) {
     const sidebar = React.useContext(SidebarContext);
     const card = React.useRef(null);
-    const button = React.useRef(null);
     React.useImperativeHandle(ref, () => card.current);
     const [open, setOpen] = React.useState(false);
-    // Tab leaves an open menu, as it does for a menu button: the menu closes and focus moves on from the button. The
-    // browser does the moving, by its own rules for disabled controls, tabindex and radio groups, once the menu has
-    // closed (so the rest of the page is no longer inert) and focus is on the button. Tab's default action is left alone.
-    // The portalled menu's keydown bubbles here through the React tree.
-    const leaveMenu = (event) => {
-      props.onKeyDown?.(event);
-      if (event.key !== 'Tab' || !open || !event.target.closest?.('.muxui-menu-popup') || card.current.contains(event.target)) return;
-      flushSync(() => setOpen(false));
-      button.current?.focus({ preventScroll: true });
-    };
     // A folded rail hides the options button, so a menu left open has nothing to anchor to or return focus to:
     // close it and hand focus to a Toggle, else Root.
     const collapsed = Boolean(sidebar?.collapsed);
@@ -1481,7 +1469,7 @@ const Sidebar = {
     }, []);
     const account = React.useMemo(() => ({ anchor: card, register }), [register]);
     useIsomorphicLayoutEffect(() => { if (!hasMenu) setOpen(false); }, [hasMenu]);
-    const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { ref: button, hidden: !hasMenu, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
+    const content = h('div', { ...props, ref: card, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { hidden: !hasMenu, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
     return h(SidebarAccountContext.Provider, { value: account }, h(AriaMenuTrigger, { isOpen: open && hasMenu && !collapsed, onOpenChange: setOpen }, content));
   }),
   AccountMenu: React.forwardRef(function SidebarAccountMenu({ items, children, onAction, className }, ref) {
