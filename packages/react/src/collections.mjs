@@ -1,7 +1,5 @@
 import React from 'react';
 import { flushSync } from 'react-dom';
-import { ColorSliderMotionTrack } from './color-slider-motion.mjs';
-import { ColorWheelMotionTrack } from './color-wheel-motion.mjs';
 import { ListBoxMotion } from './listbox-motion.mjs';
 import { TreeMotion } from './tree-motion.mjs';
 import { GridListMotion } from './grid-list-motion.mjs';
@@ -10,18 +8,6 @@ import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import {
-  ColorArea as AriaColorArea,
-  ColorAreaContext,
-  ColorField as AriaColorField,
-  ColorFieldStateContext as AriaColorFieldStateContext,
-  ColorPicker as AriaColorPicker,
-  ColorPickerStateContext,
-  ColorSlider as AriaColorSlider,
-  ColorSwatch as AriaColorSwatch,
-  ColorSwatchPicker as AriaColorSwatchPicker,
-  ColorSwatchPickerItem as AriaColorSwatchPickerItem,
-  ColorWheel as AriaColorWheel,
-  ColorThumb as AriaColorThumb,
   ComboBox as AriaComboBox,
   GridList as AriaGridList,
   GridListItem as AriaGridListItem,
@@ -72,8 +58,6 @@ import {
   Input as AriaInput,
   Text as AriaText,
   FieldError as AriaFieldError,
-  parseColor,
-  useLocale,
   TokenFieldValue,
   PopoverContext,
   RootMenuTriggerStateContext,
@@ -91,12 +75,18 @@ import { ToggleButtonGroupMotion } from './toggle-button-group-motion.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
 import { classNames, accessibleName } from './control-utils.mjs';
 import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.mjs';
-import { READ_ONLY_SELECTION_KEYS, readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
-import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.mjs';
+import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
 import { CollectionTrigger } from './collection-trigger.mjs';
 import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
 
 export { Calendar, RangeCalendar } from './calendar.mjs';
+export { ColorSwatch } from './color-swatch.mjs';
+export { ColorField } from './color-field.mjs';
+export { ColorArea } from './color-area.mjs';
+export { ColorSlider } from './color-slider.mjs';
+export { ColorWheel } from './color-wheel.mjs';
+export { ColorPicker } from './color-picker.mjs';
+export { ColorSwatchPicker } from './color-swatch-picker.mjs';
 
 const TABS_VARIANTS = new Set(['underline', 'pill', 'overflow', 'segment']);
 const TAG_VARIANTS = ['soft', 'outline', 'dot', 'strong'];
@@ -135,368 +125,6 @@ function readonlyKeySet(value, property, selectionMode) {
   }
   return keys === undefined ? undefined : new Set(keys);
 }
-
-export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, secondaryColor, shape = 'square', colorName, disabled = false, className, style, ...props }, ref) {
-  const pickerState = React.useContext(ColorPickerContext);
-  const { locale } = useLocale();
-  if (shape !== 'square' && shape !== 'circle') throw new TypeError('ColorSwatch shape must be square or circle');
-  const primary = colorValue(color, 'ColorSwatch');
-  const secondary = colorValue(secondaryColor, 'ColorSwatch secondaryColor');
-  if (secondary && !primary) throw new TypeError('Two-tone ColorSwatch requires a primary color');
-  const effectiveDisabled = disabled || pickerState.disabled;
-  return React.createElement(AriaColorSwatch, {
-    ...props, ref, color: primary,
-    colorName: colorName?.trim() || (secondary ? `${primary.getColorName(locale)}, ${secondary.getColorName(locale)}` : undefined),
-    isDisabled: effectiveDisabled,
-    'data-disabled': effectiveDisabled || undefined, 'data-readonly': pickerState.readOnly || undefined,
-    'data-muxui-color-paint': 'sample',
-    'data-shape': shape, 'data-two-tone': secondary ? '' : undefined,
-    className: classNames('muxui-color-swatch', className),
-    style: secondary ? {
-      ...style,
-      // Avoid painting translucent gradient halves over the primary colour.
-      backgroundColor: 'transparent',
-      '--muxui-color-swatch-primary': primary.toString('css'),
-      '--muxui-color-swatch-secondary': secondary.toString('css'),
-    } : style,
-  });
-});
-ColorSwatch.displayName = 'ColorSwatch';
-
-// React Aria applies typed text to a ColorField only on blur, so Enter would submit the form with the raw text and
-// never report it. Enter commits as blur does, flushed so the input and onChange are current when the form reads
-// them, and leaves the submission itself alone. NumberField does the same for its Enter, and skips the Enter that
-// confirms an input method composition, which is not an attempt to submit.
-function ColorFieldInput() {
-  const state = React.useContext(AriaColorFieldStateContext);
-  return React.createElement(AriaInput, {
-    className: 'muxui-field-input',
-    onKeyDown: (event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) flushSync(() => state?.commit()); },
-  });
-}
-
-// React Aria reads isInvalid: false as controlled-valid, which hides failed native
-// validation, so these fields pass isInvalid only when invalid is set. errorMessage
-// replaces the shown message and never makes a field invalid by itself.
-export const ColorField = React.forwardRef(function ColorField({ label, description, errorMessage, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, size, name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
-  accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorField');
-  const resolvedSize = normalizeChoiceControlSize(size, 'ColorField');
-  const pickerState = React.useContext(ColorPickerContext);
-  const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = readOnly || pickerState.readOnly;
-  const valueColor = value === null ? null : colorValue(value, 'ColorField');
-  const defaultColor = colorValue(defaultValue, 'ColorField');
-  // React Aria parses typed hex into rgb. onChange converts it to the colour space of the value, the enclosing
-  // ColorPicker, or defaultValue, the way ColorArea resolves it; rgb with none of them.
-  const space = valueColor?.getColorSpace() ?? pickerState.space ?? defaultColor?.getColorSpace() ?? 'rgb';
-  return React.createElement(AriaColorField, {
-    ...props, ref, name, value: valueColor, defaultValue: defaultColor,
-    onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toFormat(space).toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
-    isInvalid: invalid || undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
-  }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
-  React.createElement(ColorFieldInput),
-  description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
-  errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null);
-});
-ColorField.displayName = 'ColorField';
-
-// Colour controls forward no untyped props; upstream props such as onChangeEnd,
-// xChannel, or colorSpace would bypass the Mux UI guards and string values.
-// The area always edits saturation (x) and brightness (y) in HSB and converts each edit back to the
-// colour space of its value, or of the enclosing ColorPicker, so it emits the same CSS string
-// as ColorSlider: rgba() for hex and rgb values, hsla() for hsl and hsb values.
-export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-  accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorArea');
-  const pickerState = React.useContext(ColorPickerContext);
-  const pickerColorState = React.useContext(ColorPickerStateContext);
-  const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = readOnly || pickerState.readOnly;
-  const valueColor = colorValue(value, 'ColorArea');
-  const defaultColor = colorValue(defaultValue, 'ColorArea');
-  // A value or the picker's colour drives the area; otherwise React Aria keeps the HSB colour itself.
-  // A controlled area remembers its edits in HSB, which keeps the hue and saturation that hex, rgb, and hsl
-  // lose at black and grays; a picker remembers the edit for the areas inside it.
-  const [valueShown, rememberEdit] = useRememberedEdit(valueColor);
-  const driven = valueShown ?? pickerColorState?.color;
-  const space = valueColor?.getColorSpace() ?? pickerState.space ?? defaultColor?.getColorSpace() ?? 'rgb';
-  const labelId = React.useId();
-  const labelledby = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
-  const assignAreaRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-  const preventReadOnlyInteraction = (event) => {
-    if (effectiveReadOnly) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-  return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
-    label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
-    // The area writes its edit to the picker itself, so it clears the context.
-    React.createElement(ColorAreaContext.Provider, { value: null }, React.createElement(AriaColorArea, {
-      ref: assignAreaRef,
-      value: driven,
-      defaultValue: driven ? undefined : defaultColor,
-      colorSpace: 'hsb',
-      xChannel: 'saturation',
-      yChannel: 'brightness',
-      onChange: (next) => {
-        if (effectiveDisabled || effectiveReadOnly) return;
-        rememberEdit(next);
-        pickerColorState?.setColor(next);
-        onChange?.(next.toFormat(space).toString());
-      },
-      isDisabled: effectiveDisabled,
-      'aria-label': ariaLabel,
-      'aria-labelledby': labelledby,
-      'data-readonly': effectiveReadOnly || undefined,
-      'data-muxui-color-paint': 'area',
-      onPointerDownCapture: preventReadOnlyInteraction,
-      onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),
-      onTouchStartCapture: preventReadOnlyInteraction,
-      onClickCapture: preventReadOnlyInteraction,
-      onChangeCapture: preventReadOnlyInteraction,
-      className: classNames('muxui-color-area', className),
-    }, React.createElement(AriaColorThumb, {
-      className: 'muxui-color-area-thumb',
-      'data-muxui-color-paint': 'sample',
-      'data-readonly': effectiveReadOnly || undefined,
-    }))),
-  );
-});
-ColorArea.displayName = 'ColorArea';
-
-const COLOR_SPACE_CHANNELS = {
-  rgb: ['red', 'green', 'blue', 'alpha'],
-  hsl: ['hue', 'saturation', 'lightness', 'alpha'],
-  hsb: ['hue', 'saturation', 'brightness', 'alpha'],
-};
-
-// Without colorSpace, React Aria reads the channel from the value's own space.
-function assertColorSliderChannel(channel, colorSpace, color) {
-  // Computed per call so the module keeps no import-time work.
-  const channels = [...new Set(Object.values(COLOR_SPACE_CHANNELS).flat())];
-  if (!channels.includes(channel)) throw new TypeError(`ColorSlider channel must be one of: ${channels.join(', ')}`);
-  if (colorSpace !== undefined && !Object.hasOwn(COLOR_SPACE_CHANNELS, colorSpace)) throw new TypeError('ColorSlider colorSpace must be one of: rgb, hsl, hsb');
-  const space = colorSpace ?? color?.getColorSpace();
-  if (space && !COLOR_SPACE_CHANNELS[space].includes(channel)) {
-    throw new TypeError(`ColorSlider channel ${channel} is not in the ${space} color space; set colorSpace to ${Object.keys(COLOR_SPACE_CHANNELS).filter((key) => COLOR_SPACE_CHANNELS[key].includes(channel)).join(' or ')}`);
-  }
-}
-
-// Include displayName in the pure initialization so unused sliders shed their motion dependency.
-export const ColorSlider = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-    accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
-    const color = colorValue(value, 'ColorSlider');
-    const defaultColor = colorValue(defaultValue, 'ColorSlider');
-    const pickerState = React.useContext(ColorPickerContext);
-    // Inside a ColorPicker, React Aria drives the slider with the picker's colour, which may be a nested control's
-    // remembered edit in another space, so the slider reads it in the picker's space unless colorSpace says otherwise.
-    const space = colorSpace ?? pickerState.space;
-    assertColorSliderChannel(channel, space, color ?? defaultColor);
-    const effectiveDisabled = disabled || pickerState.disabled;
-    const effectiveReadOnly = readOnly || pickerState.readOnly;
-    const preventReadOnlyInteraction = (event) => {
-      if (effectiveReadOnly) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-    return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly), onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
-      React.createElement(AriaColorSlider, {
-        ref: assignSliderRef,
-        channel,
-        colorSpace: space,
-        value: color,
-        defaultValue: defaultColor,
-        onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
-        isDisabled: effectiveDisabled,
-        orientation,
-        'data-readonly': effectiveReadOnly || undefined,
-        className: classNames('muxui-color-slider', className),
-        'aria-label': ariaLabel,
-        'aria-labelledby': ariaLabelledby,
-      },
-      label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
-      React.createElement(ColorSliderMotionTrack, { readOnly: effectiveReadOnly })),
-    );
-  });
-  component.displayName = 'ColorSlider';
-  return component;
-})();
-
-function assertColorWheelGeometry(outerRadius, innerRadius) {
-  if (typeof outerRadius !== 'number' || !Number.isFinite(outerRadius) || outerRadius < 0) throw new TypeError('ColorWheel outerRadius must be a finite nonnegative number');
-  if (typeof innerRadius !== 'number' || !Number.isFinite(innerRadius) || innerRadius < 0) throw new TypeError('ColorWheel innerRadius must be a finite nonnegative number');
-  if (innerRadius >= outerRadius) throw new TypeError('ColorWheel innerRadius must be less than outerRadius');
-}
-
-export const ColorWheel = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function ColorWheel({ value, defaultValue, onChange, disabled = false, readOnly = false, className, outerRadius = 96, innerRadius = 64, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-    if (!ariaLabel && !ariaLabelledby) throw new TypeError('ColorWheel requires aria-label or aria-labelledby');
-    assertColorWheelGeometry(outerRadius, innerRadius);
-    const pickerState = React.useContext(ColorPickerContext);
-    const effectiveDisabled = disabled || pickerState.disabled;
-    const effectiveReadOnly = readOnly || pickerState.readOnly;
-    const pickerColor = React.useContext(ColorPickerStateContext)?.color;
-    const valueColor = colorValue(value, 'ColorWheel');
-    const defaultColor = colorValue(defaultValue, 'ColorWheel');
-    // React Aria edits the hue in hsl (or hsb). onChange converts it to the colour space of the value, the
-    // enclosing ColorPicker, or defaultValue, the way ColorArea resolves it; hsl with none of them.
-    const space = valueColor?.getColorSpace() ?? pickerState.space ?? defaultColor?.getColorSpace() ?? 'hsl';
-    // A controlled wheel remembers its edits in hsl, which keeps the hue of the grays that hex and rgb lose;
-    // a picker remembers the edit for the wheels inside it.
-    const [valueShown, rememberEdit] = useRememberedEdit(valueColor);
-    const preventReadOnlyInteraction = (event) => {
-      if (effectiveReadOnly) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    };
-    const assignWheelRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-    return React.createElement(AriaColorWheel, {
-      ref: assignWheelRef,
-      outerRadius,
-      innerRadius,
-      value: valueShown ?? pickerColor,
-      defaultValue: defaultColor,
-      onChange: (next) => {
-        if (effectiveDisabled || effectiveReadOnly) return;
-        rememberEdit(next);
-        onChange?.(next.toFormat(space).toString());
-      },
-      isDisabled: effectiveDisabled,
-      'aria-disabled': effectiveDisabled || undefined,
-      'data-disabled': effectiveDisabled || undefined,
-      'data-readonly': effectiveReadOnly || undefined,
-      onPointerDownCapture: preventReadOnlyInteraction,
-      onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),
-      onTouchStartCapture: preventReadOnlyInteraction,
-      onClickCapture: preventReadOnlyInteraction,
-      onChangeCapture: preventReadOnlyInteraction,
-      'aria-label': ariaLabel,
-      'aria-labelledby': ariaLabelledby,
-      className: classNames('muxui-color-wheel', className),
-    },
-      React.createElement(ColorWheelMotionTrack, { readOnly: effectiveReadOnly }));
-  });
-  component.displayName = 'ColorWheel';
-  return component;
-})();
-
-export const ColorPicker = React.forwardRef(function ColorPicker({ value, defaultValue, onChange, disabled = false, readOnly = false, children, className, ...props }, ref) {
-  // ARIA names and states need a role; a labelled picker is a group, an unlabelled one a plain wrapper.
-  const labelled = Boolean(props['aria-label'] || props['aria-labelledby']);
-  const valueColor = colorValue(value, 'ColorPicker');
-  const defaultColor = colorValue(defaultValue, 'ColorPicker');
-  // Whichever child edits, the picker reports and keeps its color in the space of its value, or of defaultValue
-  // (rgb with neither), and holds an uncontrolled color itself. Children read that space from the context.
-  const space = (valueColor ?? defaultColor)?.getColorSpace() ?? 'rgb';
-  const [held, setHeld] = React.useState(() => defaultColor ?? parseColor('#000000'));
-  // The picker also remembers the edit at full precision, in the child's own space, and feeds it back to the
-  // children while it still describes the color, so a hue slider can move off a gray in a hex picker.
-  const [pickerColor, rememberEdit] = useRememberedEdit(valueColor ?? held);
-  const onPickerChange = (next) => {
-    if (disabled || readOnly) return;
-    const edited = next.toFormat(space);
-    rememberEdit(next);
-    setHeld(edited);
-    onChange?.(edited.toString());
-  };
-  return React.createElement('div', { ...props, ref, role: labelled ? 'group' : undefined, 'aria-disabled': (labelled && disabled) || undefined, 'data-disabled': disabled || undefined, 'data-readonly': readOnly || undefined, className: classNames('muxui-color-picker', className) }, React.createElement(AriaColorPicker, { value: pickerColor, onChange: onPickerChange }, React.createElement(ColorPickerContext.Provider, { value: { disabled, readOnly, space } }, children)));
-});
-ColorPicker.displayName = 'ColorPicker';
-
-// React Aria keys swatch options by colour, so each item needs a distinct colour.
-// An explicit item label or textValue becomes the swatch colour name.
-function colorSwatchItems(items) {
-  const seen = new Set();
-  return normalizeItems(items).map((item, index) => {
-    const color = colorValue(item.color ?? item.value, 'ColorSwatchPicker');
-    const key = color?.toString('hexa');
-    if (seen.has(key)) throw new TypeError(`ColorSwatchPicker items must have distinct colors: ${item.id}`);
-    seen.add(key);
-    const source = items[index];
-    const named = source && typeof source === 'object' && (source.textValue !== undefined || source.label !== undefined);
-    return { ...item, color, colorName: named ? item.textValue : undefined };
-  });
-}
-
-// React Aria treats a null swatch value as uncontrolled, so a controlled empty
-// picker selects a transparent black that no item uses.
-function unusedSwatchColor(items) {
-  const used = new Set(items.map((item) => item.color?.toString('hexa')));
-  for (let alpha = 0; alpha < 256; alpha += 1) {
-    const color = parseColor(`#000000${alpha.toString(16).padStart(2, '0')}`);
-    if (!used.has(color.toString('hexa'))) return color;
-  }
-  throw new TypeError('ColorSwatchPicker cannot represent an empty value for these items');
-}
-
-export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-  const normalized = colorSwatchItems(items);
-  const pickerState = React.useContext(ColorPickerContext);
-  const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = readOnly || pickerState.readOnly;
-  accessibleName({ ariaLabel, ariaLabelledby }, 'ColorSwatchPicker');
-  const preventReadOnlyInteraction = (event) => {
-    if (effectiveReadOnly) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-  const assignSwatchPickerRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="listbox"]');
-  return React.createElement(
-    'div',
-    {
-      'aria-disabled': effectiveDisabled || undefined,
-      'data-disabled': effectiveDisabled || undefined,
-      'data-readonly': effectiveReadOnly || undefined,
-      onPointerDownCapture: preventReadOnlyInteraction,
-      onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly, READ_ONLY_SELECTION_KEYS),
-      onTouchStartCapture: preventReadOnlyInteraction,
-      onClickCapture: preventReadOnlyInteraction,
-      onChangeCapture: preventReadOnlyInteraction,
-    },
-    React.createElement(
-      AriaColorSwatchPicker,
-      {
-        ref: assignSwatchPickerRef,
-        value: value === null ? unusedSwatchColor(normalized) : colorValue(value, 'ColorSwatchPicker'),
-        defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'),
-        onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
-        isDisabled: effectiveDisabled,
-        'data-readonly': effectiveReadOnly || undefined,
-        'aria-label': ariaLabel,
-        'aria-labelledby': ariaLabelledby,
-        className: classNames('muxui-color-swatch-picker', className),
-      },
-      normalized.map((item) => React.createElement(
-        AriaColorSwatchPickerItem,
-        {
-          key: item.id,
-          color: item.color,
-          id: item.id,
-          isDisabled: effectiveDisabled || item.disabled,
-          'data-readonly': effectiveReadOnly || undefined,
-          className: 'muxui-color-swatch-picker-item',
-        },
-        React.createElement(AriaColorSwatch, {
-          color: item.color,
-          colorName: item.colorName,
-          isDisabled: effectiveDisabled || item.disabled,
-          'data-disabled': effectiveDisabled || item.disabled || undefined,
-          'data-muxui-color-paint': 'sample',
-          className: 'muxui-color-swatch',
-        }),
-      )),
-    ),
-  );
-});
-ColorSwatchPicker.displayName = 'ColorSwatchPicker';
 
 function collectionProps(props, componentName) {
   const { items = [], selectedIds, defaultSelectedIds, onSelectionChange, onAction, selectionMode = 'single', disabled = false, children: _children, className, ...rest } = props;

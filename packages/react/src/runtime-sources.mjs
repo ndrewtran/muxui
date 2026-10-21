@@ -13,6 +13,13 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/components.ts',
   'packages/react/src/fields.ts',
   'packages/react/src/calendar.mjs',
+  'packages/react/src/color-area.mjs',
+  'packages/react/src/color-field.mjs',
+  'packages/react/src/color-picker.mjs',
+  'packages/react/src/color-slider.mjs',
+  'packages/react/src/color-swatch-picker.mjs',
+  'packages/react/src/color-swatch.mjs',
+  'packages/react/src/color-wheel.mjs',
   'packages/react/src/collections.mjs',
   'packages/react/src/overlays.ts',
 ]);
