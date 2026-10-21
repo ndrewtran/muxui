@@ -27,6 +27,11 @@
     },
     {
       "class": "derived",
+      "file": "derived-api.schema.json",
+      "owner": "react-api-extraction"
+    },
+    {
+      "class": "derived",
       "file": "diagnostic.schema.json",
       "owner": "diagnostic-contract"
     },

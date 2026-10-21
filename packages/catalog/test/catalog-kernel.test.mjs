@@ -384,7 +384,7 @@ test('E-G0.2-02: list, search, and get are deterministic with exact source revis
   assert.throws(() => validateFamily('query-envelope', missingResolvedRevisions));
 });
 
-test('E-G0.2-02: graph and revisions remain derived from schema-owned contracts', () => {
+test('E-G0.2-02: graph and revisions remain derived from schema-owned contracts', async () => {
   const records = baseBundle.artifacts.map(({ record }) => record);
   assert.deepEqual(baseBundle.relations, relationEdges(records).sort((left, right) => (
     (left.type < right.type ? -1 : left.type > right.type ? 1 : 0)
@@ -392,10 +392,12 @@ test('E-G0.2-02: graph and revisions remain derived from schema-owned contracts'
     || (left.target < right.target ? -1 : left.target > right.target ? 1 : 0)
   )));
   const button = baseBundle.artifacts.find(({ id }) => id === 'muxui:component:button');
-  assert.equal(button.contentRevision, contentRevision('component', button.record));
+  // Content revisions fold the authored record, before any derived API merges in.
+  const authored = JSON.parse(await readFile(join(repositoryRoot, button.source.record), 'utf8'));
+  assert.equal(button.contentRevision, contentRevision('component', authored));
   assert.equal(
     button.bindingContentRevisions['web.react'],
-    bindingContentRevision(button.record.bindings['web.react']),
+    bindingContentRevision(authored.bindings['web.react']),
   );
 });
 
@@ -1016,6 +1018,86 @@ test('compiler reads content from each record source and rejects bad sources', a
       compileCatalog({ repositoryRoot: temporaryRoot, sourceManifestPath: 'catalog-sources.json' }),
       new RegExp(`MUXUI_CATALOG_SOURCE_INVALID: invalid records/${index}$`),
     );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('a derived API merges into its binding: spec revision moves, content revisions fold the authored record', async () => {
+  // A root of symlinks to the real repository, with the Button record and a
+  // derived API document under fixture/, compiles without touching the checkout.
+  const manifest = JSON.parse(await readFile(join(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-catalog-derived-api-'));
+  try {
+    for (const name of await readdir(repositoryRoot)) {
+      if (name !== '.git') await symlink(join(repositoryRoot, name), join(temporaryRoot, name));
+    }
+    const recordPath = 'catalog/components/button/artifact.json';
+    const fixturePath = 'fixture/button.json';
+    const authored = JSON.parse(await readFile(join(repositoryRoot, recordPath), 'utf8'));
+    delete authored.bindings['web.react'].api;
+    await mkdir(join(temporaryRoot, 'fixture/api'), { recursive: true });
+    const index = manifest.records.findIndex(({ path }) => path === recordPath);
+    manifest.records[index] = { family: 'component', path: fixturePath };
+    manifest.derivedApiSources = { 'web.react': 'fixture/api' };
+    await writeFile(join(temporaryRoot, 'catalog-sources.json'), JSON.stringify(manifest));
+    const derived = {
+      schema: 'muxui-derived-api-v1',
+      generatedFrom: 'packages/react/src/button.ts',
+      component: 'muxui:component:button',
+      binding: 'web.react',
+      export: 'Button',
+      api: {
+        props: ['disabled', 'variant'],
+        events: ['activate'],
+        defaults: { variant: 'primary' },
+        propDetails: {
+          disabled: { type: { kind: 'boolean' }, required: false },
+          variant: {
+            type: { kind: 'union', members: [{ kind: 'literal', value: 'primary' }, { kind: 'literal', value: 'secondary' }] },
+            required: false,
+            enum: ['primary', 'secondary'],
+          },
+        },
+        eventDetails: {
+          activate: { prop: 'onActivate', type: { kind: 'function', parameters: [], returns: { kind: 'void' } }, required: false },
+        },
+        types: {},
+      },
+    };
+    const compile = async (record, document) => {
+      await writeFile(join(temporaryRoot, fixturePath), JSON.stringify(record));
+      if (document === undefined) await rm(join(temporaryRoot, 'fixture/api/button.json'), { force: true });
+      else await writeFile(join(temporaryRoot, 'fixture/api/button.json'), JSON.stringify(document));
+      return compileCatalog({ repositoryRoot: temporaryRoot, sourceManifestPath: 'catalog-sources.json' });
+    };
+    const { bundle } = await compile(authored, derived);
+    const button = bundle.artifacts.find(({ id }) => id === 'muxui:component:button');
+    assert.deepEqual(button.record.bindings['web.react'].api, {
+      ...structuredClone(derived.api),
+      parts: authored.anatomy,
+    });
+    assert.equal(button.contentRevision, contentRevision('component', authored));
+    assert.equal(button.bindingContentRevisions['web.react'], bindingContentRevision(authored.bindings['web.react']));
+    const derivedDigest = `sha256:${createHash('sha256').update(JSON.stringify(derived)).digest('hex')}`;
+    assert.deepEqual(button.source.derivedApis, { 'web.react': { path: 'fixture/api/button.json', digest: derivedDigest } });
+
+    // Dropping a derived prop moves the spec and source revisions, never the content revisions.
+    const narrowed = structuredClone(derived);
+    narrowed.api.props = ['variant'];
+    delete narrowed.api.propDetails.disabled;
+    const changed = (await compile(authored, narrowed)).bundle;
+    const changedButton = changed.artifacts.find(({ id }) => id === 'muxui:component:button');
+    assert.notEqual(changedButton.bindingSpecRevisions['web.react'], button.bindingSpecRevisions['web.react']);
+    assert.equal(changedButton.contentRevision, button.contentRevision);
+    assert.deepEqual(changedButton.bindingContentRevisions, button.bindingContentRevisions);
+    assert.notEqual(changed.sourceRevision, bundle.sourceRevision);
+
+    const withAuthoredApi = structuredClone(authored);
+    withAuthoredApi.bindings['web.react'].api = { props: [], events: [], parts: [], defaults: {} };
+    await assert.rejects(compile(withAuthoredApi, derived), /MUXUI_SCHEMA_INVALID: .*remove the authored api/u);
+    await assert.rejects(compile(authored, undefined), /MUXUI_SCHEMA_INVALID: .*needs an authored api or a derived API source/u);
+    await assert.rejects(compile(authored, { ...derived, export: 'button' }), /MUXUI_SCHEMA_INVALID: \$\/export/u);
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }

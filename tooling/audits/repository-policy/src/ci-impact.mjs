@@ -29,6 +29,8 @@ const guideLinksPath = 'apps/guide-links.mjs';
 const familyUsageGuidePath = /^catalog\/guides\/([a-z0-9-]+)-usage\.(?:md|json)$/u;
 // The shared accessibility guide, whose support status and verification sections every family's Docs page shows.
 const accessibilityGuidePath = /^catalog\/guides\/accessibility\.(?:md|json)$/u;
+// A family's derived web.react API (Decision 0031), which the catalog merges into its component record.
+const derivedApiPath = /^packages\/react\/api\/([a-z0-9-]+)\.json$/u;
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
 const tailwindFixture = 'tests/fixtures/tailwind-consumer';
 
@@ -431,6 +433,16 @@ function addComponentDocsProof(plan) {
   addStoryUnitTest(plan, { file: componentDocsTestFile });
 }
 
+// A change to a family's compiled component record: its React and Storybook
+// proof, the catalog, the docs that render every record, and its Docs page.
+function routeComponentRecord(plan, record) {
+  plan.reactFamilies.add(record.family);
+  plan.storyFamilies.add(record.export ?? record.family);
+  plan.catalog = true;
+  plan.docs = true;
+  addComponentDocsProof(plan);
+}
+
 function storybookPageOwners(path, pageIndex) {
   return pageIndex.filter((page) => page.storyFile === path);
 }
@@ -765,11 +777,13 @@ function dependentFacingPackage(path, packages, config) {
 // routes plan the React theme and Storybook theme and chrome proofs. An edge
 // is scoped when either its upstream or the originally changed package lists
 // the dependent, so tokens -> catalog -> React keeps React at its theme proof.
-// React's catalog devDependency serves only its prepack script: React source
-// and tests never import @muxui/catalog, and the React catalog and component
-// routes already plan the canonical inputs React reads directly.
+// The catalog's devDependency on React orders generation: the catalog compiles
+// React's derived APIs (Decision 0031), so it is unscoped and a React source
+// change plans the catalog check. Storybook's catalog devDependency only
+// generates the bundle its component docs query; the catalog routes already
+// plan the Storybook proofs a catalog change needs.
 const scopedDependents = {
-  '@muxui/catalog': ['@muxui/react'],
+  '@muxui/catalog': ['@muxui/react-storybook'],
   '@muxui/react': ['@muxui/react-storybook'],
   '@muxui/tokens': ['@muxui/react', '@muxui/react-storybook'],
 };
@@ -1265,6 +1279,17 @@ export async function buildPullRequestImpact({
       continue;
     }
 
+    // React generation writes the derived API from the family's source; it
+    // reaches users only through the merged catalog record, so it routes like one.
+    const derivedApi = derivedApiPath.exec(path);
+    if (derivedApi) {
+      const record = recordForSlug(records, derivedApi[1]);
+      if (!record) throw new Error(`MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: ${path} names no canonical React component ${derivedApi[1]}`);
+      routeComponentRecord(plan, record);
+      plan.reasons.push(`${path} is the derived API of ${record.family}; validate it like the canonical component record`);
+      continue;
+    }
+
     if (isReactModuleSource(path)) {
       plan.reactProjectionCheck = true;
       plan.reasons.push(`${path} is React runtime or compiler source; AST ownership determines the affected families`);
@@ -1368,12 +1393,7 @@ export async function buildPullRequestImpact({
       const parts = path.split('/');
       const record = parts[2] ? recordForSlug(records, parts[2]) : null;
       if (record && /\/artifact\.json$/u.test(path)) {
-        plan.reactFamilies.add(record.family);
-        plan.storyFamilies.add(record.export ?? record.family);
-        plan.catalog = true;
-        // Docs render every component record.
-        plan.docs = true;
-        addComponentDocsProof(plan);
+        routeComponentRecord(plan, record);
         plan.reasons.push(`${path} changes the canonical component record for ${record.family}`);
       } else if (/\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)) {
         const owners = routeCatalogExample(path, pageIndex);
@@ -1729,6 +1749,8 @@ export async function buildPullRequestImpact({
   // Every catalog input compiles into the catalog that @muxui/tooling queries
   // and renders, so its tests and dense goldens run.
   if (plan.catalog) plan.packageChecks.add('@muxui/tooling');
+  // The catalog route runs the catalog check that React's devDependency edge also plans.
+  if (plan.catalog) plan.packageChecks.delete('@muxui/catalog');
   // The full React check already runs the React package check.
   if (plan.reactPackageFull) plan.packageChecks.delete('@muxui/react');
   plan.packageChecks = [...plan.packageChecks].sort();
@@ -1744,6 +1766,7 @@ export function needsStorybookGeneration(paths, config, {
   packages = [], lockfileImporters = [], reactPackagePagesAffected = false, patternManifestChanged = false,
 } = {}) {
   const sourceNeedsMetadata = paths.some((path) => path.startsWith('packages/react/src/')
+    || derivedApiPath.test(path)
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
     || (path.startsWith('catalog/components/') && (/\/artifact\.json$/u.test(path)
       || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))
@@ -2178,10 +2201,10 @@ function plannedCommands(plan, {
 
   // Every group repeats this generation in its own fresh runner. Only skip
   // what metadata preparation already generated earlier in this same process:
-  // `@muxui/react-storybook generate` covers `@muxui/react...` plus itself.
+  // `@muxui/react-storybook generate` covers its workspace dependencies plus itself.
   let generationPackages = plan.generationPackages ?? scopedGenerationPackages(plan, packages);
   if (metadataPrepared) {
-    const preparedNames = new Set(['@muxui/react-storybook', ...dependencyClosure(packages, ['@muxui/react']).map(({ name }) => name)]);
+    const preparedNames = new Set(dependencyClosure(packages, ['@muxui/react-storybook']).map(({ name }) => name));
     generationPackages = generationPackages.filter((name) => !preparedNames.has(name));
   }
   if (generationPackages.length > 0) {

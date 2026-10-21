@@ -8,6 +8,7 @@ import { canonicalJson } from '@muxui/schema';
 import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
+import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
@@ -48,6 +49,8 @@ async function emitTypeScript() {
   return { outDir, emitted };
 }
 const typeScriptBuild = await emitTypeScript();
+// Decision 0031: a moved component's web.react API comes from its source, merged into its record on read.
+const derivedApis = await deriveApis({ packageRoot, repositoryRoot, declarationRoot: typeScriptBuild?.outDir });
 // The exact React Aria Components pin; the generated compatibility record and README follow it.
 const racVersion = manifest.dependencies['react-aria-components'];
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
@@ -109,14 +112,14 @@ const runtimeSources = {
   'packages/react/src/collections.mjs': collectionsSource,
   'packages/react/src/overlays.mjs': overlaysSource,
 };
-const buttonArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8'));
+const buttonArtifact = withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8')), derivedApis);
 const componentArtifacts = [
   buttonArtifact,
   ...await Promise.all([
     'breadcrumbs', 'checkbox', 'disclosure', 'disclosure-group', 'group', 'link', 'meter', 'progress-bar', 'separator', 'toggle-button',
     'autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field',
     ...r13Slugs, ...r14Slugs,
-  ].map(async (slug) => JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8')))),
+  ].map(async (slug) => withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8')), derivedApis))),
 ];
 if (componentArtifacts.length !== 53 || new Set(componentArtifacts.map(({ id }) => id)).size !== 53) {
   throw new Error('MUXUI_REACT_R1_COMPONENT_ALLOCATION_DRIFT');
@@ -126,7 +129,7 @@ const allCatalogArtifacts = (await Promise.all(
     .filter((entry) => entry.isDirectory())
     .map(async ({ name }) => {
       try {
-        return JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${name}/artifact.json`), 'utf8'));
+        return withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${name}/artifact.json`), 'utf8')), derivedApis);
       } catch {
         return undefined;
       }
@@ -1175,5 +1178,6 @@ if (listing) {
 }
 
 if (!listing) {
+  await syncDerivedApis({ packageRoot, documents: derivedApis, checking });
   console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');
 }

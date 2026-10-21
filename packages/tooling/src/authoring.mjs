@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, posix, resolve } from 'node:path';
 import {
   SchemaValidationError,
+  authoredApiIssues,
   authoringMetadata,
   bindingContentRevision,
   bindingContentRevisionPreimage,
@@ -12,6 +13,7 @@ import {
   classifySchemaChange,
   contentRevision,
   contentRevisionPreimage,
+  mergeDerivedApis,
   parseJsonStrict,
   patternRevision,
   patternRevisionPreimage,
@@ -454,6 +456,18 @@ function fieldOwner(family, path, authoring) {
   }
 }
 
+/**
+ * The schema leaves an implemented binding's `api` optional because a derived
+ * block may supply it (Decision 0031). The compiled catalog records which
+ * bindings of this source took one, and the compiler's own authored-api
+ * restrictions apply against that set.
+ */
+function derivedApiIssues(context, record, recordPath) {
+  const derived = context.catalogBundle.artifacts
+    .find(({ source }) => source?.record === recordPath)?.source.derivedApis ?? {};
+  return authoredApiIssues(record, Object.keys(derived));
+}
+
 export function diagnoseCanonicalSource({
   context,
   family,
@@ -474,6 +488,10 @@ export function diagnoseCanonicalSource({
   }
   try {
     validateFamily(family, record, authoring);
+    if (family === 'component') {
+      const issues = derivedApiIssues(context, record, recordPath);
+      if (issues.length > 0) throw new SchemaValidationError('MUXUI_SCHEMA_INVALID', issues);
+    }
     return deepFreeze({ valid: true, diagnostics: [] });
   } catch (error) {
     if (!(error instanceof SchemaValidationError)) throw error;
@@ -623,6 +641,11 @@ function patternRevisionInput({ record, examples = [], exampleSources = {}, auth
   return { pattern: record, examples, exampleSources, ...authoring };
 }
 
+/**
+ * The digest preimages a record folds. A component's `derivedApis` (binding id
+ * to derived API document) merge into the spec preimage only: content
+ * revisions fold the authored record, as the catalog compiler does.
+ */
 export function explainRevisions({
   family,
   record,
@@ -633,6 +656,7 @@ export function explainRevisions({
   tokenSources = [],
   tokenRequirementSets = {},
   platformSafetyRequirementSets = {},
+  derivedApis = {},
   authoring = {},
 } = {}) {
   const axes = [revisionAxis(
@@ -652,7 +676,7 @@ export function explainRevisions({
       bindingContentRevisionPreimage(record.bindings[bindingId], authoring),
     ));
     axes.push(revisionAxis('bindingSpecRevision', bindingSpecRevisionPreimage({
-      component: record,
+      component: mergeDerivedApis(record, derivedApis),
       bindingId,
       examples: componentExamples,
       exampleSources: Object.fromEntries(componentExamples.map((example) => [example.id, exampleSources[example.id]])),
@@ -748,7 +772,8 @@ function versionEffectFor(effect, changes) {
   return classifySchemaChange(changeType).versionEffect;
 }
 
-function componentRevisionDelta(record, context, authoring) {
+/** Content revisions fold the authored record; spec revisions fold it with derived APIs merged. */
+function componentRevisionDelta(record, merged, context, authoring) {
   const content = contentRevision('component', record, authoring);
   const bindings = {};
   const componentExamples = (context.examples ?? []).filter((example) => example.binding?.ref?.startsWith(`${record.id}#`));
@@ -757,7 +782,7 @@ function componentRevisionDelta(record, context, authoring) {
       content: bindingContentRevision(binding, authoring),
       ...(binding.strategy === 'unsupported' ? {} : {
         spec: bindingSpecRevision({
-          component: record,
+          component: merged,
           bindingId,
           examples: componentExamples,
           exampleSources: Object.fromEntries(componentExamples.map((example) => [example.id, context.exampleSources?.[example.id]])),
@@ -783,6 +808,56 @@ function sideContext(revisionContext, side) {
   return { ...revisionContext, ...revisionContext[side] };
 }
 
+/** A component with one side's `derivedApis` (binding id to derived API document) merged in (Decision 0031). */
+function mergedRecord(family, record, revisionContext, side) {
+  return family === 'component'
+    ? mergeDerivedApis(record, sideContext(revisionContext, side).derivedApis ?? {})
+    : record;
+}
+
+const DERIVED_ENTRY = /^(\$\/bindings\/[^/]+\/api\/(propDetails|eventDetails|types)\/[^/]+)(\/.*)?$/u;
+const DERIVED_NAME = /^\$\/bindings\/([^/]+)\/api\/(props|events)\/\d+$/u;
+
+// In the derived grammar a `description` key is only ever documentation.
+const withoutDescriptions = (value) => {
+  if (Array.isArray(value)) return value.map(withoutDescriptions);
+  if (!isObject(value)) return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => key !== 'description')
+    .map(([key, child]) => [key, withoutDescriptions(child)]));
+};
+
+// An object type's member in the derived grammar: `{ name, type, required, readonly }`.
+const isRequiredMember = (value) => isObject(value) && typeof value.name === 'string' && isObject(value.type) && value.required === true;
+
+/**
+ * Decision 0031 refinements a derived block needs beyond its schema annotations: an
+ * entry of propDetails, eventDetails, or types that differs only in descriptions is
+ * editorial (the spec revision still moves with the block). Adding a required prop or
+ * event, or a required member to an object type inside one (inline or a named type), is
+ * incompatible.
+ */
+function derivedEffect(change, effect, mergedBefore, mergedAfter) {
+  const entry = DERIVED_ENTRY.exec(change.path);
+  if (entry) {
+    const [, entryPath, field, rest] = entry;
+    const left = valueAt(mergedBefore, entryPath);
+    const right = valueAt(mergedAfter, entryPath);
+    if (left !== undefined && right !== undefined
+      && canonicalJson(withoutDescriptions(left)) === canonicalJson(withoutDescriptions(right))) return 'editorial';
+    if (change.operation !== 'add') return effect;
+    if (rest === undefined && field !== 'types' && right?.required === true) return 'incompatible';
+    if (/\/members\/\d+$/u.test(change.path) && isRequiredMember(change.after)) return 'incompatible';
+    return effect;
+  }
+  const name = DERIVED_NAME.exec(change.path);
+  if (name && change.operation === 'add') {
+    const details = valueAt(mergedAfter, `$/bindings/${name[1]}/api/${name[2] === 'props' ? 'propDetails' : 'eventDetails'}`);
+    if (details?.[change.after]?.required === true) return 'incompatible';
+  }
+  return effect;
+}
+
 function exampleSourceBytes(context, record) {
   const bytes = context.exampleSources?.[record.id];
   if (typeof bytes !== 'string') {
@@ -802,6 +877,11 @@ function exampleSourceBytes(context, record) {
  * record and `exampleSources` text, and an example reads its own
  * `exampleSources` entry. `revisionContext.before` and `.after` override the
  * shared context per side, so a source-byte edit can differ across the diff.
+ * A component's `derivedApis` merge into both sides before the field diff, so
+ * a derived prop change is classified like an authored one; a binding derived
+ * on both sides reports only the binding-spec axis for its api changes. A
+ * derived block's required additions and description edits classify as
+ * `derivedEffect` says.
  */
 export function semanticDiff({
   family = 'component',
@@ -812,12 +892,20 @@ export function semanticDiff({
 } = {}) {
   validateFamily(family, before, authoring);
   validateFamily(family, after, authoring);
-  const changes = diffValues(before, after).map((change) => {
+  const mergedBefore = mergedRecord(family, before, revisionContext, 'before');
+  const mergedAfter = mergedRecord(family, after, revisionContext, 'after');
+  const derivedOnBothSides = Object.keys(sideContext(revisionContext, 'before').derivedApis ?? {})
+    .filter((bindingId) => Object.hasOwn(sideContext(revisionContext, 'after').derivedApis ?? {}, bindingId))
+    .map((bindingId) => `$/bindings/${bindingId.replaceAll('~', '~0').replaceAll('/', '~1')}/api/`);
+  const changes = diffValues(mergedBefore, mergedAfter).map((change) => {
     const field = resolveAuthoringField(family, change.path, authoring);
+    const derived = family === 'component' && derivedOnBothSides.some((prefix) => change.path.startsWith(prefix));
     return {
       ...change,
-      effect: field.effects[change.operation],
-      revisionAxes: field.revisionAxes,
+      effect: family === 'component'
+        ? derivedEffect(change, field.effects[change.operation], mergedBefore, mergedAfter)
+        : field.effects[change.operation],
+      revisionAxes: derived ? field.revisionAxes.filter((axis) => axis === 'binding-spec') : field.revisionAxes,
       owner: {
         name: field.owner,
         schema: field.schema,
@@ -833,8 +921,8 @@ export function semanticDiff({
   );
   let revisions;
   if (family === 'component') {
-    const beforeRevisions = componentRevisionDelta(before, revisionContext, authoring);
-    const afterRevisions = componentRevisionDelta(after, revisionContext, authoring);
+    const beforeRevisions = componentRevisionDelta(before, mergedBefore, revisionContext, authoring);
+    const afterRevisions = componentRevisionDelta(after, mergedAfter, revisionContext, authoring);
     revisions = {
       contentRevision: {
         before: beforeRevisions.content,
@@ -960,14 +1048,22 @@ function schemaSources(authoring = {}) {
     .map(({ schema }) => `packages/schema/schemas/${schema}`));
 }
 
+/** The compiled inputs an artifact reads beyond its record: its content file and derived APIs. */
+function artifactInputs({ source }) {
+  return [
+    ...(source.content === undefined ? [] : [source.content]),
+    ...Object.values(source.derivedApis ?? {}).map(({ path }) => path),
+  ];
+}
+
 function isCatalogSource(context, path) {
   return context.sourceManifest.commandRegistryPath === path
     || context.sourceManifest.pageBudgetProfilePath === path
     || context.sourceManifest.patternCategoriesPath === path
     || context.sourceManifest.platformSafetyContractPath === path
     || context.sourceManifest.records.some((entry) => entry.path === path)
-    // Content files are named by their record's `source`, not the manifest.
-    || context.catalogBundle.artifacts.some(({ source }) => source.content === path);
+    // Content files and derived APIs are named by their artifact's `source`, not the manifest.
+    || context.catalogBundle.artifacts.some((artifact) => artifactInputs(artifact).includes(path));
 }
 
 function packageForPath(packages, path) {
@@ -1082,8 +1178,9 @@ export function affectedClosure({
       );
     }
   }
-  const sourceArtifacts = context.catalogBundle.artifacts.filter(({ source }) => (
-    sourcePaths.includes(source.record) || sourcePaths.includes(source.content)
+  const sourceArtifacts = context.catalogBundle.artifacts.filter((artifact) => (
+    sourcePaths.includes(artifact.source.record)
+    || artifactInputs(artifact).some((path) => sourcePaths.includes(path))
   ));
   const schemaFamilies = new Set(sourcePaths
     .filter((path) => declaredSchemaSources.has(path))
@@ -1113,7 +1210,7 @@ export function affectedClosure({
   const canonicalSources = new Set(sourcePaths);
   for (const artifact of relatedArtifacts) {
     canonicalSources.add(artifact.source.record);
-    if (artifact.source.content) canonicalSources.add(artifact.source.content);
+    for (const path of artifactInputs(artifact)) canonicalSources.add(path);
   }
 
   const seedPackages = new Set();
@@ -1121,10 +1218,16 @@ export function affectedClosure({
     context.workspacePackages,
     dirname(context.sourceManifestPath),
   );
+  // Policy names the packages that read a path without a workspace dependency
+  // (React generation reads catalog/, which compiles React's derived APIs).
+  const consumers = Object.entries(context.repositoryPolicy.affectedPathConsumers ?? {});
   for (const path of canonicalSources) {
     const directOwner = packageForPath(context.workspacePackages, path);
     if (directOwner) seedPackages.add(directOwner.name);
     if (isCatalogSource(context, path) && catalogOwner) seedPackages.add(catalogOwner.name);
+    for (const [prefix, names] of consumers) {
+      if (path === prefix || path.startsWith(prefix)) names.forEach((name) => seedPackages.add(name));
+    }
   }
   const packages = dependentClosure(context.workspacePackages, seedPackages);
   const projections = new Set();
@@ -1217,7 +1320,14 @@ export function previewChangeIntent({
       { family, recordPath },
     );
   }
-  if (canonicalJson(canonical.record) !== canonicalJson(before)) {
+  let base = null;
+  try {
+    base = mergedRecord(family, before, revisionContext, 'before');
+  } catch (error) {
+    if (!(error instanceof SchemaValidationError)) throw error;
+  }
+  // The bundle holds the merged record, so the before-image compares with its derived APIs merged in.
+  if (base === null || canonicalJson(canonical.record) !== canonicalJson(base)) {
     throw new AuthoringPolicyError(
       'authoring.change-intent.base-drift',
       'the proposed before-image is not the exact canonical record at the source revision',

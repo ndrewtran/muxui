@@ -342,6 +342,102 @@ test('E-G0.5-02: revision explainer lists the normalized inputs behind each dige
   );
 });
 
+test('Decision 0031: a derived API change is classified like an authored one and moves only the binding spec', async () => {
+  const { component, revisionContext } = await setup();
+  const authored = JSON.parse(await readFile(resolve(repositoryRoot, component.source.record), 'utf8'));
+  delete authored.bindings['web.react'].api;
+  const derived = {
+    schema: 'muxui-derived-api-v1',
+    generatedFrom: 'packages/react/src/button.ts',
+    component: 'muxui:component:button',
+    binding: 'web.react',
+    export: 'Button',
+    api: {
+      props: ['disabled', 'variant'],
+      events: [],
+      defaults: {},
+      propDetails: {
+        disabled: { type: { kind: 'boolean' }, required: false },
+        variant: { type: { kind: 'string' }, required: false },
+      },
+      eventDetails: {},
+      types: {},
+    },
+  };
+  const narrowed = structuredClone(derived);
+  narrowed.api.props = ['variant'];
+  delete narrowed.api.propDetails.disabled;
+  const result = semanticDiff({
+    before: authored,
+    after: authored,
+    revisionContext: {
+      ...revisionContext,
+      before: { derivedApis: { 'web.react': derived } },
+      after: { derivedApis: { 'web.react': narrowed } },
+    },
+  });
+  assert.deepEqual(result.changes.map(({ path, operation, effect, revisionAxes }) => ({ path, operation, effect, revisionAxes })), [
+    { path: '$/bindings/web.react/api/propDetails/disabled', operation: 'remove', effect: 'incompatible', revisionAxes: ['binding-spec'] },
+    { path: '$/bindings/web.react/api/props/0', operation: 'remove', effect: 'incompatible', revisionAxes: ['binding-spec'] },
+  ]);
+  assert.equal(result.effect, 'incompatible');
+  assert.equal(result.revisions.contentRevision.changed, false);
+  assert.equal(result.revisions.bindings['web.react'].bindingContentRevision.changed, false);
+  assert.equal(result.revisions.bindings['web.react'].bindingSpecRevision.changed, true);
+
+  const axes = explainRevisions({
+    family: 'component',
+    record: authored,
+    bindingId: 'web.react',
+    ...revisionContext,
+    derivedApis: { 'web.react': derived },
+  }).axes;
+  const inputs = (name) => axes.find((axis) => axis.name === name).normalizedInputs.map(({ path }) => path);
+  assert.ok(inputs('bindingSpecRevision').includes('$/binding/api/propDetails/disabled/required'));
+  assert.equal(inputs('contentRevision').some((path) => path.startsWith('$/bindings/web.react/api')), false);
+  assert.equal(inputs('bindingContentRevision').some((path) => path.startsWith('$/api')), false);
+  // Without its derived block the binding has no api at all.
+  assert.throws(
+    () => semanticDiff({ before: authored, after: authored, revisionContext }),
+    /needs an authored api or a derived API source/u,
+  );
+
+  // Source diagnosis reads which bindings the compiled catalog derived.
+  const { context } = await setup();
+  const withDerivedApis = (derivedApis) => ({
+    ...context,
+    catalogBundle: {
+      ...context.catalogBundle,
+      artifacts: context.catalogBundle.artifacts.map((artifact) => {
+        if (artifact.id !== component.id) return artifact;
+        const { derivedApis: _derivedApis, ...source } = artifact.source;
+        return { ...artifact, source: derivedApis === undefined ? source : { ...source, derivedApis } };
+      }),
+    },
+  });
+  const derivedContext = withDerivedApis({ 'web.react': { path: 'packages/react/api/button.json' } });
+  const authoredContext = withDerivedApis(undefined);
+  const diagnose = (record, diagnosisContext) => diagnoseCanonicalSource({
+    context: diagnosisContext,
+    family: 'component',
+    record,
+    recordPath: component.source.record,
+  });
+  assert.equal(diagnose(authored, derivedContext).valid, true);
+  const restated = structuredClone(authored);
+  restated.bindings['web.react'].api = { props: [], events: [], parts: [], defaults: {} };
+  for (const [record, diagnosisContext, message] of [
+    [restated, derivedContext, 'remove the authored api'],
+    [authored, authoredContext, 'needs an authored api or a derived API source'],
+  ]) {
+    const diagnosis = diagnose(record, diagnosisContext);
+    assert.equal(diagnosis.valid, false);
+    assert.equal(diagnosis.diagnostics[0].details.source.path, '$/bindings/web.react/api');
+    assert.match(diagnosis.diagnostics[0].message, new RegExp(message, 'u'));
+    assert.equal(diagnosis.diagnostics[0].details.owner.name, 'binding-contract');
+  }
+});
+
 test('E-G0.5-02: revision explanations distinguish absent and empty containers on every axis', async () => {
   const { component, revisionContext } = await setup();
 

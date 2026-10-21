@@ -32,5 +32,8 @@
   "dependencies": {
     "@muxui/schema": "workspace:*",
     "@muxui/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@muxui/react": "workspace:*"
   }
 }

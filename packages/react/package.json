@@ -51,7 +51,7 @@
     }
   },
   "scripts": {
-    "prepack": "pnpm --filter @muxui/catalog... generate && node src/generate.mjs",
+    "prepack": "pnpm --filter @muxui/react^... generate && node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
     "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test 'test/!(capability-enrichment|catalog-examples-types|code-block|code-block-highlight|code-block-lifecycle|code-block-package-boundary).test.mjs' && node --test --test-concurrency=1 test/capability-enrichment.test.mjs test/catalog-examples-types.test.mjs test/code-block.test.mjs test/code-block-highlight.test.mjs test/code-block-lifecycle.test.mjs test/code-block-package-boundary.test.mjs && tsc --noEmit -p test/tsconfig.json",
     "check:component": "node ../../tooling/audits/repository-policy/src/run-component-check.mjs",
@@ -84,7 +84,6 @@
     "react-dom": ">=19.2.0 <20"
   },
   "devDependencies": {
-    "@muxui/catalog": "workspace:*",
     "@muxui/schema": "workspace:*",
     "@muxui/tokens": "workspace:*",
     "@types/jsdom": "30.0.0",

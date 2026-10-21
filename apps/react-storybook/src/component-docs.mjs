@@ -19,7 +19,8 @@ import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies, linke
  * entry also carries the same sections of the shared accessibility guide.
  */
 
-// The workspace root declares @muxui/catalog, the same canonical query API the docs application reads.
+// The app declares @muxui/catalog, the same canonical query API the docs application reads,
+// so its generation prerequisites build the catalog after React's derived APIs.
 const catalog = createRequire(import.meta.url)('@muxui/catalog');
 const platform = 'web.react';
 

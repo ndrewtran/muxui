@@ -202,7 +202,8 @@ function policyPackagesForPath(path, packages, mapping = {}) {
 }
 
 // `affectedPathConsumers` adds packages that import another package's source
-// by path without a workspace dependency (docs embeds Scale's App).
+// by path without a workspace dependency (docs embeds Scale's App, and React
+// generation reads catalog/ while the catalog depends on React).
 function ownerPackagesForPath(path, packages, policy) {
   const direct = packageForPath(packages, path);
   const owners = direct ? [direct.name] : policyPackagesForPath(path, packages, policy.affectedPathOwners);

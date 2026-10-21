@@ -1,6 +1,9 @@
 {
   "schema": "muxui-catalog-source-manifest-v1",
   "commandRegistryPath": "packages/tooling/command-registry.json",
+  "derivedApiSources": {
+    "web.react": "packages/react/api"
+  },
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "patternCategoriesPath": "catalog/patterns/categories.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",

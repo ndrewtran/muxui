@@ -6,7 +6,7 @@
   "scripts": {
     "storybook": "pnpm generate && pnpm exec storybook dev -p 6006",
     "build": "pnpm generate && storybook build --output-dir dist",
-    "generate": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/generate-stories.mjs",
+    "generate": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react-storybook^... && node src/generate-stories.mjs",
     "generate:check": "node src/generate-stories.mjs --check",
     "check:component": "MUXUI_STORYBOOK_AUDIT_PROOF=component node src/check-scoped.mjs",
     "check:scoped": "node src/check-scoped.mjs",
@@ -18,6 +18,7 @@
     "@muxui/tokens": "workspace:*"
   },
   "devDependencies": {
+    "@muxui/catalog": "workspace:*",
     "@storybook/addon-a11y": "10.5.10",
     "@storybook/addon-docs": "10.5.10",
     "@storybook/react-vite": "10.5.10",

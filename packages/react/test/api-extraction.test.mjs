@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
+import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
 import { ApiExtractionError, HOST_ALLOWLIST, extractApis } from '../api-extraction/extract.mjs';
 
 // Synthetic fixtures for the closed grammar (Decision 0031 item 3). They sit under the
@@ -307,4 +308,50 @@ test('a recursive Mux UI-owned type is defined once and referenced by name', () 
       },
     },
   });
+});
+
+test('derived API documents are validated, written, checked, pruned, and merged into their records', async () => {
+  mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
+  const root = mkdtempSync(join(packageRoot, 'build', 'derived-apis-'));
+  try {
+    const declarationRoot = join(root, 'ts');
+    const repositoryRoot = join(root, 'repository');
+    const fixturePackage = join(root, 'package');
+    mkdirSync(declarationRoot);
+    mkdirSync(join(repositoryRoot, 'packages/react/src'), { recursive: true });
+    writeFileSync(join(declarationRoot, 'thing.d.ts'), ownProps(`  variant?: 'primary' | 'neutral';
+  onActivate?: (event: ThingEvent) => void;`, event));
+    writeFileSync(join(repositoryRoot, 'packages/react/src/thing.ts'), "export function Thing({ variant = 'primary', onActivate }: { variant?: string; onActivate?: () => void }) { return [variant, onActivate]; }\n");
+    const components = [{ slug: 'thing', name: 'Thing', source: 'packages/react/src/thing.ts' }];
+    const documents = await deriveApis({ packageRoot: fixturePackage, repositoryRoot, declarationRoot, components });
+    const document = documents.get('thing');
+    assert.deepEqual({ ...document, api: undefined }, {
+      schema: 'muxui-derived-api-v1',
+      generatedFrom: 'packages/react/src/thing.ts',
+      component: 'muxui:component:thing',
+      binding: 'web.react',
+      export: 'Thing',
+      api: undefined,
+    });
+    assert.deepEqual(document.api.defaults, { variant: 'primary' });
+    assert.deepEqual(Object.keys(document.api.types), ['ThingEvent', 'ThingPointer']);
+
+    const check = () => syncDerivedApis({ packageRoot: fixturePackage, documents, checking: true });
+    await assert.rejects(check(), /MUXUI_REACT_GENERATED_DRIFT: api\/thing\.json$/u);
+    await syncDerivedApis({ packageRoot: fixturePackage, documents, checking: false });
+    await check();
+    // --list-outputs runs no tsc and reads the committed documents back.
+    assert.deepEqual(await deriveApis({ packageRoot: fixturePackage, repositoryRoot, components }), documents);
+    writeFileSync(join(fixturePackage, 'api/stale.json'), '{}\n');
+    await assert.rejects(check(), /api\/stale\.json is not a derived API output/u);
+    await syncDerivedApis({ packageRoot: fixturePackage, documents, checking: false });
+    assert.deepEqual(readdirSync(join(fixturePackage, 'api')), ['thing.json']);
+
+    const thing = { id: 'muxui:component:thing', anatomy: ['root', 'label'], bindings: { 'web.react': { strategy: 'direct' } } };
+    assert.deepEqual(withDerivedApi(thing, documents).bindings['web.react'].api, { ...document.api, parts: ['root', 'label'] });
+    const other = { id: 'muxui:component:other', anatomy: ['root'], bindings: {} };
+    assert.equal(withDerivedApi(other, documents), other);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
