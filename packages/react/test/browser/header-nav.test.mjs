@@ -111,11 +111,13 @@ import { HeaderNav } from '/src/supplemental/index.mjs';
 const h = React.createElement;
 const links = [['#docs', 'Docs'], ['#components', 'Components']];
 const navigation = links.map(([href, label]) => h(HeaderNav.NavButton, { key: href, href }, label));
-createRoot(document.getElementById('root')).render(h('div', { id: 'frame', className: 'frame' },
-  h(HeaderNav.Root, null,
-    h(HeaderNav.Logo, { href: '#home' }, 'Mux'),
-    h(HeaderNav.Secondary, { className: 'links' }, navigation),
-    h('div', { className: 'menu' }, h(HeaderNav.MobileTrigger, null, navigation, h(Button, null, 'Sign in'))))));
+const trigger = h('div', { className: 'menu' }, h(HeaderNav.MobileTrigger, null, navigation, h(Button, null, 'Sign in')));
+// 'plain-logo': nothing in the header takes focus once the trigger is hidden.
+const header = {
+  links: [h(HeaderNav.Logo, { href: '#home' }, 'Mux'), h(HeaderNav.Secondary, { className: 'links' }, navigation), trigger],
+  'plain-logo': [h(HeaderNav.Logo, null, 'Mux'), trigger],
+}[new URLSearchParams(location.search).get('variant') ?? 'links'];
+createRoot(document.getElementById('root')).render(h('div', { id: 'frame', className: 'frame' }, h(HeaderNav.Root, null, ...header)));
 `;
 
 const drawerPage = () => pageShell({
@@ -141,12 +143,12 @@ for (const engine of browserEngines()) {
     try {
       browser = await launchBrowser(engine);
       await warmUpServer(browser, `${url}/header-nav-drawer.html`, '.muxui-header-nav');
-      const open = async () => {
+      const open = async (variant = 'links') => {
         const context = await browser.newContext({ viewport: { width: 900, height: 600 }, locale: 'en-US' });
         const tab = await context.newPage();
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
-        await tab.goto(`${url}/header-nav-drawer.html`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/header-nav-drawer.html?variant=${variant}`, { waitUntil: 'networkidle' });
         await tab.locator('.muxui-header-nav__mobile-trigger').waitFor();
         const dialog = tab.getByRole('dialog', { name: 'Navigation' });
         await tab.locator('.muxui-header-nav__mobile-trigger').click();
@@ -190,6 +192,22 @@ for (const engine of browserEngines()) {
           await widen(tab);
           await dialog.waitFor({ state: 'detached', timeout: 5000 });
           await settledOn(tab, 'Mux', `${engine}: focus falls back to the header's first visible control, the logo link`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // A header with no visible control left once the trigger is hidden still takes focus, on the header itself.
+      {
+        const { context, tab, dialog } = await open('plain-logo');
+        try {
+          await dialog.getByRole('link', { name: 'Docs' }).focus();
+          await widen(tab);
+          await dialog.waitFor({ state: 'detached', timeout: 5000 });
+          await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-header-nav'), undefined, { message: `${engine}: focus falls back to the HeaderNav root when nothing in it is focusable`, report: () => document.activeElement?.outerHTML.slice(0, 100) });
+          assert.equal(await tab.evaluate(() => document.activeElement.getAttribute('tabindex')), '-1', `${engine}: the root is focusable by script only`);
+          await tab.keyboard.press('Escape');
+          assert.equal((await focused(tab)).body, false, `${engine}: Escape leaves focus off the body`);
         } finally {
           await context.close();
         }

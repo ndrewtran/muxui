@@ -1154,7 +1154,8 @@ const HeaderNav = {
       observer.observe(trigger);
       return () => observer.disconnect();
     }, []);
-    // Runs after the drawer has left: the header link matching the drawer's focused link, then any visible control in the header.
+    // Runs after the drawer has left: the header link matching the drawer's focused link, then any visible control in the
+    // header, then the header itself, which Sidebar's handoff makes focusable by script when nothing else takes focus.
     const exit = () => {
       const wanted = handoff.current;
       handoff.current = null;
@@ -1162,8 +1163,8 @@ const HeaderNav = {
       const controls = () => [...wanted.root.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')].filter((node) => !node.disabled && node.getAttribute('tabindex') !== '-1');
       sidebarHandoff(() => {
         const all = controls();
-        return [all.find((node) => wanted.href !== null && node.getAttribute('href') === wanted.href), ...all];
-      }, new Set(), (active) => wanted.dialog?.contains(active));
+        return [all.find((node) => wanted.href !== null && node.getAttribute('href') === wanted.href), ...all, wanted.root];
+      }, new Set([wanted.root]), (active) => wanted.dialog?.contains(active));
     };
     return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen }, h(IconButton, { ref: button, className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children)))));
   },
