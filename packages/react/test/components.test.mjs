@@ -18,7 +18,7 @@ import {
   ToggleButton,
 } from '../src/components.mjs';
 import { ToggleButtonGroup, RadioGroup } from '../src/collections.mjs';
-import { CheckboxGroup } from '../src/fields.mjs';
+import { CheckboxGroup, Form } from '../src/fields.mjs';
 import { RadioField } from '../src/supplemental/index.mjs';
 import { installDom } from './support/dom.mjs';
 
@@ -298,6 +298,28 @@ test('RadioGroup shows its group error once, only while invalid, and links it to
     restore();
     dom.window.close();
   }
+});
+
+test('RadioGroup shows a server validation message when it has no errorMessage, as CheckboxGroup does', () => {
+  const field = (value, label) => React.createElement(RadioField.Root, { value }, React.createElement(RadioField.Button, null,
+    React.createElement(RadioField.Indicator, null, React.createElement(RadioField.Dot)), label));
+  const render = (...children) => renderToString(React.createElement(Form, { validationBehavior: 'aria', validationErrors: { plan: 'Plan is unavailable', alerts: 'Pick an alert' } }, ...children));
+  const dom = new JSDOM(`<!doctype html><div id="root">${render(
+    React.createElement(RadioGroup, { label: 'Plan', name: 'plan' }, field('monthly', 'Monthly'), field('yearly', 'Yearly')),
+    React.createElement(RadioGroup, { label: 'Options', name: 'plan', options: [{ value: 'a', label: 'A' }] }),
+    React.createElement(CheckboxGroup, { label: 'Alerts', name: 'alerts' }, React.createElement(Checkbox, { value: 'email' }, 'Email')),
+    React.createElement(RadioGroup, { label: 'Own message', name: 'plan', errorMessage: 'Choose a plan', options: [{ value: 'a', label: 'A' }] }),
+  )}</div>`);
+  const [children, options, checkbox, own] = [...dom.window.document.querySelectorAll('.muxui-radio-group, .muxui-checkbox-group')];
+  assert.equal(children.querySelector('.muxui-field-error')?.textContent, 'Plan is unavailable', 'a children group shows the server message');
+  assert.equal(options.querySelector('.muxui-field-error')?.textContent, 'Plan is unavailable', 'an options group shows it too');
+  assert.equal(checkbox.querySelector('.muxui-field-error')?.textContent, 'Pick an alert', 'CheckboxGroup shows its server message');
+  assert.equal(own.querySelector('.muxui-field-error')?.textContent, 'Choose a plan', 'an errorMessage replaces the server message');
+  assert.equal(children.querySelectorAll('.muxui-field-error').length, 1, 'once, not once per option');
+  assert.ok(children.getAttribute('aria-describedby')?.split(' ').includes(children.querySelector('.muxui-field-error').id), 'the group is described by the message');
+  // A valid group still renders no error part.
+  const clean = new JSDOM(`<!doctype html><div id="root">${renderToString(React.createElement(RadioGroup, { label: 'Plan', name: 'plan', options: [{ value: 'a', label: 'A' }] }))}</div>`);
+  assert.equal(clean.window.document.querySelector('.muxui-field-error'), null);
 });
 
 test('R1.1 MuxUI labels, checkbox indicator states, and breadcrumb current normalization are accessible', async () => {

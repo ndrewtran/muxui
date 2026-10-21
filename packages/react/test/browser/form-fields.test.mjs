@@ -31,6 +31,10 @@ const entry = `import React from 'react';
         ['monthly', 'yearly'].map((value) => h(RadioField.Root, { key: value, value },
           h(RadioField.Button, null, h(RadioField.Indicator, null, h(RadioField.Dot)), value)))),
       h('button', { type: 'submit' }, 'Submit')),
+    // Without errorMessage the group shows the browser's own message.
+    'radio-group-native': () => h(Form, { onSubmit: submit },
+      h(RadioGroup, { label: 'Plan', name: 'plan', required: true, options: [{ value: 'monthly', label: 'Monthly' }, { value: 'yearly', label: 'Yearly' }] }),
+      h('button', { type: 'submit' }, 'Submit')),
     autocomplete: () => h(Form, { onSubmit: submit },
       h(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'], onChange: (value) => log('change', value), onSelect: (item) => log('select', item?.value) }),
       h('button', { type: 'submit' }, 'Submit')),
@@ -142,6 +146,20 @@ test('a required RadioGroup blocks native submission and shows its group error o
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [['submit', { plan: 'yearly' }]]);
     assert.equal(await page.locator('.muxui-field-error').count(), 0, 'the error leaves once a plan is chosen');
+  });
+});
+
+test('a required RadioGroup without errorMessage shows the browser message once', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('radio-group-native');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [], 'the browser blocks the submit');
+    await page.locator('.muxui-radio-group-error').waitFor();
+    assert.equal(await page.locator('.muxui-field-error').count(), 1);
+    assert.notEqual((await page.locator('.muxui-radio-group-error').textContent())?.trim() ?? '', '', 'the default message is the browser validation message');
+    await page.getByRole('radio', { name: 'Yearly' }).evaluate((node) => node.closest('label').click());
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [['submit', { plan: 'yearly' }]]);
   });
 });
 
