@@ -1,6 +1,6 @@
 import React from 'react';
 import { ButtonContext, useSlottedContext } from 'react-aria-components';
-import { Button } from '../button.mjs';
+import { Button } from '../button.ts';
 
 /** An icon-only action with Button behavior and an explicit accessible name. */
 export const IconButton = React.forwardRef(function IconButton({

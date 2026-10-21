@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
@@ -353,5 +353,19 @@ test('derived API documents are validated, written, checked, pruned, and merged 
     assert.equal(withDerivedApi(other, documents), other);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Button derives exactly ButtonOwnProps; the native attributes ButtonProps passes through stay out', () => {
+  const { api } = JSON.parse(readFileSync(resolve(packageRoot, 'api/button.json'), 'utf8'));
+  assert.deepEqual(api.props, ['disabled', 'pending', 'showTextWhileLoading', 'variant', 'size']);
+  assert.deepEqual(api.events, ['activate']);
+  // Item 8: disabled and pending have no Mux UI default, and the host type default is ignored.
+  assert.deepEqual(api.defaults, { showTextWhileLoading: false, variant: 'primary', size: 'md' });
+  const declarations = readFileSync(resolve(packageRoot, 'generated/button.d.ts'), 'utf8');
+  assert.match(declarations, /export interface ButtonProps extends ButtonOwnProps, Omit<ButtonHTMLAttributes<HTMLButtonElement>/u);
+  for (const passthrough of ['children', 'className', 'style']) {
+    assert.match(declarations, new RegExp(`\\n\\s+${passthrough}\\?:`, 'u'), `ButtonProps declares ${passthrough}`);
+    assert.equal(api.props.includes(passthrough), false, `${passthrough} is not a derived prop`);
   }
 });

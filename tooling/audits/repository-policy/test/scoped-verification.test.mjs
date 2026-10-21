@@ -373,5 +373,5 @@ test('shared app source selects its declared consumers without a workspace depen
   // and React output reaches the catalog through that devDependency.
   const catalogInput = selected('catalog/components/button/artifact.json');
   assert.ok(catalogInput.includes('@muxui/catalog') && catalogInput.includes('@muxui/react'), catalogInput.join(', '));
-  assert.ok(selected('packages/react/src/button.mjs').includes('@muxui/catalog'));
+  assert.ok(selected('packages/react/src/button.ts').includes('@muxui/catalog'));
 });

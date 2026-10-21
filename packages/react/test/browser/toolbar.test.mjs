@@ -11,7 +11,7 @@ const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toolbar } from '/src/collections.mjs';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { ToggleButton } from '/src/components.mjs';
 
 const h = React.createElement;
@@ -36,7 +36,7 @@ const LABELS = ['First', 'Second', 'Third'];
 for (const engine of browserEngines()) {
   test(`Toolbar lays controls out along its orientation in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/collections.mjs', 'src/button.mjs', 'src/components.mjs'],
+      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.mjs'],
       pages: { '/toolbar.html': page },
       modules: { '/toolbar-entry.mjs': entry },
     });

@@ -68,7 +68,7 @@ const r11Slugs = ['button', 'breadcrumbs', 'checkbox', 'disclosure', 'disclosure
 const r12Slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field'];
 const r13Slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
 const r14Slugs = ['drop-zone', 'file-trigger', 'dialog', 'popover', 'preview-trigger', 'toast', 'tooltip'];
-const buttonSource = await readFile(resolve(packageRoot, 'src/button.mjs'), 'utf8');
+const buttonSource = await readFile(resolve(packageRoot, 'src/button.ts'), 'utf8');
 const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
@@ -106,7 +106,7 @@ const authoredStyleSources = await Promise.all([
 ].map((fileName) => readFile(resolve(packageRoot, 'src/styles', fileName), 'utf8')));
 const authoredCss = authoredStyleSources.map((source) => source.trim()).join('\n\n');
 const runtimeSources = {
-  'packages/react/src/button.mjs': buttonSource,
+  'packages/react/src/button.ts': buttonSource,
   'packages/react/src/components.mjs': componentSource,
   'packages/react/src/fields.mjs': fieldsSource,
   'packages/react/src/collections.mjs': collectionsSource,
@@ -422,28 +422,15 @@ const compatibility = {
   support: 'unproved; R1.5 React exports only',
 };
 const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
-const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.mjs';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
+const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
+// Button's types are tsc's declarations of src/button.ts (Decision 0031); the index names
+// them, so the module's other exports (usePendingSubmitProps) stay private.
 const typesBody = `import type * as React from 'react';
+import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
 
-export type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;
+export { Button } from './button.js';
+export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
 export type ComponentPointerType = ButtonPointerType;
-export interface ButtonActivationEvent {
-  readonly type: 'activate';
-  readonly pointerType: ButtonPointerType;
-  readonly target: HTMLButtonElement;
-}
-export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'> {
-  children?: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-  pending?: boolean;
-  showTextWhileLoading?: boolean;
-  variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';
-  size?: 'sm' | 'md' | 'lg';
-  style?: React.CSSProperties;
-  onActivate?: (event: ButtonActivationEvent) => void;
-}
-export declare const Button: React.ForwardRefExoticComponent<ButtonProps & React.RefAttributes<HTMLButtonElement>>;
 export interface BreadcrumbItem { id?: string; label: React.ReactNode; href?: string; disabled?: boolean; }
 export interface BreadcrumbsProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className' | 'aria-label'> { items?: BreadcrumbItem[]; className?: string; 'aria-label': string; onNavigate?: (item: BreadcrumbItem) => void; }
 export declare const Breadcrumbs: React.ForwardRefExoticComponent<BreadcrumbsProps & React.RefAttributes<HTMLElement>>;
@@ -1091,7 +1078,6 @@ const outputs = new Map([
   ['compatibility.mjs', generatedText('packages/react/src/generate.mjs', compatibilityBody)],
   ['index.mjs', generatedText('packages/react/src/generate.mjs', currentIndexBody)],
   ['index.d.ts', generatedText('packages/react/src/generate.mjs', currentTypesBody)],
-  ['button.mjs', shippedModule('packages/react/src/button.mjs', buttonSource)],
   ['testing.mjs', generatedText('packages/react/src/generate.mjs', testingBody)],
   ['styles.css', generatedCss('packages/react/src/generate.mjs', layeredStylesCss)],
   ['themes.mjs', generatedText('packages/react/src/generate.mjs', themeRuntimeBody)],

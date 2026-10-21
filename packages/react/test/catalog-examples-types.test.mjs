@@ -6,6 +6,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
+import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
+import { extractApis } from '../api-extraction/extract.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -129,6 +131,26 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
       encoding: 'utf8',
     });
     assert.equal(typecheck.status, 0, `${typecheck.stdout}\n${typecheck.stderr}`);
+
+    // Decision 0031: the packed declarations carry each derived API. The same reader runs over
+    // them; names, types, enum members, and required flags match the committed derived file.
+    // Defaults live in executable source, which the declarations do not carry.
+    const packedGenerated = join(packageScope, 'react', 'generated');
+    const packedApis = extractApis({
+      declarationRoot: packedGenerated,
+      components: DERIVED_API_COMPONENTS.map(({ name, source }) => ({
+        name,
+        declarations: join(packedGenerated, source.split('/').at(-1).replace(/\.ts$/u, '.d.ts')),
+      })),
+    });
+    const typed = ({ props, events, propDetails, eventDetails, types }) => JSON.parse(JSON.stringify(
+      { props, events, propDetails, eventDetails, types },
+      (key, value) => (key === 'description' ? undefined : value),
+    ));
+    for (const { slug, name } of DERIVED_API_COMPONENTS) {
+      const derived = JSON.parse(await readFile(resolve(packageRoot, 'api', `${slug}.json`), 'utf8'));
+      assert.deepEqual(typed(packedApis.get(name)), typed(derived.api), `packed ${name} declarations match api/${slug}.json`);
+    }
 
     // Server-render the supplemental families' catalog examples from the packed package.
     const renderedSlugs = ['text', 'image', 'avatar', 'select-native'];

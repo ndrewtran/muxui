@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../../src/button.mjs';
+import { Button } from '../../src/button.ts';
 import { Checkbox, ToggleButton } from '../../src/components.mjs';
 import {
   ColorField,

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { mergeDerivedApis } from '@muxui/schema';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const snapshot = JSON.parse(await readFile(
@@ -11,7 +12,7 @@ const generatedClosure = JSON.parse((await readFile(
   'utf8',
 )).replace(/^\/\/ @generated-from:.*\n\/\/ @generated-content-sha256:.*\n/u, ''));
 const runtimeSourcePaths = [
-  'packages/react/src/button.mjs',
+  'packages/react/src/button.ts',
   'packages/react/src/components.mjs',
   'packages/react/src/fields.mjs',
   'packages/react/src/collections.mjs',
@@ -38,10 +39,14 @@ const same = (left, right) => JSON.stringify(stableValue(left)) === JSON.stringi
 
 const families = await Promise.all(snapshot.families.map(async (familyEntry) => {
   const slug = slugForFamily(familyEntry.family);
-  const artifact = JSON.parse(await readFile(
+  const authored = JSON.parse(await readFile(
     resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`),
     'utf8',
   ));
+  // A derived web.react API (Decision 0031) merges in as the catalog compiles it.
+  const derived = await readFile(resolve(repositoryRoot, `packages/react/api/${slug}.json`), 'utf8')
+    .then(JSON.parse, (error) => { if (error.code === 'ENOENT') return undefined; throw error; });
+  const artifact = derived === undefined ? authored : mergeDerivedApis(authored, { 'web.react': derived });
   const binding = artifact.bindings['web.react'];
   const bindingId = `${artifact.id}#web.react`;
   return {

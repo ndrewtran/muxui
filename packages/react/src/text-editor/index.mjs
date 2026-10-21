@@ -38,7 +38,7 @@ import {
   VisuallyHidden,
   parseColor,
 } from 'react-aria-components';
-import { Button } from '../button.mjs';
+import { Button } from '../button.ts';
 import { IconButton } from '../supplemental/icon-button.mjs';
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);

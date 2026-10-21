@@ -1667,6 +1667,7 @@ test('Button Matrix statically covers every finite visual tuple and States keeps
   ].join('/'));
   assert.equal(buttons.length, 21, 'Button Matrix renders all finite variants and sizes');
   assert.equal(new Set(tuples).size, 21, 'Button Matrix tuples are unique');
+  assert.equal(matrix.parameters.muxuiButtonMatrix.combinations, 21, 'the matrix counts the derived variants and sizes');
   assert.deepEqual(new Set(tuples), new Set(
     ['sm', 'md', 'lg'].flatMap((size) => ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'].map((variant) => `${variant}/${size}`)),
   ));

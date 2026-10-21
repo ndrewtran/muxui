@@ -1,13 +1,14 @@
 /*
  * Anatomy contract: one record per family maps rendered DOM parts to Figma
  * nodes. Variant axes come from the catalog record (prop names and defaults)
- * and the React package's generated prop types (finite values), so the
- * anatomy never repeats the catalog's variant list. Validation fails with a
- * diagnostic naming the family and field.
+ * and its finite values: a derived API's enum (Decision 0031), or else the
+ * React package's generated prop types. The anatomy never repeats the
+ * catalog's variant list. Validation fails with a diagnostic naming the
+ * family and field.
  */
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { parseJsonStrict } from '@muxui/schema';
+import { mergeDerivedApis, parseJsonStrict } from '@muxui/schema';
 
 export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
@@ -244,8 +245,11 @@ export function catalogAxes(anatomy, { catalogRecord, reactTypes }) {
     if (!api.props.includes(axis)) fail(`axes.${axis}`, `is not a web.react prop in the catalog record (${api.props.join(', ')})`);
     const fallback = api.defaults?.[axis];
     if (typeof fallback !== 'string') fail(`axes.${axis}`, 'has no string default in the catalog record');
-    const values = propValues(reactTypes, `${anatomy.component}Props`, axis);
-    if (!values?.length) fail(`axes.${axis}`, `${anatomy.component}Props.${axis} has no finite string values in the React types`);
+    const derived = api.propDetails?.[axis];
+    const values = derived ? derived.enum : propValues(reactTypes, `${anatomy.component}Props`, axis);
+    if (!values?.length || values.some((value) => typeof value !== 'string')) {
+      fail(`axes.${axis}`, `${anatomy.component}Props.${axis} has no finite string values in ${derived ? 'its derived API' : 'the React types'}`);
+    }
     if (!values.includes(fallback)) fail(`axes.${axis}`, `catalog default ${fallback} is not a React value (${values.join(', ')})`);
     return { prop: axis, name: axis[0].toUpperCase() + axis.slice(1), values: [fallback, ...values.filter((value) => value !== fallback)] };
   });
@@ -254,9 +258,15 @@ export function catalogAxes(anatomy, { catalogRecord, reactTypes }) {
 // The installed @muxui/react dependency, resolved as a consumer's type checker would.
 const reactPackage = resolve(import.meta.dirname, '../node_modules/@muxui/react');
 
-/** Load a family's catalog record and the published prop types of the React package entry. */
+/**
+ * Load a family's catalog record, with its derived web.react API merged in as
+ * the catalog compiles it, and the published prop types of the React package entry.
+ */
 export async function loadAnatomySources(anatomy) {
-  const catalogRecord = parseJsonStrict(await readFile(resolve(repositoryRoot, `catalog/components/${anatomy.family}/artifact.json`), 'utf8'));
+  const authored = parseJsonStrict(await readFile(resolve(repositoryRoot, `catalog/components/${anatomy.family}/artifact.json`), 'utf8'));
+  const derived = await readFile(resolve(repositoryRoot, `packages/react/api/${anatomy.family}.json`), 'utf8')
+    .then(parseJsonStrict, (error) => { if (error.code === 'ENOENT') return undefined; throw error; });
+  const catalogRecord = derived === undefined ? authored : mergeDerivedApis(authored, { 'web.react': derived });
   const manifest = parseJsonStrict(await readFile(resolve(reactPackage, 'package.json'), 'utf8'));
   const reactTypes = await readFile(resolve(reactPackage, manifest.exports['.'].types), 'utf8').catch(() => {
     throw new Error('MUXUI_FIGMA_COMPONENTS_REACT_UNGENERATED: run `pnpm generate --package @muxui/react` first');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../../src/button.mjs';
+import { Button } from '../../src/button.ts';
 import { Card } from '../../src/supplemental/index.mjs';
 
 // Forms with a pending submit Button or Card.Button for button.test.mjs. The page that loads

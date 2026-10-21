@@ -917,7 +917,7 @@ try {
   const installedPackage = realpathSync(join(consumer, 'node_modules/@muxui/react'));
   const buttonModules = new Set();
   const buttonImports = new Set();
-  for (const pending = ['generated/button.mjs']; pending.length !== 0;) {
+  for (const pending = ['generated/button.js']; pending.length !== 0;) {
     const relative = pending.pop();
     if (buttonModules.has(relative)) continue;
     buttonModules.add(relative);
@@ -956,7 +956,7 @@ try {
   const packageModule = (id) => (bundledModulePackage(id) === '@muxui/react' ? id.replace(/\\/gu, '/').split('/@muxui/react/').at(-1) : null);
   assertBundleRetention({
     modules: bundleModules,
-    required: [{ label: '@muxui/react generated/button.mjs', test: (id) => packageModule(id) === 'generated/button.mjs' }],
+    required: [{ label: '@muxui/react generated/button.js', test: (id) => packageModule(id) === 'generated/button.js' }],
     forbidden: [
       { label: 'Tiptap editor engine', test: (id) => /^(?:@tiptap\/|prosemirror-)/u.test(bundledModulePackage(id) ?? '') },
       { label: 'Markdown parser', test: (id) => bundledModulePackage(id) === 'marked' },

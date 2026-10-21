@@ -7,7 +7,8 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Button } from '../src/button.mjs';
+import { mergeDerivedApis } from '@muxui/schema';
+import { Button } from '../src/button.ts';
 import * as generated from '../generated/index.mjs';
 import { R1ButtonFixture } from '../src/button-fixture.mjs';
 import { createDom } from './support/dom.mjs';
@@ -162,6 +163,14 @@ test('Button exposes seven variants with stable root hooks', async () => {
     () => renderToString(React.createElement(Button, { size: 'medium' }, 'Save')),
     /Button size must be one of/u,
   );
+  // Only the exact strings pass: values that coerce to an allowed key do not.
+  const coercing = (value) => [[value], new String(value), { toString: () => value }];
+  for (const variant of coercing('primary')) {
+    assert.throws(() => renderToString(React.createElement(Button, { variant }, 'Save')), /Button variant must be one of/u);
+  }
+  for (const size of coercing('md')) {
+    assert.throws(() => renderToString(React.createElement(Button, { size }, 'Save')), /Button size must be one of/u);
+  }
 
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
   for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]`, 'u'));
@@ -179,9 +188,15 @@ test('Button exposes seven variants with stable root hooks', async () => {
   assert.doesNotMatch(pendingWithText, /visibility:hidden/u);
 });
 
+/** A component's web.react API as the catalog compiles it: authored, or derived from source (Decision 0031). */
+async function catalogApi(slug) {
+  const artifact = JSON.parse(await readFile(resolve(import.meta.dirname, `../../../catalog/components/${slug}/artifact.json`), 'utf8'));
+  const derived = await readFile(resolve(import.meta.dirname, `../api/${slug}.json`), 'utf8').then(JSON.parse, () => undefined);
+  return (derived === undefined ? artifact : mergeDerivedApis(artifact, { 'web.react': derived })).bindings['web.react'].api;
+}
+
 test('Button generator guard binds the canonical finite API contract', async () => {
-  const artifact = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../catalog/components/button/artifact.json'), 'utf8'));
-  const { api } = artifact.bindings['web.react'];
+  const api = await catalogApi('button');
   const descriptor = JSON.parse(await readFile(resolve(import.meta.dirname, '../generated/descriptor.json'), 'utf8'));
   assert.deepEqual(descriptor.bindings.find(({ export: name }) => name === 'Button').api, api);
   // The renderer applies the catalog defaults when no props are given.
@@ -203,6 +218,7 @@ const markupFlags = {
   readOnly: '[readonly], [data-readonly], [aria-readonly="true"]',
   required: '[required], [data-required], [aria-required="true"]',
   invalid: '[data-invalid], [aria-invalid="true"]',
+  // Dormant while no guarded component has a pending default; kept so one is observed if it returns.
   pending: '[data-pending], [aria-busy="true"]',
   indeterminate: '[data-indeterminate], [aria-checked="mixed"]',
   selected: '[aria-pressed="true"], [data-selected]',
@@ -322,12 +338,12 @@ function undeclaredProps(types, name, props) {
 }
 
 test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
-  const types = await readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8');
-  const catalogApi = {};
+  // The index names Button's types from tsc's declarations of src/button.ts.
+  const types = (await Promise.all(['index.d.ts', 'button.d.ts'].map((name) => readFile(resolve(import.meta.dirname, '../generated', name), 'utf8')))).join('\n');
+  const apis = {};
   for (const [name, render] of Object.entries(minimalRenders)) {
-    const artifact = JSON.parse(await readFile(resolve(import.meta.dirname, `../../../catalog/components/${kebab(name)}/artifact.json`), 'utf8'));
-    const { api } = artifact.bindings['web.react'];
-    catalogApi[name] = api;
+    const api = await catalogApi(kebab(name));
+    apis[name] = api;
     const markup = renderToString(render());
     assert.deepEqual(defaultMismatches(markup, api.defaults), [], `${name} renders the catalog defaults`);
     assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
@@ -336,14 +352,17 @@ test('catalog defaults and props agree with the renderer for every generator-gua
     if ('size' in api.defaults) assert.equal(markupValues.size(new JSDOM(markup).window.document), api.defaults.size, `${name} exposes its size default`);
   }
   // Catalog drift is caught: a different default or an undeclared prop fails.
-  const toggle = catalogApi.ToggleButton;
+  const toggle = apis.ToggleButton;
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, size: 'lg' }), ['size: catalog "lg", rendered "md"']);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
   assert.deepEqual(undeclaredProps(types, 'ToggleButton', [...toggle.props, 'missingProp']), ['missingProp']);
+  // Observers outlive the defaults they check: a pending default, were Button to declare one, is still observed.
+  assert.deepEqual(unobservedDefaults('Button', { ...apis.Button.defaults, pending: false }), []);
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Button()), { pending: true }), ['pending: catalog true, rendered false']);
   // Selection mode follows the role each mode renders: radiogroup for single, toolbar for multiple.
   const multiple = renderToString(h(generated.ToggleButtonGroup, { 'aria-label': 'Format', selectionMode: 'multiple' }, h(generated.ToggleButton, { id: 'a' }, 'A')));
   assert.equal(markupValues.selectionMode(new JSDOM(multiple).window.document), 'multiple');
-  assert.deepEqual(defaultMismatches(multiple, { ...catalogApi.ToggleButtonGroup.defaults, selectionMode: 'multiple' }), []);
+  assert.deepEqual(defaultMismatches(multiple, { ...apis.ToggleButtonGroup.defaults, selectionMode: 'multiple' }), []);
   assert.equal(defaultMismatches(renderToString(minimalRenders.ToggleButtonGroup()), { selectionMode: 'multiple' }).length, 1);
 });
 

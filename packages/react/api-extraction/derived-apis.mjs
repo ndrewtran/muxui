@@ -11,7 +11,9 @@ import { DERIVED_API_SCHEMA, mergeDerivedApis, validateDerivedApi } from '@muxui
 import { extractApis } from './extract.mjs';
 
 /** The components whose web.react API is derived from their TypeScript source. */
-export const DERIVED_API_COMPONENTS = Object.freeze([]);
+export const DERIVED_API_COMPONENTS = Object.freeze([
+  { slug: 'button', name: 'Button', source: 'packages/react/src/button.ts' },
+]);
 
 const SOURCE_ROOT = 'packages/react/src/';
 

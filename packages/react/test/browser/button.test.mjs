@@ -14,7 +14,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 
 const h = React.createElement;
 const icon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', 'aria-hidden': 'true', fill: 'none' },
@@ -37,7 +37,7 @@ const page = pageShell({
 
 const styles = '<link rel="stylesheet" href="/generated/styles.css">';
 const fixtureModule = '/test/browser/button-submit-fixture.mjs';
-const fixtureEntries = ['src/button.mjs', 'test/browser/button-submit-fixture.mjs'];
+const fixtureEntries = ['src/button.ts', 'test/browser/button-submit-fixture.mjs'];
 
 const formsEntry = (control) => `
 import React from 'react';
@@ -140,7 +140,7 @@ async function assertPendingThenSettled(tab, errors) {
 for (const engine of browserEngines()) {
   test(`Button centers its icon and label one size gap apart in ${engine}`, { timeout: 120_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/button.mjs'],
+      entries: ['src/button.ts'],
       pages: { '/button.html': page },
       modules: { '/button-entry.mjs': entry },
     });

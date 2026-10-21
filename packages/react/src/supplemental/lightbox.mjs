@@ -1,7 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
 import { Dialog, Modal, ModalOverlay } from 'react-aria-components';
-import { Button } from '../button.mjs';
+import { Button } from '../button.ts';
 import { IconButton } from './icon-button.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from '../motion.mjs';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.mjs';

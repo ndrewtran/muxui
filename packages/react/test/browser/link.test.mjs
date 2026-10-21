@@ -13,7 +13,7 @@ const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { GridList } from '/src/collections.mjs';
-import { Button } from '/src/button.mjs';
+import { Button } from '/src/button.ts';
 import { Link } from '/src/components.mjs';
 
 const h = React.createElement;
@@ -51,7 +51,7 @@ const page = pageShell({
 for (const engine of browserEngines()) {
   test(`Link inside a disabled GridList item in ${engine}`, { timeout: 300_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/collections.mjs', 'src/button.mjs', 'src/components.mjs'],
+      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.mjs'],
       pages: { '/link.html': page },
       modules: { '/link-entry.mjs': entry },
     });

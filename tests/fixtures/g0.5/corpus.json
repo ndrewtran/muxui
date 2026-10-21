@@ -20,10 +20,10 @@
       "bindingSpecChanged": true
     },
     {
-      "id": "incompatible-default-change",
-      "path": "$/bindings/web.react/api/defaults/disabled",
+      "id": "incompatible-strategy-change",
+      "path": "$/bindings/web.react/strategy",
       "operation": "replace",
-      "value": true,
+      "value": "adapted",
       "effect": "incompatible",
       "versionEffect": "major",
       "bindingSpecChanged": true

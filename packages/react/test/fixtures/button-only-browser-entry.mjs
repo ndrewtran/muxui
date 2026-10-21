@@ -1,6 +1,6 @@
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { Button } from '../../src/button.mjs';
+import { Button } from '../../src/button.ts';
 
 hydrateRoot(
   document.getElementById('root'),
