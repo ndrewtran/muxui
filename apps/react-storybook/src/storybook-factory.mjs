@@ -102,7 +102,6 @@ const PLACEMENTS = Object.freeze([
 const SELECT_PROPS = Object.freeze({
   channel: ['red', 'green', 'blue', 'hue', 'saturation', 'lightness', 'brightness', 'alpha'],
   colorSpace: ['rgb', 'hsl', 'hsb'],
-  defaultCamera: ['user', 'environment'],
   density: ['default', 'compact'],
   method: ['get', 'post'],
   orientation: ['horizontal', 'vertical'],

@@ -10,9 +10,11 @@ export type MessageFollowUp = { id: string; label: string };
 
 /**
  * The props Mux UI defines for Message; the catalog's web.react API is derived from
- * this interface (Decision 0031). The content is the children.
+ * this type (Decision 0031). The content is the children.
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-interface MessageOwnProps {
+type MessageOwnProps = {
   /** Who the turn is from. A user message shows its content in a filled bubble. */
   sender?: 'user' | 'assistant' | 'system';
   /** Content shown above the message, such as its author's name. */
@@ -35,7 +37,7 @@ interface MessageOwnProps {
   streaming?: boolean;
   /** The status text announced while streaming. */
   streamingLabel?: string;
-}
+};
 
 export type MessageProps = MessageOwnProps & Omit<HTMLAttributes<HTMLElement>, keyof MessageOwnProps | 'dangerouslySetInnerHTML'>;
 

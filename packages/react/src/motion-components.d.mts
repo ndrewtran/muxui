@@ -18,3 +18,22 @@ export interface MotionHeightProps extends HTMLAttributes<HTMLDivElement> {
 
 /** Animate a disclosure's measured content height without scaling its contents. */
 export declare function MotionHeight(props: MotionHeightProps): ReactElement;
+
+export interface MotionLifecycleOptions {
+  isOpen: boolean;
+  /** The placement the surface opens toward; it picks the side the entry and exit travel from. */
+  placement?: string;
+  triggerRef?: RefObject<Element | null>;
+  /** The style property that carries the movement. \`translate\` composes with React Aria's placement transform. */
+  property?: 'transform' | 'translate';
+  entryOffset?: { x: number; y: number };
+  exitOffset?: { x: number; y: number };
+  onEntryComplete?: () => void;
+  onExitComplete?: () => void;
+}
+
+/** Owns the pixels of one open and close cycle. Returns the ref callback for the animated element. */
+export declare function useMotionLifecycle(options: MotionLifecycleOptions): (element: HTMLElement | null) => void;
+
+/** Animates a node's reflow when `layoutKey` changes, on the independent translate channel. */
+export declare function useMotionLayout(nodeRef: RefObject<Element | null>, layoutKey: unknown, triggerRef?: RefObject<Element | null>): void;

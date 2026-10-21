@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tooltip } from '../../src/overlays.mjs';
+import { Tooltip } from '../../src/overlays.ts';
 
 const h = React.createElement;
 

@@ -7,10 +7,12 @@ export type SelectNativeVisualSize = 'sm' | 'md' | 'lg';
 
 /**
  * The props Mux UI defines for SelectNative; the catalog's web.react API is derived
- * from this interface (Decision 0031). The select's native attributes, such as value,
+ * from this type (Decision 0031). The select's native attributes, such as value,
  * onChange, multiple, and name, pass through unchanged.
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-interface SelectNativeOwnProps {
+type SelectNativeOwnProps = {
   /** The visible label, associated with the select. */
   label?: ReactNode;
   /** Help text, associated with the select. */
@@ -25,11 +27,11 @@ interface SelectNativeOwnProps {
   invalid?: boolean;
   /** String values select Mux control targets; positive numbers pass to native select size. */
   size?: SelectNativeVisualSize | number;
-}
+};
 
-export interface SelectNativeProps extends SelectNativeOwnProps, Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectNativeOwnProps | 'className'> {
+export type SelectNativeProps = SelectNativeOwnProps & Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectNativeOwnProps | 'className'> & {
   className?: string;
-}
+};
 
 const h = React.createElement;
 // Keyed by the type, so a size added to it must be added here too.

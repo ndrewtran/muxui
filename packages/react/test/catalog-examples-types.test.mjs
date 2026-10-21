@@ -8,6 +8,7 @@ import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
+import { indexSignatureCompatible } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -131,6 +132,42 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
       encoding: 'utf8',
     });
     assert.equal(typecheck.status, 0, `${typecheck.stdout}\n${typecheck.stderr}`);
+
+    // A bundler-resolved consumer with no synthetic default imports reads the same declarations. A
+    // declaration file that default-imports a CommonJS `export =` module, as `import React from 'react'`
+    // does, fails there with TS1259 even though the NodeNext project above accepts it.
+    const strictTsconfig = join(consumer, 'tsconfig.strict.json');
+    await writeFile(strictTsconfig, `${JSON.stringify({
+      extends: './tsconfig.json',
+      compilerOptions: {
+        module: 'ESNext',
+        moduleResolution: 'Bundler',
+        esModuleInterop: false,
+        allowSyntheticDefaultImports: false,
+        skipLibCheck: false,
+        // TypeScript 6 deprecates the two interop flags, which TypeScript 7 removes; drop this with them.
+        ignoreDeprecations: '6.0',
+      },
+    }, null, 2)}\n`);
+    const strictTypecheck = spawnSync(tsc, ['--noEmit', '-p', strictTsconfig], {
+      cwd: consumer,
+      env: process.env,
+      encoding: 'utf8',
+    });
+    assert.equal(strictTypecheck.status, 0, `strict consumer: ${strictTypecheck.stdout}\n${strictTypecheck.stderr}`);
+
+    // A props type a consumer could pass where `T extends Record<string, unknown>` is required before
+    // the moves still can, with and without exactOptionalPropertyTypes. TypeScript 6 rejects an
+    // interface there and an intersection with one; TypeScript 7 accepts both, so this runs tsc 6.
+    const { indexSignatureCompatible: recordedCompatible } = JSON.parse(await readFile(resolve(packageRoot, 'test/fixtures/public-declaration-kinds.json'), 'utf8'));
+    for (const exactOptionalPropertyTypes of [false, true]) {
+      const compatible = indexSignatureCompatible({ directory: consumer, specifier: '@muxui/react', names: recordedCompatible, exactOptionalPropertyTypes, tsc });
+      assert.deepEqual(
+        recordedCompatible.filter((name) => !compatible.includes(name)),
+        [],
+        `types no longer assignable to Record<string, unknown> (exactOptionalPropertyTypes ${exactOptionalPropertyTypes})`,
+      );
+    }
 
     // Decision 0031: the packed declarations carry each derived API. The same reader runs over
     // them; names, types, enum members, and required flags match the committed derived file.

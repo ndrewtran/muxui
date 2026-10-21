@@ -26,9 +26,11 @@ export type ActivityItem = {
 
 /**
  * The props Mux UI defines for Activity; the catalog's web.react API is derived from
- * this interface (Decision 0031).
+ * this type (Decision 0031).
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-interface ActivityOwnProps {
+type ActivityOwnProps = {
   /** Names the group of tasks. */
   label: string;
   /** The tasks, each with the status the application supplies. Each id is unique and nonempty. */
@@ -43,7 +45,7 @@ interface ActivityOwnProps {
   onExpandedChange?: (expanded: boolean) => void;
   /** Buttons that act on the whole group. */
   actions?: readonly ActivityAction[];
-}
+};
 
 export type ActivityProps = ActivityOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof ActivityOwnProps | 'children' | 'dangerouslySetInnerHTML'>;
 

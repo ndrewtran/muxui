@@ -23,8 +23,8 @@ function bulletSubjects(markdown, heading) {
     .flatMap((subjects) => [...subjects.matchAll(/`([^`]+)`/gu)].map(([, value]) => value));
 }
 
-/** The bullet value a section marks as the default: "- `a`, the default, ...". */
-const bulletDefault = (markdown, heading) => /^- `([^`]+)`, the default,/mu.exec(section(markdown, heading))?.[1];
+/** The bullet value a section marks as the default: "- `a`, the default, ..." or "- `a` is the default, ...". */
+const bulletDefault = (markdown, heading) => /^- `([^`]+)`(?:,| is) the default,/mu.exec(section(markdown, heading))?.[1];
 
 /** The literal values a derived type admits, through named types and object arms' members named `member`. */
 function literals(type, types, member) {
@@ -60,8 +60,11 @@ test('the Button guide covers exactly the variants its derived API declares', as
   assert.match(guide, /\[API reference\]\(#api-reference\) lists the `variant` and `size` values/u);
 });
 
-// Code spans a guide may state that no derived block owns: native attributes and their
-// values, DOM and web APIs, and JavaScript values.
+// Code spans a guide may state that no derived block owns. `native` lists native attributes and
+// their values, DOM and web APIs, and JavaScript values. `declared` lists facts about a
+// declaration-only surface, such as a provider's props, that the declaration-backed reference
+// reader will check; until it exists, the list names exactly the spans no check compares. It
+// excuses prose spans only, never an example's attributes, and only DECLARATION_ONLY_GUIDES use it.
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },
@@ -83,7 +86,54 @@ const GUIDES = {
   'toggle-button': {},
   breadcrumbs: {},
   resizable: {},
+  // `capture` is the native attribute that defaultCamera sets.
+  'file-trigger': { native: ['capture'] },
+  // `getFile()` is the file item's read; aria-label names the area.
+  'drop-zone': { native: ['aria-label', 'getFile()'] },
+  tooltip: {},
+  'preview-trigger': {},
+  // aria-label names the dialog surface.
+  popover: { native: ['aria-label'] },
+  // maxVisible, placement and its four values, and className are ToastProvider's props, and pending is Button's.
+  dialog: {},
+  toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
+
+// The guides whose declaration-only surface (ToastProvider and useToast) the check cannot read yet.
+const DECLARATION_ONLY_GUIDES = ['toast'];
+/** The guides that list `declared` spans without being declaration-only. */
+const undeclaredOwners = (guides) => Object.entries(guides)
+  .filter(([slug, entry]) => 'declared' in entry && !DECLARATION_ONLY_GUIDES.includes(slug))
+  .map(([slug]) => slug);
+
+/**
+ * The names a guide may state for a component: its block, its anatomy, its native values, and the
+ * package's own names. An example's attributes are checked against `attributes`; the guide's
+ * prose also gets the `declared` spans.
+ */
+function guideNames({ derived, record, entry: { native = [], declared = [] }, importPaths, componentNames }) {
+  const { api } = derived;
+  const attributes = new Set([
+    ...importPaths,
+    ...componentNames,
+    ...record.anatomy.map((part) => `${derived.export}.${part[0].toUpperCase()}${part.slice(1)}`),
+    ...api.props,
+    ...api.events,
+    ...Object.values(api.eventDetails).map(({ prop }) => prop),
+    ...Object.values(api.propDetails).flatMap(({ enum: values = [] }) => values),
+    ...memberNames(api.types),
+    ...memberNames(api.propDetails),
+    ...native,
+  ]);
+  return { attributes, prose: new Set([...attributes, ...declared]) };
+}
+
+/** The attribute names an example gives the component that `checked` does not hold. */
+function unknownExampleAttributes(code, exportName, checked) {
+  return [...code.matchAll(new RegExp(`<${exportName}\\b([^>]*)>`, 'gu'))]
+    .flatMap(([, attributes]) => [...attributes.matchAll(/([a-zA-Z-]+)=/gu)].map(([, name]) => name))
+    .filter((name) => !checked.has(name));
+}
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
 // A guide states a missing prop one way, which the check reads: "has no `placeholder` prop"
@@ -120,13 +170,14 @@ test('every API name a derived component\'s guide states is in its derived API o
   ]);
   const derivedSlugs = (await readdir(resolve(repositoryRoot, 'packages/react/api'))).map((file) => file.replace(/\.json$/u, '')).sort();
   assert.deepEqual(Object.keys(GUIDES).sort(), derivedSlugs, 'each derived component\'s guide is checked');
+  assert.deepEqual(undeclaredOwners(GUIDES), [], 'only a declaration-only guide lists declared spans');
   const componentNames = new Set(await Promise.all(components.map((slug) => read(`catalog/components/${slug}/artifact.json`).then((text) => JSON.parse(text).name, () => undefined))));
   const importPaths = Object.keys(reactPackage.exports).map((path) => `${reactPackage.name}${path.slice(1)}`);
   // The stylesheet's layer order, as the generated README states it.
   const layerOrder = /^@layer reset, [^\n]+;$/mu.exec(readme)?.[0];
   assert.ok(layerOrder, 'the React README states the layer order');
 
-  for (const [slug, { native = [] }] of Object.entries(GUIDES)) {
+  for (const [slug, { native = [], declared = [] }] of Object.entries(GUIDES)) {
     const [guide, derived, record] = await Promise.all([
       read(`catalog/guides/${slug}-usage.md`),
       derivedApi(slug),
@@ -138,18 +189,7 @@ test('every API name a derived component\'s guide states is in its derived API o
     const { claimed: absent, unread } = absenceClaims(guide);
     assert.deepEqual(unread, [], `${slug} guide words an absence the check cannot read; write "no \`name\` prop"`);
     assert.deepEqual(contradictedAbsences(guide, api), [], `${slug} guide claims a prop the derived API has is absent`);
-    const checked = new Set([
-      ...importPaths,
-      ...componentNames,
-      ...record.anatomy.map((part) => `${derived.export}.${part[0].toUpperCase()}${part.slice(1)}`),
-      ...api.props,
-      ...api.events,
-      ...Object.values(api.eventDetails).map(({ prop }) => prop),
-      ...Object.values(api.propDetails).flatMap(({ enum: values = [] }) => values),
-      ...memberNames(api.types),
-      ...memberNames(api.propDetails),
-      ...native,
-    ]);
+    const { attributes: checked, prose: proseChecked } = guideNames({ derived, record, entry: GUIDES[slug], importPaths, componentNames });
     // `name="value"` or `name={value}` names a prop and, where the prop is finite, one of its values.
     const attribute = (span) => {
       const match = /^([a-zA-Z-]+)=(?:"([^"]*)"|\{(.+)\})$/u.exec(span);
@@ -159,8 +199,11 @@ test('every API name a derived component\'s guide states is in its derived API o
     };
     const fences = [...guide.matchAll(/^```[a-z]*\n([\s\S]*?)^```$/gmu)].map(([, code]) => code);
     const prose = guide.replace(FENCE, '');
+    // The list names only what the guide still states.
+    const stated = new Set([...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' ')));
+    assert.deepEqual(declared.filter((span) => !stated.has(span)), [], `${slug} declares spans its guide no longer states`);
     const unchecked = [...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' '))
-      .filter((span) => !checked.has(span) && !attribute(span) && span !== layerOrder && !absent.includes(span));
+      .filter((span) => !proseChecked.has(span) && !attribute(span) && span !== layerOrder && !absent.includes(span));
     assert.deepEqual(unchecked, [], `${slug} guide`);
     // An example imports from the package and gives the component only checked attributes.
     for (const code of fences) {
@@ -168,12 +211,26 @@ test('every API name a derived component\'s guide states is in its derived API o
         assert.ok(importPaths.includes(path), `${slug} guide imports ${path}`);
         for (const name of names.split(',').map((value) => value.trim())) assert.ok(componentNames.has(name), `${slug} guide imports ${name}`);
       }
-      for (const [, attributes] of code.matchAll(new RegExp(`<${derived.export}\\b([^>]*)>`, 'gu'))) {
-        const names = [...attributes.matchAll(/([a-zA-Z-]+)=/gu)].map(([, name]) => name);
-        assert.deepEqual(names.filter((name) => !checked.has(name)), [], `${slug} guide example attributes`);
-      }
+      assert.deepEqual(unknownExampleAttributes(code, derived.export, checked), [], `${slug} guide example attributes`);
     }
   }
+});
+
+test('declared spans belong to the declaration-only guide and never excuse an example attribute', async () => {
+  assert.deepEqual(undeclaredOwners(GUIDES), []);
+  // Another guide, even with an empty list, is rejected.
+  assert.deepEqual(undeclaredOwners({ ...GUIDES, button: { ...GUIDES.button, declared: ['tone'] } }), ['button']);
+  assert.deepEqual(undeclaredOwners({ ...GUIDES, tooltip: { declared: [] } }), ['tooltip']);
+
+  // Toast's provider props are declared, so the guide may state them in prose but an example may not pass them.
+  const [derived, record] = await Promise.all([derivedApi('toast'), read('catalog/components/toast/artifact.json').then(JSON.parse)]);
+  const { attributes: checked, prose } = guideNames({ derived, record, entry: GUIDES.toast, importPaths: [], componentNames: [] });
+  for (const span of GUIDES.toast.declared) {
+    assert.equal(prose.has(span), true, `${span} is stated in prose`);
+    assert.equal(checked.has(span), false, `${span} is excused in prose only`);
+  }
+  assert.deepEqual(unknownExampleAttributes('<Toast message="Saved" variant="success" duration={0} onDismiss={close} />', 'Toast', checked), []);
+  assert.deepEqual(unknownExampleAttributes('<Toast message="Saved" maxVisible={5} pending={true} />', 'Toast', checked), ['maxVisible', 'pending']);
 });
 
 test('a guide\'s absence claim fails once the derived API gains the prop', async () => {
@@ -228,6 +285,22 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.match(meter, /By default the value text is the value's position in the range as a percent/u);
   assert.match(meterApi.api.propDetails.formatOptions.description, /Omitted, it formats the position in the range as a percentage/u);
   assert.equal(Object.hasOwn(meterApi.api.defaults, 'formatOptions'), false, 'the percent format is a behaviour, not a stated default');
+
+  // Dialog is dismissable by default, which its guide teaches before the choice to suppress dismissal.
+  const [dialog, dialogApi] = await Promise.all([guide('dialog'), derivedApi('dialog')]);
+  assert.match(dialog, /A Dialog is dismissable by default,/u);
+  assert.equal(dialogApi.api.defaults.dismissable, true);
+
+  // Toast lists its variants, marks neutral as the default, and states the default duration.
+  const [toast, toastApi] = await Promise.all([guide('toast'), derivedApi('toast')]);
+  assert.deepEqual(bulletSubjects(toast, 'Variants'), toastApi.api.propDetails.variant.enum);
+  assert.equal(bulletDefault(toast, 'Variants'), toastApi.api.defaults.variant);
+  assert.equal(Number(/Duration is in milliseconds, and it defaults to (\d+)\./u.exec(toast)?.[1]), toastApi.api.defaults.duration);
+
+  // Popover is modal by default, which its guide teaches before the non-modal choice.
+  const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);
+  assert.match(popover, /Popover is modal by default\./u);
+  assert.equal(popoverApi.api.defaults.modal, true);
 
   // DataDiff states its row kinds and its description default.
   const [dataDiff, dataDiffApi] = await Promise.all([guide('data-diff'), derivedApi('data-diff')]);

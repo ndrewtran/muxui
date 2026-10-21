@@ -13,7 +13,7 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/components.ts',
   'packages/react/src/fields.mjs',
   'packages/react/src/collections.mjs',
-  'packages/react/src/overlays.mjs',
+  'packages/react/src/overlays.ts',
 ]);
 
 /** The registry modules' text, by repository-relative path. */

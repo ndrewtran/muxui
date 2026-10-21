@@ -1,0 +1,202 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:popover",
+  "binding": "web.react",
+  "export": "Popover",
+  "api": {
+    "props": [
+      "trigger",
+      "open",
+      "defaultOpen",
+      "dismissable",
+      "placement",
+      "offset",
+      "crossOffset",
+      "shouldFlip",
+      "containerPadding",
+      "modal"
+    ],
+    "events": [
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "dismissable": true,
+      "placement": "bottom",
+      "offset": 8,
+      "crossOffset": 0,
+      "shouldFlip": true,
+      "containerPadding": 12,
+      "modal": true
+    },
+    "propDetails": {
+      "trigger": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactElement"
+        },
+        "required": true,
+        "description": "The focusable element that opens the Popover. Pressing it toggles the Popover."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Popover is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Popover starts open, when it controls itself."
+      },
+      "dismissable": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether Escape, an outside press, and the trigger close the Popover. When false, only a button in the close slot closes it, in modal and non-modal mode alike."
+      },
+      "placement": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIPlacement"
+        },
+        "required": false,
+        "enum": [
+          "top",
+          "bottom",
+          "start",
+          "end",
+          "top-start",
+          "top-end",
+          "bottom-start",
+          "bottom-end",
+          "start-top",
+          "start-bottom",
+          "end-top",
+          "end-bottom"
+        ],
+        "description": "Where the Popover opens against its trigger or anchorRef. start and end follow the locale direction."
+      },
+      "offset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The distance in pixels between the Popover and its trigger, along the placement's side."
+      },
+      "crossOffset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The shift in pixels along the side the Popover is placed against."
+      },
+      "shouldFlip": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Popover moves to the opposite side when the placed side has no room."
+      },
+      "containerPadding": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The least distance in pixels between the Popover and the edge of the viewport. Must not be negative."
+      },
+      "modal": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Popover contains focus until it closes. When false, it is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the Popover opening or closing."
+      }
+    },
+    "types": {
+      "MuxUIPlacement": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "top"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "start"
+            },
+            {
+              "kind": "literal",
+              "value": "end"
+            },
+            {
+              "kind": "literal",
+              "value": "top-start"
+            },
+            {
+              "kind": "literal",
+              "value": "top-end"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-start"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-end"
+            },
+            {
+              "kind": "literal",
+              "value": "start-top"
+            },
+            {
+              "kind": "literal",
+              "value": "start-bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "end-top"
+            },
+            {
+              "kind": "literal",
+              "value": "end-bottom"
+            }
+          ]
+        },
+        "description": "How a floating overlay is placed beside its trigger."
+      }
+    }
+  }
+}

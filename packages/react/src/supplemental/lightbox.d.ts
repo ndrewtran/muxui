@@ -18,13 +18,15 @@ export interface LightboxProps extends React.HTMLAttributes<HTMLDivElement> {
   swipeNavigation?: boolean;
 }
 export declare function Lightbox(props: LightboxProps): React.ReactElement;
-export type LightboxTriggerProps = ButtonProps & { itemKey: LightboxKey };
+// A mapped copy of Button's props, not ButtonProps itself: an interface is not assignable to
+// Record<string, unknown>, and these types were object literal types before they followed Button.
+export type LightboxTriggerProps = { [K in keyof ButtonProps]: ButtonProps[K] } & { itemKey: LightboxKey };
 export declare const LightboxTrigger: React.ForwardRefExoticComponent<LightboxTriggerProps & React.RefAttributes<HTMLButtonElement>>;
 export declare function LightboxBackdrop(props: React.HTMLAttributes<HTMLDivElement> & { dismissable?: boolean }): React.ReactElement | null;
 export declare function LightboxPopup(props: React.HTMLAttributes<HTMLDivElement>): React.ReactElement | null;
 export declare function LightboxContent(props: React.HTMLAttributes<HTMLDivElement> & { renderContent?: (context: LightboxContentRenderContext) => React.ReactNode }): React.ReactElement | null;
 export declare const LightboxCaption: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLParagraphElement> & React.RefAttributes<HTMLParagraphElement>>;
-export type LightboxControlActivation = ButtonActivationEvent;
+export type LightboxControlActivation = { [K in keyof ButtonActivationEvent]: ButtonActivationEvent[K] };
 export type LightboxControlProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { disabled?: boolean; onActivate?: (event: LightboxControlActivation) => void };
 export declare function LightboxPrevious(props: LightboxControlProps): React.ReactElement;
 export declare function LightboxNext(props: LightboxControlProps): React.ReactElement;

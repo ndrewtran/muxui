@@ -15,10 +15,10 @@ interface AvatarOwnProps {
   size?: AvatarSize;
 }
 
-export interface AvatarRootProps extends AvatarOwnProps, HTMLAttributes<HTMLSpanElement> {
+export type AvatarRootProps = AvatarOwnProps & HTMLAttributes<HTMLSpanElement> & {
   /** Avatar.Image and Avatar.Fallback, directly or inside fragments. */
   children?: ReactNode;
-}
+};
 export type AvatarImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'alt' | 'className'> & { /** Required; use an empty string for a decorative avatar. */ alt: string; className?: string };
 export type AvatarFallbackProps = HTMLAttributes<HTMLSpanElement>;
 

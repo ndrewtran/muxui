@@ -2,7 +2,7 @@ import React from 'react';
 import Check from 'lucide-react/dist/esm/icons/check.mjs';
 import CodeXml from 'lucide-react/dist/esm/icons/code-xml.mjs';
 import Copy from 'lucide-react/dist/esm/icons/copy.mjs';
-import { Tooltip } from '../overlays.mjs';
+import { Tooltip } from '../overlays.ts';
 import { useCandidateMotion } from './candidate-motion.mjs';
 import { IconButton } from './icon-button.ts';
 import { highlightCodeDocuments } from './code-block-highlight.mjs';

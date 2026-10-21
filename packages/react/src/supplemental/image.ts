@@ -9,10 +9,12 @@ export type ImageFit = 'cover' | 'contain' | 'fill' | 'none';
 
 /**
  * The props Mux UI defines for Image; the catalog's web.react API is derived from this
- * interface (Decision 0031). The image's native attributes and events, such as src,
+ * type (Decision 0031). The image's native attributes and events, such as src,
  * width, loading, and onError, pass through unchanged.
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-interface ImageOwnProps {
+type ImageOwnProps = {
   /** What the picture shows in its context, or an empty string for a decorative image. Required. */
   alt: string;
   /** A source tried once after the primary source fails to load. */
@@ -23,11 +25,11 @@ interface ImageOwnProps {
   radius?: ImageRadius;
   /** How the picture fills the box its width and height declare. */
   fit?: ImageFit;
-}
+};
 
-export interface ImageProps extends ImageOwnProps, Omit<ImgHTMLAttributes<HTMLImageElement>, keyof ImageOwnProps | 'className'> {
+export type ImageProps = ImageOwnProps & Omit<ImgHTMLAttributes<HTMLImageElement>, keyof ImageOwnProps | 'className'> & {
   className?: string;
-}
+};
 
 type Recovery = { key: string | null; mode: 'fallback' | 'error' | null };
 
