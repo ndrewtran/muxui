@@ -105,8 +105,10 @@ export type FieldInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'child
 // them (Decision 0031). Each is a type literal, not an interface, so the public props type stays
 // assignable to Record<string, unknown>, as it was before the move. The grammar lets a type list its
 // members and nothing else, so the members every field shares are written out in each; the
-// fields.types.test.tsx test pins them to FieldValidationProps and ControlSize. The accessible name's
-// arms, the native attributes, the ref, and className stay in each public type's host part.
+// fields.types.test.tsx test pins them to FieldValidationProps and ControlSize. Each public type
+// intersects NamedFieldProps (FieldValidationProps and the accessible name's arms), as it did before
+// the move, so a consumer's module augmentation of FieldValidationProps still reaches it; the native
+// attributes and the ref stay in its host part.
 
 /**
  * The props Mux UI defines for TextField. The input's native attributes, such as autoComplete,
@@ -147,7 +149,6 @@ export type TextFieldOwnProps = {
 };
 
 export type TextFieldProps = Omit<TextFieldOwnProps, 'label'> & {
-  className?: string;
   id?: string;
   inputRef?: Ref<HTMLInputElement>;
   autoComplete?: InputHTMLAttributes<HTMLInputElement>['autoComplete'];
@@ -157,7 +158,7 @@ export type TextFieldProps = Omit<TextFieldOwnProps, 'label'> & {
   minLength?: InputHTMLAttributes<HTMLInputElement>['minLength'];
   pattern?: InputHTMLAttributes<HTMLInputElement>['pattern'];
   spellCheck?: InputHTMLAttributes<HTMLInputElement>['spellCheck'];
-} & MuxUIAccessibleName;
+} & NamedFieldProps;
 
 /**
  * The props Mux UI defines for SearchField. The input's id and inputRef pass through to
@@ -198,7 +199,7 @@ export type SearchFieldOwnProps = {
   inputProps?: FieldInputProps;
 };
 
-export type SearchFieldProps = Omit<SearchFieldOwnProps, 'label'> & { className?: string; id?: string; inputRef?: Ref<HTMLInputElement> } & MuxUIAccessibleName;
+export type SearchFieldProps = Omit<SearchFieldOwnProps, 'label'> & { id?: string; inputRef?: Ref<HTMLInputElement> } & NamedFieldProps;
 
 /** The props Mux UI defines for NumberField. */
 export type NumberFieldOwnProps = {
@@ -236,7 +237,7 @@ export type NumberFieldOwnProps = {
   formatOptions?: Intl.NumberFormatOptions;
 };
 
-export type NumberFieldProps = Omit<NumberFieldOwnProps, 'label'> & { className?: string } & MuxUIAccessibleName;
+export type NumberFieldProps = Omit<NumberFieldOwnProps, 'label'> & NamedFieldProps;
 
 /** The props Mux UI defines for CheckboxGroup. The checkboxes are its children. */
 export type CheckboxGroupOwnProps = {
@@ -268,7 +269,7 @@ export type CheckboxGroupOwnProps = {
   size?: 'sm' | 'md' | 'lg';
 };
 
-export type CheckboxGroupProps = Omit<CheckboxGroupOwnProps, 'label'> & { className?: string; children?: ReactNode } & MuxUIAccessibleName;
+export type CheckboxGroupProps = Omit<CheckboxGroupOwnProps, 'label'> & { children?: ReactNode } & NamedFieldProps;
 
 /** The props Mux UI defines for Switch. */
 export type SwitchOwnProps = {
@@ -357,7 +358,7 @@ export type DateFieldOwnProps = {
   name?: string;
 };
 
-export type DateFieldProps = Omit<DateFieldOwnProps, 'label'> & { className?: string } & MuxUIAccessibleName;
+export type DateFieldProps = Omit<DateFieldOwnProps, 'label'> & NamedFieldProps;
 
 /** The props Mux UI defines for TimeField. */
 export type TimeFieldOwnProps = {
@@ -392,7 +393,7 @@ export type TimeFieldOwnProps = {
 };
 
 /** TimeField works at minute precision: HH:mm:ss values and bounds are accepted, their seconds are ignored, and values submit and emit as HH:mm. */
-export type TimeFieldProps = Omit<TimeFieldOwnProps, 'label'> & { className?: string } & MuxUIAccessibleName;
+export type TimeFieldProps = Omit<TimeFieldOwnProps, 'label'> & NamedFieldProps;
 
 /** The props Mux UI defines for DatePicker. */
 export type DatePickerOwnProps = {
@@ -434,7 +435,7 @@ export type DatePickerOwnProps = {
   name?: string;
 };
 
-export type DatePickerProps = Omit<DatePickerOwnProps, 'label'> & { className?: string } & MuxUIAccessibleName;
+export type DatePickerProps = Omit<DatePickerOwnProps, 'label'> & NamedFieldProps;
 
 /** The props Mux UI defines for DateRangePicker. */
 export type DateRangePickerOwnProps = {
@@ -478,7 +479,7 @@ export type DateRangePickerOwnProps = {
   endName?: string;
 };
 
-export type DateRangePickerProps = Omit<DateRangePickerOwnProps, 'label'> & { className?: string } & MuxUIAccessibleName;
+export type DateRangePickerProps = Omit<DateRangePickerOwnProps, 'label'> & NamedFieldProps;
 
 /** One suggestion. */
 export interface AutocompleteItem {
@@ -536,7 +537,7 @@ export type AutocompleteOwnProps = {
   placeholder?: string;
 };
 
-export type AutocompleteProps = Omit<AutocompleteOwnProps, 'label'> & { className?: string } & MuxUIAccessibleName;
+export type AutocompleteProps = Omit<AutocompleteOwnProps, 'label'> & NamedFieldProps;
 
 // React Aria props that a Mux UI field does not publish. The wrappers destructure them so a value
 // an untyped caller passes never reaches React Aria through the rest spread.
