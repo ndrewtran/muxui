@@ -1149,7 +1149,7 @@ export const NumberField: ForwardRefExoticComponent<NumberFieldProps & RefAttrib
   readOnly = false,
   required = false,
   invalid = false,
-  size,
+  size = 'md',
   validationBehavior: _validationBehavior,
   name,
   minValue,

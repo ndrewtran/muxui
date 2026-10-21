@@ -98,6 +98,8 @@ const GUIDES = {
   dialog: {},
   // The native validation rules a form checks are the browser's, not Form's.
   form: { native: ['required', 'type', 'pattern'] },
+  // className is the native attribute the sizing example sets; the width custom property and `width` are CSS; NaN, 0, null, and Number.isNaN are JavaScript.
+  'number-field': { native: ['className', '--muxui-component-number-field-width', 'width', 'NaN', '0', 'null', 'Number.isNaN', 'JSON.stringify(NaN)', 'inputMode="numeric"'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
