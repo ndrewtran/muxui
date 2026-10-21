@@ -3081,7 +3081,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/autocomplete/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#Autocomplete",
+          "packages/react/src/fields.ts#Autocomplete",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -3324,7 +3324,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/checkbox-group/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#CheckboxGroup",
+          "packages/react/src/fields.ts#CheckboxGroup",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -3574,7 +3574,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/date-field/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#DateField",
+          "packages/react/src/fields.ts#DateField",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -3824,7 +3824,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/date-picker/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#DatePicker",
+          "packages/react/src/fields.ts#DatePicker",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -4074,7 +4074,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/date-range-picker/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#DateRangePicker",
+          "packages/react/src/fields.ts#DateRangePicker",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -4316,7 +4316,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/form/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#Form",
+          "packages/react/src/fields.ts#Form",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -4558,7 +4558,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/number-field/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#NumberField",
+          "packages/react/src/fields.ts#NumberField",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -4803,7 +4803,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/search-field/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#SearchField",
+          "packages/react/src/fields.ts#SearchField",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -5045,7 +5045,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/switch/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#Switch",
+          "packages/react/src/fields.ts#Switch",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -5288,7 +5288,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/text-field/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#TextField",
+          "packages/react/src/fields.ts#TextField",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [
@@ -5538,7 +5538,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/time-field/artifact.json#bindings/web.react",
-          "packages/react/src/fields.mjs#TimeField",
+          "packages/react/src/fields.ts#TimeField",
           "packages/react/test/fields.test.mjs"
         ],
         "rac": [

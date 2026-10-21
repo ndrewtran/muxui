@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { SearchField, TextField } from '../src/fields.mjs';
+import { SearchField, TextField } from '../src/fields.ts';
 import { installDom } from './support/dom.mjs';
 
 test('TextField exposes the inner input ref and bounded native input props', async () => {

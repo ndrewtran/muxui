@@ -195,7 +195,7 @@ async function readKeyboardFocus(page) {
 }
 
 test('DateRangePicker Motion paints RAC provisional ranges row by row without committing hover', { timeout: 90_000 }, async () => {
-  const { url, close } = await startServer({ entries: ['src/fields.mjs'], pages: { '/range-selection-motion.html': documentHtml } });
+  const { url, close } = await startServer({ entries: ['src/fields.ts'], pages: { '/range-selection-motion.html': documentHtml } });
   let browser;
   try {
     browser = await launchBrowser();

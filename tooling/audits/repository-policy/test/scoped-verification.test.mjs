@@ -30,10 +30,10 @@ const policy = {
   },
 };
 const records = [
-  { family: 'DatePicker', slug: 'date-picker', source: 'packages/react/src/fields.mjs' },
+  { family: 'DatePicker', slug: 'date-picker', source: 'packages/react/src/fields.ts' },
   { family: 'Calendar', slug: 'calendar', source: 'packages/react/src/collections.mjs' },
-  { family: 'DateField', slug: 'date-field', source: 'packages/react/src/fields.mjs' },
-  { family: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.mjs' },
+  { family: 'DateField', slug: 'date-field', source: 'packages/react/src/fields.ts' },
+  { family: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.ts' },
   { family: 'RangeCalendar', slug: 'range-calendar', source: 'packages/react/src/collections.mjs' },
   { family: 'Button', slug: 'button', source: 'packages/react/src/button.mjs' },
   { family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.ts' },
@@ -152,7 +152,7 @@ test('package and file scopes include dependents while generation includes their
 });
 
 test('affected selection maps owner roots, keeps package changes proportional, and fails unmapped paths', () => {
-  const selection = changedPackageSelection({ changedPaths: ['packages/react/src/fields.mjs', 'strategy/milestone-roadmap.md'], packages, policy });
+  const selection = changedPackageSelection({ changedPaths: ['packages/react/src/fields.ts', 'strategy/milestone-roadmap.md'], packages, policy });
   assert.equal(selection.mode, 'affected');
   assert.deepEqual(selection.directPackages.map(({ name }) => name).sort(), ['@muxui/react', '@muxui/repository-policy']);
   const navigationSelection = changedPackageSelection({ changedPaths: ['packages/AGENTS.md', 'tooling/AGENTS.md'], packages, policy });
@@ -224,7 +224,7 @@ test('scoped check stages isolate React and run Storybook beside the remaining c
 
 test('selected Storybook commands replace only the Storybook lane and keep their own environment', () => {
   const plan = planWithoutInheritedStorybookSelection({
-    options: parseTaskArguments(['check', '--files', 'packages/react/src/fields.mjs']),
+    options: parseTaskArguments(['check', '--files', 'packages/react/src/fields.ts']),
     packages,
     policy,
   });
@@ -264,19 +264,19 @@ test('selected Storybook commands replace only the Storybook lane and keep their
 
 test('file and affected scopes expose the exact paths whose Storybook selection CI can plan', () => {
   const files = planWithoutInheritedStorybookSelection({
-    options: parseTaskArguments(['check', '--files', './packages/react/src/fields.mjs,packages\\react\\src\\button.mjs']),
+    options: parseTaskArguments(['check', '--files', './packages/react/src/fields.ts,packages\\react\\src\\button.mjs']),
     packages,
     policy,
   });
-  assert.deepEqual(files.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.mjs']);
+  assert.deepEqual(files.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.ts']);
 
   const affected = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--affected']),
     packages,
     policy,
-    changedPaths: ['packages/react/src/fields.mjs', 'packages/react/src/button.mjs'],
+    changedPaths: ['packages/react/src/fields.ts', 'packages/react/src/button.mjs'],
   });
-  assert.deepEqual(affected.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.mjs']);
+  assert.deepEqual(affected.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.ts']);
 
   // Package, component, and full scopes keep their current behaviour.
   for (const args of [['--package', '@muxui/react'], ['--full']]) {

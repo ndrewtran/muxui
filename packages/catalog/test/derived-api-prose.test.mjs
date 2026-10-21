@@ -96,6 +96,28 @@ const GUIDES = {
   popover: { native: ['aria-label'] },
   // maxVisible, placement and its four values, and className are ToastProvider's props, and pending is Button's.
   dialog: {},
+  // The native validation rules a form checks are the browser's, not Form's.
+  form: { native: ['required', 'type', 'pattern'] },
+  // className is the native attribute the sizing example sets; the width custom property and `width` are CSS; NaN, 0, null, and Number.isNaN are JavaScript.
+  'number-field': { native: ['className', '--muxui-component-number-field-width', 'width', 'NaN', '0', 'null', 'Number.isNaN', 'JSON.stringify(NaN)', 'inputMode="numeric"'] },
+  // FormData.get and FormData.getAll read the group's repeated entries.
+  'checkbox-group': { native: ['FormData.get', 'FormData.getAll'] },
+  // aria-label and aria-labelledby name the Switch when it has no label.
+  switch: { native: ['aria-label', 'aria-labelledby'] },
+  // YYYY-MM-DD is the value format, which the type states as a string.
+  'date-field': { native: ['YYYY-MM-DD'] },
+  // The clock formats and the rejected date-time and offset forms are strings the type states as a string.
+  'time-field': { native: ['HH:mm', '09:30:45', '2026-08-26T09:30', '09:30+10:00', 'HH:mm:ss', 'HH:mm:ss.fraction'] },
+  // YYYY-MM-DD is the value format, which the type states as a string.
+  'date-picker': { native: ['YYYY-MM-DD'] },
+  // YYYY-MM-DD is the value format, which the types state as strings.
+  'date-range-picker': { native: ['YYYY-MM-DD'] },
+  // autoComplete and inputMode are native input attributes TextField forwards; event.target.value and the setter are the change handler's JavaScript.
+  'text-field': { native: ['autoComplete', 'inputMode', 'event.target.value', 'onChange={setName}'] },
+  // preventDefault is the native keydown event's method the guide tells the input props to call.
+  'search-field': { native: ['preventDefault'] },
+  // aria-label and aria-labelledby name the field when it has no label, and {id, label, value} is the record the guide describes in words.
+  autocomplete: { native: ['aria-label', 'aria-labelledby', '{id, label, value}'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -296,6 +318,15 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.deepEqual(bulletSubjects(toast, 'Variants'), toastApi.api.propDetails.variant.enum);
   assert.equal(bulletDefault(toast, 'Variants'), toastApi.api.defaults.variant);
   assert.equal(Number(/Duration is in milliseconds, and it defaults to (\d+)\./u.exec(toast)?.[1]), toastApi.api.defaults.duration);
+
+  // Form validates natively by default, which its guide marks first among the timing choices.
+  const [form, formApi] = await Promise.all([guide('form'), derivedApi('form')]);
+  assert.equal(/^- `([^`]+)` is the default\./mu.exec(section(form, 'Validation timing'))?.[1], formApi.api.defaults.validationBehavior);
+  assert.deepEqual(bulletSubjects(form, 'Validation timing').sort(), [...formApi.api.propDetails.validationBehavior.enum].sort(), 'the guide covers both validation timings');
+
+  // CheckboxGroup stacks its options vertically by default, which its guide teaches before the horizontal choice.
+  const [checkboxGroup, checkboxGroupApi] = await Promise.all([guide('checkbox-group'), derivedApi('checkbox-group')]);
+  assert.equal(/Use the default (\w+) layout/u.exec(checkboxGroup)?.[1], checkboxGroupApi.api.defaults.orientation);
 
   // Popover is modal by default, which its guide teaches before the non-modal choice.
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);

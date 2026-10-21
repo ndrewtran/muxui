@@ -186,12 +186,11 @@ test('every canonical family resolves its routes against the real React tests', 
 });
 
 test('a family no test names runs its source group whole instead of failing', () => {
-  const field = { family: 'ScratchField', slug: 'scratch-field', source: 'packages/react/src/fields.mjs' };
+  const field = { family: 'ScratchField', slug: 'scratch-field', source: 'packages/react/src/fields.ts' };
   const selected = componentTestSelection([field], availableFiles, { includeSharedSource: false, testSources: { 'test/fields.test.mjs': '' } });
   assert.deepEqual(selected.files, [
     'test/browser/form-fields.test.mjs',
     'test/fields.test.mjs',
-    'test/r1-2-parity.test.mjs',
     ...sharedFiles,
   ]);
   assert.deepEqual(selected.testNamesByFile, {});

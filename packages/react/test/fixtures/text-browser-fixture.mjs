@@ -5,7 +5,7 @@ import {
   ListBoxItem as AriaListBoxItem,
   TextField as AriaTextField,
 } from 'react-aria-components';
-import { TextField } from '../../src/fields.mjs';
+import { TextField } from '../../src/fields.ts';
 import { Text } from '../../src/supplemental/index.mjs';
 
 const h = React.createElement;

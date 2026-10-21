@@ -36,7 +36,7 @@ const ARRAY_PROPS = new Set([
 ]);
 
 const STRING_PROPS = new Set([
-  'action', 'aria-label', 'aria-labelledby', 'children', 'className', 'color', 'content',
+  'aria-label', 'aria-labelledby', 'children', 'className', 'color', 'content',
   'description', 'endName', 'errorMessage', 'href', 'label', 'message', 'name',
   'source', 'before', 'after', 'language', 'filename', 'inputLabel', 'author', 'streamingLabel', 'applyLabel', 'emptyMessage', 'selectedModel', 'defaultSelectedModel',
   'placeholder', 'rel', 'src', 'srcSet', 'alt', 'fallbackSrc', 'fallbackSrcSet', 'fit', 'radius', 'startName', 'target', 'title',
@@ -49,7 +49,7 @@ const FUNCTION_PROPS = new Set(['close', 'filter', 'sort', 'groupBy', 'getGroupT
 const TEXT_VALUE_CONTEXT_PROPS = new Set(['placeholder', 'type']);
 const NUMBER_PROPS = new Set([
   'closeDelay', 'delay', 'duration', 'height', 'itemHeight', 'maxLength', 'maxValue',
-  'minLength', 'minValue', 'overscan', 'step', 'width',
+  'minValue', 'overscan', 'step', 'width',
 ]);
 
 const NUMBER_VALUE_CONTEXT_PROPS = new Set(['max', 'min', 'step']);
@@ -103,7 +103,6 @@ const SELECT_PROPS = Object.freeze({
   channel: ['red', 'green', 'blue', 'hue', 'saturation', 'lightness', 'brightness', 'alpha'],
   colorSpace: ['rgb', 'hsl', 'hsb'],
   density: ['default', 'compact'],
-  method: ['get', 'post'],
   orientation: ['horizontal', 'vertical'],
   placement: PLACEMENTS,
   role: ['group', 'region', 'presentation'],
@@ -111,7 +110,6 @@ const SELECT_PROPS = Object.freeze({
   selectionMode: ['none', 'single', 'multiple'],
   size: ['sm', 'md', 'lg'],
   type: ['text', 'email', 'password', 'url', 'tel'],
-  validationBehavior: ['aria', 'native'],
   variant: ['neutral', 'success', 'warning', 'danger'],
 });
 
@@ -2383,9 +2381,15 @@ const BROWSER_PROOF_PLANS = {
     const root = browserProofElement(canvasElement, '.muxui-form', 'Form');
     const submit = root.querySelector('button[type="submit"]');
     assertBrowser(submit, 'form submit control');
-    root.addEventListener('submit', (event) => event.preventDefault(), { once: true, capture: true });
+    // Form's submit and reset are the native events, which pass through unchanged and join no logged channel,
+    // so the proof watches the native submit itself.
+    let submitted = false;
+    root.addEventListener('submit', (event) => {
+      submitted = true;
+      event.preventDefault();
+    }, { once: true, capture: true });
     submit.click();
-    await waitForBrowserEvent(canvasElement, 'submit', 'Form');
+    assertBrowser(submitted, 'submitting the form fires its native submit event');
   },
   NumberField: activationPlan('NumberField', '.muxui-number-stepper-increment', 'change'),
   SearchField: async ({ canvasElement }) => {

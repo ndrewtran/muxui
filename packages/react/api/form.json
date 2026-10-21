@@ -1,0 +1,73 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/fields.ts",
+  "component": "muxui:component:form",
+  "binding": "web.react",
+  "export": "Form",
+  "api": {
+    "props": [
+      "validationBehavior",
+      "validationErrors"
+    ],
+    "events": [],
+    "defaults": {
+      "validationBehavior": "native"
+    },
+    "propDetails": {
+      "validationBehavior": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "aria"
+            },
+            {
+              "kind": "literal",
+              "value": "native"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "aria",
+          "native"
+        ],
+        "description": "When fields show built-in validation errors. With native, the browser checks each field's rules, such as required and type, when the form is submitted, and a failing field stops the submit. With aria, those rules show no error and stop no submit, so the application decides when a field is invalid."
+      },
+      "validationErrors": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIValidationErrors"
+        },
+        "required": false,
+        "description": "Errors from the application or a server, keyed by field name, each one message or an array of messages. A field shows its errors at once, and editing it or resetting the form dismisses them until a new object arrives."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "MuxUIValidationErrors": {
+        "type": {
+          "kind": "record",
+          "value": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "string"
+              },
+              {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": false
+              }
+            ]
+          },
+          "readonly": true
+        },
+        "description": "Messages for the fields of a Form, keyed by field name. Each value is one message or several."
+      }
+    }
+  }
+}

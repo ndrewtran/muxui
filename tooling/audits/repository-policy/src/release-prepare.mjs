@@ -731,7 +731,7 @@ try {
     if (compatibility.reactCompatibility.support !== 'unproved; R1.5 React exports only') throw new Error('compatibility support');
     if (testing.reactPlatformSafetyFixture.componentSupportClaim !== 'none') throw new Error('support claim');
     const packageEntry = await import.meta.resolve('@muxui/react');
-    await import(new URL('./fields.mjs', packageEntry));
+    await import(new URL('./fields.js', packageEntry));
     if (!import.meta.resolve('@muxui/react/styles.css').endsWith('/generated/styles.css')) throw new Error('styles resolution');
     if (!import.meta.resolve('@muxui/react/themes.css').endsWith('/generated/themes.css')) throw new Error('themes stylesheet resolution');
     if (!Array.isArray(themes.MUXUI_THEME_PRESETS) || themes.MUXUI_THEME_PRESETS.length !== 15) throw new Error('themes metadata');

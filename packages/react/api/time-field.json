@@ -1,0 +1,227 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/fields.ts",
+  "component": "muxui:component:time-field",
+  "binding": "web.react",
+  "export": "TimeField",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "value",
+      "defaultValue",
+      "minValue",
+      "maxValue",
+      "disabled",
+      "size",
+      "readOnly",
+      "required",
+      "invalid",
+      "name"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "size": "md",
+      "readOnly": false,
+      "required": false,
+      "invalid": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+      },
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUITimeValue"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The time as HH:mm, when the caller controls it. HH:mm:ss and HH:mm:ss.fraction are accepted with their seconds ignored. null keeps a controlled field empty. Any other string throws a TypeError."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUITimeValue"
+        },
+        "required": false,
+        "description": "The starting time, when the field controls itself, in the formats value accepts."
+      },
+      "minValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUITimeValue"
+        },
+        "required": false,
+        "description": "The earliest time, inclusive, in the formats value accepts. A value before it stays visible and invalid. A minValue later than maxValue throws a TypeError."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUITimeValue"
+        },
+        "required": false,
+        "description": "The latest time, inclusive, in the formats value accepts. A value after it stays visible and invalid."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ControlSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its time stays visible and focusable but cannot be changed."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required, so a form with native validation does not submit while it is empty."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named field submits HH:mm, or an empty string while it is empty."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUITimeValue"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new time as HH:mm, or with null when the field is cleared."
+      }
+    },
+    "types": {
+      "ControlSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The shared control sizes."
+      },
+      "MuxUITimeValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A local clock time as an ISO string, `HH:mm`, with no date, time zone, or offset."
+      }
+    }
+  }
+}

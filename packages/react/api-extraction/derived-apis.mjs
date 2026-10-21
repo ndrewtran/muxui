@@ -39,6 +39,17 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'popover', name: 'Popover', source: 'packages/react/src/overlays.ts' },
   { slug: 'toast', name: 'Toast', source: 'packages/react/src/overlays.ts' },
   { slug: 'dialog', name: 'Dialog', source: 'packages/react/src/overlays.ts' },
+  { slug: 'form', name: 'Form', source: 'packages/react/src/fields.ts' },
+  { slug: 'number-field', name: 'NumberField', source: 'packages/react/src/fields.ts' },
+  { slug: 'checkbox-group', name: 'CheckboxGroup', source: 'packages/react/src/fields.ts' },
+  { slug: 'switch', name: 'Switch', source: 'packages/react/src/fields.ts' },
+  { slug: 'date-field', name: 'DateField', source: 'packages/react/src/fields.ts' },
+  { slug: 'time-field', name: 'TimeField', source: 'packages/react/src/fields.ts' },
+  { slug: 'date-picker', name: 'DatePicker', source: 'packages/react/src/fields.ts' },
+  { slug: 'date-range-picker', name: 'DateRangePicker', source: 'packages/react/src/fields.ts' },
+  { slug: 'text-field', name: 'TextField', source: 'packages/react/src/fields.ts' },
+  { slug: 'search-field', name: 'SearchField', source: 'packages/react/src/fields.ts' },
+  { slug: 'autocomplete', name: 'Autocomplete', source: 'packages/react/src/fields.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

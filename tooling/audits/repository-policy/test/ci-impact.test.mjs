@@ -59,7 +59,7 @@ const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
 const supplementalPath = 'packages/react/src/supplemental/index.mjs';
 const collectionsPath = 'packages/react/src/collections.mjs';
-const fieldsPath = 'packages/react/src/fields.mjs';
+const fieldsPath = 'packages/react/src/fields.ts';
 const sizingExamplePath = 'catalog/components/number-field/examples/react/sizing.tsx';
 const sizingStoryId = 'muxui-react-r1-2-number-field--sizing';
 
@@ -286,6 +286,16 @@ test('Tree browser-proof edits select their exact test file without story or fam
   assert.deepEqual(result.reactFamilies, []);
   assert.deepEqual(result.storyRuns, []);
   assert.equal(result.tailwind, false);
+});
+
+test('a deleted React test file is not run, and its owner package is checked instead', async () => {
+  const retired = 'packages/react/test/retired-parity.test.mjs';
+  const deleted = await plan([retired], { textSnapshots: { [retired]: { before: 'before\n', after: null } } });
+  assert.deepEqual(deleted.reactTestFiles, []);
+  assert.deepEqual(deleted.packageChecks, ['@muxui/react']);
+  // A test with no snapshot, or one edited in place, still runs.
+  assert.deepEqual((await plan([retired])).reactTestFiles, ['test/retired-parity.test.mjs']);
+  assert.deepEqual((await plan([retired], edited(retired))).reactTestFiles, ['test/retired-parity.test.mjs']);
 });
 
 test('a canonical NumberField sizing example selects only its exact generated story page', async () => {
@@ -2778,7 +2788,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     commit('rename and edit');
     // Untracked generated metadata, as the plan job prepares it.
     write('packages/react/generated/r1-6-contract.json', JSON.stringify({
-      components: [{ family: 'NumberField', export: 'NumberField', slug: 'number-field', source: 'packages/react/src/fields.mjs' }],
+      components: [{ family: 'NumberField', export: 'NumberField', slug: 'number-field', source: 'packages/react/src/fields.ts' }],
     }));
     write('apps/react-storybook/.storybook/generated/manifest.mjs', `export const manifest = Object.freeze(${JSON.stringify({
       schema: 'muxui-react-storybook-manifest-v1',
@@ -3692,7 +3702,7 @@ test('a family-scoped React change runs its runtime workspace dependents whole a
   for (const name of ['@muxui/react-playground', '@muxui/docs', '@muxui/scale']) {
     assert.equal(workspacePackages.find((item) => item.name === name).manifest.dependencies['@muxui/react'], 'workspace:*', name);
   }
-  // Tree is moved into fields.mjs here because the fixture has focused Tree tests.
+  // Tree is moved into fields.ts here because the fixture has focused Tree tests.
   const fieldsBefore = `export const NumberField = () => null;\n${treeBefore}`;
   const fieldsAfter = `export const NumberField = () => null;\n${treeAfter}`;
   const result = await plan([fieldsPath], {

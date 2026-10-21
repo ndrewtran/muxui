@@ -1,0 +1,336 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/fields.ts",
+  "component": "muxui:component:date-range-picker",
+  "binding": "web.react",
+  "export": "DateRangePicker",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "value",
+      "defaultValue",
+      "minValue",
+      "maxValue",
+      "unavailableDateMatcher",
+      "open",
+      "defaultOpen",
+      "disabled",
+      "size",
+      "readOnly",
+      "required",
+      "invalid",
+      "startName",
+      "endName"
+    ],
+    "events": [
+      "change",
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "disabled": false,
+      "size": "md",
+      "readOnly": false,
+      "required": false,
+      "invalid": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+      },
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIDateRange"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The range as start and end YYYY-MM-DD strings, when the caller controls it. null keeps a controlled field empty. A range missing either end throws a TypeError, and one whose end is before its start is kept as given and is invalid."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateRange"
+        },
+        "required": false,
+        "description": "The starting range, when the field controls itself, as a complete pair of YYYY-MM-DD strings."
+      },
+      "minValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The earliest date, inclusive. A date before it stays visible and invalid. A minValue later than maxValue throws a TypeError."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The latest date, inclusive. A date after it stays visible and invalid."
+      },
+      "unavailableDateMatcher": {
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "date",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": true
+            },
+            {
+              "name": "anchorDate",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUIDateValue"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "boolean"
+          }
+        },
+        "required": false,
+        "description": "Returns true for a date that cannot be chosen. It receives the date being checked and the anchor, the start date chosen so far or null before a start is chosen, both as YYYY-MM-DD strings. Selection stays contiguous, so a range cannot cross an unavailable date."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the calendar is open, when the caller controls it. It is independent of the range: controlling one does not control the other."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the calendar starts open, when the picker controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ControlSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its range stays visible and focusable but cannot be changed."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required, so a form with native validation does not submit while it is empty."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+      },
+      "startName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name of the start date. It submits YYYY-MM-DD, or an empty string while the range is empty."
+      },
+      "endName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name of the end date. It submits YYYY-MM-DD, or an empty string while the range is empty."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUIDateRange"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new range as YYYY-MM-DD strings, or with null when the field is cleared."
+      },
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new open state when the calendar opens or closes."
+      }
+    },
+    "types": {
+      "ControlSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The shared control sizes."
+      },
+      "MuxUIDateRange": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "start",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "end",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        },
+        "description": "A range of calendar dates, both ends included."
+      },
+      "MuxUIDateValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A calendar date as an ISO string, `YYYY-MM-DD`, with no time or time zone."
+      }
+    }
+  }
+}

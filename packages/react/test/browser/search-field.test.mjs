@@ -11,7 +11,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { SearchField } from '/src/fields.mjs';
+import { SearchField } from '/src/fields.ts';
 
 createRoot(document.getElementById('root')).render(React.createElement(SearchField, { label: 'Search', defaultValue: 'mux' }));
 `;
@@ -27,7 +27,7 @@ const page = pageShell({
 for (const engine of browserEngines()) {
   test(`SearchField paints one clear action once it has text in ${engine}`, { timeout: 120_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/fields.mjs'],
+      entries: ['src/fields.ts'],
       pages: { '/search-field.html': page },
       modules: { '/search-field-entry.mjs': entry },
     });

@@ -34,7 +34,7 @@ The sizing hook is CSS-owned. There is no `width` React prop.
 
 ## Formatting and bounds
 
-Formatting options change only the displayed text: the field reports and submits plain numbers. A typed value is kept between the minimum and maximum and rounded to the nearest step when it is committed. NumberField formats and parses numbers in the browser's locale and has no locale prop, so the same value can read 1,234.50 in one locale and 1.234,50 in another while the field reports the same number. The NumberField formatting and bounds example shows a currency field with a decimal step and bounds.
+Formatting options change only the displayed text: the field reports and submits plain numbers. A typed value is kept between the minimum and maximum and rounded to the nearest step when it is committed. NumberField formats and parses numbers in the browser's locale and has no `locale` prop, so the same value can read 1,234.50 in one locale and 1.234,50 in another while the field reports the same number. The NumberField formatting and bounds example shows a currency field with a decimal step and bounds.
 
 ## Empty value
 

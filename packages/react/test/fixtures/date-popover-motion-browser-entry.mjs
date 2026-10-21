@@ -1,6 +1,6 @@
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { DatePicker } from '../../src/fields.mjs';
+import { DatePicker } from '../../src/fields.ts';
 
 function Fixture() {
   const [open, setOpen] = React.useState(false);

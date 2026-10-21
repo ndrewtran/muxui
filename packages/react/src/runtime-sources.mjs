@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/button.ts',
   'packages/react/src/components.ts',
-  'packages/react/src/fields.mjs',
+  'packages/react/src/fields.ts',
   'packages/react/src/collections.mjs',
   'packages/react/src/overlays.ts',
 ]);

@@ -18,7 +18,7 @@ import {
   ToggleButton,
 } from '../src/components.ts';
 import { ToggleButtonGroup, RadioGroup } from '../src/collections.mjs';
-import { CheckboxGroup, Form } from '../src/fields.mjs';
+import { CheckboxGroup, Form } from '../src/fields.ts';
 import { RadioField } from '../src/supplemental/index.mjs';
 import { installDom } from './support/dom.mjs';
 

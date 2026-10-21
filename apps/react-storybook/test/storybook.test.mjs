@@ -300,8 +300,8 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     historicalManifest.families.map(({ family }) => family).sort(),
     'every exact manifest family has a substantive Browser Proof plan',
   );
-  // The index names the types of Button, the R1.1 families, and the overlays from tsc's declarations of their sources.
-  const publicTypes = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'overlays.d.ts']
+  // The index names the types of Button, the R1.1 families, the fields, and the overlays from tsc's declarations of their sources.
+  const publicTypes = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'fields.d.ts', 'overlays.d.ts']
     .map((name) => readFile(resolve(repositoryRoot, 'packages/react/generated', name), 'utf8')))).join('\n');
   let pairCount = 0;
   let eventCount = 0;
@@ -1836,7 +1836,7 @@ test('anatomy proof resolves every canonical part to a live DOM or executable ro
 test('control inference and composition adapters preserve canonical values', () => {
   const textFieldBinding = descriptor.bindings.find(({ export: name }) => name === 'TextField');
   const textFieldArgTypes = argTypesForBinding(textFieldBinding);
-  for (const name of ['label', 'aria-label', 'value', 'defaultValue', 'name', 'placeholder']) {
+  for (const name of ['label', 'value', 'defaultValue', 'name', 'placeholder']) {
     assert.equal(textFieldArgTypes[name].control, 'text', name);
   }
 

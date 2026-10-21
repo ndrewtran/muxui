@@ -18,7 +18,7 @@ import {
   Switch,
   TextField,
   TimeField,
-} from '../src/fields.mjs';
+} from '../src/fields.ts';
 import { installDom } from './support/dom.mjs';
 
 function OptionsWrapper() {
@@ -461,7 +461,8 @@ test('R1.2 form controls follow controlled values and submit/reset through FormD
 });
 
 test('R1.2 public date contracts are ISO strings and do not expose upstream date types', async () => {
-  const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../generated/index.d.ts', import.meta.url), 'utf8'));
+  // The date types are declared by fields.ts, and the barrel names them.
+  const source = (await Promise.all(['fields.d.ts', 'index.d.ts'].map((name) => readFile(new URL(`../generated/${name}`, import.meta.url), 'utf8')))).join('\n');
   assert.match(source, /MuxUIDateValue = string/u);
   assert.match(source, /MuxUIDateRange/u);
   assert.doesNotMatch(source, /react-stately|@internationalized\/date|export type DateValue|export type TimeValue/u);
@@ -1117,15 +1118,70 @@ test('R1.2 readonly autocomplete only permits viewing suggestions', async () => 
   }
 });
 
-test('R1.2 autocomplete placeholder stays aligned across artifact, types, and runtime', async () => {
-  const { readFile } = await import('node:fs/promises');
-  const [artifactSource, typesSource] = await Promise.all([
-    readFile(new URL('../../../catalog/components/autocomplete/artifact.json', import.meta.url), 'utf8'),
-    readFile(new URL('../generated/index.d.ts', import.meta.url), 'utf8'),
+// React DOM loads before jsdom here, so it detects text edits through its keyup value-polling fallback.
+function typeInto(input, text) {
+  input.focus();
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, text);
+  input.dispatchEvent(new KeyboardEvent('keyup', { key: text.at(-1), bubbles: true }));
+}
+
+// handleSelect and handleInputChange each return early for a disabled field, a read-only field, and (typing only) the
+// reset of the form it sits in. A disabled input cannot be typed into, so the disabled typing guard is defence in
+// depth that no event reaches and this test does not simulate it; the other guards each fail it when removed. An
+// error thrown inside an event listener does not fail a jsdom test by itself, so the run records window errors
+// and console errors and asserts there were none.
+test('Autocomplete ignores choosing and typing once disabled or read-only, and the echo of its own form reset', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const changes = [];
+  const selected = [];
+  const reported = [];
+  const consoleError = console.error;
+  dom.window.addEventListener('error', (event) => reported.push(`window error: ${event.error?.stack ?? event.message}`));
+  console.error = (...args) => reported.push(`console.error: ${args.map(String).join(' ')}`);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderField = (extra) => React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'], onChange: (value) => changes.push(value), onSelect: (item) => selected.push(item), ...extra });
+    await act(async () => root.render(renderField()));
+    const input = host.querySelector('.muxui-autocomplete input');
+    await act(async () => input.focus());
+    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
+    await act(async () => root.render(renderField({ readOnly: true })));
+    await act(async () => typeInto(input, 'Syd'));
+    assert.deepEqual(changes, [], 'a read-only field reports no typing');
+    await act(async () => root.render(renderField({ disabled: true })));
+    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    assert.deepEqual(changes, [], 'a disabled field reports no choice');
+    assert.deepEqual(selected, [], 'a disabled field selects nothing');
+
+    // Typing in a form reports the text; the form's reset restores the default without reporting its own changes.
+    await act(async () => root.render(React.createElement(Form, null, renderField({ name: 'city', defaultValue: 'Sydney' }))));
+    const formInput = host.querySelector('form input[role="combobox"]');
+    await act(async () => typeInto(formInput, 'Mel'));
+    assert.deepEqual(changes, ['Mel']);
+    assert.equal(formInput.value, 'Mel');
+    await act(async () => host.querySelector('form').reset());
+    assert.equal(formInput.value, 'Sydney');
+    assert.deepEqual(changes, ['Mel'], 'the reset reports nothing');
+    assert.deepEqual(selected, []);
+    assert.deepEqual(reported, [], 'no interaction throws or logs an error');
+  } finally {
+    console.error = consoleError;
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('R1.2 autocomplete placeholder stays aligned across its derived API, types, and runtime', async () => {
+  const [derivedSource, typesSource] = await Promise.all([
+    readFile(new URL('../api/autocomplete.json', import.meta.url), 'utf8'),
+    readFile(new URL('../generated/fields.d.ts', import.meta.url), 'utf8'),
   ]);
-  const artifact = JSON.parse(artifactSource);
-  assert.equal(artifact.bindings['web.react'].api.props.includes('placeholder'), true);
-  assert.match(typesSource, /export type AutocompleteProps = .*placeholder\?: string;/u);
+  assert.equal(JSON.parse(derivedSource).api.props.includes('placeholder'), true);
+  assert.match(typesSource, /export type AutocompleteOwnProps = \{[^}]*?placeholder\?: string;/u);
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', placeholder: 'Search city' }));
   assert.match(server, /placeholder="Search city"/u);
 });

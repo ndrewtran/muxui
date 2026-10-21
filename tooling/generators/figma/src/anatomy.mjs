@@ -8,8 +8,9 @@
  * with a diagnostic naming the family and field.
  */
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { mergeDerivedApis, parseJsonStrict } from '@muxui/schema';
+import { parseAst } from 'vite';
 
 export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
@@ -276,8 +277,20 @@ export function catalogAxes(anatomy, { catalogRecord, reactTypes }) {
 const reactPackage = resolve(import.meta.dirname, '../node_modules/@muxui/react');
 
 /**
+ * The names of the sibling modules a declaration file imports or re-exports from in its top-level
+ * import and export declarations (`./fields.js` is `fields`). The file is parsed, so a specifier that
+ * only appears in a comment or a string is not one.
+ */
+export function importedModules(declarations) {
+  const specifiers = parseAst(declarations, { lang: 'dts' }).body
+    .filter(({ type }) => type === 'ImportDeclaration' || type === 'ExportNamedDeclaration' || type === 'ExportAllDeclaration')
+    .map(({ source }) => source?.value);
+  return [...new Set(specifiers.flatMap((specifier) => /^\.\/([\w-]+)\.js$/u.exec(specifier ?? '')?.slice(1) ?? []))];
+}
+
+/**
  * Load a family's catalog record, with its derived web.react API merged in as
- * the catalog compiles it, and the published prop types of the React package entry.
+ * the catalog compiles it, and the published prop types of the React package entry and of the modules it imports.
  */
 export async function loadAnatomySources(anatomy) {
   const authored = parseJsonStrict(await readFile(resolve(repositoryRoot, `catalog/components/${anatomy.family}/artifact.json`), 'utf8'));
@@ -285,10 +298,14 @@ export async function loadAnatomySources(anatomy) {
     .then(parseJsonStrict, (error) => { if (error.code === 'ENOENT') return undefined; throw error; });
   const catalogRecord = derived === undefined ? authored : mergeDerivedApis(authored, { 'web.react': derived });
   const manifest = parseJsonStrict(await readFile(resolve(reactPackage, 'package.json'), 'utf8'));
-  const reactTypes = await readFile(resolve(reactPackage, manifest.exports['.'].types), 'utf8').catch(() => {
+  const typesPath = resolve(reactPackage, manifest.exports['.'].types);
+  const entryTypes = await readFile(typesPath, 'utf8').catch(() => {
     throw new Error('MUXUI_FIGMA_COMPONENTS_REACT_UNGENERATED: run `pnpm generate --package @muxui/react` first');
   });
-  return { catalogRecord, reactTypes };
+  // The entry names the declarations of the TypeScript modules it imports, so a shared alias such as
+  // ControlSize is declared in one of them and not in the entry.
+  const moduleTypes = await Promise.all(importedModules(entryTypes).map((name) => readFile(resolve(dirname(typesPath), `${name}.d.ts`), 'utf8')));
+  return { catalogRecord, reactTypes: [entryTypes, ...moduleTypes].join('\n') };
 }
 
 /** Stable variant key, for example `variant=primary,size=md,state=hover`. */

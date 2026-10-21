@@ -1,0 +1,218 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/fields.ts",
+  "component": "muxui:component:number-field",
+  "binding": "web.react",
+  "export": "NumberField",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "value",
+      "defaultValue",
+      "disabled",
+      "size",
+      "readOnly",
+      "required",
+      "invalid",
+      "minValue",
+      "maxValue",
+      "step",
+      "name",
+      "formatOptions"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "size": "md",
+      "readOnly": false,
+      "required": false,
+      "invalid": false,
+      "step": 1
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+      },
+      "value": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The number, when the caller controls it. NaN keeps the field empty."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The starting number, when the field controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ControlSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its number stays visible and focusable but cannot be changed."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required, so a form with native validation does not submit while it is empty."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+      },
+      "minValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The smallest value. A typed value below it is raised to it when committed."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The largest value. A typed value above it is lowered to it when committed."
+      },
+      "step": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How much the steppers and arrow keys change the value, and the step a typed value is rounded to when committed."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named field submits the plain number, or an empty string while it is empty."
+      },
+      "formatOptions": {
+        "type": {
+          "kind": "host",
+          "name": "NumberFormatOptions"
+        },
+        "required": false,
+        "description": "How the number is shown, as Intl.NumberFormat options such as currency or percent. It changes only the displayed text: the field reports and submits plain numbers."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "number"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new number each time it is committed, and with NaN when the field is cleared."
+      }
+    },
+    "types": {
+      "ControlSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The shared control sizes."
+      }
+    }
+  }
+}

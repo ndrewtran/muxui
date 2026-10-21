@@ -338,8 +338,8 @@ function undeclaredProps(types, name, props) {
 }
 
 test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
-  // The index names the types of Button, the R1.1 families, and the overlays from tsc's declarations of src/button.ts, src/components.ts, and src/overlays.ts.
-  const types = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'overlays.d.ts'].map((name) => readFile(resolve(import.meta.dirname, '../generated', name), 'utf8')))).join('\n');
+  // The index names the types of Button, the R1.1 families, the fields, and the overlays from tsc's declarations of src/button.ts, src/components.ts, src/fields.ts, and src/overlays.ts.
+  const types = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'fields.d.ts', 'overlays.d.ts'].map((name) => readFile(resolve(import.meta.dirname, '../generated', name), 'utf8')))).join('\n');
   const apis = {};
   for (const [name, render] of Object.entries(minimalRenders)) {
     const api = await catalogApi(kebab(name));

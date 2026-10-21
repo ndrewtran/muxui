@@ -34,6 +34,15 @@ const deepFreeze = (value) => {
 // An allowlist entry for an application of a host generic, as the extraction serializes it.
 const hostApplication = (name, ...typeArguments) => deepFreeze({ kind: 'host', name, typeArguments });
 
+const INPUT_ATTRIBUTES = hostApplication('React.InputHTMLAttributes', { kind: 'host', name: 'HTMLInputElement' });
+
+/** The props of a field's inner input that the field owns, in the order FieldInputProps omits them. */
+const FIELD_INPUT_OWNED_PROPS = Object.freeze([
+  'children', 'dangerouslySetInnerHTML', 'slot', 'type', 'id', 'name', 'value', 'defaultValue', 'checked', 'defaultChecked',
+  'disabled', 'readOnly', 'required', 'onChange', 'onInput', 'aria-label', 'aria-labelledby', 'aria-describedby',
+  'aria-errormessage', 'aria-invalid', 'aria-required', 'aria-disabled', 'aria-readonly',
+]);
+
 /**
  * The host types a Mux UI-owned prop may reach, each one exact type: a DOM or Intl library
  * name, or `React.<Name>` from @types/react, written as a string; or an exact application of
@@ -46,7 +55,9 @@ const hostApplication = (name, ...typeArguments) => deepFreeze({ kind: 'host', n
  * React.ReactElement for the trigger of Tooltip, Dialog, Popover, and PreviewTrigger, and the
  * applications Exclude<React.ReactNode, null | undefined | boolean> for the content of Tooltip,
  * Dialog, and Toast, and Promise<File>, Promise<string>, ReadonlySet<string>, and
- * AsyncIterable<MuxUIDropItem> for DropZone's drop items.
+ * AsyncIterable<MuxUIDropItem> for DropZone's drop items, and HTMLInputElement,
+ * React.InputHTMLAttributes<HTMLInputElement>, and the Omit of it that FieldInputProps declares for
+ * TextField's and SearchField's inputProps.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -62,6 +73,13 @@ export const HOST_ALLOWLIST = Object.freeze([
   hostApplication('Promise', { kind: 'string' }),
   hostApplication('ReadonlySet', { kind: 'string' }),
   hostApplication('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }),
+  // TextField's and SearchField's inputProps: the native attributes of the inner input, less the 23 the field owns.
+  'HTMLInputElement',
+  INPUT_ATTRIBUTES,
+  hostApplication('Omit', INPUT_ATTRIBUTES, {
+    kind: 'union',
+    members: FIELD_INPUT_OWNED_PROPS.map((value) => ({ kind: 'literal', value })),
+  }),
 ]);
 
 // A namespace or wildcard would admit every type under it.

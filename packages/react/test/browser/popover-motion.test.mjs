@@ -69,7 +69,7 @@ async function waitForMenuTravel(page, label) {
 }
 
 test('field and collection popovers use the shared placement-aware Motion lifecycle', { timeout: 90_000 }, async () => {
-  const { url, close } = await startServer({ entries: ['src/fields.mjs', 'src/collections.mjs'], pages: { '/popover-motion.html': documentHtml } });
+  const { url, close } = await startServer({ entries: ['src/fields.ts', 'src/collections.mjs'], pages: { '/popover-motion.html': documentHtml } });
   let browser;
   try {
     browser = await launchBrowser();

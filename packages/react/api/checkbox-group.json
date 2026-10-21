@@ -1,0 +1,211 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/fields.ts",
+  "component": "muxui:component:checkbox-group",
+  "binding": "web.react",
+  "export": "CheckboxGroup",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly",
+      "required",
+      "invalid",
+      "name",
+      "orientation",
+      "size"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false,
+      "required": false,
+      "invalid": false,
+      "orientation": "vertical",
+      "size": "md"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the group. Without one, the group needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the group, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the group shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the group invalid by itself."
+      },
+      "value": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The values of the checked options, when the caller controls them."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The values of the options that start checked, when the group controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the group and every option in it."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the group read-only: its options stay visible and focusable but cannot be changed."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group required, so a form with native validation does not submit while no option is checked."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the group invalid."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name, applied to every option. Checked values arrive as repeated entries under it."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "vertical"
+            },
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "vertical",
+          "horizontal"
+        ],
+        "description": "Whether the options stack in a column or sit in a row. The options take it from the group."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size. The options take it from the group."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the values of all the checked options each time one changes."
+      }
+    },
+    "types": {}
+  }
+}

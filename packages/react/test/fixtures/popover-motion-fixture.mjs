@@ -1,5 +1,5 @@
 import React from 'react';
-import { Autocomplete } from '../../src/fields.mjs';
+import { Autocomplete } from '../../src/fields.ts';
 import { ComboBox, Menu, Select } from '../../src/collections.mjs';
 
 const items = [
