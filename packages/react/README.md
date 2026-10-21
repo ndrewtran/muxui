@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:25a822cc7be6ddaa5c7fac26dc7350585245328ce7835b1deb63bf546b7b1449 -->
+<!-- @generated-content-sha256: sha256:635963d9a11d224cefe82cd2a7fe8020dee29a0989b660a6e14067be904bb6f6 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -197,6 +197,8 @@ These contracts are projected from the component bindings in the canonical catal
 - Menu.Root supports open, defaultOpen, and onOpenChange. Root disabled state disables its trigger and all items; a child disabled=false cannot enable a disabled ancestor.
 - Arrow keys and typeahead navigate enabled items. Submenus open after the configured hover delay or the direction-aware forward arrow; the backward arrow returns to the parent item. Escape or selection closes the menu and restores trigger focus.
 - Tab or Shift+Tab closes the menu and any open submenu and moves focus on from the trigger by the browser's own tab order.
+- Without a Menu.Trigger, Tab or Shift+Tab moves focus on from the control that opened the menu, else from the popup's anchor.
+- A Menu.Trigger inside a Toolbar sends Tab or Shift+Tab out of the Toolbar, as Tab from the closed trigger does.
 - Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu-item[data-has-submenu] and [data-open].
 - Items require stable string IDs. Supply textValue for rich content. A per-item onAction runs before list and root onAction/onSelect. Data-backed actions preserve normalized item metadata; compound actions return identity fields id, key, and value.
 - Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Nested popup placement defaults to end-top.

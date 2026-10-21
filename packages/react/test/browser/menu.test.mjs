@@ -14,7 +14,7 @@ const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from '/src/button.ts';
-import { Menu } from '/src/collections.mjs';
+import { Menu, Toolbar } from '/src/collections.mjs';
 
 const h = React.createElement;
 const params = new URLSearchParams(location.search);
@@ -34,12 +34,35 @@ const list = params.has('submenu')
     h(Menu.Item, { id: 'rename' }, 'Rename'),
     h(Menu.Submenu, { delay: 20 }, h(Menu.Item, { id: 'more' }, 'More'), h(Menu.Popup, null, h(Menu.List, { 'aria-label': 'More actions', items: ['Archive', 'Export'] }))))
   : h(Menu.List, { 'aria-label': 'Actions', items: ['Rename', 'Delete'] });
+// ?anchored opens a controlled Menu.Root from a native button, with no Menu.Trigger, anchored to a point that cannot take
+// focus; ?detach anchors it to a button instead and removes the opener once the menu is open.
+function Anchored() {
+  const [open, setOpen] = React.useState(false);
+  const [gone, setGone] = React.useState(false);
+  const detach = params.has('detach');
+  const anchor = React.useRef(null);
+  React.useEffect(() => {
+    if (!open || !detach) return undefined;
+    const timer = setTimeout(() => setGone(true), 100);
+    return () => clearTimeout(timer);
+  }, [open, detach]);
+  return h(React.Fragment, null,
+    !gone && h('button', { id: 'opener', type: 'button', tabIndex: 0, onClick: () => setOpen(true) }, 'Open'),
+    detach ? h('button', { id: 'anchor', type: 'button', tabIndex: 0, ref: anchor }, 'Anchor') : h('span', { id: 'anchor', ref: anchor }),
+    h(Menu.Root, { open, onOpenChange: setOpen }, h(Menu.Popup, { anchorRef: anchor }, list)));
+}
+const menu = h(Menu.Root, closed ? { open: false, onOpenChange: () => {} } : null,
+  h(Menu.Trigger, { id: 'menu-trigger', tabIndex: 0 }, 'Actions'),
+  h(Menu.Popup, null, list));
+// ?toolbar puts the trigger between two controls of a Toolbar.
+const toolbar = h(Toolbar, { 'aria-label': 'Formatting' },
+  h(Button, { id: 'toolbar-first', tabIndex: 0 }, 'Bold'),
+  menu,
+  h(Button, { id: 'toolbar-last', tabIndex: 0 }, 'Italic'));
 createRoot(document.getElementById('root')).render(h(React.Fragment, null,
   h('button', { id: 'before', tabIndex: 0 }, 'Before'),
   around.before,
-  h(Menu.Root, closed ? { open: false, onOpenChange: () => {} } : null,
-    h(Menu.Trigger, { id: 'menu-trigger', tabIndex: 0 }, 'Actions'),
-    h(Menu.Popup, null, list)),
+  params.has('anchored') ? h(Anchored) : params.has('toolbar') ? toolbar : menu,
   around.after,
   h(Button, { id: 'reference-button', tabIndex: 0 }, 'Reference')));
 `;
@@ -143,17 +166,18 @@ for (const engine of browserEngines()) {
         const anyMenu = tab.locator('[role="menu"]').first();
         const holding = (selector) => tab.evaluate((selector) => document.activeElement === document.querySelector(selector), selector);
         const stray = () => tab.evaluate(() => document.activeElement?.outerHTML.slice(0, 120));
-        const visit = async (query) => {
+        const visit = async (query, opener = '#menu-trigger') => {
           await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'networkidle' });
-          await trigger.waitFor({ timeout: 15_000 });
+          await tab.locator(opener).waitFor({ timeout: 15_000 });
         };
-        // Opens the menu and waits for focus to be inside it, with a submenu open too when asked.
-        const open = async (how, { submenu = false } = {}) => {
+        // Opens the menu from its trigger, or from the native button that opens an anchored menu, and waits for focus to be
+        // inside it, with a submenu open too when asked.
+        const open = async (how, { submenu = false, opener = '#menu-trigger' } = {}) => {
           if (how === 'keyboard') {
-            await trigger.focus();
-            await tab.keyboard.press('ArrowDown');
+            await tab.locator(opener).focus();
+            await tab.keyboard.press(opener === '#menu-trigger' ? 'ArrowDown' : 'Enter');
           } else {
-            await trigger.click();
+            await tab.locator(opener).click();
           }
           await anyMenu.waitFor({ timeout: 5000 });
           await pollUntil(tab, () => document.activeElement?.closest('[role="menu"]') != null, undefined, { message: `${engine}: focus enters the ${how}-opened menu`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
@@ -169,25 +193,39 @@ for (const engine of browserEngines()) {
         // rules from document order: a button in a disabled fieldset cannot take focus, a positive tabindex jumps the queue
         // and so is never next, and a radio group is entered at its checked radio, not its first or last.
         const scenarios = [
-          ['a plain neighbour', '', { Tab: '#reference-button', 'Shift+Tab': '#before' }],
-          ['a disabled fieldset', '?around=fieldset', { Tab: '#after-fieldset', 'Shift+Tab': '#before' }],
-          ['a positive tabindex', '?around=positive', { Tab: '#reference-button', 'Shift+Tab': '#before' }],
-          ['a radio group', '?around=radios', { Tab: '#ra1', 'Shift+Tab': '#rb0' }],
-          ['an open submenu', '?submenu', { Tab: '#reference-button', 'Shift+Tab': '#before' }],
+          { name: 'a plain neighbour', query: '', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
+          { name: 'a disabled fieldset', query: '?around=fieldset', expected: { Tab: '#after-fieldset', 'Shift+Tab': '#before' } },
+          { name: 'a positive tabindex', query: '?around=positive', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
+          { name: 'a radio group', query: '?around=radios', expected: { Tab: '#ra1', 'Shift+Tab': '#rb0' } },
+          { name: 'an open submenu', query: '?submenu', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
+          // A Toolbar moves focus to its boundary before Tab, so Tab from the closed trigger leaves it, and so must Tab from the menu.
+          { name: 'a trigger inside a Toolbar', query: '?toolbar', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' }, closedToo: true },
+          // No Menu.Trigger: focus returns to the native button that opened the menu, or to the anchor once that is gone.
+          { name: 'a menu opened from a native button', query: '?anchored', opener: '#opener', expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
+          { name: 'a menu whose opener is gone, from its anchor', query: '?anchored&detach', opener: '#opener', detached: true, expected: { Tab: '#reference-button', 'Shift+Tab': '#before' } },
         ];
-        for (const [scenario, query, expected] of scenarios) {
-          await t.test(`Tab and Shift+Tab with ${scenario}`, async () => {
-            await visit(query);
+        for (const { name, query, opener = '#menu-trigger', detached = false, closedToo = false, expected } of scenarios) {
+          await t.test(`Tab and Shift+Tab with ${name}`, async () => {
+            await visit(query, opener);
             for (const how of ['keyboard', 'pointer']) {
               for (const key of ['Tab', 'Shift+Tab']) {
                 const label = `${engine}, opened by ${how}: ${key}`;
-                await open(how, { submenu: query === '?submenu' });
+                // The opener goes away once the menu is open, so each press starts from a fresh page.
+                if (detached) await visit(query, opener);
+                await open(how, { submenu: query === '?submenu', opener });
+                if (detached) await tab.locator(opener).waitFor({ state: 'detached', timeout: 5000 });
                 await tab.keyboard.press(key);
                 await anyMenu.waitFor({ state: 'detached', timeout: 5000 }).catch(async () => assert.fail(`${label} left the menu open with focus on ${await stray()}`));
                 await pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), expected[key], { message: `${label} moves focus to ${expected[key]}`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
-                assert.equal(await holding('#menu-trigger'), false, `${label} does not leave focus on the trigger`);
+                assert.equal(await holding(opener), false, `${label} does not leave focus on the opener`);
                 assert.equal(await tab.locator('[role="menu"]').count(), 0, `${label} closes the whole menu tree`);
               }
+            }
+            if (!closedToo) return;
+            for (const key of ['Tab', 'Shift+Tab']) {
+              await trigger.focus();
+              await tab.keyboard.press(key);
+              await pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), expected[key], { message: `${engine}: ${key} from the closed trigger moves focus to ${expected[key]}`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
             }
           });
         }
