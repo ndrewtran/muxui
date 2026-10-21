@@ -78,27 +78,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "expandedIds",
-          "defaultExpandedIds",
-          "multiple",
-          "disabled"
-        ],
-        "events": [
-          "expandedChange"
-        ],
-        "parts": [
-          "root",
-          "disclosure"
-        ],
-        "defaults": {
-          "expandedIds": [],
-          "defaultExpandedIds": [],
-          "multiple": true,
-          "disabled": false
-        }
-      },
       "behavior": [
         "Group state coordinates child Disclosure instances",
         "expandedIds and defaultExpandedIds list the id of each expanded child Disclosure, so give every child a stable id",

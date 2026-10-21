@@ -1,0 +1,211 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/resizable.ts",
+  "component": "muxui:component:resizable",
+  "binding": "web.react",
+  "export": "Resizable",
+  "api": {
+    "props": [
+      "sizes",
+      "defaultSizes",
+      "orientation",
+      "keyboardStep",
+      "keyboardLargeStep",
+      "precision",
+      "disabled",
+      "readOnly"
+    ],
+    "events": [
+      "sizesChange",
+      "sizesCommit"
+    ],
+    "defaults": {
+      "orientation": "horizontal",
+      "keyboardStep": 1,
+      "keyboardLargeStep": 10,
+      "precision": 4,
+      "disabled": false,
+      "readOnly": false
+    },
+    "propDetails": {
+      "sizes": {
+        "type": {
+          "kind": "reference",
+          "name": "ResizableSizes"
+        },
+        "required": false,
+        "description": "The panel sizes, when the caller controls them. Give sizes or defaultSizes, not both. A controlled value has a finite size for every panel id and no other keys, each within its panel's bounds, adding up to 100."
+      },
+      "defaultSizes": {
+        "type": {
+          "kind": "reference",
+          "name": "ResizableSizes"
+        },
+        "required": false,
+        "description": "The panel sizes at first, when Resizable controls them. Give sizes or defaultSizes, not both. Sizes that are missing, or that do not add up to 100, are adjusted to a valid layout."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            },
+            {
+              "kind": "literal",
+              "value": "vertical"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "horizontal",
+          "vertical"
+        ],
+        "description": "Whether the panels sit side by side or stacked."
+      },
+      "keyboardStep": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How many percent an arrow key moves a handle. A finite number greater than 0."
+      },
+      "keyboardLargeStep": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How many percent Shift with an arrow key, Page Up, or Page Down moves a handle. A finite number greater than 0."
+      },
+      "precision": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How many decimal places sizes keep, from 0 to 10."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes every handle unavailable."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the sizes and ignores resizing."
+      }
+    },
+    "eventDetails": {
+      "sizesChange": {
+        "prop": "onSizesChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "sizes",
+              "type": {
+                "kind": "reference",
+                "name": "ResizableSizes"
+              },
+              "required": true
+            },
+            {
+              "name": "meta",
+              "type": {
+                "kind": "reference",
+                "name": "ResizableChange"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports every change to the sizes, with the handle that made it and whether a pointer or the keyboard did."
+      },
+      "sizesCommit": {
+        "prop": "onSizesCommit",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "sizes",
+              "type": {
+                "kind": "reference",
+                "name": "ResizableSizes"
+              },
+              "required": true
+            },
+            {
+              "name": "meta",
+              "type": {
+                "kind": "reference",
+                "name": "ResizableChange"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports sizes worth saving: when a pointer gesture that changed the sizes ends normally, and after each keyboard change."
+      }
+    },
+    "types": {
+      "ResizableChange": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "handleId",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "source",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "literal",
+                    "value": "pointer"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "keyboard"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        },
+        "description": "The handle that changed the sizes, and whether a pointer or the keyboard did."
+      },
+      "ResizableSizes": {
+        "type": {
+          "kind": "record",
+          "value": {
+            "kind": "number"
+          },
+          "readonly": true
+        },
+        "description": "The panel sizes as percentages of the container, by panel id."
+      }
+    }
+  }
+}

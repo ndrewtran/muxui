@@ -3,8 +3,9 @@
  * nodes. Variant axes come from the catalog record (prop names and defaults)
  * and its finite values: a derived API's enum (Decision 0031), or else the
  * React package's generated prop types. The anatomy never repeats the
- * catalog's variant list. Validation fails with a diagnostic naming the
- * family and field.
+ * catalog's variant list, and names a default only for a prop the catalog
+ * states none for, such as a size inherited from a group. Validation fails
+ * with a diagnostic naming the family and field.
  */
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -62,6 +63,7 @@ export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
  *   component: string,
  *   name: string,
  *   axes: string[],
+ *   axisDefaults?: Record<string, string>,
  *   selection?: { name: string, values: Record<string, Record<string, unknown>> },
  *   states: StateName[],
  *   stateTarget: string | ((variant: Variant) => string),
@@ -71,6 +73,9 @@ export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
  *   preview?: string[],
  *   notes: string[],
  * }} Anatomy
+ *   `axisDefaults` names the value an axis leads with when the catalog record
+ *   states no default for its prop, because the component takes it from its
+ *   surroundings. An axis the catalog states a default for is not listed.
  *   `preview` lists the variant keys the generated Light/Dark/Compact preview
  *   shows, in order.
  */
@@ -138,6 +143,13 @@ export function validateAnatomyShape(anatomy) {
     if (typeof anatomy[field] !== 'string' || !anatomy[field]) fail(field, 'must be a non-empty string');
   }
   if (!Array.isArray(anatomy.axes) || anatomy.axes.some((axis) => typeof axis !== 'string')) fail('axes', 'must list catalog prop names');
+  if (anatomy.axisDefaults !== undefined) {
+    const defaults = anatomy.axisDefaults;
+    const named = defaults !== null && typeof defaults === 'object' && !Array.isArray(defaults) ? Object.entries(defaults) : null;
+    if (named === null || named.some(([axis, value]) => !anatomy.axes.includes(axis) || typeof value !== 'string')) {
+      fail('axisDefaults', 'must map listed axes to string values');
+    }
+  }
   if (!Array.isArray(anatomy.states) || anatomy.states.length === 0) fail('states', 'must list at least one state');
   for (const state of anatomy.states) {
     if (!Object.hasOwn(STATE_EFFECTS, state)) fail('states', `${state} is not one of ${Object.keys(STATE_EFFECTS).join(', ')}`);
@@ -243,14 +255,19 @@ export function catalogAxes(anatomy, { catalogRecord, reactTypes }) {
   if (!api) fail('family', 'catalog record has no web.react binding');
   return anatomy.axes.map((axis) => {
     if (!api.props.includes(axis)) fail(`axes.${axis}`, `is not a web.react prop in the catalog record (${api.props.join(', ')})`);
-    const fallback = api.defaults?.[axis];
-    if (typeof fallback !== 'string') fail(`axes.${axis}`, 'has no string default in the catalog record');
+    const catalogDefault = api.defaults?.[axis];
+    const anatomyDefault = anatomy.axisDefaults?.[axis];
+    if (catalogDefault !== undefined && anatomyDefault !== undefined) {
+      fail(`axisDefaults.${axis}`, 'restates a default the catalog record states');
+    }
+    const fallback = catalogDefault ?? anatomyDefault;
+    if (typeof fallback !== 'string') fail(`axes.${axis}`, 'has no string default in the catalog record or the anatomy');
     const derived = api.propDetails?.[axis];
     const values = derived ? derived.enum : propValues(reactTypes, `${anatomy.component}Props`, axis);
     if (!values?.length || values.some((value) => typeof value !== 'string')) {
       fail(`axes.${axis}`, `${anatomy.component}Props.${axis} has no finite string values in ${derived ? 'its derived API' : 'the React types'}`);
     }
-    if (!values.includes(fallback)) fail(`axes.${axis}`, `catalog default ${fallback} is not a React value (${values.join(', ')})`);
+    if (!values.includes(fallback)) fail(`axes.${axis}`, `${catalogDefault === undefined ? 'anatomy' : 'catalog'} default ${fallback} is not a React value (${values.join(', ')})`);
     return { prop: axis, name: axis[0].toUpperCase() + axis.slice(1), values: [fallback, ...values.filter((value) => value !== fallback)] };
   });
 }

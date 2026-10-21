@@ -76,29 +76,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "value",
-          "minValue",
-          "maxValue",
-          "label",
-          "formatOptions",
-          "aria-label",
-          "aria-labelledby"
-        ],
-        "events": [],
-        "parts": [
-          "root",
-          "label",
-          "track",
-          "fill"
-        ],
-        "defaults": {
-          "value": 0,
-          "minValue": 0,
-          "maxValue": 100
-        }
-      },
       "behavior": [
         "Values are clamped to the declared range",
         "Fill reflects the normalized percentage",

@@ -300,7 +300,9 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     historicalManifest.families.map(({ family }) => family).sort(),
     'every exact manifest family has a substantive Browser Proof plan',
   );
-  const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/index.d.ts'), 'utf8');
+  // The index names the types of Button and the R1.1 families from tsc's declarations of their sources.
+  const publicTypes = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts']
+    .map((name) => readFile(resolve(repositoryRoot, 'packages/react/generated', name), 'utf8')))).join('\n');
   let pairCount = 0;
   let eventCount = 0;
   let partCount = 0;

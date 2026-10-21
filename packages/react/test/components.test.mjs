@@ -16,7 +16,7 @@ import {
   ProgressBar,
   Separator,
   ToggleButton,
-} from '../src/components.mjs';
+} from '../src/components.ts';
 import { ToggleButtonGroup, RadioGroup } from '../src/collections.mjs';
 import { CheckboxGroup, Form } from '../src/fields.mjs';
 import { RadioField } from '../src/supplemental/index.mjs';

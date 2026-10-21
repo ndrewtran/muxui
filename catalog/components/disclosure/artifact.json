@@ -80,29 +80,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "title",
-          "children",
-          "expanded",
-          "defaultExpanded",
-          "disabled",
-          "id"
-        ],
-        "events": [
-          "expandedChange"
-        ],
-        "parts": [
-          "root",
-          "trigger",
-          "panel"
-        ],
-        "defaults": {
-          "expanded": false,
-          "defaultExpanded": false,
-          "disabled": false
-        }
-      },
       "behavior": [
         "Enter and Space toggle the panel",
         "Expanded state is controllable or internally managed",

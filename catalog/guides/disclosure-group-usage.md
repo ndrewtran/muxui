@@ -24,4 +24,4 @@ Put Disclosure elements directly inside DisclosureGroup. The grouped appearance 
 
 ## Common mistake
 
-Setting `expanded` on a Disclosure inside the group. The group owns expansion, so that setting is ignored. Set the group's default expanded ids or expanded ids instead.
+Giving a Disclosure inside the group its own expanded setting. The group owns expansion, so that setting is ignored. Set the group's default expanded ids or expanded ids instead.

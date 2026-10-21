@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:d7c6a10516c816450b3fdf161d718b42c94a8ea00e0739e9bfd8105b9d36944a -->
+<!-- @generated-content-sha256: sha256:a333d7dd03f37fedab562a2f73acb491feef51e491ef0f3ecbf51eef1b119eea -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -106,7 +106,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
 | Avatar | experimental | . | .muxui-avatar | size |
-| Breadcrumbs | experimental | . | .muxui-breadcrumbs | items, aria-label |
+| Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
 | Calendar | experimental | . | .muxui-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
@@ -130,13 +130,13 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
 | Dialog | experimental | . | .muxui-dialog | children, title, description, actions, open, defaultOpen, dismissable, trigger, onOpenChange, className, backdropClassName, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, aria-label, aria-labelledby, aria-describedby |
-| Disclosure | experimental | . | .muxui-disclosure | title, children, expanded, defaultExpanded, disabled, id |
+| Disclosure | experimental | . | .muxui-disclosure | title, expanded, defaultExpanded, disabled, id |
 | DisclosureGroup | experimental | . | .muxui-disclosure-group | expandedIds, defaultExpandedIds, multiple, disabled |
 | DropZone | experimental | . | .muxui-drop-zone | children, disabled, onDrop, onActivate, className, aria-label, aria-labelledby |
 | FileTrigger | experimental | . | .muxui-file-trigger | children, acceptedFileTypes, allowsMultiple, acceptDirectory, defaultCamera, disabled, onSelect, className |
 | Form | experimental | . | .muxui-form | validationBehavior, validationErrors, method, action, onSubmit, onReset |
 | GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
-| Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
+| Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
@@ -148,7 +148,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
 | Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect, children, open, defaultOpen, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
-| Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions, aria-label, aria-labelledby |
+| Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |

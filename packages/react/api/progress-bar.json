@@ -1,0 +1,53 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:progress-bar",
+  "binding": "web.react",
+  "export": "ProgressBar",
+  "api": {
+    "props": [
+      "value",
+      "minValue",
+      "maxValue",
+      "label"
+    ],
+    "events": [],
+    "defaults": {
+      "minValue": 0,
+      "maxValue": 100
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How far the task has got, within the range. Omitted, the bar is indeterminate and shows the text Loading."
+      },
+      "minValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The bottom of the range."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The top of the range."
+      },
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": true,
+        "description": "The visible name of the task."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

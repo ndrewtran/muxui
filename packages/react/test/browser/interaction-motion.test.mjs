@@ -12,7 +12,7 @@ function documentHtml() {
 }
 
 const serverOptions = {
-  entries: ['src/components.mjs', 'src/overlays.mjs', 'src/supplemental/index.mjs'],
+  entries: ['src/components.ts', 'src/overlays.mjs', 'src/supplemental/index.mjs'],
   pages: { '/interaction-motion.html': documentHtml },
 };
 

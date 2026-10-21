@@ -566,10 +566,11 @@ test('Decision 0031: adding a required derived prop or event is incompatible, an
 
 test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
   const { context } = await setup();
-  const recordPath = 'catalog/components/link/artifact.json';
+  // Text is generic over its element, which the closed grammar cannot derive, so it keeps an authored api.
+  const recordPath = 'catalog/components/text/artifact.json';
   const record = JSON.parse(await readFile(resolve(repositoryRoot, recordPath), 'utf8'));
   const diagnose = (candidate) => diagnoseCanonicalSource({ context, family: 'component', record: candidate, recordPath });
-  assert.equal(diagnose(record).valid, true, 'Link authors its web.react api');
+  assert.equal(diagnose(record).valid, true, 'Text authors its web.react api');
   const typed = structuredClone(record);
   typed.bindings['web.react'].api.propDetails = {};
   const diagnosis = diagnose(typed);

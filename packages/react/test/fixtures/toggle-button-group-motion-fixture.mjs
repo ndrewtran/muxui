@@ -1,5 +1,5 @@
 import React from 'react';
-import { ToggleButton } from '../../src/components.mjs';
+import { ToggleButton } from '../../src/components.ts';
 import { ToggleButtonGroup as ToggleButtonGroupCollection } from '../../src/collections.mjs';
 
 const h = React.createElement;

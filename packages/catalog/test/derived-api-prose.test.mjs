@@ -72,6 +72,17 @@ const GUIDES = {
   message: { native: ['http', 'https'] },
   activity: {},
   'data-diff': { native: ['0', 'false', 'null'] },
+  checkbox: { native: ['aria-describedby', 'FormData.get', 'FormData.has', 'false', 'null'] },
+  separator: { native: ['hr'] },
+  'disclosure-group': {},
+  group: { native: ['aria-label', 'aria-labelledby'] },
+  'progress-bar': {},
+  meter: { native: ['aria-label', 'aria-labelledby'] },
+  link: { native: ['aria-label', 'currentColor', '1em', 'aria-hidden="true"', 'focusable="false"'] },
+  disclosure: {},
+  'toggle-button': {},
+  breadcrumbs: {},
+  resizable: {},
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
@@ -206,6 +217,17 @@ test('the defaults and finite values the derived guides state are their derived 
   const [activity, activityApi] = await Promise.all([guide('activity'), derivedApi('activity')]);
   const follows = /follow its items: (.+)\./u.exec(activity)?.[1] ?? '';
   assert.deepEqual([...follows.matchAll(/`([^`]+)`/gu)].map(([, value]) => value).sort(), [...activityApi.api.propDetails.status.enum].sort());
+
+  // DisclosureGroup lets several panels stay open by default, which the guide teaches before multiple.
+  const [disclosureGroup, disclosureGroupApi] = await Promise.all([guide('disclosure-group'), derivedApi('disclosure-group')]);
+  assert.match(disclosureGroup, /Let several panels stay open, which is the default, when people compare sections\. Turn `multiple` off/u);
+  assert.equal(disclosureGroupApi.api.defaults.multiple, true);
+
+  // Meter's guide and its formatOptions description both say the value text is a percentage unless formatOptions says otherwise.
+  const [meter, meterApi] = await Promise.all([guide('meter'), derivedApi('meter')]);
+  assert.match(meter, /By default the value text is the value's position in the range as a percent/u);
+  assert.match(meterApi.api.propDetails.formatOptions.description, /Omitted, it formats the position in the range as a percentage/u);
+  assert.equal(Object.hasOwn(meterApi.api.defaults, 'formatOptions'), false, 'the percent format is a behaviour, not a stated default');
 
   // DataDiff states its row kinds and its description default.
   const [dataDiff, dataDiffApi] = await Promise.all([guide('data-diff'), derivedApi('data-diff')]);

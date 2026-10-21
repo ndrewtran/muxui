@@ -928,7 +928,8 @@ const ADAPTERS = {
     items: ownArg(args, 'items', fallback(args.items, ['Home', 'Docs'])).map((item, index) => typeof item === 'object'
       ? item
       : { id: String(index), label: String(item), href: '#' }),
-    'aria-label': fallback(args['aria-label'], 'Breadcrumb'),
+    // The name is the native aria-label, not an API default, so the story supplies the one Breadcrumbs falls back to.
+    'aria-label': fallback(args['aria-label'], 'Breadcrumbs'),
   }),
   Checkbox: (args) => e(MuxUI.Checkbox, args, 'Enable notifications'),
   Disclosure: (args) => e(MuxUI.Disclosure, { ...args, title: 'Details' }, 'Details content'),

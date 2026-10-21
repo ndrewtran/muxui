@@ -79,25 +79,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "items",
-          "aria-label"
-        ],
-        "events": [
-          "navigate"
-        ],
-        "parts": [
-          "root",
-          "list",
-          "item",
-          "link"
-        ],
-        "defaults": {
-          "items": [],
-          "aria-label": "Breadcrumbs"
-        }
-      },
       "behavior": [
         "Items render in source order",
         "The current item is derived from the final item and is not an activation target",

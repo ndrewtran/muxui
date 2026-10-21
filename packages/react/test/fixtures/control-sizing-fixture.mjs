@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../../src/button.ts';
-import { Checkbox, ToggleButton } from '../../src/components.mjs';
+import { Checkbox, ToggleButton } from '../../src/components.ts';
 import {
   ColorField,
   ComboBox,

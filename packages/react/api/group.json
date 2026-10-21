@@ -1,0 +1,73 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:group",
+  "binding": "web.react",
+  "export": "Group",
+  "api": {
+    "props": [
+      "disabled",
+      "invalid",
+      "readOnly",
+      "role"
+    ],
+    "events": [],
+    "defaults": {
+      "disabled": false,
+      "invalid": false,
+      "readOnly": false,
+      "role": "group"
+    },
+    "propDetails": {
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group disabled. It does not disable the controls inside it."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group invalid. It does not mark the controls inside it."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group read-only with a data attribute on its root. It does not lock the controls inside it."
+      },
+      "role": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "group"
+            },
+            {
+              "kind": "literal",
+              "value": "region"
+            },
+            {
+              "kind": "literal",
+              "value": "presentation"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "group",
+          "region",
+          "presentation"
+        ],
+        "description": "The role of the group's root. Use presentation when the Group only lays controls out and needs no name."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

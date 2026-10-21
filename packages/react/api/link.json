@@ -1,0 +1,149 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:link",
+  "binding": "web.react",
+  "export": "Link",
+  "api": {
+    "props": [
+      "href",
+      "disabled",
+      "current",
+      "target",
+      "rel"
+    ],
+    "events": [
+      "activate"
+    ],
+    "defaults": {
+      "current": false
+    },
+    "propDetails": {
+      "href": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "Where the Link leads. A Link without a non-empty href is disabled."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the Link. Left unset, a Link inside a disabled GridList item is disabled too."
+      },
+      "current": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the Link as the current page."
+      },
+      "target": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "Where to open the destination, as the native target attribute."
+      },
+      "rel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "How the destination relates to this page, as the native rel attribute."
+      }
+    },
+    "eventDetails": {
+      "activate": {
+        "prop": "onActivate",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "event",
+              "type": {
+                "kind": "reference",
+                "name": "LinkActivationEvent"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports an activation of the Link, in addition to following its href."
+      }
+    },
+    "types": {
+      "ButtonPointerType": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "mouse"
+            },
+            {
+              "kind": "literal",
+              "value": "pen"
+            },
+            {
+              "kind": "literal",
+              "value": "touch"
+            },
+            {
+              "kind": "literal",
+              "value": "keyboard"
+            },
+            {
+              "kind": "literal",
+              "value": "virtual"
+            },
+            {
+              "kind": "undefined"
+            }
+          ]
+        }
+      },
+      "LinkActivationEvent": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "activate"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "pointerType",
+              "type": {
+                "kind": "reference",
+                "name": "ButtonPointerType"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "target",
+              "type": {
+                "kind": "host",
+                "name": "HTMLAnchorElement"
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        },
+        "description": "What a Link's `onActivate` reports for one activation."
+      }
+    }
+  }
+}

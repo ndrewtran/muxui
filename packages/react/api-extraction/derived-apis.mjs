@@ -21,6 +21,17 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'message', name: 'Message', source: 'packages/react/src/supplemental/message.ts' },
   { slug: 'activity', name: 'Activity', source: 'packages/react/src/supplemental/activity.ts' },
   { slug: 'data-diff', name: 'DataDiff', source: 'packages/react/src/supplemental/data-diff.ts' },
+  { slug: 'checkbox', name: 'Checkbox', source: 'packages/react/src/components.ts' },
+  { slug: 'separator', name: 'Separator', source: 'packages/react/src/components.ts' },
+  { slug: 'disclosure-group', name: 'DisclosureGroup', source: 'packages/react/src/components.ts' },
+  { slug: 'group', name: 'Group', source: 'packages/react/src/components.ts' },
+  { slug: 'progress-bar', name: 'ProgressBar', source: 'packages/react/src/components.ts' },
+  { slug: 'meter', name: 'Meter', source: 'packages/react/src/components.ts' },
+  { slug: 'link', name: 'Link', source: 'packages/react/src/components.ts' },
+  { slug: 'disclosure', name: 'Disclosure', source: 'packages/react/src/components.ts' },
+  { slug: 'toggle-button', name: 'ToggleButton', source: 'packages/react/src/components.ts' },
+  { slug: 'breadcrumbs', name: 'Breadcrumbs', source: 'packages/react/src/components.ts' },
+  { slug: 'resizable', name: 'Resizable', source: 'packages/react/src/supplemental/resizable.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

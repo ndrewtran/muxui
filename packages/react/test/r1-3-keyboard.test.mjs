@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { parseColor } from 'react-aria-components';
 import { Calendar, ColorArea, ColorField, ColorSwatchPicker, Slider, ToggleButtonGroup } from '../src/collections.mjs';
-import { ToggleButton } from '../src/components.mjs';
+import { ToggleButton } from '../src/components.ts';
 import { createDom } from './support/dom.mjs';
 
 function press(target, key, modifiers = {}) {

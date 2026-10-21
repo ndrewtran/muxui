@@ -79,28 +79,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "selected",
-          "defaultSelected",
-          "disabled",
-          "size"
-        ],
-        "events": [
-          "change",
-          "activate"
-        ],
-        "parts": [
-          "root",
-          "label"
-        ],
-        "defaults": {
-          "selected": false,
-          "defaultSelected": false,
-          "disabled": false,
-          "size": "md"
-        }
-      },
       "behavior": [
         "Enter and Space toggle selection",
         "Selection is either controlled by the application or managed by the component",
