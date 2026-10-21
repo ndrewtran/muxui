@@ -1,5 +1,5 @@
 import React from 'react';
-import { DateRangePicker } from '../../src/fields.mjs';
+import { DateRangePicker } from '../../src/fields.ts';
 
 export function RangeSelectionMotionFixture() {
   const [open, setOpen] = React.useState(false);

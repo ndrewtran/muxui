@@ -51,10 +51,11 @@ test('direct publication fails closed while the package is private', () => {
 
 test('generated public types do not expose substrate APIs', async () => {
   const types = await readFile(resolve(packageRoot, 'generated/index.d.ts'), 'utf8');
-  // Button's and the overlays' types are tsc's declarations of src/button.ts and src/overlays.ts, which the index names.
+  // The types of Button, the fields, and the overlays are tsc's declarations of src/button.ts, src/fields.ts, and src/overlays.ts, which the index names.
   const buttonTypes = await readFile(resolve(packageRoot, 'generated/button.d.ts'), 'utf8');
+  const fieldTypes = await readFile(resolve(packageRoot, 'generated/fields.d.ts'), 'utf8');
   const overlayTypes = await readFile(resolve(packageRoot, 'generated/overlays.d.ts'), 'utf8');
-  for (const surface of [types, buttonTypes, overlayTypes]) {
+  for (const surface of [types, buttonTypes, fieldTypes, overlayTypes]) {
     assert.doesNotMatch(surface, /react-aria-components|react-stately|@internationalized\/date|isPending|isDisabled|isSelected|isExpanded|onPress/u);
   }
   assert.match(types, /^export type \{ ButtonActivationEvent, ButtonPointerType, ButtonProps \} from '\.\/button\.js';$/mu);
@@ -62,4 +63,6 @@ test('generated public types do not expose substrate APIs', async () => {
   assert.match(buttonTypes, /export (?:interface|type) ButtonProps/u);
   assert.match(types, /^export type \{ DialogProps,[^}]* \} from '\.\/overlays\.js';$/mu);
   assert.match(overlayTypes, /export (?:interface|type) DialogProps/u);
+  assert.match(types, /^export type \{ AutocompleteItem,[^}]* \} from '\.\/fields\.js';$/mu);
+  assert.match(fieldTypes, /export (?:interface|type) TextFieldProps/u);
 });

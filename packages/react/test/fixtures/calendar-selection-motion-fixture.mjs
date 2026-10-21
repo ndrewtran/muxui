@@ -2,7 +2,7 @@ import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { MotionConfig } from 'motion/react';
 import { Calendar } from '../../src/collections.mjs';
-import { DatePicker } from '../../src/fields.mjs';
+import { DatePicker } from '../../src/fields.ts';
 
 function CalendarSelectionMotionFixture() {
   const [value, setValue] = React.useState('2026-02-14');

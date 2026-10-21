@@ -235,7 +235,7 @@ test('field families share TextField interaction states in light, dark, and forc
 createRoot(document.getElementById('root')).render(React.createElement(FieldStatesBrowserFixture));`;
   const html = pageShell({ body: '<div id="root"></div>', entry: '/field-states-browser-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/fields.mjs', 'src/collections.mjs', 'src/supplemental/index.mjs', 'src/supplemental/select-native.ts'],
+    entries: ['src/fields.ts', 'src/collections.mjs', 'src/supplemental/index.mjs', 'src/supplemental/select-native.ts'],
     pages: { '/field-states.html': html },
     modules: { '/field-states-browser-entry.mjs': entry },
   });

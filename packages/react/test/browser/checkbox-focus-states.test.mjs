@@ -289,7 +289,7 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     import { createRoot } from 'react-dom/client';
     import { Checkbox } from '/src/components.ts';
     import { RadioGroup } from '/src/collections.mjs';
-    import { Switch } from '/src/fields.mjs';
+    import { Switch } from '/src/fields.ts';
     import { CheckboxField, RadioField, SwitchField } from '/src/supplemental/index.mjs';
     import '/generated/styles.css';
     const h = React.createElement;
@@ -321,7 +321,7 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     main { display: grid; gap: 12px; justify-items: start; }
   </style>`, body: '<div id="root"></div>', entry: '/checkbox-invalid-states-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.ts', 'src/collections.mjs', 'src/fields.mjs', 'src/supplemental/index.mjs'],
+    entries: ['src/components.ts', 'src/collections.mjs', 'src/fields.ts', 'src/supplemental/index.mjs'],
     pages: { '/checkbox-invalid.html': html },
     modules: { '/checkbox-invalid-states-entry.mjs': entry },
   });

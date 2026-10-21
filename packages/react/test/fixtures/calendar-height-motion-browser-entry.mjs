@@ -1,7 +1,7 @@
 import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { Calendar, RangeCalendar } from '../../src/collections.mjs';
-import { DatePicker, DateRangePicker } from '../../src/fields.mjs';
+import { DatePicker, DateRangePicker } from '../../src/fields.ts';
 
 // Hydration commits before this effect runs, so the flag tells the test that clicks reach React.
 function Hydrated({ children }) {

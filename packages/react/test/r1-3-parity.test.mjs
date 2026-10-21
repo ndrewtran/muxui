@@ -33,11 +33,14 @@ function propPattern(prop) {
 
 test('R1.3 artifact declarations have a generated MuxUI type and runtime surface', async () => {
   const repositoryRoot = resolve(import.meta.dirname, '../../..');
-  const [types, runtime, styles] = await Promise.all([
+  const [fieldTypes, indexTypes, runtime, styles] = await Promise.all([
+    readFile(resolve(import.meta.dirname, '../generated/fields.d.ts'), 'utf8'),
     readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8'),
     readFile(resolve(import.meta.dirname, '../src/collections.mjs'), 'utf8'),
     readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8'),
   ]);
+  // The field types a collection inherits are declared by fields.ts, ahead of the index that names them.
+  const types = `${fieldTypes}\n${indexTypes}`;
   assert.match(styles, /\.muxui-radio-indicator\b/u, 'RadioGroup needs a Mux UI-owned visible indicator');
   assert.match(styles, /\.muxui-radio\[data-selected\] \.muxui-radio-indicator/u, 'RadioGroup needs selected indicator styling');
   assert.match(styles, /\.muxui-radio\[data-focus-visible\]/u, 'RadioGroup needs a focus-visible affordance');

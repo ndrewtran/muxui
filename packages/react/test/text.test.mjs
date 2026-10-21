@@ -12,7 +12,7 @@ import {
   TextField as AriaTextField,
 } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
-import { TextField } from '../src/fields.mjs';
+import { TextField } from '../src/fields.ts';
 import { Text } from '../src/supplemental/index.mjs';
 import { installDom } from './support/dom.mjs';
 

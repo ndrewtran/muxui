@@ -8,7 +8,7 @@ import {
   SearchField,
   TextField,
   TimeField,
-} from '../../src/fields.mjs';
+} from '../../src/fields.ts';
 import {
   ColorField,
   ComboBox,

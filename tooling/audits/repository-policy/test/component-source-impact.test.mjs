@@ -591,11 +591,11 @@ test('shared date popover styles resolve through each picker family selector', a
   assert.notEqual(before, after, 'fixture must target the shared date popover shadow rule');
   const records = [
     {
-      family: 'DatePicker', export: 'DatePicker', slug: 'date-picker', source: 'packages/react/src/fields.mjs',
+      family: 'DatePicker', export: 'DatePicker', slug: 'date-picker', source: 'packages/react/src/fields.ts',
       parts: ['root', 'label', 'input', 'segment', 'trigger', 'calendar', 'description', 'error'],
     },
     {
-      family: 'DateRangePicker', export: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.mjs',
+      family: 'DateRangePicker', export: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.ts',
       parts: ['root', 'label', 'start', 'end', 'trigger', 'calendar', 'description', 'error'],
     },
   ];

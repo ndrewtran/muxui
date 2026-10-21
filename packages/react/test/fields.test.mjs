@@ -18,7 +18,7 @@ import {
   Switch,
   TextField,
   TimeField,
-} from '../src/fields.mjs';
+} from '../src/fields.ts';
 import { installDom } from './support/dom.mjs';
 
 function OptionsWrapper() {
@@ -461,7 +461,8 @@ test('R1.2 form controls follow controlled values and submit/reset through FormD
 });
 
 test('R1.2 public date contracts are ISO strings and do not expose upstream date types', async () => {
-  const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../generated/index.d.ts', import.meta.url), 'utf8'));
+  // The date types are declared by fields.ts, and the barrel names them.
+  const source = (await Promise.all(['fields.d.ts', 'index.d.ts'].map((name) => readFile(new URL(`../generated/${name}`, import.meta.url), 'utf8')))).join('\n');
   assert.match(source, /MuxUIDateValue = string/u);
   assert.match(source, /MuxUIDateRange/u);
   assert.doesNotMatch(source, /react-stately|@internationalized\/date|export type DateValue|export type TimeValue/u);
@@ -1118,14 +1119,13 @@ test('R1.2 readonly autocomplete only permits viewing suggestions', async () => 
 });
 
 test('R1.2 autocomplete placeholder stays aligned across artifact, types, and runtime', async () => {
-  const { readFile } = await import('node:fs/promises');
   const [artifactSource, typesSource] = await Promise.all([
     readFile(new URL('../../../catalog/components/autocomplete/artifact.json', import.meta.url), 'utf8'),
-    readFile(new URL('../generated/index.d.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../generated/fields.d.ts', import.meta.url), 'utf8'),
   ]);
   const artifact = JSON.parse(artifactSource);
   assert.equal(artifact.bindings['web.react'].api.props.includes('placeholder'), true);
-  assert.match(typesSource, /export type AutocompleteProps = .*placeholder\?: string;/u);
+  assert.match(typesSource, /export type AutocompleteOwnProps = \{[^}]*?placeholder\?: string;/u);
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', placeholder: 'Search city' }));
   assert.match(server, /placeholder="Search city"/u);
 });

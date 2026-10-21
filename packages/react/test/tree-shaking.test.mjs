@@ -78,3 +78,28 @@ test('a bundle that uses another overlay drops Dialog, Popover, and their motion
   assert.ok(withPopover.includes('popover-motion.mjs'));
   assert.equal(withPopover.includes('dialog-motion.mjs'), false);
 });
+
+// Switch, DatePicker, DateRangePicker, and Autocomplete are wrapped in a pure-annotated function, and
+// two module-level values carry the annotation too. Without it, a bundler keeps the motion modules
+// they reach whenever any field is imported.
+test('tsc keeps the pure annotations in fields.js', () => {
+  const emitted = readFileSync(resolve(generated, 'fields.js'), 'utf8');
+  for (const name of ['Switch', 'DatePicker', 'DateRangePicker', 'Autocomplete']) {
+    assert.match(emitted, new RegExp(`^export const ${name} = \\/\\*#__PURE__\\*\\/ \\(\\(\\) => \\{$`, 'mu'), name);
+  }
+  assert.match(emitted, /^const TIME_PLACEHOLDER = \/\*#__PURE__\*\/ parseTime\(/mu);
+  assert.match(emitted, /^const MUX_RUNTIME_SCOPE_SELECTOR = \/\*#__PURE__\*\/ \[/mu);
+});
+
+test('a bundle that uses one field keeps only the motion modules that field needs', async () => {
+  const MOTION = ['calendar-height-motion.mjs', 'date-popover-motion.mjs', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'popover-motion.mjs', 'range-selection-motion.mjs'];
+  const motionKept = async (name) => (await bundledModules(name, 'fields.js')).filter((module) => MOTION.includes(module)).sort();
+  for (const name of ['TextField', 'SearchField', 'NumberField', 'CheckboxGroup', 'Form', 'DateField', 'TimeField']) {
+    assert.deepEqual(await motionKept(name), [], name);
+  }
+  assert.deepEqual(await motionKept('Switch'), ['motion-geometry.mjs', 'motion.mjs']);
+  const dateMotion = ['calendar-height-motion.mjs', 'date-popover-motion.mjs', 'motion-geometry.mjs', 'motion.mjs', 'range-selection-motion.mjs'];
+  assert.deepEqual(await motionKept('DatePicker'), dateMotion);
+  assert.deepEqual(await motionKept('DateRangePicker'), dateMotion);
+  assert.deepEqual(await motionKept('Autocomplete'), ['motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'popover-motion.mjs']);
+});

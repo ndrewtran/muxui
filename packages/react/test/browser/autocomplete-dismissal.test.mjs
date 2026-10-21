@@ -10,7 +10,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Autocomplete } from '/src/fields.mjs';
+import { Autocomplete } from '/src/fields.ts';
 
 const items = [{ id: 'one', label: 'One', textValue: 'One' }, { id: 'two', label: 'Two', textValue: 'Two' }];
 let root;
@@ -75,7 +75,7 @@ const armed = { frames: 0, listeners: 2 };
 for (const engine of browserEngines()) {
   test(`Autocomplete dismissal keeps the list closed without swallowing later focus in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/fields.mjs'],
+      entries: ['src/fields.ts'],
       pages: { '/autocomplete-dismissal.html': page },
       modules: { '/autocomplete-dismissal-entry.mjs': entry },
     });

@@ -23,7 +23,7 @@ import {
   Switch,
   TimeField,
   TextField,
-} from '../../src/fields.mjs';
+} from '../../src/fields.ts';
 import {
   AlertDialog,
   CheckboxField,

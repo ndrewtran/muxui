@@ -1,5 +1,5 @@
 import React from 'react';
-import { Switch } from '../../src/fields.mjs';
+import { Switch } from '../../src/fields.ts';
 
 export function SwitchMotionFixture() {
   const [selected, setSelected] = React.useState(false);

@@ -29,7 +29,7 @@ function serverMarkup(fixedTime) {
     Date.now = () => ${fixedTime};
     const React = (await import('react')).default;
     const { renderToString } = await import('react-dom/server');
-    const { DateField, DatePicker, DateRangePicker } = await import(${JSON.stringify(resolve(packageRoot, 'src/fields.mjs'))});
+    const { DateField, DatePicker, DateRangePicker } = await import(${JSON.stringify(resolve(packageRoot, 'src/fields.ts'))});
     ${FIXTURE}
     process.stdout.write(renderToString(React.createElement(PickerFixture)));`;
   return execFileSync(process.execPath, ['--input-type=module', '-e', script], { cwd: packageRoot, env: { ...process.env, TZ: 'Pacific/Kiritimati' }, encoding: 'utf8' });
@@ -39,12 +39,12 @@ async function openAtCurrentMonth(fixedTime, { todayLabel, heading, year }) {
   const markup = serverMarkup(fixedTime);
   const entry = `import React from 'react';
     import { hydrateRoot } from 'react-dom/client';
-    import { DateField, DatePicker, DateRangePicker } from '/src/fields.mjs';
+    import { DateField, DatePicker, DateRangePicker } from '/src/fields.ts';
     import '/generated/styles.css';
     ${FIXTURE}
     hydrateRoot(document.getElementById('root'), React.createElement(PickerFixture));`;
   const { url, close } = await startServer({
-    entries: ['src/fields.mjs'],
+    entries: ['src/fields.ts'],
     pages: { '/date-picker.html': pageShell({ head: '<link rel="stylesheet" href="/generated/styles.css">', body: `<div id="root">${markup}</div>`, entry: '/date-picker-entry.mjs' }) },
     modules: { '/date-picker-entry.mjs': entry },
   });
