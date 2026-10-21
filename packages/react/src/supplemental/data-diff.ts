@@ -21,9 +21,11 @@ export type DataDiffRow =
 
 /**
  * The props Mux UI defines for DataDiff; the catalog's web.react API is derived from
- * this interface (Decision 0031).
+ * this type (Decision 0031).
+ * It is a type literal, not an interface, so the public props type stays assignable to
+ * Record<string, unknown>, as it was before the move.
  */
-interface DataDiffOwnProps {
+type DataDiffOwnProps = {
   /** Visible heading and accessible table name. Native title remains a tooltip. */
   label: string;
   /** What Apply will do, shown under the heading. */
@@ -48,7 +50,7 @@ interface DataDiffOwnProps {
   applyLabel?: string;
   /** The text shown when there are no rows. */
   emptyMessage?: string;
-}
+};
 
 export type DataDiffProps = DataDiffOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof DataDiffOwnProps | 'children' | 'dangerouslySetInnerHTML'> & {
   children?: never;
