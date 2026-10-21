@@ -17,6 +17,7 @@ const SOURCE_ROUTES = Object.freeze({
   'color-wheel': ['test/r1-3-parity.test.mjs'],
   'color-picker': ['test/r1-3-parity.test.mjs'],
   'color-swatch-picker': ['test/r1-3-parity.test.mjs'],
+  'list-box': ['test/r1-3-parity.test.mjs'],
   collections: ['test/r1-3-parity.test.mjs'],
   overlays: ['test/r1-4-overlays.test.mjs'],
   markdown: ['test/heavy-components.test.mjs'],
