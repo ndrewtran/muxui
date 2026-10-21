@@ -1211,6 +1211,12 @@ function sidebarFocusFirst(candidates, roots) {
   }
   return false;
 }
+const SIDEBAR_TABBABLE = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable]:not([contenteditable="false"])';
+/** The control Tab (or Shift+Tab) reaches from `origin`, in document order, skipping disabled, hidden and `popup` controls. */
+function sidebarTabbableBeside(origin, backwards, popup) {
+  const stops = [...document.querySelectorAll(SIDEBAR_TABBABLE)].filter((node) => node === origin || (node.tabIndex >= 0 && !node.disabled && !popup.contains(node) && !sidebarUnreachable(node)));
+  return stops[stops.indexOf(origin) + (backwards ? -1 : 1)];
+}
 /** The column's focus candidates after its drawer is gone: the link matching the drawer's focused link, the current link, a Toggle, then Root. */
 function sidebarColumnCandidates({ roots, toggles }, href) {
   const links = [...roots].flatMap((root) => [...root.querySelectorAll('a[href]')]);
@@ -1443,8 +1449,23 @@ const Sidebar = {
   AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) {
     const sidebar = React.useContext(SidebarContext);
     const card = React.useRef(null);
+    const button = React.useRef(null);
     React.useImperativeHandle(ref, () => card.current);
     const [open, setOpen] = React.useState(false);
+    // Tab leaves an open menu, as it does for a menu button: the menu closes and focus goes to the control after the
+    // button (Shift+Tab, before it). The browser cannot do that itself, because the rest of the page is inert while the
+    // menu is open. The portalled menu's keydown bubbles here through the React tree.
+    const leaveMenu = (event) => {
+      props.onKeyDown?.(event);
+      const popup = event.target.closest?.('.muxui-menu-popup');
+      if (event.key !== 'Tab' || !open || !popup || card.current.contains(event.target)) return;
+      event.preventDefault();
+      const trigger = button.current;
+      const next = sidebarTabbableBeside(trigger, event.shiftKey, popup);
+      setOpen(false);
+      // Focus goes to the button when the menu closes, so that counts as still waiting, like the menu itself.
+      if (next) sidebarHandoff(() => [next], new Set(), (active) => active === trigger || active.closest('[role="menu"]'));
+    };
     // A folded rail hides the options button, so a menu left open has nothing to anchor to or return focus to:
     // close it and hand focus to a Toggle, else Root.
     const collapsed = Boolean(sidebar?.collapsed);
@@ -1455,7 +1476,7 @@ const Sidebar = {
     }, [collapsed]);
     // The options button exists to open the AccountMenu child, so a card without one has no button.
     const hasMenu = React.Children.toArray(children).length > 0;
-    const content = h('div', { ...props, ref: card, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), hasMenu && h(IconButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
+    const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), hasMenu && h(IconButton, { ref: button, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
     return hasMenu ? h(SidebarAccountContext.Provider, { value: card }, h(AriaMenuTrigger, { isOpen: open && !collapsed, onOpenChange: setOpen }, content)) : content;
   }),
   AccountMenu: React.forwardRef(function SidebarAccountMenu({ className, ...props }, ref) {

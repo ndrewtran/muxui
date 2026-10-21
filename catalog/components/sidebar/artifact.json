@@ -145,7 +145,7 @@
         "A folded header is clipped to the rail, so only what fits in the rail's width stays visible; give the header a compact leading mark.",
         "When Root sets its own id, Toggle's aria-controls names the generated id until hydration.",
         "An AccountCard that holds an AccountMenu shows an Account options button that opens that menu from the card; a card without an AccountMenu has no button, and AccountMenu is only valid inside AccountCard.",
-        "AccountMenu takes Menu items, and the button names the menu. Escape or choosing an item closes it and returns focus to the button, and folding the sidebar closes it and moves focus to a Toggle, else Root."
+        "AccountMenu takes Menu items, and the button names the menu. Escape or choosing an item closes it and returns focus to the button, Tab or Shift+Tab closes it and moves focus to the control after or before the button, and folding the sidebar closes it and moves focus to a Toggle, else Root."
       ],
       "accessibility": [
         "A nested group without a link uses native disclosure semantics; a group that is also a link pairs it with a toggle button that reports aria-expanded and controls the nested list.",

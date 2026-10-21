@@ -1555,3 +1555,53 @@ for (const engine of browserEngines()) {
     }
   });
 }
+
+for (const engine of browserEngines()) {
+  test(`Sidebar AccountMenu closes on Tab and lets focus move on from its button in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs', 'src/collections.mjs'],
+      pages: { '/sidebar.html': page },
+      modules: { '/sidebar-entry.mjs': entry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar.html`, 'aside');
+      const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+      try {
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        await tab.goto(`${url}/sidebar.html?layout=account`, { waitUntil: 'networkidle' });
+        await tab.locator('aside').waitFor({ timeout: 15_000 });
+        const menu = tab.getByRole('menu');
+        // The controls either side of the account button in tab order, and which one holds focus.
+        const holding = (selector) => tab.evaluate((selector) => document.activeElement === document.querySelector(selector), selector);
+        for (const [key, neighbour, where] of [['Tab', '.muxui-sidebar__toggle', 'after'], ['Shift+Tab', 'a[href="#home"]', 'before']]) {
+          await tab.locator('.muxui-sidebar__account-trigger').focus();
+          await tab.keyboard.press('ArrowDown');
+          await menu.waitFor({ timeout: 5000 });
+          await tab.keyboard.press(key);
+          await menu.waitFor({ state: 'detached', timeout: 5000 });
+          await pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), neighbour, { message: `${engine}: ${key} in the menu closes it and moves focus to the control ${where} the button`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          assert.equal(await holding('.muxui-sidebar__account-trigger'), false, `${engine}: ${key} does not leave focus on the button`);
+        }
+        // Tab on the closed button moves on as usual, and the menu still closes with Escape afterwards.
+        await tab.locator('.muxui-sidebar__account-trigger').focus();
+        await tab.keyboard.press('Tab');
+        assert.equal(await holding('.muxui-sidebar__toggle'), true, `${engine}: Tab from the closed button reaches the next control`);
+        await tab.locator('.muxui-sidebar__account-trigger').focus();
+        await tab.keyboard.press('ArrowDown');
+        await menu.waitFor({ timeout: 5000 });
+        await tab.keyboard.press('Escape');
+        await menu.waitFor({ state: 'detached', timeout: 5000 });
+        assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+      } finally {
+        await context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
