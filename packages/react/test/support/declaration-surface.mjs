@@ -96,6 +96,27 @@ export function barrelDeclarations(entry) {
 }
 
 /**
+ * Runs `tsc -p config` (`tsc` is the compiler's script) and returns the diagnostic line each error
+ * printed, elaborations left out. An absent diagnostic means a pair passed, so a compile that did not
+ * run to completion must fail rather than read as every pair passing: a spawn error or a truncated
+ * read (`maxBuffer`), a signal, anything on stderr, an exit status other than the compiler's own
+ * 0, 1, and 2, and an exit status that disagrees with whether any diagnostic printed all throw.
+ */
+export function tscDiagnostics({ tsc, config, directory, maxBuffer = 1 << 28 }) {
+  const result = spawnSync(process.execPath, [tsc, '--noEmit', '--pretty', 'false', '-p', config], { cwd: directory, encoding: 'utf8', maxBuffer });
+  const label = `tsc ${tsc} -p ${config}`;
+  if (result.error) throw new Error(`${label} did not complete: ${result.error.message}`, { cause: result.error });
+  if (result.signal) throw new Error(`${label} was stopped by ${result.signal}`);
+  if (result.stderr !== '') throw new Error(`${label} wrote to stderr: ${result.stderr.trim().slice(0, 500)}`);
+  // The compiler prints each diagnostic on a line of its own, with any elaboration indented below it.
+  const diagnostics = result.stdout.split('\n').filter((text) => text !== '' && !/^\s/u.test(text));
+  if (![0, 1, 2].includes(result.status) || (result.status === 0) !== (diagnostics.length === 0)) {
+    throw new Error(`${label} exited ${result.status} with ${diagnostics.length} diagnostics`);
+  }
+  return diagnostics;
+}
+
+/**
  * The exported types that satisfy `T extends Record<string, unknown>`, as a consumer's
  * generic constraint does. A type alias of object literal types qualifies, an interface does
  * not, and an intersection qualifies only when every part does. The record this is compared
@@ -114,11 +135,8 @@ export function indexSignatureCompatible({ directory, specifier, names, exactOpt
     compilerOptions: { target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, skipLibCheck: true, noEmit: true, types: [], exactOptionalPropertyTypes },
     files: ['index-signature-probe.ts'],
   })}\n`);
-  const result = spawnSync(process.execPath, [tsc, '--noEmit', '--pretty', 'false', '-p', config], { cwd: directory, encoding: 'utf8', maxBuffer: 1 << 28 });
-  if (result.error) throw result.error;
   const rejected = new Set();
-  // The compiler prints each diagnostic on a line of its own, with any elaboration indented below it.
-  for (const line of result.stdout.split('\n').filter((text) => text !== '' && !/^\s/u.test(text))) {
+  for (const line of tscDiagnostics({ tsc, config, directory })) {
     const [, row, code] = /index-signature-probe\.ts\((\d+),\d+\): error (TS\d+):/u.exec(line) ?? [];
     // Only the constraint failing counts; a name that does not resolve must not read as compatible.
     if (code !== 'TS2344') throw new Error(`index-signature probe: ${line}`);
@@ -156,11 +174,8 @@ export function augmentationReach({ directory, specifier, interfaces, types, tsc
     compilerOptions: { target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, skipLibCheck: true, noEmit: true, types: [] },
     files: ['augmentation-reach-probe.ts'],
   })}\n`);
-  // A compile that misses a pair prints one line each, so the output is large; a truncated read must fail, not read as reached.
-  const result = spawnSync(process.execPath, [tsc, '--noEmit', '--pretty', 'false', '-p', config], { cwd: directory, encoding: 'utf8', maxBuffer: 1 << 28 });
-  if (result.error) throw result.error;
   const missed = new Set();
-  for (const line of result.stdout.split('\n').filter((text) => text !== '' && !/^\s/u.test(text))) {
+  for (const line of tscDiagnostics({ tsc, config, directory })) {
     const [, row, code] = /augmentation-reach-probe\.ts\((\d+),\d+\): error (TS\d+):/u.exec(line) ?? [];
     // Only the assertion failing counts; an interface that cannot be augmented or a name that does not resolve must not read as reached.
     if (code !== 'TS2344') throw new Error(`augmentation-reach probe: ${line}`);

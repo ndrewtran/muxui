@@ -11,6 +11,7 @@ import {
   augmentationReach,
   consumerTsc,
   indexSignatureCompatible,
+  tscDiagnostics,
   typeScript7Tsc,
   verifiedTypeScript6,
 } from './support/declaration-surface.mjs';
@@ -78,6 +79,30 @@ test('the augmentation check sees a type derived from an interface, and not a fl
       // every arm does, and an index signature is not a reach.
       assert.deepEqual(reach, { Base: ['Derived', 'Extension', 'Intersection'] }, tsc);
     }
+  });
+});
+
+test('a compile that did not complete fails the reach and index checks instead of passing every pair', () => {
+  withProject({ 'fixture.d.ts': 'export interface Base { label?: string }\nexport type Flat = { label?: string };' }, (directory) => {
+    const compiler = (name, source) => {
+      const script = join(directory, name);
+      writeFileSync(script, source);
+      return script;
+    };
+    const failures = {
+      'exits 1 with only stderr': [compiler('stderr.mjs', "process.stderr.write('tsc: internal error\\n'); process.exit(1);"), /wrote to stderr: tsc: internal error/u],
+      'is stopped by a signal': [compiler('signal.mjs', "process.kill(process.pid, 'SIGKILL');"), /was stopped by SIGKILL/u],
+      'exits 1 with no diagnostic': [compiler('silent.mjs', 'process.exit(1);'), /exited 1 with 0 diagnostics/u],
+      'exits 0 after a diagnostic': [compiler('contradiction.mjs', "console.log('probe.ts(1,1): error TS2344: x'); process.exit(0);"), /exited 0 with 1 diagnostics/u],
+      'exits with a status the compiler does not use': [compiler('status.mjs', 'process.exit(9);'), /exited 9 with 0 diagnostics/u],
+    };
+    for (const [reason, [tsc, pattern]] of Object.entries(failures)) {
+      assert.throws(() => augmentationReach({ directory, specifier: './fixture.js', interfaces: ['Base'], types: ['Base', 'Flat'], tsc }), pattern, `reach: ${reason}`);
+      assert.throws(() => indexSignatureCompatible({ directory, specifier: './fixture.js', names: ['Flat'], exactOptionalPropertyTypes: false, tsc }), pattern, `index: ${reason}`);
+    }
+    // A read cut short by the output limit.
+    const noisy = compiler('noisy.mjs', "process.stdout.write('x'.repeat(1 << 16)); process.exit(1);");
+    assert.throws(() => tscDiagnostics({ tsc: noisy, config: 'tsconfig.json', directory, maxBuffer: 1024 }), /did not complete: .*ENOBUFS/u);
   });
 });
 
