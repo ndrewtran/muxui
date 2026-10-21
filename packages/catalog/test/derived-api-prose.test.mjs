@@ -26,6 +26,18 @@ function bulletSubjects(markdown, heading) {
 /** The bullet value a section marks as the default: "- `a`, the default, ...". */
 const bulletDefault = (markdown, heading) => /^- `([^`]+)`, the default,/mu.exec(section(markdown, heading))?.[1];
 
+/** The literal values a derived type admits, through named types and object arms' members named `member`. */
+function literals(type, types, member) {
+  switch (type.kind) {
+    case 'literal': return [type.value];
+    case 'reference': return literals(types[type.name].type, types, member);
+    case 'union': return type.members.flatMap((arm) => literals(arm, types, member));
+    case 'array': return literals(type.element, types, member);
+    case 'object': return member === undefined ? [] : type.members.filter(({ name }) => name === member).flatMap(({ type: memberType }) => literals(memberType, types));
+    default: return [];
+  }
+}
+
 /** Every member name of the object types a derived block reaches, inline or named. */
 function memberNames(value, names = new Set()) {
   if (Array.isArray(value)) value.forEach((item) => memberNames(item, names));
@@ -57,6 +69,9 @@ const GUIDES = {
   image: { native: ['width', 'height'] },
   // Avatar's block is Avatar.Root's; alt is Avatar.Image's native image attribute.
   avatar: { native: ['alt', 'alt=""'] },
+  message: { native: ['http', 'https'] },
+  activity: {},
+  'data-diff': { native: ['0', 'false', 'null'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
@@ -179,4 +194,22 @@ test('the defaults and finite values the derived guides state are their derived 
   const [image, imageApi] = await Promise.all([guide('image'), derivedApi('image')]);
   assert.deepEqual(bulletSubjects(image, 'Choosing a fit'), imageApi.api.propDetails.fit.enum);
   assert.equal(bulletDefault(image, 'Choosing a fit'), imageApi.api.defaults.fit);
+
+  // Message lists exactly the senders and the default one.
+  const [message, messageApi] = await Promise.all([guide('message'), derivedApi('message')]);
+  const sender = /^- `sender` is (.+), and defaults to `([^`]+)`\./mu.exec(message);
+  assert.ok(sender, 'the Message guide states its senders');
+  assert.deepEqual([...sender[1].matchAll(/`([^`]+)`/gu)].map(([, value]) => value), messageApi.api.propDetails.sender.enum);
+  assert.equal(sender[2], messageApi.api.defaults.sender);
+
+  // Activity's group follows its items through every status.
+  const [activity, activityApi] = await Promise.all([guide('activity'), derivedApi('activity')]);
+  const follows = /follow its items: (.+)\./u.exec(activity)?.[1] ?? '';
+  assert.deepEqual([...follows.matchAll(/`([^`]+)`/gu)].map(([, value]) => value).sort(), [...activityApi.api.propDetails.status.enum].sort());
+
+  // DataDiff states its row kinds and its description default.
+  const [dataDiff, dataDiffApi] = await Promise.all([guide('data-diff'), derivedApi('data-diff')]);
+  const kinds = /already marked as ([a-z, ]+), and DataDiff/u.exec(dataDiff)?.[1].split(/, (?:or )?/u) ?? [];
+  assert.deepEqual(kinds.sort(), [...new Set(literals(dataDiffApi.api.types.DataDiffRow.type, dataDiffApi.api.types, 'kind'))].sort());
+  assert.match(dataDiff, new RegExp(`The default is ${dataDiffApi.api.defaults.description}\\.`, 'u'));
 });

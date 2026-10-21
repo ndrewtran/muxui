@@ -1,0 +1,374 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/data-diff.ts",
+  "component": "muxui:component:data-diff",
+  "binding": "web.react",
+  "export": "DataDiff",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "columns",
+      "rows",
+      "selectedIds",
+      "defaultSelectedIds",
+      "pending",
+      "disabled",
+      "applyLabel",
+      "emptyMessage"
+    ],
+    "events": [
+      "selectionChange",
+      "apply"
+    ],
+    "defaults": {
+      "description": "Select changes to apply",
+      "pending": false,
+      "disabled": false,
+      "emptyMessage": "No rows to review."
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "string"
+        },
+        "required": true,
+        "description": "Visible heading and accessible table name. Native title remains a tooltip."
+      },
+      "description": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "What Apply will do, shown under the heading."
+      },
+      "columns": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "DataDiffColumn"
+          },
+          "readonly": true
+        },
+        "required": true,
+        "description": "The columns, each with a unique, nonblank id and label."
+      },
+      "rows": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "DataDiffRow"
+          },
+          "readonly": true
+        },
+        "required": true,
+        "description": "Records contain exactly the declared column IDs, with explicit scalar values."
+      },
+      "selectedIds": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The selected row ids, when the caller controls the selection."
+      },
+      "defaultSelectedIds": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The ids selected at first, when DataDiff controls the selection. Without them every enabled proposed change starts selected; unchanged rows are never selectable."
+      },
+      "pending": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks an apply in flight: selection and Apply are unavailable."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes selection and Apply unavailable."
+      },
+      "applyLabel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "Replaces the whole Apply button label, which otherwise counts the selected changes."
+      },
+      "emptyMessage": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text shown when there are no rows."
+      }
+    },
+    "eventDetails": {
+      "selectionChange": {
+        "prop": "onSelectionChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "ids",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": true
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the selected row ids, in row order, after each selection change."
+      },
+      "apply": {
+        "prop": "onApply",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "ids",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": true
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called only by explicit Apply activation, with selected IDs in row order."
+      }
+    },
+    "types": {
+      "DataDiffColumn": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": true
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": true
+            }
+          ]
+        }
+      },
+      "DataDiffRow": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "disabled",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": false,
+                  "readonly": true
+                },
+                {
+                  "name": "kind",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "literal",
+                        "value": "unchanged"
+                      },
+                      {
+                        "kind": "literal",
+                        "value": "added"
+                      },
+                      {
+                        "kind": "literal",
+                        "value": "removed"
+                      }
+                    ]
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "values",
+                  "type": {
+                    "kind": "reference",
+                    "name": "DataDiffValues"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "before",
+                  "type": {
+                    "kind": "never"
+                  },
+                  "required": false,
+                  "readonly": true
+                },
+                {
+                  "name": "after",
+                  "type": {
+                    "kind": "never"
+                  },
+                  "required": false,
+                  "readonly": true
+                }
+              ]
+            },
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "disabled",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": false,
+                  "readonly": true
+                },
+                {
+                  "name": "kind",
+                  "type": {
+                    "kind": "literal",
+                    "value": "updated"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "before",
+                  "type": {
+                    "kind": "reference",
+                    "name": "DataDiffValues"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "after",
+                  "type": {
+                    "kind": "reference",
+                    "name": "DataDiffValues"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "values",
+                  "type": {
+                    "kind": "never"
+                  },
+                  "required": false,
+                  "readonly": true
+                }
+              ]
+            }
+          ]
+        },
+        "description": "A proposed change to one row: added, removed, and unchanged rows carry values, updated rows before and after."
+      },
+      "DataDiffValue": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "string"
+            },
+            {
+              "kind": "number"
+            },
+            {
+              "kind": "boolean"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        }
+      },
+      "DataDiffValues": {
+        "type": {
+          "kind": "record",
+          "value": {
+            "kind": "reference",
+            "name": "DataDiffValue"
+          },
+          "readonly": true
+        },
+        "description": "A row's value for each declared column, by column id."
+      }
+    }
+  }
+}

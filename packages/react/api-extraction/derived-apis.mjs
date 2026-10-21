@@ -18,6 +18,9 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'image', name: 'Image', source: 'packages/react/src/supplemental/image.ts' },
   // A compound: its API is that of Avatar.Root, the part the binding's root renders.
   { slug: 'avatar', name: 'Avatar', part: 'Root', source: 'packages/react/src/supplemental/avatar.ts' },
+  { slug: 'message', name: 'Message', source: 'packages/react/src/supplemental/message.ts' },
+  { slug: 'activity', name: 'Activity', source: 'packages/react/src/supplemental/activity.ts' },
+  { slug: 'data-diff', name: 'DataDiff', source: 'packages/react/src/supplemental/data-diff.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

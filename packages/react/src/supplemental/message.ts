@@ -1,28 +1,69 @@
 import React from 'react';
+import type { ForwardRefExoticComponent, HTMLAttributes, ReactNode, RefAttributes } from 'react';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right.mjs';
 import { useCandidateMotion } from './candidate-motion.mjs';
 
+export type MessageAction = { id: string; label: string; icon?: ReactNode; onAction: () => void; disabled?: boolean; pressed?: boolean };
+export type MessageSource = { id: string; label: string; href: string; description?: string };
+export type MessageFollowUp = { id: string; label: string };
+
+/**
+ * The props Mux UI defines for Message; the catalog's web.react API is derived from
+ * this interface (Decision 0031). The content is the children.
+ */
+interface MessageOwnProps {
+  /** Who the turn is from. A user message shows its content in a filled bubble. */
+  sender?: 'user' | 'assistant' | 'system';
+  /** Content shown above the message, such as its author's name. */
+  author?: ReactNode;
+  /** Compact buttons for the message. Pressed makes one a toggle. */
+  actions?: readonly MessageAction[];
+  /** What the reply relied on, listed behind a count button. Only http, https, and relative links stay links. */
+  sources?: readonly MessageSource[];
+  /** Whether the source list is open, when the caller controls it. */
+  sourcesExpanded?: boolean;
+  /** Whether the source list starts open, when Message controls it. */
+  defaultSourcesExpanded?: boolean;
+  /** Reports the source list opening or closing. */
+  onSourcesExpandedChange?: (expanded: boolean) => void;
+  /** Suggested next messages. They render only with onFollowUp. */
+  followUps?: readonly MessageFollowUp[];
+  /** Reports the chosen follow-up. Message sends nothing. */
+  onFollowUp?: (item: MessageFollowUp) => void;
+  /** Adds the streaming status text while the caller updates the content. */
+  streaming?: boolean;
+  /** The status text announced while streaming. */
+  streamingLabel?: string;
+}
+
+export type MessageProps = MessageOwnProps & Omit<HTMLAttributes<HTMLElement>, keyof MessageOwnProps | 'dangerouslySetInnerHTML'>;
+
 const e = React.createElement;
-function safeHref(href) {
+function safeHref(href: unknown) {
   if (typeof href !== 'string' || !href.trim() || /[\u0000-\u001f\u007f]/u.test(href)) return undefined;
   try { const url = new URL(href, 'https://muxui.invalid/'); return ['https:', 'http:'].includes(url.protocol) ? href : undefined; } catch { return undefined; }
 }
-export const Message = React.forwardRef(function Message({
+
+/** Caller-updated content; Markdown is composed through its separately imported subpath. */
+export const Message: ForwardRefExoticComponent<MessageProps & RefAttributes<HTMLElement>> = React.forwardRef<HTMLElement, MessageProps>(function Message({
   sender = 'assistant', author, children, actions = [],
   sources = [], sourcesExpanded, defaultSourcesExpanded = false, onSourcesExpandedChange,
   followUps = [], onFollowUp, streaming = false, streamingLabel = 'Response in progress.',
-  className, dangerouslySetInnerHTML, ...props
-}, ref) {
+  // Untyped callers' HTML never reaches the article.
+  className, dangerouslySetInnerHTML: _html, ...props
+}: MessageProps & { dangerouslySetInnerHTML?: unknown }, ref) {
   const [localExpanded, setLocalExpanded] = React.useState(defaultSourcesExpanded);
-  const expanded = sourcesExpanded ?? localExpanded;
+  // Controlled while sourcesExpanded is set. A conditional, not ??: extraction reads a fallback
+  // on an owned prop as an executed default, and the local state is no default.
+  const expanded = sourcesExpanded == null ? localExpanded : sourcesExpanded;
   const id = React.useId();
-  const chevron = React.useRef(null);
-  const sourcePanel = React.useRef(null);
+  const chevron = React.useRef<SVGSVGElement | null>(null);
+  const sourcePanel = React.useRef<HTMLUListElement | null>(null);
   useCandidateMotion(chevron, expanded ? 180 : 0, { angle: expanded ? 180 : 0 });
   useCandidateMotion(sourcePanel, expanded, { active: expanded, reveal: true });
   const toggle = () => { const next = !expanded; if (sourcesExpanded === undefined) setLocalExpanded(next); onSourcesExpandedChange?.(next); };
-  return e('article', { ...props, ref, className: ['muxui-message', className].filter(Boolean).join(' '), 'data-sender': sender, 'data-streaming': streaming || undefined },
+  return e('article', { ...props, ref, className: ['muxui-message', className].filter(Boolean).join(' '), 'data-sender': sender, 'data-streaming': streaming ? true : undefined },
     author && e('header', { className: 'muxui-message-author' }, author),
     e('div', { className: 'muxui-message-content' }, children),
     (actions.length > 0 || sources.length > 0) && e('div', { className: 'muxui-message-toolbar' },

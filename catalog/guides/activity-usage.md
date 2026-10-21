@@ -13,7 +13,7 @@ Use Activity to list the statuses of several tasks as dense rows. The applicatio
 - Label each item with the task, such as Prepare the release notes. Activity shows the status word beside it, so leave the status out of the label.
 - Use `meta` for a short count or size, such as 4 pages, and `time` for a duration, such as 5s, which follows the status as in 5s.
 - Put the reason for a failure in `details`, and a way to recover in `actions`.
-- Label the group with the work as a whole, such as Workspace checks. Leave `status` out to let the group follow its items: failed first, then running, queued, cancelled, and completed.
+- Label the group with the work as a whole, such as Workspace checks. Leave `status` out to let the group follow its items: `failed` first, then `running`, `queued`, `cancelled`, and `completed`.
 
 ## Common mistake
 

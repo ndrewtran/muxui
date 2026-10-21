@@ -63,55 +63,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "label",
-          "description",
-          "columns",
-          "rows",
-          "selectedIds",
-          "defaultSelectedIds",
-          "onSelectionChange",
-          "onApply",
-          "pending",
-          "disabled",
-          "applyLabel",
-          "emptyMessage"
-        ],
-        "events": [
-          "selectionChange",
-          "apply"
-        ],
-        "parts": [
-          "root",
-          "header",
-          "title",
-          "description",
-          "viewport",
-          "table",
-          "head",
-          "column",
-          "body",
-          "row",
-          "cell",
-          "selection",
-          "change",
-          "values",
-          "before",
-          "after",
-          "arrow",
-          "footer",
-          "totals",
-          "apply",
-          "empty"
-        ],
-        "defaults": {
-          "description": "Select changes to apply",
-          "pending": false,
-          "disabled": false,
-          "emptyMessage": "No rows to review."
-        }
-      },
       "behavior": [
         "The native div host attributes, ref, native title tooltip, and native onSelect event are preserved. label is a required nonblank visible heading and table name. children and dangerouslySetInnerHTML are unsupported because columns and rows own the content.",
         "DataDiffValue is string, finite number, boolean, or null. columns is a nonempty readonly array of {id, label}; rows is a readonly array with stable unique nonblank string id, nonblank accessible label, optional disabled boolean, and kind unchanged, added, removed, or updated. Duplicate row/column IDs and invalid shapes throw TypeError.",

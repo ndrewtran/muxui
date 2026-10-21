@@ -204,6 +204,9 @@ function normalizeDefaultArgs(binding) {
   if ((binding.export === 'Breadcrumbs' || binding.export === 'TagSelect') && Array.isArray(args.items) && args.items.length === 0) {
     delete args.items;
   }
+  if (binding.export === 'Message') {
+    for (const name of ['actions', 'sources', 'followUps']) if (Array.isArray(args[name]) && args[name].length === 0) delete args[name];
+  }
   // An open-state arg selects Menu's triggered composition, so the plain action list leaves it unset.
   if (binding.export === 'Menu') delete args.defaultOpen;
   return args;

@@ -228,7 +228,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), [...HOST_ALLOWLIST].sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['select-native.json'], 'caller-supplied content');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'message.json', 'select-native.json'], 'caller-supplied content');
 });
 
 test('defaults come from the executable source: literals and top-level constants the component reads', () => {

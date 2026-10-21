@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:c27f27b55cd3cfbb7c73dc6c9e839db39f18a62a5f40b5eabb85d512bea048dc -->
+<!-- @generated-content-sha256: sha256:d7c6a10516c816450b3fdf161d718b42c94a8ea00e0739e9bfd8105b9d36944a -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -125,7 +125,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorWheel | experimental | . | .muxui-color-wheel | aria-label, aria-labelledby, value, defaultValue, outerRadius, innerRadius, readOnly, disabled |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
-| DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, onSelectionChange, onApply, pending, disabled, applyLabel, emptyMessage |
+| DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
@@ -147,7 +147,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ListBox | experimental | . | .muxui-list-box | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
 | Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect, children, open, defaultOpen, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay |
-| Message | experimental | . | .muxui-message | sender, author, children, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
+| Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions, aria-label, aria-labelledby |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |

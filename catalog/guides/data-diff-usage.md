@@ -5,7 +5,7 @@ Use DataDiff to review proposed changes to a small table and choose which to req
 ## DataDiff or another family
 
 - Use DataDiff to review and select proposed row changes before an explicit Apply.
-- Use [CodeBlock](/components/code-block/) with `mode="diff"` to review changed lines of code.
+- Use [CodeBlock](/components/code-block/) to review changed lines of code.
 - Use [Table](/components/table/) for rows that have no proposed changes.
 
 ## Rows and selection

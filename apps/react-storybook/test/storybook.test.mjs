@@ -711,7 +711,7 @@ test('controls offer only what the public types admit and match their value kind
   assert.ok(Number.isInteger(rowCount) && rowCount > 0, 'the offered native size is a positive integer');
   assert.deepEqual(controls('SelectNative').size.options.filter((option) => typeof option === 'string'), declaredUnion(selectNativeTypes, 'SelectNativeVisualSize'));
   // A derived API's finite values are the control's options, in source order (Decision 0031).
-  for (const [family, name] of [['Avatar', 'size'], ['Image', 'radius'], ['Image', 'fit'], ['IconButton', 'variant']]) {
+  for (const [family, name] of [['Avatar', 'size'], ['Image', 'radius'], ['Image', 'fit'], ['IconButton', 'variant'], ['Message', 'sender'], ['Activity', 'status']]) {
     assert.deepEqual(controls(family)[name].options, currentRecord(family).binding.api.propDetails[name].enum, `${family}.${name}`);
   }
   assert.deepEqual(controls('Avatar').size.options, ['sm', 'md', 'lg']);

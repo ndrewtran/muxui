@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString, renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Message } from '../src/supplemental/message.mjs';
+import { Message } from '../src/supplemental/message.ts';
 import { createDom } from './support/dom.mjs';
 const e = (props, content = '<script>escaped</script>') => React.createElement(Message, props, content);
 

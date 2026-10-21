@@ -12,7 +12,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/activity.mjs",
+      "runtimeSource": "packages/react/src/supplemental/activity.ts",
       "styleSource": "packages/react/src/supplemental/activity.css"
     },
     {
@@ -141,7 +141,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/data-diff.mjs",
+      "runtimeSource": "packages/react/src/supplemental/data-diff.ts",
       "styleSource": "packages/react/src/supplemental/data-diff.css"
     },
     {
@@ -261,7 +261,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/message.mjs",
+      "runtimeSource": "packages/react/src/supplemental/message.ts",
       "styleSource": "packages/react/src/supplemental/message.css"
     },
     {
