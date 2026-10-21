@@ -98,11 +98,20 @@ function Responsive() {
     h('button', { type: 'button', id: 'outside' }, 'Outside'));
 }
 // The account card at the foot of the column, whose options button opens the account menu.
+// Radios, a disabled fieldset and a positive tabindex around the card: the real Tab order is not the DOM order.
+// WebKit on macOS skips plain buttons in sequential navigation, so the plain ones carry an explicit tabindex.
+const radios = (name, checked) => h('div', null, [0, 1, 2].map((index) => h('input', { key: index, type: 'radio', name, id: name + index, 'aria-label': name + ' ' + index, tabIndex: 0, defaultChecked: index === checked })));
+const around = {
+  fieldset: { after: [h('fieldset', { key: 'fieldset', disabled: true }, h('button', { type: 'button', id: 'trapped', tabIndex: 0 }, 'Trapped')), h('button', { key: 'after', type: 'button', id: 'after-fieldset', tabIndex: 0 }, 'After fieldset')] },
+  positive: { after: [h('button', { key: 'positive', type: 'button', id: 'positive', tabIndex: 1 }, 'Positive')] },
+  radios: { before: [radios('rb', 0)], after: [radios('ra', 1)] },
+}[params.get('around')] ?? {};
 function Account() {
   return h(Sidebar.Provider, { shortcut: 'b' },
     h('div', { className: 'shell' },
       h(Sidebar.Root, { 'aria-label': 'Account' },
         h(Sidebar.NavList, { 'aria-label': 'Account pages' }, h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home')),
+        around.before,
         h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' },
           params.get('menu') === 'none'
             ? h('span', null, 'Not a menu')
@@ -110,7 +119,7 @@ function Account() {
               h(Menu.Item, { id: 'profile' }, 'Profile'),
               h(Menu.Separator),
               h(Menu.Item, { id: 'sign-out' }, 'Sign out')))),
-      h('main', { className: 'main' }, h(Sidebar.Toggle), h('button', { type: 'button', id: 'outside' }, 'Outside'))));
+      h('main', { className: 'main' }, around.after, h(Sidebar.Toggle), h('button', { type: 'button', id: 'outside' }, 'Outside'))));
 }
 createRoot(document.getElementById('root')).render(h({ rwd: Responsive, account: Account }[params.get('layout')] ?? Shell));
 // An editable control inside a shadow root: the document only sees its host.
@@ -1579,20 +1588,32 @@ for (const engine of browserEngines()) {
         const tab = await context.newPage();
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
+        const menu = tab.getByRole('menu');
+        const holding = (selector) => tab.evaluate((selector) => document.activeElement === document.querySelector(selector), selector);
+        // Where Tab and Shift+Tab go from the button is the browser's call, so the page around it is shaped to tell its
+        // rules from document order: a button in a disabled fieldset cannot take focus, a positive tabindex jumps the queue
+        // and so is never next, and a radio group is entered at its checked radio, not its first or last.
+        const scenarios = [
+          ['plain', { Tab: '.muxui-sidebar__toggle', 'Shift+Tab': 'a[href="#home"]' }],
+          ['fieldset', { Tab: '#after-fieldset', 'Shift+Tab': 'a[href="#home"]' }],
+          ['positive', { Tab: '.muxui-sidebar__toggle', 'Shift+Tab': 'a[href="#home"]' }],
+          ['radios', { Tab: '#ra1', 'Shift+Tab': '#rb0' }],
+        ];
+        for (const [scenario, expected] of scenarios) {
+          await tab.goto(`${url}/sidebar.html?layout=account&around=${scenario}`, { waitUntil: 'networkidle' });
+          await tab.locator('aside').waitFor({ timeout: 15_000 });
+          for (const key of ['Tab', 'Shift+Tab']) {
+            await tab.locator('.muxui-sidebar__account-trigger').focus();
+            await tab.keyboard.press('ArrowDown');
+            await menu.waitFor({ timeout: 5000 });
+            await tab.keyboard.press(key);
+            await menu.waitFor({ state: 'detached', timeout: 5000 });
+            await pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), expected[key], { message: `${engine} ${scenario}: ${key} in the menu closes it and moves focus to ${expected[key]}`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+            assert.equal(await holding('.muxui-sidebar__account-trigger'), false, `${engine} ${scenario}: ${key} does not leave focus on the button`);
+          }
+        }
         await tab.goto(`${url}/sidebar.html?layout=account`, { waitUntil: 'networkidle' });
         await tab.locator('aside').waitFor({ timeout: 15_000 });
-        const menu = tab.getByRole('menu');
-        // The controls either side of the account button in tab order, and which one holds focus.
-        const holding = (selector) => tab.evaluate((selector) => document.activeElement === document.querySelector(selector), selector);
-        for (const [key, neighbour, where] of [['Tab', '.muxui-sidebar__toggle', 'after'], ['Shift+Tab', 'a[href="#home"]', 'before']]) {
-          await tab.locator('.muxui-sidebar__account-trigger').focus();
-          await tab.keyboard.press('ArrowDown');
-          await menu.waitFor({ timeout: 5000 });
-          await tab.keyboard.press(key);
-          await menu.waitFor({ state: 'detached', timeout: 5000 });
-          await pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), neighbour, { message: `${engine}: ${key} in the menu closes it and moves focus to the control ${where} the button`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
-          assert.equal(await holding('.muxui-sidebar__account-trigger'), false, `${engine}: ${key} does not leave focus on the button`);
-        }
         // Tab on the closed button moves on as usual, and the menu still closes with Escape afterwards.
         await tab.locator('.muxui-sidebar__account-trigger').focus();
         await tab.keyboard.press('Tab');

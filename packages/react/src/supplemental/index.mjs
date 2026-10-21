@@ -1,4 +1,5 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import {
@@ -1214,12 +1215,6 @@ function sidebarFocusFirst(candidates, roots) {
   }
   return false;
 }
-const SIDEBAR_TABBABLE = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable]:not([contenteditable="false"])';
-/** The control Tab (or Shift+Tab) reaches from `origin`, in document order, skipping disabled, hidden and `popup` controls. */
-function sidebarTabbableBeside(origin, backwards, popup) {
-  const stops = [...document.querySelectorAll(SIDEBAR_TABBABLE)].filter((node) => node === origin || (node.tabIndex >= 0 && !node.disabled && !popup.contains(node) && !sidebarUnreachable(node)));
-  return stops[stops.indexOf(origin) + (backwards ? -1 : 1)];
-}
 /** The column's focus candidates after its drawer is gone: the link matching the drawer's focused link, the current link, a Toggle, then Root. */
 function sidebarColumnCandidates({ roots, toggles }, href) {
   const links = [...roots].flatMap((root) => [...root.querySelectorAll('a[href]')]);
@@ -1455,19 +1450,15 @@ const Sidebar = {
     const button = React.useRef(null);
     React.useImperativeHandle(ref, () => card.current);
     const [open, setOpen] = React.useState(false);
-    // Tab leaves an open menu, as it does for a menu button: the menu closes and focus goes to the control after the
-    // button (Shift+Tab, before it). The browser cannot do that itself, because the rest of the page is inert while the
-    // menu is open. The portalled menu's keydown bubbles here through the React tree.
+    // Tab leaves an open menu, as it does for a menu button: the menu closes and focus moves on from the button. The
+    // browser does the moving, by its own rules for disabled controls, tabindex and radio groups, once the menu has
+    // closed (so the rest of the page is no longer inert) and focus is on the button. Tab's default action is left alone.
+    // The portalled menu's keydown bubbles here through the React tree.
     const leaveMenu = (event) => {
       props.onKeyDown?.(event);
-      const popup = event.target.closest?.('.muxui-menu-popup');
-      if (event.key !== 'Tab' || !open || !popup || card.current.contains(event.target)) return;
-      event.preventDefault();
-      const trigger = button.current;
-      const next = sidebarTabbableBeside(trigger, event.shiftKey, popup);
-      setOpen(false);
-      // Focus goes to the button when the menu closes, so that counts as still waiting, like the menu itself.
-      if (next) sidebarHandoff(() => [next], new Set(), (active) => active === trigger || active.closest('[role="menu"]'));
+      if (event.key !== 'Tab' || !open || !event.target.closest?.('.muxui-menu-popup') || card.current.contains(event.target)) return;
+      flushSync(() => setOpen(false));
+      button.current?.focus({ preventScroll: true });
     };
     // A folded rail hides the options button, so a menu left open has nothing to anchor to or return focus to:
     // close it and hand focus to a Toggle, else Root.
