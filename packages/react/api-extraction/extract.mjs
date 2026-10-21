@@ -23,6 +23,9 @@ export class ApiExtractionError extends Error {
   }
 }
 
+// An allowlist entry for an application of a host generic, as the extraction serializes it.
+const hostApplication = (name, ...typeArguments) => Object.freeze({ kind: 'host', name, typeArguments: Object.freeze(typeArguments.map((argument) => Object.freeze(argument))) });
+
 /**
  * The host types a Mux UI-owned prop may reach, each one exact type: a DOM or Intl library
  * name, or `React.<Name>` from @types/react, written as a string; or an exact application of
@@ -31,9 +34,22 @@ export class ApiExtractionError extends Error {
  * for the activation target of Button, IconButton, and ToggleButton, React.ReactNode for the
  * content props of SelectNative, Message, Activity, Disclosure, Meter, and ProgressBar,
  * HTMLAnchorElement for Link's activation target, NumberFormatOptions (written
- * `Intl.NumberFormatOptions`) for Meter's formatOptions, and File for FileTrigger's selection.
+ * `Intl.NumberFormatOptions`) for Meter's formatOptions, File for FileTrigger's selection, and
+ * the applications Promise<File>, Promise<string>, ReadonlySet<string>, and
+ * AsyncIterable<MuxUIDropItem> for DropZone's drop items.
  */
-export const HOST_ALLOWLIST = Object.freeze(['HTMLButtonElement', 'React.ReactNode', 'HTMLAnchorElement', 'NumberFormatOptions', 'File']);
+export const HOST_ALLOWLIST = Object.freeze([
+  'HTMLButtonElement',
+  'React.ReactNode',
+  'HTMLAnchorElement',
+  'NumberFormatOptions',
+  'File',
+  // DropZone's drop items: what an item reads, the formats a text item lists, and a directory's entries.
+  hostApplication('Promise', { kind: 'host', name: 'File' }),
+  hostApplication('Promise', { kind: 'string' }),
+  hostApplication('ReadonlySet', { kind: 'string' }),
+  hostApplication('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }),
+]);
 
 // A namespace or wildcard would admit every type under it.
 const EXACT_HOST_TYPE = /^(?:React\.)?[A-Z][A-Za-z0-9]*$/u;

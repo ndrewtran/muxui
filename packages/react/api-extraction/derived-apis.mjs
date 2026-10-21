@@ -33,6 +33,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'breadcrumbs', name: 'Breadcrumbs', source: 'packages/react/src/components.ts' },
   { slug: 'resizable', name: 'Resizable', source: 'packages/react/src/supplemental/resizable.ts' },
   { slug: 'file-trigger', name: 'FileTrigger', source: 'packages/react/src/overlays.ts' },
+  { slug: 'drop-zone', name: 'DropZone', source: 'packages/react/src/overlays.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

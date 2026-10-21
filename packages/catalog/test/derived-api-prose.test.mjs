@@ -85,6 +85,8 @@ const GUIDES = {
   resizable: {},
   // `capture` is the native attribute that defaultCamera sets.
   'file-trigger': { native: ['capture'] },
+  // `getFile()` is the file item's read; aria-label names the area.
+  'drop-zone': { native: ['aria-label', 'getFile()'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;

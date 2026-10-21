@@ -384,7 +384,15 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'disclosure.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json'], 'caller-supplied content');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json'], 'Meter\'s formatOptions, written Intl.NumberFormatOptions');
-  assert.deepEqual(reached.get('File'), ['file-trigger.json'], 'the files FileTrigger selects');
+  assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json'], 'the files FileTrigger selects, and the File a DropZone item reads');
+  // DropZone's drop items: a file item reads a File or its text, a text item lists its formats, a directory its entries.
+  const dropItems = [
+    [host('Promise', host('File')), 'a file item\'s read'],
+    [host('Promise', keyword('string')), 'a file or text item\'s text'],
+    [host('ReadonlySet', keyword('string')), 'the formats a text item lists'],
+    [host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }), 'a directory item\'s entries'],
+  ];
+  for (const [entry, reason] of dropItems) assert.deepEqual(reached.get(hostEntryKey(entry)), ['drop-zone.json'], reason);
 });
 
 test('defaults come from the executable source: literals and top-level constants the component reads', () => {
