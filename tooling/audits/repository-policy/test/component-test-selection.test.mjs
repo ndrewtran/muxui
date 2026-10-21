@@ -20,7 +20,7 @@ async function testFiles(root, prefix = '') {
 
 const records = [
   { family: 'Button', export: 'Button', slug: 'button', source: 'packages/react/src/button.mjs' },
-  { family: 'Tree', export: 'Tree', slug: 'tree', source: 'packages/react/src/collections.mjs' },
+  { family: 'Tree', export: 'Tree', slug: 'tree', source: 'packages/react/src/tree.mjs' },
   { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: 'packages/react/src/supplemental/index.mjs' },
 ];
 const availableFiles = (await testFiles(resolve(packageRoot, 'test'))).map((file) => `test/${file}`);
@@ -75,7 +75,7 @@ test('focused Tree and TagSelect retain only their named shared-source behavior 
 });
 
 test('GridList routes to its cross-engine layout proof and its collection cases in both modes', () => {
-  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/collections.mjs' };
+  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/grid-list.mjs' };
   const layoutProof = 'test/browser/grid-list-layout.test.mjs';
   assert.ok(selectComponentTestFiles([record], availableFiles).includes(layoutProof));
   assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
@@ -89,7 +89,7 @@ test('GridList routes to its cross-engine layout proof and its collection cases 
 });
 
 test('Virtualizer routes to its cross-engine grid proof and its named R1.3 cases in both modes', () => {
-  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/collections.mjs' };
+  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/virtualizer.mjs' };
   const gridProof = 'test/browser/virtualizer-grid.test.mjs';
   assert.ok(selectComponentTestFiles([record], availableFiles).includes(gridProof));
   assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
@@ -215,7 +215,7 @@ test('a family no test names runs its source group whole instead of failing', ()
 });
 
 test('a whole-group fallback is never narrowed to another selected family\'s cases', () => {
-  const field = { family: 'ScratchCollection', slug: 'scratch-collection', source: 'packages/react/src/collections.mjs' };
+  const field = { family: 'ScratchCollection', slug: 'scratch-collection', source: 'packages/react/src/tree.mjs' };
   const selected = componentTestSelection([records[1], field], availableFiles, {
     includeSharedSource: false,
     testSources: { 'test/r1-3-parity.test.mjs': parity },

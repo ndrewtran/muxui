@@ -4,7 +4,8 @@ import { resolve } from 'node:path';
 /**
  * The one list of the fixed-registry runtime modules: the sources that declare the 53 canonical
  * R1 families' exports (`export const <Name>`). The supplemental modules are not here; their
- * paths come from supplemental-mapping.mjs. Moving a module to TypeScript renames its entry
+ * paths come from supplemental-mapping.mjs. collections.mjs re-exports the collection families
+ * and declares none, so it is not here either. Moving a module to TypeScript renames its entry
  * here and nowhere else: generation, the R1.5 contract checks, and agent-eval read this list.
  * Order is the discovery order: the first module declaring an export owns it.
  */
@@ -24,9 +25,17 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/grid-list.mjs',
   'packages/react/src/list-box.mjs',
   'packages/react/src/menu.mjs',
+  'packages/react/src/radio-group.mjs',
   'packages/react/src/select.mjs',
+  'packages/react/src/slider.mjs',
+  'packages/react/src/table.mjs',
+  'packages/react/src/tabs.mjs',
+  'packages/react/src/tag-group.mjs',
+  'packages/react/src/toggle-button-group.mjs',
+  'packages/react/src/token-field.mjs',
+  'packages/react/src/toolbar.mjs',
+  'packages/react/src/tree.mjs',
   'packages/react/src/virtualizer.mjs',
-  'packages/react/src/collections.mjs',
   'packages/react/src/overlays.ts',
 ]);
 
