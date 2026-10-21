@@ -346,7 +346,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/resizable.mjs",
+      "runtimeSource": "packages/react/src/supplemental/resizable.ts",
       "styleSource": "packages/react/src/supplemental/resizable.css"
     },
     {

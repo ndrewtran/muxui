@@ -31,6 +31,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'disclosure', name: 'Disclosure', source: 'packages/react/src/components.ts' },
   { slug: 'toggle-button', name: 'ToggleButton', source: 'packages/react/src/components.ts' },
   { slug: 'breadcrumbs', name: 'Breadcrumbs', source: 'packages/react/src/components.ts' },
+  { slug: 'resizable', name: 'Resizable', source: 'packages/react/src/supplemental/resizable.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

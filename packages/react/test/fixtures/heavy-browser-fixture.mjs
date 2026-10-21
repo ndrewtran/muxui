@@ -2,7 +2,7 @@ import React from 'react';
 import { Markdown } from '../../src/markdown/index.mjs';
 import { TextEditor } from '../../src/text-editor/index.mjs';
 import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxPopup, LightboxTrigger } from '../../src/supplemental/lightbox.mjs';
-import { Resizable, ResizableHandle, ResizablePanel } from '../../src/supplemental/resizable.mjs';
+import { Resizable, ResizableHandle, ResizablePanel } from '../../src/supplemental/resizable.ts';
 import { PaymentInput } from '../../src/supplemental/index.mjs';
 
 const h = React.createElement;

@@ -82,6 +82,7 @@ const GUIDES = {
   disclosure: {},
   'toggle-button': {},
   breadcrumbs: {},
+  resizable: {},
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
