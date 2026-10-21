@@ -1470,9 +1470,15 @@ const Sidebar = {
     }, [collapsed]);
     // The options button exists to open an AccountMenu, so it shows only while one is mounted, however it is wrapped.
     // It stays in the tree, hidden, because the menu trigger around the card warns when it has no button to press.
-    const [menus, setMenus] = React.useState(0);
-    const hasMenu = menus > 0;
-    const register = React.useCallback(() => { setMenus((count) => count + 1); return () => setMenus((count) => count - 1); }, []);
+    // One menu per card: two would open as two popovers over one trigger.
+    const [hasMenu, setHasMenu] = React.useState(false);
+    const registered = React.useRef(false);
+    const register = React.useCallback(() => {
+      if (registered.current) throw new Error('Sidebar.AccountCard takes one Sidebar.AccountMenu');
+      registered.current = true;
+      setHasMenu(true);
+      return () => { registered.current = false; setHasMenu(false); };
+    }, []);
     const account = React.useMemo(() => ({ anchor: card, register }), [register]);
     useIsomorphicLayoutEffect(() => { if (!hasMenu) setOpen(false); }, [hasMenu]);
     const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { ref: button, hidden: !hasMenu, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);

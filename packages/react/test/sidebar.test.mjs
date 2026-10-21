@@ -80,6 +80,31 @@ test('Sidebar AccountMenu requires the card, and the server markup leaves the bu
   }
 });
 
+test('Sidebar AccountCard takes one AccountMenu, and swapping it for another is fine', async () => {
+  const card = (...children) => h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, ...children));
+  const menu = (key) => h(Sidebar.AccountMenu, { key, items: ['Profile'] });
+  // Two menus would open as two popovers over one trigger, so the second is refused, wherever it sits.
+  const reported = [];
+  const original = console.error;
+  console.error = (...args) => reported.push(args.join(' '));
+  try {
+    for (const [label, children] of [['siblings', [menu('a'), menu('b')]], ['one in a fragment', [menu('a'), h(React.Fragment, null, menu('b'))]]]) {
+      await assert.rejects(withDom(card(...children), async () => {}), /Sidebar\.AccountCard takes one Sidebar\.AccountMenu/u, label);
+    }
+  } finally {
+    console.error = original;
+  }
+  // Replacing the menu in one commit leaves one mounted at a time, so it is accepted.
+  function Swapping() {
+    const [key, setKey] = React.useState('a');
+    return h(React.Fragment, null, h('button', { id: 'swap', onClick: () => setKey('b') }, 'Swap'), card(menu(key)));
+  }
+  await withDom(h(Swapping), async (document) => {
+    await act(async () => document.querySelector('#swap').click());
+    assert.equal(document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length, 1);
+  });
+});
+
 test('Sidebar AccountCard shows its options button only while an AccountMenu is mounted', async () => {
   // A hidden button is not shown, so it is not there for a reader or the keyboard.
   const buttons = (document) => document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length;

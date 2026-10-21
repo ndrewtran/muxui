@@ -368,7 +368,7 @@ export declare const Sidebar: {
   NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
   /** Shows the account. While an `AccountMenu` is mounted inside it, its Account options button opens that menu; without one the card has no button. */
   AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;
-  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`, and read the chosen item from `onAction`. Only valid inside `AccountCard`. */
+  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`, and read the chosen item from `onAction`. Only valid inside `AccountCard`, one per card. */
   AccountMenu: React.ForwardRefExoticComponent<SidebarAccountMenuProps & React.RefAttributes<HTMLDivElement>>;
   MobileTrigger: React.ComponentType<{ children?: React.ReactNode; logo?: React.ReactNode }>;
   FeatureCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { title?: string; description?: string; dismissLabel?: string; onDismiss?: () => void } & React.RefAttributes<HTMLDivElement>>;
