@@ -2928,6 +2928,39 @@ test('a deleted React module still named outside React source routes to each ref
   assert.match(unowned.notices[0], /^scripts\/unowned\.mjs has no owner route/u);
 });
 
+test('a changed React module only files outside React source import routes to their owners', async () => {
+  // PR #342: the Button fixture's import moves from ./button.mjs to ./button.ts. The fixture is no
+  // family's source and no React module imports it; the playground and a React test do.
+  const fixturePath = 'packages/react/src/button-fixture.mjs';
+  const before = "import React from 'react';\nimport { Button } from './button.mjs';\nexport function R1ButtonFixture() { return React.createElement(Button); }\n";
+  const after = before.replace("'./button.mjs'", "'./button.ts'");
+  const changed = (references) => plan([fixturePath], {
+    packages: workspacePackages,
+    textSnapshots: { [fixturePath]: { before, after } },
+    moduleSources: {
+      ...generatorModuleSources,
+      [fieldsPath]: 'export const NumberField = () => null;',
+      [collectionsPath]: 'export const Tree = () => null;',
+      'packages/react/src/button.mjs': { before: 'export const Button = () => null;', after: null },
+      'packages/react/src/button.ts': { before: null, after: 'export const Button = (): null => null;' },
+      [fixturePath]: { before, after },
+    },
+    findReferences: async (needle) => {
+      assert.equal(needle, 'src/button-fixture.mjs');
+      return references;
+    },
+  });
+
+  const routed = await changed(['apps/react-playground/src/main.jsx', 'packages/react/test/fixture.test.mjs']);
+  assert.deepEqual(routed.packageChecks, ['@muxui/react-playground']);
+  assert.ok(routed.reactTestFiles.includes('test/fixture.test.mjs'));
+  assert.deepEqual(routed.reactFamilies, []);
+  assert.ok(routed.reasons.includes('apps/react-playground/src/main.jsx references changed packages/react/src/button-fixture.mjs; validate its owner'));
+
+  // With no file importing it, the changed module is still unowned.
+  await assert.rejects(changed([]), /MUXUI_CI_IMPACT_SOURCE_OWNERSHIP: changed module packages\/react\/src\/button-fixture\.mjs has no canonical family source or resolvable React importer/u);
+});
+
 test('modules the React projection compiler imports take the compiler route', async () => {
   const after = 'export function assertContracts() { return true; }';
   const result = await plan([contractsPath], {

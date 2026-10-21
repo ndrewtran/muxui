@@ -1148,12 +1148,27 @@ export async function buildPullRequestImpact({
   // browser entries, apps, catalog inputs). A deleted module's referencing
   // files are routed through their own owners as though they changed.
   const routedPaths = [...changed];
-  for (const path of changed.filter(isReactModuleSource)) {
-    if (await readHeadText(path) !== null) continue;
-    for (const reference of await findReferences(path.slice('packages/react/'.length))) {
+  const reactSourcePaths = changed.filter(isReactModuleSource);
+  const importsBySide = reactSourcePaths.length === 0 ? { before: new Map(), after: new Map() } : {
+    before: localModuleImports(moduleSources, 'before'),
+    after: localModuleImports(moduleSources, 'after'),
+  };
+  const importedModules = new Set(['before', 'after'].flatMap((side) => [...importsBySide[side].values()].flat()));
+  // A changed module that is no family's source and that no React module imports
+  // (a fixture such as button-fixture.mjs, which the playground and a test import)
+  // reaches nothing through React source. Its referencing files route through their
+  // owners, as a deletion's do; with none it stays unowned, and the source analysis
+  // below fails.
+  const externallyImported = new Set();
+  for (const path of reactSourcePaths) {
+    const deleted = await readHeadText(path) === null;
+    if (!deleted && (importedModules.has(path) || records.some((record) => record.source === path))) continue;
+    const references = await findReferences(path.slice('packages/react/'.length));
+    if (!deleted && references.length > 0) externallyImported.add(path);
+    for (const reference of references) {
       if (routedPaths.includes(reference) || reference.startsWith('packages/react/src/')) continue;
       routedPaths.push(reference);
-      plan.reasons.push(`${reference} references deleted ${path}; validate its owner`);
+      plan.reasons.push(`${reference} references ${deleted ? 'deleted' : 'changed'} ${path}; validate its owner`);
     }
   }
 
@@ -1549,14 +1564,9 @@ export async function buildPullRequestImpact({
     plan.reasons.push(...plan.fullReasons.map((reason) => `full workspace proof: ${reason}`));
   }
 
-  const reactSourcePaths = changed.filter(isReactModuleSource);
   // The projection compiler and every local module it imports (at base or
   // head) shape every generated family, as do its canonical catalog inputs.
   const generatorModules = new Set([reactGeneratorPath]);
-  const importsBySide = reactSourcePaths.length === 0 ? { before: new Map(), after: new Map() } : {
-    before: localModuleImports(moduleSources, 'before'),
-    after: localModuleImports(moduleSources, 'after'),
-  };
   for (const side of ['before', 'after']) {
     const imports = importsBySide[side];
     const queue = [reactGeneratorPath];
@@ -1582,6 +1592,10 @@ export async function buildPullRequestImpact({
   const baseImporters = new Set([...importsBySide.before.values()].flat());
   for (const path of reactSourcePaths) {
     if (generatorModules.has(path)) continue;
+    if (externallyImported.has(path)) {
+      plan.reasons.push(`${path} is imported only outside React source; the files that reference it validate the change`);
+      continue;
+    }
     const headSource = await readHeadText(path);
     // A deleted module that no base module imported cannot change any family;
     // the React package check regenerates and tests the package without it.
