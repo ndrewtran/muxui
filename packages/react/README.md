@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:b6c88a5ea7bacc93c02327fa4ec7cfdb6884aa1cad7b8ab4815f5bd13fabfc21 -->
+<!-- @generated-content-sha256: sha256:1d7fe64f8a4369cd6547eabdf5ababa559af3fbf7a3cfc313076092e5d859c37 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -153,7 +153,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |
 | Popover | experimental | . | .muxui-popover | children, trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, onOpenChange, className, aria-label, aria-labelledby |
-| PreviewTrigger | experimental | . | .muxui-preview-trigger | children, trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding, onOpenChange, className, aria-label, aria-labelledby |
+| PreviewTrigger | experimental | . | .muxui-preview-trigger | trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding |
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
 | PromptComposer | experimental | . | .muxui-prompt-composer | inputLabel, value, defaultValue, inputProps, inputRef, pending, disabled, error, sources, commands, attachments, accept, multiple, models, selectedModel, defaultSelectedModel |

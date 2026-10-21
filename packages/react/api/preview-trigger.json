@@ -1,0 +1,211 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:preview-trigger",
+  "binding": "web.react",
+  "export": "PreviewTrigger",
+  "api": {
+    "props": [
+      "trigger",
+      "delay",
+      "closeDelay",
+      "open",
+      "defaultOpen",
+      "disabled",
+      "placement",
+      "offset",
+      "crossOffset",
+      "shouldFlip",
+      "containerPadding"
+    ],
+    "events": [
+      "openChange"
+    ],
+    "defaults": {
+      "delay": 600,
+      "closeDelay": 200,
+      "defaultOpen": false,
+      "disabled": false,
+      "placement": "top",
+      "offset": 8,
+      "crossOffset": 0,
+      "shouldFlip": true,
+      "containerPadding": 12
+    },
+    "propDetails": {
+      "trigger": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactElement"
+        },
+        "required": true,
+        "description": "The focusable element that opens the preview. Disabling the preview leaves it operable."
+      },
+      "delay": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How long a hover waits before the preview opens, in milliseconds."
+      },
+      "closeDelay": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How long the preview stays open after the pointer leaves, in milliseconds."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the preview is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the preview starts open, when it controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the preview: it does not open, and an open one closes. The trigger stays operable."
+      },
+      "placement": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIPlacement"
+        },
+        "required": false,
+        "enum": [
+          "top",
+          "bottom",
+          "start",
+          "end",
+          "top-start",
+          "top-end",
+          "bottom-start",
+          "bottom-end",
+          "start-top",
+          "start-bottom",
+          "end-top",
+          "end-bottom"
+        ],
+        "description": "Where the preview opens against its trigger. start and end follow the locale direction."
+      },
+      "offset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The distance in pixels between the preview and its trigger, along the placement's side."
+      },
+      "crossOffset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The shift in pixels along the side the preview is placed against."
+      },
+      "shouldFlip": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the preview moves to the opposite side when the placed side has no room."
+      },
+      "containerPadding": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The least distance in pixels between the preview and the edge of the viewport. Must not be negative."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the preview opening or closing."
+      }
+    },
+    "types": {
+      "MuxUIPlacement": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "top"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "start"
+            },
+            {
+              "kind": "literal",
+              "value": "end"
+            },
+            {
+              "kind": "literal",
+              "value": "top-start"
+            },
+            {
+              "kind": "literal",
+              "value": "top-end"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-start"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-end"
+            },
+            {
+              "kind": "literal",
+              "value": "start-top"
+            },
+            {
+              "kind": "literal",
+              "value": "start-bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "end-top"
+            },
+            {
+              "kind": "literal",
+              "value": "end-bottom"
+            }
+          ]
+        },
+        "description": "How a floating overlay is placed beside its trigger."
+      }
+    }
+  }
+}

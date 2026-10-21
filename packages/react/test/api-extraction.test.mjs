@@ -382,7 +382,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'toggle-button.json'], 'the activation event target');
   assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'disclosure.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json', 'tooltip.json'], 'caller-supplied content, and the node an Exclude starts from');
-  assert.deepEqual(reached.get('React.ReactElement'), ['tooltip.json'], 'the element a trigger prop takes');
+  assert.deepEqual(reached.get('React.ReactElement'), ['preview-trigger.json', 'tooltip.json'], 'the element a trigger prop takes');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json'], 'Meter\'s formatOptions, written Intl.NumberFormatOptions');

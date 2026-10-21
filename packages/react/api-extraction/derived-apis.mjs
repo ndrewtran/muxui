@@ -35,6 +35,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'file-trigger', name: 'FileTrigger', source: 'packages/react/src/overlays.ts' },
   { slug: 'drop-zone', name: 'DropZone', source: 'packages/react/src/overlays.ts' },
   { slug: 'tooltip', name: 'Tooltip', source: 'packages/react/src/overlays.ts' },
+  { slug: 'preview-trigger', name: 'PreviewTrigger', source: 'packages/react/src/overlays.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
