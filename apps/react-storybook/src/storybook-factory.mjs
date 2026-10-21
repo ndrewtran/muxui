@@ -4,6 +4,7 @@ import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
 import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
+import selectNativeApi from '../../../packages/react/api/select-native.json' with { type: 'json' };
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
@@ -109,13 +110,19 @@ const SELECT_PROPS = Object.freeze({
   role: ['group', 'region', 'presentation'],
   expansionTrigger: ['chevron', 'row'],
   selectionMode: ['none', 'single', 'multiple'],
-  fit: ['cover', 'contain', 'fill', 'none'],
-  radius: ['none', 'sm', 'md', 'lg', 'full'],
   size: ['sm', 'md', 'lg'],
   type: ['text', 'email', 'password', 'url', 'tel'],
   validationBehavior: ['aria', 'native'],
   variant: ['neutral', 'success', 'warning', 'danger'],
 });
+
+/** The literal values a derived type (Decision 0031) admits, through named types, in source order. */
+function literalMembers(type, types) {
+  if (type.kind === 'literal') return [type.value];
+  if (type.kind === 'reference') return literalMembers(types[type.name].type, types);
+  if (type.kind === 'union') return type.members.flatMap((member) => literalMembers(member, types));
+  return [];
+}
 
 const TEXT_SELECT_PROPS = Object.freeze({
   variant: ['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono'],
@@ -133,8 +140,8 @@ const FAMILY_SELECT_PROPS = Object.freeze({
   Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
   ToggleButtonGroup: { selectionMode: ['single', 'multiple'] },
   Sidebar: { status: ['online', 'offline'] },
-  // SelectNative also admits a positive number, the native list's visible row count (SelectNativeProps.size).
-  SelectNative: { size: [...SELECT_PROPS.size, 4] },
+  // SelectNative's derived size is a visual size or a positive number, the native list's visible row count.
+  SelectNative: { size: [...literalMembers(selectNativeApi.api.propDetails.size.type, selectNativeApi.api.types), 4] },
 });
 
 const callbackType = { summary: 'MuxUI callback' };
@@ -217,7 +224,6 @@ function kebabCase(value) {
 function sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs) {
   const defaults = binding.api.defaults ?? {};
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
-  if (family === 'SelectNative' && controlled === 'value' && sourceArgs.multiple && (sourceValue === undefined || sourceValue === '')) return [];
   if (sourceValue !== undefined) return sourceValue;
   if (controlled === 'mode') return 'light';
   if (controlled === 'query') return '';
@@ -252,7 +258,7 @@ function pairArgs(binding, family, sourceArgs, mode) {
       delete args[uncontrolled];
     } else {
       delete args[controlled];
-      if ((args[uncontrolled] === undefined || family === 'SelectNative' && controlled === 'value' && sourceArgs.multiple && args[uncontrolled] === '') && value !== undefined) args[uncontrolled] = value;
+      if (args[uncontrolled] === undefined && value !== undefined) args[uncontrolled] = value;
     }
   }
   return args;
@@ -1766,12 +1772,8 @@ function eventForControlledProp(controlled, family) {
   return 'change';
 }
 
-function controlledValueFromEvent(controlled, payload, family) {
+function controlledValueFromEvent(controlled, payload) {
   const value = payload[0];
-  if (family === 'SelectNative' && controlled === 'value') {
-    const select = value.currentTarget;
-    return select.multiple ? Array.from(select.selectedOptions, (option) => option.value) : select.value;
-  }
   if (controlled === 'selectedId') {
     if (value && typeof value === 'object') return value.id ?? value.value;
     // onSelect reports a cleared selection with no item; a controlled selectedId expresses it as null.
@@ -1792,7 +1794,7 @@ function ControlledHarness({ record, args }) {
     const supplied = args[prop];
     eventArgs[prop] = (...payload) => {
       supplied?.(...payload);
-      const next = controlledValueFromEvent(controlled, payload, record.family);
+      const next = controlledValueFromEvent(controlled, payload);
       if (next !== undefined) setValues((previous) => ({ ...previous, [controlled]: next }));
     };
   }
@@ -1818,7 +1820,7 @@ function UncontrolledHarness({ record, args }) {
   // Keep the initial host default; explicit keys retain restoration across host mode changes.
   const specimenArgs = record.family === 'ColorModeToggle'
     ? { ...args, defaultMode: args.defaultMode ?? initialScheme, storageKey: args.storageKey ?? `muxui-storybook-uncontrolled-color-mode-${initialScheme}`, syncWithToolbar: false }
-    : record.family === 'SelectNative' ? uncontrolledStoryArgsForBinding(record.binding, record.family, args) : args;
+    : args;
   const uncontrolledPairs = controlledDefaultPairsForBinding(record.binding);
   const valuesToShow = Object.fromEntries(uncontrolledPairs.map(({ uncontrolled }) => [uncontrolled, specimenArgs[uncontrolled]]));
   return e('div', {
@@ -2624,8 +2626,7 @@ export function createEventsStory(record) {
   };
   return {
     name: 'Events',
-    // An avatar reports load only once it has an image.
-    args: { ...storyArgsForBinding(record.binding, 'default', record.family), ...(record.family === 'Avatar' && { src: AVATAR_LOADED_SRC }) },
+    args: storyArgsForBinding(record.binding, 'default', record.family),
     argTypes: argTypesForBinding(record.binding),
     render: (args) => renderEvents(args),
   };
@@ -2691,6 +2692,55 @@ export function createBrowserProofStory(record) {
         throw error;
       }
     },
+  };
+}
+
+const SELECT_NATIVE_PANELS = Object.freeze([['', 'Choose a panel'], ['inbox', 'Inbox'], ['research', 'Research']]);
+const selectNativePanels = () => SELECT_NATIVE_PANELS.map(([value, label]) => e('option', { key: value, value }, label));
+
+// The native select owns value, defaultValue, and onChange, outside SelectNative's derived API
+// (Decision 0031), so no generated Controlled or Events story shows them. This one does: a select
+// that follows its change event beside one that starts from a default value and keeps its own.
+function SelectNativeSelection() {
+  const [value, setValue] = React.useState('inbox');
+  const [changes, setChanges] = React.useState([]);
+  const onChange = (event) => {
+    const next = event.currentTarget.value;
+    setValue(next);
+    setChanges((previous) => [...previous, `change: ${next}`].slice(-12));
+  };
+  return e('div', {
+    className: 'muxui-storybook-proof',
+    role: 'group',
+    'aria-label': 'Native selection',
+    'data-muxui-storybook-proof': 'native-selection',
+  },
+  e(MuxUI.SelectNative, { label: 'Controlled panel', value, onChange }, ...selectNativePanels()),
+  e(HarnessStatus, {
+    label: 'Value',
+    note: 'The change event sets the value the select shows.',
+    children: e('output', { 'aria-label': 'Controlled panel value', 'data-muxui-select-native-value': '' }, value),
+  }),
+  e(HarnessStatus, {
+    label: 'Event log',
+    note: 'Choose a controlled panel to record its change event.',
+    children: e('ol', { 'aria-live': 'polite', 'data-muxui-storybook-event-log': 'SelectNative' },
+      changes.length === 0
+        ? e('li', { 'data-muxui-storybook-event-status': 'waiting' }, 'Waiting for: change')
+        : changes.map((message, index) => e('li', { key: `${message}-${index}` }, message))),
+  }),
+  e(MuxUI.SelectNative, { label: 'Default panel', description: 'Starts at Research and keeps its own selection.', defaultValue: 'research' }, ...selectNativePanels()));
+}
+
+/** SelectNative's native controlled and default-value selection, side by side. */
+export function createSelectNativeSelectionStory(record) {
+  if (record.family !== 'SelectNative') throw new TypeError('Native selection stories require the SelectNative family');
+  return {
+    name: 'Native selection',
+    args: {},
+    argTypes: argTypesForBinding(record.binding),
+    parameters: { controls: { disable: true } },
+    render: () => e(SelectNativeSelection),
   };
 }
 

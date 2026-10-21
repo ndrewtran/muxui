@@ -1,5 +1,5 @@
 import React from 'react';
-import { SelectNative } from '../../src/supplemental/select-native.mjs';
+import { SelectNative } from '../../src/supplemental/select-native.ts';
 
 const h = React.createElement;
 

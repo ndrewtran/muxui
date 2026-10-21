@@ -42,27 +42,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "size",
-          "src",
-          "srcSet",
-          "alt",
-          "children"
-        ],
-        "events": [
-          "load",
-          "error"
-        ],
-        "parts": [
-          "root",
-          "image",
-          "fallback"
-        ],
-        "defaults": {
-          "size": "md"
-        }
-      },
       "behavior": [
         "Root, Image, and Fallback are Mux-owned compound parts backed by native span and img hosts; they are not React Aria primitives.",
         "Place Image and Fallback directly under Root or inside a React.Fragment; opaque wrapper components are rejected so image and fallback state cannot diverge.",

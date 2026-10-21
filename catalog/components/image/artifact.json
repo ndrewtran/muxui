@@ -41,33 +41,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "src",
-          "srcSet",
-          "sizes",
-          "alt",
-          "width",
-          "height",
-          "loading",
-          "decoding",
-          "fallbackSrc",
-          "fallbackSrcSet",
-          "radius",
-          "fit"
-        ],
-        "events": [
-          "load",
-          "error"
-        ],
-        "parts": [
-          "root"
-        ],
-        "defaults": {
-          "radius": "none",
-          "fit": "cover"
-        }
-      },
       "behavior": [
         "Renders a native HTMLImageElement and forwards native attributes, dimensions, refs, and callbacks.",
         "When the primary source fails to load and fallbackSrc or fallbackSrcSet is supplied, the image switches to the fallback once and sets data-fallback.",

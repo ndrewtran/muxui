@@ -1,6 +1,6 @@
 import React from 'react';
-import { Avatar } from '../../src/supplemental/avatar.mjs';
-import { Image } from '../../src/supplemental/image.mjs';
+import { Avatar } from '../../src/supplemental/avatar.ts';
+import { Image } from '../../src/supplemental/image.ts';
 
 const h = React.createElement;
 const validImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3Crect width="8" height="8" fill="black"/%3E%3C/svg%3E';

@@ -14,6 +14,10 @@ import { extractApis } from './extract.mjs';
 export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'button', name: 'Button', source: 'packages/react/src/button.ts' },
   { slug: 'icon-button', name: 'IconButton', source: 'packages/react/src/supplemental/icon-button.ts' },
+  { slug: 'select-native', name: 'SelectNative', source: 'packages/react/src/supplemental/select-native.ts' },
+  { slug: 'image', name: 'Image', source: 'packages/react/src/supplemental/image.ts' },
+  // A compound: its API is that of Avatar.Root, the part the binding's root renders.
+  { slug: 'avatar', name: 'Avatar', part: 'Root', source: 'packages/react/src/supplemental/avatar.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

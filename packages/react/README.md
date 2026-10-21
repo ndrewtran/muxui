@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:4ae9c374235ee7e1d2020c82d69d9c768b97c01a45d9f8f7977194314bf2fec6 -->
+<!-- @generated-content-sha256: sha256:c27f27b55cd3cfbb7c73dc6c9e839db39f18a62a5f40b5eabb85d512bea048dc -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -105,7 +105,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Activity | experimental | . | .muxui-activity | label, items, status, expanded, defaultExpanded, actions |
 | AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
-| Avatar | experimental | . | .muxui-avatar | size, src, srcSet, alt, children |
+| Avatar | experimental | . | .muxui-avatar | size |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items, aria-label |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
@@ -139,7 +139,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
-| Image | experimental | . | .muxui-image | src, srcSet, sizes, alt, width, height, loading, decoding, fallbackSrc, fallbackSrcSet, radius, fit |
+| Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
 | Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
 | Lightbox | experimental | . | .muxui-lightbox | items, renderContent, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
@@ -163,7 +163,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, keyboardStep, keyboardLargeStep, precision, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, id, inputRef, inputProps |
 | Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal |
-| SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, aria-label, aria-labelledby, aria-describedby, id, value, defaultValue, onChange, name, form, autoComplete, disabled, required, invalid, multiple, size, children |
+| SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, disabled, required, invalid, size |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | collapsed, defaultCollapsed, onCollapsedChange, shortcut, hideBorder, density, label, href, current, external, items, expanded, defaultExpanded, onExpandedChange, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss, onAction |
 | Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |

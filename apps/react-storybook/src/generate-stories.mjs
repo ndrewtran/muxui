@@ -114,6 +114,19 @@ export const Matrix = {
 };`,
   },
   {
+    family: 'SelectNative',
+    exportName: 'NativeSelection',
+    name: 'Native selection',
+    source: () => `const nativeSelection = createSelectNativeSelectionStory(record);
+export const NativeSelection = {
+  name: ${stringLiteral('Native selection')},
+  args: nativeSelection.args,
+  argTypes: nativeSelection.argTypes,
+  parameters: nativeSelection.parameters,
+  render: nativeSelection.render,
+};`,
+  },
+  {
     family: 'Autocomplete',
     exportName: 'DisabledItemsInteraction',
     name: 'Disabled items keyboard navigation',
@@ -228,7 +241,7 @@ import {
 ${record.family === 'Button' ? '  createButtonMatrixStory,\n' : ''}  createBrowserProofStory,
   createControlledStory,
   createEventsStory,
-  createStory,
+${record.family === 'SelectNative' ? '  createSelectNativeSelectionStory,\n' : ''}  createStory,
   createUncontrolledStory,
 } from '../../src/storybook-factory.mjs';${canonicalExample ? `
 import React from 'react';

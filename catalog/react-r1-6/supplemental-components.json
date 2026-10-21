@@ -40,7 +40,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/avatar.mjs",
+      "runtimeSource": "packages/react/src/supplemental/avatar.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -185,7 +185,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/image.mjs",
+      "runtimeSource": "packages/react/src/supplemental/image.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -361,7 +361,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/select-native.mjs",
+      "runtimeSource": "packages/react/src/supplemental/select-native.ts",
       "styleSource": "packages/react/src/supplemental/select-native.css"
     },
     {

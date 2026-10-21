@@ -196,7 +196,7 @@ test('release proof rejects private archive files and export drift', () => {
 test('release proof derives the exact generated archive set from the React generator outputs', () => {
   const generatedOutputs = readGeneratedOutputNames(packageRoot);
   // Avatar, Image, SelectNative and motion outputs prove the list tracks the generator rather than a copy.
-  for (const name of ['avatar.mjs', 'image.d.ts', 'select-native.mjs', 'motion.mjs', 'motion-components.mjs', 'tabs-motion.mjs']) {
+  for (const name of ['avatar.js', 'image.d.ts', 'select-native.js', 'motion.mjs', 'motion-components.mjs', 'tabs-motion.mjs']) {
     assert.ok(generatedOutputs.includes(name), name);
   }
   const generatedOnDisk = packageFiles(join(packageRoot, 'generated'), 'package/generated').sort();
@@ -214,8 +214,8 @@ test('release proof derives the exact generated archive set from the React gener
   });
   assert.throws(() => assertExactArchiveEntries(packed, omitted), /R1\.5_PACK_CONTENT_INVALID: .*unexpected: package\/generated\/motion\.mjs/u);
   assert.throws(
-    () => assertExactArchiveEntries(packed.filter((entry) => entry !== 'package/generated/avatar.mjs'), expected),
-    /R1\.5_PACK_CONTENT_INVALID: .*missing: package\/generated\/avatar\.mjs;/u,
+    () => assertExactArchiveEntries(packed.filter((entry) => entry !== 'package/generated/avatar.js'), expected),
+    /R1\.5_PACK_CONTENT_INVALID: .*missing: package\/generated\/avatar\.js;/u,
   );
   assert.throws(
     () => assertExactArchiveEntries([...packed, 'package/generated/stale.mjs'], expected),

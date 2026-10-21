@@ -53,6 +53,10 @@ test('the Button guide covers exactly the variants its derived API declares', as
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },
+  'select-native': { native: ['FormData.getAll', 'event.currentTarget.value', 'option', 'optgroup'] },
+  image: { native: ['width', 'height'] },
+  // Avatar's block is Avatar.Root's; alt is Avatar.Image's native image attribute.
+  avatar: { native: ['alt', 'alt=""'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
@@ -147,7 +151,7 @@ test('every API name a derived component\'s guide states is in its derived API o
 });
 
 test('a guide\'s absence claim fails once the derived API gains the prop', async () => {
-  const claims = { button: 'tone', 'icon-button': 'showTextWhileLoading' };
+  const claims = { button: 'tone', 'icon-button': 'showTextWhileLoading', 'select-native': 'placeholder' };
   for (const [slug, name] of Object.entries(claims)) {
     const [guide, { api }] = await Promise.all([read(`catalog/guides/${slug}-usage.md`), derivedApi(slug)]);
     assert.ok(absenceClaims(guide).claimed.includes(name), `the ${slug} guide claims there is no ${name}`);
@@ -170,4 +174,9 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.ok(bulletSubjects(iconButton, 'Choosing a variant').every((variant) => iconButtonApi.api.propDetails.variant.enum.includes(variant)));
   assert.equal(bulletDefault(iconButton, 'Choosing a variant'), iconButtonApi.api.defaults.variant);
   assert.doesNotMatch(iconButton, /disabled=\{false\}|pending=\{false\}/u, 'IconButton defaults neither disabled nor pending');
+
+  // Image's fit guidance covers exactly the fits, in source order, and marks the default.
+  const [image, imageApi] = await Promise.all([guide('image'), derivedApi('image')]);
+  assert.deepEqual(bulletSubjects(image, 'Choosing a fit'), imageApi.api.propDetails.fit.enum);
+  assert.equal(bulletDefault(image, 'Choosing a fit'), imageApi.api.defaults.fit);
 });

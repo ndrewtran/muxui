@@ -1,0 +1,54 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/avatar.ts",
+  "component": "muxui:component:avatar",
+  "binding": "web.react",
+  "export": "Avatar",
+  "api": {
+    "props": [
+      "size"
+    ],
+    "events": [],
+    "defaults": {
+      "size": "md"
+    },
+    "propDetails": {
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "AvatarSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The avatar size."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "AvatarSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The sizes of an Avatar."
+      }
+    }
+  }
+}
