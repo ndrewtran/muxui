@@ -1037,6 +1037,11 @@ test('a derived API merges into its binding: spec revision moves, content revisi
     const authored = JSON.parse(await readFile(join(repositoryRoot, recordPath), 'utf8'));
     delete authored.bindings['web.react'].api;
     await mkdir(join(temporaryRoot, 'fixture/api'), { recursive: true });
+    // The other derived records keep their committed blocks; only Button's is the fixture's.
+    const derivedRoot = join(repositoryRoot, manifest.derivedApiSources['web.react']);
+    for (const name of (await readdir(derivedRoot)).filter((file) => file !== 'button.json')) {
+      await writeFile(join(temporaryRoot, 'fixture/api', name), await readFile(join(derivedRoot, name)));
+    }
     const index = manifest.records.findIndex(({ path }) => path === recordPath);
     manifest.records[index] = { family: 'component', path: fixturePath };
     manifest.derivedApiSources = { 'web.react': 'fixture/api' };

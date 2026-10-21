@@ -828,14 +828,16 @@ const withoutDescriptions = (value) => {
 };
 
 // An object type's member in the derived grammar: `{ name, type, required, readonly }`.
-const isRequiredMember = (value) => isObject(value) && typeof value.name === 'string' && isObject(value.type) && value.required === true;
+const isMember = (value) => isObject(value) && typeof value.name === 'string' && isObject(value.type);
+// A required member, or an absent one (`name?: never`): either rejects input the type accepted before.
+const narrowsInput = (value) => isMember(value) && (value.required === true || value.type.kind === 'never');
 
 /**
  * Decision 0031 refinements a derived block needs beyond its schema annotations: an
  * entry of propDetails, eventDetails, or types that differs only in descriptions is
  * editorial (the spec revision still moves with the block). Adding a required prop or
- * event, or a required member to an object type inside one (inline or a named type), is
- * incompatible.
+ * event, or a required or absent (`name?: never`) member to an object type inside one
+ * (inline or a named type), is incompatible.
  */
 function derivedEffect(change, effect, mergedBefore, mergedAfter) {
   const entry = DERIVED_ENTRY.exec(change.path);
@@ -847,7 +849,7 @@ function derivedEffect(change, effect, mergedBefore, mergedAfter) {
       && canonicalJson(withoutDescriptions(left)) === canonicalJson(withoutDescriptions(right))) return 'editorial';
     if (change.operation !== 'add') return effect;
     if (rest === undefined && field !== 'types' && right?.required === true) return 'incompatible';
-    if (/\/members\/\d+$/u.test(change.path) && isRequiredMember(change.after)) return 'incompatible';
+    if (/\/members\/\d+$/u.test(change.path) && narrowsInput(change.after)) return 'incompatible';
     return effect;
   }
   const name = DERIVED_NAME.exec(change.path);

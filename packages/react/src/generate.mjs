@@ -1040,7 +1040,14 @@ const currentContractRecord = {
   })),
   evidence: { status: 'pending', ids: [] },
 };
-const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.mjs';\n`).join('')}`;
+// A family moved to TypeScript ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031).
+const isTypeScriptFamily = ({ source }) => source.endsWith('.ts');
+for (const record of currentMappedRecords.filter(isTypeScriptFamily)) {
+  if (flatModuleName(record.source) !== `${record.slug}.js` || record.subpath) {
+    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a TypeScript family is a root module named for its slug`);
+  }
+}
+const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map((record) => `export * from './${isTypeScriptFamily(record) ? `${record.slug}.js` : `${record.slug}.mjs`}';\n`).join('')}`;
 const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 const componentCssBody = `${authoredCss}${supplementalStylesSource ? `\n\n${supplementalStylesSource.trim()}` : ''}${[...currentSubpathRecords, ...currentEagerRecords].map(({ style }) => style ? `\n\n${style.trim()}` : '').join('')}`;
 const layeredStylesCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', cssBody)}\n\n${cssLayer('muxui.components', componentCssBody)}`;
@@ -1124,7 +1131,7 @@ const outputs = new Map([
   ['overlays.mjs', shippedModule('packages/react/src/overlays.mjs', overlaysSource)],
   ['overlay-positioning.mjs', shippedModule('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],
 ]);
-for (const source of [...currentSubpathRecords, ...currentEagerRecords]) {
+for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {
   outputs.set(`${source.slug}.mjs`, shippedModule(source.source, source.sourceText));
   const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');
   const typesSource = await readFile(resolve(repositoryRoot, typesPath), 'utf8').catch(() => null);

@@ -153,7 +153,7 @@ function declarationReader({ project, declarationRoot, allowed }) {
     if (declaration.kind === SyntaxKind.InterfaceDeclaration) {
       if (declaration.typeParameters?.length) throw new ApiExtractionError(chain, `${name} is generic`);
       if (declaration.heritageClauses?.length) throw new ApiExtractionError(chain, `${name} extends another type; list its members instead`);
-      type = { kind: 'object', members: declaration.members.map((member) => memberOf(member, `${chain}.`)) };
+      type = objectOf(declaration.members, chain);
     } else if (declaration.kind === SyntaxKind.TypeAliasDeclaration) {
       if (declaration.typeParameters?.length) throw new ApiExtractionError(chain, `${name} is generic`);
       type = typeOf(declaration.type, chain);
@@ -209,17 +209,43 @@ function declarationReader({ project, declarationRoot, allowed }) {
     return { kind: 'function', parameters, returns: typeOf(node.type, `${chain}=>`) };
   }
 
+  /**
+   * An object type whose one member is a string index signature, `{ readonly [key: string]:
+   * T }`, is a record: string keys the caller chooses, each holding a T. It is the only
+   * index signature in the grammar: beside other members, or keyed by anything but string,
+   * one fails.
+   */
+  function recordOf(members, chain) {
+    if (!members.some((member) => member.kind === SyntaxKind.IndexSignature)) return null;
+    if (members.length !== 1) throw new ApiExtractionError(chain, 'an index signature is in the grammar only as the one member of its object type');
+    const [signature] = members;
+    const [key] = signature.parameters;
+    if (signature.parameters.length !== 1 || key.type?.kind !== SyntaxKind.StringKeyword) {
+      throw new ApiExtractionError(chain, 'an index signature takes one string key');
+    }
+    if (!signature.type) throw new ApiExtractionError(chain, 'an index signature needs a declared type');
+    return { kind: 'record', value: typeOf(signature.type, `${chain}[string]`), readonly: hasModifier(signature, SyntaxKind.ReadonlyKeyword) };
+  }
+
+  const objectOf = (members, chain) => recordOf(members, chain)
+    ?? { kind: 'object', members: members.map((member) => memberOf(member, `${chain}.`)) };
+
   function memberOf(member, prefix) {
     if (member.kind !== SyntaxKind.PropertySignature) {
       throw new ApiExtractionError(`${prefix}${member.name?.text ?? '<member>'}`, 'only property signatures are in the grammar');
     }
     const name = propertyName(member.name, `${prefix}<member>`);
     if (!member.type) throw new ApiExtractionError(`${prefix}${name}`, 'a member needs a declared type');
+    // The TypeScript 7 AST names a member's ? its postfix token.
+    const required = member.postfixToken?.kind !== SyntaxKind.QuestionToken;
+    // `name?: never` is a member that must be absent, as in one arm of a union of object
+    // types. It is the only place never is in the grammar.
+    const absent = member.type.kind === SyntaxKind.NeverKeyword;
+    if (absent && required) throw new ApiExtractionError(`${prefix}${name}`, 'never is in the grammar only as an optional member\'s type, a member that must be absent');
     return {
       name,
-      type: typeOf(member.type, `${prefix}${name}`),
-      // The TypeScript 7 AST names a member's ? its postfix token.
-      required: member.postfixToken?.kind !== SyntaxKind.QuestionToken,
+      type: absent ? { kind: 'never' } : typeOf(member.type, `${prefix}${name}`),
+      required,
       readonly: hasModifier(member, SyntaxKind.ReadonlyKeyword),
       ...description(member),
     };
@@ -239,7 +265,7 @@ function declarationReader({ project, declarationRoot, allowed }) {
         }
         throw new ApiExtractionError(chain, 'a type operator other than readonly T[] is not in the grammar');
       case SyntaxKind.FunctionType: return functionOf(node, chain);
-      case SyntaxKind.TypeLiteral: return { kind: 'object', members: node.members.map((member) => memberOf(member, `${chain}.`)) };
+      case SyntaxKind.TypeLiteral: return objectOf(node.members, chain);
       case SyntaxKind.TypeReference: return referenceOf(node, chain);
       default:
         throw new ApiExtractionError(chain, `${REJECTED.get(node.kind) ?? SyntaxKind[node.kind]} is not in the grammar`);
@@ -295,12 +321,20 @@ function ownPropsOf(checker, sourceFile, name) {
 }
 
 // The props the exported component accepts: the first parameter of its one call signature.
-function publicProps(checker, sourceFile, name) {
+// A compound export (Avatar) names the part whose props the binding's API is: its root.
+function publicProps(checker, sourceFile, name, part) {
   const exported = exportedNamed(sourceFile, name);
   if (!exported) throw new ApiExtractionError(name, `the declarations export no ${name}`);
-  const signatures = checker.getSignaturesOfType(checker.getTypeOfSymbol(checker.getSymbolAtLocation(exported.name)), SignatureKind.Call);
+  let type = checker.getTypeOfSymbol(checker.getSymbolAtLocation(exported.name));
+  const component = part === undefined ? name : `${name}.${part}`;
+  if (part !== undefined) {
+    const property = checker.getPropertyOfType(type, part);
+    if (!property) throw new ApiExtractionError(component, `the exported ${name} has no ${part} part`);
+    type = checker.getTypeOfSymbol(property);
+  }
+  const signatures = checker.getSignaturesOfType(type, SignatureKind.Call);
   if (signatures.length !== 1 || signatures[0].getParameters().length === 0) {
-    throw new ApiExtractionError(name, `the exported ${name} must be a component with one call signature that takes props`);
+    throw new ApiExtractionError(name, `the exported ${component} must be a component with one call signature that takes props`);
   }
   return new Map(checker.getPropertiesOfType(checker.getParameterType(signatures[0], 0)).map((property) => [property.name, property]));
 }
@@ -311,15 +345,16 @@ function publicProps(checker, sourceFile, name) {
  * TypeScript interns literal, union, and named types, so a redeclaration written the
  * same way is the same type; anything else, including an equal inline object, fails.
  */
-function readDeclaredApi(reader, checker, sourceFile, name) {
+function readDeclaredApi(reader, checker, sourceFile, name, part) {
   const members = ownPropsOf(checker, sourceFile, name);
-  const exposed = publicProps(checker, sourceFile, name);
+  const exposed = publicProps(checker, sourceFile, name, part);
   const props = [];
   const events = [];
   const propDetails = {};
   const eventDetails = {};
   for (const member of members) {
     const { name: prop, type, required, readonly: _readonly, ...documented } = reader.memberOf(member, `${name}.`);
+    if (type.kind === 'never') throw new ApiExtractionError(`${name}.${prop}`, `a member that must be absent is no prop; leave ${prop} to the host part of the props`);
     const own = checker.getSymbolAtLocation(member.name);
     const accepted = exposed.get(prop);
     if (!accepted) throw new ApiExtractionError(`${name}.${prop}`, `the exported ${name}'s props do not include ${prop}`);
@@ -375,6 +410,15 @@ function primitiveLiteral(node) {
   }
 }
 
+// `Object.freeze(x)` with the global Object, not a local one that shadows it.
+const isObjectFreeze = ({ checker, program }, node) => node.kind === SyntaxKind.CallExpression
+  && node.arguments.length === 1
+  && node.expression.kind === SyntaxKind.PropertyAccessExpression
+  && node.expression.expression.kind === SyntaxKind.Identifier
+  && node.expression.expression.text === 'Object'
+  && node.expression.name.text === 'freeze'
+  && (checker.getSymbolAtLocation(node.expression.expression)?.declarations ?? []).every(({ path }) => isDefaultLibrary(program, path));
+
 /**
  * Reads a default (Decision 0031 item 3). A default is a literal, an array or object
  * literal of literals, or a reference to an allowed static constant: a top-level const
@@ -383,7 +427,7 @@ function primitiveLiteral(node) {
  * Anything else, including any call, could change at run time and fails.
  */
 function defaultReader({ project, sourceFile }) {
-  const { checker, program } = project;
+  const { checker } = project;
 
   function literal(node, chain, value) {
     const unwrapped = unwrap(node);
@@ -399,20 +443,12 @@ function defaultReader({ project, sourceFile }) {
     return NOT_PRIMITIVE;
   }
 
-  const isObjectFreeze = (node) => node.kind === SyntaxKind.CallExpression
-    && node.arguments.length === 1
-    && node.expression.kind === SyntaxKind.PropertyAccessExpression
-    && node.expression.expression.kind === SyntaxKind.Identifier
-    && node.expression.expression.text === 'Object'
-    && node.expression.name.text === 'freeze'
-    && (checker.getSymbolAtLocation(node.expression.expression)?.declarations ?? []).every(({ path }) => isDefaultLibrary(program, path));
-
   // A frozen literal's values are literals or frozen literals themselves, so no part of it can change.
   function frozen(node, chain) {
     const unwrapped = unwrap(node);
     const primitive = primitiveLiteral(unwrapped);
     if (primitive !== NOT_PRIMITIVE) return primitive;
-    const argument = isObjectFreeze(unwrapped) ? unwrap(unwrapped.arguments[0]) : null;
+    const argument = isObjectFreeze(project, unwrapped) ? unwrap(unwrapped.arguments[0]) : null;
     if (argument?.kind === SyntaxKind.ObjectLiteralExpression || argument?.kind === SyntaxKind.ArrayLiteralExpression) {
       return literal(argument, chain, frozen);
     }
@@ -453,13 +489,23 @@ const UPDATES = new Set([SyntaxKind.PlusPlusToken, SyntaxKind.MinusMinusToken]);
 const FALLBACKS = new Map([[SyntaxKind.QuestionQuestionToken, '??'], [SyntaxKind.BarBarToken, '||']]);
 
 /**
+ * Whether `binding ?? fallback` or `binding || fallback` leaves an omitted prop at its
+ * parameter default: the default must be non-nullish for `??` and truthy for `||`, or the
+ * expression executes the fallback in its place.
+ */
+const keepsDefault = (operator, { defaulted, value }) => defaulted
+  && (operator === SyntaxKind.QuestionQuestionToken ? value !== null && value !== undefined : Boolean(value));
+
+/**
  * Fails when the component function executes a default for a Mux UI-owned binding
  * instead of declaring it in the props parameter: any assignment to the binding
  * (including `??=`, compound, and destructuring assignments, and a for-in or for-of
- * target), an update (`++`, `--`), or a non-event binding as the left operand of `??` or
- * `||`. Bindings are matched by symbol, so a shadowing local is not the prop. An event
- * binding may still be called optionally (`onActivate?.(event)`) or given a fallback.
- * @param {Map<number, { prop: string, event: boolean }>} owned binding symbol id to its prop
+ * target), an update (`++`, `--`), or the binding as the left operand of `??` or `||`
+ * unless its parameter default keeps the fallback from applying (`keepsDefault`).
+ * Bindings are matched by symbol, so a shadowing local is not the prop. An event binding,
+ * which has no default to misstate, may still be called optionally
+ * (`onActivate?.(event)`) or given a fallback.
+ * @param {Map<number, { prop: string, event: boolean, defaulted: boolean, value?: unknown }>} owned binding symbol id to its prop and parameter default
  */
 function assertNoExecutedDefaults(checker, component, name, owned) {
   const ownedAt = (node) => (node.kind === SyntaxKind.Identifier ? owned.get(checker.getSymbolAtLocation(node)?.id) : undefined);
@@ -505,8 +551,11 @@ function assertNoExecutedDefaults(checker, component, name, owned) {
       const operator = node.operatorToken.kind;
       if (isAssignmentOperator(operator)) assigned(node.left);
       const fallback = FALLBACKS.has(operator) ? ownedAt(unwrap(node.left)) : undefined;
-      if (fallback && !fallback.event) {
-        throw new ApiExtractionError(`${name}.${fallback.prop}`, `${fallback.prop} ${FALLBACKS.get(operator)} ... falls back to a value the component executes; declare the default in the props parameter`);
+      if (fallback && !fallback.event && !keepsDefault(operator, fallback)) {
+        const { prop, defaulted, value } = fallback;
+        throw new ApiExtractionError(`${name}.${prop}`, defaulted
+          ? `${prop} ${FALLBACKS.get(operator)} ... replaces its parameter default ${JSON.stringify(value)} with a value the component executes; declare the executed default in the props parameter`
+          : `${prop} ${FALLBACKS.get(operator)} ... falls back to a value the component executes; declare the default in the props parameter`);
       }
     } else if ((node.kind === SyntaxKind.PrefixUnaryExpression || node.kind === SyntaxKind.PostfixUnaryExpression) && UPDATES.has(node.operator)) {
       assigned(node.operand);
@@ -520,15 +569,92 @@ function assertNoExecutedDefaults(checker, component, name, owned) {
   visit(component);
 }
 
+/** A top-level const declaration of the source, or null. */
+function topLevelConst(project, sourceFile, identifier) {
+  const declarations = project.checker.getSymbolAtLocation(identifier)?.declarations ?? [];
+  const declaration = declarations.length === 1 ? declarations[0].resolve(project) : null;
+  const isConst = declaration?.kind === SyntaxKind.VariableDeclaration
+    && declaration.initializer !== undefined
+    && declaration.parent.kind === SyntaxKind.VariableDeclarationList
+    && (declaration.parent.flags & NodeFlags.Const) !== 0
+    && declaration.parent.parent.parent === sourceFile;
+  return isConst ? declaration : null;
+}
+
+const MUTATORS = new Set(['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf']);
+
+/** Whether the source writes to the binding or through it: an assignment, update, delete, or Object mutator. */
+function writesThrough({ checker }, sourceFile, symbol) {
+  const rooted = (target) => {
+    let node = unwrap(target);
+    while (node.kind === SyntaxKind.PropertyAccessExpression || node.kind === SyntaxKind.ElementAccessExpression) node = unwrap(node.expression);
+    return node.kind === SyntaxKind.Identifier && checker.getSymbolAtLocation(node)?.id === symbol.id;
+  };
+  const writes = (node) => {
+    if (node.kind === SyntaxKind.BinaryExpression && isAssignmentOperator(node.operatorToken.kind) && rooted(node.left)) return true;
+    if ((node.kind === SyntaxKind.PrefixUnaryExpression || node.kind === SyntaxKind.PostfixUnaryExpression) && UPDATES.has(node.operator) && rooted(node.operand)) return true;
+    if (node.kind === SyntaxKind.DeleteExpression && rooted(node.expression)) return true;
+    if (node.kind === SyntaxKind.CallExpression && node.arguments.length > 0 && rooted(node.arguments[0])
+      && node.expression.kind === SyntaxKind.PropertyAccessExpression && node.expression.expression.kind === SyntaxKind.Identifier
+      && node.expression.expression.text === 'Object' && MUTATORS.has(node.expression.name.text)) return true;
+    let found = false;
+    node.forEachChild((child) => {
+      found ||= writes(child);
+    });
+    return found;
+  };
+  return writes(sourceFile);
+}
+
+/**
+ * The expression a compound export binds to `part`. A compound is a top-level const the
+ * source never writes to, initialized to `Object.freeze({ Root: AvatarRoot, ... })` whose
+ * properties are all `Name: value` with plain names, each once, so no spread, computed key,
+ * or later write can replace the part the extraction reads. An identifier value is followed
+ * to a top-level const of the source.
+ */
+function compoundPart(project, sourceFile, exported, name, part) {
+  const chain = `${name}.${part}`;
+  if (!exported) throw new ApiExtractionError(chain, `the source exports no ${name}`);
+  const declaration = exported.node;
+  const isConst = declaration?.kind === SyntaxKind.VariableDeclaration
+    && (declaration.parent.flags & NodeFlags.Const) !== 0
+    && declaration.parent.parent.parent === sourceFile;
+  if (!isConst) throw new ApiExtractionError(chain, `the compound ${name} must be a top-level const`);
+  const initializer = declaration.initializer === undefined ? undefined : unwrap(declaration.initializer);
+  const object = initializer && isObjectFreeze(project, initializer) ? unwrap(initializer.arguments[0]) : undefined;
+  if (object?.kind !== SyntaxKind.ObjectLiteralExpression) throw new ApiExtractionError(chain, `the compound ${name} must be Object.freeze({ ... }) of its parts`);
+  const values = new Map();
+  for (const property of object.properties) {
+    const plain = property.kind === SyntaxKind.PropertyAssignment
+      && (property.name.kind === SyntaxKind.Identifier || property.name.kind === SyntaxKind.StringLiteral);
+    if (!plain) throw new ApiExtractionError(chain, `the compound ${name} holds only Name: value parts; a spread, shorthand, method, accessor, or computed key could replace ${part}`);
+    if (values.has(property.name.text)) throw new ApiExtractionError(chain, `the compound ${name} assigns ${property.name.text} twice`);
+    values.set(property.name.text, unwrap(property.initializer));
+  }
+  if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(exported.name))) {
+    throw new ApiExtractionError(chain, `the source writes to the compound ${name} after declaring it`);
+  }
+  const value = values.get(part);
+  if (value === undefined) throw new ApiExtractionError(chain, `the compound ${name} has no ${part} part`);
+  if (value.kind !== SyntaxKind.Identifier) return value;
+  const constant = topLevelConst(project, sourceFile, value);
+  if (!constant) throw new ApiExtractionError(chain, `${value.text} is not a top-level const in the component's source`);
+  return constant.initializer;
+}
+
 /**
  * Mux UI-owned defaults from the component's props parameter in its executable source.
  * The component destructures every Mux UI-owned prop there and executes no other default
  * for one, so no default can hide in its body or a rest object.
  */
-function readSourceDefaults(project, sourceFile, name, declared) {
+function readSourceDefaults(project, sourceFile, name, declared, part) {
   const exported = exportedNamed(sourceFile, name);
-  const component = exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node : componentFunction(exported?.node.initializer);
-  if (!component) throw new ApiExtractionError(name, 'the source exports no component function to read defaults from');
+  // A compound's defaults are its part's, whatever else the export is.
+  const component = part !== undefined
+    ? componentFunction(compoundPart(project, sourceFile, exported, name, part))
+    : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node : componentFunction(exported?.node.initializer);
+  if (!component) throw new ApiExtractionError(name, `the source exports no component function${part === undefined ? '' : ` as ${name}.${part}`} to read defaults from`);
   const [parameter] = component.parameters;
   if (parameter?.name.kind !== SyntaxKind.ObjectBindingPattern) {
     throw new ApiExtractionError(name, 'the props parameter must be an object pattern that destructures the Mux UI-owned props');
@@ -545,10 +671,11 @@ function readSourceDefaults(project, sourceFile, name, declared) {
     const element = bound.get(prop);
     if (!element) throw new ApiExtractionError(`${name}.${prop}`, 'the props parameter must destructure each Mux UI-owned prop');
     const event = !declared.props.includes(prop);
-    if (element.name.kind === SyntaxKind.Identifier) owned.set(project.checker.getSymbolAtLocation(element.name).id, { prop, event });
-    if (!element.initializer) continue;
-    if (event) throw new ApiExtractionError(`${name}.${prop}`, 'an on<Event> prop has no default');
-    defaults[prop] = value(element.initializer, `${name}.${prop}`);
+    const defaulted = element.initializer !== undefined;
+    if (defaulted && event) throw new ApiExtractionError(`${name}.${prop}`, 'an on<Event> prop has no default');
+    if (defaulted) defaults[prop] = value(element.initializer, `${name}.${prop}`);
+    // The parameter default decides whether a fallback on the binding can apply to an omitted prop.
+    if (element.name.kind === SyntaxKind.Identifier) owned.set(project.checker.getSymbolAtLocation(element.name).id, { prop, event, defaulted, value: defaults[prop] });
   }
   assertNoExecutedDefaults(project.checker, component, name, owned);
   return defaults;
@@ -556,19 +683,20 @@ function readSourceDefaults(project, sourceFile, name, declared) {
 
 /**
  * Extracts each component's API. A component names its export, its emitted declaration
- * file, and, when defaults are wanted, its TypeScript source. Types declared under
+ * file, and, when defaults are wanted, its TypeScript source; a compound export also
+ * names the `part` (its root) whose props the API is. Types declared under
  * `declarationRoot` are Mux UI-owned; any other reference must be an exact host type on
  * the allowlist. Returns a Map from export name to `{ props, events, defaults?,
  * propDetails, eventDetails, types }`, with `types` sorted by name.
- * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string }[], hostAllowlist?: readonly string[] }} options
+ * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string }[], hostAllowlist?: readonly string[] }} options
  */
 export function extractApis({ declarationRoot, components, hostAllowlist = HOST_ALLOWLIST }) {
   const allowed = assertHostAllowlist(hostAllowlist);
   const root = resolve(declarationRoot);
   const files = components.flatMap(({ declarations, source }) => [resolve(declarations), ...(source ? [resolve(source)] : [])]);
-  return withProject(files, (project) => new Map(components.map(({ name, declarations, source }) => {
+  return withProject(files, (project) => new Map(components.map(({ name, declarations, source, part }) => {
     const reader = declarationReader({ project, declarationRoot: root, allowed });
-    const declared = readDeclaredApi(reader, project.checker, project.program.getSourceFile(resolve(declarations)), name);
+    const declared = readDeclaredApi(reader, project.checker, project.program.getSourceFile(resolve(declarations)), name, part);
     const types = Object.fromEntries([...reader.types].sort(([left], [right]) => left.localeCompare(right))
       .map(([typeName, { symbol: _symbol, ...definition }]) => [typeName, definition]));
     // A prop whose type is a finite set of literals also lists them, in declaration order.
@@ -576,7 +704,7 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
       const values = literalValues(type, types);
       return [prop, { type, required, ...(values === null ? {} : { enum: values }), ...documented }];
     }));
-    const defaults = source ? readSourceDefaults(project, project.program.getSourceFile(resolve(source)), name, declared) : undefined;
+    const defaults = source ? readSourceDefaults(project, project.program.getSourceFile(resolve(source)), name, declared, part) : undefined;
     return [name, {
       props: declared.props,
       events: declared.events,

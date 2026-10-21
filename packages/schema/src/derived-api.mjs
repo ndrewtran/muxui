@@ -14,6 +14,7 @@ function referencedNames(type, names) {
     case 'reference': names.add(type.name); break;
     case 'union': for (const member of type.members) referencedNames(member, names); break;
     case 'array': referencedNames(type.element, names); break;
+    case 'record': referencedNames(type.value, names); break;
     case 'function':
       for (const parameter of type.parameters) referencedNames(parameter.type, names);
       referencedNames(type.returns, names);
@@ -24,6 +25,27 @@ function referencedNames(type, names) {
   return names;
 }
 
+// Paths where `never` stands anywhere but as an optional object member's type.
+function misplacedNever(type, path, found = []) {
+  switch (type.kind) {
+    case 'never': found.push(path); break;
+    case 'union': type.members.forEach((member, index) => misplacedNever(member, `${path}/members/${index}`, found)); break;
+    case 'array': misplacedNever(type.element, `${path}/element`, found); break;
+    case 'record': misplacedNever(type.value, `${path}/value`, found); break;
+    case 'function':
+      type.parameters.forEach((parameter, index) => misplacedNever(parameter.type, `${path}/parameters/${index}/type`, found));
+      misplacedNever(type.returns, `${path}/returns`, found);
+      break;
+    case 'object':
+      type.members.forEach((member, index) => {
+        if (member.type.kind !== 'never' || member.required) misplacedNever(member.type, `${path}/members/${index}/type`, found);
+      });
+      break;
+    default: break;
+  }
+  return found;
+}
+
 function sameSet(left, right) {
   return left.length === right.length && left.every((value) => right.includes(value));
 }
@@ -32,8 +54,9 @@ function sameSet(left, right) {
  * Validates a derived API document (packages/react/api/<slug>.json) against
  * derived-api.schema.json and the rules the grammar cannot state: details
  * cover exactly the listed props and events, each event names its on<Event>
- * prop, defaults belong to listed props and their enums, and `types` holds
- * exactly the named types the details reach.
+ * prop, defaults belong to listed props and their enums, `types` holds
+ * exactly the named types the details reach, and `never` is only an optional
+ * object member's type.
  */
 export function validateDerivedApi(document) {
   validateContractDocument('derived-api.schema.json', document);
@@ -76,6 +99,14 @@ export function validateDerivedApi(document) {
   }
   for (const name of Object.keys(api.types).filter((typeName) => !reached.has(typeName))) {
     issues.push({ path: `$/api/types/${name}`, message: 'is defined but no prop or event reaches it' });
+  }
+  const typed = [
+    ...Object.entries(api.propDetails).map(([prop, { type }]) => [`$/api/propDetails/${prop}/type`, type]),
+    ...Object.entries(api.eventDetails).map(([event, { type }]) => [`$/api/eventDetails/${event}/type`, type]),
+    ...Object.entries(api.types).map(([name, { type }]) => [`$/api/types/${name}/type`, type]),
+  ];
+  for (const path of typed.flatMap(([at, type]) => misplacedNever(type, at))) {
+    issues.push({ path, message: 'never is only an optional object member\'s type, a member that must be absent' });
   }
   if (issues.length > 0) throw invalid(issues);
   return document;

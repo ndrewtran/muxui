@@ -36,8 +36,9 @@ export async function deriveApis({ packageRoot, repositoryRoot, declarationRoot,
   }
   const apis = extractApis({
     declarationRoot,
-    components: components.map(({ name, source }) => ({
+    components: components.map(({ name, part, source }) => ({
       name,
+      part,
       declarations: resolve(declarationRoot, source.slice(SOURCE_ROOT.length).replace(/\.ts$/u, '.d.ts')),
       source: resolve(repositoryRoot, source),
     })),

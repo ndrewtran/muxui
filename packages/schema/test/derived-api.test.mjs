@@ -141,3 +141,41 @@ test('a derived document must be internally consistent', () => {
   pointer.type = { kind: 'reference', name: 'Pointer' };
   validateDerivedApi(nested);
 });
+
+test('never is only an optional object member\'s type, a member that must be absent', () => {
+  const absent = (type) => {
+    const document = derived();
+    document.api.props.push('rows');
+    document.api.propDetails.rows = { type, required: false };
+    return document;
+  };
+  const member = (required) => ({ kind: 'object', members: [{ name: 'before', type: { kind: 'never' }, required, readonly: true }] });
+  validateDerivedApi(absent(member(false)));
+  rejects(() => validateDerivedApi(absent(member(true))), /propDetails\/rows\/type\/members\/0\/type never is only an optional object member's type/u);
+  rejects(() => validateDerivedApi(absent({ kind: 'never' })), /propDetails\/rows\/type never is only/u);
+  rejects(() => validateDerivedApi(absent({ kind: 'array', element: { kind: 'never' }, readonly: true })), /rows\/type\/element never is only/u);
+  rejects(() => validateDerivedApi(absent({ kind: 'union', members: [{ kind: 'string' }, { kind: 'never' }] })), /rows\/type\/members\/1 never is only/u);
+  rejects(() => validateDerivedApi(absent({ kind: 'record', value: { kind: 'never' }, readonly: true })), /rows\/type\/value never is only/u);
+});
+
+test('a record holds caller-keyed values, and the names its values reach are defined', () => {
+  const document = derived();
+  document.api.props.push('values');
+  document.api.propDetails.values = { type: { kind: 'reference', name: 'Values' }, required: false };
+  document.api.types.Values = { type: { kind: 'record', value: { kind: 'reference', name: 'Value' }, readonly: true } };
+  document.api.types.Value = { type: { kind: 'union', members: [{ kind: 'string' }, { kind: 'null' }] } };
+  validateDerivedApi(document);
+  // The record's value type reaches Value, so removing it leaves a dangling reference.
+  const dangling = structuredClone(document);
+  delete dangling.api.types.Value;
+  rejects(() => validateDerivedApi(dangling), /Value is referenced but not defined/u);
+  for (const mutate of [
+    (record) => { delete record.readonly; },
+    (record) => { record.key = { kind: 'number' }; },
+    (record) => { delete record.value; },
+  ]) {
+    const invalid = structuredClone(document);
+    mutate(invalid.api.types.Values.type);
+    rejects(() => validateDerivedApi(invalid), /api\/types\/Values\/type/u);
+  }
+});
