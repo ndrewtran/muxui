@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { Sidebar } from '../src/supplemental/index.mjs';
@@ -59,14 +59,67 @@ test('Sidebar Toggle requires a Provider', () => {
   assert.throws(() => renderToString(h(Sidebar.Toggle, null)), /Sidebar\.Toggle must be used inside Sidebar\.Provider/u);
 });
 
-test('Sidebar AccountCard shows its options button only with an AccountMenu, and AccountMenu requires the card', () => {
-  const account = (...children) => renderToString(h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, ...children)));
-  assert.doesNotMatch(account(), /Account options/u);
-  const withMenu = account(h(Sidebar.AccountMenu, { items: ['Profile'] }));
-  const [button] = withMenu.match(/<button[^>]*>/u) ?? [];
-  assert.ok(button?.includes('aria-label="Account options"') && button.includes('aria-expanded="false"') && button.includes('aria-haspopup'), 'the button names the menu and reports it closed');
-  assert.doesNotMatch(withMenu, /role="menu"/u, 'a closed menu renders nothing');
+test('Sidebar AccountMenu requires the card, and the server markup leaves the button to hydration', async () => {
   assert.throws(() => renderToString(h(Sidebar.AccountMenu, { items: ['Profile'] })), /Sidebar\.AccountMenu must be used inside Sidebar\.AccountCard/u);
+  // A menu registers with its card once it mounts, so the server cannot know of it. Hydration must not mismatch, and then the button is there.
+  const card = h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, h(Sidebar.AccountMenu, { items: ['Profile'] })));
+  const html = renderToString(card);
+  assert.match(html.match(/<button[^>]*Account options[^>]*>|<button[^>]*>(?=[^]*Account options)/u)?.[0] ?? '', / hidden=""/u, 'the server markup keeps the button hidden');
+  const dom = new JSDOM(`<!doctype html><div id="root">${html}</div>`);
+  const restore = installDom(dom);
+  const problems = [];
+  let root;
+  try {
+    await act(async () => { root = hydrateRoot(document.querySelector('#root'), card, { onRecoverableError: (error) => problems.push(error) }); });
+    assert.deepEqual(problems, []);
+    assert.equal(document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length, 1);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+  }
+});
+
+test('Sidebar AccountCard shows its options button only while an AccountMenu is mounted', async () => {
+  // A hidden button is not shown, so it is not there for a reader or the keyboard.
+  const buttons = (document) => document.querySelectorAll('button[aria-label="Account options"]:not([hidden])').length;
+  const card = (...children) => h(Sidebar.Root, null, h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, ...children));
+  const Wrapped = () => h(Sidebar.AccountMenu, { items: ['Profile'] });
+  // Children that are not an AccountMenu leave nothing for the button to open, so there is no button.
+  for (const [label, children] of [['no children', []], ['a span', [h('span', null, 'Hi')]], ['an empty fragment', [h(React.Fragment)]], ['null and false', [null, false]]]) {
+    await withDom(card(...children), async (document) => assert.equal(buttons(document), 0, label));
+  }
+  // However the menu is wrapped, it mounts inside the card, so the button appears.
+  for (const [label, children] of [['a direct child', [h(Sidebar.AccountMenu, { items: ['Profile'] })]], ['inside a fragment', [h(React.Fragment, null, h(Sidebar.AccountMenu, { items: ['Profile'] }))]], ['inside a component', [h(Wrapped)]]]) {
+    await withDom(card(...children), async (document) => assert.equal(buttons(document), 1, label));
+  }
+  // The card is a menu trigger from its first render, before its menu registers, and React Aria warns when a trigger has no button to press.
+  const problems = [];
+  const console_ = { warn: console.warn, error: console.error };
+  console.warn = console.error = (...args) => problems.push(args.join(' '));
+  try {
+    await withDom(card(h(Sidebar.AccountMenu, { items: ['Profile'] })), async () => {});
+    await withDom(card(), async () => {});
+  } finally {
+    Object.assign(console, console_);
+  }
+  assert.deepEqual(problems, [], 'mounting a card logs nothing');
+  // The button follows the menu in and out, and a menu that goes away while open takes the open state with it.
+  function Toggled() {
+    const [shown, setShown] = React.useState(false);
+    return h(React.Fragment, null, h('button', { id: 'toggle', onClick: () => setShown((value) => !value) }, 'Toggle'), card(shown && h(Sidebar.AccountMenu, { items: ['Profile'] })));
+  }
+  await withDom(h(Toggled), async (document) => {
+    assert.equal(buttons(document), 0);
+    await act(async () => document.querySelector('#toggle').click());
+    assert.equal(buttons(document), 1);
+    // Open it, drop the menu, and bring it back: it does not reopen by itself.
+    await act(async () => document.querySelector('button[aria-label="Account options"]').click());
+    assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'true');
+    await act(async () => document.querySelector('#toggle').click());
+    assert.equal(buttons(document), 0);
+    await act(async () => document.querySelector('#toggle').click());
+    assert.equal(document.querySelector('button[aria-label="Account options"]').getAttribute('aria-expanded'), 'false');
+  });
 });
 
 const nav = (...items) => h(Sidebar.Root, null, h(Sidebar.NavList, null, ...items));

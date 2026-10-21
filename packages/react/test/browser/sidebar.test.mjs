@@ -104,10 +104,12 @@ function Account() {
       h(Sidebar.Root, { 'aria-label': 'Account' },
         h(Sidebar.NavList, { 'aria-label': 'Account pages' }, h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home')),
         h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' },
-          h(Sidebar.AccountMenu, { onAction: (item) => window.__actions.push(item.id) },
-            h(Menu.Item, { id: 'profile' }, 'Profile'),
-            h(Menu.Separator),
-            h(Menu.Item, { id: 'sign-out' }, 'Sign out')))),
+          params.get('menu') === 'none'
+            ? h('span', null, 'Not a menu')
+            : h(Sidebar.AccountMenu, { onAction: (item) => window.__actions.push(item.id) },
+              h(Menu.Item, { id: 'profile' }, 'Profile'),
+              h(Menu.Separator),
+              h(Menu.Item, { id: 'sign-out' }, 'Sign out')))),
       h('main', { className: 'main' }, h(Sidebar.Toggle), h('button', { type: 'button', id: 'outside' }, 'Outside'))));
 }
 createRoot(document.getElementById('root')).render(h({ rwd: Responsive, account: Account }[params.get('layout')] ?? Shell));
@@ -1544,6 +1546,11 @@ for (const engine of browserEngines()) {
           await menu.waitFor({ state: 'detached', timeout: 5000 });
           assert.equal(await tab.locator('aside[data-collapsed]').count(), 1, label('the chord folded the sidebar'));
           await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-sidebar__toggle'), null, { message: label('focus moves to Toggle, not the page body'), report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          // A card whose children are not an AccountMenu has no button to see or tab to, and nothing to open.
+          await tab.goto(`${url}/sidebar.html?layout=account&menu=none&scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.locator('aside').waitFor({ timeout: 15_000 });
+          assert.equal(await tab.getByRole('button', { name: 'Account options' }).count(), 0, label('a card without an AccountMenu has no button in the accessibility tree'));
+          assert.equal(await tab.evaluate(() => document.querySelector('.muxui-sidebar__account-trigger').getClientRects().length), 0, label('its hidden button takes no space'));
           assert.deepEqual(errors, [], label('the page logged no errors'));
         } finally {
           await context.close();

@@ -1172,8 +1172,9 @@ const HeaderNav = {
 /* Sidebar */
 // Folding state lives in Sidebar.Provider so Root, Toggle, and the shortcut share it. Without a Provider every part renders as before.
 const SidebarContext = React.createContext(null);
-// AccountCard shares its element with AccountMenu so the menu can anchor to the card.
+// AccountCard shares its element with AccountMenu so the menu can anchor to the card, and AccountMenu tells the card it is mounted.
 const SidebarAccountContext = React.createContext(null);
+function useSidebarAccount() { const account = React.useContext(SidebarAccountContext); if (!account) throw new Error('Sidebar.AccountMenu must be used inside Sidebar.AccountCard'); return account; }
 function useSidebarPart(part) { const context = React.useContext(SidebarContext); if (!context) throw new Error(`Sidebar.${part} must be used inside Sidebar.Provider`); return context; }
 const SIDEBAR_EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
 const sidebarShortcutModifier = (event) => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey);
@@ -1474,16 +1475,21 @@ const Sidebar = {
       setOpen(false);
       sidebarHandoff(() => [...sidebar.toggles, ...sidebar.roots], sidebar.roots, (active) => active.closest('[role="menu"]'));
     }, [collapsed]);
-    // The options button exists to open the AccountMenu child, so a card without one has no button.
-    const hasMenu = React.Children.toArray(children).length > 0;
-    const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), hasMenu && h(IconButton, { ref: button, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
-    return hasMenu ? h(SidebarAccountContext.Provider, { value: card }, h(AriaMenuTrigger, { isOpen: open && !collapsed, onOpenChange: setOpen }, content)) : content;
+    // The options button exists to open an AccountMenu, so it shows only while one is mounted, however it is wrapped.
+    // It stays in the tree, hidden, because the menu trigger around the card warns when it has no button to press.
+    const [menus, setMenus] = React.useState(0);
+    const hasMenu = menus > 0;
+    const register = React.useCallback(() => { setMenus((count) => count + 1); return () => setMenus((count) => count - 1); }, []);
+    const account = React.useMemo(() => ({ anchor: card, register }), [register]);
+    useIsomorphicLayoutEffect(() => { if (!hasMenu) setOpen(false); }, [hasMenu]);
+    const content = h('div', { ...props, ref: card, onKeyDown: leaveMenu, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { ref: button, hidden: !hasMenu, className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children);
+    return h(SidebarAccountContext.Provider, { value: account }, h(AriaMenuTrigger, { isOpen: open && hasMenu && !collapsed, onOpenChange: setOpen }, content));
   }),
   AccountMenu: React.forwardRef(function SidebarAccountMenu({ className, ...props }, ref) {
-    const card = React.useContext(SidebarAccountContext);
-    if (!card) throw new Error('Sidebar.AccountMenu must be used inside Sidebar.AccountCard');
+    const account = useSidebarAccount();
+    useIsomorphicLayoutEffect(() => account.register(), [account.register]);
     // The popup opens from the card, not the small button, so it lines up with the card's edge.
-    return h(Menu.Popup, { anchorRef: card, placement: 'top-start' }, h(Menu.List, { ...props, ref, className: cx('muxui-sidebar__account-menu', className) }));
+    return h(Menu.Popup, { anchorRef: account.anchor, placement: 'top-start' }, h(Menu.List, { ...props, ref, className: cx('muxui-sidebar__account-menu', className) }));
   }),
   MobileTrigger: function SidebarMobileTrigger({ children, logo }) {
     const sidebar = React.useContext(SidebarContext);
