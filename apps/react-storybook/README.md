@@ -26,8 +26,9 @@ each named state shows itself and a value set in Controls still wins in every
 row. The exception is the lifecycle rows (entering, exiting, opening, closing),
 which drive `open` themselves, and cap Toast `duration`, to animate. A lifecycle
 selector mounts one of those rows at a time, so one overlay is open at once; a
-Dialog is modal, so its open row is one of them too, and it starts closed when
-the user sets `open` to false. The colour audit verifies a small decoded image when every pixel is
+Dialog is modal, so its open row is one of them too. A value the user sets for
+`open`, before or after mount, drives that row like a controlled Dialog; unset,
+the row keeps its own close button and trigger. The colour audit verifies a small decoded image when every pixel is
 transparent or a canonical token colour, which is how the Avatar loaded row shows
 a real picture; any other image, including one chosen through `srcset` or
 `picture`, stays unverified and fails the audit.

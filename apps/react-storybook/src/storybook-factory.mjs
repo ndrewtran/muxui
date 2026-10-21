@@ -1498,11 +1498,13 @@ function LifecycleSelection({ family, states, children }) {
   );
 }
 
-function LifecycleTransition({ family, state, args }) {
+function LifecycleTransition({ family, state, args, controlledOpen }) {
   const isClosing = state === 'closing' || state === 'exiting';
-  // The open row has no transition to play: it mounts open, unless the user set the Dialog closed.
+  // The open row has no transition to play. It mounts open, and a value the user sets for `open` drives it from then
+  // on like any controlled Dialog, while an unset one leaves the row to its own close button and trigger.
   const isSettled = state === 'open';
-  const startsOpen = isClosing || isSettled && args.open !== false && args.defaultOpen !== false;
+  const controlled = isSettled && typeof controlledOpen === 'boolean';
+  const startsOpen = isClosing || isSettled && (controlled ? controlledOpen : args.defaultOpen !== false);
   const isToast = family === 'Toast';
   const [open, setOpen] = React.useState(!isToast && startsOpen);
   const [toastMounted, setToastMounted] = React.useState(isClosing);
@@ -1549,7 +1551,7 @@ function LifecycleTransition({ family, state, args }) {
       ? React.cloneElement(renderFamily(family, transitionArgs), { key: toastRevision })
       : null;
   } else {
-    transitionArgs.open = open;
+    transitionArgs.open = controlled ? controlledOpen : open;
     transitionArgs.onOpenChange = (nextOpen) => {
       args.onOpenChange?.(nextOpen);
       userInteracted.current = true;
@@ -1558,17 +1560,18 @@ function LifecycleTransition({ family, state, args }) {
     };
     rendered = renderFamily(family, transitionArgs);
   }
+  const shownPhase = controlled ? (controlledOpen ? 'open' : 'closed') : phase;
   return e(React.Fragment, null,
     rendered,
     e('div', {
       className: 'muxui-storybook-transition-status',
-      'data-muxui-storybook-transition': phase,
+      'data-muxui-storybook-transition': shownPhase,
       'aria-hidden': 'true',
-    }, `${state}: ${phase}`),
+    }, `${state}: ${shownPhase}`),
   );
 }
 
-function StateVariant({ family, state, args, available }) {
+function StateVariant({ family, state, args, available, controlledOpen }) {
   const stateRef = React.useRef(null);
   const [hiddenByOverlay, setHiddenByOverlay] = React.useState(false);
   React.useEffect(() => {
@@ -1615,7 +1618,7 @@ function StateVariant({ family, state, args, available }) {
     }, `Unavailable: MuxUI ${family} has no public prop or supported interaction for the ${state} state.`)
     : lifecycleRow
     ? activeLifecycleState === state
-      ? e(LifecycleTransition, { family, state, args: variantArgs })
+      ? e(LifecycleTransition, { family, state, args: variantArgs, controlledOpen })
       : e('p', { className: 'muxui-storybook-lifecycle-inactive' }, `Select ${state} to inspect this lifecycle state.`)
     : renderFamily(family, variantArgs);
   // An open Menu popup floats over its neighbours, so its rows reserve room above and below the trigger.
@@ -1643,6 +1646,7 @@ export function renderStateCoverage(record, args = storyArgsForBinding(record.bi
     state: name,
     available: stateIsSupported(record.binding, name, record.family),
     args: stateArgsForBinding(record.binding, name, record.family, args),
+    controlledOpen: args.open,
   })));
   const lifecycleStates = variants.map(({ name }) => name).filter((name) => isLifecycleState(record.family, name));
   return lifecycleStates.length > 0

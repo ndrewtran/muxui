@@ -388,7 +388,7 @@ async function withRuntime(body) {
   const host = document.querySelector('#root');
   const root = createRoot(host);
   try {
-    await body({ host, root });
+    await body({ host, root, env });
   } finally {
     // React keeps a focused text input registered until it blurs; release it while this window still exists.
     await act(async () => document.activeElement?.blur?.());
@@ -845,6 +845,48 @@ test('Dialog open row is picked with the lifecycle rows and mounts one open dial
     await settleRuntime(60);
     assert.equal(document.querySelectorAll('.muxui-dialog-backdrop').length, 0);
     assert.equal(document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition'), 'closed');
+  });
+});
+
+test('Controls changed on the mounted States story drive the Dialog open row', async () => {
+  await withRuntime(async ({ root: reactRoot, env }) => {
+    const record = currentRecord('Dialog');
+    const stock = createStory(record, 'states').args;
+    const row = () => document.querySelector('[data-muxui-storybook-lifecycle="open"]');
+    const phase = () => row().querySelector('[data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition');
+    // The trigger reports the Dialog's open state at once, where jsdom never finishes React Aria's exit animation.
+    const expanded = () => row().querySelector('.muxui-dialog-trigger').getAttribute('aria-expanded');
+    // Storybook re-renders the same story with new args, so the tree stays mounted between these renders.
+    const settle = async () => {
+      await settleRuntime(30);
+      env.resolveAnimations();
+      await settleRuntime(30);
+    };
+    const render = async (args) => {
+      await act(async () => reactRoot.render(renderStateCoverage(record, args)));
+      await settle();
+    };
+    await render(stock);
+    assert.deepEqual([expanded(), phase()], ['true', 'open']);
+
+    await render({ ...stock, open: false });
+    assert.deepEqual([expanded(), phase()], ['false', 'closed'], 'open: false closes the mounted Dialog');
+    await render({ ...stock, open: true });
+    assert.deepEqual([expanded(), phase()], ['true', 'open'], 'open: true opens it again');
+
+    // A controlled Dialog stays open until its owner closes it, but still reports the attempt.
+    const attempts = [];
+    await render({ ...stock, open: true, onOpenChange: (next) => attempts.push(next) });
+    await act(async () => document.querySelector('.muxui-dialog-close').click());
+    await settle();
+    assert.deepEqual(attempts, [false]);
+    assert.deepEqual([expanded(), phase()], ['true', 'open']);
+
+    // With open unset again the row keeps its own dismissal.
+    await render(stock);
+    await act(async () => document.querySelector('.muxui-dialog-close').click());
+    await settle();
+    assert.deepEqual([expanded(), phase()], ['false', 'closed']);
   });
 });
 
