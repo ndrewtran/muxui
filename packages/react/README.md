@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:1d7fe64f8a4369cd6547eabdf5ababa559af3fbf7a3cfc313076092e5d859c37 -->
+<!-- @generated-content-sha256: sha256:501524876152d508bdb960324223dd3621b8ef1ce7b7c512cfc9f44a10a48453 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -152,7 +152,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |
-| Popover | experimental | . | .muxui-popover | children, trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, onOpenChange, className, aria-label, aria-labelledby |
+| Popover | experimental | . | .muxui-popover | trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, modal |
 | PreviewTrigger | experimental | . | .muxui-preview-trigger | trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding |
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |

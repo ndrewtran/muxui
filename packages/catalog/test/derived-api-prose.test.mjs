@@ -89,6 +89,8 @@ const GUIDES = {
   'drop-zone': { native: ['aria-label', 'getFile()'] },
   tooltip: {},
   'preview-trigger': {},
+  // aria-label names the dialog surface.
+  popover: { native: ['aria-label'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
@@ -234,6 +236,11 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.match(meter, /By default the value text is the value's position in the range as a percent/u);
   assert.match(meterApi.api.propDetails.formatOptions.description, /Omitted, it formats the position in the range as a percentage/u);
   assert.equal(Object.hasOwn(meterApi.api.defaults, 'formatOptions'), false, 'the percent format is a behaviour, not a stated default');
+
+  // Popover is modal by default, which its guide teaches before the non-modal choice.
+  const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);
+  assert.match(popover, /Popover is modal by default\./u);
+  assert.equal(popoverApi.api.defaults.modal, true);
 
   // DataDiff states its row kinds and its description default.
   const [dataDiff, dataDiffApi] = await Promise.all([guide('data-diff'), derivedApi('data-diff')]);
