@@ -8,7 +8,7 @@ import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
-import { indexSignatureCompatible } from './support/declaration-surface.mjs';
+import { STRICT_CONSUMER_COMPILER_OPTIONS, consumerTsc, indexSignatureCompatible } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -125,8 +125,9 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
       },
       include: ['examples/**/*.tsx'],
     }, null, 2)}\n`);
-    const tsc = resolve(repositoryRoot, 'node_modules/.pnpm/node_modules/.bin/tsc');
-    const typecheck = spawnSync(tsc, ['--noEmit', '-p', tsconfig], {
+    // TypeScript 6 on every consumer check: the strict one needs its interop flags and the index one its rules.
+    const tsc = consumerTsc();
+    const typecheck = spawnSync(process.execPath, [tsc, '--noEmit', '-p', tsconfig], {
       cwd: consumer,
       env: process.env,
       encoding: 'utf8',
@@ -137,19 +138,8 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     // declaration file that default-imports a CommonJS `export =` module, as `import React from 'react'`
     // does, fails there with TS1259 even though the NodeNext project above accepts it.
     const strictTsconfig = join(consumer, 'tsconfig.strict.json');
-    await writeFile(strictTsconfig, `${JSON.stringify({
-      extends: './tsconfig.json',
-      compilerOptions: {
-        module: 'ESNext',
-        moduleResolution: 'Bundler',
-        esModuleInterop: false,
-        allowSyntheticDefaultImports: false,
-        skipLibCheck: false,
-        // TypeScript 6 deprecates the two interop flags, which TypeScript 7 removes; drop this with them.
-        ignoreDeprecations: '6.0',
-      },
-    }, null, 2)}\n`);
-    const strictTypecheck = spawnSync(tsc, ['--noEmit', '-p', strictTsconfig], {
+    await writeFile(strictTsconfig, `${JSON.stringify({ extends: './tsconfig.json', compilerOptions: STRICT_CONSUMER_COMPILER_OPTIONS }, null, 2)}\n`);
+    const strictTypecheck = spawnSync(process.execPath, [tsc, '--noEmit', '-p', strictTsconfig], {
       cwd: consumer,
       env: process.env,
       encoding: 'utf8',
@@ -157,8 +147,8 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     assert.equal(strictTypecheck.status, 0, `strict consumer: ${strictTypecheck.stdout}\n${strictTypecheck.stderr}`);
 
     // A props type a consumer could pass where `T extends Record<string, unknown>` is required before
-    // the moves still can, with and without exactOptionalPropertyTypes. TypeScript 6 rejects an
-    // interface there and an intersection with one; TypeScript 7 accepts both, so this runs tsc 6.
+    // the moves still can, with and without exactOptionalPropertyTypes. An interface fails there, and
+    // so does an intersection with one; the record was taken under TypeScript 6, which this runs.
     const { indexSignatureCompatible: recordedCompatible } = JSON.parse(await readFile(resolve(packageRoot, 'test/fixtures/public-declaration-kinds.json'), 'utf8'));
     for (const exactOptionalPropertyTypes of [false, true]) {
       const compatible = indexSignatureCompatible({ directory: consumer, specifier: '@muxui/react', names: recordedCompatible, exactOptionalPropertyTypes, tsc });
@@ -200,7 +190,7 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
       compilerOptions: { noEmit: false, outDir: 'render-dist', rootDir: 'examples', module: 'ES2022', moduleResolution: 'Bundler' },
       include: renderedSlugs.map((slug) => `examples/${slug}/*.tsx`),
     }, null, 2)}\n`);
-    const emit = spawnSync(tsc, ['-p', renderConfig], { cwd: consumer, env: process.env, encoding: 'utf8' });
+    const emit = spawnSync(process.execPath, [tsc, '-p', renderConfig], { cwd: consumer, env: process.env, encoding: 'utf8' });
     assert.equal(emit.status, 0, `${emit.stdout}\n${emit.stderr}`);
     await writeFile(join(renderDist, 'package.json'), '{ "type": "module" }\n');
     const renderProbe = join(renderDist, 'render.mjs');
