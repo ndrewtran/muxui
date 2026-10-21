@@ -94,6 +94,7 @@ const GUIDES = {
   // aria-label names the dialog surface.
   popover: { native: ['aria-label'] },
   // maxVisible, placement and its four values, and className are ToastProvider's props, and pending is Button's.
+  dialog: {},
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -244,6 +245,11 @@ test('the defaults and finite values the derived guides state are their derived 
   assert.match(meter, /By default the value text is the value's position in the range as a percent/u);
   assert.match(meterApi.api.propDetails.formatOptions.description, /Omitted, it formats the position in the range as a percentage/u);
   assert.equal(Object.hasOwn(meterApi.api.defaults, 'formatOptions'), false, 'the percent format is a behaviour, not a stated default');
+
+  // Dialog is dismissable by default, which its guide teaches before the choice to suppress dismissal.
+  const [dialog, dialogApi] = await Promise.all([guide('dialog'), derivedApi('dialog')]);
+  assert.match(dialog, /A Dialog is dismissable by default,/u);
+  assert.equal(dialogApi.api.defaults.dismissable, true);
 
   // Toast lists its variants, marks neutral as the default, and states the default duration.
   const [toast, toastApi] = await Promise.all([guide('toast'), derivedApi('toast')]);

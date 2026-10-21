@@ -1847,7 +1847,6 @@ test('control inference and composition adapters preserve canonical values', () 
   assert.equal(argTypesForBinding(numberFieldBinding).minValue.control.type, 'number');
   const dialogBinding = descriptor.bindings.find(({ export: name }) => name === 'Dialog');
   assert.equal(argTypesForBinding(dialogBinding).title.control, 'text');
-  assert.equal(argTypesForBinding(dialogBinding).children.control, 'text');
   assert.deepEqual(
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Popover')).placement.options,
     declaredUnion(overlayTypes, 'MuxUIPlacement'),

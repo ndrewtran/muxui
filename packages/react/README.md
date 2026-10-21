@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:92f60ca6b4ef71dcb9ae51f2e8c7a31a5ff8248c8cb7d03a81af76c74ff4b6d2 -->
+<!-- @generated-content-sha256: sha256:b4c8a6f548553db487a2a73d53164e71dc2c9c0554fde0ed253dcaf3147684b3 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -129,7 +129,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
-| Dialog | experimental | . | .muxui-dialog | children, title, description, actions, open, defaultOpen, dismissable, trigger, onOpenChange, className, backdropClassName, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, aria-label, aria-labelledby, aria-describedby |
+| Dialog | experimental | . | .muxui-dialog | title, description, actions, open, defaultOpen, dismissable, trigger, backdropClassName, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName |
 | Disclosure | experimental | . | .muxui-disclosure | title, expanded, defaultExpanded, disabled, id |
 | DisclosureGroup | experimental | . | .muxui-disclosure-group | expandedIds, defaultExpandedIds, multiple, disabled |
 | DropZone | experimental | . | .muxui-drop-zone | disabled |

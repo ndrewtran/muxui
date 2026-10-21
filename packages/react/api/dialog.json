@@ -1,0 +1,179 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:dialog",
+  "binding": "web.react",
+  "export": "Dialog",
+  "api": {
+    "props": [
+      "title",
+      "description",
+      "actions",
+      "open",
+      "defaultOpen",
+      "dismissable",
+      "trigger",
+      "backdropClassName",
+      "panelClassName",
+      "titleClassName",
+      "descriptionClassName",
+      "contentClassName",
+      "actionsClassName",
+      "closeClassName"
+    ],
+    "events": [
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "dismissable": true
+    },
+    "propDetails": {
+      "title": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The heading, which also names the Dialog. Without one, the Dialog needs an aria-label or aria-labelledby, and a blank title does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text under the title, which also describes the Dialog."
+      },
+      "actions": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The buttons under the content."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Dialog is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Dialog starts open, when it controls itself."
+      },
+      "dismissable": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether Escape, an outside press, the trigger, and the built-in close button close the Dialog. When false, the Dialog renders no close button of its own, and only a button in the close slot closes it."
+      },
+      "trigger": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactElement"
+        },
+        "required": false,
+        "description": "The element that opens the Dialog. Without one, only open or defaultOpen opens it."
+      },
+      "backdropClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the backdrop beside Mux UI's own."
+      },
+      "panelClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the dialog panel beside Mux UI's own."
+      },
+      "titleClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the title beside Mux UI's own."
+      },
+      "descriptionClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the description beside Mux UI's own."
+      },
+      "contentClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the content beside Mux UI's own."
+      },
+      "actionsClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the actions beside Mux UI's own."
+      },
+      "closeClassName": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A class added to the built-in close button beside Mux UI's own."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the Dialog opening or closing. A Dialog that is not dismissable reports no close from Escape, an outside press, or the trigger."
+      }
+    },
+    "types": {}
+  }
+}
