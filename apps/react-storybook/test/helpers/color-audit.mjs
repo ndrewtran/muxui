@@ -195,9 +195,12 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
   const maxAuditedImagePixels = 4096;
 
   // The distinct opaque pixel colours of a small decoded image, or null when its pixels cannot be read. A fully
-  // transparent image has none, so it paints nothing.
+  // transparent image has none, so it paints nothing. naturalWidth and naturalHeight are corrected for the density of
+  // a srcset or picture candidate, so a canvas sized to them resamples the bitmap and averages its real pixels into
+  // other colours; such an image is left unverified.
   function decodedPixelColours(element) {
     if (element.localName !== 'img' || !element.complete || !element.naturalWidth || !element.naturalHeight) return null;
+    if (element.srcset || element.sizes || element.closest('picture')) return null;
     if (element.naturalWidth * element.naturalHeight > maxAuditedImagePixels) return null;
     try {
       const canvas = document.createElement('canvas');

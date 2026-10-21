@@ -449,8 +449,19 @@ test('Storybook colour audit verifies an image only when every decoded pixel is 
       const [pale, strong] = ['reference.color.bluegreen-20', 'reference.color.bluegreen-70'].map((id) => tokens[id].value);
       await page.setContent(`<html><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}">
         <p>Image audit</p><img id="avatar" width="40" height="40" src="${AVATAR_LOADED_SRC}"></body></html>`);
+      // Alternating pixels either side of the pale colour: each 2 by 2 block averages back to it exactly.
+      const [paleRed, paleGreen, paleBlue] = channels(pale);
+      const checker = Array.from({ length: 16 * 16 }, (_, index) => {
+        const [x, y] = [index % 16, Math.floor(index / 16)];
+        return [`rgb(${paleRed + ((x + y) % 2 ? -8 : 8)}, ${paleGreen}, ${paleBlue})`, x, y, 1, 1];
+      });
       const images = [
         { id: 'canonical', size: 8, fills: [[pale, 0, 0, 8, 8], [strong, 2, 2, 4, 4]] },
+        // A 2x candidate reports half its bitmap size, so these would be sampled resampled: averaged into the palette,
+        // or under the 4096 pixel limit.
+        { id: 'averaged-by-density', size: 16, density: 'srcset', fills: checker },
+        { id: 'oversized-by-density', size: 128, density: 'srcset', fills: [[pale, 0, 0, 128, 128]] },
+        { id: 'in-picture', size: 8, density: 'picture', fills: [[pale, 0, 0, 8, 8]] },
         { id: 'off-palette', size: 8, fills: [[pale, 0, 0, 8, 8], ['rgb(1, 2, 3)', 2, 2, 1, 1]] },
         { id: 'half-transparent', size: 8, alpha: 0.5, fills: [[pale, 0, 0, 8, 8]] },
         { id: 'oversized', size: 65, fills: [[pale, 0, 0, 65, 65]] },
@@ -458,7 +469,7 @@ test('Storybook colour audit verifies an image only when every decoded pixel is 
       ];
       const sources = await page.evaluate(async (specs) => {
         const found = {};
-        for (const { id, size, alpha = 1, fills } of specs) {
+        for (const { id, size, alpha = 1, density, fills } of specs) {
           const canvas = document.createElement('canvas');
           canvas.width = size;
           canvas.height = size;
@@ -470,8 +481,18 @@ test('Storybook colour audit verifies an image only when every decoded pixel is 
           }
           const image = new Image(size, size);
           image.id = id;
-          image.src = canvas.toDataURL('image/png');
-          document.body.append(image);
+          const source = canvas.toDataURL('image/png');
+          image.src = source;
+          if (density === 'srcset') image.srcset = `${source} 2x`;
+          if (density === 'picture') {
+            const picture = document.createElement('picture');
+            const candidate = document.createElement('source');
+            candidate.srcset = `${source} 2x`;
+            picture.append(candidate, image);
+            document.body.append(picture);
+          } else {
+            document.body.append(image);
+          }
           await image.decode();
           found[id] = image.currentSrc;
         }
@@ -484,7 +505,9 @@ test('Storybook colour audit verifies an image only when every decoded pixel is 
       assert.deepEqual(report.problems, [], scheme);
       assert.deepEqual(report.nonToken, [], `${scheme}: verified image pixels are canonical colours`);
       for (const id of ['canonical', 'clear', 'avatar']) assert.equal(unverified(id), false, `${scheme}: ${id} is verified`);
-      for (const id of ['off-palette', 'half-transparent', 'oversized']) assert.equal(unverified(id), true, `${scheme}: ${id} stays unverified`);
+      for (const id of ['off-palette', 'half-transparent', 'oversized', 'averaged-by-density', 'oversized-by-density', 'in-picture']) {
+        assert.equal(unverified(id), true, `${scheme}: ${id} stays unverified`);
+      }
       // The verified pixels count as paint: the two image colours, and the avatar's two, are the same palette pair.
       const pixels = report.paints.filter(({ property }) => property === 'image-pixel');
       assert.deepEqual(pixels.map(({ rgba }) => rgba).sort(), [...new Set([strong, pale].map((hex) => `${channels(hex).join(',')},1`))].sort(), scheme);

@@ -29,7 +29,8 @@ selector mounts one of those rows at a time, so one overlay is open at once; a
 Dialog is modal, so its open row is one of them too, and it starts closed when
 the user sets `open` to false. The colour audit verifies a small decoded image when every pixel is
 transparent or a canonical token colour, which is how the Avatar loaded row shows
-a real picture; any other image stays unverified and fails the audit.
+a real picture; any other image, including one chosen through `srcset` or
+`picture`, stays unverified and fails the audit.
 
 The generator also emits one page group per catalog pattern (a Block), titled
 `Blocks/<Category>/<Pattern>`, with one story per variant, so a variant reads
