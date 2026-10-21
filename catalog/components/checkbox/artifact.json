@@ -83,35 +83,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "checked",
-          "defaultChecked",
-          "disabled",
-          "size",
-          "indeterminate",
-          "name",
-          "required",
-          "value",
-          "invalid"
-        ],
-        "events": [
-          "change"
-        ],
-        "parts": [
-          "root",
-          "input",
-          "indicator",
-          "label"
-        ],
-        "defaults": {
-          "defaultChecked": false,
-          "disabled": false,
-          "size": "md",
-          "indeterminate": false,
-          "invalid": false
-        }
-      },
       "behavior": [
         "Space toggles selection",
         "indeterminate is separate from checked, and the mixed state shows for as long as it is true.",

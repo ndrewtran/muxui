@@ -4,6 +4,8 @@ export default {
   component: 'Checkbox',
   name: 'Checkbox',
   axes: ['size'],
+  // A Checkbox takes its size from an enclosing CheckboxGroup when it sets none, so the catalog states no default; a Checkbox on its own is md.
+  axisDefaults: { size: 'md' },
   selection: { name: 'Value', values: { unchecked: {}, checked: { defaultChecked: true }, indeterminate: { indeterminate: true } } },
   states: ['rest', 'hover', 'pressed', 'focus-visible', 'disabled', 'invalid'],
   stateTarget: '.muxui-checkbox',

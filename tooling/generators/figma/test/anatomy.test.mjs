@@ -41,6 +41,23 @@ test('axes come from the catalog record and its derived API or React types, with
   ]);
 });
 
+test('an axis the catalog states no default for leads with the anatomy\'s default, and never restates a catalog default', () => {
+  // Checkbox inherits its size from a CheckboxGroup, so its derived API has none.
+  const inherited = structuredClone(catalogRecord);
+  delete inherited.bindings['web.react'].api.defaults.variant;
+  const axes = (anatomy) => catalogAxes(anatomy, { catalogRecord: inherited, reactTypes });
+  const error = (anatomy, pattern) => assert.throws(() => axes(anatomy), (thrown) => thrown instanceof AnatomyError && pattern.test(thrown.message));
+  assert.deepEqual(axes({ ...syntheticAnatomy(), axisDefaults: { variant: 'ghost' } }), [{ prop: 'variant', name: 'Variant', values: ['ghost', 'primary'] }]);
+  error(syntheticAnatomy(), /button\.axes\.variant: has no string default in the catalog record or the anatomy/u);
+  error({ ...syntheticAnatomy(), axisDefaults: { variant: 'danger' } }, /button\.axes\.variant: anatomy default danger is not a React value/u);
+  // A default the catalog states is the catalog's alone.
+  assert.throws(() => catalogAxes({ ...syntheticAnatomy(), axisDefaults: { variant: 'ghost' } }, { catalogRecord, reactTypes }),
+    (thrown) => thrown instanceof AnatomyError && /button\.axisDefaults\.variant: restates a default the catalog record states/u.test(thrown.message));
+  for (const axisDefaults of [{ size: 'md' }, { variant: 1 }, ['ghost'], null]) {
+    rejects({ ...syntheticAnatomy(), axisDefaults }, /button\.axisDefaults: must map listed axes to string values/u);
+  }
+});
+
 test('the six admitted anatomies validate against the canonical catalog and generated React types', async () => {
   const counts = {};
   for (const anatomy of anatomies) {

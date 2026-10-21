@@ -19,7 +19,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { GridList } from '/src/collections.mjs';
 import { Button } from '/src/button.ts';
-import { Link } from '/src/components.mjs';
+import { Link } from '/src/components.ts';
 
 const h = React.createElement;
 const { layout = 'grid', orientation, selectionMode = 'single', controlled = false, withAction = false, count = 8, disabled = ['e'], width = 640, plainColumns = false } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
@@ -66,7 +66,7 @@ const page = (url) => pageShell({
 for (const engine of browserEngines()) {
   test(`GridList layout and nested controls in ${engine}`, { timeout: 300_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.mjs'],
+      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.ts'],
       pages: { '/grid-list-layout.html': page },
       modules: { '/grid-list-layout-entry.mjs': entry },
     });

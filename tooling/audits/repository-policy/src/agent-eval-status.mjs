@@ -13,7 +13,7 @@ const generatedClosure = JSON.parse((await readFile(
 )).replace(/^\/\/ @generated-from:.*\n\/\/ @generated-content-sha256:.*\n/u, ''));
 const runtimeSourcePaths = [
   'packages/react/src/button.ts',
-  'packages/react/src/components.mjs',
+  'packages/react/src/components.ts',
   'packages/react/src/fields.mjs',
   'packages/react/src/collections.mjs',
   'packages/react/src/overlays.mjs',

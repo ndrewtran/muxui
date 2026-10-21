@@ -329,7 +329,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/breadcrumbs/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Breadcrumbs"
+          "packages/react/src/components.ts#Breadcrumbs"
         ],
         "rac": [
           "packages/react-aria-components/src/Breadcrumbs.tsx:37-170",
@@ -834,7 +834,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/checkbox/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Checkbox"
+          "packages/react/src/components.ts#Checkbox"
         ],
         "rac": [
           "packages/react-aria-components/src/Checkbox.tsx:50-128,130-222,272-339,350-555",
@@ -1084,7 +1084,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/disclosure/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Disclosure"
+          "packages/react/src/components.ts#Disclosure"
         ],
         "rac": [
           "packages/react-aria-components/src/Disclosure.tsx:111-314",
@@ -1335,7 +1335,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/disclosure-group/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#DisclosureGroup"
+          "packages/react/src/components.ts#DisclosureGroup"
         ],
         "rac": [
           "packages/react-aria-components/src/Disclosure.tsx:51-109,170-245",
@@ -1588,7 +1588,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/group/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Group"
+          "packages/react/src/components.ts#Group"
         ],
         "rac": [
           "packages/react-aria-components/src/Group.tsx:28-137",
@@ -1837,7 +1837,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/link/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Link"
+          "packages/react/src/components.ts#Link"
         ],
         "rac": [
           "packages/react-aria-components/src/Link.tsx:33-139",
@@ -2087,7 +2087,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/meter/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Meter"
+          "packages/react/src/components.ts#Meter"
         ],
         "rac": [
           "packages/react-aria-components/src/Meter.tsx:31-121",
@@ -2339,7 +2339,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/progress-bar/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#ProgressBar"
+          "packages/react/src/components.ts#ProgressBar"
         ],
         "rac": [
           "packages/react-aria-components/src/ProgressBar.tsx:31-116",
@@ -2590,7 +2590,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/separator/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#Separator"
+          "packages/react/src/components.ts#Separator"
         ],
         "rac": [
           "packages/react-aria-components/src/Separator.tsx:23-95",
@@ -2839,7 +2839,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/toggle-button/artifact.json#bindings/web.react",
-          "packages/react/src/components.mjs#ToggleButton"
+          "packages/react/src/components.ts#ToggleButton"
         ],
         "rac": [
           "packages/react-aria-components/src/ToggleButton.tsx:37-144",

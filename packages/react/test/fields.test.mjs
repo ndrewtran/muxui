@@ -5,9 +5,9 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
+import { Checkbox } from '../src/components.ts';
 import {
   Autocomplete,
-  Checkbox,
   CheckboxGroup,
   DateField,
   DatePicker,
@@ -18,7 +18,7 @@ import {
   Switch,
   TextField,
   TimeField,
-} from '../src/components.mjs';
+} from '../src/fields.mjs';
 import { installDom } from './support/dom.mjs';
 
 function OptionsWrapper() {

@@ -3,7 +3,7 @@ import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Calendar, GridList, ListBox, Menu, RadioGroup, ToggleButtonGroup, Tree } from '../src/collections.mjs';
-import { ToggleButton } from '../src/components.mjs';
+import { ToggleButton } from '../src/components.ts';
 import {
   attachRef, collectAncestors, observeAncestorAttributes, sameGeometry, transformFrom, useRootRef,
 } from '../src/motion-geometry.mjs';

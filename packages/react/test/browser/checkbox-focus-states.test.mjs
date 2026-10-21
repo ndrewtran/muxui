@@ -71,7 +71,7 @@ function assertKeyboardFocusPaint(paint, label) {
 test('Checkbox and CheckboxField share pointer and keyboard focus modality in light, dark, and forced colors', { timeout: 120_000 }, async () => {
   const entry = `import React from 'react';
     import { createRoot } from 'react-dom/client';
-    import { Checkbox } from '/src/components.mjs';
+    import { Checkbox } from '/src/components.ts';
     import { CheckboxField } from '/src/supplemental/index.mjs';
     import '/generated/styles.css';
     const h = React.createElement;
@@ -98,7 +98,7 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
     main { display: grid; gap: 12px; }
   </style>`, body: '<div id="root"></div>', entry: '/checkbox-focus-states-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.mjs', 'src/supplemental/index.mjs'],
+    entries: ['src/components.ts', 'src/supplemental/index.mjs'],
     pages: { '/checkbox-focus.html': html },
     modules: { '/checkbox-focus-states-entry.mjs': entry },
   });
@@ -287,7 +287,7 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
 test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField paint the invalid edge in every state and scheme', { timeout: 180_000 }, async () => {
   const entry = `import React from 'react';
     import { createRoot } from 'react-dom/client';
-    import { Checkbox } from '/src/components.mjs';
+    import { Checkbox } from '/src/components.ts';
     import { RadioGroup } from '/src/collections.mjs';
     import { Switch } from '/src/fields.mjs';
     import { CheckboxField, RadioField, SwitchField } from '/src/supplemental/index.mjs';
@@ -321,7 +321,7 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     main { display: grid; gap: 12px; justify-items: start; }
   </style>`, body: '<div id="root"></div>', entry: '/checkbox-invalid-states-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.mjs', 'src/collections.mjs', 'src/fields.mjs', 'src/supplemental/index.mjs'],
+    entries: ['src/components.ts', 'src/collections.mjs', 'src/fields.mjs', 'src/supplemental/index.mjs'],
     pages: { '/checkbox-invalid.html': html },
     modules: { '/checkbox-invalid-states-entry.mjs': entry },
   });

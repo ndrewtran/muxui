@@ -23,7 +23,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { GridList, Virtualizer } from '/src/collections.mjs';
 import { Button } from '/src/button.ts';
-import { Link } from '/src/components.mjs';
+import { Link } from '/src/components.ts';
 
 const h = React.createElement;
 const { mode = 'bounded', hydrate = false, count = ${COUNT}, initial = count, height = 560, selectionMode = 'single', controlled = false, withAction = false, disabled = ${JSON.stringify(DISABLED)}, className, options = {} } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
@@ -227,7 +227,7 @@ function analyze({ view, rows }, overscan = 2) {
 for (const engine of browserEngines()) {
   test(`Virtualizer layout="grid" in ${engine}`, { timeout: 900_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.mjs'],
+      entries: ['src/collections.mjs', 'src/button.ts', 'src/components.ts'],
       pages: { '/virtualizer-grid.html': page },
       modules: { '/virtualizer-grid-entry.mjs': entry },
     });

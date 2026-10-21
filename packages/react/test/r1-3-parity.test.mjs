@@ -11,7 +11,7 @@ import {
   ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup,
   TokenField, ToggleButtonGroup, Toolbar, Tree, Virtualizer,
 } from '../src/collections.mjs';
-import { ToggleButton } from '../src/components.mjs';
+import { ToggleButton } from '../src/components.ts';
 import { createDom } from './support/dom.mjs';
 
 const slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];

@@ -1,0 +1,136 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/components.ts",
+  "component": "muxui:component:checkbox",
+  "binding": "web.react",
+  "export": "Checkbox",
+  "api": {
+    "props": [
+      "checked",
+      "defaultChecked",
+      "disabled",
+      "size",
+      "indeterminate",
+      "name",
+      "required",
+      "value",
+      "invalid"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "defaultChecked": false,
+      "disabled": false,
+      "indeterminate": false,
+      "invalid": false
+    },
+    "propDetails": {
+      "checked": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Checkbox is checked, when the caller controls it."
+      },
+      "defaultChecked": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Checkbox starts checked, when it controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the Checkbox: it can be neither focused nor changed."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size. Without one, a Checkbox in a CheckboxGroup takes the group's size, and any other takes md."
+      },
+      "indeterminate": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the mixed state. It is separate from checked, and toggling the Checkbox does not clear it."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The name a checked Checkbox submits its value under."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the Checkbox required. Left unset, a Checkbox in a CheckboxGroup takes the group's required state."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The value a checked Checkbox submits."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the Checkbox invalid. It shows no error text."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "checked",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the new checked state."
+      }
+    },
+    "types": {}
+  }
+}

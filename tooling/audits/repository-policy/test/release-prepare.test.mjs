@@ -474,7 +474,8 @@ function currentVisualInputs() {
     tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readFileSync(join(repositoryRoot, 'catalog/tokens/default-theme.json')) },
     stylesheets: generated('.css'),
     lucide: { version: manifest.dependencies['lucide-react'], integrity: readLockedIntegrity(lockfile, 'lucide-react', manifest.dependencies['lucide-react']) },
-    modules: generated('.mjs'),
+    // As the preparation reads them: the .mjs modules and the .js that tsc emits for a TypeScript source.
+    modules: generatedFiles.filter((name) => /\.m?js$/u.test(name)).map((name) => ({ path: `generated/${name}`, bytes: readFileSync(join(generatedRoot, name)) })),
   };
 }
 
@@ -508,8 +509,8 @@ test('a token, stylesheet, Lucide version, icon mapping, or icon call-site chang
   const baseline = deriveVisualContract(inputs);
   assert.equal(baseline.comparison, 'none-recorded', 'the identity records no visual baseline');
   assert.deepEqual(deriveVisualContract(currentVisualInputs()), baseline, 'unchanged inputs reproduce the identity');
-  assert.ok(baseline.inputs.lucide.icons['generated/components.mjs'].includes('chevron-down'));
-  assert.ok(baseline.inputs.lucide.modules.some(({ path }) => path === 'generated/components.mjs'));
+  assert.ok(baseline.inputs.lucide.icons['generated/components.js'].includes('chevron-down'));
+  assert.ok(baseline.inputs.lucide.modules.some(({ path }) => path === 'generated/components.js'));
 
   const tokenSource = JSON.parse(inputs.tokenSource.bytes.toString('utf8'));
   tokenSource.tokens['semantic.action.background'].alias = 'semantic.color.color-70';
@@ -524,20 +525,20 @@ test('a token, stylesheet, Lucide version, icon mapping, or icon call-site chang
 
   assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, lucide: { ...inputs.lucide, version: '1.38.0' } })), ['lucide.version']);
 
-  const remapped = replaceModule(inputs, 'generated/components.mjs', (source) => source.replaceAll('icons/chevron-down.mjs', 'icons/chevron-up.mjs'));
+  const remapped = replaceModule(inputs, 'generated/components.js', (source) => source.replaceAll('icons/chevron-down.mjs', 'icons/chevron-up.mjs'));
   assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, modules: remapped })), ['lucide.icons', 'lucide.modules']);
 
   // Call-site geometry and accessibility semantics live in the importing module bytes.
   for (const [from, to] of [["size: 12 }", "size: 14 }"], ["'aria-hidden': 'true', focusable: 'false', size: 12", "focusable: 'false', size: 12"]]) {
-    const callSite = replaceModule(inputs, 'generated/components.mjs', (source) => {
+    const callSite = replaceModule(inputs, 'generated/components.js', (source) => {
       assert.ok(source.includes(from), from);
       return source.replace(from, to);
     });
     assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, modules: callSite })), ['lucide.modules'], to);
   }
 
-  const barrel = replaceModule(inputs, 'generated/components.mjs', (source) => `import { X } from 'lucide-react';\n${source}`);
-  assert.throws(() => deriveVisualContract({ ...inputs, modules: barrel }), /R1_EXIT_VISUAL_CONTRACT_INVALID: generated\/components\.mjs imports lucide-react;/u);
+  const barrel = replaceModule(inputs, 'generated/components.js', (source) => `import { X } from 'lucide-react';\n${source}`);
+  assert.throws(() => deriveVisualContract({ ...inputs, modules: barrel }), /R1_EXIT_VISUAL_CONTRACT_INVALID: generated\/components\.js imports lucide-react;/u);
   assert.throws(() => deriveVisualContract({ ...inputs, lucide: { version: '^1.37.0', integrity: inputs.lucide.integrity } }), /R1_EXIT_VISUAL_CONTRACT_INVALID/u);
   assert.throws(() => deriveVisualContract({ ...inputs, modules: [] }), /R1_EXIT_VISUAL_CONTRACT_INVALID/u);
 });

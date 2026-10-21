@@ -69,7 +69,7 @@ const r12Slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker',
 const r13Slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
 const r14Slugs = ['drop-zone', 'file-trigger', 'dialog', 'popover', 'preview-trigger', 'toast', 'tooltip'];
 const buttonSource = await readFile(resolve(packageRoot, 'src/button.ts'), 'utf8');
-const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
+const componentSource = await readFile(resolve(packageRoot, 'src/components.ts'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const gridListItemContextSource = await readFile(resolve(packageRoot, 'src/grid-list-item-context.mjs'), 'utf8');
@@ -107,7 +107,7 @@ const authoredStyleSources = await Promise.all([
 const authoredCss = authoredStyleSources.map((source) => source.trim()).join('\n\n');
 const runtimeSources = {
   'packages/react/src/button.ts': buttonSource,
-  'packages/react/src/components.mjs': componentSource,
+  'packages/react/src/components.ts': componentSource,
   'packages/react/src/fields.mjs': fieldsSource,
   'packages/react/src/collections.mjs': collectionsSource,
   'packages/react/src/overlays.mjs': overlaysSource,
@@ -422,38 +422,18 @@ const compatibility = {
   support: 'unproved; R1.5 React exports only',
 };
 const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
-const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
-// Button's types are tsc's declarations of src/button.ts (Decision 0031); the index names
-// them, so the module's other exports (usePendingSubmitProps) stay private.
+const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';\nexport { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
+// Button's and the R1.1 families' types are tsc's declarations of src/button.ts and
+// src/components.ts (Decision 0031); the index names them, so the modules' other exports
+// (usePendingSubmitProps) stay private.
 const typesBody = `import type * as React from 'react';
 import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
 
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
 export type ComponentPointerType = ButtonPointerType;
-export interface BreadcrumbItem { id?: string; label: React.ReactNode; href?: string; disabled?: boolean; }
-export interface BreadcrumbsProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className' | 'aria-label'> { items?: BreadcrumbItem[]; className?: string; 'aria-label': string; onNavigate?: (item: BreadcrumbItem) => void; }
-export declare const Breadcrumbs: React.ForwardRefExoticComponent<BreadcrumbsProps & React.RefAttributes<HTMLElement>>;
-export interface CheckboxProps extends Omit<React.LabelHTMLAttributes<HTMLLabelElement>, 'children' | 'className' | 'onChange'> { children?: React.ReactNode; className?: string; checked?: boolean; defaultChecked?: boolean; disabled?: boolean; size?: 'sm' | 'md' | 'lg'; indeterminate?: boolean; invalid?: boolean; name?: string; required?: boolean; value?: string; onChange?: (checked: boolean) => void; }
-export declare const Checkbox: React.ForwardRefExoticComponent<CheckboxProps & React.RefAttributes<HTMLLabelElement>>;
-export interface DisclosureProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className' | 'id' | 'title'> { title: React.ReactNode; children?: React.ReactNode; id?: string; expanded?: boolean; defaultExpanded?: boolean; disabled?: boolean; className?: string; onExpandedChange?: (expanded: boolean) => void; }
-export declare const Disclosure: React.ForwardRefExoticComponent<DisclosureProps & React.RefAttributes<HTMLDivElement>>;
-export interface DisclosureGroupProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className'> { children?: React.ReactNode; expandedIds?: string[]; defaultExpandedIds?: string[]; multiple?: boolean; disabled?: boolean; className?: string; onExpandedChange?: (expandedIds: string[]) => void; }
-export declare const DisclosureGroup: React.ForwardRefExoticComponent<DisclosureGroupProps & React.RefAttributes<HTMLDivElement>>;
-export interface GroupProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className' | 'role'> { children?: React.ReactNode; className?: string; disabled?: boolean; invalid?: boolean; readOnly?: boolean; role?: 'group' | 'region' | 'presentation'; }
-export declare const Group: React.ForwardRefExoticComponent<GroupProps & React.RefAttributes<HTMLDivElement>>;
-export interface LinkActivationEvent { readonly type: 'activate'; readonly pointerType: ComponentPointerType; readonly target: HTMLAnchorElement; }
-export interface LinkProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className' | 'onClick'> { children?: React.ReactNode; className?: string; href?: string; disabled?: boolean; current?: boolean; target?: string; rel?: string; onActivate?: (event: LinkActivationEvent) => void; }
-export declare const Link: React.ForwardRefExoticComponent<LinkProps & React.RefAttributes<HTMLElement>>;
-export interface MeterProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className'> { label: React.ReactNode; value?: number; minValue?: number; maxValue?: number; formatOptions?: Intl.NumberFormatOptions; className?: string; }
-export declare const Meter: React.ForwardRefExoticComponent<MeterProps & React.RefAttributes<HTMLDivElement>>;
-export interface ProgressBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className'> { label: React.ReactNode; value?: number; minValue?: number; maxValue?: number; className?: string; }
-export declare const ProgressBar: React.ForwardRefExoticComponent<ProgressBarProps & React.RefAttributes<HTMLDivElement>>;
-export interface SeparatorProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className'> { orientation?: 'horizontal' | 'vertical'; className?: string; }
-export declare const Separator: React.ForwardRefExoticComponent<SeparatorProps & React.RefAttributes<HTMLElement>>;
-export interface ToggleButtonActivationEvent { readonly type: 'activate'; readonly pointerType: ComponentPointerType; readonly target: HTMLButtonElement; }
-export interface ToggleButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'onChange' | 'onClick'> { children?: React.ReactNode; className?: string; selected?: boolean; defaultSelected?: boolean; disabled?: boolean; size?: 'sm' | 'md' | 'lg'; onChange?: (selected: boolean) => void; onActivate?: (event: ToggleButtonActivationEvent) => void; }
-export declare const ToggleButton: React.ForwardRefExoticComponent<ToggleButtonProps & React.RefAttributes<HTMLButtonElement>>;
+export { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';
+export type { BreadcrumbItem, BreadcrumbsProps, CheckboxProps, DisclosureGroupProps, DisclosureProps, GroupProps, LinkActivationEvent, LinkProps, MeterProps, ProgressBarProps, SeparatorProps, ToggleButtonActivationEvent, ToggleButtonProps } from './components.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const fieldsTypes = `
@@ -1104,7 +1084,6 @@ const outputs = new Map([
   ['choice-context.mjs', shippedModule('packages/react/src/choice-context.mjs', choiceContextSource)],
   ['grid-list-item-context.mjs', shippedModule('packages/react/src/grid-list-item-context.mjs', gridListItemContextSource)],
   ['toggle-button-context.mjs', shippedModule('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
-  ['components.mjs', shippedModule('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', shippedModule('packages/react/src/fields.mjs', fieldsSource)],
   ['calendar-height-motion.mjs', shippedModule('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
   ['calendar-selection-motion.mjs', shippedModule('packages/react/src/calendar-selection-motion.mjs', calendarSelectionMotionSource)],

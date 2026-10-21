@@ -72,6 +72,7 @@ const GUIDES = {
   message: { native: ['http', 'https'] },
   activity: {},
   'data-diff': { native: ['0', 'false', 'null'] },
+  checkbox: { native: ['aria-describedby', 'FormData.get', 'FormData.has', 'false', 'null'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;

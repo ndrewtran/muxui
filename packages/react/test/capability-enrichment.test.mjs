@@ -470,11 +470,11 @@ test('capability-enrichment status is a deterministic, advisory-only traceabilit
   await assert.rejects(() => buildStatus(changedRuntime), /MISSING_PATH/u);
 
   const changedRuntimeAnchor = structuredClone(matrix);
-  changedRuntimeAnchor.families[0].evidenceRefs.mux[1] = 'packages/react/src/components.mjs#import';
+  changedRuntimeAnchor.families[0].evidenceRefs.mux[1] = 'packages/react/src/components.ts#import';
   await assert.rejects(() => buildStatus(changedRuntimeAnchor), /RUNTIME_ANCHOR/u);
 
   const changedRuntimeWrongExport = structuredClone(matrix);
-  changedRuntimeWrongExport.families[0].evidenceRefs.mux[1] = 'packages/react/src/components.mjs#Checkbox';
+  changedRuntimeWrongExport.families[0].evidenceRefs.mux[1] = 'packages/react/src/components.ts#Checkbox';
   await assert.rejects(() => buildStatus(changedRuntimeWrongExport), /RUNTIME_ANCHOR/u);
 
   const changedMultiAnchor = structuredClone(matrix);
