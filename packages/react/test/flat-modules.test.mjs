@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { assertFlatImports, flattenImports } from '../src/flat-modules.mjs';
+import { assertFlatImports, flatModuleName, flattenImports } from '../src/flat-modules.mjs';
+
+test('a subdirectory index ships under its directory, in every extension a source or an emitted specifier has', () => {
+  const root = 'packages/react/src';
+  // The .ts source, the .mjs one it replaces, and the .js specifier tsc emits for it name one file.
+  for (const extension of ['mjs', 'js', 'ts']) {
+    assert.equal(flatModuleName(`${root}/markdown/index.${extension}`), extension === 'mjs' ? 'markdown.mjs' : 'markdown.js');
+  }
+  // Two subpath modules stay distinct, and neither takes the barrel's name.
+  assert.deepEqual(['markdown', 'text-editor'].map((directory) => flatModuleName(`${root}/${directory}/index.ts`)), ['markdown.js', 'text-editor.js']);
+  assert.equal(flatModuleName(`${root}/supplemental/index.mjs`), 'supplemental.mjs');
+  // Only a subdirectory's index is renamed: a module that merely sits in a directory, and a root index, keep their names.
+  assert.equal(flatModuleName(`${root}/supplemental/lightbox.ts`), 'lightbox.js');
+  assert.equal(flatModuleName(`${root}/index.ts`), 'index.js');
+  // An import of a subpath module from another directory flattens to the same name.
+  assert.equal(flattenImports(`${root}/supplemental/message.ts`, "import { Markdown } from '../markdown/index.js';\n"), "import { Markdown } from './markdown.js';\n");
+});
 
 test('flattening rewrites only real import, export, and dynamic-import specifiers', () => {
   const source = `import { Button } from /* the moved component */ '../button.ts';

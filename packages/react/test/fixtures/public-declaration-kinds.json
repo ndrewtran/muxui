@@ -1,5 +1,5 @@
 {
-  "recordedFrom": "c8434f62, before the TypeScript moves (Decision 0031 tranche 1 landed after it): kinds is the declaration kind each name of generated/index.d.ts resolved to, and indexSignatureCompatible lists the non-generic types that satisfied T extends Record<string, unknown> under tsc 6.0.3 with and without exactOptionalPropertyTypes (node test/support/declaration-surface.mjs)",
+  "recordedFrom": "c8434f62, before the TypeScript moves (Decision 0031 tranche 1 landed after it): kinds is the declaration kind each name of generated/index.d.ts resolved to, subpathKinds the same for each subpath module (generated/<slug>.d.ts, read from src/<slug>/index.d.ts at that commit), and indexSignatureCompatible lists the non-generic types that satisfied T extends Record<string, unknown> under tsc 6.0.3 with and without exactOptionalPropertyTypes (node test/support/declaration-surface.mjs)",
   "kinds": {
     "Activity": "const",
     "ActivityAction": "type",
@@ -380,6 +380,51 @@
     "supplementalFamilies": "const",
     "useCommandPalette": "function",
     "useToast": "function"
+  },
+  "subpathKinds": {
+    "markdown": {
+      "MARKDOWN_SOURCE_LIMIT": "const",
+      "MARKDOWN_LINE_LIMIT": "const",
+      "MARKDOWN_LINE_LENGTH_LIMIT": "const",
+      "MARKDOWN_DEPTH_LIMIT": "const",
+      "MARKDOWN_NODE_LIMIT": "const",
+      "MarkdownProps": "type",
+      "Markdown": "const"
+    },
+    "text-editor": {
+      "TextEditorFontFamily": "type",
+      "TextEditorFontSize": "type",
+      "TextEditorAlignment": "type",
+      "TextEditorMark": "type",
+      "TextEditorTextNode": "type",
+      "TextEditorPlainTextNode": "type",
+      "TextEditorHardBreakNode": "type",
+      "TextEditorInlineNode": "type",
+      "TextEditorParagraphNode": "type",
+      "TextEditorHeadingNode": "type",
+      "TextEditorListItemNode": "type",
+      "TextEditorBulletListNode": "type",
+      "TextEditorOrderedListType": "type",
+      "TextEditorOrderedListNode": "type",
+      "TextEditorListNode": "type",
+      "TextEditorBlockquoteNode": "type",
+      "TextEditorCodeBlockNode": "type",
+      "TextEditorImageNode": "type",
+      "TextEditorHorizontalRuleNode": "type",
+      "TextEditorBlockNode": "type",
+      "TextEditorNode": "type",
+      "TextEditorDocument": "type",
+      "TextEditorCommand": "type",
+      "TextEditorHandle": "type",
+      "TextEditorActionCallbacks": "type",
+      "TextEditorSelectionAction": "type",
+      "TextEditorSelectionRequest": "type",
+      "TextEditorSelectionActions": "type",
+      "TextEditorProps": "type",
+      "TextEditor": "const",
+      "isTextEditorDocument": "function",
+      "normalizeTextEditorDocument": "function"
+    }
   },
   "indexSignatureCompatible": [
     "ActivityAction",

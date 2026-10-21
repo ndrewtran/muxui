@@ -8,6 +8,7 @@ import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
+import { flatModuleName } from '../src/flat-modules.mjs';
 import { STRICT_CONSUMER_COMPILER_OPTIONS, augmentationReach, consumerTsc, indexSignatureCompatible, lostAugmentationReach, typeScript7Tsc } from './support/declaration-surface.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -179,7 +180,8 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
       components: DERIVED_API_COMPONENTS.map(({ name, part, source }) => ({
         name,
         part,
-        declarations: join(packedGenerated, source.split('/').at(-1).replace(/\.ts$/u, '.d.ts')),
+        // generated/ is flat: a subpath module's index.ts ships under its directory's name.
+        declarations: join(packedGenerated, flatModuleName(source).replace(/\.js$/u, '.d.ts')),
       })),
     });
     const typed = ({ props, events, propDetails, eventDetails, types }) => JSON.parse(JSON.stringify(

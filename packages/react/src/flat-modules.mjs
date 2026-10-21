@@ -1,8 +1,8 @@
 /**
  * generated/ is one flat directory: src/x.mjs and src/<dir>/x.mjs ship as x.mjs,
- * src/<dir>/index.mjs as <dir>.mjs, and a TypeScript source as its emitted x.js and
- * x.d.ts. Module specifiers are found by parsing each module, so text in comments,
- * strings, and templates that only looks like an import is never rewritten.
+ * src/<dir>/index.(mjs|js|ts) as <dir>.(mjs|js), and a TypeScript source as its emitted
+ * x.js and x.d.ts. Module specifiers are found by parsing each module, so text in
+ * comments, strings, and templates that only looks like an import is never rewritten.
  */
 import { posix } from 'node:path';
 import { parseAst } from 'vite';
@@ -11,10 +11,16 @@ const RELATIVE = /^\.{1,2}\//u;
 // A specifier that names a file rather than a package: relative or absolute.
 const PATH = /^\.{0,2}\//u;
 
+/**
+ * The flat name a source module ships as. A subdirectory's index takes the directory's name
+ * whatever its extension (`markdown/index.ts` and an emitted `../markdown/index.js` specifier
+ * both give `markdown.js`), so two subpath modules never share the root barrel's `index`.
+ */
 export function flatModuleName(sourcePath) {
   const file = posix.basename(sourcePath);
   const directory = posix.basename(posix.dirname(sourcePath));
-  return (file === 'index.mjs' && directory !== 'src' ? `${directory}.mjs` : file).replace(/\.ts$/u, '.js');
+  const name = /^index\.(?:mjs|js|ts)$/u.test(file) && directory !== 'src' ? file.replace(/^index/u, directory) : file;
+  return name.replace(/\.ts$/u, '.js');
 }
 
 const langOf = (path) => (/\.d\.m?ts$/u.test(path) ? 'dts' : /\.m?ts$/u.test(path) ? 'ts' : 'js');

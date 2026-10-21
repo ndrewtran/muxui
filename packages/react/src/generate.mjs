@@ -941,11 +941,12 @@ const currentContractRecord = {
   })),
   evidence: { status: 'pending', ids: [] },
 };
-// A family moved to TypeScript ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031).
+// A family moved to TypeScript ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031); a subpath
+// family's index.ts ships under its directory's name, which is its slug.
 const isTypeScriptFamily = ({ source }) => source.endsWith('.ts');
 for (const record of currentMappedRecords.filter(isTypeScriptFamily)) {
-  if (flatModuleName(record.source) !== `${record.slug}.js` || record.subpath) {
-    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a TypeScript family is a root module named for its slug`);
+  if (flatModuleName(record.source) !== `${record.slug}.js`) {
+    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a TypeScript family ships as a module named for its slug`);
   }
 }
 const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map((record) => `export * from './${isTypeScriptFamily(record) ? `${record.slug}.js` : `${record.slug}.mjs`}';\n`).join('')}`;
@@ -1041,8 +1042,14 @@ for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((
 for (const source of typeScriptSources) {
   const emitted = typeScriptBuild?.emitted.get(source);
   const name = flatModuleName(source);
+  const declarations = name.replace(/\.js$/u, '.d.ts');
+  // generated/ is flat, so two sources that flatten to one name (or one that takes a generator output's
+  // name, as an index.ts would take the root barrel's) must fail rather than overwrite each other.
+  for (const output of [name, declarations]) {
+    if (outputs.has(output)) throw new Error(`MUXUI_REACT_GENERATED_OUTPUT_COLLISION: ${source} ships as generated/${output}, a name another module already holds`);
+  }
   outputs.set(name, emitted ? shippedModule(source, emitted.js, 'js') : '');
-  outputs.set(name.replace(/\.js$/u, '.d.ts'), emitted ? shippedModule(source, emitted.declarations, 'dts') : '');
+  outputs.set(declarations, emitted ? shippedModule(source, emitted.declarations, 'dts') : '');
 }
 assertFlatImports(outputs);
 const readme = generatedText('packages/react/src/generate.mjs', `${readmeBody}${readmeGuidance}`, '<!--', ' -->');
