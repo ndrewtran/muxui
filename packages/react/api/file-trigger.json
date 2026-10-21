@@ -1,0 +1,107 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/overlays.ts",
+  "component": "muxui:component:file-trigger",
+  "binding": "web.react",
+  "export": "FileTrigger",
+  "api": {
+    "props": [
+      "acceptedFileTypes",
+      "allowsMultiple",
+      "acceptDirectory",
+      "defaultCamera",
+      "disabled"
+    ],
+    "events": [
+      "select"
+    ],
+    "defaults": {
+      "allowsMultiple": false,
+      "acceptDirectory": false,
+      "disabled": false
+    },
+    "propDetails": {
+      "acceptedFileTypes": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The MIME types or extensions the picker offers. It sets the native accept attribute and narrows the picker without validating the choice."
+      },
+      "allowsMultiple": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Lets the picker select more than one file."
+      },
+      "acceptDirectory": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Lets the picker select a directory instead of files, through the native webkitdirectory attribute."
+      },
+      "defaultCamera": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "user"
+            },
+            {
+              "kind": "literal",
+              "value": "environment"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "user",
+          "environment"
+        ],
+        "description": "Picks the camera a capture uses, the front one for user or the rear one for environment, through the native capture attribute."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the trigger: the picker does not open, and onSelect is not called."
+      }
+    },
+    "eventDetails": {
+      "select": {
+        "prop": "onSelect",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "files",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "host",
+                  "name": "File"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the chosen files as an array of File objects."
+      }
+    },
+    "types": {}
+  }
+}

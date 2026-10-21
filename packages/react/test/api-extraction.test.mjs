@@ -384,6 +384,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'breadcrumbs.json', 'disclosure.json', 'message.json', 'meter.json', 'progress-bar.json', 'select-native.json'], 'caller-supplied content');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json'], 'Meter\'s formatOptions, written Intl.NumberFormatOptions');
+  assert.deepEqual(reached.get('File'), ['file-trigger.json'], 'the files FileTrigger selects');
 });
 
 test('defaults come from the executable source: literals and top-level constants the component reads', () => {

@@ -83,6 +83,8 @@ const GUIDES = {
   'toggle-button': {},
   breadcrumbs: {},
   resizable: {},
+  // `capture` is the native attribute that defaultCamera sets.
+  'file-trigger': { native: ['capture'] },
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;

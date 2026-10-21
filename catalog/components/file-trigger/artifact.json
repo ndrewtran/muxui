@@ -14,12 +14,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": ["children", "acceptedFileTypes", "allowsMultiple", "acceptDirectory", "defaultCamera", "disabled", "onSelect", "className"],
-        "events": ["select"],
-        "parts": ["root", "input"],
-        "defaults": { "allowsMultiple": false, "acceptDirectory": false, "disabled": false }
-      },
       "behavior": [
         "onSelect receives the selected files as an array of File objects.",
         "acceptedFileTypes sets the native accept attribute, which narrows what the picker offers.",

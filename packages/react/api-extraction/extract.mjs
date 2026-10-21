@@ -30,10 +30,10 @@ export class ApiExtractionError extends Error {
  * extracts to. It grows per tranche, only by what a moved component needs: HTMLButtonElement
  * for the activation target of Button, IconButton, and ToggleButton, React.ReactNode for the
  * content props of SelectNative, Message, Activity, Disclosure, Meter, and ProgressBar,
- * HTMLAnchorElement for Link's activation target, and NumberFormatOptions (written
- * `Intl.NumberFormatOptions`) for Meter's formatOptions.
+ * HTMLAnchorElement for Link's activation target, NumberFormatOptions (written
+ * `Intl.NumberFormatOptions`) for Meter's formatOptions, and File for FileTrigger's selection.
  */
-export const HOST_ALLOWLIST = Object.freeze(['HTMLButtonElement', 'React.ReactNode', 'HTMLAnchorElement', 'NumberFormatOptions']);
+export const HOST_ALLOWLIST = Object.freeze(['HTMLButtonElement', 'React.ReactNode', 'HTMLAnchorElement', 'NumberFormatOptions', 'File']);
 
 // A namespace or wildcard would admit every type under it.
 const EXACT_HOST_TYPE = /^(?:React\.)?[A-Z][A-Za-z0-9]*$/u;
