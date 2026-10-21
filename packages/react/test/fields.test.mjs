@@ -749,38 +749,47 @@ function pressElement(element) {
 // An omitted defaultOpen must reach React Aria as undefined: its useContextProps
 // merge lets DatePickerContext or DateRangePickerContext supply it, but an explicit
 // false from a parameter default would override that context.
-for (const { name, Picker, Context, selector, props } of [
-  { name: 'DatePicker', Picker: DatePicker, Context: DatePickerContext, selector: '.muxui-date-picker', props: { label: 'Due date' } },
-  { name: 'DateRangePicker', Picker: DateRangePicker, Context: DateRangePickerContext, selector: '.muxui-date-range-picker', props: { label: 'Trip' } },
-]) {
+async function assertPickerDefaultOpen({ Picker, Context, selector, props }) {
   for (const { scenario, context, extraProps, openAtMount } of [
-    { scenario: 'starts closed without a context', context: undefined, extraProps: {}, openAtMount: false },
-    { scenario: 'starts open when the context sets defaultOpen', context: { defaultOpen: true }, extraProps: {}, openAtMount: true },
-    { scenario: 'starts closed when its defaultOpen={false} prop overrides the context', context: { defaultOpen: true }, extraProps: { defaultOpen: false }, openAtMount: false },
+    { scenario: 'without a context', context: undefined, extraProps: {}, openAtMount: false },
+    { scenario: 'with a context that sets defaultOpen', context: { defaultOpen: true }, extraProps: {}, openAtMount: true },
+    { scenario: 'with a context that sets defaultOpen and a defaultOpen={false} prop', context: { defaultOpen: true }, extraProps: { defaultOpen: false }, openAtMount: false },
   ]) {
-    test(`${name} ${scenario}, and a trigger press toggles it`, async () => {
-      const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
-      const restore = installDom(dom);
-      let root;
-      try {
-        const host = document.querySelector('#root');
-        root = createRoot(host);
-        const picker = React.createElement(Picker, { ...props, ...extraProps });
-        await act(async () => root.render(context ? React.createElement(Context.Provider, { value: context }, picker) : picker));
-        const trigger = host.querySelector(`${selector} .muxui-date-trigger`);
-        const isOpen = () => host.querySelector(selector).getAttribute('data-open') === 'true';
-        assert.equal(isOpen(), openAtMount);
-        assert.equal(trigger.getAttribute('aria-expanded'), String(openAtMount));
-        await pressElement(trigger);
-        assert.equal(isOpen(), !openAtMount);
-        assert.equal(trigger.getAttribute('aria-expanded'), String(!openAtMount));
-      } finally {
-        await act(async () => root?.unmount());
-        restore();
-      }
-    });
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
+    const restore = installDom(dom);
+    let root;
+    try {
+      const host = document.querySelector('#root');
+      root = createRoot(host);
+      const picker = React.createElement(Picker, { ...props, ...extraProps });
+      await act(async () => root.render(context ? React.createElement(Context.Provider, { value: context }, picker) : picker));
+      const trigger = host.querySelector(`${selector} .muxui-date-trigger`);
+      const isOpen = () => host.querySelector(selector).getAttribute('data-open') === 'true';
+      assert.equal(isOpen(), openAtMount, `${scenario}: open at mount`);
+      assert.equal(trigger.getAttribute('aria-expanded'), String(openAtMount), `${scenario}: aria-expanded at mount`);
+      await pressElement(trigger);
+      assert.equal(isOpen(), !openAtMount, `${scenario}: open after a trigger press`);
+      assert.equal(trigger.getAttribute('aria-expanded'), String(!openAtMount), `${scenario}: aria-expanded after a trigger press`);
+    } finally {
+      await act(async () => root?.unmount());
+      restore();
+    }
   }
 }
+
+test('DatePicker takes defaultOpen from DatePickerContext', () => assertPickerDefaultOpen({
+  Picker: DatePicker,
+  Context: DatePickerContext,
+  selector: '.muxui-date-picker',
+  props: { label: 'Due date' },
+}));
+
+test('DateRangePicker takes defaultOpen from DateRangePickerContext', () => assertPickerDefaultOpen({
+  Picker: DateRangePicker,
+  Context: DateRangePickerContext,
+  selector: '.muxui-date-range-picker',
+  props: { label: 'Trip' },
+}));
 
 test('read-only date segments retain accessible semantic contrast', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
