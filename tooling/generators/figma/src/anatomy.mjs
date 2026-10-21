@@ -8,7 +8,7 @@
  * with a diagnostic naming the family and field.
  */
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { mergeDerivedApis, parseJsonStrict } from '@muxui/schema';
 
 export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -277,7 +277,7 @@ const reactPackage = resolve(import.meta.dirname, '../node_modules/@muxui/react'
 
 /**
  * Load a family's catalog record, with its derived web.react API merged in as
- * the catalog compiles it, and the published prop types of the React package entry.
+ * the catalog compiles it, and the published prop types of the React package entry and of the modules it imports.
  */
 export async function loadAnatomySources(anatomy) {
   const authored = parseJsonStrict(await readFile(resolve(repositoryRoot, `catalog/components/${anatomy.family}/artifact.json`), 'utf8'));
@@ -285,10 +285,15 @@ export async function loadAnatomySources(anatomy) {
     .then(parseJsonStrict, (error) => { if (error.code === 'ENOENT') return undefined; throw error; });
   const catalogRecord = derived === undefined ? authored : mergeDerivedApis(authored, { 'web.react': derived });
   const manifest = parseJsonStrict(await readFile(resolve(reactPackage, 'package.json'), 'utf8'));
-  const reactTypes = await readFile(resolve(reactPackage, manifest.exports['.'].types), 'utf8').catch(() => {
+  const typesPath = resolve(reactPackage, manifest.exports['.'].types);
+  const entryTypes = await readFile(typesPath, 'utf8').catch(() => {
     throw new Error('MUXUI_FIGMA_COMPONENTS_REACT_UNGENERATED: run `pnpm generate --package @muxui/react` first');
   });
-  return { catalogRecord, reactTypes };
+  // The entry names the declarations of the TypeScript modules it imports, so a shared alias such as
+  // ControlSize is declared in one of them and not in the entry.
+  const modules = [...new Set([...entryTypes.matchAll(/\bfrom '\.\/([\w-]+)\.js'/gu)].map(([, name]) => name))];
+  const moduleTypes = await Promise.all(modules.map((name) => readFile(resolve(dirname(typesPath), `${name}.d.ts`), 'utf8')));
+  return { catalogRecord, reactTypes: [entryTypes, ...moduleTypes].join('\n') };
 }
 
 /** Stable variant key, for example `variant=primary,size=md,state=hover`. */
