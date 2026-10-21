@@ -132,6 +132,29 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     });
     assert.equal(typecheck.status, 0, `${typecheck.stdout}\n${typecheck.stderr}`);
 
+    // A bundler-resolved consumer with no synthetic default imports reads the same declarations. A
+    // declaration file that default-imports a CommonJS `export =` module, as `import React from 'react'`
+    // does, fails there with TS1259 even though the NodeNext project above accepts it.
+    const strictTsconfig = join(consumer, 'tsconfig.strict.json');
+    await writeFile(strictTsconfig, `${JSON.stringify({
+      extends: './tsconfig.json',
+      compilerOptions: {
+        module: 'ESNext',
+        moduleResolution: 'Bundler',
+        esModuleInterop: false,
+        allowSyntheticDefaultImports: false,
+        skipLibCheck: false,
+        // TypeScript 6 deprecates the two interop flags, which TypeScript 7 removes; drop this with them.
+        ignoreDeprecations: '6.0',
+      },
+    }, null, 2)}\n`);
+    const strictTypecheck = spawnSync(tsc, ['--noEmit', '-p', strictTsconfig], {
+      cwd: consumer,
+      env: process.env,
+      encoding: 'utf8',
+    });
+    assert.equal(strictTypecheck.status, 0, `strict consumer: ${strictTypecheck.stdout}\n${strictTypecheck.stderr}`);
+
     // Decision 0031: the packed declarations carry each derived API. The same reader runs over
     // them; names, types, enum members, and required flags match the committed derived file.
     // Defaults live in executable source, which the declarations do not carry.

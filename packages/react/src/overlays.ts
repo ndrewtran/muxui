@@ -545,7 +545,7 @@ export interface DialogOwnProps {
   /** Whether Escape, an outside press, the trigger, and the built-in close button close the Dialog. When false, the Dialog renders no close button of its own, and only a button in the close slot closes it. */
   dismissable?: boolean;
   /** The element that opens the Dialog. Without one, only open or defaultOpen opens it. */
-  trigger?: React.ReactElement;
+  trigger?: ReactElement;
   /** A class added to the backdrop beside Mux UI's own. */
   backdropClassName?: string;
   /** A class added to the dialog panel beside Mux UI's own. */
@@ -712,7 +712,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
  */
 export interface PopoverOwnProps {
   /** The focusable element that opens the Popover. Pressing it toggles the Popover. */
-  trigger: React.ReactElement;
+  trigger: ReactElement;
   /** Whether the Popover is open, when the caller controls it. */
   open?: boolean;
   /** Whether the Popover starts open, when it controls itself. */
@@ -859,7 +859,7 @@ function overlayTrigger(trigger: ReactNode, { disabled, className, markPending, 
  */
 export interface PreviewTriggerOwnProps {
   /** The focusable element that opens the preview. Disabling the preview leaves it operable. */
-  trigger: React.ReactElement;
+  trigger: ReactElement;
   /** How long a hover waits before the preview opens, in milliseconds. */
   delay?: number;
   /** How long the preview stays open after the pointer leaves, in milliseconds. */
@@ -980,7 +980,7 @@ export interface TooltipOwnProps {
   /** What the tooltip says. It is required, and a blank string does not count. */
   content: Exclude<ReactNode, null | undefined | boolean>;
   /** The focusable element the tooltip describes. */
-  trigger: React.ReactElement;
+  trigger: ReactElement;
   /** How long a hover waits before the tooltip opens, in milliseconds. Keyboard focus opens it at once. */
   delay?: number;
   /** How long the tooltip stays open after the pointer leaves, in milliseconds. */
@@ -1375,7 +1375,9 @@ export interface ToastOwnProps {
   onDismiss?: () => void;
 }
 
-export type ToastProps = ToastOwnProps & { className?: string };
+export interface ToastProps extends ToastOwnProps {
+  className?: string;
+}
 
 export const Toast: FC<ToastProps> = function Toast({
   message,
