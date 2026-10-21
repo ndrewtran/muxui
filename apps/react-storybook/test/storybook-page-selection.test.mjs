@@ -40,6 +40,8 @@ test('storybook page index mirrors static CSF fallback and explicit story names'
   assert.equal(stories.find(({ exportName }) => exportName === 'Matrix').name, 'Variant × size');
   const autocomplete = manifest.pageIndex.find(({ family }) => family === 'Autocomplete').stories;
   assert.equal(autocomplete.find(({ exportName }) => exportName === 'DisabledItemsInteraction').name, 'Disabled items keyboard navigation');
+  const selectNative = manifest.pageIndex.find(({ family }) => family === 'SelectNative').stories;
+  assert.equal(selectNative.find(({ exportName }) => exportName === 'NativeSelection').name, 'Native selection');
   const sizing = manifest.pageIndex.find(({ family }) => family === 'NumberField').stories
     .find(({ exportName }) => exportName === 'Sizing');
   assert.equal(sizing.name, 'Sizing');

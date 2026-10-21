@@ -13,7 +13,7 @@ test('SelectNative hydrates as a native form control and preserves browser focus
     hydrateRoot(document.getElementById('root'), React.createElement(SelectNativeBrowserFixture));`;
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(SelectNativeBrowserFixture))}</div>`, entry: '/select-native-browser-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/supplemental/select-native.mjs'],
+    entries: ['src/supplemental/select-native.ts'],
     pages: { '/select-native.html': html },
     modules: { '/select-native-browser-entry.mjs': entry },
   });

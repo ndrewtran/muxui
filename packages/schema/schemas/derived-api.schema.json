@@ -72,6 +72,7 @@
         { "$ref": "#/$defs/arrayType" },
         { "$ref": "#/$defs/functionType" },
         { "$ref": "#/$defs/objectType" },
+        { "$ref": "#/$defs/recordType" },
         { "$ref": "#/$defs/referenceType" },
         { "$ref": "#/$defs/hostType" }
       ]
@@ -80,7 +81,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["kind"],
-      "properties": { "kind": { "enum": ["string", "number", "boolean", "void", "null", "undefined"] } }
+      "description": "never appears only as an optional object member's type: a member that must be absent.",
+      "properties": { "kind": { "enum": ["string", "number", "boolean", "void", "null", "undefined", "never"] } }
     },
     "literalType": {
       "type": "object",
@@ -153,6 +155,17 @@
             }
           }
         }
+      }
+    },
+    "recordType": {
+      "description": "An object type whose one member is a string index signature: caller-chosen string keys, each holding value.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "readonly"],
+      "properties": {
+        "kind": { "const": "record" },
+        "value": { "$ref": "#/$defs/type" },
+        "readonly": { "type": "boolean" }
       }
     },
     "referenceType": {

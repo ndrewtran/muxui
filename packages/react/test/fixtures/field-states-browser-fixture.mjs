@@ -23,7 +23,7 @@ import {
   TagSelect,
   TextArea,
 } from '../../src/supplemental/index.mjs';
-import { SelectNative } from '../../src/supplemental/select-native.mjs';
+import { SelectNative } from '../../src/supplemental/select-native.ts';
 
 const h = React.createElement;
 const items = Object.freeze([

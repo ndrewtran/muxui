@@ -31,6 +31,7 @@ import {
   createBrowserProofStory,
   createControlledStory,
   createEventsStory,
+  createSelectNativeSelectionStory,
   createStory,
   createStoryMeta,
   createUncontrolledStory,
@@ -471,30 +472,58 @@ test('native select stock mode seeds decode values and forward the original chan
   const host = document.querySelector('#root');
   const root = createRoot(host);
   const record = currentRecord('SelectNative');
+  // value, defaultValue, and onChange are native passthrough, outside SelectNative's derived API
+  // (Decision 0031), so it has no controlled, uncontrolled, or events story; its Default story seeds them.
+  for (const name of ['Controlled', 'Uncontrolled', 'Events']) assert.equal(STORY_APPLICABILITY[name](record.binding, record.family), false, name);
   try {
-    for (const story of [createControlledStory(record), createUncontrolledStory(record), createStory(record, 'default')]) {
-      for (const multiple of [false, true]) {
-        let received;
-        let receivedTarget;
-        const args = { ...story.args, multiple, onChange: (event) => { received = event; receivedTarget = event.currentTarget; } };
-        await act(async () => root.render(React.cloneElement(story.render(args), { key: `${story.name}-${multiple}` })));
-        const select = host.querySelector('select');
-        const controlled = host.querySelector('[data-muxui-controlled-values]');
-        const uncontrolled = host.querySelector('[data-muxui-uncontrolled-values]');
-        assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? [] : ['']);
-        if (controlled) assert.deepEqual(JSON.parse(controlled.textContent).value, multiple ? [] : '');
-        if (uncontrolled) assert.deepEqual(JSON.parse(uncontrolled.textContent).defaultValue, multiple ? [] : '');
-        if (multiple) {
-          for (const option of select.options) option.selected = option.value !== '';
-        } else select.value = 'research';
-        await act(async () => select.dispatchEvent(new Event('change', { bubbles: true })));
-        assert.equal(received.type, 'change');
-        assert.strictEqual(receivedTarget, select);
-        if (controlled) assert.deepEqual(JSON.parse(controlled.textContent).value, multiple ? ['inbox', 'research'] : 'research');
-        if (uncontrolled) assert.deepEqual(JSON.parse(uncontrolled.textContent).defaultValue, multiple ? [] : '');
-        assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? ['inbox', 'research'] : ['research']);
-      }
+    const story = createStory(record, 'default');
+    for (const multiple of [false, true]) {
+      let received;
+      let receivedTarget;
+      const args = { ...story.args, multiple, onChange: (event) => { received = event; receivedTarget = event.currentTarget; } };
+      await act(async () => root.render(React.cloneElement(story.render(args), { key: `${story.name}-${multiple}` })));
+      const select = host.querySelector('select');
+      assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? [] : ['']);
+      if (multiple) {
+        for (const option of select.options) option.selected = option.value !== '';
+      } else select.value = 'research';
+      await act(async () => select.dispatchEvent(new Event('change', { bubbles: true })));
+      assert.equal(received.type, 'change');
+      assert.strictEqual(receivedTarget, select);
+      assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? ['inbox', 'research'] : ['research']);
     }
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('the native selection story follows a controlled value through its change event beside a default-value select', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const story = createSelectNativeSelectionStory(currentRecord('SelectNative'));
+  assert.equal(story.name, 'Native selection');
+  assert.throws(() => createSelectNativeSelectionStory(currentRecord('Button')), /require the SelectNative family/u);
+  try {
+    await act(async () => root.render(story.render(story.args)));
+    const [controlled, uncontrolled] = host.querySelectorAll('select');
+    const label = (select) => host.querySelector(`label[for="${select.id}"]`).textContent;
+    assert.deepEqual([label(controlled), label(uncontrolled)], ['Controlled panel', 'Default panel']);
+    const value = host.querySelector('[data-muxui-select-native-value]');
+    const log = () => [...host.querySelectorAll('[data-muxui-storybook-event-log="SelectNative"] li')].map((item) => item.textContent);
+    assert.deepEqual([controlled.value, value.textContent, uncontrolled.value], ['inbox', 'inbox', 'research']);
+    assert.deepEqual(log(), ['Waiting for: change']);
+    // The change event sets the controlled value; the default-value select keeps its own selection.
+    controlled.value = 'research';
+    await act(async () => controlled.dispatchEvent(new Event('change', { bubbles: true })));
+    assert.deepEqual([controlled.value, value.textContent], ['research', 'research']);
+    assert.deepEqual(log(), ['change: research']);
+    uncontrolled.value = 'inbox';
+    await act(async () => uncontrolled.dispatchEvent(new Event('change', { bubbles: true })));
+    assert.deepEqual([uncontrolled.value, controlled.value, value.textContent], ['inbox', 'research', 'research']);
+    assert.deepEqual(log(), ['change: research']);
   } finally {
     await act(async () => root.unmount());
     env.resolveAnimations();
@@ -681,6 +710,10 @@ test('controls offer only what the public types admit and match their value kind
   assert.deepEqual(unexpected, []);
   assert.ok(Number.isInteger(rowCount) && rowCount > 0, 'the offered native size is a positive integer');
   assert.deepEqual(controls('SelectNative').size.options.filter((option) => typeof option === 'string'), declaredUnion(selectNativeTypes, 'SelectNativeVisualSize'));
+  // A derived API's finite values are the control's options, in source order (Decision 0031).
+  for (const [family, name] of [['Avatar', 'size'], ['Image', 'radius'], ['Image', 'fit'], ['IconButton', 'variant'], ['Message', 'sender'], ['Activity', 'status']]) {
+    assert.deepEqual(controls(family)[name].options, currentRecord(family).binding.api.propDetails[name].enum, `${family}.${name}`);
+  }
   assert.deepEqual(controls('Avatar').size.options, ['sm', 'md', 'lg']);
   const nativeList = new JSDOM(renderToStaticMarkup(renderFamily('SelectNative', { size: rowCount }))).window.document.querySelector('select');
   assert.equal(nativeList.getAttribute('size'), String(rowCount));
@@ -738,8 +771,8 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
     assert.equal(avatar.getAttribute('data-image-state'), 'error');
     assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, false);
   });
-  // Events seeds the same picture, so load can be observed on an avatar that shows it.
-  assert.equal(createEventsStory(currentRecord('Avatar')).args.src, AVATAR_LOADED_SRC);
+  // load and error are Avatar.Image's native events, outside Avatar's derived API, so Avatar has no Events story.
+  assert.equal(STORY_APPLICABILITY.Events(currentRecord('Avatar').binding, 'Avatar'), false);
 });
 
 test('Card routes variant and padding to both roots and selection, pending, disabled, and activation to Card.Button', async () => {
@@ -2544,6 +2577,8 @@ test('generated stories are stock CSF modules that display only the stories that
   assert.ok(!group.includes('Events'), 'Group declares no events, so it has no Events story');
   assert.ok(!group.includes('Controlled') && !group.includes('Uncontrolled'), 'Group has no controlled pair');
   assert.deepEqual(await exportsOf('Button'), ['Anatomy', 'BrowserProof', 'Default', 'Events', 'Matrix', 'States']);
+  // SelectNative's native value and change event are outside its derived API; its own story shows them.
+  assert.ok((await exportsOf('SelectNative')).includes('NativeSelection'));
   assert.ok((await exportsOf('Checkbox')).includes('Controlled'), 'a family with a controlled pair keeps the pair');
   // A family whose named states the specimen cannot show has no States page of unavailable rows.
   for (const family of ['Form', 'Markdown', 'Meter']) assert.ok(!(await exportsOf(family)).includes('States'), family);

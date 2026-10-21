@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { TextField, SearchField } from '../../src/fields.mjs';
 import { Button } from '../../src/button.ts';
-import { IconButton } from '../../src/supplemental/icon-button.mjs';
+import { IconButton } from '../../src/supplemental/icon-button.ts';
 import { CommandPalette, useCommandPalette } from '../../src/supplemental/index.mjs';
 import { ColorSwatch } from '../../src/collections.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
@@ -163,7 +163,7 @@ test('Bento input and control host contracts in a real browser', { timeout: 90_0
 import { hydrateRoot } from 'react-dom/client';
 import { TextField, SearchField } from '/src/fields.mjs';
 import { Button } from '/src/button.ts';
-import { IconButton } from '/src/supplemental/icon-button.mjs';
+import { IconButton } from '/src/supplemental/icon-button.ts';
 import { CommandPalette, useCommandPalette } from '/src/supplemental/index.mjs';
 import { ColorSwatch } from '/src/collections.mjs';
 import '/generated/styles.css';

@@ -4,8 +4,8 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Avatar } from '../src/supplemental/avatar.mjs';
-import { Image } from '../src/supplemental/image.mjs';
+import { Avatar } from '../src/supplemental/avatar.ts';
+import { Image } from '../src/supplemental/image.ts';
 import { installDom } from './support/dom.mjs';
 
 function imageElement(document) {

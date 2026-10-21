@@ -13,6 +13,14 @@ import { extractApis } from './extract.mjs';
 /** The components whose web.react API is derived from their TypeScript source. */
 export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'button', name: 'Button', source: 'packages/react/src/button.ts' },
+  { slug: 'icon-button', name: 'IconButton', source: 'packages/react/src/supplemental/icon-button.ts' },
+  { slug: 'select-native', name: 'SelectNative', source: 'packages/react/src/supplemental/select-native.ts' },
+  { slug: 'image', name: 'Image', source: 'packages/react/src/supplemental/image.ts' },
+  // A compound: its API is that of Avatar.Root, the part the binding's root renders.
+  { slug: 'avatar', name: 'Avatar', part: 'Root', source: 'packages/react/src/supplemental/avatar.ts' },
+  { slug: 'message', name: 'Message', source: 'packages/react/src/supplemental/message.ts' },
+  { slug: 'activity', name: 'Activity', source: 'packages/react/src/supplemental/activity.ts' },
+  { slug: 'data-diff', name: 'DataDiff', source: 'packages/react/src/supplemental/data-diff.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
@@ -36,8 +44,9 @@ export async function deriveApis({ packageRoot, repositoryRoot, declarationRoot,
   }
   const apis = extractApis({
     declarationRoot,
-    components: components.map(({ name, source }) => ({
+    components: components.map(({ name, part, source }) => ({
       name,
+      part,
       declarations: resolve(declarationRoot, source.slice(SOURCE_ROOT.length).replace(/\.ts$/u, '.d.ts')),
       source: resolve(repositoryRoot, source),
     })),

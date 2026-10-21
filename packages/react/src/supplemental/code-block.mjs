@@ -4,7 +4,7 @@ import CodeXml from 'lucide-react/dist/esm/icons/code-xml.mjs';
 import Copy from 'lucide-react/dist/esm/icons/copy.mjs';
 import { Tooltip } from '../overlays.mjs';
 import { useCandidateMotion } from './candidate-motion.mjs';
-import { IconButton } from './icon-button.mjs';
+import { IconButton } from './icon-button.ts';
 import { highlightCodeDocuments } from './code-block-highlight.mjs';
 
 const MAX_LENGTH = 1_000_000;

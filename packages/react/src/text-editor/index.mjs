@@ -39,7 +39,7 @@ import {
   parseColor,
 } from 'react-aria-components';
 import { Button } from '../button.ts';
-import { IconButton } from '../supplemental/icon-button.mjs';
+import { IconButton } from '../supplemental/icon-button.ts';
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:']);

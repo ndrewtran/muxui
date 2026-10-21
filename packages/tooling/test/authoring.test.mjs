@@ -518,6 +518,9 @@ test('Decision 0031: adding a required derived prop or event is incompatible, an
   const named = (required) => diff((api) => api.types.ActivationEvent.type.members.push(id(required)));
   assert.deepEqual(summary(named(true)), ['add types/ActivationEvent/type/members/1 incompatible']);
   assert.equal(named(false).effect, 'compatible');
+  // An absent member (`id?: never`) rejects input that carried the key, so it narrows like a required one.
+  const absent = diff((api) => api.propDetails.config.type.members.push({ name: 'id', type: { kind: 'never' }, required: false, readonly: true }));
+  assert.deepEqual(summary(absent), ['add propDetails/config/type/members/1 incompatible']);
 
   // A description is editorial wherever it sits, though the block, and so the spec revision, changes.
   const described = diff((api) => {
@@ -535,14 +538,38 @@ test('Decision 0031: adding a required derived prop or event is incompatible, an
     api.propDetails.variant.type = { kind: 'number' };
   });
   assert.equal(retyped.effect, 'incompatible');
+
+  // A record (a string index signature) classifies by the same rules: a description edit is
+  // editorial, and a change to its value type or readonly flag, or to or from a record, is not.
+  const withValues = (api) => {
+    api.props.push('values');
+    api.propDetails.values = { type: { kind: 'reference', name: 'Values' }, required: false };
+    api.types.Values = { type: { kind: 'record', value: { kind: 'string' }, readonly: true } };
+  };
+  const recordDiff = (edit) => {
+    const before = structuredClone(derived);
+    withValues(before.api);
+    const after = structuredClone(before);
+    edit(after.api);
+    return semanticDiff({
+      before: authored,
+      after: authored,
+      revisionContext: { ...revisionContext, before: { derivedApis: { 'web.react': before } }, after: { derivedApis: { 'web.react': after } } },
+    });
+  };
+  assert.deepEqual(summary(recordDiff((api) => { api.types.Values.description = 'Values by column id.'; })), ['add types/Values/description editorial']);
+  assert.deepEqual(summary(recordDiff((api) => { api.types.Values.type.value = { kind: 'number' }; })), ['replace types/Values/type/value/kind incompatible']);
+  assert.equal(recordDiff((api) => { api.types.Values.type.readonly = false; }).effect, 'incompatible');
+  assert.equal(recordDiff((api) => { api.types.Values.type = { kind: 'object', members: [] }; }).effect, 'incompatible');
+  assert.deepEqual(summary(diff(withValues)), ['add propDetails/values compatible', 'add props/2 compatible', 'add types/Values compatible']);
 });
 
 test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
   const { context } = await setup();
-  const recordPath = 'catalog/components/icon-button/artifact.json';
+  const recordPath = 'catalog/components/link/artifact.json';
   const record = JSON.parse(await readFile(resolve(repositoryRoot, recordPath), 'utf8'));
   const diagnose = (candidate) => diagnoseCanonicalSource({ context, family: 'component', record: candidate, recordPath });
-  assert.equal(diagnose(record).valid, true, 'IconButton authors its web.react api');
+  assert.equal(diagnose(record).valid, true, 'Link authors its web.react api');
   const typed = structuredClone(record);
   typed.bindings['web.react'].api.propDetails = {};
   const diagnosis = diagnose(typed);

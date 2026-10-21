@@ -138,8 +138,9 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     const packedGenerated = join(packageScope, 'react', 'generated');
     const packedApis = extractApis({
       declarationRoot: packedGenerated,
-      components: DERIVED_API_COMPONENTS.map(({ name, source }) => ({
+      components: DERIVED_API_COMPONENTS.map(({ name, part, source }) => ({
         name,
+        part,
         declarations: join(packedGenerated, source.split('/').at(-1).replace(/\.ts$/u, '.d.ts')),
       })),
     });

@@ -43,31 +43,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "label",
-          "items",
-          "status",
-          "expanded",
-          "defaultExpanded",
-          "actions"
-        ],
-        "events": [
-          "expandedChange"
-        ],
-        "parts": [
-          "root",
-          "header",
-          "trigger",
-          "items",
-          "status",
-          "details",
-          "actions"
-        ],
-        "defaults": {
-          "defaultExpanded": true
-        }
-      },
       "behavior": [
         "The native div attributes/ref/events retain their meanings. label names the aggregate; items have unique nonempty stable IDs, label and queued/running/completed/failed/cancelled status. Optional details, context, meta, caller time and action records remain caller-owned content.",
         "An omitted aggregate status follows failed, running, queued, cancelled, then completed priority across nonempty items. Empty items have a neutral No activity state unless an explicit status is supplied. There are no cosmetic timers, task execution, requests or simulated processing.",

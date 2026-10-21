@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { Activity } from '../../src/supplemental/activity.mjs';
+import { Activity } from '../../src/supplemental/activity.ts';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const items = [
@@ -10,7 +10,7 @@ const items = [
   { id: 'review', label: 'Review records', status: 'failed', details: 'The selected file could not be read.', actions: [{ id: 'cancel', label: 'Cancel request', onAction: () => {} }, { id: 'disabled', label: 'Unavailable action', disabled: true, onAction: () => {} }] },
   { id: 'write', label: 'Draft notes', status: 'queued', meta: '7 items' },
 ];
-const entryFor = (list) => `import React from 'react';import { hydrateRoot } from 'react-dom/client';import { flushSync } from 'react-dom';import { Activity } from '/src/supplemental/activity.mjs';
+const entryFor = (list) => `import React from 'react';import { hydrateRoot } from 'react-dom/client';import { flushSync } from 'react-dom';import { Activity } from '/src/supplemental/activity.ts';
 window.events=[];window.errors=[];window.items=${JSON.stringify(list)};window.items[1].actions.forEach(action=>action.onAction=()=>window.events.push(action.id));
 const content=(props={})=>React.createElement(Activity,{label:'Workspace checks',onExpandedChange:value=>window.events.push(value),items:window.items,...props});
 const root=hydrateRoot(document.querySelector('#root'),content(),{onRecoverableError:error=>window.errors.push(error.message)});
@@ -20,7 +20,7 @@ const fixtureFor = (list) => pageShell({ attributes: 'data-muxui-color-scheme="l
 const outer = '.muxui-activity-items-host > .muxui-activity-motion-panel';
 const itemPanel = '.muxui-activity-details-host > .muxui-activity-motion-panel';
 async function setup(list = items) {
-  const server = await startServer({ entries: ['src/supplemental/activity.mjs'], pages: { '/activity.html': fixtureFor(list) }, modules: { '/activity-entry.mjs': entryFor(list) } });
+  const server = await startServer({ entries: ['src/supplemental/activity.ts'], pages: { '/activity.html': fixtureFor(list) }, modules: { '/activity-entry.mjs': entryFor(list) } });
   const browser = await launchBrowser(); const page = await browser.newPage({ viewport: { width: 390, height: 700 } }); const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {

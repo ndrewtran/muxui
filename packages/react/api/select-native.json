@@ -1,0 +1,111 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/select-native.ts",
+  "component": "muxui:component:select-native",
+  "binding": "web.react",
+  "export": "SelectNative",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "disabled",
+      "required",
+      "invalid",
+      "size"
+    ],
+    "events": [],
+    "defaults": {
+      "disabled": false,
+      "required": false,
+      "invalid": false,
+      "size": "md"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The visible label, associated with the select."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Help text, associated with the select."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Error text, associated with the select. A nonempty message makes the select invalid."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Applies the native disabled attribute."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Applies the native required attribute."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the select invalid."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "SelectNativeVisualSize"
+            },
+            {
+              "kind": "number"
+            }
+          ]
+        },
+        "required": false,
+        "description": "String values select Mux control targets; positive numbers pass to native select size."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "SelectNativeVisualSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The visual sizes of SelectNative."
+      }
+    }
+  }
+}

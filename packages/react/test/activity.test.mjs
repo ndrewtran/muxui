@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString, renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Activity } from '../src/supplemental/activity.mjs';
+import { Activity } from '../src/supplemental/activity.ts';
 import { createDom } from './support/dom.mjs';
 const e = (props) => React.createElement(Activity, { label: 'Checks', ...props });
 

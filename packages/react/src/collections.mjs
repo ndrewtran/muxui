@@ -105,7 +105,7 @@ import { RadioGroupMotion, RadioMotionIndicator } from './radio-motion.mjs';
 import { SliderMotionTrack } from './slider-motion.mjs';
 import { TabsMotion } from './tabs-motion.mjs';
 import { ToggleButtonGroupMotion } from './toggle-button-group-motion.mjs';
-import { IconButton } from './supplemental/icon-button.mjs';
+import { IconButton } from './supplemental/icon-button.ts';
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');

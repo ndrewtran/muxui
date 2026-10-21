@@ -1,31 +1,69 @@
 import React from 'react';
+import type { ForwardRefExoticComponent, HTMLAttributes, ImgHTMLAttributes, ReactElement, ReactNode, RefAttributes, SyntheticEvent } from 'react';
 import { attachRef } from '../motion-geometry.mjs';
 
-const h = React.createElement;
-const AVATAR_SIZES = new Set(['sm', 'md', 'lg']);
-const AvatarContext = React.createContext(null);
+/** The sizes of an Avatar. */
+export type AvatarSize = 'sm' | 'md' | 'lg';
 
-function classNames(...values) {
+/**
+ * The props Mux UI defines for Avatar.Root, the compound's root; the catalog's
+ * web.react API is derived from this interface (Decision 0031). Avatar.Image and
+ * Avatar.Fallback take native image and span attributes.
+ */
+interface AvatarOwnProps {
+  /** The avatar size. */
+  size?: AvatarSize;
+}
+
+export interface AvatarRootProps extends AvatarOwnProps, HTMLAttributes<HTMLSpanElement> {
+  /** Avatar.Image and Avatar.Fallback, directly or inside fragments. */
+  children?: ReactNode;
+}
+export type AvatarImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'alt' | 'className'> & { /** Required; use an empty string for a decorative avatar. */ alt: string; className?: string };
+export type AvatarFallbackProps = HTMLAttributes<HTMLSpanElement>;
+
+type ImageStatus = 'loaded' | 'error';
+interface AvatarContextValue {
+  hasImage: boolean;
+  imageAvailable: boolean;
+  imageLoaded: boolean;
+  imageDecorative: boolean;
+  failedKey: string | null;
+  loadedKey: string | null;
+  rootHasName: boolean;
+  markFailure: (key: string) => void;
+  markLoaded: (key: string) => void;
+  reconcileImage: (key: string, image: HTMLImageElement | null, available: boolean) => void;
+}
+type AvatarPart = ReactElement<Partial<AvatarImageProps> & { children?: ReactNode }>;
+
+const h = React.createElement;
+// Keyed by the type, so a size added to it must be added here too.
+const AVATAR_SIZES: Readonly<Record<AvatarSize, true>> = { sm: true, md: true, lg: true };
+const AvatarContext = React.createContext<AvatarContextValue | null>(null);
+
+function classNames(...values: unknown[]) {
   return values.filter(Boolean).join(' ');
 }
 
-function normalizeSize(size) {
-  if (!AVATAR_SIZES.has(size)) throw new TypeError(`Avatar size must be one of: ${[...AVATAR_SIZES].join(', ')}.`);
+// Untyped callers can pass anything; Object.hasOwn alone would coerce ['md'] to a key.
+function normalizeSize(size: AvatarSize) {
+  if (typeof size !== 'string' || !Object.hasOwn(AVATAR_SIZES, size)) throw new TypeError(`Avatar size must be one of: ${Object.keys(AVATAR_SIZES).join(', ')}.`);
   return size;
 }
 
-function imageSourceKey(src, srcSet) {
+function imageSourceKey(src?: string, srcSet?: string) {
   return [src ?? '', srcSet ?? ''].join('\u0000');
 }
 
-function hasImageSource(src, srcSet) {
+function hasImageSource(src?: string, srcSet?: string) {
   return [src, srcSet].some((value) => typeof value === 'string' && value.trim().length > 0);
 }
 
-function collectAvatarParts(children, parts = []) {
+function collectAvatarParts(children: ReactNode, parts: AvatarPart[] = []) {
   React.Children.forEach(children, (child) => {
     if (child == null || typeof child === 'boolean') return;
-    if (!React.isValidElement(child)) {
+    if (!React.isValidElement<Partial<AvatarImageProps> & { children?: ReactNode }>(child)) {
       throw new TypeError('Avatar.Root accepts Avatar.Image and Avatar.Fallback as direct children or fragment children.');
     }
     if (child.type === React.Fragment) {
@@ -40,7 +78,7 @@ function collectAvatarParts(children, parts = []) {
   return parts;
 }
 
-const AvatarImage = React.forwardRef(function AvatarImage({
+const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(function AvatarImage({
   alt,
   src,
   srcSet,
@@ -55,8 +93,8 @@ const AvatarImage = React.forwardRef(function AvatarImage({
   if (typeof alt !== 'string') throw new TypeError('Avatar.Image requires an alt string; use alt="" for decorative avatars.');
   const key = imageSourceKey(src, srcSet);
   const sourceAvailable = hasImageSource(src, srcSet);
-  const imageRef = React.useRef(null);
-  const setImageRef = React.useCallback((node) => {
+  const imageRef = React.useRef<HTMLImageElement | null>(null);
+  const setImageRef = React.useCallback((node: HTMLImageElement | null) => {
     imageRef.current = node;
     const detach = attachRef(ref, node);
     return () => {
@@ -70,11 +108,11 @@ const AvatarImage = React.forwardRef(function AvatarImage({
   const failed = sourceAvailable && context.failedKey === key;
   const loaded = sourceAvailable && context.loadedKey === key;
   const unavailable = !sourceAvailable;
-  const handleLoad = (event) => {
+  const handleLoad = (event: SyntheticEvent<HTMLImageElement>) => {
     onLoad?.(event);
     context.markLoaded(key);
   };
-  const handleError = (event) => {
+  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
     onError?.(event);
     context.markFailure(key);
   };
@@ -100,7 +138,7 @@ const AvatarImage = React.forwardRef(function AvatarImage({
 
 AvatarImage.displayName = 'Avatar.Image';
 
-const AvatarFallback = React.forwardRef(function AvatarFallback({
+const AvatarFallback = React.forwardRef<HTMLSpanElement, AvatarFallbackProps>(function AvatarFallback({
   children,
   className,
   hidden,
@@ -121,7 +159,7 @@ const AvatarFallback = React.forwardRef(function AvatarFallback({
 
 AvatarFallback.displayName = 'Avatar.Fallback';
 
-const AvatarRoot = React.forwardRef(function AvatarRoot({
+const AvatarRoot = React.forwardRef<HTMLSpanElement, AvatarRootProps>(function AvatarRoot({
   size = 'md',
   children,
   className,
@@ -135,11 +173,11 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
   const parts = collectAvatarParts(children);
   const imageChild = parts.find((child) => child.type === AvatarImage);
   const hasImage = Boolean(imageChild);
-  const imageAlt = hasImage && typeof imageChild.props.alt === 'string' ? imageChild.props.alt : '';
-  const imageKey = hasImage ? imageSourceKey(imageChild.props.src, imageChild.props.srcSet) : null;
-  const imageAvailable = hasImage && hasImageSource(imageChild.props.src, imageChild.props.srcSet);
+  const imageAlt = imageChild && typeof imageChild.props.alt === 'string' ? imageChild.props.alt : '';
+  const imageKey = imageChild ? imageSourceKey(imageChild.props.src, imageChild.props.srcSet) : null;
+  const imageAvailable = imageChild !== undefined && hasImageSource(imageChild.props.src, imageChild.props.srcSet);
   const imageDecorative = hasImage && imageAlt.trim().length === 0;
-  const [imageState, setImageState] = React.useState({ key: null, status: null });
+  const [imageState, setImageState] = React.useState<{ key: string | null; status: ImageStatus | null }>({ key: null, status: null });
   const imageStatus = imageState.key === imageKey ? imageState.status : null;
   const imageFailed = imageAvailable && imageStatus === 'error';
   // The fallback shows while the image loads, after it fails, or with no source.
@@ -147,17 +185,17 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
   const rootHasName = Boolean(ariaLabel || ariaLabelledby);
   const recoveryName = hasImage && !imageLoaded && imageAlt.trim() && !rootHasName && !ariaHidden ? imageAlt : undefined;
   const hasImageRole = !ariaHidden && (rootHasName || recoveryName);
-  const markFailure = React.useCallback((key) => {
+  const markFailure = React.useCallback((key: string) => {
     setImageState((current) => current.key === key && current.status === 'error'
       ? current
       : { key, status: 'error' });
   }, []);
-  const markLoaded = React.useCallback((key) => {
+  const markLoaded = React.useCallback((key: string) => {
     setImageState((current) => current.key === key && current.status === 'loaded'
       ? current
       : { key, status: 'loaded' });
   }, []);
-  const reconcileImage = React.useCallback((key, image, available) => {
+  const reconcileImage = React.useCallback((key: string, image: HTMLImageElement | null, available: boolean) => {
     if (!available || !image?.complete) return;
     if (image.naturalWidth > 0) markLoaded(key);
     else markFailure(key);
@@ -165,7 +203,7 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
   React.useEffect(() => {
     setImageState((current) => current.key === imageKey ? current : { key: imageKey, status: null });
   }, [imageKey]);
-  const context = React.useMemo(() => ({
+  const context = React.useMemo<AvatarContextValue>(() => ({
     hasImage,
     imageAvailable,
     imageLoaded,
@@ -192,7 +230,11 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
 
 AvatarRoot.displayName = 'Avatar.Root';
 
-export const Avatar = Object.freeze({
+export const Avatar: {
+  Root: ForwardRefExoticComponent<AvatarRootProps & RefAttributes<HTMLSpanElement>>;
+  Image: ForwardRefExoticComponent<AvatarImageProps & RefAttributes<HTMLImageElement>>;
+  Fallback: ForwardRefExoticComponent<AvatarFallbackProps & RefAttributes<HTMLSpanElement>>;
+} = Object.freeze({
   Root: AvatarRoot,
   Image: AvatarImage,
   Fallback: AvatarFallback,

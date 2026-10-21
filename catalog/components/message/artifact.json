@@ -43,39 +43,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "sender",
-          "author",
-          "children",
-          "actions",
-          "sources",
-          "sourcesExpanded",
-          "defaultSourcesExpanded",
-          "followUps",
-          "streaming",
-          "streamingLabel"
-        ],
-        "events": [
-          "sourcesExpandedChange",
-          "followUp"
-        ],
-        "parts": [
-          "root",
-          "author",
-          "content",
-          "actions",
-          "sources",
-          "follow-ups",
-          "status"
-        ],
-        "defaults": {
-          "sender": "assistant",
-          "defaultSourcesExpanded": false,
-          "streaming": false,
-          "streamingLabel": "Response in progress."
-        }
-      },
       "behavior": [
         "The native article host/ref, children and HTML attributes/events retain their native meanings. sender is user, assistant or system rather than redefining native role; author is React content rather than native title or RDFa content.",
         "Caller-updated ReactNode children render first, followed by compact labeled actions and source disclosure, then follow-up controls. Markdown is explicitly composed through separately imported @muxui/react/markdown; the root imports no parser or editor.",

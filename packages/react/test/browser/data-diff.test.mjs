@@ -7,7 +7,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { DataDiff } from '/generated/data-diff.mjs';
+import { DataDiff } from '/generated/data-diff.js';
 const columns = [{id:'token',label:'Token'},{id:'group',label:'Group'},{id:'owner',label:'Owner'}];
 const rows = [
   {id:'gutter',label:'Gutter',kind:'removed',values:{token:'Gutter',group:'Legacy',owner:'design-team'}},
@@ -35,7 +35,7 @@ const fixture = pageShell({
 });
 
 test('DataDiff native keyboard selection, Apply, narrow/long data, and forced colors work in an isolated browser', { timeout: 120_000 }, async () => {
-  const server = await startServer({ entries: ['generated/data-diff.mjs'], pages: { '/data-diff.html': fixture }, modules: { '/data-diff-entry.mjs': entry } });
+  const server = await startServer({ entries: ['generated/data-diff.js'], pages: { '/data-diff.html': fixture }, modules: { '/data-diff-entry.mjs': entry } });
   const browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
   const directory = process.env.MUXUI_DATA_DIFF_SCREENSHOTS;

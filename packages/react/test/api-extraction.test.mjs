@@ -206,7 +206,29 @@ test('the host allowlist is exact: a namespace or wildcard entry is too broad, a
   rejects(ownProps('  label?: React.ReactNode;\n  element?: React.ReactElement;'), /Thing\.element -> React\.ReactElement: .*not in the host allowlist/u, { hostAllowlist: ['React.ReactNode'] });
   // An allowlisted host type with type arguments is still generic.
   rejects(ownProps('  anchor?: React.RefObject<HTMLElement>;'), /Thing\.anchor -> React\.RefObject: generic type arguments/u, { hostAllowlist: ['React.RefObject', 'HTMLElement'] });
-  assert.deepEqual(HOST_ALLOWLIST, ['HTMLButtonElement'], 'the shipped allowlist holds only what moved components reach');
+});
+
+/** Every host type a derived type reaches, by name. */
+function hostTypes(value, found = new Set()) {
+  if (Array.isArray(value)) value.forEach((item) => hostTypes(item, found));
+  else if (value !== null && typeof value === 'object') {
+    if (value.kind === 'host') found.add(value.name);
+    Object.values(value).forEach((item) => hostTypes(item, found));
+  }
+  return found;
+}
+
+test('the shipped allowlist holds exactly the host types the committed derived APIs reach', () => {
+  const reached = new Map();
+  for (const file of readdirSync(resolve(packageRoot, 'api'))) {
+    for (const name of hostTypes(JSON.parse(readFileSync(resolve(packageRoot, 'api', file), 'utf8')).api)) {
+      reached.set(name, [...(reached.get(name) ?? []), file]);
+    }
+  }
+  assert.deepEqual([...reached.keys()].sort(), [...HOST_ALLOWLIST].sort());
+  // Each entry, and the components that need it.
+  assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json'], 'the activation event target');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'message.json', 'select-native.json'], 'caller-supplied content');
 });
 
 test('defaults come from the executable source: literals and top-level constants the component reads', () => {
@@ -216,9 +238,9 @@ test('defaults come from the executable source: literals and top-level constants
   tags?: readonly string[];
   pending?: boolean;
   onActivate?: () => void;`);
-  const source = (variantDefault = "'primary'", before = '') => `${before}const DEFAULT_SIZE = 'md' as const;
+  const source = (variantDefault = "'primary'", before = '') => `import { forwardRef } from 'react';
+${before}const DEFAULT_SIZE = 'md' as const;
 const THING_DEFAULTS = Object.freeze({ count: -2, tags: Object.freeze(['a', 'b']) });
-function forwardRef(render: unknown) { return render; }
 export const Thing = forwardRef(function Thing({
   variant = ${variantDefault},
   size = DEFAULT_SIZE,
@@ -262,6 +284,47 @@ export const Thing = forwardRef(function Thing({
   });
 });
 
+test('defaults are read only through React\'s forwardRef and memo, from their first argument', () => {
+  const declarations = ownProps("  size?: 'sm' | 'md';");
+  const imports = "import React, { forwardRef, memo } from 'react';\n";
+  // The component renders with size 'sm'; the comparator is memo's second argument and defaults 'md'.
+  const actual = "function ActualRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }\n";
+  const comparator = "({ size = 'md' }: Record<string, unknown>) => size === 'md'";
+  const read = (exported, before = '', head = imports) => extract({ declarations, source: `${head}${before}export const Thing = ${exported};\n` }).defaults;
+  const cases = [
+    [`React.memo(ActualRoot, ${comparator})`, actual],
+    [`memo(ActualRoot, ${comparator})`, actual],
+    // A wrapped wrapper, an arrow, a type argument, and parentheses or `as` around any of them.
+    ["memo(forwardRef(function ActualRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }))", ''],
+    ["React.memo<unknown>(({ size = 'sm' }: Record<string, unknown>) => size)", ''],
+    ["(memo(ActualRoot) as unknown)", actual],
+    // A top-level const bound to a wrapper resolves to that wrapper's function.
+    ['memo(Inner, Object.is)', `const Inner = forwardRef(function Inner({ size = 'sm' }: Record<string, unknown>) { return size; });\n`],
+  ];
+  for (const [exported, before] of cases) assert.deepEqual(read(exported, before), { size: 'sm' }, exported);
+  assert.deepEqual(read('React.memo(ActualRoot, Object.is)', actual, "import * as React from 'react';\n"), { size: 'sm' }, 'a namespace import');
+  assert.deepEqual(read('keep(ActualRoot)', actual, "import { memo as keep } from 'react';\n"), { size: 'sm' }, 'a renamed import');
+
+  // Any other callee, or a first argument the extraction cannot follow, fails rather than reading another argument.
+  const wrap = 'const wrap = (render: unknown, ...rest: unknown[]) => render;\n';
+  const rejections = [
+    ['wrap(ActualRoot)', wrap + actual, imports, /Thing: wrap is not React's forwardRef or memo/u],
+    [`wrap(${comparator})`, wrap, imports, /Thing: wrap is not React's forwardRef or memo/u],
+    ["forwardRef(function Thing({ size = 'sm' }: Record<string, unknown>) { return size; })", 'function forwardRef(render: unknown) { return render; }\n', '', /Thing: forwardRef is not React's forwardRef or memo/u],
+    ["React.memo(function Thing({ size = 'sm' }: Record<string, unknown>) { return size; })", 'const React = { memo: (render: unknown) => render };\n', '', /Thing: React\.memo is not React's forwardRef or memo/u],
+    ['memo(LetRoot, Object.is)', `let LetRoot = function LetRoot({ size = 'sm' }: Record<string, unknown>) { return size; };\n`, imports, /Thing: LetRoot is not a top-level function declaration or const in the component's source/u],
+    ['memo(Alias)', `${actual}const Alias = ActualRoot;\n`, imports, /Thing: Alias must be a function, forwardRef, or memo call/u],
+    ['memo(UNDECLARED)', '', imports, /Thing: UNDECLARED is not a top-level function declaration or const/u],
+    ['memo()', '', imports, /Thing: memo\(\) has no component function/u],
+    ['memo(Thing)', '', imports, /Thing: Thing wraps itself/u],
+    ['memo(...rest)', 'declare const rest: [() => null];\n', imports, /Thing: the first argument of memo must be/u],
+    [`memo(5, ${comparator})`, '', imports, /Thing: the first argument of memo must be/u],
+  ];
+  for (const [exported, before, head, pattern] of rejections) {
+    assert.throws(() => read(exported, before, head), (error) => error instanceof ApiExtractionError && pattern.test(error.message), exported);
+  }
+});
+
 test('a default the component executes outside its props parameter fails extraction', () => {
   const declarations = ownProps("  size?: 'sm' | 'md';\n  count?: number;\n  onActivate?: () => void;");
   const source = (body) => `declare function chooseSize(): 'sm' | 'md';
@@ -294,6 +357,47 @@ export function Thing({ size, count, onActivate }: { size?: 'sm' | 'md'; count?:
   assert.deepEqual(allowed.defaults, {});
 });
 
+test('a fallback on a prop with a parameter default passes only where that default keeps it from applying', () => {
+  const declarations = ownProps(`  size?: 'sm' | 'md';
+  count?: number;
+  flag?: boolean;
+  note?: string | null;
+  items?: readonly string[];
+  expanded?: boolean;
+  onActivate?: () => void;`);
+  const source = (body) => `declare const local: boolean;
+declare const hasError: boolean;
+declare const host: { 'aria-busy'?: boolean };
+export function Thing({ size = 'md', count = 0, flag = false, note = null, items = [], expanded, onActivate }: Record<string, any>) {
+  ${body}
+  return [size, count, flag, note, items, expanded, onActivate];
+}
+`;
+  const defaults = { size: 'md', count: 0, flag: false, note: null, items: [] };
+  // ?? passes over a non-nullish default and || over a truthy one, so an omitted prop keeps its default.
+  for (const body of ["size ?? 'sm'", "size || 'sm'", 'items ?? []', 'items || []', 'count ?? 1', 'flag ?? true']) {
+    assert.deepEqual(extract({ declarations, source: source(`void (${body});`) }).defaults, defaults, body);
+  }
+  // The forms the moved families use: the prop on a fallback's right (SelectNative's invalid), a
+  // conditional over a false default (Message, DataDiff, Button), and a controlled prop without a
+  // default that falls back to local state (Message, Activity, DataDiff).
+  for (const body of ['hasError || flag', 'flag ? true : undefined', "flag ? true : host['aria-busy']", 'flag ? true : count > 0', 'expanded == null ? local : expanded']) {
+    assert.deepEqual(extract({ declarations, source: source(`void (${body});`) }).defaults, defaults, body);
+  }
+  // Otherwise the fallback replaces the default the block would state: false || true runs true.
+  const cases = [
+    ['flag || true', /Thing\.flag: flag \|\| \.\.\. replaces its parameter default false with a value the component executes/u],
+    ['flag || hasError', /Thing\.flag: flag \|\| \.\.\. replaces its parameter default false/u],
+    ['count || 1', /Thing\.count: count \|\| \.\.\. replaces its parameter default 0/u],
+    ["note ?? 'actual'", /Thing\.note: note \?\? \.\.\. replaces its parameter default null/u],
+    ["note || 'actual'", /Thing\.note: note \|\| \.\.\. replaces its parameter default null/u],
+    ['expanded ?? local', /Thing\.expanded: expanded \?\? \.\.\. falls back to a value the component executes/u],
+  ];
+  for (const [body, pattern] of cases) rejects(declarations, pattern, { source: source(`void (${body});`) });
+  // A defaulted prop is still assigned to only in its parameter.
+  rejects(declarations, /Thing\.size: the component assigns to size/u, { source: source("size ||= 'sm';") });
+});
+
 test('a recursive Mux UI-owned type is defined once and referenced by name', () => {
   const api = extract({ declarations: ownProps('  items?: readonly ThingItem[];', 'export interface ThingItem { id: string; children?: ThingItem[]; }\n') });
   assert.deepEqual(api.propDetails.items.type, { kind: 'array', element: { kind: 'reference', name: 'ThingItem' }, readonly: true });
@@ -308,6 +412,117 @@ test('a recursive Mux UI-owned type is defined once and referenced by name', () 
       },
     },
   });
+});
+
+test('a record is an object type whose one member is a string index signature', () => {
+  const api = extract({
+    declarations: ownProps('  values?: ThingValues;\n  counts?: { [key: string]: number };', 'export type ThingValues = { readonly [column: string]: string | null };\n'),
+  });
+  assert.deepEqual(api.propDetails.values.type, { kind: 'reference', name: 'ThingValues' });
+  assert.deepEqual(api.types.ThingValues.type, { kind: 'record', value: { kind: 'union', members: [{ kind: 'string' }, { kind: 'null' }] }, readonly: true });
+  assert.deepEqual(api.propDetails.counts.type, { kind: 'record', value: { kind: 'number' }, readonly: false });
+  // An interface holds a record the same way.
+  assert.deepEqual(extract({ declarations: ownProps('  values?: ThingValues;', 'export interface ThingValues { readonly [column: string]: boolean }\n') }).types.ThingValues.type,
+    { kind: 'record', value: { kind: 'boolean' }, readonly: true });
+  const cases = [
+    ['  bad?: { [key: number]: string };', '', /Thing\.bad: an index signature takes one string key/u],
+    ['  bad?: { [key: symbol]: string };', '', /Thing\.bad: an index signature takes one string key/u],
+    ['  bad?: { [key: `id-${string}`]: string };', '', /Thing\.bad: an index signature takes one string key/u],
+    ['  bad?: { [key: string]: string; id: string };', '', /Thing\.bad: an index signature is in the grammar only as the one member of its object type/u],
+    ['  bad?: { [key: string]: string; [key: number]: string };', '', /Thing\.bad: an index signature is in the grammar only as the one member/u],
+    ['  bad?: Mixed;', 'export interface Mixed { [key: string]: string; id: string }\n', /Thing\.bad -> Mixed: an index signature is in the grammar only as the one member/u],
+    // The value is read by the same grammar, with the chain naming the key.
+    ['  bad?: { [key: string]: any };', '', /Thing\.bad\[string\]: any is not in the grammar/u],
+  ];
+  for (const [members, extra, pattern] of cases) rejects(ownProps(members, extra), pattern);
+  // OwnProps itself takes only named props.
+  rejects(ownProps('  size?: string;\n  [key: string]: string | undefined;'), /Thing\.<member>: only property signatures are in the grammar/u);
+});
+
+test('never is in the grammar only as an optional member\'s type, a member that must be absent', () => {
+  const rows = `export type ThingRow =
+  | { readonly kind: 'added'; readonly values: string; readonly before?: never }
+  | { readonly kind: 'updated'; readonly before: string; readonly values?: never };
+`;
+  const api = extract({ declarations: ownProps('  rows?: readonly ThingRow[];', rows) });
+  assert.deepEqual(api.types.ThingRow.type.members.map(({ members }) => members.map(({ name, type, required }) => `${name}${required ? '' : '?'}: ${type.kind}`)), [
+    ['kind: literal', 'values: string', 'before?: never'],
+    ['kind: literal', 'before: string', 'values?: never'],
+  ]);
+  const cases = [
+    ['  bad?: { gone: never };', /Thing\.bad\.gone: never is in the grammar only as an optional member's type/u],
+    ['  bad?: never;', /Thing\.bad: a member that must be absent is no prop; leave bad to the host part/u],
+    ['  bad?: string | never;', /Thing\.bad: never is not in the grammar/u],
+    ['  bad?: readonly never[];', /Thing\.bad\[\]: never is not in the grammar/u],
+    ['  onBad?: (value: never) => void;', /Thing\.onBad\(value\): never is not in the grammar/u],
+    ['  bad?: { [key: string]: never };', /Thing\.bad\[string\]: never is not in the grammar/u],
+  ];
+  for (const [members, pattern] of cases) rejects(ownProps(members), pattern);
+});
+
+test('a compound export derives the API of its named root part', () => {
+  const declarations = `${header}export interface ThingOwnProps {
+  size?: 'sm' | 'md';
+}
+export interface ThingRootProps extends ThingOwnProps, React.HTMLAttributes<HTMLSpanElement> {}
+export interface ThingImageProps extends React.ImgHTMLAttributes<HTMLImageElement> { alt: string }
+export declare const Thing: {
+  Root: React.ForwardRefExoticComponent<ThingRootProps & React.RefAttributes<HTMLSpanElement>>;
+  Image: React.ForwardRefExoticComponent<ThingImageProps & React.RefAttributes<HTMLImageElement>>;
+};
+`;
+  const source = (exported, before = '', after = '', keyword = 'const') => `import React, { forwardRef, memo } from 'react';
+const ThingRoot = forwardRef(function ThingRoot({ size = 'md', ...props }: Record<string, unknown>) { return [size, props]; });
+const OtherRoot = forwardRef(function OtherRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; });
+const ThingImage = forwardRef(function ThingImage({ alt }: { alt: string }) { return alt; });
+${before}export ${keyword} Thing = ${exported};
+${after}`;
+  const read = (exported, { part = 'Root', before, after, keyword, text } = {}) => {
+    mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
+    const root = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
+    try {
+      writeFileSync(join(root, 'thing.d.ts'), declarations);
+      writeFileSync(join(root, 'thing.ts'), text ?? source(exported, before, after, keyword));
+      return extractApis({ declarationRoot: root, components: [{ name: 'Thing', part, declarations: join(root, 'thing.d.ts'), source: join(root, 'thing.ts') }] }).get('Thing');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+  const api = read('Object.freeze({ Root: ThingRoot, Image: ThingImage })');
+  assert.deepEqual([api.props, api.defaults], [['size'], { size: 'md' }]);
+  // The part's component is the wrapper's first argument, not its comparator.
+  const memoized = "function ActualRoot({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }\nconst MemoRoot = React.memo(ActualRoot, ({ size = 'md' }: Record<string, unknown>) => size === 'md');\n";
+  assert.deepEqual(read('Object.freeze({ Root: MemoRoot })', { before: memoized }).defaults, { size: 'sm' });
+  assert.deepEqual(read('Object.freeze({ Root: MemoRoot })', { before: "const MemoRoot = memo(forwardRef(function ActualRoot({ size = 'sm' }: Record<string, unknown>) { return size; }));\n" }).defaults, { size: 'sm' });
+  // A part's own properties, such as its displayName, may still be set.
+  assert.deepEqual(read("Object.freeze({ 'Root': ThingRoot, Image: ThingImage })", { after: "(ThingRoot as { displayName?: string }).displayName = 'Thing.Root';\n" }).defaults, { size: 'md' });
+  assert.throws(() => read('Object.freeze({ Root: ThingRoot })', { part: 'Body' }), /Thing\.Body: the exported Thing has no Body part/u);
+  // Only a frozen literal of Name: value parts, bound once to a const the source never writes,
+  // fixes the part the extraction reads; anything else could run another root.
+  const cases = [
+    ['Object.freeze({ Root: ThingRoot, ...overrides })', { before: 'const overrides = { Root: OtherRoot };\n' }, /Thing\.Root: the compound Thing holds only Name: value parts; a spread/u],
+    ['{ Root: ThingRoot, Image: ThingImage }', {}, /Thing\.Root: the compound Thing must be Object\.freeze\(\{ \.\.\. \}\) of its parts/u],
+    ['wrap({ Root: ThingRoot })', { before: 'const wrap = <T,>(value: T) => value;\n' }, /Thing\.Root: the compound Thing must be Object\.freeze/u],
+    ['Object.freeze(parts)', { before: 'const parts = { Root: ThingRoot };\n' }, /Thing\.Root: the compound Thing must be Object\.freeze/u],
+    ['Object.freeze({ [key]: ThingRoot })', { before: "const key = 'Root';\n" }, /Thing\.Root: the compound Thing holds only Name: value parts; .*computed key/u],
+    ['Object.freeze({ ThingRoot })', {}, /Thing\.Root: the compound Thing holds only Name: value parts; .*shorthand/u],
+    ['Object.freeze({ get Root() { return OtherRoot; } })', {}, /Thing\.Root: the compound Thing holds only Name: value parts; .*accessor/u],
+    // A reassigned member: a second Root, a write after the freeze, or a binding that is not const.
+    ['Object.freeze({ Root: ThingRoot, Root: OtherRoot })', {}, /Thing\.Root: the compound Thing assigns Root twice/u],
+    ['Object.freeze({ Root: ThingRoot })', { after: '(Thing as { Root: unknown }).Root = OtherRoot;\n' }, /Thing\.Root: the source writes to the compound Thing after declaring it/u],
+    ['Object.freeze({ Root: ThingRoot })', { after: 'Object.defineProperty(Thing, \'Root\', { value: OtherRoot });\n' }, /Thing\.Root: the source writes to the compound Thing/u],
+    ['Object.freeze({ Root: LetRoot })', { before: 'let LetRoot = ThingRoot;\nLetRoot = OtherRoot;\n' }, /Thing\.Root: LetRoot is not a top-level const in the component's source/u],
+    ['Object.freeze({ Image: ThingImage })', {}, /Thing\.Root: the compound Thing has no Root part/u],
+    // A part reads defaults only through React's forwardRef and memo, from the first argument.
+    ['Object.freeze({ Root: LocalRoot })', { before: "const wrap = (render: unknown, ...rest: unknown[]) => render;\nconst LocalRoot = wrap(function LocalRoot({ size = 'sm' }: Record<string, unknown>) { return size; });\n" }, /Thing\.Root: wrap is not React's forwardRef or memo/u],
+    ['Object.freeze({ Root: MemoRoot })', { before: "let LetRoot = function LetRoot({ size = 'sm' }: Record<string, unknown>) { return size; };\nconst MemoRoot = memo(LetRoot, ({ size = 'md' }: Record<string, unknown>) => size === 'md');\n" }, /Thing\.Root: LetRoot is not a top-level function declaration or const/u],
+    // The compound binding itself could be reassigned, and a function is no compound.
+    ['Object.freeze({ Root: ThingRoot })', { keyword: 'let' }, /Thing\.Root: the compound Thing must be a top-level const/u],
+    ['', { text: "export function Thing({ size = 'sm' }: Record<string, unknown>) { return size; }\n" }, /Thing\.Root: the compound Thing must be a top-level const/u],
+  ];
+  for (const [exported, options, pattern] of cases) {
+    assert.throws(() => read(exported, options), (error) => error instanceof ApiExtractionError && pattern.test(error.message), exported);
+  }
 });
 
 test('derived API documents are validated, written, checked, pruned, and merged into their records', async () => {

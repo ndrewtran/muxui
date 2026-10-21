@@ -1,0 +1,128 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/image.ts",
+  "component": "muxui:component:image",
+  "binding": "web.react",
+  "export": "Image",
+  "api": {
+    "props": [
+      "alt",
+      "fallbackSrc",
+      "fallbackSrcSet",
+      "radius",
+      "fit"
+    ],
+    "events": [],
+    "defaults": {
+      "radius": "none",
+      "fit": "cover"
+    },
+    "propDetails": {
+      "alt": {
+        "type": {
+          "kind": "string"
+        },
+        "required": true,
+        "description": "What the picture shows in its context, or an empty string for a decorative image. Required."
+      },
+      "fallbackSrc": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A source tried once after the primary source fails to load."
+      },
+      "fallbackSrcSet": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "A source set tried once, with fallbackSrc, after the primary source fails to load."
+      },
+      "radius": {
+        "type": {
+          "kind": "reference",
+          "name": "ImageRadius"
+        },
+        "required": false,
+        "enum": [
+          "none",
+          "sm",
+          "md",
+          "lg",
+          "full"
+        ],
+        "description": "The corner radius."
+      },
+      "fit": {
+        "type": {
+          "kind": "reference",
+          "name": "ImageFit"
+        },
+        "required": false,
+        "enum": [
+          "cover",
+          "contain",
+          "fill",
+          "none"
+        ],
+        "description": "How the picture fills the box its width and height declare."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "ImageFit": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "cover"
+            },
+            {
+              "kind": "literal",
+              "value": "contain"
+            },
+            {
+              "kind": "literal",
+              "value": "fill"
+            },
+            {
+              "kind": "literal",
+              "value": "none"
+            }
+          ]
+        },
+        "description": "How an Image's picture fills its declared box."
+      },
+      "ImageRadius": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "none"
+            },
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            },
+            {
+              "kind": "literal",
+              "value": "full"
+            }
+          ]
+        },
+        "description": "The corner radii of an Image."
+      }
+    }
+  }
+}

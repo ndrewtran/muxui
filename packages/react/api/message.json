@@ -1,0 +1,300 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/message.ts",
+  "component": "muxui:component:message",
+  "binding": "web.react",
+  "export": "Message",
+  "api": {
+    "props": [
+      "sender",
+      "author",
+      "actions",
+      "sources",
+      "sourcesExpanded",
+      "defaultSourcesExpanded",
+      "followUps",
+      "streaming",
+      "streamingLabel"
+    ],
+    "events": [
+      "sourcesExpandedChange",
+      "followUp"
+    ],
+    "defaults": {
+      "sender": "assistant",
+      "actions": [],
+      "sources": [],
+      "defaultSourcesExpanded": false,
+      "followUps": [],
+      "streaming": false,
+      "streamingLabel": "Response in progress."
+    },
+    "propDetails": {
+      "sender": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "user"
+            },
+            {
+              "kind": "literal",
+              "value": "assistant"
+            },
+            {
+              "kind": "literal",
+              "value": "system"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "user",
+          "assistant",
+          "system"
+        ],
+        "description": "Who the turn is from. A user message shows its content in a filled bubble."
+      },
+      "author": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Content shown above the message, such as its author's name."
+      },
+      "actions": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "MessageAction"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "Compact buttons for the message. Pressed makes one a toggle."
+      },
+      "sources": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "MessageSource"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "What the reply relied on, listed behind a count button. Only http, https, and relative links stay links."
+      },
+      "sourcesExpanded": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the source list is open, when the caller controls it."
+      },
+      "defaultSourcesExpanded": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the source list starts open, when Message controls it."
+      },
+      "followUps": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "MessageFollowUp"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "Suggested next messages. They render only with onFollowUp."
+      },
+      "streaming": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Adds the streaming status text while the caller updates the content."
+      },
+      "streamingLabel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The status text announced while streaming."
+      }
+    },
+    "eventDetails": {
+      "sourcesExpandedChange": {
+        "prop": "onSourcesExpandedChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "expanded",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the source list opening or closing."
+      },
+      "followUp": {
+        "prop": "onFollowUp",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "MessageFollowUp"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the chosen follow-up. Message sends nothing."
+      }
+    },
+    "types": {
+      "MessageAction": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "icon",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "onAction",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "void"
+                }
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "pressed",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "MessageFollowUp": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "MessageSource": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "href",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "description",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      }
+    }
+  }
+}

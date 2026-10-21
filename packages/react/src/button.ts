@@ -12,6 +12,12 @@ import type { ButtonProps as AriaButtonProps, PressEvent } from 'react-aria-comp
 
 export type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;
 
+/** The visual recipes Button and IconButton share. */
+export type ButtonVariant = 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';
+
+/** The control sizes Button and IconButton share. */
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
 /** What `onActivate` reports for one activation. */
 export interface ButtonActivationEvent {
   readonly type: 'activate';
@@ -31,9 +37,9 @@ export interface ButtonOwnProps {
   /** Keeps the label visible beside the spinner while pending. */
   showTextWhileLoading?: boolean;
   /** The visual recipe, chosen by the action's emphasis and consequence. */
-  variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';
+  variant?: ButtonVariant;
   /** The control size. */
-  size?: 'sm' | 'md' | 'lg';
+  size?: ButtonSize;
   /** Requests the Button's one immediate action. */
   onActivate?: (event: ButtonActivationEvent) => void;
 }
@@ -44,9 +50,6 @@ export interface ButtonProps extends ButtonOwnProps, Omit<ButtonHTMLAttributes<H
   className?: string;
   style?: CSSProperties;
 }
-
-type ButtonVariant = NonNullable<ButtonOwnProps['variant']>;
-type ButtonSize = NonNullable<ButtonOwnProps['size']>;
 
 // Records keyed by the prop types, so a value added to a type must be added here too.
 const BUTTON_VARIANTS: Readonly<Record<ButtonVariant, true>> = {

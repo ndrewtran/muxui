@@ -1,31 +1,84 @@
 import React from 'react';
+import type { ForwardRefExoticComponent, HTMLAttributes, MouseEvent, Ref, RefAttributes } from 'react';
 import Check from 'lucide-react/dist/esm/icons/check.mjs';
 import Minus from 'lucide-react/dist/esm/icons/minus.mjs';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right.mjs';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw.mjs';
 import { useCandidateMotion } from './candidate-motion.mjs';
 
+export type DataDiffValue = string | number | boolean | null;
+export type DataDiffColumn = { readonly id: string; readonly label: string };
+/** A row's value for each declared column, by column id. */
+export type DataDiffValues = { readonly [columnId: string]: DataDiffValue };
+
+/** The members every row has. The hand-written declarations made this name public, so it stays exported. */
+export type DataDiffRowIdentity = { readonly id: string; readonly label: string; readonly disabled?: boolean };
+
+/** A proposed change to one row: added, removed, and unchanged rows carry values, updated rows before and after. */
+export type DataDiffRow =
+  | { readonly id: string; readonly label: string; readonly disabled?: boolean; readonly kind: 'unchanged' | 'added' | 'removed'; readonly values: DataDiffValues; readonly before?: never; readonly after?: never }
+  | { readonly id: string; readonly label: string; readonly disabled?: boolean; readonly kind: 'updated'; readonly before: DataDiffValues; readonly after: DataDiffValues; readonly values?: never };
+
+/**
+ * The props Mux UI defines for DataDiff; the catalog's web.react API is derived from
+ * this interface (Decision 0031).
+ */
+interface DataDiffOwnProps {
+  /** Visible heading and accessible table name. Native title remains a tooltip. */
+  label: string;
+  /** What Apply will do, shown under the heading. */
+  description?: string;
+  /** The columns, each with a unique, nonblank id and label. */
+  columns: readonly DataDiffColumn[];
+  /** Records contain exactly the declared column IDs, with explicit scalar values. */
+  rows: readonly DataDiffRow[];
+  /** The selected row ids, when the caller controls the selection. */
+  selectedIds?: readonly string[];
+  /** The ids selected at first, when DataDiff controls the selection. Without them every enabled proposed change starts selected; unchanged rows are never selectable. */
+  defaultSelectedIds?: readonly string[];
+  /** Reports the selected row ids, in row order, after each selection change. */
+  onSelectionChange?: (ids: readonly string[]) => void;
+  /** Called only by explicit Apply activation, with selected IDs in row order. */
+  onApply?: (ids: readonly string[]) => void;
+  /** Marks an apply in flight: selection and Apply are unavailable. */
+  pending?: boolean;
+  /** Makes selection and Apply unavailable. */
+  disabled?: boolean;
+  /** Replaces the whole Apply button label, which otherwise counts the selected changes. */
+  applyLabel?: string;
+  /** The text shown when there are no rows. */
+  emptyMessage?: string;
+}
+
+export interface DataDiffProps extends DataDiffOwnProps, Omit<HTMLAttributes<HTMLDivElement>, keyof DataDiffOwnProps | 'children' | 'dangerouslySetInnerHTML'> {
+  children?: never;
+  dangerouslySetInnerHTML?: never;
+}
+
+type CheckboxProps = { checked: boolean; indeterminate?: boolean; disabled?: boolean; ref?: Ref<HTMLInputElement>; 'aria-label': string; onChange: () => void };
+
 // Native inputs preserve host event bubbling; the visible indicator follows Mux Checkbox.
-function checkbox({ checked, indeterminate = false, disabled, ...props }) {
+function checkbox({ checked, indeterminate = false, disabled, ...props }: CheckboxProps) {
   return React.createElement('label', { className: 'muxui-checkbox muxui-checkbox--sm', 'data-size': 'sm', 'data-selected': checked || undefined, 'data-indeterminate': indeterminate || undefined, 'data-disabled': disabled || undefined },
     React.createElement('input', { ...props, type: 'checkbox', checked, disabled, 'aria-checked': indeterminate ? 'mixed' : checked }),
     React.createElement('span', { className: 'muxui-checkbox-indicator', 'aria-hidden': true, 'data-selected': checked || undefined, 'data-indeterminate': indeterminate || undefined },
       (indeterminate || checked) && React.createElement(indeterminate ? Minus : Check, { size: 12, 'aria-hidden': true, focusable: 'false' })));
 }
 
-const changeLabels = { unchanged: 'Unchanged', added: 'Added', removed: 'Removed', updated: 'Updated' };
-const changeMarkers = { unchanged: '', added: '+', removed: '−', updated: '' };
+const changeLabels: Readonly<Record<DataDiffRow['kind'], string>> = { unchanged: 'Unchanged', added: 'Added', removed: 'Removed', updated: 'Updated' };
+const changeMarkers: Readonly<Record<DataDiffRow['kind'], string>> = { unchanged: '', added: '+', removed: '−', updated: '' };
 
-function plainRecord(value) {
+// Untyped callers can pass anything, so every record is checked as it arrives.
+function plainRecord(value: unknown) {
   return value !== null && typeof value === 'object'
     && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
 }
 
-function nonblank(value, name) {
+function nonblank(value: unknown, name: string) {
   if (typeof value !== 'string' || !value.trim()) throw new TypeError(`DataDiff ${name} must be a nonblank string.`);
 }
 
-function validateValues(values, columns, name) {
+function validateValues(values: DataDiffValues, columns: readonly DataDiffColumn[], name: string) {
   if (!plainRecord(values) || Reflect.ownKeys(values).length !== columns.length) {
     throw new TypeError(`DataDiff ${name} must contain exactly the declared columns.`);
   }
@@ -39,7 +92,7 @@ function validateValues(values, columns, name) {
   }
 }
 
-function validateData(columns, rows) {
+function validateData(columns: readonly DataDiffColumn[], rows: readonly DataDiffRow[]) {
   if (!Array.isArray(columns) || !columns.length) throw new TypeError('DataDiff columns must be a nonempty array.');
   if (!Array.isArray(rows)) throw new TypeError('DataDiff rows must be an array.');
   const columnIds = new Set();
@@ -70,22 +123,22 @@ function validateData(columns, rows) {
   }
 }
 
-function validateIds(value, name) {
+function validateIds(value: readonly string[] | undefined, name: string) {
   if (value === undefined) return;
   if (!Array.isArray(value)) throw new TypeError(`DataDiff ${name} must be an array of string IDs.`);
   for (const id of value) nonblank(id, name);
 }
 
-function pruneSelection(ids, selectable) {
+function pruneSelection(ids: Iterable<string>, selectable: readonly DataDiffRow[]) {
   const requested = new Set(ids);
   return selectable.filter((row) => requested.has(row.id)).map((row) => row.id);
 }
 
-function scalar(value) {
+function scalar(value: DataDiffValue) {
   return value === null ? 'null' : String(value);
 }
 
-function cellValue(row, column) {
+function cellValue(row: DataDiffRow, column: DataDiffColumn) {
   if (row.kind !== 'updated') return scalar(row.values[column.id]);
   const before = row.before[column.id];
   const after = row.after[column.id];
@@ -101,7 +154,7 @@ function cellValue(row, column) {
 }
 
 /** Review caller-supplied scalar changes. Selection and Apply never mutate records. */
-export const DataDiff = React.forwardRef(function DataDiff({
+export const DataDiff: ForwardRefExoticComponent<DataDiffProps & RefAttributes<HTMLDivElement>> = React.forwardRef<HTMLDivElement, DataDiffProps>(function DataDiff({
   label, description = 'Select changes to apply', columns, rows,
   selectedIds, defaultSelectedIds, onSelectionChange, onApply,
   pending = false, disabled = false, applyLabel, emptyMessage = 'No rows to review.',
@@ -120,15 +173,19 @@ export const DataDiff = React.forwardRef(function DataDiff({
   validateIds(selectedIds, 'selectedIds');
   validateIds(defaultSelectedIds, 'defaultSelectedIds');
   const selectable = rows.filter((row) => row.kind !== 'unchanged' && !row.disabled);
-  const [selection, setSelection] = React.useState(() => pruneSelection(defaultSelectedIds ?? selectable.map((row) => row.id), selectable));
-  const selected = pruneSelection(selectedIds ?? selection, selectable);
+  // Conditionals, not ??: extraction reads a fallback on an owned prop as an executed default.
+  // Without defaultSelectedIds every selectable row starts selected, which is computed from the
+  // rows, not static; the selection is controlled while selectedIds is set.
+  const [selection, setSelection] = React.useState(() => pruneSelection(defaultSelectedIds == null ? selectable.map((row) => row.id) : defaultSelectedIds, selectable));
+  const selected = pruneSelection(selectedIds == null ? selection : selectedIds, selectable);
   const selectedSet = new Set(selected);
-  const gated = disabled || pending;
+  // Conditionals, not ||: extraction reads || on an owned prop with a false default as an executed fallback.
+  const gated = disabled ? true : pending;
   const allSelected = selectable.length > 0 && selected.length === selectable.length;
   const mixed = selected.length > 0 && !allSelected;
-  const selectAllRef = React.useRef(null);
-  const totalsRef = React.useRef(null);
-  const applyCountRef = React.useRef(null);
+  const selectAllRef = React.useRef<HTMLInputElement | null>(null);
+  const totalsRef = React.useRef<HTMLSpanElement | null>(null);
+  const applyCountRef = React.useRef<HTMLSpanElement | null>(null);
   const selectionKey = JSON.stringify(selected);
   useCandidateMotion(totalsRef, selectionKey, { active: !pending });
   useCandidateMotion(applyCountRef, selected.length, { active: !pending && applyLabel === undefined });
@@ -147,13 +204,13 @@ export const DataDiff = React.forwardRef(function DataDiff({
 
   React.useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = mixed; }, [mixed]);
 
-  const changeSelection = (ids) => {
+  const changeSelection = (ids: readonly string[]) => {
     if (gated) return;
     const next = pruneSelection(ids, selectable);
     if (selectedIds === undefined) setSelection(next);
     onSelectionChange?.([...next]);
   };
-  const toggleRow = (row) => {
+  const toggleRow = (row: DataDiffRow) => {
     if (row.kind === 'unchanged' || row.disabled || gated) return;
     changeSelection(selectedSet.has(row.id) ? selected.filter((id) => id !== row.id) : [...selected, row.id]);
   };
@@ -163,9 +220,9 @@ export const DataDiff = React.forwardRef(function DataDiff({
   return React.createElement('div', {
     ...props, ref,
     className: ['muxui-data-diff', className].filter(Boolean).join(' '),
-    'data-pending': pending || undefined,
-    'data-disabled': disabled || undefined,
-    'aria-busy': pending || props['aria-busy'],
+    'data-pending': pending ? true : undefined,
+    'data-disabled': disabled ? true : undefined,
+    'aria-busy': pending ? true : props['aria-busy'],
   },
   React.createElement('div', { className: 'muxui-data-diff-header' },
     React.createElement('span', { id: titleId, className: 'muxui-data-diff-title' }, label),
@@ -184,7 +241,7 @@ export const DataDiff = React.forwardRef(function DataDiff({
           'data-change': row.kind, 'data-selected': selectedSet.has(row.id) || undefined,
           'data-selectable': row.kind !== 'unchanged' && !row.disabled && !gated || undefined,
           'data-disabled': row.disabled || undefined,
-          onClick: (event) => { if (!event.target.closest('.muxui-data-diff-selection')) toggleRow(row); },
+          onClick: (event: MouseEvent<HTMLTableRowElement>) => { if (!(event.target as Element).closest('.muxui-data-diff-selection')) toggleRow(row); },
         },
         React.createElement('td', { className: 'muxui-data-diff-selection' }, row.kind !== 'unchanged' && checkbox({
           checked: selectedSet.has(row.id), 'aria-label': `Select ${row.label} (${changeLabels[row.kind].toLowerCase()})`, disabled: gated || row.disabled,
@@ -197,9 +254,10 @@ export const DataDiff = React.forwardRef(function DataDiff({
           React.createElement('span', { className: 'muxui-data-diff-sr-only' }, `${changeLabels[row.kind]} row, ${row.label}: `)), cellValue(row, column))))) : React.createElement('tr', null, React.createElement('td', { colSpan: columns.length + 1, className: 'muxui-data-diff-empty' }, emptyMessage))))),
   React.createElement('div', { className: 'muxui-data-diff-footer' },
     React.createElement('span', { ref: totalsRef, className: 'muxui-data-diff-totals', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, totals),
-    React.createElement('button', { 'data-size': 'sm', 'data-variant': 'primary', type: 'button', className: 'muxui-button muxui-data-diff-apply', disabled: gated || !selected.length || !onApply, 'data-disabled': gated || !selected.length || !onApply || undefined, 'data-pending': pending || undefined,
+    React.createElement('button', { 'data-size': 'sm', 'data-variant': 'primary', type: 'button', className: 'muxui-button muxui-data-diff-apply', disabled: gated || !selected.length || !onApply, 'data-disabled': gated || !selected.length || !onApply || undefined, 'data-pending': pending ? true : undefined,
       onClick: () => { if (!gated && selected.length) onApply?.([...selected]); },
-    }, React.createElement('span', { ref: applyCountRef, className: 'muxui-data-diff-apply-label' }, pending ? 'Applying…' : applyLabel ?? `Apply ${selected.length} ${selected.length === 1 ? 'change' : 'changes'}`))));
+    // Without applyLabel the label counts the selection, with the same conditional in place of ??.
+    }, React.createElement('span', { ref: applyCountRef, className: 'muxui-data-diff-apply-label' }, pending ? 'Applying…' : applyLabel == null ? `Apply ${selected.length} ${selected.length === 1 ? 'change' : 'changes'}` : applyLabel))));
 });
 
 DataDiff.displayName = 'DataDiff';

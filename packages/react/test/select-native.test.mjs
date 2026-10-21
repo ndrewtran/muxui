@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { SelectNative } from '../src/supplemental/select-native.mjs';
+import { SelectNative } from '../src/supplemental/select-native.ts';
 import { installDom } from './support/dom.mjs';
 
 function optionTree() {

@@ -1,0 +1,268 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/activity.ts",
+  "component": "muxui:component:activity",
+  "binding": "web.react",
+  "export": "Activity",
+  "api": {
+    "props": [
+      "label",
+      "items",
+      "status",
+      "expanded",
+      "defaultExpanded",
+      "actions"
+    ],
+    "events": [
+      "expandedChange"
+    ],
+    "defaults": {
+      "defaultExpanded": true
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "string"
+        },
+        "required": true,
+        "description": "Names the group of tasks."
+      },
+      "items": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "ActivityItem"
+          },
+          "readonly": true
+        },
+        "required": true,
+        "description": "The tasks, each with the status the application supplies. Each id is unique and nonempty."
+      },
+      "status": {
+        "type": {
+          "kind": "reference",
+          "name": "ActivityStatus"
+        },
+        "required": false,
+        "enum": [
+          "queued",
+          "running",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "description": "The group status. Without it the group follows its items: failed first, then running, queued, cancelled, and completed."
+      },
+      "expanded": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the group is open, when the caller controls it."
+      },
+      "defaultExpanded": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the group starts open, when Activity controls it."
+      },
+      "actions": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "ActivityAction"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "Buttons that act on the whole group."
+      }
+    },
+    "eventDetails": {
+      "expandedChange": {
+        "prop": "onExpandedChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "expanded",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the group opening or closing."
+      }
+    },
+    "types": {
+      "ActivityAction": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "onAction",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "void"
+                }
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "ActivityItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "status",
+              "type": {
+                "kind": "reference",
+                "name": "ActivityStatus"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "details",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "context",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "meta",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "time",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "actions",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "ActivityAction"
+                },
+                "readonly": true
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "defaultExpanded",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Starts the item's disclosure open. Read at mount, so later changes do not open or close it; an item without details, context, or actions ignores it."
+            }
+          ]
+        }
+      },
+      "ActivityStatus": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "queued"
+            },
+            {
+              "kind": "literal",
+              "value": "running"
+            },
+            {
+              "kind": "literal",
+              "value": "completed"
+            },
+            {
+              "kind": "literal",
+              "value": "failed"
+            },
+            {
+              "kind": "literal",
+              "value": "cancelled"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

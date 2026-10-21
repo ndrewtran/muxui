@@ -5,7 +5,7 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { DataDiff } from '../src/supplemental/data-diff.mjs';
+import { DataDiff } from '../src/supplemental/data-diff.ts';
 import { installDom } from './support/dom.mjs';
 
 const columns = [{ id: 'name', label: 'Name' }, { id: 'stock', label: 'Stock' }];

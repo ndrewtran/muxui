@@ -7,8 +7,8 @@ import { ToggleButton } from '../src/components.mjs';
 import {
   attachRef, collectAncestors, observeAncestorAttributes, sameGeometry, transformFrom, useRootRef,
 } from '../src/motion-geometry.mjs';
-import { Avatar } from '../src/supplemental/avatar.mjs';
-import { Image } from '../src/supplemental/image.mjs';
+import { Avatar } from '../src/supplemental/avatar.ts';
+import { Image } from '../src/supplemental/image.ts';
 import { createDom } from './support/dom.mjs';
 
 const h = React.createElement;

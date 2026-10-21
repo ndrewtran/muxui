@@ -45,45 +45,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "label",
-          "description",
-          "errorMessage",
-          "aria-label",
-          "aria-labelledby",
-          "aria-describedby",
-          "id",
-          "value",
-          "defaultValue",
-          "onChange",
-          "name",
-          "form",
-          "autoComplete",
-          "disabled",
-          "required",
-          "invalid",
-          "multiple",
-          "size",
-          "children"
-        ],
-        "events": [
-          "change"
-        ],
-        "parts": [
-          "root",
-          "select",
-          "label",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "size": "md",
-          "disabled": false,
-          "required": false,
-          "invalid": false
-        }
-      },
       "behavior": [
         "Renders a genuine visible native select with caller options and optgroups unchanged.",
         "Label, description, and error text are associated with the select.",

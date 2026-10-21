@@ -13,12 +13,12 @@ The change callback receives the native React change event, so read the value fr
 
 ## Size and forms
 
-A named size sets the visual size, while a number sets the native count of visible rows. A named multiple select submits one entry per selected option, so read them with `FormData.getAll`. A nonempty error message makes the select invalid even when the invalid state is not set. The SelectNative in a form example shows a four-row multiple select, an error message, and a reset. The [Behavior](#behavior) section lists each rule, and the [API reference](#api-reference) lists the props.
+A named size sets the visual size, while a number sets the native count of visible rows. A named multiple select submits one entry per selected option, so read them with `FormData.getAll`. A nonempty error message makes the select invalid even when the invalid state is not set. The SelectNative in a form example shows a four-row multiple select, an error message, and a reset. The [Behavior](#behavior) section lists each rule, and the [API reference](#api-reference) lists the props Mux UI defines. The value, the change callback, and the other native select attributes pass through to the select.
 
 ## Content
 
 - Options are native `option` and `optgroup` elements, so their content is plain text.
-- SelectNative has no placeholder prop. Add a first option with an empty value for the unselected state, as the Basic React SelectNative example does.
+- SelectNative has no `placeholder` prop. Add a first option with an empty value for the unselected state, as the Basic React SelectNative example does.
 
 ## Common mistake
 
