@@ -29,7 +29,6 @@
       "openChange"
     ],
     "defaults": {
-      "defaultOpen": false,
       "disabled": false,
       "size": "md",
       "readOnly": false,
@@ -169,7 +168,7 @@
           "kind": "boolean"
         },
         "required": false,
-        "description": "Whether the calendar starts open, when the picker controls itself."
+        "description": "Whether the calendar starts open, when the picker controls itself. Omitted, it starts closed unless a React Aria context supplies defaultOpen."
       },
       "disabled": {
         "type": {
