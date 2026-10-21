@@ -1341,7 +1341,7 @@ export const DateField: ForwardRefExoticComponent<DateFieldProps & RefAttributes
   readOnly = false,
   required = false,
   invalid = false,
-  size,
+  size = 'md',
   validationBehavior: _validationBehavior,
   name,
   className,

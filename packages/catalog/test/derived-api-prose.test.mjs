@@ -104,6 +104,8 @@ const GUIDES = {
   'checkbox-group': { native: ['FormData.get', 'FormData.getAll'] },
   // aria-label and aria-labelledby name the Switch when it has no label.
   switch: { native: ['aria-label', 'aria-labelledby'] },
+  // YYYY-MM-DD is the value format, which the type states as a string.
+  'date-field': { native: ['YYYY-MM-DD'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

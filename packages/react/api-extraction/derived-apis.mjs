@@ -43,6 +43,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'number-field', name: 'NumberField', source: 'packages/react/src/fields.ts' },
   { slug: 'checkbox-group', name: 'CheckboxGroup', source: 'packages/react/src/fields.ts' },
   { slug: 'switch', name: 'Switch', source: 'packages/react/src/fields.ts' },
+  { slug: 'date-field', name: 'DateField', source: 'packages/react/src/fields.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
