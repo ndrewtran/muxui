@@ -8,6 +8,7 @@ const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Checkbox } from '/src/components.mjs';
   import { Autocomplete, CheckboxGroup, DateField, Form, NumberField, SearchField, Switch, TextField, TimeField } from '/src/fields.mjs';
+  import { ColorField } from '/src/collections.mjs';
   import { SelectNative } from '/src/supplemental/select-native.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
@@ -65,6 +66,14 @@ const entry = `import React from 'react';
         h('option', { value: 'a' }, 'Alpha'),
         h('option', { value: 'b' }, 'Beta')),
       h('button', { type: 'submit' }, 'Submit')),
+    'color-field': function ColorFieldCase() {
+      const [color, setColor] = React.useState('#336699');
+      return h(Form, { onSubmit: submit },
+        h(ColorField, { label: 'Brand', name: 'brand', value: color, onChange: (next) => { log('change', next); setColor(next); } }),
+        h('output', { 'data-state': true }, color),
+        h('button', { type: 'submit' }, 'Submit'));
+    },
+    'color-field-standalone': () => h(ColorField, { label: 'Accent', defaultValue: '#336699', onChange: (next) => log('change', next) }),
     'server-error': () => h(Form, { onSubmit: submit, validationErrors: { email: 'Already registered.' } },
       h(TextField, { label: 'Email', name: 'email', type: 'email' }),
       h('button', { type: 'submit' }, 'Submit')),
@@ -76,7 +85,7 @@ const entry = `import React from 'react';
 async function withPage(run) {
   const html = pageShell({ body: '<div id="root"></div>', entry: '/form-fields-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.mjs', 'src/fields.mjs', 'src/supplemental/select-native.mjs'],
+    entries: ['src/components.mjs', 'src/fields.mjs', 'src/collections.mjs', 'src/supplemental/select-native.mjs'],
     pages: { '/form-fields.html': html },
     modules: { '/form-fields-entry.mjs': entry },
   });
@@ -261,6 +270,55 @@ test('a select inside a Form reports one change per choice, even with an error s
     await open('select-native');
     await page.getByRole('combobox', { name: 'City' }).selectOption('b');
     assert.deepEqual(await events(), [['change', 'b']], 'the early dismissal fires change only for controls that wait for blur');
+  });
+});
+
+test('Enter in a ColorField inside a Form commits the typed colour before the form submits it', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('color-field');
+    const field = page.getByRole('textbox', { name: 'Brand' });
+    const state = () => page.locator('[data-state]').textContent();
+    const type = async (text) => {
+      await field.press('ControlOrMeta+a');
+      await page.keyboard.type(text);
+    };
+    await field.click();
+    await type('112233');
+    assert.deepEqual(await events(), [], 'typing alone applies nothing');
+    await page.keyboard.press('Enter');
+    // One change, then the submit, which read the normalized hex rather than the typed text.
+    assert.deepEqual(await events(), [['change', 'rgba(17, 34, 51, 1)'], ['submit', { brand: '#112233' }]]);
+    assert.equal(await state(), 'rgba(17, 34, 51, 1)', 'a controlled owner holds the committed colour');
+    assert.equal(await field.inputValue(), '#112233');
+
+    // A short hex is a whole colour: it expands before it is submitted.
+    await type('445');
+    await page.keyboard.press('Enter');
+    assert.deepEqual((await events()).slice(2), [['change', 'rgba(68, 68, 85, 1)'], ['submit', { brand: '#444455' }]]);
+
+    // Text that is not a whole colour reverts as it does on blur, and the form still submits the last colour.
+    await type('11223');
+    await page.keyboard.press('Enter');
+    assert.deepEqual((await events()).slice(4), [['submit', { brand: '#444455' }]]);
+    assert.equal(await field.inputValue(), '#444455');
+    assert.equal(await state(), 'rgba(68, 68, 85, 1)');
+  });
+});
+
+test('Enter in a ColorField outside a Form commits the typed colour once', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('color-field-standalone');
+    const field = page.getByRole('textbox', { name: 'Accent' });
+    await field.click();
+    await field.press('ControlOrMeta+a');
+    await page.keyboard.type('445566');
+    await page.keyboard.press('Enter');
+    assert.deepEqual(await events(), [['change', 'rgba(68, 85, 102, 1)']]);
+    assert.equal(await field.inputValue(), '#445566', 'the field shows the normalized hex while still focused');
+    assert.equal(await field.evaluate((node) => node === document.activeElement), true);
+    // Leaving the field applies the same colour, which reports nothing new.
+    await field.blur();
+    assert.deepEqual(await events(), [['change', 'rgba(68, 85, 102, 1)']]);
   });
 });
 

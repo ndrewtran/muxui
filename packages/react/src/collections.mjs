@@ -1,4 +1,5 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import { CalendarSelectionCell, CalendarSelectionMotion } from './calendar-selection-motion.mjs';
 import { ColorSliderMotionTrack } from './color-slider-motion.mjs';
@@ -24,6 +25,7 @@ import {
   ColorArea as AriaColorArea,
   ColorAreaContext,
   ColorField as AriaColorField,
+  ColorFieldStateContext as AriaColorFieldStateContext,
   ColorPicker as AriaColorPicker,
   ColorPickerStateContext,
   ColorSlider as AriaColorSlider,
@@ -480,6 +482,17 @@ export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, second
 });
 ColorSwatch.displayName = 'ColorSwatch';
 
+// React Aria applies typed text to a ColorField only on blur, so Enter would submit the form with the raw text and
+// never report it. Enter commits as blur does, flushed so the input and onChange are current when the form reads
+// them, and leaves the submission itself alone. NumberField does the same for its Enter.
+function ColorFieldInput() {
+  const state = React.useContext(AriaColorFieldStateContext);
+  return React.createElement(AriaInput, {
+    className: 'muxui-field-input',
+    onKeyDown: (event) => { if (event.key === 'Enter') flushSync(() => state?.commit()); },
+  });
+}
+
 // React Aria reads isInvalid: false as controlled-valid, which hides failed native
 // validation, so these fields pass isInvalid only when invalid is set. errorMessage
 // replaces the shown message and never makes a field invalid by itself.
@@ -499,7 +512,7 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
     onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toFormat(space).toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
     isInvalid: invalid || undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
-  React.createElement(AriaInput, { className: 'muxui-field-input' }),
+  React.createElement(ColorFieldInput),
   description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
   errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null);
 });
