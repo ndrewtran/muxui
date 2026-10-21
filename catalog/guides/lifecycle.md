@@ -10,7 +10,9 @@ next to the platform binding.
 
 Experimental means the API, styling, accessibility, and compatibility contract
 is still under active proof. Use the exact package and catalog tuple selected by
-your project rather than assuming a hosted latest version.
+your project rather than assuming a hosted latest version. The
+[tested profile](/installation/#tested-profile) lists the versions Mux UI's
+automated checks run against.
 
 Lifecycle status is separate from implementation strategy and evidence. A
 binding can be implemented while its support claim remains unproved. The docs

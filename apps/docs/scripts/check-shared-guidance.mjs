@@ -66,6 +66,18 @@ const slugify = (value) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-'
 	}
 }
 
+// The Lifecycle guide points its exact-tuple advice at the tested profile, so the built page links it and the heading exists.
+{
+	const root = readPage('lifecycle');
+	const routes = linkedSiteRoutes(readText('catalog/guides/lifecycle.md'));
+	assert(routes.includes('/installation/#tested-profile'), 'The Lifecycle guide does not link the tested profile.');
+	for (const route of routes) {
+		const [path, fragment] = route.split('#');
+		assert(elements(root).some((node) => node.tagName === 'a' && attributeValue(node, 'href') === route), `/lifecycle/ does not link ${route}.`);
+		assert(fragment === undefined || elements(readPage(path.replace(/^\/|\/$/gu, ''))).some((node) => attributeValue(node, 'id') === fragment), `${route} names a heading that is not built.`);
+	}
+}
+
 // Installation renders the tested profile from the compatibility record the package generates, and says nothing the record does not.
 {
 	const manifest = JSON.parse(readText('packages/react/package.json'));
@@ -118,4 +130,4 @@ const slugify = (value) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-'
 	assert(toc !== undefined && elements(toc).some((node) => node.tagName === 'a' && attributeValue(node, 'href') === '#tested-profile'), '/installation/ outline does not list the Tested profile.');
 }
 
-console.log('Shared guidance contract passed: /accessibility/ renders the Support status and Verification sections that Storybook shows, and /installation/ renders the tested profile from the package compatibility record with its non-claims.');
+console.log('Shared guidance contract passed: /accessibility/ renders the Support status and Verification sections that Storybook shows, /lifecycle/ links the tested profile, and /installation/ renders the tested profile from the package compatibility record with its non-claims.');
