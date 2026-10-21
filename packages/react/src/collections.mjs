@@ -484,12 +484,13 @@ ColorSwatch.displayName = 'ColorSwatch';
 
 // React Aria applies typed text to a ColorField only on blur, so Enter would submit the form with the raw text and
 // never report it. Enter commits as blur does, flushed so the input and onChange are current when the form reads
-// them, and leaves the submission itself alone. NumberField does the same for its Enter.
+// them, and leaves the submission itself alone. NumberField does the same for its Enter, and skips the Enter that
+// confirms an input method composition, which is not an attempt to submit.
 function ColorFieldInput() {
   const state = React.useContext(AriaColorFieldStateContext);
   return React.createElement(AriaInput, {
     className: 'muxui-field-input',
-    onKeyDown: (event) => { if (event.key === 'Enter') flushSync(() => state?.commit()); },
+    onKeyDown: (event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) flushSync(() => state?.commit()); },
   });
 }
 

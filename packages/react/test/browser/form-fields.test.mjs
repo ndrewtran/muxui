@@ -252,6 +252,23 @@ test('Enter in a ColorField inside a Form commits the typed colour before the fo
   });
 });
 
+test('the Enter that confirms an input method composition does not commit a ColorField', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('color-field-standalone');
+    const field = page.getByRole('textbox', { name: 'Accent' });
+    await field.click();
+    await field.press('ControlOrMeta+a');
+    await page.keyboard.type('445');
+    // The browser marks the Enter that ends a composition with isComposing; the typed text is not a colour yet.
+    await field.evaluate((node) => node.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true })));
+    assert.deepEqual(await events(), [], 'composition Enter reports nothing');
+    assert.equal(await field.inputValue(), '445', 'composition Enter leaves the typed text alone');
+    await page.keyboard.press('Enter');
+    assert.deepEqual(await events(), [['change', 'rgba(68, 68, 85, 1)']], 'a plain Enter commits it');
+    assert.equal(await field.inputValue(), '#444455');
+  });
+});
+
 test('Enter in a ColorField outside a Form commits the typed colour once', { timeout: 90_000 }, async () => {
   await withPage(async ({ page, open, events }) => {
     await open('color-field-standalone');
