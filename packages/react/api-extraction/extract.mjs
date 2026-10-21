@@ -23,8 +23,16 @@ export class ApiExtractionError extends Error {
   }
 }
 
+const deepFreeze = (value) => {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    Object.values(value).forEach(deepFreeze);
+  }
+  return value;
+};
+
 // An allowlist entry for an application of a host generic, as the extraction serializes it.
-const hostApplication = (name, ...typeArguments) => Object.freeze({ kind: 'host', name, typeArguments: Object.freeze(typeArguments.map((argument) => Object.freeze(argument))) });
+const hostApplication = (name, ...typeArguments) => deepFreeze({ kind: 'host', name, typeArguments });
 
 /**
  * The host types a Mux UI-owned prop may reach, each one exact type: a DOM or Intl library
@@ -34,8 +42,10 @@ const hostApplication = (name, ...typeArguments) => Object.freeze({ kind: 'host'
  * for the activation target of Button, IconButton, and ToggleButton, React.ReactNode for the
  * content props of SelectNative, Message, Activity, Disclosure, Meter, and ProgressBar,
  * HTMLAnchorElement for Link's activation target, NumberFormatOptions (written
- * `Intl.NumberFormatOptions`) for Meter's formatOptions, File for FileTrigger's selection, and
- * the applications Promise<File>, Promise<string>, ReadonlySet<string>, and
+ * `Intl.NumberFormatOptions`) for Meter's formatOptions, File for FileTrigger's selection,
+ * React.ReactElement for the trigger of Tooltip, Dialog, Popover, and PreviewTrigger, and the
+ * applications Exclude<React.ReactNode, null | undefined | boolean> for the content of Tooltip,
+ * Dialog, and Toast, and Promise<File>, Promise<string>, ReadonlySet<string>, and
  * AsyncIterable<MuxUIDropItem> for DropZone's drop items.
  */
 export const HOST_ALLOWLIST = Object.freeze([
@@ -44,6 +54,9 @@ export const HOST_ALLOWLIST = Object.freeze([
   'HTMLAnchorElement',
   'NumberFormatOptions',
   'File',
+  'React.ReactElement',
+  // The content a Tooltip, Dialog title, or Toast message takes: any node but the ones that render nothing.
+  hostApplication('Exclude', { kind: 'host', name: 'React.ReactNode' }, { kind: 'union', members: [{ kind: 'null' }, { kind: 'undefined' }, { kind: 'boolean' }] }),
   // DropZone's drop items: what an item reads, the formats a text item lists, and a directory's entries.
   hostApplication('Promise', { kind: 'host', name: 'File' }),
   hostApplication('Promise', { kind: 'string' }),

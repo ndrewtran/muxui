@@ -87,6 +87,7 @@ const GUIDES = {
   'file-trigger': { native: ['capture'] },
   // `getFile()` is the file item's read; aria-label names the area.
   'drop-zone': { native: ['aria-label', 'getFile()'] },
+  tooltip: {},
 };
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
