@@ -571,6 +571,9 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       return node && Number(getComputedStyle(node).opacity) > 0 && Number(getComputedStyle(node).opacity) < 1;
     }, alertPopup, { timeout: 1800 });
     await page.locator(alertPopup).waitFor({ state: 'detached', timeout: 5000 });
+    // React Aria restores focus a frame after the popup unmounts, so wait for it instead of reading when the node detaches.
+    // A timeout falls through to the assertion, which reports the id that held focus.
+    await page.waitForFunction(() => document.activeElement?.id === 'interaction-alert-trigger', undefined, { timeout: 5000 }).catch(() => {});
     assert.equal(await page.evaluate(() => document.activeElement?.id), 'interaction-alert-trigger', 'alert close restores focus to the trigger');
 
     await alertTrigger.click();
