@@ -12,7 +12,7 @@ Choose by whether the range is a form field.
 
 ## Range values
 
-A range is null or a complete pair of start and end dates, and a one-day range is valid. The unavailable-date callback also receives the anchor, which is the start date chosen so far, so a rule can depend on the start. The Controlled range with an unavailable rule example limits a trip to seven days from its start. The [Behavior](#behavior) section lists the shape, ordering, and contiguity rules.
+A range is null or a complete pair of start and end dates, and a one-day range is valid. `unavailableDateMatcher` also receives the anchor, which is the start date chosen so far, so a rule can depend on the start. The range example limits a trip to seven days from its start this way. The [Behavior](#behavior) section lists the shape, ordering, and contiguity rules.
 
 ## In a form
 

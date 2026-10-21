@@ -46,6 +46,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'date-field', name: 'DateField', source: 'packages/react/src/fields.ts' },
   { slug: 'time-field', name: 'TimeField', source: 'packages/react/src/fields.ts' },
   { slug: 'date-picker', name: 'DatePicker', source: 'packages/react/src/fields.ts' },
+  { slug: 'date-range-picker', name: 'DateRangePicker', source: 'packages/react/src/fields.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

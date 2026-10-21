@@ -1525,12 +1525,12 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     onChange,
     onOpenChange,
     open,
-    defaultOpen,
+    defaultOpen = false,
     disabled = false,
     readOnly = false,
     required = false,
     invalid = false,
-    size,
+    size = 'md',
     validationBehavior: _validationBehavior,
     allowsNonContiguousRanges: _allowsNonContiguousRanges,
     closeOnSelect: _closeOnSelect,
@@ -1549,7 +1549,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
     const parsedValue = React.useMemo(() => controlledTemporal(value, dateRangeOrUndefined), [value === null, value?.start, value?.end]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue ?? null);
+    const [formValue, setFormValue] = React.useState(() => (value === undefined || value === null ? defaultValue : value) ?? null);
     const resettingRef = React.useRef(false);
     const handleChange = (next: { start: DateValue; end: DateValue } | null) => {
       if (resettingRef.current) return;
@@ -1560,7 +1560,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     };
     const handleReset = () => {
       externalValidation.dismiss();
-      if (value === undefined) setFormValue(defaultValue ?? null);
+      if (value === undefined) setFormValue(defaultValue === undefined || defaultValue === null ? null : defaultValue);
     };
     const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
     const submittedValue = value !== undefined ? value : formValue;
@@ -1570,7 +1570,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     return React.createElement(AriaDateRangePicker, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
+      ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
       value: effectiveValueObject,
       minValue: parsedMinValue,
       maxValue: parsedMaxValue,
