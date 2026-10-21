@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { canonicalJson, validateContractDocument } from '@muxui/schema';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
+import { runtimeSourceFor } from './runtime-sources.mjs';
 
 // The R1.0 Stage 1 registry snapshot, a historical record of the upstream it
 // was taken from. It does not follow the live `react-aria-components` pin in
@@ -213,13 +214,10 @@ export function assertReactR15GeneratedContracts({
 
   const artifactsBySlug = new Map(componentArtifacts.map((artifact) => [r15Slug(artifact), artifact]));
   const snapshotByFamily = new Map(snapshot.families.map((entry) => [entry.family, entry]));
-  const runtimeEntries = Object.entries(runtimeSources ?? {});
   const familySources = snapshot.families.map((upstreamFamily) => {
     const slug = r15FamilySlug(upstreamFamily.family);
     const artifact = artifactsBySlug.get(slug);
-    const runtimeSource = runtimeEntries.find(([, source]) => (
-      artifact && new RegExp(`export\\s+const\\s+${artifact.name}\\b`, 'u').test(source)
-    ))?.[0];
+    const runtimeSource = artifact && runtimeSourceFor(runtimeSources ?? {}, artifact.name);
     return {
       family: upstreamFamily.family,
       slug,

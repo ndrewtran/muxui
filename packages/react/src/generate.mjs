@@ -12,6 +12,7 @@ import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/d
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
+import { readRuntimeSources, runtimeSourceFor } from './runtime-sources.mjs';
 import { readSupplementalMapping } from './supplemental-mapping.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -68,12 +69,9 @@ const r11Slugs = ['button', 'breadcrumbs', 'checkbox', 'disclosure', 'disclosure
 const r12Slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field'];
 const r13Slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
 const r14Slugs = ['drop-zone', 'file-trigger', 'dialog', 'popover', 'preview-trigger', 'toast', 'tooltip'];
-const buttonSource = await readFile(resolve(packageRoot, 'src/button.ts'), 'utf8');
-const componentSource = await readFile(resolve(packageRoot, 'src/components.ts'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const gridListItemContextSource = await readFile(resolve(packageRoot, 'src/grid-list-item-context.mjs'), 'utf8');
-const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
 const calendarSelectionMotionSource = await readFile(resolve(packageRoot, 'src/calendar-selection-motion.mjs'), 'utf8');
 const colorSliderMotionSource = await readFile(resolve(packageRoot, 'src/color-slider-motion.mjs'), 'utf8');
@@ -94,8 +92,6 @@ const rangeSelectionMotionSource = await readFile(resolve(packageRoot, 'src/rang
 const radioMotionSource = await readFile(resolve(packageRoot, 'src/radio-motion.mjs'), 'utf8');
 const sliderMotionSource = await readFile(resolve(packageRoot, 'src/slider-motion.mjs'), 'utf8');
 const toggleButtonGroupMotionSource = await readFile(resolve(packageRoot, 'src/toggle-button-group-motion.mjs'), 'utf8');
-const collectionsSource = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
-const overlaysSource = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
 const overlayPositioningSource = await readFile(resolve(packageRoot, 'src/overlay-positioning.mjs'), 'utf8');
 const authoredStyleSources = await Promise.all([
   'base.css',
@@ -105,13 +101,7 @@ const authoredStyleSources = await Promise.all([
   'overlays.css',
 ].map((fileName) => readFile(resolve(packageRoot, 'src/styles', fileName), 'utf8')));
 const authoredCss = authoredStyleSources.map((source) => source.trim()).join('\n\n');
-const runtimeSources = {
-  'packages/react/src/button.ts': buttonSource,
-  'packages/react/src/components.ts': componentSource,
-  'packages/react/src/fields.mjs': fieldsSource,
-  'packages/react/src/collections.mjs': collectionsSource,
-  'packages/react/src/overlays.mjs': overlaysSource,
-};
+const runtimeSources = await readRuntimeSources(repositoryRoot);
 const buttonArtifact = withDerivedApi(JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8')), derivedApis);
 const componentArtifacts = [
   buttonArtifact,
@@ -830,12 +820,10 @@ const r15TrancheEvidence = (tranche) => Array.from({ length: tranche === 'R1.3' 
 const familySlug = (family) => family === 'Modal'
   ? 'dialog'
   : family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-const runtimeSourceFor = (exportName) => Object.entries(runtimeSources)
-  .find(([, source]) => new RegExp(`export\\s+const\\s+${exportName}\\b`, 'u').test(source))?.[0];
 const r15Families = familySnapshot.families.map((upstreamFamily) => {
   const slug = familySlug(upstreamFamily.family);
   const artifact = artifactBySlug.get(slug);
-  const runtimeSource = runtimeSourceFor(artifact?.name);
+  const runtimeSource = runtimeSourceFor(runtimeSources, artifact?.name);
   if (!artifact || !runtimeSource) throw new Error(`MUXUI_REACT_R15_FAMILY_OWNER_MISSING: ${upstreamFamily.family}`);
   return {
     family: upstreamFamily.family,
@@ -1084,7 +1072,6 @@ const outputs = new Map([
   ['choice-context.mjs', shippedModule('packages/react/src/choice-context.mjs', choiceContextSource)],
   ['grid-list-item-context.mjs', shippedModule('packages/react/src/grid-list-item-context.mjs', gridListItemContextSource)],
   ['toggle-button-context.mjs', shippedModule('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
-  ['fields.mjs', shippedModule('packages/react/src/fields.mjs', fieldsSource)],
   ['calendar-height-motion.mjs', shippedModule('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
   ['calendar-selection-motion.mjs', shippedModule('packages/react/src/calendar-selection-motion.mjs', calendarSelectionMotionSource)],
   ['color-slider-motion.mjs', shippedModule('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
@@ -1106,10 +1093,12 @@ const outputs = new Map([
   ['radio-motion.mjs', shippedModule('packages/react/src/radio-motion.mjs', radioMotionSource)],
   ['slider-motion.mjs', shippedModule('packages/react/src/slider-motion.mjs', sliderMotionSource)],
   ['toggle-button-group-motion.mjs', shippedModule('packages/react/src/toggle-button-group-motion.mjs', toggleButtonGroupMotionSource)],
-  ['collections.mjs', shippedModule('packages/react/src/collections.mjs', collectionsSource)],
-  ['overlays.mjs', shippedModule('packages/react/src/overlays.mjs', overlaysSource)],
   ['overlay-positioning.mjs', shippedModule('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],
 ]);
+// A registry module still in JavaScript ships as itself; a TypeScript one ships as tsc's emit, below.
+for (const [path, text] of Object.entries(runtimeSources)) {
+  if (!typeScriptSources.includes(path)) outputs.set(flatModuleName(path), shippedModule(path, text));
+}
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {
   outputs.set(`${source.slug}.mjs`, shippedModule(source.source, source.sourceText));
   const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');
