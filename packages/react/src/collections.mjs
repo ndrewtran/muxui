@@ -35,7 +35,6 @@ import {
   ColorWheel as AriaColorWheel,
   ColorThumb as AriaColorThumb,
   ComboBox as AriaComboBox,
-  ComboBoxValue as AriaComboBoxValue,
   GridList as AriaGridList,
   GridListItem as AriaGridListItem,
   ListBox as AriaListBox,
@@ -86,7 +85,6 @@ import {
   Input as AriaInput,
   Text as AriaText,
   FieldError as AriaFieldError,
-  Button as AriaButton,
   parseColor,
   useLocale,
   TokenFieldValue,
@@ -106,10 +104,12 @@ import { SliderMotionTrack } from './slider-motion.mjs';
 import { TabsMotion } from './tabs-motion.mjs';
 import { ToggleButtonGroupMotion } from './toggle-button-group-motion.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
-
-function classNames(base, className) {
-  return [base, className].filter(Boolean).join(' ');
-}
+import { classNames, accessibleName } from './control-utils.mjs';
+import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.mjs';
+import { READ_ONLY_SELECTION_KEYS, readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
+import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.mjs';
+import { CollectionTrigger } from './collection-trigger.mjs';
+import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
 
 const TABS_VARIANTS = new Set(['underline', 'pill', 'overflow', 'segment']);
 const TAG_VARIANTS = ['soft', 'outline', 'dot', 'strong'];
@@ -128,35 +128,6 @@ function normalizeTabsVariant(value = 'underline') {
 function normalizeTagOption(name, options, value) {
   if (!options.includes(value)) throw new TypeError(`TagGroup ${name} must be one of: ${options.join(', ')}`);
   return value;
-}
-
-function textContent(value) {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') return String(value);
-  if (Array.isArray(value)) return value.map(textContent).join('');
-  if (React.isValidElement(value)) return textContent(value.props.children);
-  return '';
-}
-
-function normalizeItems(items = []) {
-  const used = new Set();
-  return items.map((item, index) => {
-    const source = typeof item === 'string' ? { label: item, value: item } : (item ?? {});
-    const base = String(source.id ?? source.key ?? source.value ?? index);
-    let id = base || String(index);
-    let suffix = 1;
-    while (used.has(id)) id = `${base}-${suffix++}`;
-    used.add(id);
-    const label = source.label ?? source.name ?? source.value ?? id;
-    return { ...source, id, key: id, label, value: source.value ?? id, textValue: source.textValue ?? (textContent(label) || id) };
-  });
-}
-
-function keySet(value) {
-  return value === undefined ? undefined : value === 'all' ? 'all' : new Set((value ?? []).map(String));
-}
-
-function keyList(value) {
-  return value === 'all' ? 'all' : [...(value ?? [])].map(String);
 }
 
 function readonlyKeyArray(value, property) {
@@ -178,13 +149,6 @@ function readonlyKeySet(value, property, selectionMode) {
   return keys === undefined ? undefined : new Set(keys);
 }
 
-function accessibleName(props, componentName) {
-  const { label, ariaLabel, ariaLabelledby } = props;
-  if ((label === undefined || label === null || label === '') && !ariaLabel && !ariaLabelledby) {
-    throw new TypeError(`${componentName} requires label, aria-label, or aria-labelledby`);
-  }
-}
-
 function dateValue(value, name = 'Calendar') {
   if (value === undefined || value === null || value === '') return undefined;
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) throw new TypeError(`${name} values must use YYYY-MM-DD ISO format`);
@@ -204,96 +168,6 @@ function dateUnavailableCallback(callback, name) {
   if (callback === undefined) return undefined;
   if (typeof callback !== 'function') throw new TypeError(`${name} unavailableDateMatcher must be a function`);
   return (date) => Boolean(callback(serializeDateValue(date)));
-}
-
-function colorValue(value, name) {
-  if (value === undefined || value === null || value === '') return undefined;
-  if (typeof value !== 'string') throw new TypeError(`${name} values must be Mux UI color strings`);
-  try { return parseColor(value); } catch { throw new TypeError(`${name} values must be valid CSS color strings`); }
-}
-
-// RAC's ColorPicker does not propagate disabled/read-only state through
-// arbitrary child layout, so MuxUI owns that propagation separately. A
-// context keeps fragments and wrapper elements transparent to the contract.
-const ColorPickerContext = React.createContext({ disabled: false, readOnly: false });
-
-const readOnlyInteractionEvents = [
-  'beforeinput', 'change', 'click', 'input', 'keydown', 'mousedown', 'mousemove',
-  'pointerdown', 'pointermove', 'touchstart', 'touchmove',
-];
-const readOnlyTargetGuards = new WeakMap();
-
-// Read-only controls stay focusable and navigable. Keys that change the value are
-// blocked with any modifier, because React Aria acts on them regardless; Tab and
-// Escape are never blocked.
-const READ_ONLY_ADJUSTMENT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
-// Swatch pickers move focus with arrows, so only the selection keys are blocked.
-const READ_ONLY_SELECTION_KEYS = new Set(['Enter', ' ']);
-
-function readOnlyBlocksKey(event, keys) {
-  return keys.has(event.key);
-}
-
-function readOnlyKeyGuard(readOnly, keys = READ_ONLY_ADJUSTMENT_KEYS) {
-  return (event) => {
-    if (readOnly && readOnlyBlocksKey(event, keys)) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-}
-
-function setReadOnlyTargetGuard(target, readOnly) {
-  const existingGuard = readOnlyTargetGuards.get(target);
-  if (readOnly && !existingGuard) {
-    const keys = target.getAttribute('role') === 'listbox' ? READ_ONLY_SELECTION_KEYS : READ_ONLY_ADJUSTMENT_KEYS;
-    const guard = (event) => {
-      if (event.type === 'keydown' && !readOnlyBlocksKey(event, keys)) return;
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    for (const eventName of readOnlyInteractionEvents) target.addEventListener(eventName, guard, true);
-    readOnlyTargetGuards.set(target, guard);
-  } else if (!readOnly && existingGuard) {
-    for (const eventName of readOnlyInteractionEvents) target.removeEventListener(eventName, existingGuard, true);
-    readOnlyTargetGuards.delete(target);
-  }
-}
-
-function updateReadOnlyTargets(scope, readOnly, selector) {
-  if (!scope) return;
-  const targets = [
-    ...(scope.matches(selector) ? [scope] : []),
-    ...scope.querySelectorAll(selector),
-  ];
-  for (const target of targets) {
-    if (readOnly) {
-      target.setAttribute('aria-readonly', 'true');
-      target.setAttribute('data-readonly', 'true');
-    } else {
-      target.removeAttribute('aria-readonly');
-      target.removeAttribute('data-readonly');
-    }
-    setReadOnlyTargetGuard(target, readOnly);
-  }
-}
-
-function useReadOnlyTargets(forwardedRef, readOnly, selector) {
-  const scopeRef = React.useRef(null);
-  const assignRef = React.useCallback((node) => {
-    scopeRef.current = node;
-    if (typeof forwardedRef === 'function') forwardedRef(node);
-    else if (forwardedRef) forwardedRef.current = node;
-    // SSR can carry owned root/thumb data markers. RAC-private range inputs are
-    // decorated by this callback during commit, so no private internals/imports
-    // are needed to expose readOnly semantics on the actual targets.
-    updateReadOnlyTargets(node, readOnly, selector);
-  }, [forwardedRef, readOnly, selector]);
-  const useReadOnlyLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-  useReadOnlyLayoutEffect(() => {
-    updateReadOnlyTargets(scopeRef.current, readOnly, selector);
-  }, [readOnly, selector]);
-  return assignRef;
 }
 
 const subscribeToNothing = () => () => {};
@@ -521,40 +395,6 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
   errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null);
 });
 ColorField.displayName = 'ColorField';
-
-// Whether two colors of one space have exactly the same channels and alpha.
-function sameColor(a, b) {
-  return a.getColorSpace() === b.getColorSpace() && a.alpha === b.alpha && a.getColorChannels().every((channel) => a.getChannelValue(channel) === b.getChannelValue(channel));
-}
-
-// Whether `edit`, the color of a control's last edit, still describes `color`: the same channels once converted
-// to the color's space, alpha aside. Hue wraps, so 0 and 360 match. RGB channels are whole numbers on both sides
-// and match exactly; only hsl and hsb percentages need a tolerance, for the two decimals a CSS string keeps.
-function editDescribesColor(edit, color) {
-  const space = color.getColorSpace();
-  const converted = edit.toFormat(space);
-  return color.getColorChannels().every((channel) => {
-    const gap = Math.abs(converted.getChannelValue(channel) - color.getChannelValue(channel));
-    if (channel === 'hue') return gap % 360 === 0;
-    return gap <= (space === 'rgb' ? 0 : 0.01);
-  });
-}
-
-// Hex and rgb cannot hold the hue of black, white, and grays, and hsl cannot hold the saturation of black, so a
-// ColorPicker, or a control driven by a value, remembers the color of its last edit, with the value that edit
-// started from. The memory shows while the value describes it. A value equal to the one the edit started from may
-// only be waiting to accept the edit, so only a new value decides: one that still describes the edit adopts it, any
-// other forgets it. An edit the memory already describes, such as an alpha change a child reports in the value's
-// space, keeps the richer memory. Returns the color to show, and a function that remembers an edit.
-function useRememberedEdit(driven) {
-  const [edit, setEdit] = React.useState(null);
-  const describes = edit && driven && editDescribesColor(edit.color, driven);
-  if (edit && driven && !sameColor(driven, edit.received)) setEdit(describes ? { ...edit, received: driven } : null);
-  return [
-    describes ? edit.color.withChannelValue('alpha', driven.alpha) : driven,
-    (color) => { if (driven && !(describes && editDescribesColor(edit.color, color))) setEdit({ color, received: driven }); },
-  ];
-}
 
 // Colour controls forward no untyped props; upstream props such as onChangeEnd,
 // xChannel, or colorSpace would bypass the Mux UI guards and string values.
@@ -864,10 +704,6 @@ function collectionProps(props, componentName) {
 
 const ListBoxContext = React.createContext({ disabled: false });
 
-function collectionItem(id) {
-  return { id: String(id), key: String(id), value: String(id) };
-}
-
 // Keep component creation and metadata local so unused motion can be removed.
 export const ListBox = /*#__PURE__*/ (() => {
   const ListBox = React.forwardRef(function ListBoxRoot({ items = [], selectedIds, defaultSelectedIds, onSelectionChange, onAction, selectionMode = 'single', disabled = false, children, className, style, layout = 'stack', orientation = 'vertical', ...props }, ref) {
@@ -912,10 +748,6 @@ export const ListBox = /*#__PURE__*/ (() => {
 })();
 
 const GridListContext = React.createContext({ disabled: false });
-
-// A grid Virtualizer provides this so its GridList can report the CSS gap it
-// resolves to; the Virtualizer turns that gap into layout spacing.
-const GridVirtualizerContext = React.createContext(null);
 
 const useVirtualizedLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -1085,25 +917,6 @@ export const GridList = /*#__PURE__*/ (() => {
   });
   return component;
 })();
-
-// RAC supplies trigger semantics while Mux preserves native button handlers and refs.
-const CollectionTrigger = React.forwardRef(function CollectionTrigger({ children, disabled, onActivate, className, ...nativeProps }, ref) {
-  const eventProps = Object.fromEntries(Object.entries(nativeProps).filter(([key]) => /^on[A-Z]/u.test(key)));
-  const attributes = Object.fromEntries(Object.entries(nativeProps).filter(([key]) => !/^on[A-Z]/u.test(key)));
-  return React.createElement(AriaButton, {
-    ...attributes, ref, isDisabled: disabled, className,
-    onPress: onActivate ? (event) => { if (!disabled) onActivate({ type: 'activate', pointerType: event.pointerType, target: event.target }); } : undefined,
-    render: (buttonProps) => {
-      const merged = { ...nativeProps, ...buttonProps };
-      for (const [name, handler] of Object.entries(eventProps)) {
-        if (typeof handler !== 'function') continue;
-        const internal = buttonProps[name];
-        merged[name] = internal ? (event) => { handler(event); if (!event.defaultPrevented) internal(event); } : handler;
-      }
-      return React.createElement('button', merged);
-    },
-  }, children);
-});
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
