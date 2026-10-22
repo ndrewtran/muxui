@@ -1033,6 +1033,12 @@ const outputs = new Map([
 for (const [path, text] of Object.entries(runtimeSources)) {
   if (!typeScriptSources.includes(path)) outputs.set(flatModuleName(path), shippedModule(path, text));
 }
+// The collections barrel and the modules its families share. None declares a registry family, so
+// the loop above skips them; assertFlatImports below fails the build if a family imports one that
+// is not listed.
+for (const name of ['collections', 'control-utils', 'collection-items', 'read-only-guard', 'color-context', 'collection-trigger', 'grid-virtualizer-context']) {
+  outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
+}
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {
   outputs.set(`${source.slug}.mjs`, shippedModule(source.source, source.sourceText));
   const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');

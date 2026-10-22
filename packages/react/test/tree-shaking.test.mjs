@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { build } from 'vite';
@@ -102,4 +102,76 @@ test('a bundle that uses one field keeps only the motion modules that field need
   assert.deepEqual(await motionKept('DatePicker'), dateMotion);
   assert.deepEqual(await motionKept('DateRangePicker'), dateMotion);
   assert.deepEqual(await motionKept('Autocomplete'), ['motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'popover-motion.mjs']);
+});
+
+// collections.mjs re-exports one module per collections family. Fourteen of the 24 families are a
+// pure-annotated wrapper (the rest are a bare forwardRef with `displayName` beside it), so a bundler
+// that ignores the package's sideEffects flag still drops the motion modules of an unused family.
+test('the collections family modules keep the pure annotation on each wrapper', () => {
+  const wrappers = {
+    '/*#__PURE__*/': {
+      'calendar.mjs': ['Calendar', 'RangeCalendar'],
+      'combo-box.mjs': ['ComboBox'],
+      'grid-list.mjs': ['GridList'],
+      'list-box.mjs': ['ListBox'],
+      'menu.mjs': ['Menu'],
+      'radio-group.mjs': ['RadioGroup'],
+      'select.mjs': ['Select'],
+      'tabs.mjs': ['Tabs'],
+      'toggle-button-group.mjs': ['ToggleButtonGroup'],
+      'tree.mjs': ['Tree'],
+    },
+    '/* @__PURE__ */': {
+      'color-slider.mjs': ['ColorSlider'],
+      'color-wheel.mjs': ['ColorWheel'],
+      'slider.mjs': ['Slider'],
+    },
+  };
+  for (const [annotation, modules] of Object.entries(wrappers)) {
+    for (const [module, names] of Object.entries(modules)) {
+      const emitted = readFileSync(resolve(generated, module), 'utf8');
+      for (const name of names) {
+        assert.ok(emitted.includes(`\nexport const ${name} = ${annotation} (() => {\n`), `${module}: ${name}`);
+      }
+    }
+  }
+  assert.match(readFileSync(resolve(generated, 'menu.mjs'), 'utf8'), /^ {2}const MenuPopup = \/\*#__PURE__\*\/ React\.forwardRef\(function MenuPopup/mu);
+});
+
+test('a bundle that uses one collections family keeps its own module and only the motion modules it needs', async () => {
+  const pageMotion = ['motion-geometry.mjs', 'motion.mjs'];
+  const popupMotion = ['motion-components.mjs', 'popover-motion.mjs', ...pageMotion];
+  const calendarMotion = ['calendar-height-motion.mjs', 'calendar-selection-motion.mjs', 'range-selection-motion.mjs', ...pageMotion];
+  const motionKept = {
+    Calendar: calendarMotion,
+    RangeCalendar: calendarMotion,
+    ColorSlider: ['color-slider-motion.mjs', ...pageMotion],
+    ColorWheel: ['color-wheel-motion.mjs', ...pageMotion],
+    ListBox: ['listbox-motion.mjs', ...pageMotion],
+    GridList: ['grid-list-item-context.mjs', 'grid-list-motion.mjs', ...pageMotion],
+    Menu: ['menu-motion.mjs', 'overlay-positioning.mjs', ...popupMotion],
+    ComboBox: popupMotion,
+    Select: ['overlay-positioning.mjs', ...popupMotion],
+    RadioGroup: ['radio-motion.mjs', ...pageMotion],
+    Slider: ['slider-motion.mjs', ...pageMotion],
+    Tabs: ['tabs-motion.mjs', ...pageMotion],
+    ToggleButtonGroup: ['toggle-button-context.mjs', 'toggle-button-group-motion.mjs', ...pageMotion],
+    Tree: ['tree-motion.mjs', ...pageMotion],
+  };
+  // Every motion module and motion context in generated/; choice-context is shared form plumbing and is left out.
+  const motionModules = new Set(readdirSync(generated).filter((name) => /(?:^|-)motion(?:-[\w-]+)?\.mjs$|^(?:grid-list-item|toggle-button)-context\.mjs$|^overlay-positioning\.mjs$/u.test(name)));
+  // The family modules are the barrel's re-export targets, and each name's module is its owner.
+  const owners = new Map();
+  for (const [, names, module] of readFileSync(resolve(generated, 'collections.mjs'), 'utf8').matchAll(/^export \{ ([^}]+) \} from '\.\/([\w-]+\.mjs)';$/gmu)) {
+    for (const name of names.split(', ')) owners.set(name, module);
+  }
+  assert.equal(owners.size, 24);
+  const familyModules = new Set(owners.values());
+  assert.equal(familyModules.size, 23);
+  for (const [name, owner] of owners) {
+    const kept = await bundledModules(name, 'collections.mjs');
+    // No other family's code comes along, which is what one module per family buys over one file.
+    assert.deepEqual(kept.filter((module) => familyModules.has(module)), [owner], name);
+    assert.deepEqual(kept.filter((module) => motionModules.has(module)).sort(), [...(motionKept[name] ?? [])].sort(), name);
+  }
 });

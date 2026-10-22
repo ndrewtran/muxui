@@ -5788,7 +5788,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/calendar/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Calendar",
+          "packages/react/src/calendar.mjs#Calendar",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6039,7 +6039,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-area/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorArea",
+          "packages/react/src/color-area.mjs#ColorArea",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6291,7 +6291,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-field/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorField",
+          "packages/react/src/color-field.mjs#ColorField",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6542,7 +6542,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-picker/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorPicker",
+          "packages/react/src/color-picker.mjs#ColorPicker",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6794,7 +6794,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-slider/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorSlider",
+          "packages/react/src/color-slider.mjs#ColorSlider",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -7038,7 +7038,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-swatch/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorSwatch",
+          "packages/react/src/color-swatch.mjs#ColorSwatch",
           "packages/react/test/r1-3-parity.test.mjs"
         ],
         "rac": [
@@ -7288,7 +7288,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-swatch-picker/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorSwatchPicker",
+          "packages/react/src/color-swatch-picker.mjs#ColorSwatchPicker",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -7539,7 +7539,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-wheel/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ColorWheel",
+          "packages/react/src/color-wheel.mjs#ColorWheel",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -7791,7 +7791,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/combo-box/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ComboBox",
+          "packages/react/src/combo-box.mjs#ComboBox",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -8043,7 +8043,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/grid-list/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#GridList",
+          "packages/react/src/grid-list.mjs#GridList",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -8294,7 +8294,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/list-box/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ListBox",
+          "packages/react/src/list-box.mjs#ListBox",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -8545,7 +8545,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/menu/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Menu",
+          "packages/react/src/menu.mjs#Menu",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -8797,7 +8797,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/radio-group/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#RadioGroup",
+          "packages/react/src/radio-group.mjs#RadioGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -9048,7 +9048,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/range-calendar/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#RangeCalendar",
+          "packages/react/src/calendar.mjs#RangeCalendar",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -9299,7 +9299,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/select/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Select",
+          "packages/react/src/select.mjs#Select",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -9551,7 +9551,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/slider/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Slider",
+          "packages/react/src/slider.mjs#Slider",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -9849,7 +9849,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/table/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Table",
+          "packages/react/src/table.mjs#Table",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -10100,7 +10100,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tabs/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Tabs",
+          "packages/react/src/tabs.mjs#Tabs",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -10353,7 +10353,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tag-group/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#TagGroup",
+          "packages/react/src/tag-group.mjs#TagGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -10604,7 +10604,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/toggle-button-group/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#ToggleButtonGroup",
+          "packages/react/src/toggle-button-group.mjs#ToggleButtonGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -10855,7 +10855,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/token-field/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#TokenField",
+          "packages/react/src/token-field.mjs#TokenField",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -11106,7 +11106,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/toolbar/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Toolbar",
+          "packages/react/src/toolbar.mjs#Toolbar",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -11357,7 +11357,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tree/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Tree",
+          "packages/react/src/tree.mjs#Tree",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -11608,7 +11608,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/virtualizer/artifact.json#bindings/web.react",
-          "packages/react/src/collections.mjs#Virtualizer",
+          "packages/react/src/virtualizer.mjs#Virtualizer",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
