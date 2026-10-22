@@ -40,9 +40,12 @@ type Field<T, F extends string, E = never> = T extends unknown ? (
   : F extends 'open' ? (string extends keyof T ? true : false)
   : F extends 'readonly' ? ReadonlyIn<T, E>
   : never) : never;
+// An arm is as before when some arm of the other side, one of its mutual twins, has the same field; otherwise
+// it is set against all its twins together (or the whole other side when it has none), which names the difference.
+type FieldTwin<A, X, F extends string, E> = X extends unknown ? (Mutual<A, X> extends true ? ([Diff<Field<A, F, E>, Field<X, F, E>>] extends [never] ? true : false) : never) : never;
 type FieldDiff<O, N, F extends string, E = never> =
-  | (O extends unknown ? Diff<Field<O, F, E>, Field<Pair<O, N>, F, E>> : never)
-  | (N extends unknown ? Diff<Field<Pair<N, O>, F, E>, Field<N, F, E>> : never);
+  | (O extends unknown ? (true extends FieldTwin<O, N, F, E> ? never : Diff<Field<O, F, E>, Field<Pair<O, N>, F, E>>) : never)
+  | (N extends unknown ? (true extends FieldTwin<N, O, F, E> ? never : Diff<Field<Pair<N, O>, F, E>, Field<N, F, E>>) : never);
 type Unpaired<O, N> =
   | (O extends unknown ? ([Twin<O, N>] extends [never] ? { old: O } : never) : never)
   | (N extends unknown ? ([Twin<N, O>] extends [never] ? { new: N } : never) : never);
@@ -67,9 +70,10 @@ type ParamAt<F, I> = I extends keyof Params<F> ? Params<F>[I] : never;
 type Writes<FO, FN> = { [Q in \`readonly:\${Pos<FO> | Pos<FN>}\`]: Q extends \`readonly:\${infer I}\` ? [ReadonlyKeys<ParamAt<FO, I>>, ReadonlyKeys<ParamAt<FN, I>>] : never };
 type Evidence<MO, MN> = Bits<Fn<MO>, MO, MN, 'old'> & Bits<Fn<MN>, MO, MN, 'new'> & Writes<Fn<MO>, Fn<MN>>;
 type Disagree<E> = { [Q in keyof E as E[Q] extends [infer A, infer B] ? (Mutual<A, B> extends true ? never : Q) : never]: E[Q] };
+type HandlerTwin<A, X, K extends PropertyKey> = X extends unknown ? (Mutual<A, X> extends true ? ([Quiet<Disagree<Evidence<Member<A, K>, Member<X, K>>>>] extends [never] ? true : false) : never) : never;
 type VarianceDiff<O, N, K extends PropertyKey> =
-  | (O extends unknown ? Quiet<Disagree<Evidence<Member<O, K>, Member<Pair<O, N>, K>>>> : never)
-  | (N extends unknown ? Quiet<Disagree<Evidence<Member<Pair<N, O>, K>, Member<N, K>>>> : never);
+  | (O extends unknown ? (true extends HandlerTwin<O, N, K> ? never : Quiet<Disagree<Evidence<Member<O, K>, Member<Pair<O, N>, K>>>>) : never)
+  | (N extends unknown ? (true extends HandlerTwin<N, O, K> ? never : Quiet<Disagree<Evidence<Member<Pair<N, O>, K>, Member<N, K>>>>) : never);
 type Keys<T> = T extends unknown ? (string extends keyof T ? never : Extract<keyof T, string>) : never;
 type Callable<T, E> = T extends unknown ? { [K in keyof T & E]-?: [Fn<T[K]>] extends [never] ? never : K }[keyof T & E] : never;
 `;

@@ -129,6 +129,27 @@ test('a member that loses its whole classification fails the key check instead o
   });
 });
 
+test('arms of a union that overlap but are the same on both sides pass, and the arms that exchange variance still fail', () => {
+  // The first two arms of each type are mutually assignable (a function property and its method form; an optional
+  // key and the same beside an optional key typed undefined), so each arm has two twins on the other side and only one of them is its own.
+  const overlapping = `export type E = { id: string };
+export type S = (e: E) => void;
+export type B = { m(e: E): void }['m'];
+export type Props = { onChange?: S } | { onChange?: B };
+export type Keys = { a?: 1 } | { a?: 1; b?: undefined };
+`;
+  withPair(overlapping, overlapping, (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected([]));
+    assert.deepEqual(failuresOf(comparison, 'exact'), expected([]));
+  });
+  // Both arms turned into the method form: the function property arm has no twin as it was, though it has twins.
+  const bivariant = overlapping.replace('{ onChange?: S } | { onChange?: B }', '{ onChange?: B } | { onChange?: { m(e: E): void }[\'m\'] & {} }');
+  withPair(overlapping, bivariant, (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected(['Props handler:onChange']));
+  });
+});
+
 test('a type, value, component or part missing from the current build is named, and a recorded addition stays recorded', () => {
   const before = `import type * as React from 'react';
 export interface Dropped { x?: string }
