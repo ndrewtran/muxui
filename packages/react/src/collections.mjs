@@ -20,4 +20,4 @@ export { ToggleButtonGroup } from './toggle-button-group.ts';
 export { TokenField } from './token-field.ts';
 export { Toolbar } from './toolbar.ts';
 export { Tree } from './tree.mjs';
-export { Virtualizer } from './virtualizer.mjs';
+export { Virtualizer } from './virtualizer.ts';

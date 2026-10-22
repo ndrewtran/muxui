@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
 import { ApiExtractionError, HOST_ALLOWLIST, extractApis, hostEntryKey } from '../api-extraction/extract.mjs';
@@ -20,10 +20,18 @@ export interface ThingProps extends ThingOwnProps, Omit<React.ButtonHTMLAttribut
 export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLButtonElement>>;
 `;
 
-function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, files = {}, part, callable, parts }) {
+// `outside` holds files beside the package under test, such as a stand-in node_modules/@types/react: when given, the
+// declarations and the sources sit in a package/ directory of their own, so those files are not Mux UI-owned.
+function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, files = {}, outside = {}, part, callable, parts }) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
-  const root = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
+  const base = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
+  const root = Object.keys(outside).length > 0 ? join(base, 'package') : base;
   try {
+    mkdirSync(root, { recursive: true });
+    for (const [name, text] of Object.entries(outside)) {
+      mkdirSync(dirname(join(base, name)), { recursive: true });
+      writeFileSync(join(base, name), text);
+    }
     for (const [name, text] of Object.entries(files)) writeFileSync(join(root, name), text);
     writeFileSync(join(root, 'thing.d.ts'), declarations);
     if (source !== undefined) writeFileSync(join(root, sourceName), source);
@@ -37,7 +45,7 @@ function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist,
     };
     return extractApis({ declarationRoot: root, components: [component], ...(hostAllowlist ? { hostAllowlist } : {}) }).get('Thing');
   } finally {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(base, { recursive: true, force: true });
   }
 }
 
@@ -384,6 +392,123 @@ const INPUT_ATTRIBUTES = host('React.InputHTMLAttributes', host('HTMLInputElemen
 const omitted = (names) => host('Omit', INPUT_ATTRIBUTES, { kind: 'union', members: names.map((value) => ({ kind: 'literal', value })) });
 const OMITTED_INPUT_ATTRIBUTES = omitted(OWNED_INPUT_PROPS);
 
+// React's bivariant event handler aliases (Decision 0031, tranche 8c): a member typed React.UIEventHandler<HTMLDivElement> keeps the
+// alias in the public type, so a handler declared with a narrower event stays assignable, and the catalog reads it as the function it
+// stands for. The reader takes the alias from its declarations in @types/react, never from its name.
+const SCROLL_ALLOWLIST = Object.freeze(['HTMLDivElement', host('React.UIEvent', host('HTMLDivElement'))]);
+const scrollEvent = host('React.UIEvent', host('HTMLDivElement'));
+const handlerFunction = (parameter, eventType) => ({ kind: 'function', parameters: [{ name: parameter, type: eventType, required: true }], returns: keyword('void') });
+
+test('a React event handler alias reads as the function it stands for, named by its declarations and not by its name', () => {
+  const alias = extract({ declarations: ownProps('  /** Called on scroll. */\n  onScroll?: React.UIEventHandler<HTMLDivElement>;'), hostAllowlist: SCROLL_ALLOWLIST });
+  assert.deepEqual(alias.events, ['scroll']);
+  assert.deepEqual(alias.eventDetails.scroll, { prop: 'onScroll', type: handlerFunction('event', scrollEvent), required: false, description: 'Called on scroll.' });
+  // The catalog text is the one the restated function extracts to.
+  const restated = extract({ declarations: ownProps('  /** Called on scroll. */\n  onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;'), hostAllowlist: SCROLL_ALLOWLIST });
+  assert.deepEqual(alias, restated);
+  // Imported by name, or under another local name: the symbol is React's alias either way.
+  for (const [imports, written] of [
+    ["import type { UIEventHandler } from 'react';", 'UIEventHandler<HTMLDivElement>'],
+    ["import type { UIEventHandler as ScrollHandler } from 'react';", 'ScrollHandler<HTMLDivElement>'],
+  ]) {
+    assert.deepEqual(extract({ declarations: ownProps(`  onScroll?: ${written};`, imports), hostAllowlist: SCROLL_ALLOWLIST }).eventDetails.scroll.type, handlerFunction('event', scrollEvent), written);
+  }
+  // Any React alias of that shape reads the same way: its event type and its element come from its own declaration.
+  const form = extract({ declarations: ownProps('  onSend?: React.FormEventHandler<HTMLFormElement>;\n  onMove?: React.ReactEventHandler<HTMLFormElement>;'), hostAllowlist: ['HTMLFormElement', host('React.FormEvent', host('HTMLFormElement')), host('React.SyntheticEvent', host('HTMLFormElement'))] });
+  assert.deepEqual(form.eventDetails.send.type, handlerFunction('event', host('React.FormEvent', host('HTMLFormElement'))));
+  assert.deepEqual(form.eventDetails.move.type, handlerFunction('event', host('React.SyntheticEvent', host('HTMLFormElement'))));
+  // The event is an exact host application on the allowlist, like any other: one the list lacks is refused.
+  rejects(ownProps('  onScroll?: React.UIEventHandler<HTMLDivElement>;'), /Thing\.onScroll -> React\.UIEventHandler\(event\): React\.UIEvent<HTMLDivElement> is not an application on the host allowlist/u, { hostAllowlist: ['HTMLDivElement'] });
+  rejects(ownProps('  onScroll?: React.UIEventHandler<HTMLButtonElement>;'), /Thing\.onScroll -> React\.UIEventHandler\(event\)<0> -> HTMLButtonElement: HTMLButtonElement is outside @muxui\/react and not in the host allowlist/u, { hostAllowlist: SCROLL_ALLOWLIST });
+});
+
+test('only React\'s own handler aliases are read: a local alias, a bare EventHandler, a merged event type, and another alias shape are not', () => {
+  const read = (members, extra, pattern, hostAllowlist = SCROLL_ALLOWLIST) => rejects(ownProps(members, extra), pattern, { hostAllowlist });
+  // A local alias named like React's, restating it or copying its whole declaration, is a Mux UI-owned type, which takes no type arguments.
+  read('  onScroll?: UIEventHandler<HTMLDivElement>;', 'export type UIEventHandler<T> = (event: React.UIEvent<T>) => void;\n',
+    /Thing\.onScroll -> UIEventHandler: UIEventHandler is a Mux UI-owned type; it takes no type arguments/u);
+  read('  onScroll?: UIEventHandler<HTMLDivElement>;', `export type EventHandler<E extends React.SyntheticEvent<any>> = { bivarianceHack(event: E): void }["bivarianceHack"];
+export type UIEventHandler<T = Element> = EventHandler<React.UIEvent<T>>;
+`, /Thing\.onScroll -> UIEventHandler: UIEventHandler is a Mux UI-owned type; it takes no type arguments/u);
+  // The bare EventHandler<E> is no alias of an event type but a host generic, which only its own exact entry admits, as the host type it is and never as a function.
+  read('  scroller?: React.EventHandler<React.UIEvent<HTMLDivElement>>;', '', /Thing\.scroller -> React\.EventHandler: React\.EventHandler<React\.UIEvent<HTMLDivElement>> is not an application on the host allowlist/u);
+  assert.deepEqual(extract({ declarations: ownProps('  scroller?: React.EventHandler<React.UIEvent<HTMLDivElement>>;'), hostAllowlist: [...SCROLL_ALLOWLIST, host('React.EventHandler', scrollEvent)] }).propDetails.scroller.type, host('React.EventHandler', scrollEvent));
+  read('  onScroll?: React.EventHandler<React.UIEvent<HTMLDivElement>>;', '', /Thing\.onScroll: an on<Event> prop must be a function type/u, [...SCROLL_ALLOWLIST, host('React.EventHandler', scrollEvent)]);
+  // A handler alias with two type parameters is another shape.
+  read('  onChange?: React.ChangeEventHandler<HTMLDivElement>;', '', /Thing\.onChange -> React\.ChangeEventHandler: React\.ChangeEventHandler<HTMLDivElement> is not an application on the host allowlist/u, [...SCROLL_ALLOWLIST, host('React.ChangeEvent', host('HTMLDivElement'))]);
+  // A package declaration that merges into React's event type makes it no React type alone, so the alias over it is not read.
+  read('  onScroll?: React.UIEventHandler<HTMLDivElement>;', "declare module 'react' { interface UIEvent<T> { merged: T } }\n", /Thing\.onScroll -> React\.UIEventHandler: React\.UIEventHandler<HTMLDivElement> is not an application on the host allowlist/u);
+});
+
+// A stand-in @types/react beside the declarations, so the shape the reader requires can be varied one rule at a time: a type
+// declared in a node_modules/@types/react directory is React's to the extractor, and nothing in it is named by the reader.
+const FAITHFUL_HANDLER = 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void }["bivarianceHack"];';
+const standInReact = ({
+  handler = FAITHFUL_HANDLER,
+  alias = 'export type UIEventHandler<T = Element> = EventHandler<UIEvent<T>>;',
+  // The handler alias is declared in React's types, but the event type or the EventHandler it builds on is declared elsewhere.
+  elsewhere = [],
+} = {}) => ({
+  'node_modules/@types/react/package.json': JSON.stringify({ name: '@types/react', version: '0.0.0', types: 'index.d.ts' }),
+  'node_modules/@types/react/index.d.ts': `${elsewhere.includes('handler') ? "import type { EventHandler } from 'elsewhere';" : handler}
+export interface SyntheticEvent<T = Element, E = Event> { readonly currentTarget: EventTarget & T; readonly nativeEvent: E }
+${elsewhere.includes('event') ? "import type { UIEvent } from 'elsewhere';" : 'export interface UIEvent<T = Element, E = Event> extends SyntheticEvent<T, E> { readonly detail: number }'}
+${alias}
+`,
+  ...(elsewhere.length === 0 ? {} : {
+    'node_modules/elsewhere/package.json': JSON.stringify({ name: 'elsewhere', version: '0.0.0', types: 'index.d.ts' }),
+    'node_modules/elsewhere/index.d.ts': `import type { SyntheticEvent } from '@types/react';\n${FAITHFUL_HANDLER}\nexport interface UIEvent<T = Element, E = Event> extends SyntheticEvent<T, E> { readonly detail: number }\n`,
+  }),
+});
+const standInThing = "import type { UIEventHandler } from 'react';\nexport interface ThingOwnProps { onScroll?: UIEventHandler<HTMLDivElement>; }\nexport interface ThingProps extends ThingOwnProps {}\nexport declare const Thing: (props: ThingProps) => null;\n";
+
+test('a handler alias is read by the shape of its declarations in @types/react: one bivariance hack method over the alias\'s own type parameter', () => {
+  const read = (variant) => extract({ declarations: standInThing, outside: standInReact(variant), hostAllowlist: SCROLL_ALLOWLIST });
+  // The faithful shape reads, and the parameter takes the name its method declares.
+  assert.deepEqual(read().eventDetails.scroll.type, handlerFunction('event', scrollEvent));
+  assert.deepEqual(read({ handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(evt: E): void }["bivarianceHack"];' }).eventDetails.scroll.type, handlerFunction('evt', scrollEvent));
+  // Each rule of the shape, broken alone, leaves the alias an unlisted host application.
+  const refused = /Thing\.onScroll -> UIEventHandler: React\.UIEventHandler<HTMLDivElement> is not an application on the host allowlist/u;
+  for (const [rule, variant] of [
+    ['a strict function type is no bivariance hack', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = (event: E) => void;' }],
+    ['the hack method takes one parameter', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E, other: string): void }["bivarianceHack"];' }],
+    ['the hack method returns void', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): string }["bivarianceHack"];' }],
+    ['the object type has the one method', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void; other(): void }["bivarianceHack"];' }],
+    ['the method takes the alias\'s type parameter', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: SyntheticEvent): void }["bivarianceHack"];' }],
+    ['the index names the method', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void }["other"];' }],
+    ['the method is a method, not a function-typed property', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack: (event: E) => void }["bivarianceHack"];' }],
+    ['the handler alias passes its own type parameter', { alias: 'export type UIEventHandler<T = Element> = EventHandler<UIEvent<Element>>;' }],
+    ['the handler alias takes one type parameter', { alias: 'export type UIEventHandler<T = Element, U = Element> = EventHandler<UIEvent<T>>;' }],
+    ['the event type takes the alias\'s type parameter alone', { alias: 'export type UIEventHandler<T = Element> = EventHandler<UIEvent<T, Event>>;' }],
+    ['the handler alias applies the handler to one event type', { alias: 'export type UIEventHandler<T = Element> = EventHandler<UIEvent<T>, T>;' }],
+    ['the handler alias is a reference, not a function', { alias: 'export type UIEventHandler<T = Element> = (event: UIEvent<T>) => void;' }],
+    ['the EventHandler it builds on is declared in React\'s types', { elsewhere: ['handler'] }],
+    ['the event type it names is declared in React\'s types', { elsewhere: ['event'] }],
+  ]) {
+    assert.throws(() => read(variant), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, refused, rule);
+      return true;
+    }, rule);
+  }
+});
+
+test('a React event handler alias is the whole type of a member and names its element', () => {
+  const read = (members, pattern) => rejects(ownProps(members), pattern, { hostAllowlist: SCROLL_ALLOWLIST });
+  const refused = /one of React's event handler aliases, which is in the grammar only as the whole type of a member/u;
+  // Inside a union, an array, a parameter, parentheses, or a record, it is not read.
+  read('  onScroll?: React.UIEventHandler<HTMLDivElement> | null;', refused);
+  read('  onScroll?: React.UIEventHandler<HTMLDivElement> | undefined;', refused);
+  read('  onScroll?: (React.UIEventHandler<HTMLDivElement>);', refused);
+  read('  onScroll?: React.UIEventHandler<HTMLDivElement>[];', refused);
+  read('  onScroll?: (handler: React.UIEventHandler<HTMLDivElement>) => void;', refused);
+  read('  scrollers?: { readonly [key: string]: React.UIEventHandler<HTMLDivElement> };', refused);
+  // Without a type argument it names no element, and its default is Element, which no entry admits.
+  read('  onScroll?: React.UIEventHandler;', /one of React's event handler aliases and needs one type argument naming the element/u);
+  // A member that is not an on<Event> prop may be one, and is a function; an on<Event> prop may not be a union of one.
+  assert.deepEqual(extract({ declarations: ownProps('  scroller?: React.UIEventHandler<HTMLDivElement>;'), hostAllowlist: SCROLL_ALLOWLIST }).propDetails.scroller.type, handlerFunction('event', scrollEvent));
+});
+
 test('the shipped allowlist holds exactly the host types the committed derived APIs reach', () => {
   const reached = new Map();
   for (const file of readdirSync(resolve(packageRoot, 'api'))) {
@@ -394,8 +519,8 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'caller-supplied content, and the node an Exclude starts from');
-  assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json'], 'the element a trigger prop takes');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
@@ -404,6 +529,9 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual(reached.get('HTMLInputElement'), ['search-field.json', 'text-field.json'], 'the element whose attributes inputProps takes');
   assert.deepEqual(reached.get(hostEntryKey(INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the attributes of the inner input');
   assert.deepEqual(reached.get(hostEntryKey(OMITTED_INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the inner input\'s attributes less the 23 the field owns');
+  // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
+  assert.deepEqual(reached.get('HTMLDivElement'), ['virtualizer.json'], 'the element a scroll event reports');
+  assert.deepEqual(reached.get(hostEntryKey(host('React.UIEvent', host('HTMLDivElement')))), ['virtualizer.json'], 'the scroll event of the Virtualizer viewport');
   // DropZone's drop items: a file item reads a File or its text, a text item lists its formats, a directory its entries.
   const dropItems = [
     [host('Promise', host('File')), 'a file item\'s read'],

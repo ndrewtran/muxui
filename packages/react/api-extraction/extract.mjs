@@ -62,7 +62,8 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * Dialog, and Toast, and Promise<File>, Promise<string>, ReadonlySet<string>, and
  * AsyncIterable<MuxUIDropItem> for DropZone's drop items, and HTMLInputElement,
  * React.InputHTMLAttributes<HTMLInputElement>, and the Omit of it that FieldInputProps declares for
- * TextField's and SearchField's inputProps.
+ * TextField's and SearchField's inputProps, and HTMLDivElement with React.UIEvent<HTMLDivElement>, the event
+ * of Virtualizer's onScroll, which its React.UIEventHandler<HTMLDivElement> alias reads as.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -85,6 +86,9 @@ export const HOST_ALLOWLIST = Object.freeze([
     kind: 'union',
     members: FIELD_INPUT_OWNED_PROPS.map((value) => ({ kind: 'literal', value })),
   }),
+  // Virtualizer's onScroll event: a scroll of the viewport, which is a div.
+  'HTMLDivElement',
+  hostApplication('React.UIEvent', { kind: 'host', name: 'HTMLDivElement' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.
@@ -268,6 +272,64 @@ function showType(type) {
   }
 }
 
+const declaredInReact = (symbol) => symbol.declarations.length > 0 && symbol.declarations.every(({ path }) => REACT_TYPES.test(path));
+
+/** The symbol a type reference names, through an import or export alias. */
+function referencedSymbol({ checker }, reference) {
+  const found = checker.getSymbolAtLocation(reference.typeName);
+  return found?.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
+}
+
+/** The one type alias a symbol declares in @types/react, when it takes `typeParameters` type parameters. */
+function reactAlias(project, symbol, typeParameters) {
+  if (!symbol || symbol.declarations.length !== 1 || !declaredInReact(symbol)) return null;
+  const declaration = symbol.declarations[0].resolve(project);
+  return declaration.kind === SyntaxKind.TypeAliasDeclaration && declaration.typeParameters?.length === typeParameters ? declaration : null;
+}
+
+/** Whether a node is a plain reference to the type parameter `parameter` declares. */
+const refersTo = (project, node, parameter) => node.kind === SyntaxKind.TypeReference && !node.typeArguments?.length
+  && referencedSymbol(project, node)?.id === project.checker.getSymbolAtLocation(parameter.name)?.id;
+
+/**
+ * The parameter name of React's `EventHandler<E>`, when `declaration` is `{ bivarianceHack(event: E): void }["bivarianceHack"]`:
+ * an indexed access of the one method of an object type, which takes the alias's type parameter and returns void.
+ * That declaration is why such a handler accepts a narrower event than it is typed with; null for any other.
+ */
+function bivarianceHackParameter(project, declaration) {
+  const body = declaration.type;
+  if (body.kind !== SyntaxKind.IndexedAccessType || body.objectType.kind !== SyntaxKind.TypeLiteral || body.objectType.members.length !== 1) return null;
+  const [method] = body.objectType.members;
+  const { indexType } = body;
+  if (method.kind !== SyntaxKind.MethodSignature || method.name.kind !== SyntaxKind.Identifier || method.typeParameters?.length || method.parameters.length !== 1) return null;
+  if (indexType.kind !== SyntaxKind.LiteralType || indexType.literal.kind !== SyntaxKind.StringLiteral || indexType.literal.text !== method.name.text) return null;
+  const [parameter] = method.parameters;
+  if (parameter.name.kind !== SyntaxKind.Identifier || parameter.dotDotDotToken || parameter.questionToken || !parameter.type) return null;
+  if (!refersTo(project, parameter.type, declaration.typeParameters[0]) || method.type?.kind !== SyntaxKind.VoidKeyword) return null;
+  return parameter.name.text;
+}
+
+/**
+ * Whether `symbol` is one of React's bivariant event handler aliases, read from its declarations and never from
+ * a name: a type alias in @types/react with one type parameter `T` whose body is a reference to a React alias (the
+ * `EventHandler`, which `bivarianceHackParameter` recognises) applied to one argument, a React event type of `T`
+ * (`UIEvent<T>`). A local alias of the same name, `React.EventHandler` itself, and an alias of another shape are not.
+ * @returns {{ event: object, parameter: string } | null} the event type's symbol and the handler's parameter name
+ */
+function eventHandlerAlias(project, symbol) {
+  const alias = reactAlias(project, symbol, 1);
+  const body = alias?.type;
+  if (body?.kind !== SyntaxKind.TypeReference || body.typeArguments?.length !== 1) return null;
+  const base = referencedSymbol(project, body);
+  const baseAlias = reactAlias(project, base, 1);
+  const parameter = baseAlias === null ? null : bivarianceHackParameter(project, baseAlias);
+  const [argument] = body.typeArguments;
+  if (parameter === null || argument.kind !== SyntaxKind.TypeReference || argument.typeArguments?.length !== 1) return null;
+  const event = referencedSymbol(project, argument);
+  if (!event || !declaredInReact(event) || !refersTo(project, argument.typeArguments[0], alias.typeParameters[0])) return null;
+  return { event, parameter };
+}
+
 function declarationReader({ project, declarationRoot, allowed }) {
   const { checker, program } = project;
   // Named types by name, each with the symbol it was read from. A type being read (a
@@ -339,15 +401,40 @@ function declarationReader({ project, declarationRoot, allowed }) {
         ? `${symbol.name} also has a declaration in @muxui/react (a global augmentation or merged declaration); a host type is declared only in the default library or @types/react`
         : `${written} is outside @muxui/react and not in the host allowlist`);
     }
+    const handler = eventHandlerAlias(project, symbol);
+    if (handler !== null) return eventHandlerOf(node, handler, hop);
     if (!applied) {
       if (allowed.names.has(host)) return { kind: 'host', name: host };
       throw new ApiExtractionError(hop, `${host} is outside @muxui/react and not in the host allowlist`);
     }
-    // An application matches an entry only exactly, so the arguments are read like any type
-    // (a host argument must itself be allowlisted, a Mux UI-owned one is recorded) and then compared.
-    const application = { kind: 'host', name: host, typeArguments: node.typeArguments.map((argument, index) => typeOf(argument, `${hop}<${index}>`)) };
+    return hostApplicationOf(host, node.typeArguments, hop);
+  }
+
+  // An application matches an entry only exactly, so the arguments are read like any type
+  // (a host argument must itself be allowlisted, a Mux UI-owned one is recorded) and then compared.
+  function hostApplicationOf(host, typeArguments, hop) {
+    const application = { kind: 'host', name: host, typeArguments: typeArguments.map((argument, index) => typeOf(argument, `${hop}<${index}>`)) };
     if (allowed.applications.has(hostEntryKey(application))) return application;
     throw new ApiExtractionError(hop, `${showType(application)} is not an application on the host allowlist; an application matches an entry exactly, with the arguments in order`);
+  }
+
+  /**
+   * One of React's bivariant event handler aliases (`UIEventHandler<T>`, `FormEventHandler<T>`), recognised by
+   * `eventHandlerAlias` from its declarations. It is the callback the alias stands for, `(event: XEvent<T>) => void`,
+   * with the parameter name `bivarianceHack` declares, so the catalog states the same function the restated type
+   * would. The alias is the whole type of a member and names its element: in a union, a parameter, or another
+   * argument, or bare (which defaults the element), it is refused rather than read.
+   */
+  function eventHandlerOf(node, { event, parameter }, hop) {
+    const written = entityName(node.typeName);
+    if (!(node.parent.kind === SyntaxKind.PropertySignature && node.parent.type === node)) {
+      throw new ApiExtractionError(hop, `${written} is one of React's event handler aliases, which is in the grammar only as the whole type of a member; a union, a parameter, or another type's argument cannot hold it`);
+    }
+    if (node.typeArguments?.length !== 1) {
+      throw new ApiExtractionError(hop, `${written} is one of React's event handler aliases and needs one type argument naming the element, as ${written}<HTMLDivElement> does`);
+    }
+    const eventType = hostApplicationOf(hostName(event), node.typeArguments, `${hop}(${parameter})`);
+    return { kind: 'function', parameters: [{ name: parameter, type: eventType, required: true }], returns: { kind: 'void' } };
   }
 
   function literalOf(node, chain) {

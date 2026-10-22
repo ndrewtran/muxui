@@ -11608,7 +11608,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/virtualizer/artifact.json#bindings/web.react",
-          "packages/react/src/virtualizer.mjs#Virtualizer",
+          "packages/react/src/virtualizer.ts#Virtualizer",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

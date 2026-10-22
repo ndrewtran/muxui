@@ -2414,6 +2414,71 @@ test('R1.3 Slider onChangeEnd follows RAC interaction lifecycle', async () => {
   }
 });
 
+// The disabled guard on onScroll is Mux UI's own: React Aria's ListBox would call the handler either way.
+test('R1.3 Virtualizer onScroll fires while enabled, is suppressed while disabled, and fires again once re-enabled', async () => {
+  const env = installVirtualizerDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const items = Array.from({ length: 100 }, (_, index) => `Item ${index}`);
+  const scrolls = [];
+  const render = (disabled) => root.render(React.createElement(Virtualizer, {
+    'aria-label': 'Results', items, height: 120, itemHeight: 40, disabled, onScroll: (event) => scrolls.push(event.currentTarget.scrollTop),
+  }));
+  const scrollTo = async (top) => {
+    const viewport = container.querySelector('.muxui-virtualizer');
+    viewport.scrollTop = top;
+    await act(async () => viewport.dispatchEvent(new Event('scroll', { bubbles: true })));
+  };
+  try {
+    await act(async () => render(false));
+    await scrollTo(80);
+    assert.deepEqual(scrolls, [80], 'an enabled Virtualizer reports a scroll');
+    await act(async () => render(true));
+    await scrollTo(160);
+    assert.deepEqual(scrolls, [80], 'a disabled Virtualizer reports none');
+    await act(async () => render(false));
+    await scrollTo(240);
+    assert.deepEqual(scrolls, [80, 240], 'a re-enabled Virtualizer reports again');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+// The grid-mode checks ask which props were supplied, and the defaults apply to the same props. A prop bound twice in the
+// parameter would be read twice, and an accessor prop that answers differently the second time would render differently.
+// The render function runs directly here, since React copies the props of an element and so hides an accessor from it.
+test('R1.3 Virtualizer reads a supplied prop no more often than it checks it', () => {
+  const read = (values, answers = {}) => {
+    const reads = {};
+    const props = {};
+    for (const [name, value] of Object.entries(values)) {
+      Object.defineProperty(props, name, { enumerable: true, get() { reads[name] = (reads[name] ?? 0) + 1; return answers[name] ? answers[name](reads[name]) : value; } });
+    }
+    const outcome = () => {
+      try { return { markup: renderToString(Virtualizer.render(props, null)) }; } catch (error) { return { error: error.message }; }
+    };
+    return { reads, ...outcome() };
+  };
+  // Every stack prop an accessor: each is read once, and a height that answers 120 and then 300 renders 120.
+  const stack = read(
+    { layout: 'stack', items: ['One'], renderItem: () => null, itemHeight: 40, height: 0, overscan: 2, disabled: false, 'aria-label': 'Results', 'aria-labelledby': 'x', className: 'c', style: {}, onScroll: () => {}, 'data-extra': 'e' },
+    { height: (count) => (count === 1 ? 120 : 300) },
+  );
+  assert.match(stack.markup, /block-size:120px/u);
+  assert.deepEqual(Object.values(stack.reads), Array(13).fill(1));
+  // The grid check reads the prop it finds a second time, and the stack check does the same for a grid-only prop.
+  const grid = read({ layout: 'grid', children: React.createElement(GridList, { 'aria-label': 'Posters', layout: 'grid' }), height: 10 });
+  assert.match(grid.error, /layout="grid" takes no height/u);
+  assert.deepEqual(grid.reads, { layout: 1, children: 1, height: 2 });
+  const gridOnly = read({ 'aria-label': 'Results', minItemWidth: 100 });
+  assert.match(gridOnly.error, /minItemWidth applies to layout="grid" only/u);
+  assert.deepEqual(gridOnly.reads, { 'aria-label': 1, minItemWidth: 2 });
+  // Supplied sizing props are read once each, and a grid without any is read for its layout and child alone.
+  assert.deepEqual(read({ layout: 'grid', children: React.createElement(GridList, { 'aria-label': 'Posters', layout: 'grid' }), minItemWidth: 150, maxItemWidth: 400, estimatedItemHeight: 250, maxColumns: 3, overscan: 1 }).reads,
+    { layout: 1, children: 1, minItemWidth: 1, maxItemWidth: 1, estimatedItemHeight: 1, maxColumns: 1, overscan: 1 });
+});
+
 test('R1.3 Virtualizer mounts exact fixed-row windows and preserves focused identity', async () => {
   const env = installVirtualizerDom();
   const container = document.querySelector('#root');

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:d1e7c9209364c0c873dffc6344cf7eb0fc66c9ebd8c100b59b651f7ef63f2ef2 -->
+<!-- @generated-content-sha256: sha256:f3429fc07b7d92bace1e588caf8c226e57aa650f3dc13b00191d93d46be0eb93 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -185,7 +185,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Toolbar | experimental | . | .muxui-toolbar | orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
 | Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
-| Virtualizer | experimental | . | .muxui-virtualizer | aria-label, items, height, itemHeight, overscan, disabled, layout, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
+| Virtualizer | experimental | . | .muxui-virtualizer | layout, items, height, itemHeight, overscan, disabled, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
 
 ## Composition and native input contracts
 

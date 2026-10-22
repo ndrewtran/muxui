@@ -9377,7 +9377,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }
@@ -9416,7 +9416,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }
@@ -9455,7 +9455,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }
@@ -9494,7 +9494,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }
@@ -9533,7 +9533,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }
@@ -9572,7 +9572,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }
@@ -9611,7 +9611,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/virtualizer.mjs",
+          "path": "packages/react/src/virtualizer.ts",
           "lines": null,
           "anchor": "#Virtualizer"
         }

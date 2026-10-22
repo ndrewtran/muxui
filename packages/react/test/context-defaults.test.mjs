@@ -83,6 +83,8 @@ const audited = [
       // before the move, so a GridListContext never supplied them. Each GridList.Item sent isDisabled as a boolean: its own flag, else the list's.
       ...expand(['grid-list'], ['selectionMode', 'disabled', 'orientation']),
       ...expand(['grid-list.item'], ['disabled']),
+      // Virtualizer sent isDisabled to React Aria as its own value, false when omitted, before the move, so a ListBoxContext never supplied it.
+      ...expand(['virtualizer'], ['disabled']),
     ],
   },
   {

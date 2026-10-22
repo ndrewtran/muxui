@@ -1,0 +1,235 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/virtualizer.ts",
+  "component": "muxui:component:virtualizer",
+  "binding": "web.react",
+  "export": "Virtualizer",
+  "api": {
+    "props": [
+      "layout",
+      "items",
+      "height",
+      "itemHeight",
+      "overscan",
+      "disabled",
+      "children",
+      "minItemWidth",
+      "maxItemWidth",
+      "estimatedItemHeight",
+      "maxColumns"
+    ],
+    "events": [
+      "scroll"
+    ],
+    "defaults": {
+      "layout": "stack",
+      "height": 240,
+      "itemHeight": 40,
+      "overscan": 2,
+      "disabled": false
+    },
+    "propDetails": {
+      "layout": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "stack"
+            },
+            {
+              "kind": "literal",
+              "value": "grid"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "stack",
+          "grid"
+        ],
+        "description": "`stack`, the default, is a fixed-row list that renders its own items. `grid` wraps one GridList that has layout=\"grid\" and the vertical orientation, and lays it out in measured rows."
+      },
+      "items": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIItems"
+        },
+        "required": false,
+        "description": "The rows of a stack layout, as strings or items with an `id`, a `label`, a `textValue`, and `disabled`. Stack layout only: a grid takes its items on its GridList."
+      },
+      "height": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The stack viewport's block size in px, a finite number greater than 0. Stack layout only."
+      },
+      "itemHeight": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The fixed height of each stack row in px, a finite number greater than 0. Rows are not measured, so content taller than this overflows into the next row. Stack layout only."
+      },
+      "overscan": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The rows mounted above and below the visible window, an integer of 0 or more. For a grid they are whole grid rows."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables every stack row and stops `onScroll`. Stack layout only: a grid disables its GridList instead."
+      },
+      "children": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactElement"
+        },
+        "required": false,
+        "description": "The GridList a grid layout lays out, which must have layout=\"grid\". Required for a grid; a stack renders its own items and takes no children."
+      },
+      "minItemWidth": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "Minimum item width in px for a grid, a finite number greater than 0. Default 200."
+      },
+      "maxItemWidth": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "Maximum item width in px for a grid, Infinity or a finite number no smaller than `minItemWidth`. Default unbounded, so items stretch to fill their columns."
+      },
+      "estimatedItemHeight": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "Estimated height in px of the grid rows that have not mounted yet, a finite number greater than 0. Default 200. Mounted rows take their measured content height."
+      },
+      "maxColumns": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "Cap on the number of grid columns, Infinity or an integer greater than 0. Default unbounded. A narrow container shows fewer."
+      }
+    },
+    "eventDetails": {
+      "scroll": {
+        "prop": "onScroll",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "event",
+              "type": {
+                "kind": "host",
+                "name": "React.UIEvent",
+                "typeArguments": [
+                  {
+                    "kind": "host",
+                    "name": "HTMLDivElement"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called when the stack viewport scrolls. It is not called while the Virtualizer is disabled. Stack layout only."
+      }
+    },
+    "types": {
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      },
+      "MuxUIItems": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        }
+      }
+    }
+  }
+}

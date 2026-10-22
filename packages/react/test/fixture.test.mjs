@@ -257,6 +257,7 @@ const minimalRenders = {
   // Menu's block is Menu.Root's, so the menu is the triggered composition, closed.
   Menu: () => menuRoot(),
   GridList: () => h(generated.GridList, { 'aria-label': 'Cards', items: ['One', 'Two'] }),
+  Virtualizer: () => h(generated.Virtualizer, { 'aria-label': 'Results', items: ['One', 'Two'] }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -273,6 +274,7 @@ const partRenders = {
   'GridList.item': { scope: '[role="row"]', render: () => h(generated.GridList, { 'aria-label': 'Cards' }, h(generated.GridList.Item, { id: 'one' }, 'One')) },
 };
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
+const stackVirtualizer = (props) => h(generated.Virtualizer, { 'aria-label': 'Results', items: ['One', 'Two'], ...props });
 
 async function withMounted(element, run) {
   const env = createDom('<div id="root"></div>', { layoutStubs: true });
@@ -359,6 +361,17 @@ const behaviourObservers = {
       (sent) => 'delay' in sent && Array.isArray(sent.children),
     )).delay,
   },
+  Virtualizer: {
+    // The stack viewport's block size, from the server markup.
+    height: (props) => Number.parseFloat(new JSDOM(renderToString(stackVirtualizer(props))).window.document.querySelector('.muxui-virtualizer').style.blockSize),
+    // The scroll extent is the row count (two here) times the row height.
+    itemHeight: (props) => Number.parseFloat(new JSDOM(renderToString(stackVirtualizer(props))).window.document.querySelector('[role="presentation"]').style.height) / 2,
+    // At the top of 100 rows in a 240 px viewport of 40 px rows, 6 rows are visible and the overscan rows below them are mounted too.
+    overscan: (props) => withMeasuredViewport(h(generated.Virtualizer, { 'aria-label': 'Results', items: Array.from({ length: 100 }, (_, index) => `Item ${index}`), height: 240, itemHeight: 40, ...props }),
+      (container) => container.querySelectorAll('[role="option"]').length - 6),
+    // A disabled Virtualizer disables its rows. The server markup mounts none, so a mounted row carries the flag.
+    disabled: (props) => withMeasuredViewport(stackVirtualizer(props), (container) => container.querySelector('[role="option"]')?.getAttribute('aria-disabled') === 'true'),
+  },
   Tabs: {
     // An arrow key either selects the next tab at once (automatic) or only moves focus (manual).
     keyboardActivation: (props) => {
@@ -372,6 +385,33 @@ const behaviourObservers = {
     },
   },
 };
+
+// jsdom has no layout, so a Virtualizer mounts no rows in it. This gives the viewport a box (as tall as its block size, 600 wide) and
+// every row 40 px, which is what the layout reads to decide which rows to mount.
+async function withMeasuredViewport(element, run) {
+  const env = createDom('<div id="root"></div>', { layoutStubs: true });
+  const prototype = env.dom.window.HTMLElement.prototype;
+  const blockSize = (node) => Number.parseFloat(node.style.blockSize || node.style.height || '') || 0;
+  Object.defineProperty(prototype, 'clientWidth', { configurable: true, get: () => 600 });
+  Object.defineProperty(prototype, 'clientHeight', { configurable: true, get() { return this.classList.contains('muxui-virtualizer') ? blockSize(this) : 40; } });
+  class MeasuredObserver {
+    constructor(callback) { this.callback = callback; }
+    observe(node) { queueMicrotask(() => this.callback([{ target: node, contentRect: { width: 600, height: blockSize(node) } }])); }
+    unobserve() {}
+    disconnect() {}
+  }
+  globalThis.ResizeObserver = MeasuredObserver;
+  env.dom.window.ResizeObserver = MeasuredObserver;
+  const root = createRoot(document.querySelector('#root'));
+  try {
+    await act(async () => root.render(element));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+    return await run(document.querySelector('#root'));
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+}
 
 const kebab = (name) => name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
 
@@ -500,6 +540,22 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, orientation: 'horizontal' }), ['orientation: catalog "horizontal", rendered "vertical"']);
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, selectionMode: 'multiple' }), ['selectionMode: catalog "multiple", rendered "single"']);
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, selectionMode: 'none' }), ['selectionMode: catalog "none", rendered "single"']);
+  // GridList's root defaults are observed as the list's are, and its Item part as the part is: a different default fails.
+  const gridMarkup = renderToString(minimalRenders.GridList());
+  assert.deepEqual(defaultMismatches(gridMarkup, { ...apis.GridList.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
+  assert.deepEqual(defaultMismatches(gridMarkup, { ...apis.GridList.defaults, orientation: 'horizontal' }), ['orientation: catalog "horizontal", rendered "vertical"']);
+  assert.deepEqual(defaultMismatches(gridMarkup, { ...apis.GridList.defaults, selectionMode: 'multiple' }), ['selectionMode: catalog "multiple", rendered "single"']);
+  assert.deepEqual(defaultMismatches(gridMarkup, { ...apis.GridList.defaults, selectionMode: 'none' }), ['selectionMode: catalog "none", rendered "single"']);
+  const gridItem = apis.GridList.partApis.item;
+  assert.deepEqual(await partProblems(types, 'GridList', 'item', gridItem), []);
+  assert.deepEqual(await partProblems(types, 'GridList', 'item', { ...gridItem, defaults: { disabled: true } }), ['disabled: catalog true, rendered false']);
+  // Virtualizer's defaults are observed by what the viewport does: its block size, its scroll extent, and the rows it mounts.
+  const virtualizer = apis.Virtualizer.defaults;
+  assert.deepEqual(await behaviourMismatches('Virtualizer', virtualizer), []);
+  for (const [prop, wrong] of [['height', 241], ['itemHeight', 41], ['overscan', 3]]) {
+    assert.deepEqual(await behaviourMismatches('Virtualizer', { ...virtualizer, [prop]: wrong }), [`${prop}: catalog ${wrong}, behaves ${virtualizer[prop]}`], `a different ${prop} default fails`);
+  }
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Virtualizer()), { ...virtualizer, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
   // Selection mode follows the role each mode renders: radiogroup for single, toolbar for multiple.
   const multiple = renderToString(h(generated.ToggleButtonGroup, { 'aria-label': 'Format', selectionMode: 'multiple' }, h(generated.ToggleButton, { id: 'a' }, 'A')));
   assert.equal(markupValues.selectionMode(new JSDOM(multiple).window.document), 'multiple');
@@ -522,6 +578,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
   const states = {
     showTextWhileLoading: [false, true], disallowEmptySelection: [false, true], keyboardActivation: ['automatic', 'manual'],
     shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
+    height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3], disabled: [false, true],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {

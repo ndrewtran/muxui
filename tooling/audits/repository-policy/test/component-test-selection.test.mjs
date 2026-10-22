@@ -94,7 +94,7 @@ test('focused Tree and TagSelect retain only their named shared-source behavior 
 });
 
 test('GridList routes to its cross-engine layout proof and its collection cases in both modes', () => {
-  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/grid-list.mjs' };
+  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/grid-list.ts' };
   const layoutProof = 'test/browser/grid-list-layout.test.mjs';
   assert.ok(selectComponentTestFiles([record], availableFiles).includes(layoutProof));
   assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
@@ -108,7 +108,7 @@ test('GridList routes to its cross-engine layout proof and its collection cases 
 });
 
 test('Virtualizer routes to its cross-engine grid proof and its named R1.3 cases in both modes', () => {
-  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/virtualizer.mjs' };
+  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/virtualizer.ts' };
   const gridProof = 'test/browser/virtualizer-grid.test.mjs';
   assert.ok(selectComponentTestFiles([record], availableFiles).includes(gridProof));
   assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));

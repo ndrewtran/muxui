@@ -80,6 +80,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'menu', name: 'Menu', part: 'Root', callable: 'list', source: 'packages/react/src/menu.ts', parts: { trigger: 'Trigger', popup: 'Popup', list: 'List', item: 'Item', submenu: 'Submenu', section: 'Section' } },
   // GridList is its own root and has no Root part; Item owns props beside it.
   { slug: 'grid-list', name: 'GridList', source: 'packages/react/src/grid-list.ts', parts: { item: 'Item' } },
+  // Virtualizer is one component with two layouts: its own props are one all-optional type, and its public type is two arms built from it.
+  { slug: 'virtualizer', name: 'Virtualizer', source: 'packages/react/src/virtualizer.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
