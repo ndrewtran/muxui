@@ -1,8 +1,8 @@
 // The probe program of the public-surface check. For every subject both snapshots hold (`O` the baseline,
 // `N` the current build) it asserts, one assertion a line so a compile diagnostic names its subject:
-//   pair proof    mutual assignability, and the key set, required keys, optional keys, keys that accept an
-//                 explicit `undefined` (read through `Required<Pick<T, K>>[K]`, and as an object literal) and
-//                 open or closed index sets
+//   pair proof    mutual assignability, and the key set, required keys, optional keys, readonly keys (of the
+//                 examined members, below), keys that accept an explicit `undefined` (read through
+//                 `Required<Pick<T, K>>[K]`, and as an object literal) and open or closed index sets
 //   handler probes for each callable member that is declared in a snapshot's own files, or differs from
 //                 React's, and for each exported callback type: at every parameter position, a narrow, a
 //                 wide and a record (`Record<string, unknown>`) handler built from each side, assigned to
@@ -31,22 +31,24 @@ type Twin<A, B> = B extends unknown ? (Mutual<A, B> extends true ? B : never) : 
 type Pair<A, B> = [Twin<A, B>] extends [never] ? B : Twin<A, B>;
 type Member<A, K extends PropertyKey> = A extends unknown ? (K extends keyof A ? A[K] : never) : never;
 
-type Field<T, F extends string> = T extends unknown ? (
+type Field<T, F extends string, E = never> = T extends unknown ? (
   F extends 'keyof' ? keyof T
   : F extends 'required' ? keyof { [K in keyof T as {} extends Pick<T, K> ? never : K]: 0 }
   : F extends 'optional' ? keyof { [K in keyof T as {} extends Pick<T, K> ? K : never]: 0 }
   : F extends 'undefined' ? keyof { [K in keyof T as {} extends Pick<T, K> ? (undefined extends Required<Pick<T, K>>[K] ? K : never) : never]: 0 }
   : F extends 'literal' ? keyof { [K in keyof T as {} extends Pick<T, K> ? ({ [Q in K]: undefined } extends Pick<T, K> ? K : never) : never]: 0 }
   : F extends 'open' ? (string extends keyof T ? true : false)
+  : F extends 'readonly' ? ReadonlyIn<T, E>
   : never) : never;
-type FieldDiff<O, N, F extends string> =
-  | (O extends unknown ? Diff<Field<O, F>, Field<Pair<O, N>, F>> : never)
-  | (N extends unknown ? Diff<Field<Pair<N, O>, F>, Field<N, F>> : never);
+type FieldDiff<O, N, F extends string, E = never> =
+  | (O extends unknown ? Diff<Field<O, F, E>, Field<Pair<O, N>, F, E>> : never)
+  | (N extends unknown ? Diff<Field<Pair<N, O>, F, E>, Field<N, F, E>> : never);
 type Unpaired<O, N> =
   | (O extends unknown ? ([Twin<O, N>] extends [never] ? { old: O } : never) : never)
   | (N extends unknown ? ([Twin<N, O>] extends [never] ? { new: N } : never) : never);
 
-type Fn<M> = Extract<NonNullable<M>, (...a: never[]) => unknown>;
+// A member typed any has no call signature to probe, like the enumerator's classification.
+type Fn<M> = 0 extends 1 & M ? never : Extract<NonNullable<M>, (...a: never[]) => unknown>;
 type Params<F> = F extends (...a: infer P) => unknown ? P : never;
 type Ret<F> = F extends (...a: never[]) => infer R ? R : never;
 type Pos<F> = Extract<keyof Params<F>, \`\${number}\`>;
@@ -59,6 +61,7 @@ type Bits<F, TO, TN, Tag extends string> = {
     Q extends \`\${string}:exact\` ? [Takes<TO, F>, Takes<TN, F>]
     : Q extends \`\${string}:\${infer K}:\${infer I}\` ? [Takes<TO, Build<F, K, I>>, Takes<TN, Build<F, K, I>>] : never;
 };
+type ReadonlyIn<T, E> = T extends object ? ({ [K in keyof T as K extends E ? K : never]-?: Same<{ [Q in K]: T[K] }, { -readonly [Q in K]: T[K] }> extends true ? never : K } extends infer M ? M[keyof M] : never) : never;
 type ReadonlyKeys<P> = P extends object ? { [K in keyof P]-?: Same<{ [Q in K]: P[K] }, { -readonly [Q in K]: P[K] }> extends true ? never : K }[keyof P] : never;
 type ParamAt<F, I> = I extends keyof Params<F> ? Params<F>[I] : never;
 type Writes<FO, FN> = { [Q in \`readonly:\${Pos<FO> | Pos<FN>}\`]: Q extends \`readonly:\${infer I}\` ? [ReadonlyKeys<ParamAt<FO, I>>, ReadonlyKeys<ParamAt<FN, I>>] : never };
@@ -93,6 +96,8 @@ export function buildProbe(snapshots, common, members) {
     if (shape === 'object') {
       assert(old, 'arms', `Clean<Unpaired<${O}, ${N}>>`);
       for (const [field, assertion] of FIELDS) assert(old, assertion, `Clean<FieldDiff<${O}, ${N}, '${field}'>>`);
+      // Readonly is read for the members the probe examines: the others are the same declaration with the same readonly modifier.
+      if (examined.length > 0) assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${union(examined)}>>`);
     }
     if (selfCallable) assert(old, 'handler', `Clean<Quiet<Disagree<Evidence<${O}, ${N}>>>>`);
     // The compiler's own view of which examined members are callable must be the classification's.

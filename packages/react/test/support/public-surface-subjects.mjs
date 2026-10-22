@@ -18,6 +18,9 @@ import { createSnapshots, entrySpecifier, loadBaseline, loadCurrent } from './pu
 // Bundler resolution reads the package export maps the way the packed consumer does.
 export const PROJECT_OPTIONS = { target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', skipLibCheck: false };
 const SPELLING = NodeBuilderFlags.UseFullyQualifiedType | NodeBuilderFlags.NoTruncation;
+// The readonly bit of a property symbol's check flags (TypeScript's CheckFlags.Readonly, which the API does not
+// export): a mapped or instantiated property carries its own, where a declared one has the modifier of its declaration.
+const READONLY_CHECK_FLAG = 8;
 // The depth static parts are followed to (`Sidebar.AccountCard.Something`); a cycle stops sooner.
 const MAX_PART_DEPTH = 4;
 
@@ -162,8 +165,9 @@ export function commonSubjects(baseline, current) {
  * - `shape` is `object` when either snapshot's type has an object or intersection arm, else `value`.
  * - `selfCallable`: an exported callback type, probed as a handler target itself.
  * - `examined`: the members the probe looks at by name, because some declaration of theirs is in a
- *   snapshot's own files, or an inherited one is not the same declaration and the same resolved type
- *   on both sides (React's own members that are, are not examined: the shared checker shows them identical);
+ *   snapshot's own files, or an inherited one is not the same declaration, resolved type and readonly
+ *   modifier on both sides (React's own members that are, are not examined: the shared checker shows
+ *   them identical);
  * - `callable`: the examined members that are callable, which get the handler probes.
  * Arms of a union are paired by mutual assignability; a subject with an unpaired arm examines every member.
  */
@@ -208,7 +212,8 @@ export function classifyMembers(snapshots, common) {
         const identical = pairs.every(([i, j]) => {
           const [left, right] = [properties[i].get(name), properties[oldArms.length + j].get(name)];
           if (!left || !right) return !left && !right;
-          return declarationKey(left) === declarationKey(right) && checker.getTypeOfSymbol(left)?.id === checker.getTypeOfSymbol(right)?.id;
+          return declarationKey(left) === declarationKey(right) && checker.getTypeOfSymbol(left)?.id === checker.getTypeOfSymbol(right)?.id
+            && (left.checkFlags & READONLY_CHECK_FLAG) === (right.checkFlags & READONLY_CHECK_FLAG);
         });
         if (!identical) examined.add(name);
       }

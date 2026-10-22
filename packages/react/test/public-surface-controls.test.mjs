@@ -156,6 +156,24 @@ export declare const Kept: { Search: React.${component}<{ label?: string } & Rea
   });
 });
 
+test('a readonly modifier that goes missing from a member fails the pair proof, whether the member is declared here or inherited', () => {
+  // Assignability ignores readonly, so mutual assignability passes both.
+  const own = (modifier) => `export interface Swatch { ${modifier}primary: string; readonly secondary: string }\n`;
+  withPair(own('readonly '), own(''), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['Swatch readonly']));
+    assert.deepEqual(failuresOf(comparison, 'exact'), expected(['Swatch readonly']));
+    const [{ loose }] = comparison.runs;
+    assert.deepEqual(loose.failures.map(({ old, new: next }) => [old, next]), [['"primary" | "secondary"', '"secondary"']]);
+  });
+  // An inherited member is the same declaration with the same type, so only its modifier tells the packages apart.
+  const inherited = (wrap) => `import type * as React from 'react';\nexport type Div = ${wrap('React.HTMLAttributes<HTMLDivElement>')} & { label?: string };\n`;
+  withPair(inherited((type) => type), inherited((type) => `Readonly<${type}>`), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['Div readonly']));
+  });
+});
+
 // Two packages whose declarations import their own name: the self-import is what a wrong layout redirects.
 // `Base` differs between them, so a redirected import is a visible type difference.
 const packageFiles = (id) => ({
