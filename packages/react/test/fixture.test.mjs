@@ -242,6 +242,9 @@ const minimalRenders = {
   CheckboxGroup: () => h(generated.CheckboxGroup, { label: 'Group' }, h(generated.Checkbox, { value: 'a' }, 'A')),
   RadioGroup: () => h(generated.RadioGroup, { label: 'Choice', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] }),
   Autocomplete: () => h(generated.Autocomplete, { label: 'City', items: ['Melbourne'] }),
+  // A calendar with no date defers its markup to the client, so these carry one, and the server renders the calendar itself.
+  Calendar: () => h(generated.Calendar, { label: 'Date', defaultValue: '2025-01-15' }),
+  RangeCalendar: () => h(generated.RangeCalendar, { label: 'Range', defaultValue: { start: '2025-01-10', end: '2025-01-12' } }),
   Tabs: () => h(generated.Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }),
 };
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];

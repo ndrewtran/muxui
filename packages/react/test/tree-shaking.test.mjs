@@ -171,6 +171,15 @@ test('a bundle that uses one collections family keeps its own module and only th
   }
 });
 
+// Both calendars live in calendar.js, so either one keeps the module, the icon button its month buttons use,
+// and the three calendar motion modules. Through the barrel, a bundle keeps exactly these package modules.
+test('a bundle that uses Calendar or RangeCalendar keeps its own module, the icon button, and the calendar motion modules', async () => {
+  const kept = ['button.js', 'calendar-height-motion.mjs', 'calendar-selection-motion.mjs', 'calendar.js', 'control-utils.js', 'icon-button.js', 'motion-geometry.mjs', 'motion.mjs', 'range-selection-motion.mjs'];
+  for (const name of ['Calendar', 'RangeCalendar']) {
+    assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), kept, name);
+  }
+});
+
 // The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
 // guard and a picker no motion. Through the barrel, a bundle keeps exactly these package modules.
 test('a bundle that uses one color family keeps its own module and only the shared and motion modules it needs', async () => {

@@ -7,6 +7,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
+import { CalendarContext, RangeCalendarContext } from 'react-aria-components';
 import {
   Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel,
   ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup,
@@ -2003,6 +2004,83 @@ test('R1.3 unavailable calendar dates stay focusable but never select', async ()
     await act(async () => container.querySelector('.muxui-calendar-next').click());
     assert.deepEqual(rangeChanges, []);
     assert.ok(rangeFocus.every((date) => /^\d{4}-\d{2}-\d{2}$/u.test(date)));
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+const calendarDay = (container, text) => [...container.querySelectorAll('.muxui-calendar-cell, .muxui-range-calendar-cell')].find((cell) => cell.textContent === text && !cell.hasAttribute('data-outside-month'));
+const selectedDays = (container) => [...container.querySelectorAll('[data-selected="true"]')].map((cell) => cell.textContent);
+
+// React Aria merges a context's props under the component's own, and an explicit false overrides an inherited
+// isDisabled or isReadOnly. Calendar sends disabled and readOnly as given, so a parameter default of false would
+// make a click select inside a disabled or read-only CalendarContext.
+test('R1.3 a CalendarContext that disables or locks a Calendar keeps its dates from being selected', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  try {
+    for (const [context, selects] of [[undefined, true], [{ isDisabled: true }, false], [{ isReadOnly: true }, false]]) {
+      const changes = [];
+      const calendar = React.createElement(Calendar, { label: 'Date', defaultValue: '2025-01-15', onChange: (date) => changes.push(date) });
+      await act(async () => root.render(context ? React.createElement(CalendarContext.Provider, { value: context }, calendar) : calendar));
+      const before = selectedDays(container);
+      await act(async () => calendarDay(container, '20').click());
+      const name = JSON.stringify(context ?? 'no context');
+      assert.deepEqual(changes, selects ? ['2025-01-20'] : [], name);
+      assert.deepEqual(selectedDays(container), selects ? ['20'] : before, name);
+    }
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+// RangeCalendar already sent disabled, readOnly, and required as false before the move, so a RangeCalendarContext
+// does not reach it and only its own props lock it. This pins that, so adding or dropping a default is deliberate.
+test('R1.3 a RangeCalendar is locked by its own disabled and readOnly, not by a RangeCalendarContext', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  try {
+    for (const [name, context, props, selects] of [
+      ['no lock', undefined, {}, true],
+      ['context isDisabled', { isDisabled: true }, {}, true],
+      ['context isReadOnly', { isReadOnly: true }, {}, true],
+      ['disabled', undefined, { disabled: true }, false],
+      ['readOnly', undefined, { readOnly: true }, false],
+    ]) {
+      const changes = [];
+      const calendar = React.createElement(RangeCalendar, { label: 'Range', defaultValue: { start: '2025-01-10', end: '2025-01-12' }, onChange: (range) => changes.push(range), ...props });
+      await act(async () => root.render(context ? React.createElement(RangeCalendarContext.Provider, { value: context }, calendar) : calendar));
+      await act(async () => calendarDay(container, '20').click());
+      await act(async () => calendarDay(container, '22').click());
+      assert.deepEqual(changes, selects ? [{ start: '2025-01-20', end: '2025-01-22' }] : [], name);
+    }
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+// MuxUIDateValue is any string, and an empty one counts as no date: it leaves a Calendar uncontrolled, where null
+// keeps it controlled and empty, and it does not throw.
+test('R1.3 an empty string is no date for a Calendar', async () => {
+  const markup = (props) => renderToString(React.createElement(Calendar, { label: 'Date', ...props }));
+  assert.equal(markup({ value: '' }), markup({}));
+  assert.equal(markup({ defaultValue: '' }), markup({}));
+  assert.equal(markup({ focusedValue: '' }), markup({}));
+  assert.throws(() => markup({ value: '2025-02-30' }), /Calendar values must use YYYY-MM-DD ISO format/u);
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  try {
+    for (const [value, selects] of [['', true], [null, false]]) {
+      await act(async () => root.render(React.createElement(Calendar, { key: String(value), label: 'Date', value, focusedValue: '2025-01-15' })));
+      await act(async () => calendarDay(container, '20').click());
+      assert.deepEqual(selectedDays(container), selects ? ['20'] : [], JSON.stringify(value));
+    }
   } finally {
     await act(async () => root.unmount());
     env.restore();
