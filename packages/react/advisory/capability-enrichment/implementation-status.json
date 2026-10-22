@@ -5633,7 +5633,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5672,7 +5672,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5711,7 +5711,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5750,7 +5750,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5789,7 +5789,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5828,7 +5828,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5867,7 +5867,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }

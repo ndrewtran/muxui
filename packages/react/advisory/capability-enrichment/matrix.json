@@ -7539,7 +7539,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-wheel/artifact.json#bindings/web.react",
-          "packages/react/src/color-wheel.mjs#ColorWheel",
+          "packages/react/src/color-wheel.ts#ColorWheel",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

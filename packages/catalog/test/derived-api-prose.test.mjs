@@ -126,6 +126,8 @@ const GUIDES = {
   markdown: { native: ['#', '##', '###', 'h1', 'h2', 'pre', '#summary', 'http', 'https', 'mailto'] },
   // aria-label is the native attribute the example names the swatch with.
   'color-swatch': { native: ['aria-label'] },
+  // rgba() and hsla() are the CSS color functions onChange returns.
+  'color-wheel': { native: ['rgba()', 'hsla()'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

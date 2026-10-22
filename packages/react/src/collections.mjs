@@ -3,7 +3,7 @@ export { ColorSwatch } from './color-swatch.ts';
 export { ColorField } from './color-field.mjs';
 export { ColorArea } from './color-area.mjs';
 export { ColorSlider } from './color-slider.mjs';
-export { ColorWheel } from './color-wheel.mjs';
+export { ColorWheel } from './color-wheel.ts';
 export { ColorPicker } from './color-picker.mjs';
 export { ColorSwatchPicker } from './color-swatch-picker.mjs';
 export { ListBox } from './list-box.mjs';

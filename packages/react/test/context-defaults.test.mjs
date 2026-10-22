@@ -53,7 +53,7 @@ const audited = [
       ...expand(overlayFamilies, ['placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding']),
       ...expand(['preview-trigger', 'tooltip'], ['delay', 'closeDelay']),
       // The color controls send isDisabled (and ColorField isReadOnly and isRequired) as a boolean: their own flag, else the enclosing ColorPicker's.
-      ...expand(['color-swatch'], ['disabled']),
+      ...expand(['color-swatch', 'color-wheel'], ['disabled']),
     ],
   },
   {
@@ -69,6 +69,8 @@ const audited = [
       ...expand(['activity'], ['defaultExpanded']),
       // CheckboxGroup keeps its orientation for CSS and gives React Aria none.
       ...expand(['checkbox-group'], ['orientation']),
+      // The color controls enforce readOnly themselves, with a data attribute and guards, and send React Aria no isReadOnly.
+      ...expand(['color-wheel'], ['readOnly']),
     ],
   },
   {
