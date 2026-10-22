@@ -1889,7 +1889,12 @@ function storyProofEnvironment(storyRun, environment) {
 export const storyShardPageBudget = 80;
 
 const sharedGroup = '*';
+// The limit on a group's checks step, per kind.
 const groupTimeoutMinutes = { checks: 30, react: 30, browser: 30, tailwind: 15, storybook: 30 };
+// Extra job time for a group that installs Playwright's system libraries. apt can crawl on a slow
+// runner-image mirror (22 to 23 minutes for one step in run 39806468125), so that setup must not
+// spend the checks limit. The workflow bounds the install step itself below this allowance.
+const browserSetupAllowanceMinutes = 30;
 
 // Package checks run in independent CI groups so the two long suites overlap
 // instead of queueing behind every other package check. Every `checks-*` id
@@ -2538,10 +2543,17 @@ export function fullWorkspacePlan(reason = 'full workspace graph requested') {
 
 // The GitHub Actions matrix: one entry per independently runnable group.
 // `reusedFrom` and `browserEngines` are always strings so workflow `if:`
-// comparisons stay exact.
+// comparisons stay exact. `timeoutMinutes` limits the checks step and
+// `jobTimeoutMinutes` the whole job: expressions cannot add, so the planner adds
+// the setup allowance of a group that installs browser system libraries.
 export function groupMatrix(groups, decisions = []) {
   return groups.map(({ id, kind, timeoutMinutes, browserEngines = '' }) => ({
-    id, kind, timeoutMinutes, browserEngines, reusedFrom: decisions.find((decision) => decision.id === id)?.reusedFrom ?? '',
+    id,
+    kind,
+    timeoutMinutes,
+    jobTimeoutMinutes: timeoutMinutes + (browserEngines === '' ? 0 : browserSetupAllowanceMinutes),
+    browserEngines,
+    reusedFrom: decisions.find((decision) => decision.id === id)?.reusedFrom ?? '',
   }));
 }
 
