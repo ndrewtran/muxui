@@ -1,0 +1,701 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/menu.ts",
+  "component": "muxui:component:menu",
+  "binding": "web.react",
+  "export": "Menu",
+  "api": {
+    "props": [
+      "open",
+      "defaultOpen",
+      "disabled",
+      "shouldCloseOnSelect"
+    ],
+    "events": [
+      "openChange",
+      "action",
+      "select"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "disabled": false,
+      "shouldCloseOnSelect": true
+    },
+    "propDetails": {
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the menu is open, when the caller controls it. A disabled menu is closed whatever this says."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the menu starts open, when it controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the trigger and every item. A child's own `disabled={false}` cannot re-enable them under a disabled root."
+      },
+      "shouldCloseOnSelect": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether choosing an item closes the menu. A Menu.List or Menu.Item can set its own, which wins over this."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the next open state when the menu opens or closes. It is not called for a request to open a disabled menu."
+      },
+      "action": {
+        "prop": "onAction",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called when the user activates an item in any list of the menu, after the item's own `onAction` and the list's callbacks. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the menu is disabled."
+      },
+      "select": {
+        "prop": "onSelect",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the same item as `onAction`, right after it."
+      }
+    },
+    "types": {
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      }
+    },
+    "partApis": {
+      "trigger": {
+        "member": "Trigger",
+        "props": [
+          "disabled"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "boolean"
+                },
+                {
+                  "kind": "undefined"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Disables the trigger: it can be neither focused nor activated. A disabled menu disables it whatever this says."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "reference",
+                    "name": "ButtonActivationEvent"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the user activates the trigger, before the menu opens or closes. It is not called while the trigger is disabled."
+          }
+        },
+        "types": {
+          "ButtonActivationEvent": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "activate"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "pointerType",
+                  "type": {
+                    "kind": "reference",
+                    "name": "ButtonPointerType"
+                  },
+                  "required": true,
+                  "readonly": true
+                },
+                {
+                  "name": "target",
+                  "type": {
+                    "kind": "host",
+                    "name": "HTMLButtonElement"
+                  },
+                  "required": true,
+                  "readonly": true
+                }
+              ]
+            },
+            "description": "What `onActivate` reports for one activation."
+          },
+          "ButtonPointerType": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "mouse"
+                },
+                {
+                  "kind": "literal",
+                  "value": "pen"
+                },
+                {
+                  "kind": "literal",
+                  "value": "touch"
+                },
+                {
+                  "kind": "literal",
+                  "value": "keyboard"
+                },
+                {
+                  "kind": "literal",
+                  "value": "virtual"
+                },
+                {
+                  "kind": "undefined"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "popup": {
+        "member": "Popup",
+        "props": [
+          "placement",
+          "offset",
+          "crossOffset",
+          "shouldFlip",
+          "containerPadding",
+          "modal"
+        ],
+        "events": [],
+        "defaults": {
+          "offset": 4,
+          "crossOffset": 0,
+          "shouldFlip": true,
+          "containerPadding": 12,
+          "modal": true
+        },
+        "propDetails": {
+          "placement": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUIPlacement"
+            },
+            "required": false,
+            "enum": [
+              "top",
+              "bottom",
+              "start",
+              "end",
+              "top-start",
+              "top-end",
+              "bottom-start",
+              "bottom-end",
+              "start-top",
+              "start-bottom",
+              "end-top",
+              "end-bottom"
+            ],
+            "description": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a popup opens at `bottom-start`, and a popup inside a Menu.Submenu opens at `end-top`."
+          },
+          "offset": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite."
+          },
+          "crossOffset": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "The shift in pixels along the side the popup is placed against. Must be finite."
+          },
+          "shouldFlip": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the popup moves to the opposite side when the placed side has no room."
+          },
+          "containerPadding": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative."
+          },
+          "modal": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible."
+          }
+        },
+        "eventDetails": {},
+        "types": {
+          "MuxUIPlacement": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "top"
+                },
+                {
+                  "kind": "literal",
+                  "value": "bottom"
+                },
+                {
+                  "kind": "literal",
+                  "value": "start"
+                },
+                {
+                  "kind": "literal",
+                  "value": "end"
+                },
+                {
+                  "kind": "literal",
+                  "value": "top-start"
+                },
+                {
+                  "kind": "literal",
+                  "value": "top-end"
+                },
+                {
+                  "kind": "literal",
+                  "value": "bottom-start"
+                },
+                {
+                  "kind": "literal",
+                  "value": "bottom-end"
+                },
+                {
+                  "kind": "literal",
+                  "value": "start-top"
+                },
+                {
+                  "kind": "literal",
+                  "value": "start-bottom"
+                },
+                {
+                  "kind": "literal",
+                  "value": "end-top"
+                },
+                {
+                  "kind": "literal",
+                  "value": "end-bottom"
+                }
+              ]
+            },
+            "description": "How a floating overlay is placed beside its trigger."
+          }
+        }
+      },
+      "list": {
+        "member": "List",
+        "props": [
+          "items",
+          "disabled",
+          "shouldCloseOnSelect"
+        ],
+        "events": [
+          "action",
+          "select"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "items": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUIItems"
+            },
+            "required": false,
+            "description": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+          },
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Disables every item and stops the action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+          },
+          "shouldCloseOnSelect": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether choosing an item closes the menu, in place of the root's setting. A Menu.Item can still set its own."
+          }
+        },
+        "eventDetails": {
+          "action": {
+            "prop": "onAction",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "item",
+                  "type": {
+                    "kind": "reference",
+                    "name": "MuxUICollectionItem"
+                  },
+                  "required": false
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+          },
+          "select": {
+            "prop": "onSelect",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "item",
+                  "type": {
+                    "kind": "reference",
+                    "name": "MuxUICollectionItem"
+                  },
+                  "required": false
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the same item as `onAction`, right after it."
+          }
+        },
+        "types": {
+          "MuxUICollectionItem": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "host",
+                    "name": "React.ReactNode"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false,
+                  "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+                },
+                {
+                  "name": "textValue",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "disabled",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ],
+              "additional": "unknown"
+            },
+            "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+          },
+          "MuxUIItems": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUICollectionItem"
+                  },
+                  {
+                    "kind": "string"
+                  }
+                ]
+              },
+              "readonly": false
+            }
+          }
+        }
+      },
+      "item": {
+        "member": "Item",
+        "props": [
+          "id",
+          "textValue",
+          "disabled",
+          "shouldCloseOnSelect"
+        ],
+        "events": [
+          "action"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "id": {
+            "type": {
+              "kind": "string"
+            },
+            "required": true,
+            "description": "The stable string id the action callbacks report."
+          },
+          "textValue": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+          },
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Disables the item. A disabled list or menu disables every item whatever this says."
+          },
+          "shouldCloseOnSelect": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether choosing this item closes the menu, in place of the list's and the root's setting. Left unset, the item follows them."
+          }
+        },
+        "eventDetails": {
+          "action": {
+            "prop": "onAction",
+            "type": {
+              "kind": "function",
+              "parameters": [],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the user activates the item, before the list's and the root's callbacks. It is not called while the item is disabled."
+          }
+        },
+        "types": {}
+      },
+      "submenu": {
+        "member": "Submenu",
+        "props": [
+          "delay"
+        ],
+        "events": [],
+        "defaults": {
+          "delay": 200
+        },
+        "propDetails": {
+          "delay": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "How long in milliseconds the pointer rests on the submenu's item before the submenu opens. Must be finite and not negative."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "section": {
+        "member": "Section",
+        "props": [
+          "title"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "title": {
+            "type": {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            "required": false,
+            "description": "The visible heading of the section, rendered in a Menu.Header. Without one, name the section with `aria-label`."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

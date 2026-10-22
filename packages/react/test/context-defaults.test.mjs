@@ -74,6 +74,11 @@ const audited = [
       // so a ListBoxContext never supplied them. Each ListBox.Item sent isDisabled as a boolean: its own flag, else the list's.
       ...expand(['list-box'], ['selectionMode', 'orientation']),
       ...expand(['list-box.item'], ['disabled']),
+      // Menu.Trigger and Menu.Item sent isDisabled as a boolean: their own flag, else the menu's. Menu.Popup sent React Aria its geometry and isNonModal
+      // as its own values, through the overlay geometry helper, whether or not they were set, and Menu.Submenu sent its delay.
+      ...expand(['menu.trigger', 'menu.item'], ['disabled']),
+      ...expand(['menu.popup'], ['offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal']),
+      ...expand(['menu.submenu'], ['delay']),
     ],
   },
   {
@@ -96,6 +101,10 @@ const audited = [
       ...expand(['slider'], ['readOnly']),
       // ListBox turns its disabled into disabledKeys and data attributes and never sends React Aria isDisabled.
       ...expand(['list-box'], ['disabled']),
+      // Menu.Root drives React Aria's MenuTrigger with a controlled isOpen and sends it no isDisabled, so no React Aria context can supply either.
+      // Menu.List turns its disabled into disabledKeys and data attributes and never sends React Aria isDisabled.
+      ...expand(['menu'], ['defaultOpen', 'disabled']),
+      ...expand(['menu.list'], ['disabled']),
     ],
   },
   {

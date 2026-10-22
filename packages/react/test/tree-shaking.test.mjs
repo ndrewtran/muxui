@@ -113,7 +113,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
     'combo-box.mjs': ['ComboBox'],
     'grid-list.mjs': ['GridList'],
     'list-box.js': ['ListBox'],
-    'menu.mjs': ['Menu'],
+    'menu.js': ['Menu'],
     'radio-group.js': ['RadioGroup'],
     'select.mjs': ['Select'],
     'tabs.mjs': ['Tabs'],
@@ -130,7 +130,8 @@ test('the collections family modules keep the pure annotation on each wrapper', 
       assert.match(emitted, new RegExp(`^export const ${name} = /\\*\\s*[#@]__PURE__\\s*\\*/ \\(\\(\\) => \\{$`, 'mu'), `${module}: ${name}`);
     }
   }
-  assert.match(readFileSync(resolve(generated, 'menu.mjs'), 'utf8'), /^ {2}const MenuPopup = \/\*#__PURE__\*\/ React\.forwardRef\(function MenuPopup/mu);
+  // tsc indents the wrapper's body by four spaces.
+  assert.match(readFileSync(resolve(generated, 'menu.js'), 'utf8'), /^ {4}const MenuPopup = \/\*#__PURE__\*\/ React\.forwardRef\(function MenuPopup/mu);
 });
 
 test('a bundle that uses one collections family keeps its own module and only the motion modules it needs', async () => {
@@ -186,6 +187,15 @@ test('a bundle that uses ListBox keeps its own module, the collection item helpe
   const kept = ['collection-items.js', 'control-utils.js', 'list-box.js', 'listbox-motion.mjs', 'motion-geometry.mjs', 'motion.mjs'];
   assert.deepEqual((await bundledModules('ListBox', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('ListBox', 'index.mjs')).sort(), kept);
+});
+
+// Menu keeps its own module, the item helpers it normalizes with, the trigger it renders, the shared class and name helper,
+// and its menu and popup motion. Through the barrel or the index, a bundle keeps exactly these package modules and no
+// other family's, which the three contexts and the geometry constant at the module's top level must not change.
+test('a bundle that uses Menu keeps its own module, the collection helpers, and the menu and popup motion modules', async () => {
+  const kept = ['collection-items.js', 'collection-trigger.js', 'control-utils.js', 'menu-motion.mjs', 'menu.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs'];
+  assert.deepEqual((await bundledModules('Menu', 'collections.mjs')).sort(), kept);
+  assert.deepEqual((await bundledModules('Menu', 'index.mjs')).sort(), kept);
 });
 
 // The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
