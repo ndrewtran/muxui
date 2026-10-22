@@ -343,6 +343,24 @@ function undeclaredProps(types, name, props) {
   return props.filter((prop) => !new RegExp(`(?:\\b|['"])${prop}['"]?\\??\\s*:`, 'u').test(surface));
 }
 
+/**
+ * Everything a part's block gets wrong against the renderer, checked as the root's is: its defaults in its own element,
+ * its behaviour-only defaults, a default no observer covers, and a prop its declarations do not list.
+ */
+async function partProblems(types, family, part, block) {
+  const qualified = `${family}.${part}`;
+  const render = partRenders[qualified];
+  const rendered = render === undefined
+    ? (Object.keys(block.defaults).length === 0 ? [] : [`${qualified} has no render`])
+    : defaultMismatches(renderToString(render.render()), block.defaults, render.scope);
+  return [
+    ...rendered,
+    ...await behaviourMismatches(qualified, block.defaults),
+    ...unobservedDefaults(qualified, block.defaults).map((key) => `${key}: no observer`),
+    ...undeclaredProps(types, `${family}${block.member}`, block.props).map((prop) => `${prop}: not declared`),
+  ];
+}
+
 test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
   // A family's types sit in the index or in the declarations of the module that owns it, so every shipped declaration is read.
   const types = joinedDeclarations();
@@ -355,14 +373,9 @@ test('catalog defaults and props agree with the renderer for every generator-gua
     assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
     assert.deepEqual(unobservedDefaults(name, api.defaults), [], `${name} defaults each have a markup or behaviour observer`);
     assert.deepEqual(undeclaredProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
-    // Each part that owns props is observed on its own: its defaults render in its element, and its props are declared.
+    // Each part that owns props is observed on its own, as the root is.
     for (const [part, block] of Object.entries(api.partApis ?? {})) {
-      const qualified = `${name}.${part}`;
-      const observed = partRenders[qualified];
-      assert.ok(observed !== undefined || Object.keys(block.defaults).length === 0, `${qualified} defaults have a render`);
-      if (observed !== undefined) assert.deepEqual(defaultMismatches(renderToString(observed.render()), block.defaults, observed.scope), [], `${qualified} renders the catalog defaults`);
-      assert.deepEqual(unobservedDefaults(qualified, block.defaults), [], `${qualified} defaults each have a markup or behaviour observer`);
-      assert.deepEqual(undeclaredProps(types, `${name}${block.member}`, block.props), [], `${qualified} generated declarations list the catalog props`);
+      assert.deepEqual(await partProblems(types, name, part, block), [], `${name}.${part} agrees with the renderer`);
     }
     if ('size' in api.defaults) assert.equal(markupValues.size(new JSDOM(markup).window.document), api.defaults.size, `${name} exposes its size default`);
   }
@@ -374,15 +387,25 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   // Observers outlive the defaults they check: a pending default, were Button to declare one, is still observed.
   assert.deepEqual(unobservedDefaults('Button', { ...apis.Button.defaults, pending: false }), []);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Button()), { pending: true }), ['pending: catalog true, rendered false']);
-  // A part's catalog default is compared with the part's element: a changed default, an unrendered part, or a prop its
-  // declarations do not list fails, and a root default stays the root's.
+  // A part's catalog block is compared with the part's element and behaviour: a changed default, an unrendered part, an
+  // unobserved default, or a prop its declarations do not list fails, and a root default stays the root's.
   const item = apis.ListBox.partApis.item;
   const itemMarkup = renderToString(partRenders['ListBox.item'].render());
-  assert.deepEqual(defaultMismatches(itemMarkup, item.defaults, partRenders['ListBox.item'].scope), []);
-  assert.deepEqual(defaultMismatches(itemMarkup, { ...item.defaults, disabled: true }, partRenders['ListBox.item'].scope), ['disabled: catalog true, rendered false']);
+  const changed = (defaults) => partProblems(types, 'ListBox', 'item', { ...item, defaults: { ...item.defaults, ...defaults } });
+  assert.deepEqual(await partProblems(types, 'ListBox', 'item', item), []);
+  assert.deepEqual(await changed({ disabled: true }), ['disabled: catalog true, rendered false']);
   assert.deepEqual(defaultMismatches(itemMarkup, item.defaults, '[role="gone"]'), ['scope [role="gone"] is not rendered']);
-  assert.deepEqual(unobservedDefaults('ListBox.item', { ...item.defaults, tone: 'quiet' }), ['tone'], 'a part default with no observer is reported');
-  assert.deepEqual(undeclaredProps(types, 'ListBoxItem', [...item.props, 'missingProp']), ['missingProp']);
+  assert.deepEqual(await partProblems(types, 'ListBox', 'gone', { member: 'Gone', props: [], defaults: { disabled: false } }), ['ListBox.gone has no render']);
+  assert.deepEqual(await changed({ tone: 'quiet' }), ['tone: no observer'], 'a part default with no observer is reported');
+  assert.deepEqual(await partProblems(types, 'ListBox', 'item', { ...item, props: [...item.props, 'missingProp'] }), ['missingProp: not declared']);
+  // A behaviour-only default of a part is observed under the part's name: the part loop runs it, and a wrong default fails.
+  behaviourObservers['ListBox.item'] = { textValue: () => 'One' };
+  try {
+    assert.deepEqual(await changed({ textValue: 'One' }), []);
+    assert.deepEqual(await changed({ textValue: 'Wrong' }), ['textValue: catalog "Wrong", behaves "One"']);
+  } finally {
+    delete behaviourObservers['ListBox.item'];
+  }
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
