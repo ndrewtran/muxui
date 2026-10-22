@@ -43,7 +43,9 @@ import {
   renderStateCoverage,
   stateArgsForBinding,
   stateCoverageForBinding,
+  STORY_API_PARTS,
   STORY_APPLICABILITY,
+  storyApi,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
@@ -269,9 +271,56 @@ test('every story exposes exactly its canonical Mux UI-owned properties', () => 
   for (const record of historicalManifest.families) {
     const binding = byFamily.get(record.family);
     assert.ok(binding, `unknown manifest family ${record.family}`);
-    assert.deepEqual(Object.keys(argTypesForBinding(binding)).sort(), binding.api.props.slice().sort(), record.family);
-    assert.deepEqual(record.props, binding.api.props, record.family);
+    assert.deepEqual(Object.keys(argTypesForBinding(binding)).sort(), storyApi(binding).props.slice().sort(), record.family);
+    assert.deepEqual(record.props, storyApi(binding).props, record.family);
     assert.equal(record.tranche, snapshot.families.find(({ muxuiPublicFamily, corePublicFamily }) => (muxuiPublicFamily ?? corePublicFamily) === record.family).tranche, record.family);
+  }
+});
+
+// A compound's Controls and states take one set of args, so the adapter folds the parts it renders from them into the
+// root's API. That is the adapter's choice: every part stays in the binding's partApis, which the reference lists.
+test('storyApi folds the parts the adapter names into the root\'s API and leaves the binding alone', () => {
+  const block = (props, extra = {}) => ({
+    props: Object.keys(props),
+    events: [],
+    defaults: {},
+    propDetails: Object.fromEntries(Object.entries(props).map(([name, type]) => [name, { type: { kind: type }, required: false }])),
+    eventDetails: {},
+    types: {},
+    ...extra,
+  });
+  const api = {
+    ...block({ open: 'boolean', placement: 'string' }, { events: ['openChange'], defaults: { placement: 'bottom' }, eventDetails: { openChange: { prop: 'onOpenChange' } }, parts: ['root', 'popup', 'list', 'item'] }),
+    partApis: {
+      popup: { member: 'Popup', ...block({ placement: 'number', offset: 'number', modal: 'boolean' }, { defaults: { offset: 4, placement: 7 } }) },
+      list: { member: 'List', ...block({ items: 'string' }, { events: ['action', 'openChange'], eventDetails: { action: { prop: 'onAction' }, openChange: { prop: 'onOpenChange' } } }) },
+      item: { member: 'Item', ...block({ id: 'string' }) },
+    },
+  };
+  const binding = Object.freeze({ export: 'Thing', api: Object.freeze(api) });
+  // A family with no entry reads its root API as it is.
+  assert.equal(storyApi(binding, {}), binding.api);
+  assert.equal(storyApi(binding, { Other: ['popup'] }), binding.api);
+  const merged = storyApi(binding, { Thing: ['popup', 'list', 'absent'] });
+  // The root's props come first, each prop and event once, and a part the binding lacks adds nothing.
+  assert.deepEqual(merged.props, ['open', 'placement', 'offset', 'modal', 'items']);
+  assert.deepEqual(merged.events, ['openChange', 'action']);
+  // The root's default and detail win over a part's, and a part's fill what the root lacks.
+  assert.deepEqual(merged.defaults, { placement: 'bottom', offset: 4 });
+  assert.equal(merged.propDetails.placement.type.kind, 'string');
+  assert.deepEqual(Object.keys(merged.propDetails).sort(), merged.props.slice().sort());
+  assert.deepEqual(Object.keys(merged.eventDetails).sort(), ['action', 'openChange']);
+  // A part the adapter does not name stays out of the controls, though the binding still lists it.
+  assert.equal(merged.props.includes('id'), false);
+  assert.equal(merged.partApis.item.member, 'Item');
+  assert.deepEqual(merged.parts, ['root', 'popup', 'list', 'item']);
+  // The binding it read from is untouched.
+  assert.deepEqual(binding.api.props, ['open', 'placement']);
+  // Every part the shipped table names exists in that family's partApis, so a renamed part cannot leave a stale entry.
+  const byFamily = new Map(descriptor.bindings.map((entry) => [entry.export, entry]));
+  for (const [family, parts] of Object.entries(STORY_API_PARTS)) {
+    assert.ok(byFamily.has(family), `${family} is a family`);
+    for (const part of parts) assert.ok(byFamily.get(family).api.partApis?.[part] !== undefined, `${family} has a ${part} part API`);
   }
 });
 
@@ -284,8 +333,8 @@ test('generated metadata exposes every canonical event, part, state, and control
     const tranche = record.tranche.replace('.', '-').toLowerCase();
     const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
     const metadata = story.default.parameters.muxuiApi;
-    assert.deepEqual(metadata.props, binding.api.props, `${record.family} props`);
-    assert.deepEqual(metadata.events, binding.api.events, `${record.family} events`);
+    assert.deepEqual(metadata.props, storyApi(binding).props, `${record.family} props`);
+    assert.deepEqual(metadata.events, storyApi(binding).events, `${record.family} events`);
     assert.deepEqual(metadata.parts, binding.api.parts, `${record.family} parts`);
     assert.deepEqual(metadata.states, binding.states, `${record.family} states`);
     assert.deepEqual(metadata.controlled, controlledDefaultPairsForBinding(binding), `${record.family} controlled pairs`);
@@ -1730,7 +1779,7 @@ test('Button Matrix statically covers every finite visual tuple and States keeps
   assert.deepEqual(new Set(tuples), new Set(
     ['sm', 'md', 'lg'].flatMap((size) => ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'].map((variant) => `${variant}/${size}`)),
   ));
-  assert.deepEqual(Object.keys(matrix.argTypes).sort(), binding.api.props.slice().sort());
+  assert.deepEqual(Object.keys(matrix.argTypes).sort(), storyApi(binding).props.slice().sort());
 
   const states = createStory(record, 'states');
   const statesMarkup = renderToStaticMarkup(states.render(states.args));
@@ -1969,7 +2018,7 @@ test('default and state stories use uncontrolled pairs without collapsing state 
     const defaultArgs = storyArgsForBinding(binding, 'default', family);
     const stateArgs = storyArgsForBinding(binding, 'states', family);
     for (const [controlled, uncontrolled] of pairs) {
-      if (!binding.api.props.includes(controlled) || !binding.api.props.includes(uncontrolled)) continue;
+      if (!storyApi(binding).props.includes(controlled) || !storyApi(binding).props.includes(uncontrolled)) continue;
       assert.equal(defaultArgs[controlled], undefined, `${family} default ${controlled}`);
       assert.notEqual(defaultArgs[uncontrolled], undefined, `${family} default ${uncontrolled}`);
       // The States story never sets the controlled prop, and leaves unset the uncontrolled default a row drives.
@@ -2014,12 +2063,12 @@ test('state coverage metadata exposes isolated supported states with canonical a
     assert.ok(coverage.length >= record.states.length, record.family);
     assert.deepEqual(coverage.slice(0, record.states.length).map(({ name }) => name), record.states, record.family);
     for (const { name, args } of coverage) {
-      assert.ok(Object.keys(args).every((prop) => binding.api.props.includes(prop)
+      assert.ok(Object.keys(args).every((prop) => storyApi(binding).props.includes(prop)
         || record.family === 'TagGroup' && name === 'removable' && prop === 'onRemove'), `${record.family}/${name} leaked a non-Mux UI prop`);
     }
     const story = createStory({ family: record.family, tranche: record.tranche, binding }, 'states');
     assert.deepEqual(comparableCoverage(story.parameters.muxuiStateCoverage), comparableCoverage(coverage), `${record.family} metadata`);
-    assert.deepEqual(Object.keys(story.argTypes).sort(), binding.api.props.slice().sort(), `${record.family} controls`);
+    assert.deepEqual(Object.keys(story.argTypes).sort(), storyApi(binding).props.slice().sort(), `${record.family} controls`);
   }
 
   const binding = (family) => byFamily.get(family);
@@ -2566,7 +2615,7 @@ test('generated stories are stock CSF modules that display only the stories that
     const fileName = `${tranche}-${slug}.stories.mjs`;
     const source = await readFile(resolve(appRoot, '.storybook/generated', fileName), 'utf8');
     const body = generatedBody(source, fileName);
-    assert.match(body, /include: binding\.api\.props/);
+    assert.match(body, /include: storyApi\(binding\)\.props/);
     assert.match(body, /argTypesForBinding/);
     assert.match(body, /export const Default/);
     assert.match(body, /export const BrowserProof/);

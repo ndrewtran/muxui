@@ -1119,7 +1119,7 @@ const ANATOMY_PART = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
  * callable compound (ListBox, whose Item is `ListBox.Item`) is its own root, and `parts`
  * maps each of its other anatomy parts that owns Mux UI props to its export member
  * (`{ item: 'Item' }`); each is read like the root, from `<Name><Member>OwnProps`, into
- * `partApis`. `callable` names the anatomy part whose props the export itself must also carry
+ * `partApis`, with defaults when the component's source is given, as for the root. `callable` names the anatomy part whose props the export itself must also carry
  * unchanged (Menu, whose callable is its List): a check, not data. Types declared under
  * `declarationRoot` are Mux UI-owned; any other reference must be an exact host type on
  * the allowlist. Returns a Map from export name to `{ props, events, defaults?,
@@ -1167,7 +1167,6 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
       if (member === part) throw new ApiExtractionError(label, `${anatomyPart} maps to ${member}, which is the root part; the root's API is the family-level block`);
       if (members.has(member)) throw new ApiExtractionError(label, `${members.get(member)} and ${anatomyPart} both map to ${member}; a member has one anatomy part`);
       members.set(member, anatomyPart);
-      if (!sourceFile) throw new ApiExtractionError(label, 'a part reads its defaults from the component source, which is not given');
       return [anatomyPart, { member, ...read({ ownName: `${name}${member}`, member, label, part: true }) }];
     }));
     if (callable !== undefined) {

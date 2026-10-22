@@ -160,36 +160,47 @@ const undeclaredOwners = (guides) => Object.entries(guides)
   .filter(([slug, entry]) => 'declared' in entry && !DECLARATION_ONLY_GUIDES.includes(slug))
   .map(([slug]) => slug);
 
+/** Every name one block owns: its props, events, event props, finite values, and the members of its object types. */
+const blockNames = (block) => [
+  ...block.props,
+  ...block.events,
+  ...Object.values(block.eventDetails).map(({ prop }) => prop),
+  ...Object.values(block.propDetails).flatMap(({ enum: values = [] }) => values),
+  ...memberNames(block.types),
+  ...memberNames(block.propDetails),
+];
+
+/** A derived API's blocks: the root's, then each part's (`partApis`), which owns its own props. */
+const blocksOf = (api) => [api, ...Object.values(api.partApis ?? {})];
+
 /**
  * The names a guide may state for a component: its block, its anatomy, its native values, and the
- * package's own names. An example's attributes are checked against `attributes`; the guide's
- * prose also gets the `declared` spans.
+ * package's own names. An example's attributes are checked against `attributes`, and the attributes
+ * of a part's element (`<ListBox.Item>`) against that part's names (`partAttributes`, by member), so
+ * a part's prop is not the root's; the guide's prose gets every block's names and also the `declared` spans.
  */
 function guideNames({ derived, record, entry: { native = [], declared = [], from = {}, described = {} }, importPaths, componentNames }) {
   const { api } = derived;
-  const attributes = new Set([
+  const shared = [
     ...importPaths,
     ...componentNames,
     ...record.anatomy.map((part) => `${derived.export}.${part[0].toUpperCase()}${part.slice(1)}`),
-    ...api.props,
-    ...api.events,
-    ...Object.values(api.eventDetails).map(({ prop }) => prop),
-    ...Object.values(api.propDetails).flatMap(({ enum: values = [] }) => values),
-    ...memberNames(api.types),
-    ...memberNames(api.propDetails),
     ...native,
-  ]);
-  return { attributes, prose: new Set([...attributes, ...declared, ...Object.values(from).flat(), ...Object.values(described).flat()]) };
+  ];
+  const attributes = new Set([...shared, ...blockNames(api)]);
+  const partAttributes = new Map(Object.values(api.partApis ?? {}).map((part) => [part.member, new Set([...shared, ...blockNames(part)])]));
+  const partNames = Object.values(api.partApis ?? {}).flatMap(blockNames);
+  return { attributes, partAttributes, prose: new Set([...attributes, ...partNames, ...declared, ...Object.values(from).flat(), ...Object.values(described).flat()]) };
 }
 
 /** The spans of `spans` that `api` (another component's derived API) does not own as a prop, event prop, or finite value. */
 function missingFromOwner(api, spans) {
-  const owned = new Set([
-    ...api.props,
-    ...Object.values(api.eventDetails).map(({ prop }) => prop),
-    ...Object.values(api.propDetails).flatMap(({ enum: values = [] }) => values),
-    ...memberNames(api.types),
-  ]);
+  const owned = new Set(blocksOf(api).flatMap((block) => [
+    ...block.props,
+    ...Object.values(block.eventDetails).map(({ prop }) => prop),
+    ...Object.values(block.propDetails).flatMap(({ enum: values = [] }) => values),
+    ...memberNames(block.types),
+  ]));
   return spans.filter((span) => !owned.has(span));
 }
 
@@ -197,11 +208,26 @@ function missingFromOwner(api, spans) {
 const missingFromDescription = (api, described) => Object.entries(described)
   .flatMap(([type, spans]) => spans.filter((span) => !api.types[type]?.description.includes(span)).map((span) => `${type}: ${span}`));
 
-/** The attribute names an example gives the component that `checked` does not hold. */
-function unknownExampleAttributes(code, exportName, checked) {
-  return [...code.matchAll(new RegExp(`<${exportName}\\b([^>]*)>`, 'gu'))]
-    .flatMap(([, attributes]) => [...attributes.matchAll(/([a-zA-Z-]+)=/gu)].map(([, name]) => name))
-    .filter((name) => !checked.has(name));
+/**
+ * The attribute names an example gives the component that `checked` does not hold. The element of a
+ * part (`<ListBox.Item ...>`) is held to that part's names in `partAttributes`, by member, when the
+ * part has an entry there; any other element of the export is held to `checked`.
+ */
+function unknownExampleAttributes(code, exportName, checked, partAttributes = new Map()) {
+  return [...code.matchAll(new RegExp(`<${exportName}(?:\\.([A-Z][A-Za-z0-9]*))?\\b([^>]*)>`, 'gu'))]
+    .flatMap(([, member, attributes]) => [...attributes.matchAll(/([a-zA-Z-]+)=/gu)]
+      .map(([, name]) => name)
+      .filter((name) => !(partAttributes.get(member) ?? checked).has(name)));
+}
+
+/** Whether a prose span `name="value"` or `name={value}` names a prop of the root or of a part and, where the prop is finite, one of its values. */
+function statedAttribute(api, native, span) {
+  const match = /^([a-zA-Z-]+)=(?:"([^"]*)"|\{(.+)\})$/u.exec(span);
+  if (!match || native.includes(span)) return false;
+  return blocksOf(api).filter((block) => block.props.includes(match[1])).some((block) => {
+    const values = block.propDetails[match[1]].enum;
+    return values === undefined || values.includes(match[2] ?? JSON.parse(match[3]));
+  });
 }
 
 const FENCE = /^```[a-z]*\n[\s\S]*?^```$/gmu;
@@ -224,9 +250,9 @@ function absenceClaims(markdown) {
   };
 }
 
-/** The props a guide claims are absent that its derived API has, as props or event props. */
+/** The props a guide claims are absent that its derived API has, in the root's block or a part's, as props or event props. */
 const contradictedAbsences = (markdown, api) => absenceClaims(markdown).claimed
-  .filter((name) => api.props.includes(name) || Object.values(api.eventDetails).some(({ prop }) => prop === name));
+  .filter((name) => blocksOf(api).some((block) => block.props.includes(name) || Object.values(block.eventDetails).some(({ prop }) => prop === name)));
 
 // Architecture, "One owner per fact": a guide states no prop, enum member, default, event,
 // or import path in prose unless a check compares it with the block. Every code span in the
@@ -253,19 +279,13 @@ test('every API name a derived component\'s guide states is in its derived API o
       read(`catalog/components/${slug}/artifact.json`).then(JSON.parse),
     ]);
     const { api } = derived;
-    const props = new Set(api.props);
+    const props = new Set(blocksOf(api).flatMap((block) => block.props));
     // Each absence claim is worded so the check reads it, and the block has no such prop.
     const { claimed: absent, unread } = absenceClaims(guide);
     assert.deepEqual(unread, [], `${slug} guide words an absence the check cannot read; write "no \`name\` prop"`);
     assert.deepEqual(contradictedAbsences(guide, api), [], `${slug} guide claims a prop the derived API has is absent`);
-    const { attributes: checked, prose: proseChecked } = guideNames({ derived, record, entry: GUIDES[slug], importPaths, componentNames });
-    // `name="value"` or `name={value}` names a prop and, where the prop is finite, one of its values.
-    const attribute = (span) => {
-      const match = /^([a-zA-Z-]+)=(?:"([^"]*)"|\{(.+)\})$/u.exec(span);
-      if (!match || native.includes(span)) return false;
-      const values = api.propDetails[match[1]]?.enum;
-      return props.has(match[1]) && (values === undefined || values.includes(match[2] ?? JSON.parse(match[3])));
-    };
+    const { attributes: checked, partAttributes, prose: proseChecked } = guideNames({ derived, record, entry: GUIDES[slug], importPaths, componentNames });
+    const attribute = (span) => statedAttribute(api, native, span);
     const fences = [...guide.matchAll(/^```[a-z]*\n([\s\S]*?)^```$/gmu)].map(([, code]) => code);
     const prose = guide.replace(FENCE, '');
     // The list names only what the guide still states.
@@ -287,7 +307,7 @@ test('every API name a derived component\'s guide states is in its derived API o
         assert.ok(importPaths.includes(path), `${slug} guide imports ${path}`);
         for (const name of names.split(',').map((value) => value.trim())) assert.ok(componentNames.has(name), `${slug} guide imports ${name}`);
       }
-      assert.deepEqual(unknownExampleAttributes(code, derived.export, checked), [], `${slug} guide example attributes`);
+      assert.deepEqual(unknownExampleAttributes(code, derived.export, checked, partAttributes), [], `${slug} guide example attributes`);
     }
   }
 });
@@ -326,6 +346,49 @@ test('a format a guide states is checked against the derived type that describes
   const { attributes, prose } = guideNames({ derived: { api, export: 'Calendar' }, record, entry: GUIDES.calendar, importPaths: [], componentNames: [] });
   assert.equal(prose.has('YYYY-MM-DD'), true);
   assert.equal(attributes.has('YYYY-MM-DD'), false);
+});
+
+// A compound's parts own their props (Decision 0031 D2), and a guide may state them. Each part's names are
+// checked like the root's, and a part's element is held to its own part's, not the root's.
+test('a part\'s props, finite values, and element attributes are checked against that part\'s derived block', () => {
+  const quiet = { type: { kind: 'union', members: [{ kind: 'literal', value: 'quiet' }, { kind: 'literal', value: 'loud' }] }, required: false, enum: ['quiet', 'loud'] };
+  const block = (propDetails, eventDetails = {}) => ({ props: Object.keys(propDetails), events: Object.keys(eventDetails), propDetails, eventDetails, types: {} });
+  const root = block({ size: { type: { kind: 'string' }, required: false } });
+  const item = { member: 'Item', ...block({ value: { type: { kind: 'string' }, required: true }, tone: quiet }, { pick: { prop: 'onPick', type: { kind: 'function', parameters: [], returns: { kind: 'void' } }, required: false } }), defaults: {} };
+  const api = { ...root, partApis: { item } };
+  const record = { anatomy: ['root', 'item'] };
+  const names = (derived, entry = {}) => guideNames({ derived: { export: 'Thing', api: derived }, record, entry, importPaths: [], componentNames: [] });
+  const { attributes, partAttributes, prose } = names(api, { native: ['className'] });
+
+  // Prose may state a part\'s props, event props, and values, which the root\'s attribute names do not hold.
+  for (const span of ['value', 'tone', 'onPick', 'quiet', 'loud', 'size', 'Thing.Item']) assert.equal(prose.has(span), true, span);
+  assert.equal(attributes.has('tone'), false);
+  assert.equal(partAttributes.get('Item').has('tone'), true);
+  assert.equal(partAttributes.get('Item').has('className'), true, 'a native value serves a part\'s element too');
+  assert.equal(partAttributes.get('Item').has('size'), false, 'the root\'s props are not a part\'s');
+  // A part that drops a prop stops excusing the span.
+  const dropped = { ...api, partApis: { item: { ...item, props: ['value'], propDetails: { value: item.propDetails.value } } } };
+  assert.equal(names(dropped).prose.has('tone'), false);
+  assert.equal(names(dropped).prose.has('quiet'), false);
+  // An example holds a part\'s element to that part\'s names, and any other element of the export to the root\'s.
+  assert.deepEqual(unknownExampleAttributes('<Thing size="sm"><Thing.Item value="a" tone="loud" onPick={pick} /></Thing>', 'Thing', attributes, partAttributes), []);
+  assert.deepEqual(unknownExampleAttributes('<Thing tone="loud" />', 'Thing', attributes, partAttributes), ['tone'], 'a part prop on the root');
+  assert.deepEqual(unknownExampleAttributes('<Thing.Item size="sm" />', 'Thing', attributes, partAttributes), ['size'], 'a root prop on a part');
+  assert.deepEqual(unknownExampleAttributes('<Thing.Item gone="sm" />', 'Thing', attributes, partAttributes), ['gone']);
+  assert.deepEqual(unknownExampleAttributes('<Thing.Header size="sm" />', 'Thing', attributes, partAttributes), [], 'a part with no entry is held to the root\'s names');
+  // A prose attribute span names a prop of the root or of any part, and one of that prop\'s finite values.
+  assert.equal(statedAttribute(api, [], 'tone="loud"'), true);
+  assert.equal(statedAttribute(api, [], 'tone="louder"'), false, 'a value the part does not admit');
+  assert.equal(statedAttribute(api, [], 'tone={"quiet"}'), true);
+  assert.equal(statedAttribute(api, [], 'value="a"'), true);
+  assert.equal(statedAttribute(api, [], 'size="sm"'), true);
+  assert.equal(statedAttribute(api, [], 'gone="sm"'), false);
+  assert.equal(statedAttribute({ ...api, partApis: undefined }, [], 'tone="loud"'), false, 'the root alone does not own tone');
+  // An absence claim fails once any block gains the prop or event prop, and a neighbour\'s span is owned by its parts too.
+  assert.deepEqual(contradictedAbsences('Thing has no `tone` prop and no `onPick` prop.', api), ['tone', 'onPick']);
+  assert.deepEqual(contradictedAbsences('Thing has no `tone` prop.', { ...api, partApis: undefined }), []);
+  assert.deepEqual(missingFromOwner(api, ['tone', 'onPick', 'loud', 'size', 'gone']), ['gone']);
+  assert.deepEqual(missingFromOwner({ ...api, partApis: undefined }, ['tone']), ['tone']);
 });
 
 test('declared spans belong to the declaration-only guide and never excuse an example attribute', async () => {

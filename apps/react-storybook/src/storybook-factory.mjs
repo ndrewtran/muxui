@@ -75,8 +75,38 @@ const CONTROLLED_DEFAULT_PAIRS = Object.freeze([
 
 const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
 
+/**
+ * The anatomy parts of a compound whose props and events the Storybook adapter drives through the
+ * family's one set of args, by family. A part not listed here keeps its API in `partApis` alone.
+ * This is the adapter's choice, for Controls and states; the Docs page lists every part separately,
+ * and the merge below never stands in for that complete reference.
+ */
+export const STORY_API_PARTS = Object.freeze({});
+
+/**
+ * The props, events, defaults and details the stories read: the binding's root API, with the parts
+ * `parts` names for its family folded in. A prop the root and a part both own keeps the root's
+ * default and detail (the root comes first), and a prop or event listed by more than one is listed once.
+ * @param {{ export: string, api: object }} binding
+ * @param {Readonly<Record<string, readonly string[]>>} [parts]
+ */
+export function storyApi(binding, parts = STORY_API_PARTS) {
+  const { api } = binding;
+  const merged = (parts[binding.export] ?? []).filter((part) => api.partApis?.[part] !== undefined);
+  if (merged.length === 0) return api;
+  const blocks = [api, ...merged.map((part) => api.partApis[part])];
+  return {
+    ...api,
+    props: [...new Set(blocks.flatMap((block) => block.props))],
+    events: [...new Set(blocks.flatMap((block) => block.events))],
+    defaults: Object.assign({}, ...[...blocks].reverse().map((block) => block.defaults)),
+    propDetails: Object.assign({}, ...[...blocks].reverse().map((block) => block.propDetails)),
+    eventDetails: Object.assign({}, ...[...blocks].reverse().map((block) => block.eventDetails)),
+  };
+}
+
 export function controlledDefaultPairsForBinding(binding) {
-  const props = new Set(binding.api.props);
+  const props = new Set(storyApi(binding).props);
   return CONTROLLED_DEFAULT_PAIRS
     .filter(([controlled, uncontrolled]) => props.has(controlled) && props.has(uncontrolled))
     .map(([controlled, uncontrolled]) => ({ controlled, uncontrolled }));
@@ -89,7 +119,7 @@ export function eventCallbackPropForChannel(channel) {
 }
 
 export function eventBindingsForBinding(binding) {
-  return binding.api.events.map((channel) => ({ channel, prop: eventCallbackPropForChannel(channel) }));
+  return storyApi(binding).events.map((channel) => ({ channel, prop: eventCallbackPropForChannel(channel) }));
 }
 
 // The twelve logical placements of the public MuxUIPlacement type.
@@ -169,15 +199,15 @@ function inferControl(name, defaults, props, family, propDetails) {
 }
 
 export function argTypesForBinding(binding) {
-  const defaults = binding.api.defaults ?? {};
+  const { props, defaults = {}, propDetails } = storyApi(binding);
   const family = binding.export;
-  return Object.fromEntries(binding.api.props.map((name) => [
+  return Object.fromEntries(props.map((name) => [
     name,
     {
-      ...inferControl(name, defaults, binding.api.props, family, binding.api.propDetails),
+      ...inferControl(name, defaults, props, family, propDetails),
       description: `Mux UI-owned ${name} property`,
       table: {
-        ...(inferControl(name, defaults, binding.api.props, family, binding.api.propDetails).table ?? {}),
+        ...(inferControl(name, defaults, props, family, propDetails).table ?? {}),
         defaultValue: defaults[name] === undefined ? undefined : { summary: defaults[name] },
       },
     },
@@ -185,8 +215,8 @@ export function argTypesForBinding(binding) {
 }
 
 function normalizeDefaultArgs(binding) {
-  const args = { ...(binding.api.defaults ?? {}) };
-  const props = new Set(binding.api.props);
+  const args = { ...(storyApi(binding).defaults ?? {}) };
+  const props = new Set(storyApi(binding).props);
   for (const [controlled, uncontrolled] of CONTROLLED_DEFAULT_PAIRS) {
     if (!props.has(controlled) || !props.has(uncontrolled)) continue;
     if (args[uncontrolled] === undefined && args[controlled] !== undefined) {
@@ -219,7 +249,7 @@ function kebabCase(value) {
 }
 
 function sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs) {
-  const defaults = binding.api.defaults ?? {};
+  const defaults = storyApi(binding).defaults ?? {};
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
   if (sourceValue !== undefined) return sourceValue;
   if (controlled === 'mode') return 'light';
@@ -307,7 +337,7 @@ export function isLifecycleState(family, state) {
 
 function stateVariantNames(binding, family) {
   const names = [...binding.states];
-  const props = new Set(binding.api.props);
+  const props = new Set(storyApi(binding).props);
   if (props.has('placement')) names.push('placement');
   if (family === 'DropZone') names.push('dragging');
   if (family === 'Link') names.push('no-href', 'empty-href');
@@ -318,7 +348,7 @@ function stateVariantNames(binding, family) {
 
 function resetStateArgs(binding, sourceArgs, preserveExplicit = false) {
   if (preserveExplicit) return { ...sourceArgs };
-  const props = new Set(binding.api.props);
+  const props = new Set(storyApi(binding).props);
   const args = { ...sourceArgs };
   for (const name of STATE_BOOLEAN_PROPS) {
     if (props.has(name) && (!preserveExplicit || !Object.hasOwn(args, name))) args[name] = false;
@@ -328,7 +358,7 @@ function resetStateArgs(binding, sourceArgs, preserveExplicit = false) {
     if (preserveExplicit && (Object.hasOwn(args, controlled) || Object.hasOwn(args, uncontrolled))) continue;
     delete args[controlled];
     if (args[uncontrolled] === undefined) {
-      const defaults = binding.api.defaults ?? {};
+      const defaults = storyApi(binding).defaults ?? {};
       const value = defaults[uncontrolled] ?? defaults[controlled];
       if (value !== undefined) args[uncontrolled] = value;
     }
@@ -383,7 +413,7 @@ function setSelectedState(args, props, family, preserveExplicit) {
 }
 
 function stateIsSupported(binding, state, family) {
-  const props = new Set(binding.api.props);
+  const props = new Set(storyApi(binding).props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
     case 'default':
@@ -512,7 +542,7 @@ function stateIsSupported(binding, state, family) {
 }
 
 function applyStateArgs(args, binding, state, family, preserveExplicit = false) {
-  const props = new Set(binding.api.props);
+  const props = new Set(storyApi(binding).props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
     case 'disabled':
@@ -1922,7 +1952,7 @@ function partSelectors(binding, part) {
 
 function anatomyArgsForBinding(record, sourceArgs) {
   const args = { ...sourceArgs };
-  const props = new Set(record.binding.api.props);
+  const props = new Set(storyApi(record.binding).props);
   if (props.has('description')) args.description = 'Additional context';
   if (props.has('errorMessage')) args.errorMessage = 'A value is required';
   // errorMessage renders only while invalid, so the anatomy shows the error part through invalid.
@@ -2682,7 +2712,7 @@ export function createBrowserProofStory(record) {
     parameters: {
       muxuiProof: {
         browser: true,
-        events: record.binding.api.events,
+        events: storyApi(record.binding).events,
         notes: 'Playwright proof covers the family-specific DOM, focus, geometry, timing, or native input contract.',
       },
     },
@@ -2816,8 +2846,8 @@ export function createStoryMeta(record, category) {
         },
       },
       muxuiApi: {
-        props: record.binding.api.props,
-        events: record.binding.api.events,
+        props: storyApi(record.binding).props,
+        events: storyApi(record.binding).events,
         parts: record.binding.api.parts,
         states: record.binding.states,
         controlled: controlledDefaultPairsForBinding(record.binding),

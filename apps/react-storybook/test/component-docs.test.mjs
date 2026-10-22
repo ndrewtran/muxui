@@ -142,6 +142,12 @@ test('every family Docs page runs the continuous reference sections in order, pr
     }
     assert.deepEqual(list(section('behavior'), 'binding.behavior'), binding.behavior ?? [], `${family} behavior`);
     assert.deepEqual(texts(section('events').querySelectorAll('[data-fact="binding.api.events"] code')), binding.api.events, `${family} events`);
+    // A part's events follow the root's, under the part's owner, and a part with none lists none.
+    const partsWithEvents = Object.entries(binding.api.partApis ?? {}).filter(([, api]) => api.events.length > 0);
+    for (const [part, api] of Object.entries(binding.api.partApis ?? {})) {
+      assert.deepEqual(texts(section('events').querySelectorAll(`[data-fact="binding.api.partApis.${part}.events"] code`)), api.events, `${family} ${part} events`);
+    }
+    assert.deepEqual(texts(section('events').querySelectorAll('h3')), partsWithEvents.map(([, api]) => `${descriptor.bindings.find(({ binding: ref }) => ref === `${artifact.id}#web.react`).export}.${api.member}`), `${family} part event owners`);
     const nameRequired = section('accessibility').querySelector('[data-fact="accessibility.nameRequired"]').textContent;
     assert.equal(nameRequired, `Accessible name required: ${artifact.accessibility.nameRequired ? 'yes' : 'no'}`, `${family} accessible name`);
     assert.deepEqual(list(section('accessibility'), 'accessibility.obligations'), artifact.accessibility.obligations, `${family} obligations`);

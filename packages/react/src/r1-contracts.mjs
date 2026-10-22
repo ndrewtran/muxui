@@ -24,6 +24,14 @@ const EXPECTED_UPSTREAM_DISPOSITIONS = Object.freeze([
 ]);
 
 /**
+ * Whether a binding's api lists an upstream prop name (`isDisabled`) where the Mux UI name belongs,
+ * in the root's block or in any part's (`partApis`).
+ */
+export function carriesUpstreamPropName(api) {
+  return [api, ...Object.values(api.partApis ?? {})].some(({ props }) => props.some((prop) => /^is[A-Z]/u.test(prop)));
+}
+
+/**
  * The upstream identity the generated compatibility record declares: the exact
  * pin from package.json. The retained snapshot's commit is added only while the
  * pin is still the snapshot's version, since a newer version has another commit.
@@ -320,7 +328,7 @@ export function assertReactR15GeneratedContracts({
       || binding.lifecycle !== 'experimental'
       || binding.strategy !== 'direct'
       || !Array.isArray(binding.api?.props)
-      || binding.api.props.some((prop) => /^is[A-Z]/u.test(prop))
+      || carriesUpstreamPropName(binding.api)
       || typeof runtimeSource !== 'string'
       || !new RegExp(`export\\s+const\\s+${source.exportName}\\b`, 'u').test(runtimeSource)
       || !styles.includes(`.muxui-${source.slug}`)) failR15('FAMILY_CONTRACT_INVALID');

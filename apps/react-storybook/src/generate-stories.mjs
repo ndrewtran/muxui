@@ -5,7 +5,7 @@ import { patternVariantExamples } from '../../../tooling/audits/repository-polic
 import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import { transformWithOxc } from 'vite';
 import { blockStoryExports, selectionKeyOwners } from './block-pages.mjs';
-import { adapterNames, STORY_APPLICABILITY } from './storybook-factory.mjs';
+import { adapterNames, STORY_APPLICABILITY, storyApi } from './storybook-factory.mjs';
 import { componentCategory } from '../../component-navigation.mjs';
 import { componentRecordCategory } from './component-categories.mjs';
 import { readComponentDocs } from './component-docs.mjs';
@@ -243,6 +243,7 @@ ${record.family === 'Button' ? '  createButtonMatrixStory,\n' : ''}  createBrows
   createEventsStory,
 ${record.family === 'SelectNative' ? '  createSelectNativeSelectionStory,\n' : ''}  createStory,
   createUncontrolledStory,
+  storyApi,
 } from '../../src/storybook-factory.mjs';${canonicalExample ? `
 import React from 'react';
 import { ${canonicalExample.importName} } from './${canonicalExample.helperName}';` : ''}${dedicatedImport}
@@ -257,11 +258,11 @@ export default {
   tags: ['autodocs'],
   parameters: {
     controls: {
-      include: binding.api.props,
+      include: storyApi(binding).props,
     },
     muxuiApi: {
-      props: binding.api.props,
-      events: binding.api.events,
+      props: storyApi(binding).props,
+      events: storyApi(binding).events,
       parts: binding.api.parts,
       states: binding.states,
       controlled: controlledDefaultPairsForBinding(binding),
@@ -401,8 +402,8 @@ const manifest = {
   families: records.map(({ family, tranche, binding }) => ({
     family,
     tranche,
-    props: binding.api.props,
-    defaults: binding.api.defaults ?? {},
+    props: storyApi(binding).props,
+    defaults: storyApi(binding).defaults ?? {},
     states: binding.states,
   })),
   // Pattern pages are not component families, so they are listed apart. Their

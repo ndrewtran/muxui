@@ -9,7 +9,7 @@ import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
-import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, compatibilityUpstream } from './r1-contracts.mjs';
+import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, carriesUpstreamPropName, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 import { readRuntimeSources, runtimeSourceFor } from './runtime-sources.mjs';
@@ -156,7 +156,7 @@ if (new Set(r16SupplementalComponents.map(({ export: componentExport }) => compo
 }
 for (const artifact of componentArtifacts) {
   const binding = artifact.bindings['web.react'];
-  if (!binding || binding.api.props.some((prop) => /^is[A-Z]/u.test(prop))) {
+  if (!binding || carriesUpstreamPropName(binding.api)) {
     throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_CANONICAL_API_DRIFT`);
   }
 }
@@ -560,11 +560,18 @@ const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ c
 const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
 const readmeMappingBySlug = new Map(r16SupplementalComponents.map((entry) => [entry.slug, entry]));
+// The root's props, then each part that owns Mux UI props with some, in anatomy order and qualified by the part (`item: id, disabled`).
+const readmeProps = ({ props, parts, partApis = {} }) => [
+  props.join(', ') || 'none',
+  ...Object.entries(partApis).filter(([, part]) => part.props.length > 0)
+    .sort(([left], [right]) => parts.indexOf(left) - parts.indexOf(right))
+    .map(([name, part]) => `${name}: ${part.props.join(', ')}`),
+].join('; ');
 const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.localeCompare(right.name)).map((artifact) => {
   const slug = artifact.id.slice('muxui:component:'.length);
   const binding = artifact.bindings['web.react'];
   const module = readmeMappingBySlug.get(slug)?.export.module ?? '.';
-  return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | ${module} | .muxui-${slug} | ${markdownCell(binding.api.props.join(', ') || 'none')} |`;
+  return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | ${module} | .muxui-${slug} | ${markdownCell(readmeProps(binding.api))} |`;
 }).join('\n');
 const readmeCompositionGuidance = ['menu', 'list-box', 'grid-list', 'virtualizer', 'select', 'text-field', 'search-field', 'command-palette', 'popover', 'tooltip', 'dialog', 'alert-dialog', 'button', 'icon-button']
   .map((slug) => {

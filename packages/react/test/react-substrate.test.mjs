@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { reactCompatibility } from '../generated/index.mjs';
-import { compatibilityUpstream } from '../src/r1-contracts.mjs';
+import { carriesUpstreamPropName, compatibilityUpstream } from '../src/r1-contracts.mjs';
 import { generatedDeclarations } from './support/declarations.mjs';
 import { exactLockedProblems, readLockfile } from './support/locked-dependencies.mjs';
 
@@ -39,6 +39,17 @@ test('the declared upstream follows the pin and keeps the retained commit only f
   assert.notEqual(upgraded, pin);
   assert.deepEqual(compatibilityUpstream({ pin: upgraded, retained }), { package: 'react-aria-components', version: upgraded });
   assert.equal(compatibilityUpstream({ pin: retained.version, retained }).gitHead, retained.commit);
+});
+
+test('a binding may not list an upstream is* prop name in its root block or in any part\'s', () => {
+  const part = (props) => ({ member: 'Item', props, events: [], defaults: {}, propDetails: {}, eventDetails: {}, types: {} });
+  assert.equal(carriesUpstreamPropName({ props: ['disabled', 'items'] }), false);
+  assert.equal(carriesUpstreamPropName({ props: ['disabled'], partApis: { item: part(['id', 'disabled']) } }), false);
+  assert.equal(carriesUpstreamPropName({ props: ['isDisabled'] }), true);
+  // The same name in a part is the same drift, wherever the part sits among the others.
+  assert.equal(carriesUpstreamPropName({ props: ['disabled'], partApis: { section: part(['title']), item: part(['id', 'isDisabled']) } }), true);
+  // A lower-case is prefix is an ordinary word, not the upstream form.
+  assert.equal(carriesUpstreamPropName({ props: ['island'], partApis: { item: part(['issue']) } }), false);
 });
 
 test('direct publication fails closed while the package is private', () => {

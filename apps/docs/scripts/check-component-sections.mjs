@@ -90,6 +90,7 @@ function codeTexts(root) {
 let routes = 0;
 let projectedStrings = 0;
 let guideLinks = 0;
+let partStrings = 0;
 for (const component of listComponents()) {
 	const slug = component.id.slice(component.id.lastIndexOf(':') + 1);
 	const route = `/components/${slug}/`;
@@ -163,6 +164,21 @@ for (const component of listComponents()) {
 	assertList(section('behavior'), 'binding.behavior', binding.behavior ?? [], route);
 	const eventNames = facts(section('events'), 'binding.api.events');
 	assert(eventNames.length === 1 && JSON.stringify(codeTexts(eventNames[0])) === JSON.stringify(binding.api.events), `${route} events differ from the catalog.`);
+	// A part's events follow the root's, under the part's owner, and only a part that declares events has any.
+	// The parts follow the anatomy's order, whatever order the compiled record keys them in.
+	const partApis = Object.entries(binding.api.partApis ?? {}).sort(([left], [right]) => artifact.anatomy.indexOf(left) - artifact.anatomy.indexOf(right));
+	for (const [part, api] of partApis) {
+		const rendered = facts(section('events'), `binding.api.partApis.${part}.events`);
+		assert(
+			api.events.length === 0 ? rendered.length === 0 : rendered.length === 1 && JSON.stringify(codeTexts(rendered[0])) === JSON.stringify(api.events),
+			`${route} ${part} events differ from the catalog.`,
+		);
+	}
+	const projectedParts = new Set(elements(main).map((node) => /^binding\.api\.partApis\.([^.]+)\./u.exec(attributeValue(node, 'data-fact') ?? '')?.[1]).filter((part) => part !== undefined));
+	assert(
+		JSON.stringify([...projectedParts].sort()) === JSON.stringify(partApis.filter(([, api]) => api.props.length + api.events.length > 0).map(([part]) => part).sort()),
+		`${route} projects a part that the catalog does not list, or leaves one out.`,
+	);
 	const nameRequired = facts(section('accessibility'), 'accessibility.nameRequired');
 	assert(
 		nameRequired.length === 1 && textContent(nameRequired[0]) === `Accessible name required: ${artifact.accessibility.nameRequired ? 'yes' : 'no'}`,
@@ -184,6 +200,26 @@ for (const component of listComponents()) {
 		const [name, value] = elements(props[position]).filter((node) => node.tagName === 'code').map((node) => textContent(node));
 		const declared = binding.api.defaults[prop];
 		assert(name === prop && value === (declared === undefined ? 'Not specified' : JSON.stringify(declared)), `${route} prop ${prop} differs from the catalog.`);
+	}
+	// Each part that owns Mux UI props follows under its owner, with the same Prop and Default rows. A missing group, prop or default fails.
+	const partHeadings = elements(section('api-reference')).filter((node) => node.tagName === 'h3');
+	assert(
+		JSON.stringify(partHeadings.map((node) => attributeValue(node, 'id'))) === JSON.stringify(partApis.map(([part]) => `api-reference-${part}`)),
+		`${route} part groups differ from the catalog: ${partHeadings.map((node) => attributeValue(node, 'id')).join(', ') || 'none'}.`,
+	);
+	for (const [part, api] of partApis) {
+		const heading = partHeadings.find((node) => attributeValue(node, 'id') === `api-reference-${part}`);
+		assert(textContent(heading) === `${exported.export}.${api.member}`, `${route} ${part} is not owned by ${exported.export}.${api.member}.`);
+		const tables = facts(section('api-reference'), `binding.api.partApis.${part}.props`);
+		assert(tables.length === (api.props.length > 0 ? 1 : 0), `${route} ${part} props table is missing or repeated.`);
+		const rows = tables.length === 0 ? [] : elements(tables[0]).filter((node) => node.tagName === 'tr');
+		assert(rows.length === api.props.length, `${route} ${part} props differ from the catalog.`);
+		for (const [position, prop] of api.props.entries()) {
+			const [name, value] = elements(rows[position]).filter((node) => node.tagName === 'code').map((node) => textContent(node));
+			const declared = api.defaults[prop];
+			assert(name === prop && value === (declared === undefined ? 'Not specified' : JSON.stringify(declared)), `${route} ${part} prop ${prop} differs from the catalog.`);
+		}
+		partStrings += api.props.length + api.events.length;
 	}
 	assert(!elements(section('api-reference')).some((node) => node.tagName === 'th' && attributeValue(node, 'scope') === 'col' && /^(?:type|presence)$/iu.test(textContent(node).trim())), `${route} API reference has a Type or Presence column.`);
 
@@ -228,7 +264,7 @@ for (const component of listComponents()) {
 	);
 	for (const path of expectedSources) assert(existsSync(resolve(repositoryRoot, path)), `${route} links a missing source: ${path}.`);
 
-	projectedStrings += (artifact.intent?.useWhen?.length ?? 0) + (artifact.intent?.avoidWhen?.length ?? 0) + (binding.behavior?.length ?? 0)
+	projectedStrings += partApis.length + (artifact.intent?.useWhen?.length ?? 0) + (artifact.intent?.avoidWhen?.length ?? 0) + (binding.behavior?.length ?? 0)
 		+ binding.api.events.length + artifact.accessibility.obligations.length + bindingAccessibility.length + requirements.length + expectedSources.length;
 	routes += 1;
 }
@@ -249,4 +285,4 @@ for (const id of sharedUsageGuides) {
 	);
 }
 
-console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values; ${guideLinks} guide links to other families reach a built family page; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);
+console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values (${partStrings} of them a part's props and events); ${guideLinks} guide links to other families reach a built family page; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);

@@ -1037,6 +1037,10 @@ test('a callable compound is its own root, and the parts assigned in its wrapper
   assert.deepEqual([item.propDetails.value.required, item.propDetails.tone.enum, Object.keys(item)], [true, ['quiet', 'loud'], ['member', 'props', 'events', 'defaults', 'propDetails', 'eventDetails', 'types']]);
   assert.deepEqual([group.member, group.props, group.defaults, group.propDetails.heading.type], ['Group', ['heading'], {}, { kind: 'host', name: 'React.ReactNode' }]);
   assert.deepEqual([badge.member, badge.defaults, tag.member, tag.defaults], ['Badge', { count: 1 }, 'Tag', { label: 'Tag' }]);
+  // Without the source, as when the packed declarations are read, a part is its typed block alone.
+  const typed = read(all, { parts: { item: 'Item' }, source: undefined });
+  assert.deepEqual(Object.keys(typed.partApis.item), ['member', 'props', 'events', 'propDetails', 'eventDetails', 'types']);
+  assert.equal(Object.hasOwn(typed, 'defaults'), false);
   // Without parts, the root's block is all there is.
   assert.equal(Object.hasOwn(read(all), 'partApis'), false);
 
@@ -1070,7 +1074,6 @@ test('a callable compound\'s part is checked like the root: its props, its defau
     ['the root part as a part', reads({ root: 'Root' }, { part: 'Root' }), /Thing\.Root: root maps to Root, which is the root part/u],
     ['an anatomy part that is not kebab-case', reads({ Item: 'Item' }), /Thing\.Item: parts maps an anatomy part, such as item, to an export member, such as Item; not Item to Item/u],
     ['a member that is not PascalCase', reads({ item: 'item' }), /Thing\.item: parts maps an anatomy part/u],
-    ['parts without the source that reads their defaults', reads({ item: 'Item' }, { source: undefined }), /Thing\.Item: a part reads its defaults from the component source, which is not given/u],
     ['a part prop its function does not destructure', reads({ item: 'Item' }, { source: source.replace('{ value, tone', '{ tone') }), /Thing\.Item\.value: the props parameter must destructure each Mux UI-owned prop/u],
     ['a part default the function executes', reads({ item: 'Item' }, { source: source.replace("tone = 'quiet'", 'tone').replace('[value, tone, onPick, props]', "[value, tone ?? 'quiet', onPick, props]") }),
       /Thing\.Item\.tone: tone \?\? \.\.\. falls back to a value the component executes; declare the default in the props parameter/u],

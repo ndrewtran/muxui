@@ -39,12 +39,21 @@ export interface CatalogTokenRequirement {
 	profiles?: readonly string[];
 }
 
+/** One non-root part's Mux UI-owned API, such as ListBox.Item's, derived beside the root's. */
+export interface CatalogPartApi {
+	member: string;
+	props: readonly string[];
+	events: readonly string[];
+	defaults: Readonly<Record<string, unknown>>;
+}
+
 export interface CatalogBinding {
 	api: {
 		props: readonly string[];
 		events: readonly string[];
 		parts: readonly string[];
 		defaults: Readonly<Record<string, unknown>>;
+		partApis?: Readonly<Record<string, CatalogPartApi>>;
 	};
 	behavior?: readonly string[];
 	accessibility?: readonly string[];
@@ -334,6 +343,19 @@ function readTokenRecipe(value: unknown): CatalogBinding['tokenRecipe'] {
 	});
 }
 
+function readPartApis(value: unknown): Readonly<Record<string, CatalogPartApi>> {
+	if (!isRecord(value)) throw new Error('Canonical React binding has invalid part APIs.');
+	return Object.freeze(Object.fromEntries(Object.entries(value).map(([part, api]) => {
+		if (!isRecord(api) || !isRecord(api.defaults)) throw new Error(`Canonical React binding has an invalid ${part} part API.`);
+		return [part, Object.freeze({
+			member: requiredString(api.member, `binding.api.partApis.${part}.member`),
+			props: stringArray(api.props, `binding.api.partApis.${part}.props`),
+			events: stringArray(api.events, `binding.api.partApis.${part}.events`),
+			defaults: Object.freeze({ ...api.defaults }),
+		})];
+	})));
+}
+
 function readBinding(value: unknown): CatalogBinding {
 	if (!isRecord(value) || !isRecord(value.api)) {
 		throw new Error('Canonical artifact is missing its React binding API.');
@@ -346,6 +368,7 @@ function readBinding(value: unknown): CatalogBinding {
 			events: stringArray(value.api.events, 'binding.api.events'),
 			parts: stringArray(value.api.parts, 'binding.api.parts'),
 			defaults: Object.freeze({ ...defaults }),
+			...(value.api.partApis === undefined ? {} : { partApis: readPartApis(value.api.partApis) }),
 		}),
 		...(value.behavior === undefined ? {} : { behavior: stringArray(value.behavior, 'binding.behavior') }),
 		...(value.accessibility === undefined ? {} : { accessibility: stringArray(value.accessibility, 'binding.accessibility') }),

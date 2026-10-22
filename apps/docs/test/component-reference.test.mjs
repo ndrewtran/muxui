@@ -72,6 +72,29 @@ test('token requirements group by their first two segments only when the recipe 
   assert.deepEqual(groups.map(({ prefix, tokens }) => [prefix, tokens.length]), [['component.card', 8], ['semantic.focus', 1]]);
 });
 
+test('a compound lists each part that owns props under its owner, in anatomy order, and a single-part component lists none', () => {
+  const block = (member, props, events = [], defaults = {}) => ({ member, props, events, defaults });
+  const compound = (partApis) => {
+    const artifact = record();
+    artifact.anatomy = ['root', 'section', 'header', 'item'];
+    // A compiled record keys its parts in any order; item comes before section here.
+    artifact.bindings['web.react'].api = { events: ['activate'], partApis };
+    return artifact;
+  };
+  const partApis = { item: block('Item', ['id', 'disabled'], ['pick'], { disabled: false }), section: block('Section', ['title']) };
+  const { parts, events } = componentReference({ artifact: compound(partApis), examples, packageFacts: packageFacts() });
+  assert.deepEqual(events, ['activate'], 'the root events stay the root\'s');
+  assert.deepEqual(parts.map(({ part, owner, props, events: partEvents, defaults }) => [part, owner, props, partEvents, defaults]), [
+    ['section', 'Card.Section', ['title'], [], {}],
+    ['item', 'Card.Item', ['id', 'disabled'], ['pick'], { disabled: false }],
+  ]);
+  assert.deepEqual(componentReference({ artifact: record(), examples, packageFacts: packageFacts() }).parts, []);
+  assert.deepEqual(componentReference({ artifact: compound(undefined), examples, packageFacts: packageFacts() }).parts, []);
+  // The owner names the export the descriptor lists, so a renamed export renames every part.
+  const renamed = { ...packageFacts(), bindings: new Map([['muxui:component:card#web.react', { export: 'Panel', specifier: '@muxui/react' }]]) };
+  assert.deepEqual(componentReference({ artifact: compound(partApis), examples, packageFacts: renamed }).parts.map(({ owner }) => owner), ['Panel.Section', 'Panel.Item']);
+});
+
 test('usage guides are related by the declared id', () => {
   assert.equal(usageGuideId('muxui:component:icon-button'), 'muxui:guide:icon-button-usage');
 });

@@ -7,7 +7,9 @@ import { resolve } from 'node:path';
  * Applications show a component's usage, behavior, accessibility, anatomy,
  * token requirements, imports and sources through this module, never from
  * hand-written per-family text. It carries no prop types or event signatures;
- * Decision 0031 derives those from the React TypeScript source later.
+ * Decision 0031 derives those from the React TypeScript source later. A compound
+ * whose parts own Mux UI props lists each one beside the root's (`parts`), so an
+ * application that shows the root's props and events shows the parts' too.
  */
 
 const manifestPath = 'packages/react/package.json';
@@ -26,8 +28,18 @@ const tokenGroupThreshold = 8;
  */
 
 /**
+ * One part's API in a derived binding: the part of the export that renders it and the
+ * Mux UI-owned props, events, and defaults of that part alone.
+ * @typedef {object} PartApi
+ * @property {string} member The export member that renders the part, such as Item for ListBox.Item.
+ * @property {readonly string[]} props
+ * @property {readonly string[]} events
+ * @property {Readonly<Record<string, unknown>>} defaults
+ */
+
+/**
  * @typedef {object} ReactBindingRecord
- * @property {{ events: readonly string[] }} api
+ * @property {{ events: readonly string[], partApis?: Readonly<Record<string, PartApi>> }} api
  * @property {readonly string[]} [behavior]
  * @property {readonly string[]} [accessibility]
  * @property {{ source: string, requirements: readonly TokenRequirement[] }} tokenRecipe
@@ -118,6 +130,24 @@ function groupTokens(requirements) {
 }
 
 /**
+ * The parts of a compound that own Mux UI props, in anatomy order (a compiled record may key
+ * them in any order), each with the owner a reader recognises: the export and the member that renders the part.
+ * @param {string} exportName
+ * @param {Readonly<Record<string, PartApi>> | undefined} partApis
+ * @param {readonly string[]} anatomy
+ */
+function partReferences(exportName, partApis, anatomy) {
+  const position = (/** @type {string} */ part) => anatomy.indexOf(part);
+  return Object.freeze(Object.entries(partApis ?? {}).sort(([left], [right]) => position(left) - position(right)).map(([part, api]) => Object.freeze({
+    part,
+    owner: `${exportName}.${api.member}`,
+    props: api.props,
+    events: api.events,
+    defaults: api.defaults,
+  })));
+}
+
+/**
  * @param {{ artifact: ComponentRecord, examples: readonly { source: { content: string } }[], packageFacts: ReactPackageFacts }} input
  */
 export function componentReference({ artifact, examples, packageFacts }) {
@@ -144,6 +174,8 @@ export function componentReference({ artifact, examples, packageFacts }) {
     }),
     behavior: binding.behavior ?? [],
     events: binding.api.events,
+    /** The API of each part beside the root's, such as ListBox.Item; empty for a component with one part. */
+    parts: partReferences(exported.export, binding.api.partApis, artifact.anatomy),
     accessibility: Object.freeze({
       nameRequired: artifact.accessibility.nameRequired,
       obligations,
