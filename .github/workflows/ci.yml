@@ -96,7 +96,9 @@ jobs:
     if: needs.plan.outputs.groups != '[]'
     name: run ${{ matrix.group.id }}
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ matrix.group.timeoutMinutes }}
+    # The checks limit plus, for a group that installs browser system libraries,
+    # a setup allowance (see the install step and the planner's groupMatrix).
+    timeout-minutes: ${{ matrix.group.jobTimeoutMinutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -145,7 +147,9 @@ jobs:
       # browser-webkit WebKit) with their system libraries. Other groups,
       # including browser-chromium, use Chrome. The browser builds are cached
       # per playwright-core version and engine set; the system libraries
-      # install every time.
+      # install every time, from the runner image's apt mirror, which can crawl.
+      # So the install has its own step limit inside the job's setup allowance,
+      # and the checks step keeps the group's own limit.
       - name: Read playwright-core version
         id: playwright
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
@@ -164,12 +168,14 @@ jobs:
 
       - name: Install Playwright browsers
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
+        timeout-minutes: 25
         env:
           BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
         run: pnpm --filter @muxui/react exec playwright-core install --with-deps $BROWSER_ENGINES
 
       - name: Run ${{ matrix.group.id }} checks
         if: matrix.group.reusedFrom == ''
+        timeout-minutes: ${{ matrix.group.timeoutMinutes }}
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
           MUXUI_CI_GROUP: ${{ matrix.group.id }}

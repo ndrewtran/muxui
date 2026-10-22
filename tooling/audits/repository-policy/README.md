@@ -60,6 +60,13 @@ Scale change to the same family in every plan. Reuse treats a browser group and
 its shards as one family: a change routed to any shard reruns its siblings, and
 a shard is reused only when its id and file list match.
 
+Each group's `timeoutMinutes` limits its checks step. A group that installs
+Firefox or WebKit (`browserEngines` is set) also gets a 30 minute setup
+allowance in `jobTimeoutMinutes`, the job limit, because Playwright's apt
+install of system libraries can crawl on a slow runner-image mirror. The
+workflow bounds that install step to 25 minutes, inside the allowance, so a
+stalled install fails by itself and never spends the checks limit.
+
 The PR planner prepares ignored React or Storybook metadata only when those
 owners are needed to resolve canonical families or page IDs. A full workspace
 plan is reserved for identified workspace-wide inputs such as the Node/pnpm

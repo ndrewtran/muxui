@@ -1584,6 +1584,36 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
   ]);
 });
 
+// Hand-written limits: only the groups that install Firefox's or WebKit's system libraries get the 30 minute setup
+// allowance on top of their checks limit, so a slow apt mirror cannot spend the time their tests need.
+test('groups that install browser system libraries get a setup allowance outside their checks limit', async () => {
+  const limits = (groups) => groupMatrix(groups).map(({ id, timeoutMinutes, jobTimeoutMinutes }) => [id, timeoutMinutes, jobTimeoutMinutes]);
+  assert.deepEqual(limits(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })), [
+    ['checks-policy', 30, 30], ['checks-tooling', 30, 30], ['checks', 30, 30], ['react', 30, 30],
+    ['browser-chromium', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30], ['browser-chromium-only-3', 30, 30],
+    ['browser-firefox', 30, 60], ['browser-webkit', 30, 60],
+    ['storybook-a11y', 30, 30], ['storybook', 30, 30], ['tailwind', 15, 15],
+  ]);
+
+  const dismissal = await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs']);
+  assert.deepEqual(limits(executionGroups(dismissal, { packages, environment: {}, pageIndex })), [
+    ['browser-chromium', 30, 30], ['browser-firefox', 30, 60], ['browser-webkit', 30, 60],
+  ]);
+});
+
+test('the workflow limits the job, the browser install and the checks separately', async () => {
+  const workflow = readFileSync(resolve(repositoryRoot, '.github/workflows/ci.yml'), 'utf8');
+  const step = (name) => workflow.split('\n      - ').find((block) => block.startsWith(`name: ${name}\n`)) ?? '';
+  // The job limit comes from the planner, which adds the setup allowance; expressions cannot add.
+  assert.match(workflow, /\n    runs-on: ubuntu-latest\n(?: {4}#.*\n)*? {4}timeout-minutes: \$\{\{ matrix\.group\.jobTimeoutMinutes \}\}\n/u);
+  // The checks keep the group's own limit as a step limit.
+  assert.match(step('Run ${{ matrix.group.id }} checks'), /\n {8}timeout-minutes: \$\{\{ matrix\.group\.timeoutMinutes \}\}\n/u);
+  // A stuck install fails by itself, inside the allowance and with time left for the other setup steps.
+  const [firefox] = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })).filter(({ id }) => id === 'browser-firefox');
+  const installLimit = Number(step('Install Playwright browsers').match(/\n {8}timeout-minutes: (\d+)\n/u)?.[1]);
+  assert.ok(installLimit > 0 && installLimit < firefox.jobTimeoutMinutes - firefox.timeoutMinutes, `install step limit ${installLimit}`);
+});
+
 test('only calls through the harness browserEngines() binding opt a test in', () => {
   const harness = "from './harness.mjs'";
   // Hand-written classification, independent of the planner.
