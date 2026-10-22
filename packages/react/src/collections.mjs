@@ -1,4 +1,4 @@
-export { Calendar, RangeCalendar } from './calendar.mjs';
+export { Calendar, RangeCalendar } from './calendar.ts';
 export { ColorSwatch } from './color-swatch.ts';
 export { ColorField } from './color-field.ts';
 export { ColorArea } from './color-area.ts';

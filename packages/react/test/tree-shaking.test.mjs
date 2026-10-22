@@ -109,7 +109,7 @@ test('a bundle that uses one field keeps only the motion modules that field need
 // that ignores the package's sideEffects flag still drops the motion modules of an unused family.
 test('the collections family modules keep the pure annotation on each wrapper', () => {
   const wrappers = {
-    'calendar.mjs': ['Calendar', 'RangeCalendar'],
+    'calendar.js': ['Calendar', 'RangeCalendar'],
     'combo-box.mjs': ['ComboBox'],
     'grid-list.mjs': ['GridList'],
     'list-box.mjs': ['ListBox'],
@@ -168,6 +168,15 @@ test('a bundle that uses one collections family keeps its own module and only th
     // No other family's code comes along, which is what one module per family buys over one file.
     assert.deepEqual(kept.filter((module) => familyModules.has(module)), [owner], name);
     assert.deepEqual(kept.filter((module) => motionModules.has(module)).sort(), [...(motionKept[name] ?? [])].sort(), name);
+  }
+});
+
+// Both calendars live in calendar.js, so either one keeps the module, the icon button its month buttons use,
+// and the three calendar motion modules. Through the barrel, a bundle keeps exactly these package modules.
+test('a bundle that uses Calendar or RangeCalendar keeps its own module, the icon button, and the calendar motion modules', async () => {
+  const kept = ['button.js', 'calendar-height-motion.mjs', 'calendar-selection-motion.mjs', 'calendar.js', 'control-utils.js', 'icon-button.js', 'motion-geometry.mjs', 'motion.mjs', 'range-selection-motion.mjs'];
+  for (const name of ['Calendar', 'RangeCalendar']) {
+    assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), kept, name);
   }
 });
 

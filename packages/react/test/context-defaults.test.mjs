@@ -57,6 +57,8 @@ const audited = [
       ...expand(['color-field'], ['readOnly', 'required']),
       // color-slider sends orientation to React Aria as its own value, horizontal when omitted, as it did before the move.
       ...expand(['color-slider'], ['orientation']),
+      // RangeCalendar already sent isDisabled, isReadOnly, and isRequired as booleans, so a RangeCalendarContext cannot supply them. Calendar claims none of the three: it sends the prop as given, so a CalendarContext still can.
+      ...expand(['range-calendar'], ['disabled', 'readOnly', 'required']),
     ],
   },
   {
@@ -86,6 +88,8 @@ const audited = [
       ...expand(['link'], ['current']),
       // color-field sends isInvalid: invalid ? invalid : undefined, so a React Aria context can still make it invalid.
       ...expand(['color-field'], ['invalid']),
+      // The calendars send isInvalid the same way, so a CalendarContext or RangeCalendarContext can still make them invalid.
+      ...expand(['calendar', 'range-calendar'], ['invalid']),
     ],
   },
 ];
