@@ -186,6 +186,12 @@ export function classifyMembers(snapshots, common) {
     const armsOf = (type) => (type.isUnionType() ? type.getTypes() : [type]).filter((arm) => isObjectLike(arm) && !checker.isArrayType(arm) && !checker.isTupleType(arm));
     const mutual = (left, right) => checker.isTypeAssignableTo(left, right) && checker.isTypeAssignableTo(right, left);
     const declarationKey = (property) => property.declarations.map(({ path, index }) => `${path}#${index}`).sort().join(',');
+    // The probe varies the parameters of a callback by position, which a rest parameter (variadic or a tuple's) has none to name.
+    const rejectVariadic = (type, where) => {
+      if (checker.getSignaturesOfType(type, SignatureKind.Call).some((signature) => signature.hasRestParameter)) {
+        throw new Error(`${where} is a callback with a rest parameter, which the handler probes do not cover: extend them to vary the rest element before accepting one`);
+      }
+    };
     const result = new Map();
     for (const { old } of common) {
       const [oldType, newType] = [aliases.get(names.get(old.id).old), aliases.get(names.get(old.id).new)];
@@ -196,6 +202,7 @@ export function classifyMembers(snapshots, common) {
         continue;
       }
       const selfCallable = old.kind === 'type' && [...oldArms, ...newArms].some((arm) => calls(checker, arm) > 0);
+      if (selfCallable) [...oldArms, ...newArms].forEach((arm) => rejectVariadic(arm, old.id));
       if (old.kind === 'value' || old.kind === 'partValue') {
         result.set(old.id, { shape: 'object', selfCallable: false, examined: [], callable: [] });
         continue;
@@ -224,7 +231,10 @@ export function classifyMembers(snapshots, common) {
         if (name.startsWith('__@')) throw new Error(`${old.id} has the symbol-keyed member ${name}, which the probe cannot name`);
         return properties.some((map) => {
           const type = map.has(name) && checker.getTypeOfSymbol(map.get(name));
-          return type && (type.isUnionType() ? type.getTypes() : [type]).some((member) => calls(checker, member) > 0);
+          return type && (type.isUnionType() ? type.getTypes() : [type]).some((member) => {
+            rejectVariadic(member, `${old.id} member ${name}`);
+            return calls(checker, member) > 0;
+          });
         });
       });
       result.set(old.id, { shape: 'object', selfCallable, examined: [...examined].sort(), callable: callable.sort(), inherited: [...allNames].filter((name) => !examined.has(name)).sort() });

@@ -150,6 +150,20 @@ export type Keys = { a?: 1 } | { a?: 1; b?: undefined };
   });
 });
 
+test('a callback with a rest parameter stops the check, because no probe varies the rest element', () => {
+  const item = 'export interface Item { id: string }\n';
+  // A function property turned into its bivariant method form accepts narrower handlers; no position names a rest element.
+  const member = (type) => `${item}export interface ListProps { cb?: ${type} }\n`;
+  withPair(member('(...items: Item[]) => void'), member("{ m(...items: Item[]): void }['m']"), (snapshots) => {
+    assert.throws(() => comparePublicSurfaces(snapshots, compilers), /ListProps member cb is a callback with a rest parameter/u);
+  });
+  // An exported callback type is the same: the check names it.
+  const callback = (type) => `${item}export type Handler = ${type};\n`;
+  withPair(callback('(...items: Item[]) => void'), callback("{ m(...items: Item[]): void }['m']"), (snapshots) => {
+    assert.throws(() => comparePublicSurfaces(snapshots, compilers), /Handler is a callback with a rest parameter/u);
+  });
+});
+
 test('a type, value, component or part missing from the current build is named, and a recorded addition stays recorded', () => {
   const before = `import type * as React from 'react';
 export interface Dropped { x?: string }
