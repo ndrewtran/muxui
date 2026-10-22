@@ -1,0 +1,29 @@
+{
+  "note": "The only differences from the declarations before the TypeScript moves that the public-surface check accepts, each as the one failed assertion of one subject with the old and new value the compiler reports. An entry absorbs nothing else on its subject, and an entry the check no longer needs fails it. These are pair-assertion differences, not the only observable changes: the new augmentation reach is asserted in catalog-examples-types.test.mjs, and new exports are listed in public-surface-inventory.json.",
+  "accepted": [
+    {
+      "subject": ".:type:DataDiffValues",
+      "assertion": "keyof",
+      "old": "string",
+      "new": "string | number",
+      "reason": "Readonly<Record<string, DataDiffValue>> became { readonly [columnId: string]: DataDiffValue }. keyof a string index signature is string | number where the Record alias gave string; mutual assignability and every other key set are unchanged.",
+      "tranche": "Decision 0031 tranche 2, 7e82f369"
+    },
+    {
+      "subject": ".:type:ResizableSizes",
+      "assertion": "keyof",
+      "old": "string",
+      "new": "string | number",
+      "reason": "Readonly<Record<string, number>> became { readonly [panelId: string]: number }, with the same keyof widening.",
+      "tranche": "Decision 0031 tranche 3, fbb9d651"
+    },
+    {
+      "subject": ".:type:MuxUIValidationErrors",
+      "assertion": "keyof",
+      "old": "string",
+      "new": "string | number",
+      "reason": "Readonly<Record<string, string | string[]>> became { readonly [key: string]: string | string[] }, with the same keyof widening.",
+      "tranche": "Decision 0031 tranche 5, 9bc13bc5"
+    }
+  ]
+}

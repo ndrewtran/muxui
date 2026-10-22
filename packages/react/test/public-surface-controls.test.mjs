@@ -1,0 +1,232 @@
+// What public-surface-baseline.test.mjs relies on, shown by running it: each kind of check fails on the change
+// it exists for (a synthetic baseline and a mutated copy of it go through the same harness), the packages
+// resolve as intended, and a compile that cannot be trusted stops the check instead of passing it.
+import assert from 'node:assert/strict';
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import test from 'node:test';
+import { consumerTsc, tscDiagnostics, typeScript7Tsc } from './support/declaration-surface.mjs';
+import { applyAccepted, comparePublicSurfaces, interpretDiagnostics } from './support/public-surface-probes.mjs';
+import { assertResolution, createSnapshots, entrySpecifier } from './support/public-surface-snapshots.mjs';
+import { inventoryOf, inventoryProblems, listSubjects } from './support/public-surface-subjects.mjs';
+
+const compilers = [{ label: 'TypeScript 7', tsc: typeScript7Tsc() }, { label: 'TypeScript 6', tsc: consumerTsc() }];
+
+test('an accepted difference absorbs only its own assertion, with the values it states', () => {
+  const failure = { subject: 'S', assertion: 'keyof', message: '', old: 'string', new: 'string | number' };
+  const entry = { subject: 'S', assertion: 'keyof', old: 'string', new: 'string | number' };
+  assert.deepEqual(applyAccepted([failure], [entry]), { unaccepted: [], stale: [] });
+  // Anything else on the subject, or a different value, is not absorbed, and the entry then reads as stale.
+  for (const other of [{ ...failure, assertion: 'mutual' }, { ...failure, new: 'string | symbol' }, { ...failure, subject: 'T' }]) {
+    const result = applyAccepted([other], [entry]);
+    assert.deepEqual(result.unaccepted, [other]);
+    assert.deepEqual(result.stale, [entry]);
+  }
+});
+
+test('a compile that rejects nothing, or something the probe did not ask for, is not a pass', () => {
+  const probe = { records: [{ subject: 'canary', assertion: 'canary' }, { subject: 'S', assertion: 'mutual' }], firstLine: 10 };
+  const canary = "probe.ts(10,21): error TS2344: Type 'false' does not satisfy the constraint 'true'.";
+  assert.deepEqual(interpretDiagnostics([canary], probe), []);
+  assert.deepEqual(interpretDiagnostics([canary, canary.replace('(10,', '(11,')], probe).map(({ subject }) => subject), ['S']);
+  // No diagnostic at all means the probe was not evaluated; so does a diagnostic elsewhere or of another kind.
+  assert.throws(() => interpretDiagnostics([], probe), /canary/u);
+  for (const stray of [canary.replace('(10,', '(12,'), canary.replace('TS2344', 'TS2322'), canary.replace('probe.ts', 'baseline/generated/index.d.ts'), "probe.ts(11,5): error TS2304: Cannot find name 'X'."]) {
+    assert.throws(() => interpretDiagnostics([canary, stray], probe), /unexpected diagnostic/u, stray);
+  }
+});
+
+// Controls: a synthetic baseline and a mutated copy of it, through the same harness.
+const manifestOf = (name, version) => ({ name, version, type: 'module', exports: { '.': { types: './generated/index.d.ts' } } });
+const controlPair = (before, after, options = {}) => createSnapshots({
+  baseline: { files: before.files ?? { 'index.d.ts': before }, manifest: before.manifest ?? manifestOf('@muxui/react', '0.0.0-control-baseline') },
+  current: { files: after.files ?? { 'index.d.ts': after }, manifest: after.manifest ?? manifestOf('@muxui/react', '0.0.0-control-current') },
+  ...options,
+});
+const withPair = (before, after, run, options) => {
+  const snapshots = controlPair(before, after, options);
+  try {
+    return run(snapshots);
+  } finally {
+    snapshots.dispose();
+  }
+};
+const failuresOf = (comparison, mode) => comparison.runs.map((run) => `${run.label}: ${run[mode].failures.map(({ subject, assertion }) => `${subject.replace(/^\.:\w+:/u, '')} ${assertion}`).sort().join(', ')}`);
+const expected = (modeFailures) => compilers.map(({ label }) => `${label}: ${modeFailures.sort().join(', ')}`);
+
+const SHARED = `import type * as React from 'react';
+export interface ActivateEvent { readonly type: 'activate' }
+export interface StableProps { onClick?: React.MouseEventHandler<HTMLButtonElement>; onValue?: (value: string) => void; label?: string }
+export type StableArms = { kind: 'a'; onChange?: (event: { id: string }) => void } | { kind: 'b'; onChange?: { method(event: { id: string }): void }['method'] };
+`;
+const BEFORE = `${SHARED}
+export interface FormProps { onSubmit?: React.FormEventHandler<HTMLFormElement> }
+export interface ActivateProps { onActivate?: (event: ActivateEvent) => void }
+export interface VariantProps { variant?: 'a' | 'b' }
+export interface RecordEvent { readonly id: string }
+export interface RecordProps { onRecord?: (event: RecordEvent) => void }
+export type SecondProps = { onRequest?: (request: { id: string }, actions: { close(): void }) => void };
+export type ArmProps = { kind: 'a'; onChange?: (event: { id: string }) => void } | { kind: 'b'; onChange?: { method(event: { id: string }): void }['method'] };
+export type ReadonlyProps = { onChange?: (event: { readonly id: string }) => void };
+`;
+const AFTER = `${SHARED}
+export interface FormProps { onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void }
+export interface ActivateProps { onActivate?(event: ActivateEvent): void }
+export interface VariantProps { variant?: 'a' | 'b' | undefined }
+export type RecordEvent = { readonly id: string };
+export interface RecordProps { onRecord?: (event: RecordEvent) => void }
+export interface Actions { close(): void }
+export type SecondProps = { onRequest?: (request: { id: string }, actions: Actions) => void };
+export type ArmProps = { kind: 'a'; onChange?: { method(event: { id: string }): void }['method'] } | { kind: 'b'; onChange?: (event: { id: string }) => void };
+export type ReadonlyProps = { onChange?: (event: { id: string }) => void };
+`;
+
+test('the pair proof and the callback probes each fail on the change they exist for', () => {
+  withPair(BEFORE, AFTER, (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    // C1 a bivariant React alias restated as a function, C2 a function property turned into a method, C4 an
+    // interface turned into a type alias (the record handler), the second parameter of a callback turned from
+    // a literal into an interface, the arms of a union exchanging variance, and a callback parameter losing
+    // readonly. The stable subjects and the added export Actions fail nothing.
+    const everywhere = [
+      'FormProps handler:onSubmit', 'ActivateProps handler:onActivate', 'RecordProps handler:onRecord',
+      'SecondProps handler:onRequest', 'ArmProps handler:onChange', 'ReadonlyProps handler:onChange',
+    ];
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(everywhere));
+    // C3 an optional property gaining `| undefined` shows only when exactOptionalPropertyTypes is on: the object
+    // is no longer mutually assignable (so its arm has no twin), and both explicit-undefined key sets differ.
+    assert.deepEqual(failuresOf(comparison, 'exact'), expected([...everywhere, 'VariantProps arms', 'VariantProps mutual', 'VariantProps explicitUndefined', 'VariantProps explicitUndefinedLiteral']));
+  });
+});
+
+test('dropping a callable member from the classification fails the cross-check instead of skipping its probe', () => {
+  withPair(BEFORE, BEFORE, (snapshots) => {
+    const dropActivate = (members) => {
+      const classified = members.get('.:type:ActivateProps');
+      members.set('.:type:ActivateProps', { ...classified, callable: classified.callable.filter((name) => name !== 'onActivate') });
+      return members;
+    };
+    const comparison = comparePublicSurfaces(snapshots, compilers, { tamper: dropActivate });
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['ActivateProps callable-members']));
+  });
+});
+
+test('a type, value, component or part missing from the current build is named, and a recorded addition stays recorded', () => {
+  const before = `import type * as React from 'react';
+export interface Dropped { x?: string }
+export declare const Gone: { readonly a: 1 };
+export declare const Kept: React.FC<{ label?: string }> & { Part: React.FC<{ part?: string }>; Other: React.FC<{ other?: string }> };
+export declare const Panel: React.FC<{ label?: string }>;
+`;
+  const after = `import type * as React from 'react';
+export declare const Kept: React.FC<{ label?: string }> & { Other: React.FC<{ other?: string }> };
+`;
+  withPair(before, after, (snapshots) => {
+    const baseline = listSubjects(snapshots, snapshots.baseline);
+    const current = listSubjects(snapshots, snapshots.current);
+    const recorded = { baseline: inventoryOf(baseline), added: {} };
+    assert.deepEqual(inventoryProblems({ baseline, current, manifest: recorded }).vanished, [
+      '.:components:Panel', '.:parts:Kept.Part', '.:types:Dropped', '.:values:Gone', '.:values:Panel',
+    ]);
+    // A subject added since is only reported until it is recorded, and then it may not go away either.
+    const grown = [...current, { id: '.:type:Extra', entry: '.', kind: 'type', name: 'Extra' }];
+    assert.deepEqual(inventoryProblems({ baseline, current: grown, manifest: recorded }).added, ['.:types:Extra']);
+    const withExtra = { ...recorded, added: { '.': { types: ['Extra'] } } };
+    assert.deepEqual(inventoryProblems({ baseline, current: grown, manifest: withExtra }).added, []);
+    assert.ok(inventoryProblems({ baseline, current, manifest: withExtra }).vanished.includes('.:types:Extra'));
+    // A baseline that enumerates differently from its record means the enumerator or the fixture changed.
+    assert.equal(inventoryProblems({ baseline: baseline.slice(1), current, manifest: recorded }).drifted.length, 1);
+  });
+});
+
+// Two packages whose declarations import their own name: the self-import is what a wrong layout redirects.
+// `Base` differs between them, so a redirected import is a visible type difference.
+const packageFiles = (id) => ({
+  'index.d.ts': `export * from './more.js';\nexport interface Base { id?: ${id} }\n`,
+  'more.d.ts': "import type { Base } from '@muxui/react';\nexport interface More { base?: Base }\n",
+});
+
+/** A project importing both entry files, as the probe does, that asserts the current package's `More` holds the current `Base`. */
+function projectOfBoth(snapshots) {
+  const imports = [snapshots.baseline, snapshots.current].map((snapshot, side) => `import type * as P${side} from '${entrySpecifier(snapshots, snapshot, snapshot.entries[0])}';\nexport type { P${side} };`);
+  const mutual = '[A] extends [B] ? ([B] extends [A] ? true : false) : false';
+  writeFileSync(join(snapshots.root, 'both.ts'), `${imports.join('\n')}\ntype Mutual<A, B> = ${mutual};\nexport type Own = true extends Mutual<NonNullable<P1.More['base']>, P1.Base> ? true : never;\nexport const own: Own = true;\n`);
+  const config = join(snapshots.root, 'tsconfig.both.json');
+  writeFileSync(config, `${JSON.stringify({ compilerOptions: { target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', strict: true, noEmit: true, types: [] }, files: ['both.ts'] })}\n`);
+  return config;
+}
+
+test('the two packages resolve their own self-imports and one copy of the React types', () => {
+  withPair({ files: packageFiles('string') }, { files: packageFiles('number') }, (snapshots) => {
+    for (const { tsc } of compilers) {
+      const config = projectOfBoth(snapshots);
+      assert.doesNotThrow(() => assertResolution({ tsc, config, snapshots }));
+      assert.deepEqual(tscDiagnostics({ tsc, config, directory: snapshots.root }), [], 'the current self-import reaches the current Base');
+    }
+    // The packages differ in Base alone, and More follows its own package's Base: the pair proof finds exactly that.
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'exact'), expected(['Base arms', 'Base mutual', 'More arms', 'More mutual']));
+  });
+});
+
+/**
+ * A project that reaches each package by its name, as two consumers would (`a` the baseline, `b` the current
+ * build), and asserts that the package `b` sees has the current `Base`.
+ */
+function projectViaPackageNames(snapshots) {
+  for (const [side, snapshot] of [['a', snapshots.baseline], ['b', snapshots.current]]) {
+    mkdirSync(join(snapshots.root, side, 'node_modules/@muxui'), { recursive: true });
+    symlinkSync(snapshot.dir, join(snapshots.root, side, 'node_modules/@muxui/react'), 'junction');
+    writeFileSync(join(snapshots.root, side, 'use.ts'), "import type { Base } from '@muxui/react';\nexport type Seen = Base;\n");
+  }
+  writeFileSync(join(snapshots.root, 'via.ts'), "import type { Seen as A } from './a/use.js';\nimport type { Seen as B } from './b/use.js';\nexport const a: A = { id: 'text' };\nexport const b: B = { id: 1 };\n");
+  const config = join(snapshots.root, 'tsconfig.via.json');
+  writeFileSync(config, `${JSON.stringify({ compilerOptions: { target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', strict: true, noEmit: true, types: [] }, files: ['via.ts'] })}\n`);
+  return config;
+}
+
+test('packages of the same name and version are merged by TypeScript, and the check refuses to run on them', () => {
+  const via = (manifest) => withPair({ files: packageFiles('string'), manifest }, { files: packageFiles('number'), manifest }, (snapshots) => {
+    const config = projectViaPackageNames(snapshots);
+    return compilers.map(({ tsc }) => tscDiagnostics({ tsc, config, directory: snapshots.root }));
+  });
+  // Distinct versions keep each package's own Base; the same version makes the second package's Base the first's.
+  for (const diagnostics of via(undefined)) assert.deepEqual(diagnostics, []);
+  const same = manifestOf('@muxui/react', '0.0.0-control-same');
+  for (const diagnostics of via(same)) assert.match(diagnostics.join('\n'), /via\.ts\(4,.*TS2322/u);
+  withPair({ files: packageFiles('string'), manifest: same }, { files: packageFiles('number'), manifest: same }, (snapshots) => {
+    assert.throws(() => comparePublicSurfaces(snapshots, compilers), /both packages are version 0\.0\.0-control-same/u);
+  });
+});
+
+test('a baseline renamed away from @muxui/react would resolve its self-imports to the current package, and the check refuses to run', () => {
+  const renamed = manifestOf('@muxui/react-baseline', '0.0.0-control-baseline');
+  withPair({ files: packageFiles('string'), manifest: renamed }, { files: packageFiles('number') }, (snapshots) => {
+    for (const { tsc } of compilers) {
+      assert.throws(() => assertResolution({ tsc, config: projectOfBoth(snapshots), snapshots }), /from the baseline package resolves to .*current\/generated\/index\.d\.ts/u);
+    }
+  }, { linkCurrent: true });
+});
+
+test('an import that does not resolve fails the check instead of reading as an any that every pair passes', () => {
+  const broken = { ...packageFiles('number'), 'more.d.ts': "import type { Missing } from 'not-installed-anywhere';\nexport interface More { base?: Missing }\n" };
+  withPair({ files: packageFiles('string') }, { files: broken }, (snapshots) => {
+    for (const { tsc } of compilers) {
+      assert.throws(() => assertResolution({ tsc, config: projectOfBoth(snapshots), snapshots }), /not-installed-anywhere is unresolved/u);
+    }
+    // And the probe's own diagnostics: a declaration the compiler rejects is not an expected rejection.
+    assert.throws(() => comparePublicSurfaces(snapshots, compilers), /unresolved|unexpected diagnostic/u);
+  });
+});
+
+test('a compiler that crashes, is killed, or prints nothing stops the check instead of passing every pair', () => {
+  withPair({ files: packageFiles('string') }, { files: packageFiles('number') }, (snapshots) => {
+    const compiler = (name, source) => {
+      const tsc = join(snapshots.root, name);
+      writeFileSync(tsc, source);
+      return [{ label: name, tsc }];
+    };
+    assert.throws(() => comparePublicSurfaces(snapshots, compiler('stderr.mjs', "process.stderr.write('tsc: internal error\\n'); process.exit(1);")), /wrote to stderr: tsc: internal error/u);
+    assert.throws(() => comparePublicSurfaces(snapshots, compiler('signal.mjs', "process.kill(process.pid, 'SIGKILL');")), /was stopped by SIGKILL/u);
+    assert.throws(() => comparePublicSurfaces(snapshots, compiler('silent.mjs', 'process.exit(0);')), /no resolution of @muxui\/react was traced/u);
+  });
+});
