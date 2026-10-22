@@ -1,6 +1,6 @@
 // The probe program of the public-surface check. For every subject both snapshots hold (`O` the baseline,
 // `N` the current build) it asserts, one assertion a line so a compile diagnostic names its subject:
-//   pair proof    mutual assignability, and the key set, required keys, optional keys, readonly keys (of the
+//   pair proof    mutual assignability (and the subject being any on neither or both sides), and the key set, required keys, optional keys, readonly keys (of the
 //                 examined members, below), keys that accept an explicit `undefined` (read through
 //                 `Required<Pick<T, K>>[K]`, and as an object literal) and open or closed index sets
 //   handler probes for each callable member that is declared in a snapshot's own files, or differs from
@@ -39,6 +39,7 @@ type Field<T, F extends string, E = never> = T extends unknown ? (
   : F extends 'literal' ? keyof { [K in keyof T as {} extends Pick<T, K> ? ({ [Q in K]: undefined } extends Pick<T, K> ? K : never) : never]: 0 }
   : F extends 'open' ? (string extends keyof T ? true : false)
   : F extends 'readonly' ? ReadonlyIn<T, E>
+  : F extends 'any' ? AnyIn<T, E>
   : never) : never;
 // An arm is as before when some arm of the other side, one of its mutual twins, has the same field; otherwise
 // it is set against all its twins together (or the whole other side when it has none), which names the difference.
@@ -65,6 +66,9 @@ type Bits<F, TO, TN, Tag extends string> = {
     : Q extends \`\${string}:\${infer K}:\${infer I}\` ? [Takes<TO, Build<F, K, I>>, Takes<TN, Build<F, K, I>>] : never;
 };
 type ReadonlyIn<T, E> = T extends object ? ({ [K in keyof T as K extends E ? K : never]-?: Same<{ [Q in K]: T[K] }, { -readonly [Q in K]: T[K] }> extends true ? never : K } extends infer M ? M[keyof M] : never) : never;
+type IsAny<T> = 0 extends 1 & T ? true : false;
+// The members of E typed any: assignability both ways cannot tell an any from anything else.
+type AnyIn<T, E> = T extends object ? ({ [K in keyof T as K extends E ? K : never]-?: IsAny<T[K]> extends true ? K : never } extends infer M ? M[keyof M] : never) : never;
 type ReadonlyKeys<P> = P extends object ? { [K in keyof P]-?: Same<{ [Q in K]: P[K] }, { -readonly [Q in K]: P[K] }> extends true ? never : K }[keyof P] : never;
 type ParamAt<F, I> = I extends keyof Params<F> ? Params<F>[I] : never;
 type Writes<FO, FN> = { [Q in \`readonly:\${Pos<FO> | Pos<FN>}\`]: Q extends \`readonly:\${infer I}\` ? [ReadonlyKeys<ParamAt<FO, I>>, ReadonlyKeys<ParamAt<FN, I>>] : never };
@@ -106,14 +110,17 @@ export function buildProbe(snapshots, common, members) {
   for (const { old } of common) {
     const [O, N] = [names.get(old.id).old, names.get(old.id).new];
     const { shape, selfCallable, examined, callable, inherited } = members.get(old.id);
-    assert(old, 'mutual', `Mutual<${O}, ${N}>`);
+    assert(old, 'mutual', `Mutual<${O}, ${N}> extends true ? Same<IsAny<${O}>, IsAny<${N}>> : false`);
     if (shape === 'object') {
       assert(old, 'arms', `Clean<Unpaired<${O}, ${N}>>`);
       for (const [field, assertion] of FIELDS) assert(old, assertion, `Clean<FieldDiff<${O}, ${N}, '${field}'>>`);
       // Readonly is read for the members the probe examines: the others are the same declaration with the same readonly
       // modifier. A value or part value classifies no members (its statics are its own), so it is read for every key.
       const readonlyKeys = old.kind === 'value' || old.kind === 'partValue' ? 'PropertyKey' : examined.length > 0 ? union(examined) : undefined;
-      if (readonlyKeys) assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${readonlyKeys}>>`);
+      if (readonlyKeys) {
+        assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${readonlyKeys}>>`);
+        assert(old, 'any', `Clean<FieldDiff<${O}, ${N}, 'any', ${readonlyKeys}>>`);
+      }
     }
     if (selfCallable) assert(old, 'handler', `Clean<Quiet<Disagree<Evidence<${O}, ${N}>>>>`);
     // The compiler's own keys of the subject are the classification's, so a member cannot lose its probes by losing its entry.

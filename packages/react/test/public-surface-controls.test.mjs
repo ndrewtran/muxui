@@ -244,6 +244,21 @@ export declare const Panel: { Header: React.FC<{ label?: string }> & { ${modifie
   });
 });
 
+test('a member that becomes or stops being any fails, because mutual assignability cannot see it', () => {
+  // any is assignable to and from every type, so a member typed any passes against a callback typed (x: never) => any.
+  const props = (type) => `export interface Props { cb: ${type} }\n`;
+  withPair(props('any'), props('(x: never) => any'), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['Props any']));
+    assert.deepEqual(comparison.runs[0].loose.failures.map(({ old, new: next }) => [old, next]), [['"cb"', 'never']]);
+  });
+  // The same for an exported type that is any itself, which the mutual proof reads as any being a string.
+  const alias = (type) => `export type Handler = ${type};\n`;
+  withPair(alias('any'), alias('string'), (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected(['Handler mutual']));
+  });
+});
+
 // Two packages whose declarations import their own name: the self-import is what a wrong layout redirects.
 // `Base` differs between them, so a redirected import is a visible type difference.
 const packageFiles = (id) => ({
