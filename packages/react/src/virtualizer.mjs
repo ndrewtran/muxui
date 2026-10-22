@@ -9,7 +9,7 @@ import {
 } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.ts';
-import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
+import { GridVirtualizerContext } from './grid-virtualizer-context.ts';
 
 function assertPositiveVirtualizerNumber(value, property) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) throw new TypeError(`Virtualizer ${property} must be a finite number greater than 0`);
