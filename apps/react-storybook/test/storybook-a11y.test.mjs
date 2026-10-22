@@ -490,6 +490,82 @@ async function assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme) 
   }
 }
 
+// The nested submenu lives on a page of its own, because the state matrix opens its popups together and React Aria hides the
+// rest while one is open, which leaves a submenu there unreachable to axe and to a person. Real key presses open the menu, move
+// into the submenu and back, close each level, and move on, and each step checks the names and where focus is.
+async function assertNestedMenuKeyboard(page, baseUrl, story, scheme) {
+  const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+  await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, scheme);
+  await waitForDocumentAnimations(page);
+  await page.addScriptTag({ content: axe.source });
+  const trigger = page.locator('#menu-nested-trigger');
+  const actions = page.getByRole('menu', { name: 'Actions' });
+  const share = page.getByRole('menu', { name: 'Share' });
+  const focused = (expected, message) => page.waitForFunction(
+    (text) => (document.activeElement?.id === text || document.activeElement?.textContent?.trim() === text),
+    expected,
+    { timeout: storyTimeoutMs },
+  ).catch(async (error) => {
+    const active = await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 160));
+    throw new Error(`${scheme}: ${message}: focus is on ${active}`, { cause: error });
+  });
+  const expanded = (name) => page.getByRole('menuitem', { name }).getAttribute('aria-expanded');
+  const openToSubmenu = async () => {
+    await page.keyboard.press('ArrowDown');
+    await actions.waitFor();
+    await focused('Rename', 'the keyboard opens the menu on its first item');
+    await page.keyboard.press('ArrowDown');
+    await focused('Share', 'ArrowDown moves to the submenu item');
+    await page.keyboard.press('ArrowRight');
+    await share.waitFor();
+    await focused('Copy link', 'the forward arrow moves into the submenu');
+  };
+
+  await trigger.focus();
+  assert.equal(await page.getByRole('menu').count(), 0, `${scheme}: the menu is closed before it is opened`);
+  await openToSubmenu();
+  // Naming: the top menu and the submenu each have their own name, and the submenu's item says it opens one.
+  assert.equal(await page.getByRole('menu').count(), 2, `${scheme}: two menus are open, named Actions and Share`);
+  assert.equal(await page.getByRole('menuitem', { name: 'Share' }).getAttribute('aria-haspopup'), 'menu', `${scheme}: the submenu item announces a menu`);
+  assert.equal(await expanded('Share'), 'true', `${scheme}: the submenu item is expanded while its menu is open`);
+  await waitForDocumentAnimations(page);
+  for (const name of ['Actions', 'Share']) {
+    const result = await runAxe(page, `[role="menu"][aria-label="${name}"]`);
+    assert.equal(result.violations.length, 0, `${scheme}: the open ${name} menu has axe violations:\n${formatViolations(result.violations)}`);
+  }
+  // The backward arrow closes the submenu and returns to its item, with the menu above it still open.
+  await page.keyboard.press('ArrowLeft');
+  await share.waitFor({ state: 'detached' });
+  await focused('Share', 'the backward arrow returns to the submenu item');
+  assert.equal(await expanded('Share'), 'false', `${scheme}: the submenu item is collapsed once its menu closes`);
+  assert.equal(await actions.count(), 1, `${scheme}: the menu above stays open`);
+  // Escape closes one level at a time: the submenu first, then the menu, which hands focus back to its trigger.
+  await page.keyboard.press('ArrowRight');
+  await share.waitFor();
+  await page.keyboard.press('Escape');
+  await share.waitFor({ state: 'detached' });
+  await focused('Share', 'Escape from the submenu returns to its item');
+  assert.equal(await actions.count(), 1, `${scheme}: Escape from the submenu leaves the menu above open`);
+  await page.keyboard.press('Escape');
+  await actions.waitFor({ state: 'detached' });
+  await focused('menu-nested-trigger', 'Escape from the menu restores focus to its trigger');
+  // Tab from inside the submenu closes the whole tree and moves on from the trigger by the page's own order.
+  await openToSubmenu();
+  await page.keyboard.press('Tab');
+  await actions.waitFor({ state: 'detached' });
+  await share.waitFor({ state: 'detached' });
+  await focused('menu-nested-after', 'Tab from the submenu moves on from the trigger');
+  // And back: Shift+Tab reaches the trigger, which opens the menu again from the keyboard.
+  await page.keyboard.press('Shift+Tab');
+  await focused('menu-nested-trigger', 'Shift+Tab returns to the trigger');
+  await page.keyboard.press('Enter');
+  await actions.waitFor();
+  await page.keyboard.press('Escape');
+  await actions.waitFor({ state: 'detached' });
+  await focused('menu-nested-trigger', 'focus is restored after a second opening');
+}
+
 async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
   await page.emulateMedia({
     colorScheme: 'light',
@@ -791,6 +867,7 @@ async function runA11yWorker({
   linkIconComposition,
   buttonMatrix,
   autocompleteInteraction,
+  nestedMenu,
   schemes,
   signal,
   onProgress,
@@ -811,6 +888,14 @@ async function runA11yWorker({
           coverage.push(`${scheme}:autocomplete-keyboard`);
         } catch (error) {
           recordPageFailure(failures, { scheme, id: autocompleteInteraction.id, family: 'Autocomplete', check: 'keyboard' }, error, { signal });
+        }
+      }
+      if (nestedMenu) {
+        try {
+          await assertNestedMenuKeyboard(page, baseUrl, nestedMenu, scheme);
+          coverage.push(`${scheme}:menu-nested-keyboard`);
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: nestedMenu.id, family: 'Menu', check: 'nested keyboard' }, error, { signal });
         }
       }
       if (buttonMatrix) {
@@ -926,6 +1011,9 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
           } else if (story.name === 'Disabled items keyboard navigation') {
             await assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme);
             coverage.push(`${scheme}:autocomplete-keyboard:${story.id}`);
+          } else if (story.name === 'Nested submenu keyboard navigation') {
+            await assertNestedMenuKeyboard(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:menu-nested-keyboard:${story.id}`);
           } else if (story.name === 'Variant × size') {
             await assertButtonMatrix(page, baseUrl, story, scheme);
             coverage.push(`${scheme}:button-matrix:${story.id}`);
@@ -1016,6 +1104,7 @@ function expectedSelectedPageCoverage(stories, schemes) {
     ...(story.exportName === 'BrowserProof' ? [`${scheme}:browser-proof:${story.id}`] : []),
     ...(story.exportName === 'Controlled' && ['PromptComposer', 'Message'].includes(storyFamily(story)) ? [`${scheme}:controlled-callbacks:${story.id}`] : []),
     ...(story.name === 'Disabled items keyboard navigation' ? [`${scheme}:autocomplete-keyboard:${story.id}`] : []),
+    ...(story.name === 'Nested submenu keyboard navigation' ? [`${scheme}:menu-nested-keyboard:${story.id}`] : []),
     ...(story.name === 'Variant × size' ? [`${scheme}:button-matrix:${story.id}`] : []),
     ...(story.name === 'States' && INTERACTION_OPEN_LOCATORS[storyFamily(story)] ? [`${scheme}:open-portal:${story.id}`] : []),
     ...(story.name === 'States' && storyFamily(story) === 'Dialog' ? [`${scheme}:dialog-state-dismissal:${story.id}`] : []),
@@ -1340,6 +1429,8 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
     const checkboxStates = states.find((story) => storyFamily(story) === 'Checkbox');
     const autocompleteInteraction = stories.find(({ name }) => name === 'Disabled items keyboard navigation'
       && isSelected({ title: 'Mux UI React/Autocomplete' }));
+    const nestedMenu = stories.find((story) => story.name === 'Nested submenu keyboard navigation'
+      && storyFamily(story) === 'Menu' && isSelected(story));
     const expectedFamilies = new Set(selectedFamilies ?? manifest.families.map(({ family }) => family));
     assert.ok(expectedFamilies.size > 0, 'the generated Storybook manifest must contain the current union');
     // A family shows a States story only when it has named states to show, so the generated manifest lists which do.
@@ -1358,6 +1449,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       'every States story belongs to a family with a Default story',
     );
     if (!focused || expectedFamilies.has('Autocomplete')) assert.ok(autocompleteInteraction, 'Storybook must expose the disabled-item Autocomplete interaction story');
+    if (!focused || expectedFamilies.has('Menu')) assert.ok(nestedMenu, 'Storybook must expose the nested submenu keyboard story');
     if (!focused || expectedFamilies.has('Link')) assert.ok(linkIconComposition, 'Storybook must expose the Link icon composition story');
     if (!focused || expectedFamilies.has('Button')) assert.ok(buttonStates, 'Storybook must expose the Button States story for focused platform-mode proof');
     if (!focused || expectedFamilies.has('Checkbox')) assert.ok(checkboxStates, 'Storybook must expose the Checkbox States story for focused contrast proof');
@@ -1380,6 +1472,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       linkIconComposition,
       buttonMatrix,
       autocompleteInteraction,
+      nestedMenu,
       schemes,
       signal: t.signal,
       onProgress: (message) => { activeProof = message; },
@@ -1398,6 +1491,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
 
     const expectedCoverage = workerSchemes.flatMap((schemes) => schemes.flatMap((scheme) => [
       ...(autocompleteInteraction ? [`${scheme}:autocomplete-keyboard`] : []),
+      ...(nestedMenu ? [`${scheme}:menu-nested-keyboard`] : []),
       ...(buttonMatrix ? [`${scheme}:button-matrix`] : []),
       ...(expectedFamilies.has('Dialog') ? [`${scheme}:dialog-state-dismissal`] : []),
       ...MODAL_STATE_FAMILIES.filter((family) => statesFamilies.has(family)).map((family) => `${scheme}:modal-controls-open:${family}`),

@@ -32,6 +32,7 @@ import {
   createBrowserProofStory,
   createControlledStory,
   createEventsStory,
+  createMenuNestedStory,
   createSelectNativeSelectionStory,
   createStory,
   createStoryMeta,
@@ -423,6 +424,10 @@ test('a family\'s callback must be declared by that family, not by an unrelated 
   // A compound's parts are part of its declaration.
   const compound = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport declare const Menu: ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport type MenuProps = {};';
   assert.match(familyDeclarations(compound, 'Menu'), declaresCallback('onOpenChange'));
+  // A compound a module declares as a type of its own (Menu's `MenuComponent`) counts the same, though the module does not export it.
+  const aliased = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport type OtherProps = { onClear?: () => void };\ntype MenuComponent = ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport declare const Menu: MenuComponent;\nexport type MenuProps = {};';
+  assert.match(familyDeclarations(aliased, 'Menu'), declaresCallback('onOpenChange'));
+  assert.doesNotMatch(familyDeclarations(aliased, 'Menu'), declaresCallback('onClear'));
 });
 
 test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {
@@ -567,6 +572,33 @@ test('native select stock mode seeds decode values and forward the original chan
       assert.strictEqual(receivedTarget, select);
       assert.deepEqual([...select.selectedOptions].map((option) => option.value), multiple ? ['inbox', 'research'] : ['research']);
     }
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('the nested submenu story is a closed menu with a submenu and a control after it, apart from the state matrix', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const story = createMenuNestedStory(currentRecord('Menu'));
+  assert.equal(story.name, 'Nested submenu keyboard navigation');
+  assert.throws(() => createMenuNestedStory(currentRecord('Button')), /require the Menu family/u);
+  try {
+    await act(async () => root.render(story.render(story.args)));
+    // Closed: the trigger, and the control Tab lands on, and no state matrix beside them.
+    assert.deepEqual([...host.querySelectorAll('button')].map((button) => button.textContent), ['Actions', 'After']);
+    assert.equal(host.querySelector('#menu-nested-trigger').getAttribute('aria-expanded'), 'false');
+    assert.equal(host.querySelector('.muxui-storybook-state'), null, 'the specimen is not a state of the matrix');
+    assert.equal(document.querySelectorAll('[role="menu"]').length, 0);
+    await act(async () => host.querySelector('#menu-nested-trigger').click());
+    const menu = document.querySelector('[role="menu"][aria-label="Actions"]');
+    assert.ok(menu, 'the trigger opens the menu');
+    // The submenu is in the list as one item that announces a menu, named for what it opens.
+    assert.deepEqual([...menu.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent), ['Rename', 'Share', 'Delete']);
+    assert.equal(menu.querySelector('.muxui-menu-item[data-has-submenu]').textContent, 'Share');
   } finally {
     await act(async () => root.unmount());
     env.resolveAnimations();
@@ -2651,6 +2683,8 @@ test('generated stories are stock CSF modules that display only the stories that
   assert.ok(!group.includes('Events'), 'Group declares no events, so it has no Events story');
   assert.ok(!group.includes('Controlled') && !group.includes('Uncontrolled'), 'Group has no controlled pair');
   assert.deepEqual(await exportsOf('Button'), ['Anatomy', 'BrowserProof', 'Default', 'Events', 'Matrix', 'States']);
+  // A nested submenu is unreachable in the state matrix, so Menu has a story of its own for it.
+  assert.ok((await exportsOf('Menu')).includes('NestedSubmenu'));
   // SelectNative's native value and change event are outside its derived API; its own story shows them.
   assert.ok((await exportsOf('SelectNative')).includes('NativeSelection'));
   assert.ok((await exportsOf('Checkbox')).includes('Controlled'), 'a family with a controlled pair keeps the pair');

@@ -159,7 +159,9 @@ test('every family Docs page runs the continuous reference sections in order, pr
     assert.deepEqual(list(section('behavior'), 'binding.behavior'), binding.behavior ?? [], `${family} behavior`);
     assert.deepEqual(texts(section('events').querySelectorAll('[data-fact="binding.api.events"] code')), binding.api.events, `${family} events`);
     // A part's events follow the root's, under the part's owner, and a part with none lists none.
-    const partsWithEvents = Object.entries(binding.api.partApis ?? {}).filter(([, api]) => api.events.length > 0);
+    // The docs list the parts in anatomy order, whatever order the catalog record keys them in.
+    const partsWithEvents = Object.entries(binding.api.partApis ?? {}).filter(([, api]) => api.events.length > 0)
+      .sort(([left], [right]) => artifact.anatomy.indexOf(left) - artifact.anatomy.indexOf(right));
     for (const [part, api] of Object.entries(binding.api.partApis ?? {})) {
       assert.deepEqual(texts(section('events').querySelectorAll(`[data-fact="binding.api.partApis.${part}.events"] code`)), api.events, `${family} ${part} events`);
     }

@@ -127,6 +127,19 @@ export const NativeSelection = {
 };`,
   },
   {
+    family: 'Menu',
+    exportName: 'NestedSubmenu',
+    name: 'Nested submenu keyboard navigation',
+    source: () => `const nestedSubmenu = createMenuNestedStory(record);
+export const NestedSubmenu = {
+  name: ${stringLiteral('Nested submenu keyboard navigation')},
+  args: nestedSubmenu.args,
+  argTypes: nestedSubmenu.argTypes,
+  parameters: nestedSubmenu.parameters,
+  render: nestedSubmenu.render,
+};`,
+  },
+  {
     family: 'Autocomplete',
     exportName: 'DisabledItemsInteraction',
     name: 'Disabled items keyboard navigation',
@@ -241,7 +254,7 @@ import {
 ${record.family === 'Button' ? '  createButtonMatrixStory,\n' : ''}  createBrowserProofStory,
   createControlledStory,
   createEventsStory,
-${record.family === 'SelectNative' ? '  createSelectNativeSelectionStory,\n' : ''}  createStory,
+${record.family === 'Menu' ? '  createMenuNestedStory,\n' : ''}${record.family === 'SelectNative' ? '  createSelectNativeSelectionStory,\n' : ''}  createStory,
   createUncontrolledStory,
   storyApi,
 } from '../../src/storybook-factory.mjs';${canonicalExample ? `
