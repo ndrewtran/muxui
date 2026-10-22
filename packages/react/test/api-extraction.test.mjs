@@ -20,14 +20,21 @@ export interface ThingProps extends ThingOwnProps, Omit<React.ButtonHTMLAttribut
 export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLButtonElement>>;
 `;
 
-function extract({ declarations, source, hostAllowlist, files = {}, part }) {
+function extract({ declarations, source, hostAllowlist, files = {}, part, callable, parts }) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const root = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
   try {
     for (const [name, text] of Object.entries(files)) writeFileSync(join(root, name), text);
     writeFileSync(join(root, 'thing.d.ts'), declarations);
     if (source !== undefined) writeFileSync(join(root, 'thing.ts'), source);
-    const component = { name: 'Thing', ...(part === undefined ? {} : { part }), declarations: join(root, 'thing.d.ts'), ...(source === undefined ? {} : { source: join(root, 'thing.ts') }) };
+    const component = {
+      name: 'Thing',
+      ...(part === undefined ? {} : { part }),
+      ...(callable === undefined ? {} : { callable }),
+      ...(parts === undefined ? {} : { parts }),
+      declarations: join(root, 'thing.d.ts'),
+      ...(source === undefined ? {} : { source: join(root, 'thing.ts') }),
+    };
     return extractApis({ declarationRoot: root, components: [component], ...(hostAllowlist ? { hostAllowlist } : {}) }).get('Thing');
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -656,6 +663,52 @@ test('a record is an object type whose one member is a string index signature', 
   rejects(ownProps('  size?: string;\n  [key: string]: string | undefined;'), /Thing\.<member>: only property signatures are in the grammar/u);
 });
 
+test('beside named properties, exactly one mutable [key: string]: unknown marks an open item', () => {
+  const item = 'export interface ThingItem {\n  /** The stable id. */\n  id?: string;\n  label?: React.ReactNode;\n  [key: string]: unknown;\n}\n';
+  const members = [
+    { name: 'id', type: { kind: 'string' }, required: false, readonly: false, description: 'The stable id.' },
+    { name: 'label', type: { kind: 'host', name: 'React.ReactNode' }, required: false, readonly: false },
+  ];
+  const api = extract({ declarations: ownProps('  items?: (ThingItem | string)[];\n  inline?: { id: string; [key: string]: unknown };', item) });
+  assert.deepEqual(api.types.ThingItem.type, { kind: 'object', members, additional: 'unknown' });
+  assert.deepEqual(api.propDetails.items.type, { kind: 'array', element: { kind: 'union', members: [{ kind: 'reference', name: 'ThingItem' }, { kind: 'string' }] }, readonly: false });
+  // A type literal holds the marker the same way, and a type alias of one does too.
+  assert.deepEqual(api.propDetails.inline.type, { kind: 'object', members: [{ name: 'id', type: { kind: 'string' }, required: true, readonly: false }], additional: 'unknown' });
+  assert.deepEqual(extract({ declarations: ownProps('  item?: ThingItem;', 'export type ThingItem = { id?: string; [key: string]: unknown };\n') }).types.ThingItem.type.additional, 'unknown');
+  // An ordinary object carries no marker, so no existing block changes.
+  const plain = extract({ declarations: ownProps('  item?: ThingItem;', 'export interface ThingItem { id?: string }\n') });
+  assert.equal(Object.hasOwn(plain.types.ThingItem.type, 'additional'), false);
+  assert.equal(Object.hasOwn(extract({ declarations: ownProps('  bag?: { [key: string]: string };') }).propDetails.bag.type, 'additional'), false);
+
+  const cases = [
+    // Beside named properties the signature is the one mutable string-keyed unknown, and nothing else.
+    ['two signatures', 'export interface Bad { id?: string; [key: string]: unknown; [key: number]: unknown }\n', /Thing\.bad -> Bad: an index signature is in the grammar only as the one member of its object type, or as the one mutable/u],
+    ['a number key', 'export interface Bad { id?: string; [key: number]: unknown }\n', /Thing\.bad -> Bad: an index signature takes one string key/u],
+    ['a symbol key', 'export interface Bad { id?: string; [key: symbol]: unknown }\n', /Thing\.bad -> Bad: an index signature takes one string key/u],
+    ['a template key', 'export interface Bad { id?: string; [key: `data-${string}`]: unknown }\n', /Thing\.bad -> Bad: an index signature takes one string key/u],
+    ['a readonly signature beside members', 'export interface Bad { id?: string; readonly [key: string]: unknown }\n', /Thing\.bad -> Bad: .*beside named properties it must be mutable/u],
+    ['another value type', 'export interface Bad { id?: string; [key: string]: string | undefined }\n', /Thing\.bad -> Bad: .*its value is written as the keyword unknown, not an alias, union, or other type/u],
+    ['an alias of unknown', 'export type Anything = unknown;\nexport interface Bad { id?: string; [key: string]: Anything }\n', /Thing\.bad -> Bad: .*its value is written as the keyword unknown/u],
+    ['a union holding unknown', 'export interface Bad { id?: string; [key: string]: unknown | string }\n', /Thing\.bad -> Bad: .*its value is written as the keyword unknown/u],
+    ['a parenthesized unknown', 'export interface Bad { id?: string; [key: string]: (unknown) }\n', /Thing\.bad -> Bad: .*its value is written as the keyword unknown/u],
+    ['any', 'export interface Bad { id?: string; [key: string]: any }\n', /Thing\.bad -> Bad: .*its value is written as the keyword unknown/u],
+    ['Record<string, unknown>', 'export interface Bad { id?: string; extra?: Record<string, unknown> }\n', /Thing\.bad -> Bad\.extra -> Record<1>: unknown is not in the grammar/u],
+    // unknown is not in the grammar on a named member, in a callback, or as the value of a sole signature.
+    ['a named member of unknown', 'export interface Bad { id?: string; extra?: unknown; [key: string]: unknown }\n', /Thing\.bad -> Bad\.extra: unknown is not in the grammar/u],
+    ['a callback parameter of unknown', 'export interface Bad { id?: string; [key: string]: unknown; onX?: (value: unknown) => void }\n', /Thing\.bad -> Bad\.onX\(value\): unknown is not in the grammar/u],
+    ['a method beside the marker', 'export interface Bad { id?: string; call(): void; [key: string]: unknown }\n', /Thing\.bad -> Bad\.call: only property signatures are in the grammar/u],
+    ['a sole signature of unknown', 'export interface Bad { [key: string]: unknown }\n', /Thing\.bad -> Bad\[string\]: unknown is not in the grammar/u],
+    ['a sole readonly signature of unknown', 'export interface Bad { readonly [key: string]: unknown }\n', /Thing\.bad -> Bad\[string\]: unknown is not in the grammar/u],
+  ];
+  for (const [label, extra, pattern] of cases) {
+    assert.throws(() => extract({ declarations: ownProps('  bad?: Bad;', extra) }), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
+  }
+  // unknown stays out of every other position.
+  rejects(ownProps('  bad?: unknown;'), /Thing\.bad: unknown is not in the grammar/u);
+  rejects(ownProps('  bad?: unknown[];'), /Thing\.bad\[\]: unknown is not in the grammar/u);
+  rejects(ownProps('  bad?: string | unknown;'), /Thing\.bad: unknown is not in the grammar/u);
+});
+
 test('never is in the grammar only as an optional member\'s type, a member that must be absent', () => {
   const rows = `export type ThingRow =
   | { readonly kind: 'added'; readonly values: string; readonly before?: never }
@@ -768,25 +821,25 @@ test('an exported component may be a zero-argument wrapper that returns one forw
     ['an expression body', wrapped('', { call: '(() => forwardRef(function Thing() { return null; }))()' }), /Thing: the wrapper has an expression body; /u],
     ['an async wrapper', wrapped(standard, { call: '(async () => {\n  %BODY%\n})()' }), /Thing: the wrapper is generic, async, or a generator; /u],
     ['a side-effecting statement', wrapped(`${component}\n  register(component);\n  component.displayName = 'Thing';\n  return component;`, { before: 'declare function register(value: unknown): void;\n' }),
-      /Thing: the wrapper runs a statement that is not a displayName assignment to one of its consts; /u],
+      /Thing: the wrapper runs a statement that is not a displayName or part assignment to one of its consts; /u],
     ['a side-effecting const', wrapped(`const hit = register();\n  ${component}\n  return component;`, { before: 'declare function register(): number;\n' }), /Thing: register is not React's forwardRef or memo; /u],
     ['a conditional return', wrapped(`${component}\n  const other = forwardRef(function Other() { return null; });\n  return flag ? component : other;`, { before: 'declare const flag: boolean;\n' }),
       /Thing: the wrapper does not end by returning one of its consts; /u],
     ['a return of something other than a const', wrapped(`${component}\n  return Object.freeze({ Root: component });`), /Thing: the wrapper does not end by returning one of its consts; /u],
     ['a return of an outer binding', wrapped(`${component}\n  return outer;`, { before: 'declare const outer: unknown;\n' }), /Thing: the wrapper does not end by returning one of its consts; /u],
     ['no return', wrapped(`${component}\n  component.displayName = 'Thing';`), /Thing: the wrapper does not end by returning one of its consts; /u],
-    ['a return before the end', wrapped(`${component}\n  return component;\n  component.displayName = 'Thing';`), /Thing: the wrapper holds a statement that is not a const, a displayName assignment, or its final return; /u],
+    ['a return before the end', wrapped(`${component}\n  return component;\n  component.displayName = 'Thing';`), /Thing: the wrapper holds a statement that is not a const, a displayName or part assignment, or its final return; /u],
     ['a non-literal displayName', wrapped(`${component}\n  component.displayName = label;\n  return component;`, { before: "declare const label: string;\n" }), /Thing: the wrapper sets component\.displayName to something other than a string literal; /u],
-    ['a render assignment', wrapped(`${component}\n  component.render = () => null;\n  return component;`), /Thing: the wrapper runs a statement that is not a displayName assignment to one of its consts; /u],
-    ['a displayName assignment before its const', wrapped(`component.displayName = 'Thing';\n  ${component}\n  return component;`), /Thing: the wrapper runs a statement that is not a displayName assignment to one of its consts; /u],
+    ['a render assignment', wrapped(`${component}\n  component.render = () => null;\n  return component;`), /Thing: the wrapper assigns component\.render, which is neither displayName nor a part named in PascalCase; /u],
+    ['a displayName assignment before its const', wrapped(`component.displayName = 'Thing';\n  ${component}\n  return component;`), /Thing: the wrapper runs a statement that is not a displayName or part assignment to one of its consts; /u],
     ['a let binding', wrapped(`let component = forwardRef(${render});\n  return component;`), /Thing: the wrapper declares a binding that is not const; /u],
     ['a var binding', wrapped(`var component = forwardRef(${render});\n  return component;`), /Thing: the wrapper declares a binding that is not const; /u],
     ['a destructured const', wrapped(`const { component } = { component: forwardRef(${render}) };\n  return component;`), /Thing: the wrapper declares a const that is not a named, initialized binding; /u],
     ['a const that is not a React wrapper', wrapped(`const component = ${render.replace('function (', '(').replace(') {', ') =>  {')};\n  return component;`), /Thing: component is not a forwardRef or memo call; /u],
     ['a local forwardRef', wrapped(`${component}\n  return component;`, { head: 'function forwardRef(render: unknown) { return render; }\n' }), /Thing: forwardRef is not React's forwardRef or memo; /u],
-    ['a write after the wrapper to its export', wrapped(standard, { after: "Thing.displayName = 'Other';\n" }), /Thing: the source writes to Thing beyond the wrapper's displayName assignments; /u],
-    ['a write after the wrapper to its const through the export', wrapped(standard, { after: 'Object.defineProperty(Thing, \'render\', { value: null });\n' }), /Thing: the source writes to Thing beyond the wrapper's displayName assignments; /u],
-    ['a write to a wrapper const from its component', wrapped(`const component = forwardRef(function Thing({ size = 'sm', count = 2 }: Record<string, unknown>) { (component as { render?: unknown }).render = null; return [size, count]; });\n  return component;`), /Thing: the source writes to component beyond the wrapper's displayName assignments; /u],
+    ['a write after the wrapper to its export', wrapped(standard, { after: "Thing.displayName = 'Other';\n" }), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u],
+    ['a write after the wrapper to its const through the export', wrapped(standard, { after: 'Object.defineProperty(Thing, \'render\', { value: null });\n' }), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u],
+    ['a write to a wrapper const from its component', wrapped(`const component = forwardRef(function Thing({ size = 'sm', count = 2 }: Record<string, unknown>) { (component as { render?: unknown }).render = null; return [size, count]; });\n  return component;`), /Thing: the source writes to component beyond the wrapper's displayName and part assignments; /u],
   ];
   for (const [label, text, pattern] of rejections) {
     assert.throws(() => read(text), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
@@ -855,8 +908,8 @@ ${after}`;
   const compound = (after) => `${imports}const ThingRoot = forwardRef(${render});\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${after}`;
   const cases = [
     // The exported wrapper binding, a wrapper const written from its own render function, and a compound binding.
-    ...Object.entries(writeForms('Thing', 'render')).map(([label, statement]) => [`export: ${label}`, () => extract({ declarations, source: wrapper(statement) }), /Thing: the source writes to Thing beyond the wrapper's displayName assignments; /u]),
-    ...Object.entries(writeForms('component', 'render')).map(([label, statement]) => [`const: ${label}`, () => extract({ declarations, source: wrapper('', statement) }), /Thing: the source writes to component beyond the wrapper's displayName assignments; /u]),
+    ...Object.entries(writeForms('Thing', 'render')).map(([label, statement]) => [`export: ${label}`, () => extract({ declarations, source: wrapper(statement) }), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u]),
+    ...Object.entries(writeForms('component', 'render')).map(([label, statement]) => [`const: ${label}`, () => extract({ declarations, source: wrapper('', statement) }), /Thing: the source writes to component beyond the wrapper's displayName and part assignments; /u]),
     ...Object.entries(writeForms('Thing', 'Root')).map(([label, statement]) => [`compound: ${label}`, () => extract({ declarations: compoundDeclarations, source: compound(statement), part: 'Root' }), /Thing\.Root: the source writes to the compound Thing after declaring it/u]),
   ];
   assert.deepEqual(accepted(cases), []);
@@ -911,6 +964,244 @@ ${after}`;
   assert.deepEqual(accepted(cases), []);
 });
 
+// A callable compound: the export is its own root (Thing.Root is Thing), and its other parts are statics
+// assigned to the returned const in the wrapper, as ListBox, GridList, and Select attach theirs.
+const callableDeclarations = `${header}export interface ThingOwnProps {
+  size?: 'sm' | 'md';
+  onCommit?: (value: string) => void;
+}
+export interface ThingItemOwnProps {
+  value: string;
+  tone?: 'quiet' | 'loud';
+  onPick?: (value: string) => void;
+}
+export interface ThingGroupOwnProps { heading?: React.ReactNode; }
+export interface ThingBadgeOwnProps { count?: number; }
+export interface ThingTagOwnProps { label?: string; }
+export interface ThingHeaderOwnProps {}
+export interface ThingProps extends ThingOwnProps, Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {}
+export interface ThingItemProps extends ThingItemOwnProps, React.HTMLAttributes<HTMLDivElement> {}
+export interface ThingGroupProps extends ThingGroupOwnProps, React.HTMLAttributes<HTMLElement> {}
+export interface ThingBadgeProps extends ThingBadgeOwnProps, React.HTMLAttributes<HTMLElement> {}
+export interface ThingTagProps extends ThingTagOwnProps, React.HTMLAttributes<HTMLElement> {}
+export interface ThingHeaderProps extends ThingHeaderOwnProps, React.HTMLAttributes<HTMLElement> {}
+export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> & {
+  Root: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>>;
+  Item: React.ForwardRefExoticComponent<ThingItemProps & React.RefAttributes<HTMLDivElement>>;
+  Group: React.ForwardRefExoticComponent<ThingGroupProps & React.RefAttributes<HTMLElement>>;
+  Badge: React.ForwardRefExoticComponent<ThingBadgeProps & React.RefAttributes<HTMLElement>>;
+  Tag: React.ForwardRefExoticComponent<ThingTagProps & React.RefAttributes<HTMLElement>>;
+  Header: React.ForwardRefExoticComponent<ThingHeaderProps & React.RefAttributes<HTMLElement>>;
+};
+`;
+const callableRender = "function ThingRoot({ size = 'md', onCommit, ...props }: Record<string, unknown>) { return [size, onCommit, props]; }";
+const callableItem = "function ThingItem({ value, tone = 'quiet', onPick, ...props }: Record<string, unknown>) { return [value, tone, onPick, props]; }";
+/** A callable compound's source; `statics` are the statements after the displayName, `before` and `after` sit around the export. */
+const callableSource = ({ before = '', inside = '', statics, after = '' } = {}) => `import { forwardRef, memo } from 'react';
+declare const replacement: unknown;
+${before}export const Thing = /*#__PURE__*/ (() => {
+  const Thing = forwardRef(${callableRender});
+  ${inside}
+  Thing.displayName = 'Thing';
+  ${statics ?? `Thing.Root = Thing;
+  Thing.Item = forwardRef(${callableItem});
+  Thing.Group = Group;`}
+  return Thing;
+})();
+${after}`;
+const callableBefore = `function ThingBadge({ count = 1, ...props }: Record<string, unknown>) { return [count, props]; }
+const ThingTag = forwardRef(function ThingTag({ label = 'Tag', ...props }: Record<string, unknown>) { return [label, props]; });
+`;
+const groupConst = "const Group = forwardRef(function ThingGroup({ heading, ...props }: Record<string, unknown>) { return [heading, props]; });\n";
+
+test('a callable compound is its own root, and the parts assigned in its wrapper each derive a partApis entry', () => {
+  const all = `Thing.Root = Thing;
+  Thing.Item = forwardRef(${callableItem});
+  Thing.Group = Group;
+  Thing.Badge = ThingBadge;
+  Thing.Tag = ThingTag;`;
+  const read = (statics, options = {}) => extract({
+    declarations: callableDeclarations,
+    source: callableSource({ before: `${callableBefore}`, inside: groupConst.trim(), statics }),
+    ...options,
+  });
+  const api = read(all, { parts: { item: 'Item', group: 'Group', badge: 'Badge', tag: 'Tag' } });
+  // The root is the callable itself: ThingOwnProps and its defaults, with the parts beside it.
+  assert.deepEqual([api.props, api.events, api.defaults], [['size'], ['commit'], { size: 'md' }]);
+  assert.deepEqual(Object.keys(api.partApis), ['item', 'group', 'badge', 'tag']);
+  assert.deepEqual(api.partApis.item.member, 'Item');
+  // A part is read like the root, from <Name><Member>OwnProps and its own function: an inline forwardRef,
+  // a wrapper const, a top-level function declaration, and a top-level const each supply their defaults.
+  const { item, group, badge, tag } = api.partApis;
+  assert.deepEqual([item.props, item.events, item.defaults], [['value', 'tone'], ['pick'], { tone: 'quiet' }]);
+  assert.deepEqual([item.propDetails.value.required, item.propDetails.tone.enum, Object.keys(item)], [true, ['quiet', 'loud'], ['member', 'props', 'events', 'defaults', 'propDetails', 'eventDetails', 'types']]);
+  assert.deepEqual([group.member, group.props, group.defaults, group.propDetails.heading.type], ['Group', ['heading'], {}, { kind: 'host', name: 'React.ReactNode' }]);
+  assert.deepEqual([badge.member, badge.defaults, tag.member, tag.defaults], ['Badge', { count: 1 }, 'Tag', { label: 'Tag' }]);
+  // Without parts, the root's block is all there is.
+  assert.equal(Object.hasOwn(read(all), 'partApis'), false);
+
+  // Root = <the callable> is how ListBox, GridList, and Select name their root, and omitting Root does too.
+  assert.deepEqual(read('Thing.Item = forwardRef(' + callableItem + ');', { parts: { item: 'Item' } }).defaults, { size: 'md' });
+  // Any other Root is a different component than the export, and the root must then be named.
+  const otherRoot = (value) => `Thing.Root = ${value};\n  Thing.Item = forwardRef(${callableItem});`;
+  for (const value of ['Group', `forwardRef(${callableRender.replace("'md'", "'sm'")})`, 'ThingBadge']) {
+    assert.throws(() => read(otherRoot(value), { parts: { item: 'Item' } }), (error) => error instanceof ApiExtractionError
+      && /Thing: Thing\.Root is not Thing itself; name the root part \('Root'\) in the derived component list/u.test(error.message), value);
+  }
+  // Naming the part makes that component the root, as Menu's Root is not its callable.
+  const rooted = read(otherRoot(`forwardRef(${callableRender.replace("'md'", "'sm'")})`), { part: 'Root', parts: { item: 'Item' } });
+  assert.deepEqual(rooted.defaults, { size: 'sm' });
+  assert.deepEqual(Object.keys(rooted.partApis), ['item']);
+});
+
+test('a callable compound\'s part is checked like the root: its props, its defaults, and its mapping', () => {
+  const statics = `Thing.Root = Thing;
+  Thing.Item = forwardRef(${callableItem});
+  Thing.Group = Group;`;
+  const source = callableSource({ inside: groupConst.trim(), statics });
+  const reads = (parts, options = {}) => () => extract({ declarations: callableDeclarations, source, parts, ...options });
+  const fails = (read, pattern, label) => assert.throws(read, (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
+  const cases = [
+    ['a member the export lacks', reads({ item: 'Itm' }), /Thing\.Itm: the declarations do not declare ThingItmOwnProps/u],
+    ['a member the declarations have and the wrapper does not assign', reads({ badge: 'Badge' }), /Thing\.Badge: the exported Thing has no Badge part assigned in its wrapper/u],
+    ['a part without Mux UI-owned props', reads({ header: 'Header' }, { source: source.replace('Thing.Group = Group;', 'Thing.Header = forwardRef(function ThingHeader(props: Record<string, unknown>) { return props; });') }),
+      /Thing\.Header: ThingHeaderOwnProps declares no Mux UI-owned prop; a part without Mux UI-owned props has no partApis entry/u],
+    ['two anatomy parts for one member', reads({ item: 'Item', entry: 'Item' }), /Thing\.Item: item and entry both map to Item; a member has one anatomy part/u],
+    ['the root part as a part', reads({ root: 'Root' }, { part: 'Root' }), /Thing\.Root: root maps to Root, which is the root part/u],
+    ['an anatomy part that is not kebab-case', reads({ Item: 'Item' }), /Thing\.Item: parts maps an anatomy part, such as item, to an export member, such as Item; not Item to Item/u],
+    ['a member that is not PascalCase', reads({ item: 'item' }), /Thing\.item: parts maps an anatomy part/u],
+    ['parts without the source that reads their defaults', reads({ item: 'Item' }, { source: undefined }), /Thing\.Item: a part reads its defaults from the component source, which is not given/u],
+    ['a part prop its function does not destructure', reads({ item: 'Item' }, { source: source.replace('{ value, tone', '{ tone') }), /Thing\.Item\.value: the props parameter must destructure each Mux UI-owned prop/u],
+    ['a part default the function executes', reads({ item: 'Item' }, { source: source.replace("tone = 'quiet'", 'tone').replace('[value, tone, onPick, props]', "[value, tone ?? 'quiet', onPick, props]") }),
+      /Thing\.Item\.tone: tone \?\? \.\.\. falls back to a value the component executes; declare the default in the props parameter/u],
+  ];
+  for (const [label, read, pattern] of cases) fails(read, pattern, label);
+  // The part\'s public props must carry its OwnProps unchanged, as the root\'s must.
+  const redeclared = callableDeclarations.replace("export interface ThingItemProps extends ThingItemOwnProps, React.HTMLAttributes<HTMLDivElement> {}", "export interface ThingItemProps extends React.HTMLAttributes<HTMLDivElement> { value?: string; tone?: 'quiet' | 'loud'; onPick?: (value: string) => void }");
+  fails(() => extract({ declarations: redeclared, source, parts: { item: 'Item' } }), /Thing\.Item\.value: the exported Thing\.Item's props redeclare value as optional string | undefined; ThingItemOwnProps declares required string/u, 'a redeclared part prop');
+  // A part\'s type name resolves within its own block: two parts may share a type, and the blocks each define it.
+  const shared = extract({
+    declarations: `${callableDeclarations.replace('heading?: React.ReactNode;', 'heading?: ThingTone;').replace('tone?: \'quiet\' | \'loud\';', 'tone?: ThingTone;')}export type ThingTone = 'quiet' | 'loud';\n`,
+    source,
+    parts: { item: 'Item', group: 'Group' },
+  });
+  assert.deepEqual(shared.partApis.item.types, shared.partApis.group.types);
+  assert.deepEqual(Object.keys(shared.partApis.item.types), ['ThingTone']);
+  assert.deepEqual(shared.types, {});
+});
+
+test('a callable compound may name a part its own props must also carry, and a misnamed or short callable fails', () => {
+  // Menu\'s callable is its List, while its root is Menu.Root, a different component.
+  const declarations = `${header}export interface ThingOwnProps { open?: boolean; }
+export interface ThingListOwnProps { items?: string[]; disabled?: boolean; }
+export interface ThingRootProps extends ThingOwnProps, React.HTMLAttributes<HTMLDivElement> {}
+export interface ThingListProps extends ThingListOwnProps, React.HTMLAttributes<HTMLDivElement> {}
+export declare const Thing: React.ForwardRefExoticComponent<ThingListProps & React.RefAttributes<HTMLDivElement>> & {
+  Root: React.ForwardRefExoticComponent<ThingRootProps>;
+  List: React.ForwardRefExoticComponent<ThingListProps & React.RefAttributes<HTMLDivElement>>;
+};
+`;
+  const source = `import { forwardRef } from 'react';
+export const Thing = (() => {
+  const ThingRoot = forwardRef(function ThingRoot({ open = false }: Record<string, unknown>) { return open; });
+  const Thing = forwardRef(function ThingList({ items, disabled = false }: Record<string, unknown>) { return [items, disabled]; });
+  Thing.Root = ThingRoot;
+  Thing.List = Thing;
+  return Thing;
+})();
+`;
+  const options = { part: 'Root', parts: { list: 'List' }, declarations, source };
+  const api = extract({ ...options, callable: 'list' });
+  assert.deepEqual([api.props, api.defaults, api.partApis.list.props, api.partApis.list.defaults], [['open'], { open: false }, ['items', 'disabled'], { disabled: false }]);
+  assert.deepEqual(Object.keys(extract(options)), Object.keys(api), 'the check adds no data');
+  const fails = (overrides, pattern, label) => assert.throws(() => extract({ ...options, callable: 'list', ...overrides }), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
+  fails({ callable: 'popup' }, /Thing: callable names popup, which is not one of the parts/u, 'an unknown part');
+  fails({ declarations: declarations.replace('React.ForwardRefExoticComponent<ThingListProps & React.RefAttributes<HTMLDivElement>> & {', 'React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLDivElement> & React.RefAttributes<HTMLDivElement>> & {') },
+    /Thing \(callable\)\.items: the exported Thing \(callable\)'s props do not include items/u, 'a callable without the part\'s props');
+  fails({ declarations: declarations.replace('export declare const Thing: React.ForwardRefExoticComponent<ThingListProps', 'export declare const Thing: React.ForwardRefExoticComponent<ThingListProps').replace('React.ForwardRefExoticComponent<ThingListProps & React.RefAttributes<HTMLDivElement>> & {', 'React.ForwardRefExoticComponent<Omit<ThingListProps, \'disabled\'> & { disabled: boolean } & React.RefAttributes<HTMLDivElement>> & {') },
+    /Thing \(callable\)\.disabled: the exported Thing \(callable\)'s props redeclare disabled as required boolean; ThingListOwnProps declares optional boolean/u, 'a callable that changes a prop');
+});
+
+test('a part assigned in a wrapper is assigned once, to the returned const, as a component', () => {
+  const read = (statics, options = {}) => extract({
+    declarations: callableDeclarations,
+    source: callableSource({ before: options.before ?? '', inside: options.inside ?? '', statics, after: options.after ?? '' }),
+    parts: { item: 'Item' },
+  });
+  const item = `Thing.Item = forwardRef(${callableItem});`;
+  assert.deepEqual(read(item).partApis.item.defaults, { tone: 'quiet' });
+  const cases = [
+    ['a part assigned twice', `${item}\n  ${item}`, {}, /Thing: the wrapper assigns Thing\.Item twice; /u],
+    ['a part on a const that is not returned', `${item}\n  other.Item = forwardRef(${callableItem});`, { inside: 'const other = forwardRef(function Other() { return null; });' }, /Thing: the wrapper assigns other\.Item, but parts attach only to the returned const Thing; /u],
+    ['a computed part', `${item}\n  Thing['Group'] = forwardRef(${callableItem});`, {}, /Thing: the wrapper runs a statement that is not a displayName or part assignment to one of its consts; /u],
+    ['an Object.assign of parts', `${item}\n  Object.assign(Thing, { Group: forwardRef(${callableItem}) });`, {}, /Thing: the wrapper runs a statement that is not a displayName or part assignment to one of its consts; /u],
+    ['a part named in lower case', `${item}\n  Thing.render = forwardRef(${callableItem});`, {}, /Thing: the wrapper assigns Thing\.render, which is neither displayName nor a part named in PascalCase; /u],
+    ['a part that is an arrow', 'Thing.Item = () => null;', {}, /Thing: the wrapper assigns Thing\.Item something other than a forwardRef or memo call, one of its consts, or a top-level function or const; /u],
+    ['a part that is a literal', 'Thing.Item = 5;', {}, /Thing: the wrapper assigns Thing\.Item something other than a forwardRef or memo call, one of its consts, or a top-level function or const; /u],
+    ['a part that is a conditional', 'Thing.Item = replacement ? Thing : Thing;', {}, /Thing: the wrapper assigns Thing\.Item something other than a forwardRef or memo call, one of its consts, or a top-level function or const; /u],
+    ['a part that is a call to something else', 'Thing.Item = register();', { before: 'declare function register(): never;\n' }, /Thing\.Item: register is not React's forwardRef or memo; a component's defaults/u],
+    ['a part named by a name that is not a component', 'Thing.Item = Count;', { before: 'const Count = 5;\n' }, /Thing\.Item: Count must be a function, forwardRef, or memo call/u],
+    ['a part named by a name that is not top-level', 'Thing.Item = Missing;', {}, /Thing\.Item: Missing is not a top-level function declaration or const in the component's source/u],
+    ['a part that wraps itself', 'Thing.Item = Loop;', { before: 'const Loop = memo(Loop);\n' }, /Thing\.Item: Loop wraps itself/u],
+  ];
+  for (const [label, statics, options, pattern] of cases) {
+    const text = callableSource({ before: options.before ?? '', inside: options.inside ?? '', statics });
+    assert.throws(() => extract({ declarations: callableDeclarations, source: text, parts: { item: 'Item' } }), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
+  }
+  // A part written to later is not the part the extraction read.
+  assert.throws(() => read(item, { after: 'Thing.Item = replacement as typeof Thing.Item;\n' }), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u);
+  assert.throws(() => read(item, { after: 'Object.assign(Thing, { Item: replacement });\n' }), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u);
+  assert.throws(() => read(`${item}`, { inside: '', after: "Object.defineProperty(Thing, 'Item', { value: replacement });\n" }), /Thing: the source writes to Thing beyond/u);
+});
+
+test('a part cannot be replaced through an alias of the component', () => {
+  const declarations = callableDeclarations;
+  const item = `Thing.Root = Thing;\n  Thing.Item = forwardRef(${callableItem});`;
+  const read = (after, before = '') => extract({ declarations, source: callableSource({ before, statics: item, after }), parts: { item: 'Item' } });
+  const aliased = (name) => ({
+    ...writeForms(name, 'Item'),
+    'an Object.assign': `Object.assign(${name}, { Item: replacement });`,
+    'an Object.defineProperty': `Object.defineProperty(${name}, 'Item', { value: replacement });`,
+    'a delete': `delete (${name} as { Item?: unknown }).Item;`,
+    'a displayName': `${name}.displayName = label;`,
+  });
+  const through = /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u;
+  // An alias is a variable that takes the component\'s value, however it is introduced and however many times it is passed on.
+  const aliases = {
+    'a const alias': 'const alias = Thing;\n',
+    'a const alias through an assertion': 'const alias = Thing as unknown as { Item: unknown };\n',
+    'a const alias through a satisfies': 'const alias = (Thing satisfies unknown) as { Item: unknown };\n',
+    'a let alias assigned later': 'let alias: unknown;\nalias = Thing;\n',
+    'a chain of aliases': 'const first = Thing;\nconst second = first;\nconst alias = second;\n',
+  };
+  const cases = Object.entries(aliases).flatMap(([setup, declaration]) => Object.entries(aliased('alias')).map(([label, statement]) => [
+    `${setup}: ${label}`, () => read(`${declaration}${statement}\n`, 'declare const label: string;\n'), through,
+  ]));
+  assert.deepEqual(accepted(cases), []);
+  // An alias that is only read, and a variable that is not the component, write nothing.
+  assert.deepEqual(read("const alias = Thing;\nvoid alias.Item;\nvoid alias.displayName;\nlet other: unknown;\nother = replacement;\nObject.assign({}, alias);\n").partApis.item.defaults, { tone: 'quiet' });
+  // The same holds for a component read without a wrapper, and for a compound.
+  const plain = (statement) => `import { forwardRef } from 'react';\ndeclare const replacement: unknown;\nexport const Thing = forwardRef(${callableRender});\nconst alias = Thing;\n${statement}\n`;
+  assert.throws(() => extract({ declarations: ownProps("  size?: 'sm' | 'md';"), source: plain('alias.render = replacement;') }), /Thing: the source writes to Thing, which the component's defaults are read through/u);
+  const compound = (statement) => `import { forwardRef } from 'react';\ndeclare const replacement: unknown;\nconst ThingRoot = forwardRef(${callableRender});\nexport const Thing = Object.freeze({ Root: ThingRoot });\nconst alias = Thing;\n${statement}\n`;
+  assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('Object.assign(alias, { Root: replacement });') }), /Thing\.Root: the source writes to the compound Thing after declaring it/u);
+  assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('(alias as { Root: unknown }).Root = replacement;') }), /Thing\.Root: the source writes to the compound Thing after declaring it/u);
+});
+
+test('a part read through a top-level const or function is checked for writes like any component', () => {
+  const read = (after, inside = '') => extract({
+    declarations: callableDeclarations,
+    source: callableSource({ before: callableBefore, inside, statics: 'Thing.Root = Thing;\n  Thing.Badge = ThingBadge;\n  Thing.Tag = ThingTag;', after }),
+    parts: { badge: 'Badge', tag: 'Tag' },
+  });
+  assert.deepEqual(read('').partApis.tag.defaults, { label: 'Tag' });
+  const through = (name) => new RegExp(`Thing: the source writes to ${name}, which the component's defaults are read through, beyond a literal displayName assignment; `, 'u');
+  assert.deepEqual(read("ThingTag.displayName = 'Tag';\n").partApis.tag.defaults, { label: 'Tag' }, 'a literal displayName write stays allowed');
+  assert.throws(() => read('(ThingTag as { render?: unknown }).render = replacement;\n'), through('ThingTag'));
+  assert.throws(() => read('const alias = ThingTag;\n(alias as { render?: unknown }).render = replacement;\n'), through('ThingTag'));
+  assert.throws(() => read('Object.assign(ThingTag, { render: replacement });\n'), through('ThingTag'));
+});
+
 test('derived API documents are validated, written, checked, pruned, and merged into their records', async () => {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const root = mkdtempSync(join(packageRoot, 'build', 'derived-apis-'));
@@ -952,6 +1243,53 @@ test('derived API documents are validated, written, checked, pruned, and merged 
     assert.deepEqual(withDerivedApi(thing, documents).bindings['web.react'].api, { ...document.api, parts: ['root', 'label'] });
     const other = { id: 'muxui:component:other', anatomy: ['root'], bindings: {} };
     assert.equal(withDerivedApi(other, documents), other);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('derived part APIs are validated across blocks: one type name has one definition, and the document merges under the anatomy', async () => {
+  mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
+  const root = mkdtempSync(join(packageRoot, 'build', 'derived-parts-'));
+  try {
+    const declarationRoot = join(root, 'ts');
+    const repositoryRoot = join(root, 'repository');
+    mkdirSync(declarationRoot);
+    mkdirSync(join(repositoryRoot, 'packages/react/src'), { recursive: true });
+    const declarations = (partTone) => `${header}${partTone}
+export type ThingTone = 'quiet' | 'loud';
+export interface ThingOwnProps { tone?: ThingTone; }
+export interface ThingItemOwnProps { tone?: PartTone; }
+export interface ThingProps extends ThingOwnProps, React.HTMLAttributes<HTMLDivElement> {}
+export interface ThingItemProps extends ThingItemOwnProps, React.HTMLAttributes<HTMLDivElement> {}
+export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> & {
+  Item: React.ForwardRefExoticComponent<ThingItemProps & React.RefAttributes<HTMLDivElement>>;
+};
+`;
+    // An imported type named ThingTone is a second Mux UI-owned type of that name, in the part's block only.
+    writeFileSync(join(declarationRoot, 'other.d.ts'), "export type ThingTone = 'a' | 'b';\n");
+    const components = [{ slug: 'thing', name: 'Thing', source: 'packages/react/src/thing.ts', parts: { item: 'Item' } }];
+    const derive = (partTone, itemDefault) => {
+      writeFileSync(join(repositoryRoot, 'packages/react/src/thing.ts'), `import { forwardRef } from 'react';
+export const Thing = (() => {
+  const Thing = forwardRef(function Thing({ tone = 'quiet' }: Record<string, unknown>) { return tone; });
+  Thing.Item = forwardRef(function ThingItem({ tone = '${itemDefault}' }: Record<string, unknown>) { return tone; });
+  return Thing;
+})();
+`);
+      writeFileSync(join(declarationRoot, 'thing.d.ts'), declarations(partTone));
+      return deriveApis({ packageRoot: join(root, 'package'), repositoryRoot, declarationRoot, components });
+    };
+    // The same type under another name is no conflict; the same name with two definitions is one.
+    const same = (await derive('type PartTone = ThingTone;', 'loud')).get('thing');
+    assert.deepEqual(Object.keys(same.api.partApis.item.types), ['PartTone', 'ThingTone']);
+    assert.deepEqual(same.api.partApis.item.types.ThingTone, same.api.types.ThingTone);
+    await assert.rejects(derive("import type { ThingTone as PartTone } from './other.js';", 'a'), /api\/partApis\/item\/types\/ThingTone is defined differently from \$\/api\/types\/ThingTone/u);
+
+    // The merged record carries the part APIs under its own anatomy parts, and nowhere else.
+    const thing = { id: 'muxui:component:thing', anatomy: ['root', 'item'], bindings: { 'web.react': { strategy: 'direct' } } };
+    assert.deepEqual(withDerivedApi(thing, new Map([['thing', same]])).bindings['web.react'].api.partApis, same.api.partApis);
+    assert.throws(() => withDerivedApi({ ...thing, anatomy: ['root'] }, new Map([['thing', same]])), /partApis\/item is not a part of the component anatomy/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

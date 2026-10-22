@@ -371,24 +371,35 @@ function declarationReader({ project, declarationRoot, allowed }) {
   }
 
   /**
-   * An object type whose one member is a string index signature, `{ readonly [key: string]:
-   * T }`, is a record: string keys the caller chooses, each holding a T. It is the only
-   * index signature in the grammar: beside other members, or keyed by anything but string,
-   * one fails.
+   * An index signature is in the grammar in two forms only. As the one member of its object
+   * type, `{ readonly [key: string]: T }` is a record: string keys the caller chooses, each
+   * holding a T. Beside named properties it must be the one mutable `[key: string]: unknown`,
+   * which marks an open item (`additional: "unknown"`): other string-keyed fields are allowed
+   * and typed unknown. This marker is the only place the keyword unknown is in the grammar,
+   * and it never goes through `typeOf`. Anything else fails: a second signature, a key other
+   * than string, a readonly signature beside members, or any other value type beside them.
    */
-  function recordOf(members, chain) {
-    if (!members.some((member) => member.kind === SyntaxKind.IndexSignature)) return null;
-    if (members.length !== 1) throw new ApiExtractionError(chain, 'an index signature is in the grammar only as the one member of its object type');
-    const [signature] = members;
+  function indexedOf(members, chain) {
+    const signatures = members.filter((member) => member.kind === SyntaxKind.IndexSignature);
+    if (signatures.length === 0) return null;
+    const rule = 'an index signature is in the grammar only as the one member of its object type, or as the one mutable `[key: string]: unknown` beside named properties';
+    if (signatures.length !== 1) throw new ApiExtractionError(chain, rule);
+    const [signature] = signatures;
     const [key] = signature.parameters;
     if (signature.parameters.length !== 1 || key.type?.kind !== SyntaxKind.StringKeyword) {
       throw new ApiExtractionError(chain, 'an index signature takes one string key');
     }
     if (!signature.type) throw new ApiExtractionError(chain, 'an index signature needs a declared type');
-    return { kind: 'record', value: typeOf(signature.type, `${chain}[string]`), readonly: hasModifier(signature, SyntaxKind.ReadonlyKeyword) };
+    const readonly = hasModifier(signature, SyntaxKind.ReadonlyKeyword);
+    if (members.length === 1) return { kind: 'record', value: typeOf(signature.type, `${chain}[string]`), readonly };
+    if (readonly) throw new ApiExtractionError(chain, `${rule}; beside named properties it must be mutable`);
+    if (signature.type.kind !== SyntaxKind.UnknownKeyword) {
+      throw new ApiExtractionError(chain, `${rule}; its value is written as the keyword unknown, not an alias, union, or other type`);
+    }
+    return { kind: 'object', members: members.filter((member) => member !== signature).map((member) => memberOf(member, `${chain}.`)), additional: 'unknown' };
   }
 
-  const objectOf = (members, chain) => recordOf(members, chain)
+  const objectOf = (members, chain) => indexedOf(members, chain)
     ?? { kind: 'object', members: members.map((member) => memberOf(member, `${chain}.`)) };
 
   function memberOf(member, prefix) {
@@ -463,26 +474,28 @@ function exportedNamed(sourceFile, name) {
   return found;
 }
 
-function ownPropsOf(checker, sourceFile, name) {
+// `ownName` names the declaration, `<ownName>OwnProps`; `label` is the component in a diagnostic.
+function ownPropsOf(checker, sourceFile, ownName, label) {
   const declaration = sourceFile.statements.find((statement) => (
     (statement.kind === SyntaxKind.InterfaceDeclaration || statement.kind === SyntaxKind.TypeAliasDeclaration)
-    && statement.name.text === `${name}OwnProps`
+    && statement.name.text === `${ownName}OwnProps`
   ));
-  if (!declaration) throw new ApiExtractionError(name, `the declarations do not declare ${name}OwnProps`);
+  if (!declaration) throw new ApiExtractionError(label, `the declarations do not declare ${ownName}OwnProps`);
   // A second, merged declaration would add members the first one does not show.
   const { declarations } = checker.getSymbolAtLocation(declaration.name);
-  if (declarations.length !== 1) throw new ApiExtractionError(name, `${name}OwnProps has ${declarations.length} declarations; declaration merging is not in the grammar`);
-  if (declaration.typeParameters?.length) throw new ApiExtractionError(name, `${name}OwnProps is generic`);
+  if (declarations.length !== 1) throw new ApiExtractionError(label, `${ownName}OwnProps has ${declarations.length} declarations; declaration merging is not in the grammar`);
+  if (declaration.typeParameters?.length) throw new ApiExtractionError(label, `${ownName}OwnProps is generic`);
   if (declaration.kind === SyntaxKind.InterfaceDeclaration) {
-    if (declaration.heritageClauses?.length) throw new ApiExtractionError(name, `${name}OwnProps extends another type; list the Mux UI-owned props instead`);
+    if (declaration.heritageClauses?.length) throw new ApiExtractionError(label, `${ownName}OwnProps extends another type; list the Mux UI-owned props instead`);
     return declaration.members;
   }
-  if (declaration.type.kind !== SyntaxKind.TypeLiteral) throw new ApiExtractionError(name, `${name}OwnProps must be an object type`);
+  if (declaration.type.kind !== SyntaxKind.TypeLiteral) throw new ApiExtractionError(label, `${ownName}OwnProps must be an object type`);
   return declaration.type.members;
 }
 
 // The props the exported component accepts: the first parameter of its one call signature.
-// A compound export (Avatar) names the part whose props the binding's API is: its root.
+// A compound export (Avatar) names the part whose props the binding's API is: its root. A
+// callable compound (ListBox) is its own root, and its other parts are members of the export.
 function publicProps(checker, sourceFile, name, part) {
   const exported = exportedNamed(sourceFile, name);
   if (!exported) throw new ApiExtractionError(name, `the declarations export no ${name}`);
@@ -502,32 +515,34 @@ function publicProps(checker, sourceFile, name, part) {
 
 /**
  * The typed block of one component, read from its emitted declarations: the members
- * `<Name>OwnProps` declares, each as the exported component's props type has it.
+ * `<ownName>OwnProps` declares, each as the exported component's props type has it.
  * TypeScript interns literal, union, and named types, so a redeclaration written the
  * same way is the same type; anything else, including an equal inline object, fails.
+ * `member` is the export's part whose props are read (none: the export itself), and
+ * `label` is the component in a diagnostic.
  */
-function readDeclaredApi(reader, checker, sourceFile, name, part) {
-  const members = ownPropsOf(checker, sourceFile, name);
-  const exposed = publicProps(checker, sourceFile, name, part);
+function readDeclaredApi(reader, checker, sourceFile, { exportName, ownName, member, label }) {
+  const members = ownPropsOf(checker, sourceFile, ownName, label);
+  const exposed = publicProps(checker, sourceFile, exportName, member);
   const props = [];
   const events = [];
   const propDetails = {};
   const eventDetails = {};
-  for (const member of members) {
-    const { name: prop, type, required, readonly: _readonly, ...documented } = reader.memberOf(member, `${name}.`);
-    if (type.kind === 'never') throw new ApiExtractionError(`${name}.${prop}`, `a member that must be absent is no prop; leave ${prop} to the host part of the props`);
-    const own = checker.getSymbolAtLocation(member.name);
+  for (const ownMember of members) {
+    const { name: prop, type, required, readonly: _readonly, ...documented } = reader.memberOf(ownMember, `${label}.`);
+    if (type.kind === 'never') throw new ApiExtractionError(`${label}.${prop}`, `a member that must be absent is no prop; leave ${prop} to the host part of the props`);
+    const own = checker.getSymbolAtLocation(ownMember.name);
     const accepted = exposed.get(prop);
-    if (!accepted) throw new ApiExtractionError(`${name}.${prop}`, `the exported ${name}'s props do not include ${prop}`);
+    if (!accepted) throw new ApiExtractionError(`${label}.${prop}`, `the exported ${label}'s props do not include ${prop}`);
     const ownType = checker.getTypeOfSymbol(own);
     const acceptedType = checker.getTypeOfSymbol(accepted);
     if (acceptedType.id !== ownType.id || Boolean(accepted.flags & SymbolFlags.Optional) !== !required) {
       const shown = (symbol, type) => `${symbol.flags & SymbolFlags.Optional ? 'optional' : 'required'} ${checker.typeToString(type)}`;
-      throw new ApiExtractionError(`${name}.${prop}`, `the exported ${name}'s props redeclare ${prop} as ${shown(accepted, acceptedType)}; ${name}OwnProps declares ${shown(own, ownType)}`);
+      throw new ApiExtractionError(`${label}.${prop}`, `the exported ${label}'s props redeclare ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}`);
     }
     if (/^on[A-Z]/u.test(prop)) {
       // Decision 0031 item 7: on<Event> maps to <event>, recorded with its callback signature.
-      if (type.kind !== 'function') throw new ApiExtractionError(`${name}.${prop}`, 'an on<Event> prop must be a function type');
+      if (type.kind !== 'function') throw new ApiExtractionError(`${label}.${prop}`, 'an on<Event> prop must be a function type');
       const event = `${prop[2].toLowerCase()}${prop.slice(3)}`;
       events.push(event);
       eventDetails[event] = { prop, type, required, ...documented };
@@ -587,16 +602,24 @@ function wrappedFunction(project, sourceFile, chain, call, seen, followed) {
     if (!component) throw new ApiExtractionError(chain, `the first argument of ${wrapper} must be a function, a forwardRef or memo call, or a top-level function or const`);
     return component;
   }
-  const declarations = project.checker.getSymbolAtLocation(argument)?.declarations ?? [];
+  return namedFunction(project, sourceFile, chain, argument, seen, followed);
+}
+
+/**
+ * The function a name stands for: a top-level function declaration, or a top-level const
+ * read as a component expression. The const is collected in `followed`.
+ */
+function namedFunction(project, sourceFile, chain, identifier, seen, followed) {
+  const declarations = project.checker.getSymbolAtLocation(identifier)?.declarations ?? [];
   const declaration = declarations.length === 1 ? declarations[0].resolve(project) : null;
   if (declaration?.kind === SyntaxKind.FunctionDeclaration && declaration.parent === sourceFile && declaration.body) return declaration;
-  const constant = topLevelConst(project, sourceFile, argument);
-  if (!constant) throw new ApiExtractionError(chain, `${argument.text} is not a top-level function declaration or const in the component's source`);
-  if (seen.has(constant)) throw new ApiExtractionError(chain, `${argument.text} wraps itself`);
+  const constant = topLevelConst(project, sourceFile, identifier);
+  if (!constant) throw new ApiExtractionError(chain, `${identifier.text} is not a top-level function declaration or const in the component's source`);
+  if (seen.has(constant)) throw new ApiExtractionError(chain, `${identifier.text} wraps itself`);
   seen.add(constant);
   followed.add(constant);
   const component = componentFunction(project, sourceFile, chain, constant.initializer, seen, followed);
-  if (!component) throw new ApiExtractionError(chain, `${argument.text} must be a function, forwardRef, or memo call`);
+  if (!component) throw new ApiExtractionError(chain, `${identifier.text} must be a function, forwardRef, or memo call`);
   return component;
 }
 
@@ -802,14 +825,47 @@ function topLevelConst(project, sourceFile, identifier) {
 const MUTATORS = new Set(['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf']);
 
 /**
+ * The ids of a binding and of every variable that takes its value: `const alias = Thing`
+ * or `alias = Thing`, through type assertions and in turn. A write through an alias is a
+ * write to the binding, so a part assigned or replaced that way cannot go unseen.
+ */
+function aliasIds(checker, sourceFile, symbol) {
+  const ids = new Set([symbol.id]);
+  const edges = [];
+  const collect = (node) => {
+    if (node.kind === SyntaxKind.VariableDeclaration && node.name.kind === SyntaxKind.Identifier && node.initializer) edges.push([node.name, node.initializer]);
+    if (node.kind === SyntaxKind.BinaryExpression && node.operatorToken.kind === SyntaxKind.EqualsToken && unwrap(node.left).kind === SyntaxKind.Identifier) edges.push([unwrap(node.left), node.right]);
+    node.forEachChild(collect);
+  };
+  collect(sourceFile);
+  const holds = (expression) => {
+    const node = unwrap(expression);
+    return node.kind === SyntaxKind.Identifier && ids.has(checker.getSymbolAtLocation(node)?.id);
+  };
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const [target, value] of edges) {
+      const id = checker.getSymbolAtLocation(target)?.id;
+      if (id !== undefined && !ids.has(id) && holds(value)) {
+        ids.add(id);
+        grew = true;
+      }
+    }
+  }
+  return ids;
+}
+
+/**
  * Whether the source writes to the binding or through it: an assignment, update, delete,
  * Object mutator, destructuring assignment, or for-in or for-of target, however deeply the
- * pattern nests it. `allowed` holds assignment nodes already verified as harmless.
+ * pattern nests it, and whether the write is made through the binding or an alias of it.
+ * `allowed` holds assignment nodes already verified as harmless.
  * `displayName` also lets `<binding>.displayName = '<string literal>'` pass anywhere in
  * the source, since a display name never changes which function renders.
  */
 function writesThrough({ checker }, sourceFile, symbol, { allowed = new Set(), displayName = false } = {}) {
-  const same = (node) => node.kind === SyntaxKind.Identifier && checker.getSymbolAtLocation(node)?.id === symbol.id;
+  const ids = aliasIds(checker, sourceFile, symbol);
+  const same = (node) => node.kind === SyntaxKind.Identifier && ids.has(checker.getSymbolAtLocation(node)?.id);
   const rooted = (target) => {
     let node = unwrap(target);
     while (node.kind === SyntaxKind.PropertyAccessExpression || node.kind === SyntaxKind.ElementAccessExpression) node = unwrap(node.expression);
@@ -818,7 +874,7 @@ function writesThrough({ checker }, sourceFile, symbol, { allowed = new Set(), d
   // Whether an assignment target, or any leaf of its pattern, is the binding or a path under it.
   const targets = (target) => {
     for (const leaf of assignmentLeaves(target)) {
-      if (leaf.kind === SyntaxKind.ShorthandPropertyAssignment ? checker.getShorthandAssignmentValueSymbol(leaf)?.id === symbol.id : rooted(leaf)) return true;
+      if (leaf.kind === SyntaxKind.ShorthandPropertyAssignment ? ids.has(checker.getShorthandAssignmentValueSymbol(leaf)?.id) : rooted(leaf)) return true;
     }
     return false;
   };
@@ -858,21 +914,27 @@ function isWrapperCall(initializer) {
   return node?.kind === SyntaxKind.CallExpression && isFunctionLiteral(unwrap(node.expression));
 }
 
-const WRAPPER_RULE = 'an exported component\'s wrapper is called with no arguments, takes no parameters, and its block holds only const forwardRef or memo components, `<const>.displayName = \'<string literal>\'` statements, and a final return of one of those consts';
+const WRAPPER_RULE = 'an exported component\'s wrapper is called with no arguments, takes no parameters, and its block holds only const forwardRef or memo components, `<const>.displayName = \'<string literal>\'` statements, `<returned const>.<Part> = <component>` part assignments (each part once), and a final return of one of those consts';
 
 /**
- * The function a wrapped component export renders with. A component may be initialized by a
- * zero-argument call, optionally annotated as pure, of a zero-parameter arrow or function
- * expression, which keeps an unused component out of a bundle with everything it imports.
- * The wrapper body holds only:
+ * The functions a wrapped component export renders with: the callable it returns and the
+ * parts assigned to it. A component may be initialized by a zero-argument call, optionally
+ * annotated as pure, of a zero-parameter arrow or function expression, which keeps an unused
+ * component out of a bundle with everything it imports. The wrapper body holds only:
  *   - const declarations, each name once, each initialized by React's forwardRef or memo,
  *     read through the first argument as for an unwrapped component;
- *   - `<const>.displayName = '<string literal>'` statements; and
+ *   - `<const>.displayName = '<string literal>'` statements;
+ *   - `<returned const>.<Part> = <component>` statements, each part once, where the Part is
+ *     named in PascalCase and the component is one of the wrapper's consts (the returned one
+ *     included, as in `Root = Component`), a top-level function declaration or const of the
+ *     source, or a forwardRef or memo call; and
  *   - one final `return <const>`.
  * Anything else fails naming the component and this rule, so nothing the wrapper runs can
- * change which function renders. The source must write to neither the exported binding nor
- * a wrapper const other than through those displayName statements. A top-level const a wrapper
- * const follows is collected in `followed` and checked by the caller like any other.
+ * change which function renders. The source must write to neither the exported binding, nor
+ * a wrapper const, nor a variable that takes either's value, other than through those
+ * statements: a part assigned later would publish a stale part. A top-level const a wrapper
+ * const or part follows is collected in `followed` and checked by the caller like any other.
+ * @returns {{ callable: object, parts: Map<string, object> }} the callable's function and each part's, by member name
  */
 function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
   const fail = (message) => {
@@ -884,6 +946,7 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
   if (wrapper.typeParameters?.length || wrapper.asteriskToken || hasModifier(wrapper, SyntaxKind.AsyncKeyword)) fail('the wrapper is generic, async, or a generator');
   if (wrapper.body.kind !== SyntaxKind.Block) fail('the wrapper has an expression body');
   const consts = new Map();
+  const statics = new Map();
   const verified = new Set();
   let returned;
   const { statements } = wrapper.body;
@@ -899,31 +962,49 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
     } else if (statement.kind === SyntaxKind.ExpressionStatement) {
       const assignment = unwrap(statement.expression);
       const target = assignment.kind === SyntaxKind.BinaryExpression && assignment.operatorToken.kind === SyntaxKind.EqualsToken ? unwrap(assignment.left) : undefined;
-      const isDisplayName = target?.kind === SyntaxKind.PropertyAccessExpression && target.name.text === 'displayName'
-        && target.expression.kind === SyntaxKind.Identifier && consts.has(target.expression.text);
-      if (!isDisplayName) fail('the wrapper runs a statement that is not a displayName assignment to one of its consts');
+      const onConst = target?.kind === SyntaxKind.PropertyAccessExpression && target.expression.kind === SyntaxKind.Identifier && consts.has(target.expression.text);
+      if (!onConst) fail('the wrapper runs a statement that is not a displayName or part assignment to one of its consts');
+      const owner = target.expression.text;
+      const property = target.name.text;
       const value = unwrap(assignment.right);
-      if (value.kind !== SyntaxKind.StringLiteral && value.kind !== SyntaxKind.NoSubstitutionTemplateLiteral) fail(`the wrapper sets ${target.expression.text}.displayName to something other than a string literal`);
+      if (property === 'displayName') {
+        if (value.kind !== SyntaxKind.StringLiteral && value.kind !== SyntaxKind.NoSubstitutionTemplateLiteral) fail(`the wrapper sets ${owner}.displayName to something other than a string literal`);
+      } else {
+        if (!REFERENCE_NAME.test(property)) fail(`the wrapper assigns ${owner}.${property}, which is neither displayName nor a part named in PascalCase`);
+        if (statics.has(`${owner}.${property}`)) fail(`the wrapper assigns ${owner}.${property} twice`);
+        statics.set(`${owner}.${property}`, { owner, property, value });
+      }
       verified.add(assignment);
     } else if (statement.kind === SyntaxKind.ReturnStatement && index === statements.length - 1) {
       returned = statement.expression === undefined ? undefined : unwrap(statement.expression);
     } else {
-      fail('the wrapper holds a statement that is not a const, a displayName assignment, or its final return');
+      fail('the wrapper holds a statement that is not a const, a displayName or part assignment, or its final return');
     }
   });
   if (returned?.kind !== SyntaxKind.Identifier || !consts.has(returned.text)) fail('the wrapper does not end by returning one of its consts');
+  for (const { owner, property } of statics.values()) {
+    if (owner !== returned.text) fail(`the wrapper assigns ${owner}.${property}, but parts attach only to the returned const ${returned.text}`);
+  }
   const components = new Map([...consts].map(([constName, declaration]) => {
     const initializer = unwrap(declaration.initializer);
     if (initializer.kind !== SyntaxKind.CallExpression) fail(`${constName} is not a forwardRef or memo call`);
     return [constName, wrappedFunction(project, sourceFile, chain, initializer, new Set(), followed)];
   }));
+  const parts = new Map([...statics.values()].map(({ property, value }) => {
+    const partChain = `${chain}.${property}`;
+    if (value.kind === SyntaxKind.Identifier) {
+      return [property, consts.has(value.text) ? components.get(value.text) : namedFunction(project, sourceFile, partChain, value, new Set(), followed)];
+    }
+    if (value.kind !== SyntaxKind.CallExpression) fail(`the wrapper assigns ${returned.text}.${property} something other than a forwardRef or memo call, one of its consts, or a top-level function or const`);
+    return [property, wrappedFunction(project, sourceFile, partChain, value, new Set(), followed)];
+  }));
   const writeTargets = [binding, ...[...consts.values()].map(({ name }) => name)];
   for (const target of writeTargets) {
     if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(target), { allowed: verified })) {
-      fail(`the source writes to ${target.text} beyond the wrapper's displayName assignments`);
+      fail(`the source writes to ${target.text} beyond the wrapper's displayName and part assignments`);
     }
   }
-  return components.get(returned.text);
+  return { callable: components.get(returned.text), parts };
 }
 
 /**
@@ -967,24 +1048,37 @@ function compoundPart(project, sourceFile, exported, name, part, followed) {
 /**
  * Mux UI-owned defaults from the component's props parameter in its executable source.
  * The component destructures every Mux UI-owned prop there and executes no other default
- * for one, so no default can hide in its body or a rest object.
+ * for one, so no default can hide in its body or a rest object. `member` names the part of
+ * a compound the props belong to, none for the export itself, and `label` is the component
+ * in a diagnostic.
  */
-function readSourceDefaults(project, sourceFile, name, declared, part) {
-  const exported = exportedNamed(sourceFile, name);
-  const chain = part === undefined ? name : `${name}.${part}`;
-  // A compound's defaults are its part's, whatever else the export is.
+function readSourceDefaults(project, sourceFile, { exportName, member, label }, declared) {
+  const exported = exportedNamed(sourceFile, exportName);
+  const chain = member === undefined ? exportName : `${exportName}.${member}`;
   const initializer = exported?.node.initializer;
+  const wrapped = isWrapperCall(initializer);
   const followed = new Set();
-  const component = part !== undefined
-    ? componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, name, part, followed), new Set(), followed)
-    : exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node
-      : isWrapperCall(initializer) ? wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer), followed)
-        : componentFunction(project, sourceFile, chain, initializer, new Set(), followed);
-  if (!component) throw new ApiExtractionError(name, `the source exports no component function${part === undefined ? '' : ` as ${name}.${part}`} to read defaults from`);
+  let component;
+  if (wrapped) {
+    // A callable compound is its own root; its other parts are the statics assigned in the wrapper.
+    const { callable, parts } = wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer), followed);
+    if (member === undefined && parts.has('Root') && parts.get('Root') !== callable) {
+      throw new ApiExtractionError(chain, `${exportName}.Root is not ${exportName} itself; name the root part ('Root') in the derived component list`);
+    }
+    if (member !== undefined && !parts.has(member)) throw new ApiExtractionError(chain, `the exported ${exportName} has no ${member} part assigned in its wrapper`);
+    component = member === undefined ? callable : parts.get(member);
+  } else if (member !== undefined) {
+    // A compound's defaults are its part's, whatever else the export is.
+    component = componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, exportName, member, followed), new Set(), followed);
+  } else {
+    component = exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node
+      : componentFunction(project, sourceFile, chain, initializer, new Set(), followed);
+  }
+  if (!component) throw new ApiExtractionError(exportName, `the source exports no component function${member === undefined ? '' : ` as ${exportName}.${member}`} to read defaults from`);
   // The function read above is the one that renders only while every binding it was read through stays as it was.
   // A wrapper or compound export is checked more strictly where it is read; a plain export is checked here.
   const through = [...followed].map((declaration) => declaration.name);
-  if (part === undefined && !isWrapperCall(initializer) && exported.node.kind === SyntaxKind.VariableDeclaration) through.unshift(exported.name);
+  if (member === undefined && !wrapped && exported.node.kind === SyntaxKind.VariableDeclaration) through.unshift(exported.name);
   for (const binding of through) {
     if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(binding), { displayName: true })) {
       throw new ApiExtractionError(chain, `the source writes to ${binding.text}, which the component's defaults are read through, beyond a literal displayName assignment; a component is set once, so no write can change the function it renders with`);
@@ -992,61 +1086,96 @@ function readSourceDefaults(project, sourceFile, name, declared, part) {
   }
   const [parameter] = component.parameters;
   if (parameter?.name.kind !== SyntaxKind.ObjectBindingPattern) {
-    throw new ApiExtractionError(name, 'the props parameter must be an object pattern that destructures the Mux UI-owned props');
+    throw new ApiExtractionError(label, 'the props parameter must be an object pattern that destructures the Mux UI-owned props');
   }
   const bound = new Map();
   for (const element of parameter.name.elements) {
     // Host passthrough props, such as Button's type = 'button', are not Mux UI-owned.
-    if (!element.dotDotDotToken) bound.set(propertyName(element.propertyName ?? element.name, name), element);
+    if (!element.dotDotDotToken) bound.set(propertyName(element.propertyName ?? element.name, label), element);
   }
   const value = defaultReader({ project, sourceFile });
   const defaults = {};
   const owned = new Map();
   for (const prop of [...declared.props, ...Object.values(declared.eventDetails).map(({ prop: eventProp }) => eventProp)]) {
     const element = bound.get(prop);
-    if (!element) throw new ApiExtractionError(`${name}.${prop}`, 'the props parameter must destructure each Mux UI-owned prop');
+    if (!element) throw new ApiExtractionError(`${label}.${prop}`, 'the props parameter must destructure each Mux UI-owned prop');
     const event = !declared.props.includes(prop);
     const defaulted = element.initializer !== undefined;
-    if (defaulted && event) throw new ApiExtractionError(`${name}.${prop}`, 'an on<Event> prop has no default');
-    if (defaulted) defaults[prop] = value(element.initializer, `${name}.${prop}`);
+    if (defaulted && event) throw new ApiExtractionError(`${label}.${prop}`, 'an on<Event> prop has no default');
+    if (defaulted) defaults[prop] = value(element.initializer, `${label}.${prop}`);
     // The parameter default decides whether a fallback on the binding can apply to an omitted prop.
     if (element.name.kind === SyntaxKind.Identifier) owned.set(project.checker.getSymbolAtLocation(element.name).id, { prop, event, defaulted, value: defaults[prop] });
   }
-  assertNoExecutedDefaults(project.checker, component, name, owned);
+  assertNoExecutedDefaults(project.checker, component, label, owned);
   return defaults;
 }
 
+const ANATOMY_PART = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
+
 /**
  * Extracts each component's API. A component names its export, its emitted declaration
- * file, and, when defaults are wanted, its TypeScript source; a compound export also
- * names the `part` (its root) whose props the API is. Types declared under
+ * file, and, when defaults are wanted, its TypeScript source. The API is that of its root:
+ * the export itself, or, for a compound whose root is another part, the `part` named. A
+ * callable compound (ListBox, whose Item is `ListBox.Item`) is its own root, and `parts`
+ * maps each of its other anatomy parts that owns Mux UI props to its export member
+ * (`{ item: 'Item' }`); each is read like the root, from `<Name><Member>OwnProps`, into
+ * `partApis`. `callable` names the anatomy part whose props the export itself must also carry
+ * unchanged (Menu, whose callable is its List): a check, not data. Types declared under
  * `declarationRoot` are Mux UI-owned; any other reference must be an exact host type on
  * the allowlist. Returns a Map from export name to `{ props, events, defaults?,
- * propDetails, eventDetails, types }`, with `types` sorted by name.
- * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string }[], hostAllowlist?: readonly string[] }} options
+ * propDetails, eventDetails, types, partApis? }`, with `types` sorted by name.
+ * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string, callable?: string, parts?: Record<string, string> }[], hostAllowlist?: readonly string[] }} options
  */
 export function extractApis({ declarationRoot, components, hostAllowlist = HOST_ALLOWLIST }) {
   const allowed = assertHostAllowlist(hostAllowlist);
   const root = resolve(declarationRoot);
   const files = components.flatMap(({ declarations, source }) => [resolve(declarations), ...(source ? [resolve(source)] : [])]);
-  return withProject(files, (project) => new Map(components.map(({ name, declarations, source, part }) => {
-    const reader = declarationReader({ project, declarationRoot: root, allowed });
-    const declared = readDeclaredApi(reader, project.checker, project.program.getSourceFile(resolve(declarations)), name, part);
-    const types = Object.fromEntries([...reader.types].sort(([left], [right]) => left.localeCompare(right))
-      .map(([typeName, { symbol: _symbol, ...definition }]) => [typeName, definition]));
-    // A prop whose type is a finite set of literals also lists them, in declaration order.
-    const propDetails = Object.fromEntries(Object.entries(declared.propDetails).map(([prop, { type, required, ...documented }]) => {
-      const values = literalValues(type, types);
-      return [prop, { type, required, ...(values === null ? {} : { enum: values }), ...documented }];
+  return withProject(files, (project) => new Map(components.map(({ name, declarations, source, part, callable, parts = {} }) => {
+    const declarationFile = project.program.getSourceFile(resolve(declarations));
+    const sourceFile = source ? project.program.getSourceFile(resolve(source)) : undefined;
+    // One block: the API of the export's root, or of one part of it.
+    const read = ({ ownName, member, label, part: isPart = false }) => {
+      const reader = declarationReader({ project, declarationRoot: root, allowed });
+      const declared = readDeclaredApi(reader, project.checker, declarationFile, { exportName: name, ownName, member, label });
+      if (isPart && declared.props.length === 0 && declared.events.length === 0) {
+        throw new ApiExtractionError(label, `${ownName}OwnProps declares no Mux UI-owned prop; a part without Mux UI-owned props has no partApis entry`);
+      }
+      const types = Object.fromEntries([...reader.types].sort(([left], [right]) => left.localeCompare(right))
+        .map(([typeName, { symbol: _symbol, ...definition }]) => [typeName, definition]));
+      // A prop whose type is a finite set of literals also lists them, in declaration order.
+      const propDetails = Object.fromEntries(Object.entries(declared.propDetails).map(([prop, { type, required, ...documented }]) => {
+        const values = literalValues(type, types);
+        return [prop, { type, required, ...(values === null ? {} : { enum: values }), ...documented }];
+      }));
+      const defaults = sourceFile ? readSourceDefaults(project, sourceFile, { exportName: name, member, label }, declared) : undefined;
+      return {
+        props: declared.props,
+        events: declared.events,
+        ...(defaults === undefined ? {} : { defaults }),
+        propDetails,
+        eventDetails: declared.eventDetails,
+        types,
+      };
+    };
+    const api = read({ ownName: name, member: part, label: name });
+    const members = new Map();
+    const partApis = Object.fromEntries(Object.entries(parts).map(([anatomyPart, member]) => {
+      const label = `${name}.${member}`;
+      if (!ANATOMY_PART.test(anatomyPart) || !REFERENCE_NAME.test(member)) {
+        throw new ApiExtractionError(label, `parts maps an anatomy part, such as item, to an export member, such as Item; not ${anatomyPart} to ${member}`);
+      }
+      if (member === part) throw new ApiExtractionError(label, `${anatomyPart} maps to ${member}, which is the root part; the root's API is the family-level block`);
+      if (members.has(member)) throw new ApiExtractionError(label, `${members.get(member)} and ${anatomyPart} both map to ${member}; a member has one anatomy part`);
+      members.set(member, anatomyPart);
+      if (!sourceFile) throw new ApiExtractionError(label, 'a part reads its defaults from the component source, which is not given');
+      return [anatomyPart, { member, ...read({ ownName: `${name}${member}`, member, label, part: true }) }];
     }));
-    const defaults = source ? readSourceDefaults(project, project.program.getSourceFile(resolve(source)), name, declared, part) : undefined;
-    return [name, {
-      props: declared.props,
-      events: declared.events,
-      ...(defaults === undefined ? {} : { defaults }),
-      propDetails,
-      eventDetails: declared.eventDetails,
-      types,
-    }];
+    if (callable !== undefined) {
+      const member = parts[callable];
+      if (member === undefined) throw new ApiExtractionError(name, `callable names ${callable}, which is not one of the parts`);
+      // The export itself must carry that part's props with the same types and requiredness.
+      readDeclaredApi(declarationReader({ project, declarationRoot: root, allowed }), project.checker, declarationFile, { exportName: name, ownName: `${name}${member}`, member: undefined, label: `${name} (callable)` });
+    }
+    return [name, { ...api, ...(Object.keys(partApis).length === 0 ? {} : { partApis }) }];
   })));
 }

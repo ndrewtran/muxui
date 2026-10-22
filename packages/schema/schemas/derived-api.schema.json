@@ -16,21 +16,49 @@
   },
   "$defs": {
     "api": {
+      "description": "The API of the binding's root part. A compound whose other parts own Mux UI props lists each one in partApis.",
       "type": "object",
       "additionalProperties": false,
       "required": ["props", "events", "defaults", "propDetails", "eventDetails", "types"],
       "properties": {
-        "props": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-        "events": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" } },
-        "defaults": { "type": "object", "additionalProperties": true },
-        "propDetails": { "type": "object", "additionalProperties": { "$ref": "#/$defs/propDetail" } },
-        "eventDetails": { "type": "object", "additionalProperties": { "$ref": "#/$defs/eventDetail" } },
-        "types": {
+        "props": { "$ref": "#/$defs/propList" },
+        "events": { "$ref": "#/$defs/eventList" },
+        "defaults": { "$ref": "#/$defs/defaultsMap" },
+        "propDetails": { "$ref": "#/$defs/propDetailMap" },
+        "eventDetails": { "$ref": "#/$defs/eventDetailMap" },
+        "types": { "$ref": "#/$defs/typeMap" },
+        "partApis": {
+          "description": "The API of each non-root part that owns Mux UI props, keyed by its anatomy part. A part without Mux UI-owned props has no entry.",
           "type": "object",
-          "propertyNames": { "pattern": "^[A-Z][A-Za-z0-9]*$" },
-          "additionalProperties": { "$ref": "#/$defs/namedType" }
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+          "additionalProperties": { "$ref": "#/$defs/partApi" }
         }
       }
+    },
+    "partApi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["member", "props", "events", "defaults", "propDetails", "eventDetails", "types"],
+      "properties": {
+        "member": { "description": "The export member that renders the part, such as Item for ListBox.Item.", "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+        "props": { "$ref": "#/$defs/propList" },
+        "events": { "$ref": "#/$defs/eventList" },
+        "defaults": { "$ref": "#/$defs/defaultsMap" },
+        "propDetails": { "$ref": "#/$defs/propDetailMap" },
+        "eventDetails": { "$ref": "#/$defs/eventDetailMap" },
+        "types": { "$ref": "#/$defs/typeMap" }
+      }
+    },
+    "propList": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "eventList": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" } },
+    "defaultsMap": { "type": "object", "additionalProperties": true },
+    "propDetailMap": { "type": "object", "additionalProperties": { "$ref": "#/$defs/propDetail" } },
+    "eventDetailMap": { "type": "object", "additionalProperties": { "$ref": "#/$defs/eventDetail" } },
+    "typeMap": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Z][A-Za-z0-9]*$" },
+      "additionalProperties": { "$ref": "#/$defs/namedType" }
     },
     "description": { "type": "string", "minLength": 1 },
     "propDetail": {
@@ -140,6 +168,10 @@
       "required": ["kind", "members"],
       "properties": {
         "kind": { "const": "object" },
+        "additional": {
+          "description": "Present on an open item: besides its members, the object takes other string-keyed fields of unknown type (a mutable [key: string]: unknown beside named properties). It is the only place unknown is in the grammar.",
+          "const": "unknown"
+        },
         "members": {
           "type": "array",
           "items": {
