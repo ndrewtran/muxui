@@ -150,6 +150,8 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     // A consumer that forwards `className?: string | undefined`, or sets className or style to undefined, on a
     // Lightbox trigger compiles under exactOptionalPropertyTypes, as it did before LightboxTriggerProps followed
     // ButtonProps. ButtonProps declares those two exactly (`?: string`), where React declares them `| undefined`.
+    // A handler on Record<string, unknown> assigns to onActivate too. ButtonProps's event is an interface, which
+    // has no implicit index signature, where the trigger's event was an object literal type.
     const exactDirectory = join(consumer, 'exact-optional');
     await mkdir(exactDirectory, { recursive: true });
     await writeFile(join(exactDirectory, 'lightbox-trigger.tsx'), `import { LightboxTrigger } from '@muxui/react';
@@ -158,11 +160,15 @@ import type { LightboxTriggerProps } from '@muxui/react';
 export const props: LightboxTriggerProps = { itemKey: 'one', className: undefined, style: undefined };
 export const element = <LightboxTrigger itemKey="one" className={undefined} style={undefined}>Open</LightboxTrigger>;
 export const forwarded = (className?: string) => <LightboxTrigger itemKey="one" className={className}>Open</LightboxTrigger>;
+
+const onRecord: (event: Record<string, unknown>) => void = () => {};
+export const typedHandler: LightboxTriggerProps['onActivate'] = onRecord;
+export const handled = <LightboxTrigger itemKey="one" onActivate={onRecord}>Open</LightboxTrigger>;
 `);
     const exactTsconfig = join(consumer, 'tsconfig.exact-optional.json');
     await writeFile(exactTsconfig, `${JSON.stringify({ extends: './tsconfig.json', compilerOptions: { exactOptionalPropertyTypes: true }, include: ['exact-optional/*.tsx'] }, null, 2)}\n`);
     for (const [label, compiler] of [['TypeScript 6', tsc], ['TypeScript 7', typeScript7Tsc()]]) {
-      assert.deepEqual(tscDiagnostics({ tsc: compiler, config: exactTsconfig, directory: consumer }), [], `a Lightbox trigger rejects an undefined className or style under exactOptionalPropertyTypes (${label})`);
+      assert.deepEqual(tscDiagnostics({ tsc: compiler, config: exactTsconfig, directory: consumer }), [], `a Lightbox trigger rejects an undefined className or style, or an onActivate handler on Record<string, unknown>, under exactOptionalPropertyTypes (${label})`);
     }
 
     // A props type a consumer could pass where `T extends Record<string, unknown>` is required before

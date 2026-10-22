@@ -64,10 +64,12 @@ export type LightboxControlProps = ButtonHTMLAttributes<HTMLButtonElement> & { d
 // ButtonProps follows Button, but its className and style are declared exactly (`?: string`),
 // where React declares them `?: string | undefined`. Under exactOptionalPropertyTypes the exact form
 // rejects a consumer's `className={undefined}`, which LightboxTrigger accepted before it followed Button,
-// so those two come from React's attributes. Omit and Pick keep the type assignable to Record<string, unknown>.
-export type LightboxTriggerProps = Omit<ButtonProps, 'className' | 'style'>
+// so those two come from React's attributes. onActivate is re-added as the mapped LightboxControlActivation,
+// so its event keeps the object literal shape it had before (an interface would reject an index-signature
+// handler). Omit and Pick keep the type assignable to Record<string, unknown>.
+export type LightboxTriggerProps = Omit<ButtonProps, 'className' | 'style' | 'onActivate'>
   & Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'style'>
-  & { itemKey: LightboxKey };
+  & { itemKey: LightboxKey; onActivate?: (event: LightboxControlActivation) => void };
 
 type Offset = Readonly<{ x: number; y: number }>;
 type MotionValues = Offset & { opacity: number };
