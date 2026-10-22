@@ -161,14 +161,17 @@ export function commonSubjects(baseline, current) {
 }
 
 /**
- * For each common subject, how it is probed: `{ shape, selfCallable, examined, callable }`.
+ * For each common subject, how it is probed: `{ shape, selfCallable, examined, callable, inherited }`.
  * - `shape` is `object` when either snapshot's type has an object or intersection arm, else `value`.
  * - `selfCallable`: an exported callback type, probed as a handler target itself.
  * - `examined`: the members the probe looks at by name, because some declaration of theirs is in a
  *   snapshot's own files, or an inherited one is not the same declaration, resolved type and readonly
  *   modifier on both sides (React's own members that are, are not examined: the shared checker shows
  *   them identical);
- * - `callable`: the examined members that are callable, which get the handler probes.
+ * - `callable`: the examined members that are callable, which get the handler probes;
+ * - `inherited`: every other member, the ones skipped as identical (absent for a `value` or `partValue`, which
+ *   are not probed by name). `examined` and `inherited` together are the keys the compiler enumerates for the
+ *   subject, which the probe checks (`members`) so that a member that loses its classification fails.
  * Arms of a union are paired by mutual assignability; a subject with an unpaired arm examines every member.
  */
 export function classifyMembers(snapshots, common) {
@@ -224,7 +227,7 @@ export function classifyMembers(snapshots, common) {
           return type && (type.isUnionType() ? type.getTypes() : [type]).some((member) => calls(checker, member) > 0);
         });
       });
-      result.set(old.id, { shape: 'object', selfCallable, examined: [...examined].sort(), callable: callable.sort() });
+      result.set(old.id, { shape: 'object', selfCallable, examined: [...examined].sort(), callable: callable.sort(), inherited: [...allNames].filter((name) => !examined.has(name)).sort() });
     }
     return result;
   });

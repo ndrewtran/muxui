@@ -70,6 +70,7 @@ type Disagree<E> = { [Q in keyof E as E[Q] extends [infer A, infer B] ? (Mutual<
 type VarianceDiff<O, N, K extends PropertyKey> =
   | (O extends unknown ? Quiet<Disagree<Evidence<Member<O, K>, Member<Pair<O, N>, K>>>> : never)
   | (N extends unknown ? Quiet<Disagree<Evidence<Member<Pair<N, O>, K>, Member<N, K>>>> : never);
+type Keys<T> = T extends unknown ? (string extends keyof T ? never : Extract<keyof T, string>) : never;
 type Callable<T, E> = T extends unknown ? { [K in keyof T & E]-?: [Fn<T[K]>] extends [never] ? never : K }[keyof T & E] : never;
 `;
 
@@ -85,13 +86,22 @@ export function buildProbe(snapshots, common, members) {
   const head = [...lines, PRELUDE];
   const records = [{ subject: CANARY, assertion: CANARY }];
   const body = [`type L0 = Assert<Mutual<'canary', 'not the canary'>>;`];
+  // A long list of names is written once and shared by the subjects that have it (React's attributes, mostly).
+  const lists = new Map();
+  const listOf = (text) => {
+    if (!lists.has(text)) {
+      lists.set(text, `K${lists.size}`);
+      head.push(`type K${lists.size - 1} = ${text};`);
+    }
+    return lists.get(text);
+  };
   const assert = (subject, assertion, expression) => {
     records.push({ subject: subject.id, assertion });
     body.push(`type L${records.length - 1} = Assert<${expression}>;`);
   };
   for (const { old } of common) {
     const [O, N] = [names.get(old.id).old, names.get(old.id).new];
-    const { shape, selfCallable, examined, callable } = members.get(old.id);
+    const { shape, selfCallable, examined, callable, inherited } = members.get(old.id);
     assert(old, 'mutual', `Mutual<${O}, ${N}>`);
     if (shape === 'object') {
       assert(old, 'arms', `Clean<Unpaired<${O}, ${N}>>`);
@@ -100,6 +110,8 @@ export function buildProbe(snapshots, common, members) {
       if (examined.length > 0) assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${union(examined)}>>`);
     }
     if (selfCallable) assert(old, 'handler', `Clean<Quiet<Disagree<Evidence<${O}, ${N}>>>>`);
+    // The compiler's own keys of the subject are the classification's, so a member cannot lose its probes by losing its entry.
+    if (inherited) assert(old, 'members', `Clean<Exclude<Keys<${O}> | Keys<${N}>, ${listOf(union([...examined, ...inherited]))}>>`);
     // The compiler's own view of which examined members are callable must be the classification's.
     if (examined.length > 0) assert(old, 'callable-members', `Mutual<Callable<${O}, ${union(examined)}> | Callable<${N}, ${union(examined)}>, ${union(callable)}>`);
     for (const name of callable) assert(old, `handler:${name}`, `Clean<VarianceDiff<${O}, ${N}, ${JSON.stringify(name)}>>`);

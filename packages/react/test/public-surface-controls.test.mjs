@@ -111,6 +111,24 @@ test('dropping a callable member from the classification fails the cross-check i
   });
 });
 
+test('a member that loses its whole classification fails the key check instead of escaping every probe', () => {
+  const event = "export interface Activation { readonly id: string }\n";
+  const before = `${event}export interface ActivateProps { onActivate?: (event: Activation) => void }\n`;
+  const after = `${event}export interface ActivateProps { onActivate?(event: Activation): void }\n`;
+  withPair(before, after, (snapshots) => {
+    // Honest classification: the method form is bivariant, so the handler probe fails on it.
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected(['ActivateProps handler:onActivate']));
+    // The member dropped from the examined and the callable list alike has no probe left to fail, and no cross-check
+    // of the callable list to disagree: only the compiler's own keys of the subject show it was lost.
+    const dropBoth = (members) => {
+      const classified = members.get('.:type:ActivateProps');
+      members.set('.:type:ActivateProps', { ...classified, examined: classified.examined.filter((name) => name !== 'onActivate'), callable: classified.callable.filter((name) => name !== 'onActivate') });
+      return members;
+    };
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers, { tamper: dropBoth }), 'loose'), expected(['ActivateProps members']));
+  });
+});
+
 test('a type, value, component or part missing from the current build is named, and a recorded addition stays recorded', () => {
   const before = `import type * as React from 'react';
 export interface Dropped { x?: string }
