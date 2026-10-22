@@ -132,6 +132,7 @@ const GUIDES = {
   // rgba() and hsla() are the CSS color functions onChange returns.
   'color-wheel': { native: ['rgba()', 'hsla()'] },
   'color-slider': { native: ['rgba()', 'hsla()'] },
+  'color-area': { native: ['rgba()', 'hsla()'] },
   // colorSpace, hsb, and hsl are the slider's: the guide tells a hex picker's slider to set them.
   'color-picker': { native: ['rgba()', 'hsla()'], from: { 'color-slider': ['colorSpace', 'hsb', 'hsl'] } },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },

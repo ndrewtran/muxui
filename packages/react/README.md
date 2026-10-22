@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:71b50a32aa91a3d89dd8ebf666801afe844a116af9472abc9e342d76c4ac7877 -->
+<!-- @generated-content-sha256: sha256:dddbd215c2d2bbaba59e737dea73d7aaa073845f696a5a3ea6b4653c4496373e -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -115,7 +115,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, size, disabled, invalid, required, readOnly, onChange |
 | CheckboxGroup | experimental | . | .muxui-checkbox-group | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, name, orientation, size |
 | CodeBlock | experimental | . | .muxui-code-block | mode, source, before, after, language, filename, lineNumbers, copyable, wrap |
-| ColorArea | experimental | . | .muxui-color-area | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly |
+| ColorArea | experimental | . | .muxui-color-area | label, value, defaultValue, disabled, readOnly |
 | ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name |
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |

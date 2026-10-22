@@ -4327,7 +4327,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4366,7 +4366,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4405,7 +4405,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4444,7 +4444,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4483,7 +4483,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4522,7 +4522,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }

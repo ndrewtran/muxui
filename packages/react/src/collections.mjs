@@ -1,7 +1,7 @@
 export { Calendar, RangeCalendar } from './calendar.mjs';
 export { ColorSwatch } from './color-swatch.ts';
 export { ColorField } from './color-field.mjs';
-export { ColorArea } from './color-area.mjs';
+export { ColorArea } from './color-area.ts';
 export { ColorSlider } from './color-slider.ts';
 export { ColorWheel } from './color-wheel.ts';
 export { ColorPicker } from './color-picker.ts';

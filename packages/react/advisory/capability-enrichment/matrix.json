@@ -6039,7 +6039,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-area/artifact.json#bindings/web.react",
-          "packages/react/src/color-area.mjs#ColorArea",
+          "packages/react/src/color-area.ts#ColorArea",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

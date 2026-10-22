@@ -1,0 +1,114 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/color-area.ts",
+  "component": "muxui:component:color-area",
+  "binding": "web.react",
+  "export": "ColorArea",
+  "api": {
+    "props": [
+      "label",
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the area. Without one, the area needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "value": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The area's color, when the caller controls it. The area edits its saturation and brightness and keeps the hue."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The starting color, when the area controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the area: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the area read-only: it stays focusable but its color cannot be changed. A read-only enclosing ColorPicker does the same."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIColorValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new color as a CSS string each time saturation or brightness changes, in the color space of the value, of the enclosing ColorPicker, or of defaultValue, and in rgba() form with none of them. A disabled or read-only area does not call it."
+      }
+    },
+    "types": {
+      "MuxUIColorValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color."
+      }
+    }
+  }
+}
