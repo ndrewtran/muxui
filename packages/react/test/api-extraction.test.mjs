@@ -1192,67 +1192,130 @@ test('a part cannot be replaced through an alias of the component', () => {
   assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('(alias as { Root: unknown }).Root = replacement;') }), /Thing\.Root: the source writes to the compound Thing after declaring it/u);
 });
 
-// Following every way a value moves is a losing game, so the extractor admits the component only where it is declared,
-// exported, assigned its parts, returned, or read as a part that is called or passed on directly. Everything else fails,
-// whether or not it is a write, because it could be the alias a later write goes through.
-test('a component used as a value anywhere but its own wrapper, export, and direct part reads fails extraction', () => {
+// Following every way a value moves is a losing game, so the extractor admits the component and its parts as a value
+// only where they are rendered: as a JSX tag or the first argument of React's createElement. Everything else fails, whether
+// or not it is a write, because it could hand the part to code that replaces what it renders (`value.render = ...`).
+test('the component and its parts are values only where they are rendered', () => {
   const item = `Thing.Root = Thing;\n  Thing.Item = forwardRef(${callableItem});`;
-  const read = (after, before = '') => extract({
+  const prelude = [
+    "import * as React from 'react';",
+    "import { createElement } from 'react';",
+    'declare function use(...values: unknown[]): void;',
+    'declare function identity<T>(value: T): T;',
+    'function rewrite(value: unknown) { (value as { render: unknown }).render = replacement; }',
+    '',
+  ].join('\n');
+  const read = (after, { statics = item, before = prelude, inside = '', sourceName } = {}) => extract({
     declarations: callableDeclarations,
-    source: callableSource({ before: `declare function use(...values: unknown[]): void;\ndeclare function identity<T>(value: T): T;\n${before}`, statics: item, after }),
+    source: callableSource({ before, inside, statics, after }),
+    sourceName,
     parts: { item: 'Item' },
   });
-  const value = /Thing: the source uses Thing as a value, which could hand an alias of the component to code that replaces a part; /u;
-  const aliases = {
-    'a destructured alias': 'const { value: alias } = { value: Thing };\n',
-    'an array-destructured alias': 'const [alias] = [Thing];\n',
-    'a destructuring assignment alias': 'let alias: unknown;\n({ value: alias } = { value: Thing });\n',
-    'an array destructuring assignment alias': 'let alias: unknown;\n[alias] = [Thing];\n',
-    'a conditional alias': 'const alias = Date.now() ? Thing : Thing;\n',
-    'a logical alias': 'const alias = replacement || Thing;\n',
-    'a nullish alias': 'const alias = replacement ?? Thing;\n',
-    'a Root alias': 'const alias = Thing.Root;\n',
-    'a Root alias through an assertion': 'const alias = (Thing as { Root: unknown }).Root;\n',
-    'a destructured Root alias': 'const { Root: alias } = Thing;\n',
-    'an element-access Root alias': "const alias = Thing['Root'];\n",
-    'an alias returned from a function': 'const alias = (() => Thing)();\n',
-    'an alias through a call': 'const alias = identity(Thing);\n',
-    'a property of an object': 'const alias = { Thing };\n',
-    'a spread': 'const alias = [...[Thing]];\n',
-  };
-  const writes = {
-    'a part write': 'alias.Item = replacement;',
-    'an Object.assign': 'Object.assign(alias, { Item: replacement });',
-  };
-  const cases = Object.entries(aliases).flatMap(([setup, declaration]) => Object.entries(writes).map(([label, statement]) => [
-    `${setup}: ${label}`, () => read(`${declaration}${statement}\n`), value,
-  ]));
-  assert.deepEqual(accepted(cases), []);
-  // The reads the rule admits: a part called or passed on, a type query, an export, and Root assigned in the wrapper.
-  const admitted = [
-    ['a part passed to a call', 'use(Thing.Item);'],
-    ['a part called', 'Thing.Item({ value: "a" } as never);'],
-    ['a part passed through an assertion', 'use((Thing as { Item: unknown }).Item);'],
-    ['a type query', 'export type ThingItem = typeof Thing.Item;\nexport type ThingSelf = typeof Thing;'],
+  const value = /Thing: the source uses (?:Thing|other) as a value, which could hand an alias of the component to code that replaces a part; /u;
+  const list = `${item}\n  Thing.List = Thing;`;
+  // A part passed anywhere but into a render: a call's argument, a closure, an assertion, an optional chain, a generic, an
+  // indirect call, a spread, a literal, a template, a comma. Each of these publishes a default the part no longer renders.
+  const passed = [
+    ['an argument', 'rewrite(Thing.Item);'],
+    ['an argument of a closure', 'const run = () => rewrite(Thing.Item);\nrun();'],
+    ['a closure that returns it', 'const get = () => Thing.Item;\nrewrite(get());'],
+    ['an assertion', 'rewrite(Thing.Item as unknown);'],
+    ['a satisfies', 'rewrite(Thing.Item satisfies unknown);'],
+    ['a non-null assertion', 'rewrite(Thing.Item!);'],
+    ['an angle-bracket assertion', 'rewrite(<unknown>Thing.Item);'],
+    ['parentheses', 'rewrite((Thing.Item));'],
+    ['an optional chain', 'rewrite(Thing?.Item);'],
+    ['an optional chain through an assertion', 'rewrite((Thing as { Item: unknown })?.Item);'],
+    ['a generic call', 'rewrite(identity(Thing.Item));'],
+    ['an explicit type argument', 'identity<unknown>(Thing.Item);'],
+    ['a call method', 'rewrite.call(null, Thing.Item);'],
+    ['an apply', 'rewrite.apply(null, [Thing.Item]);'],
+    ['a Reflect.apply', 'Reflect.apply(rewrite, null, [Thing.Item]);'],
+    ['a spread', 'rewrite(...[Thing.Item]);'],
+    ['an array literal', 'rewrite([Thing.Item]);'],
+    ['an object literal', 'rewrite({ item: Thing.Item });'],
+    ['a template literal', 'rewrite(`${Thing.Item}`);'],
+    ['a comma expression', 'rewrite((0, Thing.Item));'],
+    ['a variable', 'const held = Thing.Item;\nrewrite(held);'],
+    ['a destructured part', 'const { Item: held } = Thing;\nrewrite(held);'],
+    ['an element access', "rewrite(Thing['Item']);"],
+    ['a second argument of createElement', "createElement('div', null, Thing.Item);"],
+    ['a prop of createElement', "createElement('div', { as: Thing.Item });"],
+    ['the component as a createElement child', "createElement('div', null, Thing);"],
+    ['the component as an argument', 'rewrite(Thing);'],
+    ['the component returned from a function', 'const get = () => Thing;\nrewrite(get());'],
+  ];
+  assert.deepEqual(accepted(passed.map(([label, after]) => [label, () => read(`${after}\n`), value])), []);
+  // The same holds when the component is its own List (Thing.List = Thing, Menu's callable shape): the alias is the component.
+  const aliased = [
+    ['the alias passed on', 'rewrite(Thing.List);'],
+    ['the alias held', 'const held = Thing.List;\nrewrite(held);'],
+    ['a part through the alias passed on', 'rewrite(Thing.List.Item);'],
+    ['a part through the alias and an assertion', 'rewrite((Thing.List as { Item: unknown }).Item);'],
+    ['the alias destructured', 'const { Item: held } = Thing.List;\nrewrite(held);'],
+    ['the alias in an object', 'rewrite({ list: Thing.List });'],
+    ['the alias as a createElement child', "createElement('div', null, Thing.List);"],
+  ];
+  assert.deepEqual(accepted(aliased.map(([label, after]) => [label, () => read(`${after}\n`, { statics: list }), value])), []);
+  // A write through the alias is a write to the component, and Object.assign through it names its target.
+  for (const write of ['Thing.List.Item = replacement;', 'Object.assign(Thing.List, { Item: replacement });', "Reflect.set(Thing.List, 'Item', replacement);"]) {
+    assert.throws(() => read(`${write}\n`, { statics: list }), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u, write);
+  }
+  // A non-returned wrapper const is a component too, and so is a part that names it.
+  const sibling = { inside: 'const other = forwardRef(function Other() { return null; });', statics: `${item}\n  Thing.Section = other;` };
+  assert.throws(() => read('rewrite(Thing.Section);\n', sibling), value, 'a part that names the sibling const');
+  const holder = (body) => ({ ...sibling, inside: `${sibling.inside}\n  const holder = forwardRef(function Holder() { ${body} return null; });`, statics: `${sibling.statics}\n  Thing.Holder = holder;` });
+  assert.throws(() => read('', holder('rewrite(other);')), value, 'a sibling const as an argument');
+  assert.throws(() => read('', holder('const held = other; rewrite(held);')), value, 'a sibling const held in a variable');
+  assert.deepEqual(read('', holder('createElement(other, {});')).partApis.item.defaults, { tone: 'quiet' }, 'a sibling const rendered');
+  // A shadowing createElement is not React's, and neither is one imported from another module.
+  const shadow = ["import * as React from 'react';", 'declare function use(...values: unknown[]): void;', 'function createElement(type: unknown) { use(type); }', ''].join('\n');
+  assert.throws(() => read('createElement(Thing.Item);\n', { before: shadow }), value, 'a local createElement');
+  const foreign = ["import { createElement } from './elsewhere.js';", 'declare function use(...values: unknown[]): void;', ''].join('\n');
+  assert.throws(() => read('createElement(Thing.Item);\n', { before: foreign }), value, 'a createElement from another module');
+  assert.throws(() => read('React.createElement(Thing.Item);\n', { before: ["import * as React from './elsewhere.js';", ''].join('\n') }), value, 'a React from another module');
+  // What the rule admits: the component and its parts rendered through React's createElement, however it is imported, with
+  // parentheses and an assertion around the first argument; a type query and an export; and the wrapper's own assignments.
+  const rendered = [
+    ['a named createElement', "createElement(Thing.Item, {});"],
+    ['the namespace import', "React.createElement(Thing.Item, null);"],
+    ['the component itself', "createElement(Thing, {});"],
+    ['the alias', "createElement(Thing.List, {});"],
+    ['a part through the alias', "createElement(Thing.List.Item, {});"],
+    ['parentheses', "createElement((Thing.Item), {});"],
+    ['an assertion', "createElement(Thing.Item as never, {});"],
+    ['a type query', 'export type ThingItem = typeof Thing.Item;\nexport type ThingSelf = typeof Thing;\nexport type ThingList = typeof Thing.List;'],
     ['an export of the binding', 'export { Thing as OtherThing };'],
   ];
-  for (const [label, statement] of admitted) assert.deepEqual(read(`${statement}\n`).partApis.item.defaults, { tone: 'quiet' }, label);
-  // Root is the component itself, so it is read as nothing: not passed on, not called.
-  assert.throws(() => read('use(Thing.Root);\n'), value);
-  assert.throws(() => read('use(Thing);\n'), value);
-  assert.throws(() => read('const alias = Thing.Item;\nuse(alias);\n'), value, 'a part held in a variable is not read directly');
-  // A wrapper const that is not returned is held to the same rule.
-  assert.throws(() => extract({
-    declarations: callableDeclarations,
-    source: callableSource({ before: 'declare function use(...values: unknown[]): void;\n', inside: 'const other = forwardRef(function Other() { return null; });\n  const holder = forwardRef(function Holder() { use(other); return null; });', statics: `${item}\n  Thing.Group = holder;` }),
-    parts: { item: 'Item' },
-  }), /Thing: the source uses other as a value, which could hand an alias of the component to code that replaces a part; /u);
-  // A frozen compound is held to it too.
-  const compound = (statement) => `import { forwardRef } from 'react';\ndeclare const replacement: unknown;\nconst ThingRoot = forwardRef(${callableRender});\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${statement}\n`;
+  for (const [label, after] of rendered) assert.deepEqual(read(`${after}\n`, { statics: list }).partApis.item.defaults, { tone: 'quiet' }, label);
+  const renamed = ["import { createElement as h } from 'react';", "import React from 'react';", ''].join('\n');
+  assert.deepEqual(read('h(Thing.Item, {});\nReact.createElement(Thing.Item, {});\n', { before: renamed }).partApis.item.defaults, { tone: 'quiet' }, 'a renamed createElement and the default import');
+  // A sibling renders another sibling, as Menu's list, item and header do (createElement between wrapper consts).
+  const menu = {
+    before: prelude,
+    inside: [
+      'const Header = forwardRef(function Header() { return null; });',
+      'const Row = forwardRef(function Row() { return createElement(Header, {}, createElement(Thing, {}), React.createElement(Other, {})); });',
+      'const Other = forwardRef(function Other() { return createElement(Row, {}); });',
+    ].join('\n  '),
+    statics: `${item}\n  Thing.Header = Header;\n  Thing.Row = Row;`,
+  };
+  assert.deepEqual(read('', menu).partApis.item.defaults, { tone: 'quiet' }, 'siblings render one another');
+  assert.throws(() => read('', { ...menu, inside: `${menu.inside}\n  const Leak = forwardRef(function Leak() { rewrite(Other); return null; });` }), /Thing: the source uses Other as a value/u, 'a sibling passed to a function');
+  // JSX is the other render sink: a tag is admitted, an attribute value is not.
+  const jsx = (after) => read(after, { sourceName: 'thing.tsx', statics: list });
+  assert.deepEqual(jsx('export const view = <Thing.Item value="a" />;\nexport const nested = <div><Thing.List><Thing.List.Item value="b" /></Thing.List></div>;\n').partApis.item.defaults, { tone: 'quiet' }, 'JSX tags');
+  assert.throws(() => jsx('export const view = <div as={Thing.Item} />;\n'), value, 'a JSX attribute');
+  assert.throws(() => jsx('export const view = <div>{Thing.Item}</div>;\n'), value, 'a JSX child');
+  // A frozen compound is held to the same rule.
+  const compound = (statement) => `import { forwardRef, createElement } from 'react';\ndeclare function use(...values: unknown[]): void;\ndeclare const replacement: unknown;\nconst ThingRoot = forwardRef(${callableRender});\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${statement}\n`;
   const frozen = /Thing\.Root: the source uses the compound Thing as a value, which could hand an alias of it to code that replaces a part/u;
-  assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('const alias = Thing;\nvoid alias;') }), frozen);
-  assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('const { Root: alias } = Thing;\nvoid alias;') }), frozen);
-  assert.equal(extract({ declarations: compoundDeclarations, part: 'Root', source: compound('export type ThingRootType = typeof Thing.Root;') }).defaults.size, 'md');
+  for (const statement of ['const alias = Thing;\nvoid alias;', 'const { Root: alias } = Thing;\nvoid alias;', 'use(Thing.Root);', 'use(Thing);', 'createElement("div", null, Thing);']) {
+    assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound(statement) }), frozen, statement);
+  }
+  for (const statement of ['export type ThingRootType = typeof Thing.Root;', 'createElement(Thing.Root, {});']) {
+    assert.equal(extract({ declarations: compoundDeclarations, part: 'Root', source: compound(statement) }).defaults.size, 'md', statement);
+  }
 });
 
 // A module that imports itself holds its own component under a second name, so a write through that name cannot be seen.
@@ -1351,6 +1414,8 @@ test('Object and Reflect members that write properties are only called directly,
   for (const [statement, spelling] of spelled) {
     assert.throws(() => read(`declare function use(...values: unknown[]): void;\n${statement}\n`), (error) => error instanceof ApiExtractionError && hidden.exec(error.message)?.groups.spelling === spelling, statement);
   }
+  // The component handed to a method of its own is a value like any other.
+  assert.throws(() => read('Thing.assign(Thing, { Item: replacement });\n'), /Thing: the source uses Thing as a value/u, 'the component as a receiver');
   // The name alone is not the Object method: the source's own classes, maps and objects keep their assign, set and defineProperty.
   const own = [
     'class Selection { assign() {} defineProperty() {} setPrototypeOf() {} defineProperties() {} }\nnew Selection().assign();\nnew Selection().defineProperty();\nnew Selection().setPrototypeOf();\nnew Selection().defineProperties();',

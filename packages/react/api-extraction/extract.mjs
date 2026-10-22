@@ -6,7 +6,11 @@
  * one differently. Types come from the emitted declarations through the pinned
  * TypeScript 7 compiler API and a closed grammar; defaults come from the executable
  * source. Anything the grammar does not admit fails extraction with the component, the
- * prop, and the reference chain that reached it.
+ * prop, and the reference chain that reached it. The rules that keep a source from rewriting
+ * a component after its defaults are read (the write, value, self-import and reflective-API
+ * scans below) give an early, named error; the executed-default observers in
+ * packages/react/test/fixture.test.mjs render the components of the built package entry, so
+ * for the families they render they are the runtime backstop for any write the scan cannot see.
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -946,9 +950,10 @@ const WRAPPER_RULE = 'an exported component\'s wrapper is called with no argumen
  * Anything else fails naming the component and this rule, so nothing the wrapper runs can
  * change which function renders. The source must write to neither the exported binding nor
  * a wrapper const other than through those statements: a part assigned later would publish
- * a stale part. Nor may either be used as a value (`valueEscape`), since an alias is a write
- * path the scan cannot follow. A top-level const a wrapper const or part follows is
- * collected in `followed` and checked by the caller like any other.
+ * a stale part. Nor may either, or a part, be used as a value except where it is rendered
+ * (`valueEscape`), since an alias is a write path the scan cannot follow. A top-level const
+ * a wrapper const or part follows is collected in `followed` and checked by the caller like
+ * any other.
  * @returns {{ callable: object, parts: Map<string, object> }} the callable's function and each part's, by member name
  */
 function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
@@ -1019,7 +1024,9 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
       fail(`the source writes to ${target.text} beyond the wrapper's displayName and part assignments`);
     }
   }
-  const escaped = valueEscape(project, sourceFile, writeTargets, { allowed: verified, finalReturn: statements.at(-1) });
+  // A part assigned another of the wrapper's consts (Root = Thing, List = Thing) is that component.
+  const selfParts = new Set([...statics.values()].filter(({ value }) => value.kind === SyntaxKind.Identifier && consts.has(value.text)).map(({ property }) => property));
+  const escaped = valueEscape(project, sourceFile, writeTargets, { allowed: verified, finalReturn: statements.at(-1), selfParts });
   if (escaped) fail(`the source uses ${escaped.text} as a value, which could hand an alias of the component to code that replaces a part`);
   return { callable: components.get(returned.text), parts };
 }
@@ -1111,29 +1118,63 @@ function selfReference(sourceFile) {
 }
 
 /**
- * The first reference to one of `bindings` that could hand the component itself to other code, or
- * undefined. A part is replaced by writing it on the component, and a write through an alias of
- * the component is as good as one through its name, so the scan above must see every write. It
- * cannot follow every way a value moves (a destructuring, a conditional, `Thing.Root`, a call
- * argument), and the rule does not try. It admits a binding only as:
- *   - its declaration, an export of it, or a `typeof` type query;
- *   - the target or the value of an `allowed` assignment, and the wrapper's final return;
- *   - `<binding>.<Part>` read directly, as a JSX tag, a call, or a call's argument
- *     (createElement(Thing.Item, ...)), where the part is not Root, which is the component itself.
- * Any other reference fails, since it could be an alias this scan does not see.
+ * The ids of the symbols a source's `import ... from 'react'` binds that matter to `valueEscape`: the
+ * default and namespace imports (`React`) and the names `createElement` is imported as.
  */
-function valueEscape({ checker }, sourceFile, bindings, { allowed = new Set(), finalReturn } = {}) {
+function reactImports({ checker }, sourceFile) {
+  const namespaces = new Set();
+  const createElements = new Set();
+  const bind = (name, ids) => ids.add(checker.getSymbolAtLocation(name)?.id);
+  for (const statement of sourceFile.statements) {
+    const clause = statement.kind === SyntaxKind.ImportDeclaration && statement.moduleSpecifier.text === 'react' ? statement.importClause : undefined;
+    if (!clause) continue;
+    if (clause.name) bind(clause.name, namespaces);
+    const { namedBindings } = clause;
+    if (namedBindings?.kind === SyntaxKind.NamespaceImport) bind(namedBindings.name, namespaces);
+    for (const specifier of namedBindings?.elements ?? []) {
+      const imported = (specifier.propertyName ?? specifier.name).text;
+      if (imported === 'createElement') bind(specifier.name, createElements);
+      else if (imported === 'default') bind(specifier.name, namespaces);
+    }
+  }
+  return { namespaces, createElements };
+}
+
+/**
+ * The first reference to one of `bindings` that could hand the component, or one of its parts, to other
+ * code, or undefined. A part is replaced by writing it on the component, or changed by writing to the
+ * part (`value.render = ...`), and a write through an alias is as good as one through the name, so the
+ * scan above must see every write. It cannot follow every way a value moves (a destructuring, a
+ * conditional, `Thing.Root`, a closure, an argument, `.apply`), and the rule does not try. The component
+ * or a part is a value only where it is rendered and goes nowhere else:
+ *   - as a JSX tag, or the first argument of React's `createElement` (`createElement(Thing.Item, ...)`,
+ *     `React.createElement(Sibling, ...)`), which may hold parentheses and a type assertion around it;
+ *   - and for the component itself, in its declaration, an export, a `typeof` query, the target or the
+ *     value of an `allowed` assignment, and the wrapper's final return.
+ * `<component>.<Part>` is a part, so it is a value only as a JSX tag or the first argument of createElement,
+ * and `<component>.<Part>` where the part is another component (`selfParts`: `Thing.Root = Thing`,
+ * `Thing.List = Thing`) is that component. Anything else fails, since it could be an alias this scan
+ * does not see.
+ */
+function valueEscape(project, sourceFile, bindings, { allowed = new Set(), finalReturn, selfParts = new Set() } = {}) {
+  const { checker } = project;
   const ids = new Set(bindings.map((binding) => checker.getSymbolAtLocation(binding)?.id).filter((id) => id !== undefined));
+  const react = reactImports(project, sourceFile);
   const outerOf = (node) => (WRAPPERS.has(node.parent.kind) ? outerOf(node.parent) : node);
   const jsxTag = new Set([SyntaxKind.JsxOpeningElement, SyntaxKind.JsxSelfClosingElement, SyntaxKind.JsxClosingElement]);
-  const direct = (access) => {
-    const use = access.parent;
-    return (jsxTag.has(use.kind) && use.tagName === access)
-      || (use.kind === SyntaxKind.CallExpression && (use.expression === access || use.arguments.some((argument) => argument === access)));
+  const isCreateElement = (callee) => {
+    const target = unwrap(callee);
+    if (target.kind === SyntaxKind.Identifier) return react.createElements.has(checker.getSymbolAtLocation(target)?.id);
+    return target.kind === SyntaxKind.PropertyAccessExpression && target.name.text === 'createElement'
+      && target.expression.kind === SyntaxKind.Identifier && react.namespaces.has(checker.getSymbolAtLocation(target.expression)?.id);
   };
-  const admitted = (node) => {
+  // Whether the expression `node`, which evaluates to the component (`kind` component) or to one of its parts, is used admissibly.
+  const admitted = (node, kind) => {
     const outer = outerOf(node);
     const { parent } = outer;
+    if (jsxTag.has(parent.kind) && parent.tagName === outer) return true;
+    if (parent.kind === SyntaxKind.CallExpression && parent.arguments[0] === outer && isCreateElement(parent.expression)) return true;
+    if (kind === 'part') return false;
     if ((parent.kind === SyntaxKind.VariableDeclaration && parent.name === node) || parent.kind === SyntaxKind.ExportSpecifier) return true;
     let name = parent;
     while (name.kind === SyntaxKind.QualifiedName) name = name.parent;
@@ -1142,7 +1183,7 @@ function valueEscape({ checker }, sourceFile, bindings, { allowed = new Set(), f
     if (parent.kind !== SyntaxKind.PropertyAccessExpression || parent.expression !== outer) return false;
     const access = outerOf(parent);
     return (access.parent.kind === SyntaxKind.BinaryExpression && allowed.has(access.parent) && access.parent.left === access)
-      || (parent.name.text !== 'Root' && direct(access));
+      || admitted(parent, selfParts.has(parent.name.text) ? 'component' : 'part');
   };
   let found;
   const visit = (node) => {
@@ -1150,7 +1191,7 @@ function valueEscape({ checker }, sourceFile, bindings, { allowed = new Set(), f
     if (node.kind === SyntaxKind.Identifier) {
       const shorthand = node.parent.kind === SyntaxKind.ShorthandPropertyAssignment && node.parent.name === node;
       const id = (shorthand ? checker.getShorthandAssignmentValueSymbol(node.parent) : checker.getSymbolAtLocation(node))?.id;
-      if (ids.has(id) && !admitted(node)) found = node;
+      if (ids.has(id) && !admitted(node, 'component')) found = node;
     }
     node.forEachChild(visit);
   };
