@@ -448,6 +448,8 @@ export { Toolbar } from './toolbar.js';
 export type { ToolbarProps } from './toolbar.js';
 export { ToggleButtonGroup } from './toggle-button-group.js';
 export type { ToggleButtonGroupProps } from './toggle-button-group.js';
+export { Slider } from './slider.js';
+export type { SliderProps } from './slider.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
@@ -515,8 +517,6 @@ export declare const Select: React.ForwardRefExoticComponent<SelectProps & React
 };
 export type ComboBoxProps = NamedFieldProps & { /** The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. */ items?: MuxUIItems; value?: string; defaultValue?: string; /** The selected item's id. A controlled field with no selection passes null; an empty string throws. */ selectedId?: string | null; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; /** Called with the chosen item, or with no item when the selection clears. */ onSelect?: (item?: MuxUICollectionItem) => void; };
 export declare const ComboBox: React.ForwardRefExoticComponent<ComboBoxProps & React.RefAttributes<HTMLDivElement>>;
-export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; name?: string; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
-export declare const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
 export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }
 export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };

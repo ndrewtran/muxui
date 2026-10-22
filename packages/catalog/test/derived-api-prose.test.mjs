@@ -143,6 +143,7 @@ const GUIDES = {
   // YYYY-MM-DD is Mux UI's own value format, not a native one: MuxUIDateValue's description states it, and the check reads it there.
   calendar: { described: { MuxUIDateValue: ['YYYY-MM-DD'] } },
   'range-calendar': {},
+  slider: {},
   // ToggleButtonGroup's guide words its missing form name as "no `name` prop", which the check reads.
   'toggle-button-group': {},
   toolbar: {},

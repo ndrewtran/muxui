@@ -1,0 +1,183 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/slider.ts",
+  "component": "muxui:component:slider",
+  "binding": "web.react",
+  "export": "Slider",
+  "api": {
+    "props": [
+      "label",
+      "value",
+      "defaultValue",
+      "min",
+      "max",
+      "step",
+      "disabled",
+      "readOnly",
+      "orientation",
+      "name"
+    ],
+    "events": [
+      "change",
+      "changeEnd"
+    ],
+    "defaults": {
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "disabled": false,
+      "readOnly": false,
+      "orientation": "horizontal"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the slider. Without one, the slider needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "value": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The value, when the caller controls it."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The starting value, when the slider controls itself."
+      },
+      "min": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The smallest value the thumb can take."
+      },
+      "max": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The largest value the thumb can take."
+      },
+      "step": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "How far one arrow key press moves the value, and the increment the value snaps to."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the slider: it can be neither focused nor changed."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the slider read-only: it stays focusable but its value cannot be changed."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            },
+            {
+              "kind": "literal",
+              "value": "vertical"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "horizontal",
+          "vertical"
+        ],
+        "description": "The direction of the track."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named slider submits its value."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "number"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new value each time it changes while the thumb moves. A disabled or read-only slider does not call it."
+      },
+      "changeEnd": {
+        "prop": "onChangeEnd",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "number"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the current value when an interaction ends, such as a key press or a drag release, even when the value did not move. A disabled or read-only slider does not call it."
+      }
+    },
+    "types": {}
+  }
+}

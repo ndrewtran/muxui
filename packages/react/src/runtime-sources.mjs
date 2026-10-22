@@ -27,7 +27,7 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/menu.mjs',
   'packages/react/src/radio-group.mjs',
   'packages/react/src/select.mjs',
-  'packages/react/src/slider.mjs',
+  'packages/react/src/slider.ts',
   'packages/react/src/table.mjs',
   'packages/react/src/tabs.mjs',
   'packages/react/src/tag-group.mjs',

@@ -7544,7 +7544,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/slider.mjs",
+          "path": "packages/react/src/slider.ts",
           "lines": null,
           "anchor": "#Slider"
         }
@@ -7583,7 +7583,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/slider.mjs",
+          "path": "packages/react/src/slider.ts",
           "lines": null,
           "anchor": "#Slider"
         }
@@ -7622,7 +7622,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/slider.mjs",
+          "path": "packages/react/src/slider.ts",
           "lines": null,
           "anchor": "#Slider"
         }
@@ -7661,7 +7661,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/slider.mjs",
+          "path": "packages/react/src/slider.ts",
           "lines": null,
           "anchor": "#Slider"
         }
@@ -7700,7 +7700,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/slider.mjs",
+          "path": "packages/react/src/slider.ts",
           "lines": null,
           "anchor": "#Slider"
         }
@@ -7739,7 +7739,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/slider.mjs",
+          "path": "packages/react/src/slider.ts",
           "lines": null,
           "anchor": "#Slider"
         }

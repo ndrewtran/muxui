@@ -12,7 +12,7 @@ export { Menu } from './menu.mjs';
 export { ComboBox } from './combo-box.mjs';
 export { Select } from './select.mjs';
 export { RadioGroup } from './radio-group.mjs';
-export { Slider } from './slider.mjs';
+export { Slider } from './slider.ts';
 export { Table } from './table.mjs';
 export { Tabs } from './tabs.mjs';
 export { TagGroup } from './tag-group.mjs';

@@ -13,7 +13,7 @@ const contextMergedProps = new Set([
   'open', 'isOpen', 'defaultOpen', 'modal', 'dismissable',
   'disabled', 'isDisabled', 'readOnly', 'isReadOnly', 'required', 'isRequired', 'invalid', 'isInvalid', 'pending', 'isPending', 'validationBehavior',
   'value', 'defaultValue', 'minValue', 'maxValue', 'step', 'type',
-  'selectionMode', 'selected', 'isSelected', 'defaultSelected', 'checked', 'defaultChecked', 'indeterminate', 'isIndeterminate',
+  'min', 'max', 'selectionMode', 'selected', 'isSelected', 'defaultSelected', 'checked', 'defaultChecked', 'indeterminate', 'isIndeterminate',
   'selectedKey', 'defaultSelectedKey', 'selectedKeys', 'defaultSelectedKeys',
   'expanded', 'isExpanded', 'defaultExpanded', 'defaultExpandedIds', 'multiple', 'items',
   'orientation', 'role', 'current', 'allowsMultiple', 'acceptDirectory', 'disallowEmptySelection',
@@ -63,6 +63,8 @@ const audited = [
       ...expand(['toolbar', 'toggle-button-group'], ['orientation']),
       // ToggleButtonGroup sends selectionMode, isDisabled, and disallowEmptySelection to React Aria as its own values, single, false, and false when omitted, as it did before the move.
       ...expand(['toggle-button-group'], ['selectionMode', 'disabled', 'disallowEmptySelection']),
+      // Slider sends minValue, maxValue, step, isDisabled, and orientation to React Aria as its own values, 0, 100, 1, false, and horizontal when omitted, as it did before the move.
+      ...expand(['slider'], ['min', 'max', 'step', 'disabled', 'orientation']),
     ],
   },
   {
@@ -81,6 +83,8 @@ const audited = [
       // The color controls enforce readOnly themselves, with a data attribute and guards, and send React Aria no isReadOnly. ColorPicker's flags reach its children through a Mux UI context, and React Aria's picker takes neither.
       ...expand(['color-picker'], ['disabled', 'readOnly']),
       ...expand(['color-area', 'color-slider', 'color-wheel'], ['readOnly']),
+      // Slider enforces readOnly itself, with a data attribute and guards, and sends React Aria no isReadOnly.
+      ...expand(['slider'], ['readOnly']),
     ],
   },
   {

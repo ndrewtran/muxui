@@ -64,6 +64,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'range-calendar', name: 'RangeCalendar', source: 'packages/react/src/calendar.ts' },
   { slug: 'toolbar', name: 'Toolbar', source: 'packages/react/src/toolbar.ts' },
   { slug: 'toggle-button-group', name: 'ToggleButtonGroup', source: 'packages/react/src/toggle-button-group.ts' },
+  { slug: 'slider', name: 'Slider', source: 'packages/react/src/slider.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
