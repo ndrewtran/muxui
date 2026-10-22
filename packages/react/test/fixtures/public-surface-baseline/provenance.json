@@ -1,0 +1,51 @@
+{
+  "commit": "c8434f6281d6aa880b7d94838b8f10e65990273d",
+  "subject": "feat(react)!: open the Sidebar account menu, add a RadioGroup group error, and fix HeaderNav and PromptComposer follow-ups (#341)",
+  "note": "The packed type declarations of @muxui/react before Decision 0031 tranche 1 moved any family to TypeScript. They are the frozen baseline of test/public-surface-baseline.test.mjs: never edit them; a deliberate public type change is recorded in public-surface-accepted.json instead. The two @generated header lines are stripped (repository policy reads them as a projection marker), and the digests below are the generator's own @generated-content-sha256 values, which are the sha256 of each stripped file.",
+  "exports": {
+    ".": {
+      "types": "./generated/index.d.ts",
+      "default": "./generated/index.mjs"
+    },
+    "./compatibility": "./generated/compatibility.mjs",
+    "./styles.css": "./generated/styles.css",
+    "./themes": {
+      "types": "./generated/themes.d.ts",
+      "default": "./generated/themes.mjs"
+    },
+    "./themes.css": "./generated/themes.css",
+    "./testing": "./generated/testing.mjs",
+    "./text-editor": {
+      "types": "./generated/text-editor.d.ts",
+      "default": "./generated/text-editor.mjs"
+    },
+    "./markdown": {
+      "types": "./generated/markdown.d.ts",
+      "default": "./generated/markdown.mjs"
+    }
+  },
+  "reproduce": [
+    "git clone <repository> baseline && cd baseline && git checkout c8434f62",
+    "pnpm install --frozen-lockfile && pnpm generate",
+    "for f in packages/react/generated/*.d.ts; do tail -n +3 \"$f\" > <this directory>/$(basename \"$f\"); done",
+    "sha256sum <this directory>/*.d.ts must equal the digests in files"
+  ],
+  "files": {
+    "activity.d.ts": "sha256:42a5d6207b892141637d638516662e7300169117a9dd6ee766f719d192a7d94e",
+    "avatar.d.ts": "sha256:655a53ae29d13db06716db607ced94545d80cfcec8b6dc5471677719a5b71f90",
+    "code-block.d.ts": "sha256:692853bc6306cfd467cbfaa6c469ae55f7ae48d0bb56b01dcdf6c4ce5d25e17b",
+    "data-diff.d.ts": "sha256:dadb7c6c112c6ac05634ef9ea1f47dcdb4a1a2ca00b985cfc128efa8515c44c4",
+    "icon-button.d.ts": "sha256:32166700c84db0c59ddcf7dac4b0631d839490916fe761a70f0c4bf77be2e084",
+    "image.d.ts": "sha256:d9e982b9c96d6c8335bc128f91f9d53f46d8bcbeaac8223ec09e44051994acdc",
+    "index.d.ts": "sha256:a3714744e82adb2b5370df4c75f48a57bfbe14a3e79045216c1d0a8e5cf1ede2",
+    "lightbox.d.ts": "sha256:a50ad9743e130bb8d4a267cac8e77f8039e1731773606617073824de53bf5b8e",
+    "markdown.d.ts": "sha256:eeb7b3f2d02aab0f4ff3d0ee5c55d8a344cc16e3f7d1a5fb221db6070475417c",
+    "message.d.ts": "sha256:3bc2bf3c95480d5e254c2021922cd0ddb499a736ac5cef5b4a75b9b552751764",
+    "prompt-composer.d.ts": "sha256:aed40d419c49171b62192a5dcd2d91da4bb8665158ac2db4f2957255f0854671",
+    "resizable.d.ts": "sha256:517813e27124d30953baa7094a1deec08bc9ea7a59d292e90c72e870cacc870a",
+    "select-native.d.ts": "sha256:2b8fcb8ab41263dad01fd6df2cfc8706ee03f5015a7191f28f7d59c803fd2667",
+    "supplemental.d.ts": "sha256:95b8d64c7e967933f4f336b1b5e693704d708fefb1b3b924cf0fde68474b6ab6",
+    "text-editor.d.ts": "sha256:01df4aa2d0c8eadbc9a59d02cdc3fc4c3caa955114c8849c0d3cdcd34c5baadf",
+    "themes.d.ts": "sha256:48d63c1ffe3f42165bc2ff1487723afd2c14d8c06a1e6ee70b46d2563bd8556d"
+  }
+}
