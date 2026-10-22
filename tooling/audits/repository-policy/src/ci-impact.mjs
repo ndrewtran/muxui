@@ -1605,7 +1605,6 @@ export async function buildPullRequestImpact({
   }
   // Families whose component source or CSS changed: the patterns that use them are replanned below.
   const changedSourceFamilies = new Set();
-  const baseImporters = new Set([...importsBySide.before.values()].flat());
   for (const path of reactSourcePaths) {
     if (generatorModules.has(path)) continue;
     if (externallyImported.has(path)) {
@@ -1613,12 +1612,16 @@ export async function buildPullRequestImpact({
       continue;
     }
     const headSource = await readHeadText(path);
-    // A deleted module that no base module imported cannot change any family;
-    // the React package check regenerates and tests the package without it.
-    if (headSource === null && !baseImporters.has(path) && !records.some((record) => record.source === path)) {
-      plan.packageChecks.add('@muxui/react');
-      plan.reasons.push(`${path} was deleted and no React module imported it; run the React package check`);
-      continue;
+    // A deleted module that no base module imported cannot change any family, and neither can one
+    // whose every importer changed in this PR (a module moving from .mjs to .ts): each importer is
+    // analyzed in its own right. The React package check regenerates and tests the package without it.
+    if (headSource === null && !records.some((record) => record.source === path)) {
+      const importers = [...importsBySide.before].filter(([, targets]) => targets.includes(path)).map(([importer]) => importer);
+      if (importers.every((importer) => reactSourcePaths.includes(importer))) {
+        plan.packageChecks.add('@muxui/react');
+        plan.reasons.push(`${path} was deleted and ${importers.length === 0 ? 'no React module imported it' : 'every React module that imported it changed'}; run the React package check`);
+        continue;
+      }
     }
     const before = await readBaseText(path) ?? '';
     const after = headSource ?? '';
