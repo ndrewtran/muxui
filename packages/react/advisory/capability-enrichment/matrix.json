@@ -6542,7 +6542,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-picker/artifact.json#bindings/web.react",
-          "packages/react/src/color-picker.mjs#ColorPicker",
+          "packages/react/src/color-picker.ts#ColorPicker",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

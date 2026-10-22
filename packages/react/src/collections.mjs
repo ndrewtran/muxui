@@ -4,7 +4,7 @@ export { ColorField } from './color-field.mjs';
 export { ColorArea } from './color-area.mjs';
 export { ColorSlider } from './color-slider.ts';
 export { ColorWheel } from './color-wheel.ts';
-export { ColorPicker } from './color-picker.mjs';
+export { ColorPicker } from './color-picker.ts';
 export { ColorSwatchPicker } from './color-swatch-picker.mjs';
 export { ListBox } from './list-box.mjs';
 export { GridList } from './grid-list.mjs';

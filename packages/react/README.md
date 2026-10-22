@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:91d343424a617897e94202ab16b8c79bdcf256ddc4f134862c9d92fc8ac5f202 -->
+<!-- @generated-content-sha256: sha256:71b50a32aa91a3d89dd8ebf666801afe844a116af9472abc9e342d76c4ac7877 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -118,7 +118,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorArea | experimental | . | .muxui-color-area | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly |
 | ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name |
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
-| ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly, children |
+| ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |

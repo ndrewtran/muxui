@@ -436,6 +436,8 @@ export { ColorWheel } from './color-wheel.js';
 export type { ColorWheelProps } from './color-wheel.js';
 export { ColorSlider } from './color-slider.js';
 export type { ColorSliderProps } from './color-slider.js';
+export { ColorPicker } from './color-picker.js';
+export type { ColorPickerProps } from './color-picker.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
@@ -453,8 +455,6 @@ export type ColorAreaProps = MuxUIAccessibleName & { value?: MuxUIColorValue; de
 export declare const ColorArea: React.ForwardRefExoticComponent<ColorAreaProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; onChange?: (value: MuxUIColorValue | null) => void; name?: string; size?: ControlSize; };
 export declare const ColorField: React.ForwardRefExoticComponent<ColorFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; children?: React.ReactNode; className?: string; };
-export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };

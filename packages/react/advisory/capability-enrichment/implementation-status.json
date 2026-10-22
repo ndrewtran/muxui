@@ -4795,7 +4795,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4834,7 +4834,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4873,7 +4873,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4912,7 +4912,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4951,7 +4951,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4990,7 +4990,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }

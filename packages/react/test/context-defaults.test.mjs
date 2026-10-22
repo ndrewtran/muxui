@@ -71,7 +71,8 @@ const audited = [
       ...expand(['activity'], ['defaultExpanded']),
       // CheckboxGroup keeps its orientation for CSS and gives React Aria none.
       ...expand(['checkbox-group'], ['orientation']),
-      // The color controls enforce readOnly themselves, with a data attribute and guards, and send React Aria no isReadOnly.
+      // The color controls enforce readOnly themselves, with a data attribute and guards, and send React Aria no isReadOnly. ColorPicker's flags reach its children through a Mux UI context, and React Aria's picker takes neither.
+      ...expand(['color-picker'], ['disabled', 'readOnly']),
       ...expand(['color-slider', 'color-wheel'], ['readOnly']),
     ],
   },

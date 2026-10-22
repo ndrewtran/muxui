@@ -65,6 +65,9 @@ test('the Button guide covers exactly the variants its derived API declares', as
 // declaration-only surface, such as a provider's props, that the declaration-backed reference
 // reader will check; until it exists, the list names exactly the spans no check compares. It
 // excuses prose spans only, never an example's attributes, and only DECLARATION_ONLY_GUIDES use it.
+// `from` lists, by slug, the spans a guide states about a neighbouring component's API, such as the slider
+// props a picker's advice names; each must be a prop, event prop, or finite value of that component's derived
+// API, so the claim moves with the neighbour. It excuses prose spans only, like `declared`.
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },
@@ -129,6 +132,8 @@ const GUIDES = {
   // rgba() and hsla() are the CSS color functions onChange returns.
   'color-wheel': { native: ['rgba()', 'hsla()'] },
   'color-slider': { native: ['rgba()', 'hsla()'] },
+  // colorSpace, hsb, and hsl are the slider's: the guide tells a hex picker's slider to set them.
+  'color-picker': { native: ['rgba()', 'hsla()'], from: { 'color-slider': ['colorSpace', 'hsb', 'hsl'] } },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -144,7 +149,7 @@ const undeclaredOwners = (guides) => Object.entries(guides)
  * package's own names. An example's attributes are checked against `attributes`; the guide's
  * prose also gets the `declared` spans.
  */
-function guideNames({ derived, record, entry: { native = [], declared = [] }, importPaths, componentNames }) {
+function guideNames({ derived, record, entry: { native = [], declared = [], from = {} }, importPaths, componentNames }) {
   const { api } = derived;
   const attributes = new Set([
     ...importPaths,
@@ -158,7 +163,18 @@ function guideNames({ derived, record, entry: { native = [], declared = [] }, im
     ...memberNames(api.propDetails),
     ...native,
   ]);
-  return { attributes, prose: new Set([...attributes, ...declared]) };
+  return { attributes, prose: new Set([...attributes, ...declared, ...Object.values(from).flat()]) };
+}
+
+/** The spans of `spans` that `api` (another component's derived API) does not own as a prop, event prop, or finite value. */
+function missingFromOwner(api, spans) {
+  const owned = new Set([
+    ...api.props,
+    ...Object.values(api.eventDetails).map(({ prop }) => prop),
+    ...Object.values(api.propDetails).flatMap(({ enum: values = [] }) => values),
+    ...memberNames(api.types),
+  ]);
+  return spans.filter((span) => !owned.has(span));
 }
 
 /** The attribute names an example gives the component that `checked` does not hold. */
@@ -210,7 +226,7 @@ test('every API name a derived component\'s guide states is in its derived API o
   const layerOrder = /^@layer reset, [^\n]+;$/mu.exec(readme)?.[0];
   assert.ok(layerOrder, 'the React README states the layer order');
 
-  for (const [slug, { native = [], declared = [] }] of Object.entries(GUIDES)) {
+  for (const [slug, { native = [], declared = [], from = {} }] of Object.entries(GUIDES)) {
     const [guide, derived, record] = await Promise.all([
       read(`catalog/guides/${slug}-usage.md`),
       derivedApi(slug),
@@ -235,6 +251,11 @@ test('every API name a derived component\'s guide states is in its derived API o
     // The list names only what the guide still states.
     const stated = new Set([...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' ')));
     assert.deepEqual(declared.filter((span) => !stated.has(span)), [], `${slug} declares spans its guide no longer states`);
+    for (const [owner, spans] of Object.entries(from)) {
+      assert.notEqual(owner, slug, `${slug} takes its own spans from another component`);
+      assert.deepEqual(spans.filter((span) => !stated.has(span)), [], `${slug} lists ${owner} spans its guide no longer states`);
+      assert.deepEqual(missingFromOwner((await derivedApi(owner)).api, spans), [], `${slug} guide states ${owner} spans its derived API does not own`);
+    }
     const unchecked = [...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' '))
       .filter((span) => !proseChecked.has(span) && !attribute(span) && span !== layerOrder && !absent.includes(span));
     assert.deepEqual(unchecked, [], `${slug} guide`);
@@ -247,6 +268,24 @@ test('every API name a derived component\'s guide states is in its derived API o
       assert.deepEqual(unknownExampleAttributes(code, derived.export, checked), [], `${slug} guide example attributes`);
     }
   }
+});
+
+// The picker guide names the slider's colorSpace, hsb, and hsl. They are checked against the slider's derived API,
+// not excused as native, so a slider that drops one fails the picker's guide.
+test('spans a guide states about a neighbour are checked against the neighbour\'s derived API', async () => {
+  const slider = (await derivedApi('color-slider')).api;
+  assert.deepEqual(missingFromOwner(slider, GUIDES['color-picker'].from['color-slider']), []);
+  assert.deepEqual(missingFromOwner(slider, ['colorSpace', 'hsb', 'tone', 'onChange']), ['tone']);
+  // The slider drops hsb from colorSpace, drops a prop, or renames its change prop.
+  const withoutHsb = { ...slider, propDetails: { ...slider.propDetails, colorSpace: { ...slider.propDetails.colorSpace, enum: ['rgb', 'hsl'] } }, types: {} };
+  assert.deepEqual(missingFromOwner(withoutHsb, ['hsb', 'hsl']), ['hsb']);
+  assert.deepEqual(missingFromOwner({ ...slider, props: slider.props.filter((name) => name !== 'colorSpace') }, ['colorSpace']), ['colorSpace']);
+  // A span listed `from` excuses prose only: the picker's examples may not pass colorSpace to the picker.
+  const [derived, record] = await Promise.all([derivedApi('color-picker'), read('catalog/components/color-picker/artifact.json').then(JSON.parse)]);
+  const { attributes, prose } = guideNames({ derived, record, entry: GUIDES['color-picker'], importPaths: [], componentNames: [] });
+  assert.equal(prose.has('colorSpace'), true);
+  assert.equal(attributes.has('colorSpace'), false);
+  assert.deepEqual(unknownExampleAttributes('<ColorPicker colorSpace="hsb" />', 'ColorPicker', attributes), ['colorSpace']);
 });
 
 test('declared spans belong to the declaration-only guide and never excuse an example attribute', async () => {
