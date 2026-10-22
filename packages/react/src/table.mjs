@@ -8,7 +8,7 @@ import {
   Row as AriaRow,
   Cell as AriaCell,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems, keySet, keyList } from './collection-items.mjs';
 
 function normalizeSortDescriptor(value, columns) {

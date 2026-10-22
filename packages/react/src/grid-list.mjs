@@ -2,7 +2,7 @@ import React from 'react';
 import { GridListMotion } from './grid-list-motion.mjs';
 import { GridList as AriaGridList, GridListItem as AriaGridListItem } from 'react-aria-components';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.mjs';
 import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
 

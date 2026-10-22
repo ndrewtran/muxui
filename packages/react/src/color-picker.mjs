@@ -1,7 +1,7 @@
 import React from 'react';
 import { ColorPicker as AriaColorPicker, parseColor } from 'react-aria-components';
-import { classNames } from './control-utils.mjs';
-import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.mjs';
+import { classNames } from './control-utils.ts';
+import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.ts';
 
 export const ColorPicker = React.forwardRef(function ColorPicker({ value, defaultValue, onChange, disabled = false, readOnly = false, children, className, ...props }, ref) {
   // ARIA names and states need a role; a labelled picker is a group, an unlabelled one a plain wrapper.

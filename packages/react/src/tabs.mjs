@@ -8,7 +8,7 @@ import {
 } from 'react-aria-components';
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { TabsMotion } from './tabs-motion.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.mjs';
 
 const TABS_VARIANTS = new Set(['underline', 'pill', 'overflow', 'segment']);

@@ -9,8 +9,8 @@ import {
   FieldError as AriaFieldError,
 } from 'react-aria-components';
 import { normalizeChoiceControlSize } from './choice-context.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
-import { colorValue, ColorPickerContext } from './color-context.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
+import { colorValue, ColorPickerContext } from './color-context.ts';
 
 // React Aria applies typed text to a ColorField only on blur, so Enter would submit the form with the raw text and
 // never report it. Enter commits as blur does, flushed so the input and onChange are current when the form reads

@@ -12,7 +12,7 @@ import {
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems } from './collection-items.mjs';
 import { CollectionTrigger } from './collection-trigger.mjs';
 

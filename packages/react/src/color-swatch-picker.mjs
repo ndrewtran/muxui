@@ -5,10 +5,10 @@ import {
   ColorSwatchPickerItem as AriaColorSwatchPickerItem,
   parseColor,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.mjs';
-import { READ_ONLY_SELECTION_KEYS, readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
-import { colorValue, ColorPickerContext } from './color-context.mjs';
+import { READ_ONLY_SELECTION_KEYS, readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
+import { colorValue, ColorPickerContext } from './color-context.ts';
 
 // React Aria keys swatch options by colour, so each item needs a distinct colour.
 // An explicit item label or textValue becomes the swatch colour name.

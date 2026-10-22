@@ -1,8 +1,8 @@
 import React from 'react';
 import { Slider as AriaSlider, SliderOutput as AriaSliderOutput, Label as AriaLabel } from 'react-aria-components';
 import { SliderMotionTrack } from './slider-motion.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
-import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
+import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
 
 export const Slider = /* @__PURE__ */ (() => {
   const component = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {

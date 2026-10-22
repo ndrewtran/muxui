@@ -1,9 +1,9 @@
 import React from 'react';
 import { ColorWheelMotionTrack } from './color-wheel-motion.mjs';
 import { ColorPickerStateContext, ColorWheel as AriaColorWheel } from 'react-aria-components';
-import { classNames } from './control-utils.mjs';
-import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
-import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.mjs';
+import { classNames } from './control-utils.ts';
+import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
+import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.ts';
 
 function assertColorWheelGeometry(outerRadius, innerRadius) {
   if (typeof outerRadius !== 'number' || !Number.isFinite(outerRadius) || outerRadius < 0) throw new TypeError('ColorWheel outerRadius must be a finite nonnegative number');

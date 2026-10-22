@@ -1,9 +1,9 @@
 import React from 'react';
 import { ColorSliderMotionTrack } from './color-slider-motion.mjs';
 import { ColorSlider as AriaColorSlider, Label as AriaLabel } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
-import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
-import { colorValue, ColorPickerContext } from './color-context.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
+import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
+import { colorValue, ColorPickerContext } from './color-context.ts';
 
 const COLOR_SPACE_CHANNELS = {
   rgb: ['red', 'green', 'blue', 'alpha'],

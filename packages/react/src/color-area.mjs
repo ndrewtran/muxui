@@ -5,9 +5,9 @@ import {
   ColorPickerStateContext,
   ColorThumb as AriaColorThumb,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
-import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.mjs';
-import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
+import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
+import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.ts';
 
 // Colour controls forward no untyped props; upstream props such as onChangeEnd,
 // xChannel, or colorSpace would bypass the Mux UI guards and string values.

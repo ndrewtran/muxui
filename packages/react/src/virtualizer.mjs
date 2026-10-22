@@ -7,7 +7,7 @@ import {
   GridLayout,
   Size,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.mjs';
 import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
 

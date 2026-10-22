@@ -6,7 +6,7 @@ import {
   Label as AriaLabel,
   TokenFieldValue,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 
 function toTokenValue(values = [], text = '') {
   const segments = values.map((value) => ({ type: 'token', text: String(value), value: String(value) }));

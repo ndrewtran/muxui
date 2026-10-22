@@ -15,7 +15,7 @@ import {
 import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { createFocusManager } from 'react-aria/private/focus/FocusScope';
 import { PopoverMotion } from './popover-motion.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems, collectionItem } from './collection-items.mjs';
 import { CollectionTrigger } from './collection-trigger.mjs';
 

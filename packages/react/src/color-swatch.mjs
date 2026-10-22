@@ -1,7 +1,7 @@
 import React from 'react';
 import { ColorSwatch as AriaColorSwatch, useLocale } from 'react-aria-components';
-import { classNames } from './control-utils.mjs';
-import { colorValue, ColorPickerContext } from './color-context.mjs';
+import { classNames } from './control-utils.ts';
+import { colorValue, ColorPickerContext } from './color-context.ts';
 
 export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, secondaryColor, shape = 'square', colorName, disabled = false, className, style, ...props }, ref) {
   const pickerState = React.useContext(ColorPickerContext);
