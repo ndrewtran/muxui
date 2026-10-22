@@ -434,12 +434,12 @@ test('token changes request compiler and theme contrast proof without behavior a
   assert.equal(result.storyTheme, true);
   // The token source belongs to @muxui/tokens, so its runtime dependents
   // (catalog, docs, Scale, Figma, tooling, policy) run whole; React keeps its
-  // theme proof rather than the full package check, plus the surface test that reads the token source.
+  // theme proof rather than the full package check, plus the surface tests that read the token source.
   assert.equal(result.docs && result.scale && result.policy, true);
   assert.equal(result.reactPackageFull, false);
   assert.deepEqual(result.packageChecks, ['@muxui/figma', '@muxui/tooling']);
   assert.deepEqual(result.reactFamilies, []);
-  assert.deepEqual(result.reactTestFiles, ['test/public-surface.test.mjs']);
+  assert.deepEqual(result.reactTestFiles, ['test/public-surface-baseline.test.mjs', 'test/public-surface.test.mjs']);
   assert.deepEqual(result.storyRuns.map(({ proof, families, storyIds }) => ({ proof, families, storyIds })), [
     { proof: 'theme', families: [], storyIds: [] },
     { proof: 'chrome', families: [], storyIds: [] },
@@ -3777,6 +3777,41 @@ test('the public-surface check is planned for every change that can alter the pu
     assert.equal(result.reactPackageFull, false, path);
     assert.ok(!result.reactTestFiles.includes(surface) && !result.reactComponentTests.includes(surface) && !result.packageChecks.includes('@muxui/react'), path);
     assert.ok(!executionCommands(result, { packages }).some(({ args }) => args.includes(surface)), path);
+  }
+});
+
+// The token source behind ./themes generates the MuxUIStandardThemeId and MuxUIMonochromeThemeId unions of
+// themes.d.ts, so a preset ID change alters the public types and nothing under packages/react/src changes.
+test('a preset ID change in the token source plans the public-surface check', async () => {
+  const surface = 'test/public-surface-baseline.test.mjs';
+  const tokenPath = 'catalog/tokens/default-theme.json';
+  const after = readFileSync(resolve(repositoryRoot, tokenPath), 'utf8');
+  const [{ id }] = JSON.parse(after).theme.scale.standardPresets;
+  const before = after.replace(`"${id}"`, `"${id}-review"`);
+  assert.notEqual(before, after, 'fixture must rename a preset ID');
+  const result = await plan([tokenPath], { textSnapshots: { [tokenPath]: { before, after } } });
+  assert.ok(result.reactTestFiles.includes(surface));
+  assert.equal(result.reactPackageFull, false);
+  assert.ok(executionCommands(result, { packages }).some(({ args }) => args.at(-1) === surface && args.includes('--test')));
+});
+
+// Every catalog file the generator reads by name must plan the check, or the full React check that runs it: a
+// catalog input the generator starts reading cannot silently skip the public types it may now change. A component
+// artifact routes through its family, whose check selects the shared test (see the family case above).
+test('every catalog file the React generator names plans the public-surface check', async () => {
+  const surface = 'test/public-surface-baseline.test.mjs';
+  const sources = ['packages/react/src/generate.mjs', 'packages/react/src/supplemental-mapping.mjs'].map((path) => readFileSync(resolve(repositoryRoot, path), 'utf8'));
+  const named = [...new Set(sources.flatMap((source) => [...source.matchAll(/'(catalog\/[^'$]+\.json)'/gu)].map((match) => match[1])))]
+    .filter((path) => !path.startsWith('catalog/components/')).sort();
+  assert.ok(named.includes('catalog/tokens/default-theme.json') && named.includes('catalog/react-r1-6/supplemental-components.json'), 'the scan finds the generator inputs');
+  for (const path of named) {
+    assert.ok(existsSync(resolve(repositoryRoot, path)), `${path} exists`);
+    const result = await plan([path], edited(path));
+    const commands = executionCommands(result, { packages });
+    const runs = commands.some(({ args }) => args.join(' ') === '--filter @muxui/react run check')
+      || commands.some(({ args }) => args.at(-1) === surface && args.includes('--test'))
+      || result.reactComponentTests.includes(surface);
+    assert.ok(runs, `${path} plans the public-surface check`);
   }
 });
 

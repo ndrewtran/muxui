@@ -1,10 +1,27 @@
 // Decision 0031 Part 1 promises no change to the public TypeScript surface of @muxui/react. This holds the
 // current declarations against the frozen declarations from before the TypeScript moves
 // (test/fixtures/public-surface-baseline), under TypeScript 7 and the pinned TypeScript 6, with
-// exactOptionalPropertyTypes off and on: every exported type, `typeof` value, component and static part,
-// on every entry point of the export map, by the pair proof and the callback probes of
-// test/support/public-surface-probes.mjs. It is not a universal equivalence engine: generic binders and
-// inference, overloads and nested method behaviour keep their family-specific tests.
+// exactOptionalPropertyTypes off and on: every exported type, `typeof` value, component and static part
+// (its props and its own statics), on every entry point of the export map, by the pair proof and the
+// callback probes of test/support/public-surface-probes.mjs.
+//
+// What it does not claim, so the focused family gates (T10b, T11) keep it:
+// - nested callbacks inside a callback's parameter objects, and overloads: only the callback's own
+//   parameters are varied, and only a type's first signature is probed;
+// - generic binders and inference: a generic type is compared at its defaults or constraints;
+// - JSX use: props are compared as types, and no element is compiled against them;
+// - the statics of a `typeof` value or part value, which are held by the pair proof (mutual assignability, key
+//   sets, readonly modifiers) and not probed by name;
+// - an `any` member, which has no call signature to probe, and an index-signature type, whose named keys the
+//   key check cannot read;
+// - a member inherited unchanged: the same declaration, resolved type and readonly modifier on both sides is
+//   not examined (React's own attributes are shared by both snapshots).
+// A symbol-keyed own member, or a callback with a rest parameter, stops the check instead of passing unprobed.
+//
+// The declarations are generated, so this test runs whenever one of its generating inputs changes: the sources
+// and declarations under packages/react/src, the package manifest and lockfile importer, the catalog mapping
+// of supplemental families (via the full React check), and the token source behind ./themes,
+// 'catalog/tokens/default-theme.json', which is routed to this test by `reactTestInputs` in repository-policy.json.
 //
 // A difference that is deliberate goes in test/fixtures/public-surface-accepted.json with its reason.
 // public-surface-controls.test.mjs shows each kind of check can fail, and that the packages resolve as intended.
