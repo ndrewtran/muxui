@@ -9,7 +9,7 @@ import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
-import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, compatibilityUpstream } from './r1-contracts.mjs';
+import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, carriesUpstreamPropName, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 import { readRuntimeSources, runtimeSourceFor } from './runtime-sources.mjs';
@@ -156,7 +156,7 @@ if (new Set(r16SupplementalComponents.map(({ export: componentExport }) => compo
 }
 for (const artifact of componentArtifacts) {
   const binding = artifact.bindings['web.react'];
-  if (!binding || binding.api.props.some((prop) => /^is[A-Z]/u.test(prop))) {
+  if (!binding || carriesUpstreamPropName(binding.api)) {
     throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_CANONICAL_API_DRIFT`);
   }
 }
@@ -419,6 +419,7 @@ const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nex
 // (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type * as React from 'react';
 import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
+import type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 import type { MuxUIColorValue } from './color-context.js';
 import type { ControlSize, FieldValidationProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, NamedFieldProps } from './fields.js';
 import type { MuxUIPlacement } from './overlays.js';
@@ -455,14 +456,14 @@ export type { RadioGroupProps, RadioOption } from './radio-group.js';
 export { TokenField } from './token-field.js';
 export type { TokenFieldProps } from './token-field.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
+export type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
+export { ListBox } from './list-box.js';
+export type { ListBoxItemProps, ListBoxProps, ListBoxSectionProps } from './list-box.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const collectionsTypes = `
-export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; /** Consumer data; named Select and ComboBox forms submit the item \`id\`, not \`value\`. */ value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
-export type MuxUISelection = string[] | 'all';
-export type MuxUIItems = Array<MuxUICollectionItem | string>;
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
@@ -470,15 +471,6 @@ export type GridListProps = CollectionProps & { children?: React.ReactNode; styl
 export type GridListItemProps = { id: string; textValue?: string; disabled?: boolean; className?: string; style?: React.CSSProperties; children?: React.ReactNode; };
 export declare const GridList: React.ForwardRefExoticComponent<GridListProps & React.RefAttributes<HTMLDivElement>> & {
   Item: React.ForwardRefExoticComponent<GridListItemProps & React.RefAttributes<HTMLDivElement>>;
-};
-export type ListBoxProps = CollectionProps & { children?: React.ReactNode; style?: React.CSSProperties; layout?: 'stack' | 'grid'; orientation?: 'vertical' | 'horizontal'; };
-export type ListBoxItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'id'> & { id: string; textValue?: string; disabled?: boolean; };
-export type ListBoxSectionProps = Omit<React.HTMLAttributes<HTMLElement>, 'title'> & { title?: React.ReactNode; };
-export declare const ListBox: React.ForwardRefExoticComponent<ListBoxProps & React.RefAttributes<HTMLDivElement>> & {
-  Root: React.ForwardRefExoticComponent<ListBoxProps & React.RefAttributes<HTMLDivElement>>;
-  Section: React.ForwardRefExoticComponent<ListBoxSectionProps & React.RefAttributes<HTMLElement>>;
-  Header: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  Item: React.ForwardRefExoticComponent<ListBoxItemProps & React.RefAttributes<HTMLDivElement>>;
 };
 export type MenuProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; disabled?: boolean; shouldCloseOnSelect?: boolean; onAction?: (item?: MuxUICollectionItem) => void; onSelect?: (item?: MuxUICollectionItem) => void; children?: React.ReactNode; className?: string; };
 export type MenuRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; disabled?: boolean; shouldCloseOnSelect?: boolean; onAction?: (item?: MuxUICollectionItem) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
@@ -561,11 +553,18 @@ const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ c
 const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
 const readmeMappingBySlug = new Map(r16SupplementalComponents.map((entry) => [entry.slug, entry]));
+// The root's props, then each part that owns Mux UI props with some, in anatomy order and qualified by the part (`item: id, disabled`).
+const readmeProps = ({ props, parts, partApis = {} }) => [
+  props.join(', ') || 'none',
+  ...Object.entries(partApis).filter(([, part]) => part.props.length > 0)
+    .sort(([left], [right]) => parts.indexOf(left) - parts.indexOf(right))
+    .map(([name, part]) => `${name}: ${part.props.join(', ')}`),
+].join('; ');
 const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.localeCompare(right.name)).map((artifact) => {
   const slug = artifact.id.slice('muxui:component:'.length);
   const binding = artifact.bindings['web.react'];
   const module = readmeMappingBySlug.get(slug)?.export.module ?? '.';
-  return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | ${module} | .muxui-${slug} | ${markdownCell(binding.api.props.join(', ') || 'none')} |`;
+  return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | ${module} | .muxui-${slug} | ${markdownCell(readmeProps(binding.api))} |`;
 }).join('\n');
 const readmeCompositionGuidance = ['menu', 'list-box', 'grid-list', 'virtualizer', 'select', 'text-field', 'search-field', 'command-palette', 'popover', 'tooltip', 'dialog', 'alert-dialog', 'button', 'icon-button']
   .map((slug) => {
@@ -1031,7 +1030,7 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // The collections barrel and the modules its families share. None declares a registry family, so
 // the loop above skips them; assertFlatImports below fails the build if a family imports one that
 // is not listed.
-for (const name of ['collections', 'collection-items', 'collection-trigger', 'grid-virtualizer-context']) {
+for (const name of ['collections', 'collection-trigger', 'grid-virtualizer-context']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
 }
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {

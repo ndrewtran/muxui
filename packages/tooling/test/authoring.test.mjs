@@ -564,6 +564,150 @@ test('Decision 0031: adding a required derived prop or event is incompatible, an
   assert.deepEqual(summary(diff(withValues)), ['add propDetails/values compatible', 'add props/2 compatible', 'add types/Values compatible']);
 });
 
+/** A Button derived block with parts, and the diff of one derived-block edit, for the D2 classification tests. */
+async function partFixture() {
+  const { component, revisionContext } = await setup();
+  // Button's anatomy is root and label, and a second part lets a test add one beside an existing part.
+  const authored = { ...structuredClone(component.record), anatomy: ['root', 'label', 'other'] };
+  const part = (edit = () => {}) => {
+    const block = {
+      member: 'Label',
+      props: ['title'],
+      events: [],
+      defaults: {},
+      propDetails: { title: { type: { kind: 'string' }, required: false, description: 'The title.' } },
+      eventDetails: {},
+      types: {},
+    };
+    edit(block);
+    return block;
+  };
+  const document = (partApis) => ({
+    schema: 'muxui-derived-api-v1',
+    generatedFrom: 'packages/react/src/button.ts',
+    component: 'muxui:component:button',
+    binding: 'web.react',
+    export: 'Button',
+    api: { props: ['variant'], events: [], defaults: {}, propDetails: { variant: { type: { kind: 'string' }, required: false } }, eventDetails: {}, types: {}, ...(partApis === undefined ? {} : { partApis }) },
+  });
+  const diff = (before, edit) => {
+    const after = structuredClone(before);
+    edit(after.api);
+    return semanticDiff({
+      before: authored,
+      after: authored,
+      revisionContext: { ...revisionContext, before: { derivedApis: { 'web.react': before } }, after: { derivedApis: { 'web.react': after } } },
+    });
+  };
+  const summary = (result) => result.changes.map(({ path, operation, effect }) => `${operation} ${path.replace('$/bindings/web.react/api/', '')} ${effect}`);
+  const withOther = (edit) => (api) => { api.partApis.other = part((block) => { block.member = 'Other'; edit(block); }); };
+  return { authored, revisionContext, part, document, diff, summary, withOther, base: document({ label: part() }), bare: document() };
+}
+
+test('Decision 0031 D2: inside a part, the root\'s derived rules hold', async () => {
+  const { authored, revisionContext, document, diff, summary, base, part } = await partFixture();
+  const addProp = (required) => (api) => {
+    api.partApis.label.props.push('tone');
+    api.partApis.label.propDetails.tone = { type: { kind: 'string' }, required };
+  };
+  assert.deepEqual(summary(diff(base, addProp(false))), ['add partApis/label/propDetails/tone compatible', 'add partApis/label/props/1 compatible']);
+  assert.deepEqual(summary(diff(base, addProp(true))), ['add partApis/label/propDetails/tone incompatible', 'add partApis/label/props/1 incompatible']);
+  const addEvent = (required) => (api) => {
+    api.partApis.label.events.push('dismiss');
+    api.partApis.label.eventDetails.dismiss = { prop: 'onDismiss', type: { kind: 'function', parameters: [], returns: { kind: 'void' } }, required };
+  };
+  assert.equal(diff(base, addEvent(false)).effect, 'compatible');
+  assert.deepEqual(summary(diff(base, addEvent(true))), ['add partApis/label/eventDetails/dismiss incompatible', 'add partApis/label/events/0 incompatible']);
+  assert.deepEqual(summary(diff(base, (api) => { api.partApis.label.propDetails.title.description = 'The heading.'; })), ['replace partApis/label/propDetails/title/description editorial']);
+  assert.deepEqual(summary(diff(base, (api) => { api.partApis.label.propDetails.title.type = { kind: 'number' }; })), ['replace partApis/label/propDetails/title/type/kind incompatible']);
+  // Removing or retargeting a part is incompatible, and so is changing its member.
+  assert.equal(diff(base, (api) => { api.partApis.label.member = 'Caption'; }).effect, 'incompatible');
+  assert.equal(diff(base, (api) => { delete api.partApis.label; api.partApis = { other: part() }; }).effect, 'incompatible');
+  assert.equal(diff(base, (api) => { delete api.partApis; }).effect, 'incompatible', 'dropping the map is a removal');
+  // A default inside a part is incompatible whatever the operation, as at the root.
+  const withDefault = structuredClone(base);
+  withDefault.api.partApis.label.defaults.title = 'Label';
+  assert.equal(diff(withDefault, (api) => { api.partApis.label.defaults.title = 'Caption'; }).effect, 'incompatible', 'a part default replaced');
+  assert.equal(diff(withDefault, (api) => { delete api.partApis.label.defaults.title; }).effect, 'incompatible', 'a part default removed');
+
+  // A part moves only the binding spec revision, never the authored content revisions.
+  const moved = diff(base, addProp(false));
+  assert.equal(moved.revisions.contentRevision.changed, false);
+  assert.equal(moved.revisions.bindings['web.react'].bindingContentRevision.changed, false);
+  assert.equal(moved.revisions.bindings['web.react'].bindingSpecRevision.changed, true);
+  assert.ok(moved.changes.every(({ revisionAxes }) => revisionAxes.join() === 'binding-spec'));
+  const explained = explainRevisions({ family: 'component', record: authored, bindingId: 'web.react', ...revisionContext, derivedApis: { 'web.react': base } }).axes;
+  const specInputs = explained.find((axis) => axis.name === 'bindingSpecRevision').normalizedInputs.map(({ path }) => path);
+  assert.ok(specInputs.includes('$/binding/api/partApis/label/propDetails/title/required'));
+  assert.ok(specInputs.includes('$/binding/api/partApis/label/member'));
+  assert.equal(explained.find((axis) => axis.name === 'contentRevision').normalizedInputs.some(({ path }) => path.includes('partApis')), false);
+
+  // A part key outside the component\'s anatomy is rejected when the block merges into the record.
+  assert.throws(
+    () => semanticDiff({ before: authored, after: authored, revisionContext: { ...revisionContext, derivedApis: { 'web.react': document({ item: part() }) } } }),
+    /partApis\/item is not a part of the component anatomy/u,
+  );
+  // An authored api may not carry partApis.
+  const restated = structuredClone(authored);
+  restated.bindings['web.react'].api = { props: [], events: [], parts: [], defaults: {}, partApis: {} };
+  assert.throws(() => mergeDerivedApis(restated, { 'web.react': base }), /partApis is derived only and cannot be authored/u);
+});
+
+// A part added whole, or the first partApis map, is classified by what it carries, not by the schema\'s blanket
+// compatible add: a default or a required prop or event asks more of existing callers.
+test('Decision 0031 D2: semantic-diff mutations of a part\'s additions', async (t) => {
+  const { diff, summary, base, bare, part, withOther } = await partFixture();
+  const requiredEvent = (block) => {
+    block.events.push('dismiss');
+    block.eventDetails.dismiss = { prop: 'onDismiss', type: { kind: 'function', parameters: [], returns: { kind: 'void' } }, required: true };
+  };
+
+  await t.test('mutation 1: a default added inside an existing part is incompatible', () => {
+    const defaulted = diff(base, (api) => { api.partApis.label.defaults.title = 'Label'; });
+    assert.deepEqual(summary(defaulted), ['add partApis/label/defaults/title incompatible']);
+    assert.deepEqual([defaulted.effect, defaulted.versionEffect], ['incompatible', 'major']);
+    assert.equal(defaulted.changes[0].revisionAxes.join(), 'binding-spec');
+  });
+
+  await t.test('mutation 2: a whole part added with a required prop (or event) is incompatible', () => {
+    const requiredPart = diff(base, withOther((block) => { block.propDetails.title.required = true; }));
+    assert.deepEqual(summary(requiredPart), ['add partApis/other incompatible']);
+    assert.deepEqual([requiredPart.effect, requiredPart.versionEffect], ['incompatible', 'major']);
+    assert.equal(diff(base, withOther(requiredEvent)).effect, 'incompatible', 'a required event');
+  });
+
+  await t.test('mutation 3: a whole part added with a default is incompatible', () => {
+    assert.deepEqual(summary(diff(base, withOther((block) => { block.defaults.title = 'Other'; }))), ['add partApis/other incompatible']);
+  });
+
+  await t.test('mutation 4: the first partApis map with a required prop (or event) is incompatible', () => {
+    const first = (edit) => diff(bare, (api) => { api.partApis = { label: part(edit) }; });
+    const requiredFirst = first((block) => { block.propDetails.title.required = true; });
+    assert.deepEqual(summary(requiredFirst), ['add partApis incompatible']);
+    assert.deepEqual([requiredFirst.effect, requiredFirst.versionEffect], ['incompatible', 'major']);
+    assert.equal(first(requiredEvent).effect, 'incompatible', 'a required event');
+    // One obligating part among several makes the whole map incompatible.
+    assert.equal(diff(bare, (api) => {
+      api.partApis = { label: part(), other: part((block) => { block.member = 'Other'; block.propDetails.title.required = true; }) };
+    }).effect, 'incompatible');
+  });
+
+  await t.test('mutation 5: the first partApis map with a default is incompatible', () => {
+    const first = (edit) => diff(bare, (api) => { api.partApis = { label: part(edit) }; });
+    assert.deepEqual(summary(first((block) => { block.defaults.title = 'Label'; })), ['add partApis incompatible']);
+    assert.equal(diff(bare, (api) => {
+      api.partApis = { label: part(), other: part((block) => { block.member = 'Other'; block.defaults.title = 'Other'; }) };
+    }).effect, 'incompatible');
+  });
+
+  await t.test('an addition that carries nothing a caller must supply stays compatible', () => {
+    assert.deepEqual(summary(diff(base, withOther(() => {}))), ['add partApis/other compatible']);
+    const optional = diff(bare, (api) => { api.partApis = { label: part() }; });
+    assert.deepEqual([...summary(optional)], ['add partApis compatible']);
+    assert.deepEqual([optional.effect, optional.versionEffect], ['compatible', 'minor']);
+  });
+});
+
 test('Decision 0031: any change inside a host type\'s typeArguments is incompatible', async () => {
   const { component, revisionContext } = await setup();
   const authored = component.record;

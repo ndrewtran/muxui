@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:688cab7a7e959f52756deb3d67d045c186fab63b92a920552c01703093674c6a -->
+<!-- @generated-content-sha256: sha256:ef3a18c0bd5ad3e841d5ad5ae61106495ff2816cfa82e330d61bc7844d2eeb2a -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -144,7 +144,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
 | Lightbox | experimental | . | .muxui-lightbox | items, renderContent, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
-| ListBox | experimental | . | .muxui-list-box | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
+| ListBox | experimental | . | .muxui-list-box | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; section: title; item: id, textValue, disabled |
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
 | Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect, children, open, defaultOpen, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |

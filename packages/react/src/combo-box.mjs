@@ -14,7 +14,7 @@ import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
 import { classNames, accessibleName } from './control-utils.ts';
-import { normalizeItems } from './collection-items.mjs';
+import { normalizeItems } from './collection-items.ts';
 
 export const ComboBox = /*#__PURE__*/ (() => {
   const component = React.forwardRef(function ComboBox({ label, description, errorMessage, items = [], value, defaultValue, selectedId, defaultSelectedId, onChange, onSelect, disabled = false, readOnly = false, required = false, invalid = false, placeholder, size, name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {

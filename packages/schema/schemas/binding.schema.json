@@ -122,6 +122,14 @@
             "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
             "revisionAxes": ["binding-spec"]
           }
+        },
+        "partApis": {
+          "description": "Derived only: the API of each non-root part that owns Mux UI props, keyed by anatomy part. The properties above are the root part's.",
+          "type": "object",
+          "x-muxui-authoring": {
+            "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+            "revisionAxes": ["binding-spec"]
+          }
         }
       }
     },

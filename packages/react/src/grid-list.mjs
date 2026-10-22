@@ -3,7 +3,7 @@ import { GridListMotion } from './grid-list-motion.mjs';
 import { GridList as AriaGridList, GridListItem as AriaGridListItem } from 'react-aria-components';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
-import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.mjs';
+import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.ts';
 import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
 
 function collectionProps(props, componentName) {

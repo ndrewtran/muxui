@@ -40,7 +40,7 @@ const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
 // The blocks that use this component, from the usedIn view the catalog derives. Block variants are never listed as component examples.
 const usedInBlocks = resolveUsedIn(page.usedIn);
 // Every fact below is projected from the catalog record; this page authors none.
-const { imports, usage, behavior, events, accessibility, styling, sources } = componentReference({ artifact, examples, packageFacts: getReactPackageFacts() });
+const { imports, usage, behavior, events, parts, accessibility, styling, sources } = componentReference({ artifact, examples, packageFacts: getReactPackageFacts() });
 
 for (const example of examples) {
 	assertExampleSource(example.source.content);
@@ -72,6 +72,7 @@ const headings = [
 	})),
 	...(usedInBlocks.length > 0 ? [{ depth: 2, text: 'Used in blocks', slug: 'used-in-blocks' }] : []),
 	{ depth: 2, text: 'API reference', slug: 'api-reference' },
+	...parts.map(({ part, owner }) => ({ depth: 3, text: owner, slug: `api-reference-${part}` })),
 	{ depth: 2, text: 'Events', slug: 'events' },
 	{ depth: 2, text: 'Accessibility', slug: 'accessibility' },
 	{ depth: 2, text: 'Anatomy and styling', slug: 'anatomy-and-styling' },
@@ -170,11 +171,30 @@ const headings = [
 				{reactBinding.api.props.map((prop) => <tr><th scope="row"><code>{prop}</code></th><td><code>{reactBinding.api.defaults[prop] === undefined ? 'Not specified' : JSON.stringify(reactBinding.api.defaults[prop])}</code></td></tr>)}
 			</tbody>
 		</table>
+		{parts.map((api) => (
+			<Fragment>
+				<h3 id={`api-reference-${api.part}`}><code>{api.owner}</code></h3>
+				{api.props.length > 0 && (
+					<table>
+						<thead><tr><th scope="col">Prop</th><th scope="col">Default</th></tr></thead>
+						<tbody data-fact={`binding.api.partApis.${api.part}.props`}>
+							{api.props.map((prop) => <tr><th scope="row"><code>{prop}</code></th><td><code>{api.defaults[prop] === undefined ? 'Not specified' : JSON.stringify(api.defaults[prop])}</code></td></tr>)}
+						</tbody>
+					</table>
+				)}
+			</Fragment>
+		))}
 	</section>
 
 	<section id="events" class="docs-section">
 		<h2>Events</h2>
-		<p data-fact="binding.api.events">{events.length ? events.map((event) => <code class="inline-code">{event}</code>) : 'This binding does not declare events.'}</p>
+		<p data-fact="binding.api.events">{events.length ? events.map((event) => <code class="inline-code">{event}</code>) : parts.some((api) => api.events.length > 0) ? 'The root declares no events.' : 'This binding does not declare events.'}</p>
+		{parts.filter((api) => api.events.length > 0).map((api) => (
+			<Fragment>
+				<h3><code>{api.owner}</code></h3>
+				<p data-fact={`binding.api.partApis.${api.part}.events`}>{api.events.map((event) => <code class="inline-code">{event}</code>)}</p>
+			</Fragment>
+		))}
 	</section>
 
 	<section id="accessibility" class="docs-section">

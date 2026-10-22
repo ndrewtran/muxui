@@ -9,7 +9,7 @@ import {
   Cell as AriaCell,
 } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
-import { normalizeItems, keySet, keyList } from './collection-items.mjs';
+import { normalizeItems, keySet, keyList } from './collection-items.ts';
 
 function normalizeSortDescriptor(value, columns) {
   if (value === undefined) return undefined;

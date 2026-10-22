@@ -8,7 +8,7 @@ import {
   Size,
 } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
-import { normalizeItems } from './collection-items.mjs';
+import { normalizeItems } from './collection-items.ts';
 import { GridVirtualizerContext } from './grid-virtualizer-context.mjs';
 
 function assertPositiveVirtualizerNumber(value, property) {

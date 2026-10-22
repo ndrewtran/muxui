@@ -1,0 +1,329 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/list-box.ts",
+  "component": "muxui:component:list-box",
+  "binding": "web.react",
+  "export": "ListBox",
+  "api": {
+    "props": [
+      "items",
+      "selectedIds",
+      "defaultSelectedIds",
+      "disabled",
+      "selectionMode",
+      "layout",
+      "orientation"
+    ],
+    "events": [
+      "selectionChange",
+      "action"
+    ],
+    "defaults": {
+      "disabled": false,
+      "selectionMode": "single",
+      "layout": "stack",
+      "orientation": "vertical"
+    },
+    "propDetails": {
+      "items": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIItems"
+        },
+        "required": false,
+        "description": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+      },
+      "selectedIds": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUISelection"
+        },
+        "required": false,
+        "description": "The selected item ids when the caller controls the selection, or `'all'`."
+      },
+      "defaultSelectedIds": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUISelection"
+        },
+        "required": false,
+        "description": "The ids selected at first when the list controls its own selection, or `'all'`."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables every item and stops the selection and action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+      },
+      "selectionMode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "none"
+            },
+            {
+              "kind": "literal",
+              "value": "single"
+            },
+            {
+              "kind": "literal",
+              "value": "multiple"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "none",
+          "single",
+          "multiple"
+        ],
+        "description": "How many items can be selected. With `single`, pressing the selected item again clears the selection, so the list can end with nothing selected."
+      },
+      "layout": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "stack"
+            },
+            {
+              "kind": "literal",
+              "value": "grid"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "stack",
+          "grid"
+        ],
+        "description": "`stack` navigates along the orientation. `grid` uses the items' actual positions for two-dimensional arrow navigation, and the columns and sizes come from CSS or `style`."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "vertical"
+            },
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "vertical",
+          "horizontal"
+        ],
+        "description": "The direction arrow keys move along a stack layout."
+      }
+    },
+    "eventDetails": {
+      "selectionChange": {
+        "prop": "onSelectionChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "ids",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUISelection"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the selected item ids, or `'all'`, when the selection changes. It is not called while the list is disabled."
+      },
+      "action": {
+        "prop": "onAction",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+      }
+    },
+    "types": {
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      },
+      "MuxUIItems": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        }
+      },
+      "MuxUISelection": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "array",
+              "element": {
+                "kind": "string"
+              },
+              "readonly": false
+            },
+            {
+              "kind": "literal",
+              "value": "all"
+            }
+          ]
+        }
+      }
+    },
+    "partApis": {
+      "section": {
+        "member": "Section",
+        "props": [
+          "title"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "title": {
+            "type": {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            "required": false,
+            "description": "The visible heading of the section, rendered in a ListBox.Header. Without one, name the section with `aria-label`."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "item": {
+        "member": "Item",
+        "props": [
+          "id",
+          "textValue",
+          "disabled"
+        ],
+        "events": [],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "id": {
+            "type": {
+              "kind": "string"
+            },
+            "required": true,
+            "description": "The stable string id the selection and action callbacks report."
+          },
+          "textValue": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+          },
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Disables the item. A disabled list disables every item whatever this says."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

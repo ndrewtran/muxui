@@ -207,15 +207,25 @@ export const handled = <LightboxTrigger itemKey="one" onActivate={onRecord}>Open
     const packedGenerated = join(packageScope, 'react', 'generated');
     const packedApis = extractApis({
       declarationRoot: packedGenerated,
-      components: DERIVED_API_COMPONENTS.map(({ name, part, source }) => ({
+      components: DERIVED_API_COMPONENTS.map(({ name, part, callable, parts, source }) => ({
         name,
         part,
+        callable,
+        parts,
         // generated/ is flat: a subpath module's index.ts ships under its directory's name.
         declarations: join(packedGenerated, flatModuleName(source).replace(/\.js$/u, '.d.ts')),
       })),
     });
-    const typed = ({ props, events, propDetails, eventDetails, types }) => JSON.parse(JSON.stringify(
-      { props, events, propDetails, eventDetails, types },
+    // The typed fields of the root and, recursively, of each part (with the member that renders it).
+    const typed = ({ props, events, propDetails, eventDetails, types, partApis }) => JSON.parse(JSON.stringify(
+      {
+        props,
+        events,
+        propDetails,
+        eventDetails,
+        types,
+        ...(partApis === undefined ? {} : { partApis: Object.fromEntries(Object.entries(partApis).map(([part, api]) => [part, { member: api.member, ...typed(api) }])) }),
+      },
       (key, value) => (key === 'description' ? undefined : value),
     ));
     for (const { slug, name } of DERIVED_API_COMPONENTS) {

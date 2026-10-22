@@ -6,7 +6,7 @@ import {
   parseColor,
 } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
-import { normalizeItems } from './collection-items.mjs';
+import { normalizeItems } from './collection-items.ts';
 import { READ_ONLY_SELECTION_KEYS, readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
 import { colorValue, ColorPickerContext } from './color-context.ts';
 

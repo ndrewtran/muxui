@@ -815,8 +815,12 @@ function mergedRecord(family, record, revisionContext, side) {
     : record;
 }
 
-const DERIVED_ENTRY = /^(\$\/bindings\/[^/]+\/api\/(propDetails|eventDetails|types)\/[^/]+)(\/.*)?$/u;
-const DERIVED_NAME = /^\$\/bindings\/([^/]+)\/api\/(props|events)\/\d+$/u;
+// A part's block (`partApis/<part>/…`) classifies like the root's, so each pattern takes an optional part segment.
+const DERIVED_ENTRY = /^(\$\/bindings\/[^/]+\/api\/(?:partApis\/[^/]+\/)?(propDetails|eventDetails|types)\/[^/]+)(\/.*)?$/u;
+const DERIVED_NAME = /^\$\/bindings\/([^/]+)\/api\/((?:partApis\/[^/]+\/)?)(props|events)\/\d+$/u;
+// The whole of `partApis` (its first map), or one part's block.
+const PART_APIS = /^\$\/bindings\/[^/]+\/api\/partApis(\/[^/]+)?$/u;
+const PART_DEFAULTS = /^\$\/bindings\/[^/]+\/api\/partApis\/[^/]+\/defaults(?:\/.*)?$/u;
 // Anywhere at or inside a host type's `typeArguments`, below the derived entry's own name.
 const HOST_ARGUMENTS = /\/typeArguments(?:\/|$)/u;
 
@@ -833,6 +837,10 @@ const withoutDescriptions = (value) => {
 const isMember = (value) => isObject(value) && typeof value.name === 'string' && isObject(value.type);
 // A required member, or an absent one (`name?: never`): either rejects input the type accepted before.
 const narrowsInput = (value) => isMember(value) && (value.required === true || value.type.kind === 'never');
+// A part block that owns a default, or a prop or event the caller must now pass, asks more of existing callers.
+const obligates = (part) => isObject(part)
+  && (Object.keys(part.defaults ?? {}).length > 0
+    || [...Object.values(part.propDetails ?? {}), ...Object.values(part.eventDetails ?? {})].some((detail) => detail?.required === true));
 
 /**
  * Decision 0031 refinements a derived block needs beyond its schema annotations: an
@@ -841,8 +849,18 @@ const narrowsInput = (value) => isMember(value) && (value.required === true || v
  * event, or a required or absent (`name?: never`) member to an object type inside one
  * (inline or a named type), is incompatible, and so is any change inside a host type's
  * `typeArguments`: adding, removing, replacing, or reordering an argument or a union member.
+ * A part's block (`partApis`) follows the same rules, and its additions are classified by
+ * content, not by the schema's blanket compatible add: a default inside a part is
+ * incompatible, as at the root, and so is adding a whole part, or the first `partApis` map,
+ * whose parts carry a default or a required prop or event.
  */
 function derivedEffect(change, effect, mergedBefore, mergedAfter) {
+  if (PART_DEFAULTS.test(change.path)) return 'incompatible';
+  const added = PART_APIS.exec(change.path);
+  if (added && change.operation === 'add') {
+    const parts = added[1] === undefined ? Object.values(change.after ?? {}) : [change.after];
+    return parts.some(obligates) ? 'incompatible' : effect;
+  }
   const entry = DERIVED_ENTRY.exec(change.path);
   if (entry) {
     const [, entryPath, field, rest] = entry;
@@ -860,7 +878,7 @@ function derivedEffect(change, effect, mergedBefore, mergedAfter) {
   }
   const name = DERIVED_NAME.exec(change.path);
   if (name && change.operation === 'add') {
-    const details = valueAt(mergedAfter, `$/bindings/${name[1]}/api/${name[2] === 'props' ? 'propDetails' : 'eventDetails'}`);
+    const details = valueAt(mergedAfter, `$/bindings/${name[1]}/api/${name[2]}${name[3] === 'props' ? 'propDetails' : 'eventDetails'}`);
     if (details?.[change.after]?.required === true) return 'incompatible';
   }
   return effect;

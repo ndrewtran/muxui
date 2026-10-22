@@ -8,7 +8,8 @@ import test from 'node:test';
 // defaults, so a default named here is the hazard that made DatePicker and DateRangePicker
 // ignore a context defaultOpen. The check is by name: it also asks about a name that a
 // family keeps to itself, and the audited groups below record why each such default is safe.
-// The is* names are the upstream aliases of the Mux names before them.
+// The is* names are the upstream aliases of the Mux names before them. A default of a part of a compound
+// (partApis) is named `family.part.prop`, and the check reads the prop after the last dot.
 const contextMergedProps = new Set([
   'open', 'isOpen', 'defaultOpen', 'modal', 'dismissable',
   'disabled', 'isDisabled', 'readOnly', 'isReadOnly', 'required', 'isRequired', 'invalid', 'isInvalid', 'pending', 'isPending', 'validationBehavior',
@@ -69,6 +70,10 @@ const audited = [
       ...expand(['token-field'], ['disabled', 'readOnly']),
       // Slider sends minValue, maxValue, step, isDisabled, and orientation to React Aria as its own values, 0, 100, 1, false, and horizontal when omitted, as it did before the move.
       ...expand(['slider'], ['min', 'max', 'step', 'disabled', 'orientation']),
+      // ListBox sent selectionMode and orientation to React Aria as its own values, single and vertical when omitted, before the move,
+      // so a ListBoxContext never supplied them. Each ListBox.Item sent isDisabled as a boolean: its own flag, else the list's.
+      ...expand(['list-box'], ['selectionMode', 'orientation']),
+      ...expand(['list-box.item'], ['disabled']),
     ],
   },
   {
@@ -89,6 +94,8 @@ const audited = [
       ...expand(['color-area', 'color-slider', 'color-wheel'], ['readOnly']),
       // Slider enforces readOnly itself, with a data attribute and guards, and sends React Aria no isReadOnly.
       ...expand(['slider'], ['readOnly']),
+      // ListBox turns its disabled into disabledKeys and data attributes and never sends React Aria isDisabled.
+      ...expand(['list-box'], ['disabled']),
     ],
   },
   {
@@ -106,19 +113,24 @@ const audited = [
   },
 ];
 
+/** Every derived default as `family.prop`, and each part's as `family.part.prop`. */
 function derivedDefaults() {
   const apiDirectory = new URL('../api/', import.meta.url);
   return readdirSync(apiDirectory)
     .filter((file) => file.endsWith('.json'))
     .flatMap((file) => {
-      const { defaults } = JSON.parse(readFileSync(new URL(file, apiDirectory), 'utf8')).api;
-      return Object.keys(defaults).map((prop) => `${file.slice(0, -'.json'.length)}.${prop}`);
+      const family = file.slice(0, -'.json'.length);
+      const { defaults, partApis = {} } = JSON.parse(readFileSync(new URL(file, apiDirectory), 'utf8')).api;
+      return [
+        ...Object.keys(defaults).map((prop) => `${family}.${prop}`),
+        ...Object.entries(partApis).flatMap(([part, api]) => Object.keys(api.defaults).map((prop) => `${family}.${part}.${prop}`)),
+      ];
     });
 }
 
 test('a derived default on a context-merged prop is audited, so a React Aria context can still supply it', () => {
   const allowed = new Set(audited.flatMap(({ entries }) => entries));
-  const found = derivedDefaults().filter((name) => contextMergedProps.has(name.slice(name.indexOf('.') + 1)));
+  const found = derivedDefaults().filter((name) => contextMergedProps.has(name.slice(name.lastIndexOf('.') + 1)));
 
   assert.deepEqual(
     found.filter((name) => !allowed.has(name)),

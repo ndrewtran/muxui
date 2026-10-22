@@ -10,7 +10,14 @@ import { resolve } from 'node:path';
 import { DERIVED_API_SCHEMA, mergeDerivedApis, validateDerivedApi } from '@muxui/schema';
 import { extractApis } from './extract.mjs';
 
-/** The components whose web.react API is derived from their TypeScript source. */
+/**
+ * The components whose web.react API is derived from their TypeScript source. An entry names
+ * its export and source, and may add:
+ *   - `part`: the export's part that is the root, when the root is not the export itself;
+ *   - `parts`: each other anatomy part that owns Mux UI props, mapped to its export member
+ *     (`{ item: 'Item' }`), which becomes that part's entry in `partApis`; and
+ *   - `callable`: the anatomy part whose props the export itself must also carry unchanged.
+ */
 export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'button', name: 'Button', source: 'packages/react/src/button.ts' },
   { slug: 'icon-button', name: 'IconButton', source: 'packages/react/src/supplemental/icon-button.ts' },
@@ -67,6 +74,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'slider', name: 'Slider', source: 'packages/react/src/slider.ts' },
   { slug: 'radio-group', name: 'RadioGroup', source: 'packages/react/src/radio-group.ts' },
   { slug: 'token-field', name: 'TokenField', source: 'packages/react/src/token-field.ts' },
+  // ListBox is its own root (ListBox.Root is ListBox); Section and Item own props beside it, and Header owns none.
+  { slug: 'list-box', name: 'ListBox', source: 'packages/react/src/list-box.ts', parts: { section: 'Section', item: 'Item' } },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
@@ -90,9 +99,11 @@ export async function deriveApis({ packageRoot, repositoryRoot, declarationRoot,
   }
   const apis = extractApis({
     declarationRoot,
-    components: components.map(({ name, part, source }) => ({
+    components: components.map(({ name, part, callable, parts, source }) => ({
       name,
       part,
+      callable,
+      parts,
       declarations: resolve(declarationRoot, source.slice(SOURCE_ROOT.length).replace(/\.ts$/u, '.d.ts')),
       source: resolve(repositoryRoot, source),
     })),

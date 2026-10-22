@@ -6,7 +6,7 @@ export { ColorSlider } from './color-slider.ts';
 export { ColorWheel } from './color-wheel.ts';
 export { ColorPicker } from './color-picker.ts';
 export { ColorSwatchPicker } from './color-swatch-picker.mjs';
-export { ListBox } from './list-box.mjs';
+export { ListBox } from './list-box.ts';
 export { GridList } from './grid-list.mjs';
 export { Menu } from './menu.mjs';
 export { ComboBox } from './combo-box.mjs';

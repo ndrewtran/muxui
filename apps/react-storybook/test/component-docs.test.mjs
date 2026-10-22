@@ -78,6 +78,22 @@ async function families() {
   }));
 }
 
+test('the Events section lists a part\'s events under its owner, and says when only the parts have any', async () => {
+  const { meta } = (await families()).find(({ family }) => family === 'ListBox');
+  const entry = meta.parameters.muxuiReference;
+  const render = (changes) => new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry: { ...entry, ...changes }, blocks }))).window.document.querySelector('#events');
+  assert.equal(entry.parts.length, 2, 'ListBox lists its Section and Item');
+  assert.equal(render({}).querySelectorAll('h3').length, 0, 'a part with no events adds nothing');
+  const row = { part: 'row', owner: 'ListBox.Row', props: ['id'], events: ['pick', 'drop'], defaults: {} };
+  const withEvents = render({ parts: [...entry.parts, row] });
+  assert.deepEqual(texts(withEvents.querySelectorAll('h3')), ['ListBox.Row']);
+  assert.deepEqual(texts(withEvents.querySelectorAll('[data-fact="binding.api.partApis.row.events"] code')), ['pick', 'drop']);
+  assert.deepEqual(texts(withEvents.querySelectorAll('[data-fact="binding.api.events"] code')), entry.events, 'the root events stay first');
+  // With no root events the root line says so, and with none anywhere it says the binding declares none.
+  assert.equal(render({ events: [], parts: [row] }).querySelector('[data-fact="binding.api.events"]').textContent, 'The root declares no events.');
+  assert.equal(render({ events: [], parts: [] }).querySelector('[data-fact="binding.api.events"]').textContent, 'This binding does not declare events.');
+});
+
 test('every family Docs page runs the continuous reference sections in order, projected from the catalog', async () => {
   const guideIds = new Set(canonicalCatalog.listArtifacts({ kind: 'guide', platform: 'web.react', detail: 'brief', limit: 100 }).data.items.map(({ id }) => id));
   // Every Block story with the canonical variant source it renders.
@@ -142,6 +158,12 @@ test('every family Docs page runs the continuous reference sections in order, pr
     }
     assert.deepEqual(list(section('behavior'), 'binding.behavior'), binding.behavior ?? [], `${family} behavior`);
     assert.deepEqual(texts(section('events').querySelectorAll('[data-fact="binding.api.events"] code')), binding.api.events, `${family} events`);
+    // A part's events follow the root's, under the part's owner, and a part with none lists none.
+    const partsWithEvents = Object.entries(binding.api.partApis ?? {}).filter(([, api]) => api.events.length > 0);
+    for (const [part, api] of Object.entries(binding.api.partApis ?? {})) {
+      assert.deepEqual(texts(section('events').querySelectorAll(`[data-fact="binding.api.partApis.${part}.events"] code`)), api.events, `${family} ${part} events`);
+    }
+    assert.deepEqual(texts(section('events').querySelectorAll('h3')), partsWithEvents.map(([, api]) => `${descriptor.bindings.find(({ binding: ref }) => ref === `${artifact.id}#web.react`).export}.${api.member}`), `${family} part event owners`);
     const nameRequired = section('accessibility').querySelector('[data-fact="accessibility.nameRequired"]').textContent;
     assert.equal(nameRequired, `Accessible name required: ${artifact.accessibility.nameRequired ? 'yes' : 'no'}`, `${family} accessible name`);
     assert.deepEqual(list(section('accessibility'), 'accessibility.obligations'), artifact.accessibility.obligations, `${family} obligations`);

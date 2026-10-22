@@ -6374,7 +6374,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/list-box.mjs",
+          "path": "packages/react/src/list-box.ts",
           "lines": null,
           "anchor": "#ListBox"
         }
@@ -6413,7 +6413,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/list-box.mjs",
+          "path": "packages/react/src/list-box.ts",
           "lines": null,
           "anchor": "#ListBox"
         }
@@ -6452,7 +6452,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/list-box.mjs",
+          "path": "packages/react/src/list-box.ts",
           "lines": null,
           "anchor": "#ListBox"
         }
@@ -6491,7 +6491,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/list-box.mjs",
+          "path": "packages/react/src/list-box.ts",
           "lines": null,
           "anchor": "#ListBox"
         }
@@ -6530,7 +6530,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/list-box.mjs",
+          "path": "packages/react/src/list-box.ts",
           "lines": null,
           "anchor": "#ListBox"
         }
@@ -6569,7 +6569,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/list-box.mjs",
+          "path": "packages/react/src/list-box.ts",
           "lines": null,
           "anchor": "#ListBox"
         }

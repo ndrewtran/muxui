@@ -79,6 +79,7 @@ export function ComponentDocs({ entry, blocks }) {
   const { Title, Primary, Controls, Source, Markdown, Anchor } = blocks;
   const [basic, ...others] = entry.examples;
   const { usage, accessibility, accessibilityGuide, styling } = entry;
+  const partEvents = entry.parts.filter(({ events }) => events.length > 0);
   // A link to another family, written as its docs path, goes to that family's Docs page. Other links stay as written.
   const guideLink = ({ href, children, ...props }) => entry.guide.links[href] === undefined
     ? h('a', { href, ...props }, children)
@@ -124,9 +125,15 @@ export function ComponentDocs({ entry, blocks }) {
       h('span', { className: 'muxui-docs-roles' }, roles.map(({ role, requirement }) => requirement === 'optional' ? `${role} (optional)` : role).join(', '))))),
     // The existing Controls table is the API reference: it lists the props and edits them live.
     'api-reference': () => h(Controls),
-    events: () => entry.events.length > 0
-      ? h(Codes, { items: entry.events, fact: 'binding.api.events' })
-      : h('p', { 'data-fact': 'binding.api.events' }, 'This binding does not declare events.'),
+    // The root's events, then each part's under its owner, so Item events read as ListBox.Item's.
+    events: () => [
+      entry.events.length > 0
+        ? h(Codes, { key: 'root', items: entry.events, fact: 'binding.api.events' })
+        : h('p', { key: 'root', 'data-fact': 'binding.api.events' }, partEvents.length > 0 ? 'The root declares no events.' : 'This binding does not declare events.'),
+      ...partEvents.map(({ part, owner, events }) => h(React.Fragment, { key: part },
+        h('h3', null, h('code', null, owner)),
+        h(Codes, { items: events, fact: `binding.api.partApis.${part}.events` }))),
+    ],
     accessibility: () => [
       h('p', { key: 'name', 'data-fact': 'accessibility.nameRequired' }, `Accessible name required: ${accessibility.nameRequired ? 'yes' : 'no'}`),
       h('h3', { key: 'obligations-title' }, 'Obligations'),

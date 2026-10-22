@@ -8,7 +8,7 @@ import {
 } from 'react-aria-components';
 import { IconButton } from './supplemental/icon-button.ts';
 import { classNames, accessibleName } from './control-utils.ts';
-import { textContent, keySet, keyList } from './collection-items.mjs';
+import { textContent, keySet, keyList } from './collection-items.ts';
 
 function normalizeTreeItems(items, used = new Set(), parentDisabled = false) {
   return items.map((item, index) => {

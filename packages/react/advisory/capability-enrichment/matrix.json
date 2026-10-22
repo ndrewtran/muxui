@@ -8294,7 +8294,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/list-box/artifact.json#bindings/web.react",
-          "packages/react/src/list-box.mjs#ListBox",
+          "packages/react/src/list-box.ts#ListBox",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

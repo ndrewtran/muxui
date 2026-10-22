@@ -3,6 +3,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
+import { parse } from 'parse5';
+import { expectedEventGroups, renderedEventGroups } from '../scripts/event-groups.mjs';
+import { attributeValue, elements } from '../scripts/html-tree.mjs';
 import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 
 const requirement = (token, extra = {}) => ({ token, requirement: 'required', ...extra });
@@ -72,6 +75,29 @@ test('token requirements group by their first two segments only when the recipe 
   assert.deepEqual(groups.map(({ prefix, tokens }) => [prefix, tokens.length]), [['component.card', 8], ['semantic.focus', 1]]);
 });
 
+test('a compound lists each part that owns props under its owner, in anatomy order, and a single-part component lists none', () => {
+  const block = (member, props, events = [], defaults = {}) => ({ member, props, events, defaults });
+  const compound = (partApis) => {
+    const artifact = record();
+    artifact.anatomy = ['root', 'section', 'header', 'item'];
+    // A compiled record keys its parts in any order; item comes before section here.
+    artifact.bindings['web.react'].api = { events: ['activate'], partApis };
+    return artifact;
+  };
+  const partApis = { item: block('Item', ['id', 'disabled'], ['pick'], { disabled: false }), section: block('Section', ['title']) };
+  const { parts, events } = componentReference({ artifact: compound(partApis), examples, packageFacts: packageFacts() });
+  assert.deepEqual(events, ['activate'], 'the root events stay the root\'s');
+  assert.deepEqual(parts.map(({ part, owner, props, events: partEvents, defaults }) => [part, owner, props, partEvents, defaults]), [
+    ['section', 'Card.Section', ['title'], [], {}],
+    ['item', 'Card.Item', ['id', 'disabled'], ['pick'], { disabled: false }],
+  ]);
+  assert.deepEqual(componentReference({ artifact: record(), examples, packageFacts: packageFacts() }).parts, []);
+  assert.deepEqual(componentReference({ artifact: compound(undefined), examples, packageFacts: packageFacts() }).parts, []);
+  // The owner names the export the descriptor lists, so a renamed export renames every part.
+  const renamed = { ...packageFacts(), bindings: new Map([['muxui:component:card#web.react', { export: 'Panel', specifier: '@muxui/react' }]]) };
+  assert.deepEqual(componentReference({ artifact: compound(partApis), examples, packageFacts: renamed }).parts.map(({ owner }) => owner), ['Panel.Section', 'Panel.Item']);
+});
+
 test('usage guides are related by the declared id', () => {
   assert.equal(usageGuideId('muxui:component:icon-button'), 'muxui:guide:icon-button-usage');
 });
@@ -109,4 +135,30 @@ test('package facts verify the descriptor, renderer contract and stylesheet agai
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('the docs checker holds each part\'s event group to its owner heading, its event list and the anatomy order', () => {
+  const partApis = [['section', { member: 'Section', events: [] }], ['item', { member: 'Item', events: ['pick'] }], ['row', { member: 'Row', events: ['drop'] }]];
+  const group = (owner, part, events) => `<h3><code>${owner}</code></h3><p data-fact="binding.api.partApis.${part}.events">${events.map((event) => `<code class="inline-code">${event}</code>`).join('')}</p>`;
+  const rendered = (...groups) => renderedEventGroups(elements(parse(`<html><body><section id="events"><h2>Events</h2><p data-fact="binding.api.events"><code class="inline-code">select</code></p>${groups.join('')}</section></body></html>`))
+    .find((node) => attributeValue(node, 'id') === 'events'));
+  const expected = expectedEventGroups('ListBox', partApis);
+  assert.deepEqual(expected, ['ListBox.Item', 'binding.api.partApis.item.events', 'ListBox.Row', 'binding.api.partApis.row.events'], 'a part with no events has no group');
+  assert.deepEqual(rendered(group('ListBox.Item', 'item', ['pick']), group('ListBox.Row', 'row', ['drop'])), expected);
+  // Each of these is a docs page the checker must refuse.
+  const refused = {
+    'a renamed owner heading': rendered(group('ListBox.Wrong', 'item', ['pick']), group('ListBox.Row', 'row', ['drop'])),
+    'a missing owner heading': rendered('<p data-fact="binding.api.partApis.item.events"><code class="inline-code">pick</code></p>', group('ListBox.Row', 'row', ['drop'])),
+    'a missing event list': rendered('<h3><code>ListBox.Item</code></h3>', group('ListBox.Row', 'row', ['drop'])),
+    'a missing part group': rendered(group('ListBox.Item', 'item', ['pick'])),
+    'groups out of anatomy order': rendered(group('ListBox.Row', 'row', ['drop']), group('ListBox.Item', 'item', ['pick'])),
+    'a heading over another part\'s list': rendered(group('ListBox.Item', 'row', ['drop']), group('ListBox.Row', 'item', ['pick'])),
+    'a group for a part with no events': rendered(group('ListBox.Section', 'section', []), group('ListBox.Item', 'item', ['pick']), group('ListBox.Row', 'row', ['drop'])),
+    'an extra heading': rendered(group('ListBox.Item', 'item', ['pick']), '<h3><code>ListBox.Extra</code></h3>', group('ListBox.Row', 'row', ['drop'])),
+  };
+  for (const [label, groups] of Object.entries(refused)) assert.notDeepEqual(groups, expected, label);
+  // With no part events there are no groups, and a stray heading is refused.
+  assert.deepEqual(expectedEventGroups('ListBox', [['section', { member: 'Section', events: [] }]]), []);
+  assert.deepEqual(rendered(), []);
+  assert.notDeepEqual(rendered('<h3><code>ListBox.Item</code></h3>'), []);
 });
