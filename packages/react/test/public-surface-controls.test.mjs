@@ -227,6 +227,23 @@ test('a readonly modifier that goes missing from a member fails the pair proof, 
   });
 });
 
+test('a readonly modifier that goes missing from a value or from a static of a part fails the pair proof', () => {
+  // Readonly<Record<...>> turned into the Record: its keys stay the same, and assignability ignores readonly.
+  const value = (wrap) => `export interface Preset { readonly id: string }\nexport declare const PRESETS_BY_ID: ${wrap('Record<\'a\' | \'b\', Preset>')};\n`;
+  withPair(value((type) => `Readonly<${type}>`), value((type) => type), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['PRESETS_BY_ID readonly']));
+    assert.deepEqual(comparison.runs[0].loose.failures.map(({ old, new: next }) => [old, next]), [['"a" | "b"', 'never']]);
+  });
+  // The custom static of a part: its props are untouched, so only the part value carries it.
+  const part = (modifier) => `import type * as React from 'react';
+export declare const Panel: { Header: React.FC<{ label?: string }> & { ${modifier}slot: string } };
+`;
+  withPair(part('readonly '), part(''), (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected(['Panel.Header readonly']));
+  });
+});
+
 // Two packages whose declarations import their own name: the self-import is what a wrong layout redirects.
 // `Base` differs between them, so a redirected import is a visible type difference.
 const packageFiles = (id) => ({

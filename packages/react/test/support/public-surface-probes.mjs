@@ -110,8 +110,10 @@ export function buildProbe(snapshots, common, members) {
     if (shape === 'object') {
       assert(old, 'arms', `Clean<Unpaired<${O}, ${N}>>`);
       for (const [field, assertion] of FIELDS) assert(old, assertion, `Clean<FieldDiff<${O}, ${N}, '${field}'>>`);
-      // Readonly is read for the members the probe examines: the others are the same declaration with the same readonly modifier.
-      if (examined.length > 0) assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${union(examined)}>>`);
+      // Readonly is read for the members the probe examines: the others are the same declaration with the same readonly
+      // modifier. A value or part value classifies no members (its statics are its own), so it is read for every key.
+      const readonlyKeys = old.kind === 'value' || old.kind === 'partValue' ? 'PropertyKey' : examined.length > 0 ? union(examined) : undefined;
+      if (readonlyKeys) assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${readonlyKeys}>>`);
     }
     if (selfCallable) assert(old, 'handler', `Clean<Quiet<Disagree<Evidence<${O}, ${N}>>>>`);
     // The compiler's own keys of the subject are the classification's, so a member cannot lose its probes by losing its entry.
