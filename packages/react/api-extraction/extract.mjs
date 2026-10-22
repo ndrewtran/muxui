@@ -822,7 +822,22 @@ function topLevelConst(project, sourceFile, identifier) {
   return isConst ? declaration : null;
 }
 
-const MUTATORS = new Set(['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf']);
+// The Object and Reflect members that write properties of their first argument.
+const MUTATORS = new Map([
+  ['Object', new Set(['assign', 'defineProperty', 'defineProperties', 'setPrototypeOf'])],
+  ['Reflect', new Set(['set', 'defineProperty', 'deleteProperty', 'setPrototypeOf'])],
+]);
+
+/**
+ * Whether a call writes properties of its first argument through `Object.<mutator>(...)` or
+ * `Reflect.<mutator>(...)`, spelled as a direct call with a plain name.
+ */
+function isMutatorCall(node) {
+  if (node.kind !== SyntaxKind.CallExpression || node.arguments.length === 0) return false;
+  const callee = node.expression;
+  return callee.kind === SyntaxKind.PropertyAccessExpression && callee.expression.kind === SyntaxKind.Identifier
+    && MUTATORS.get(callee.expression.text)?.has(callee.name.text) === true;
+}
 
 /**
  * The ids of a binding and of every variable that takes its value: `const alias = Thing`
@@ -891,9 +906,7 @@ function writesThrough({ checker }, sourceFile, symbol, { allowed = new Set(), d
     if ((node.kind === SyntaxKind.PrefixUnaryExpression || node.kind === SyntaxKind.PostfixUnaryExpression) && UPDATES.has(node.operator) && rooted(node.operand)) return true;
     if (node.kind === SyntaxKind.DeleteExpression && rooted(node.expression)) return true;
     if ((node.kind === SyntaxKind.ForInStatement || node.kind === SyntaxKind.ForOfStatement) && node.initializer.kind !== SyntaxKind.VariableDeclarationList && targets(node.initializer)) return true;
-    if (node.kind === SyntaxKind.CallExpression && node.arguments.length > 0 && rooted(node.arguments[0])
-      && node.expression.kind === SyntaxKind.PropertyAccessExpression && node.expression.expression.kind === SyntaxKind.Identifier
-      && node.expression.expression.text === 'Object' && MUTATORS.has(node.expression.name.text)) return true;
+    if (isMutatorCall(node) && rooted(node.arguments[0])) return true;
     let found = false;
     node.forEachChild((child) => {
       found ||= writes(child);
@@ -930,10 +943,11 @@ const WRAPPER_RULE = 'an exported component\'s wrapper is called with no argumen
  *     source, or a forwardRef or memo call; and
  *   - one final `return <const>`.
  * Anything else fails naming the component and this rule, so nothing the wrapper runs can
- * change which function renders. The source must write to neither the exported binding, nor
- * a wrapper const, nor a variable that takes either's value, other than through those
- * statements: a part assigned later would publish a stale part. A top-level const a wrapper
- * const or part follows is collected in `followed` and checked by the caller like any other.
+ * change which function renders. The source must write to neither the exported binding nor
+ * a wrapper const other than through those statements: a part assigned later would publish
+ * a stale part. Nor may either be used as a value (`valueEscape`), since an alias is a write
+ * path the scan cannot follow. A top-level const a wrapper const or part follows is
+ * collected in `followed` and checked by the caller like any other.
  * @returns {{ callable: object, parts: Map<string, object> }} the callable's function and each part's, by member name
  */
 function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
@@ -1004,8 +1018,107 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
       fail(`the source writes to ${target.text} beyond the wrapper's displayName and part assignments`);
     }
   }
+  const escaped = valueEscape(project, sourceFile, writeTargets, { allowed: verified, finalReturn: statements.at(-1) });
+  if (escaped) fail(`the source uses ${escaped.text} as a value, which could hand an alias of the component to code that replaces a part`);
   return { callable: components.get(returned.text), parts };
 }
+
+/**
+ * The first place the source reaches a property-writing member of Object or Reflect other than by
+ * calling it directly by its plain name (`Object.assign(target, ...)`). `const assign = Object.assign`,
+ * `Object['assign']`, `const { assign } = Object`, `globalThis.Object.assign`, and `Reflect.set` passed
+ * on all hide the target of a write from the scan above, so each fails here, whatever it writes to.
+ * The rule is conservative on purpose: it refuses the spelling instead of following the value. No
+ * static reader can see through arbitrary dynamic code, so what it cannot follow it does not admit.
+ */
+function reflectiveEscape(sourceFile) {
+  const globals = new Set(['Object', 'Reflect']);
+  const named = (key) => key.kind === SyntaxKind.StringLiteral || key.kind === SyntaxKind.NoSubstitutionTemplateLiteral;
+  let found;
+  const visit = (node) => {
+    if (found) return;
+    const { parent } = node;
+    if (node.kind === SyntaxKind.PropertyAccessExpression) {
+      const { expression: receiver, name } = node;
+      const direct = parent.kind === SyntaxKind.CallExpression && parent.expression === node;
+      const global = receiver.kind === SyntaxKind.Identifier && globals.has(receiver.text) ? receiver.text : undefined;
+      // The global reached through another object (globalThis.Object), or a mutator not called as Object.<mutator>(...) or Reflect.<mutator>(...).
+      const called = direct && global !== undefined && MUTATORS.get(global).has(name.text);
+      if (globals.has(name.text) || (MUTATORS.get('Object').has(name.text) && !called)) found = node;
+      else if (global === 'Reflect' && !direct) found = node;
+    } else if (node.kind === SyntaxKind.ElementAccessExpression) {
+      const { expression: receiver, argumentExpression: key } = node;
+      const global = receiver.kind === SyntaxKind.Identifier && (globals.has(receiver.text) || receiver.text === 'globalThis');
+      if (global || (named(key) && (globals.has(key.text) || MUTATORS.get('Object').has(key.text)))) found = node;
+    } else if (node.kind === SyntaxKind.Identifier && (globals.has(node.text) || node.text === 'globalThis')) {
+      // The global itself as a value: const O = Object, const { assign } = Object, use(Reflect).
+      const member = (parent.kind === SyntaxKind.PropertyAccessExpression || parent.kind === SyntaxKind.ElementAccessExpression) && parent.expression === node;
+      // A name being declared, or a key or member so named, is not a reference to the global; globalThis.Object is caught above.
+      const label = parent.name === node && parent.kind !== SyntaxKind.ShorthandPropertyAssignment;
+      const type = parent.kind === SyntaxKind.TypeReference || parent.kind === SyntaxKind.QualifiedName;
+      if (!member && !label && !type) found = node;
+    }
+    node.forEachChild(visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
+/**
+ * The first reference to one of `bindings` that could hand the component itself to other code, or
+ * undefined. A part is replaced by writing it on the component, and a write through an alias of
+ * the component is as good as one through its name, so the scan above must see every write. It
+ * cannot follow every way a value moves (a destructuring, a conditional, `Thing.Root`, a call
+ * argument), and the rule does not try. It admits a binding only as:
+ *   - its declaration, an export of it, or a `typeof` type query;
+ *   - the target or the value of an `allowed` assignment, and the wrapper's final return;
+ *   - `<binding>.<Part>` read directly, as a JSX tag, a call, or a call's argument
+ *     (createElement(Thing.Item, ...)), where the part is not Root, which is the component itself.
+ * Any other reference fails, since it could be an alias this scan does not see.
+ */
+function valueEscape({ checker }, sourceFile, bindings, { allowed = new Set(), finalReturn } = {}) {
+  const ids = new Set(bindings.map((binding) => checker.getSymbolAtLocation(binding)?.id).filter((id) => id !== undefined));
+  const outerOf = (node) => (WRAPPERS.has(node.parent.kind) ? outerOf(node.parent) : node);
+  const jsxTag = new Set([SyntaxKind.JsxOpeningElement, SyntaxKind.JsxSelfClosingElement, SyntaxKind.JsxClosingElement]);
+  const direct = (access) => {
+    const use = access.parent;
+    return (jsxTag.has(use.kind) && use.tagName === access)
+      || (use.kind === SyntaxKind.CallExpression && (use.expression === access || use.arguments.some((argument) => argument === access)));
+  };
+  const admitted = (node) => {
+    const outer = outerOf(node);
+    const { parent } = outer;
+    if ((parent.kind === SyntaxKind.VariableDeclaration && parent.name === node) || parent.kind === SyntaxKind.ExportSpecifier) return true;
+    let name = parent;
+    while (name.kind === SyntaxKind.QualifiedName) name = name.parent;
+    if (name.kind === SyntaxKind.TypeQuery) return true;
+    if (parent === finalReturn || (allowed.has(parent) && parent.right === outer)) return true;
+    if (parent.kind !== SyntaxKind.PropertyAccessExpression || parent.expression !== outer) return false;
+    const access = outerOf(parent);
+    return (access.parent.kind === SyntaxKind.BinaryExpression && allowed.has(access.parent) && access.parent.left === access)
+      || (parent.name.text !== 'Root' && direct(access));
+  };
+  let found;
+  const visit = (node) => {
+    if (found) return;
+    if (node.kind === SyntaxKind.Identifier) {
+      const shorthand = node.parent.kind === SyntaxKind.ShorthandPropertyAssignment && node.parent.name === node;
+      const id = (shorthand ? checker.getShorthandAssignmentValueSymbol(node.parent) : checker.getSymbolAtLocation(node))?.id;
+      if (ids.has(id) && !admitted(node)) found = node;
+    }
+    node.forEachChild(visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
+/** A short spelling of an access chain for a diagnostic: `Object.assign`, `Object[…]`. */
+const spelled = (node) => {
+  if (node.kind === SyntaxKind.Identifier) return node.text;
+  if (node.kind === SyntaxKind.PropertyAccessExpression) return `${spelled(node.expression)}.${node.name.text}`;
+  if (node.kind === SyntaxKind.ElementAccessExpression) return `${spelled(node.expression)}[…]`;
+  return '…';
+};
 
 /**
  * The expression a compound export binds to `part`. A compound is a top-level const the
@@ -1036,6 +1149,8 @@ function compoundPart(project, sourceFile, exported, name, part, followed) {
   if (writesThrough(project, sourceFile, project.checker.getSymbolAtLocation(exported.name))) {
     throw new ApiExtractionError(chain, `the source writes to the compound ${name} after declaring it`);
   }
+  const escaped = valueEscape(project, sourceFile, [exported.name]);
+  if (escaped) throw new ApiExtractionError(chain, `the source uses the compound ${name} as a value, which could hand an alias of it to code that replaces a part`);
   const value = values.get(part);
   if (value === undefined) throw new ApiExtractionError(chain, `the compound ${name} has no ${part} part`);
   if (value.kind !== SyntaxKind.Identifier) return value;
@@ -1055,6 +1170,10 @@ function compoundPart(project, sourceFile, exported, name, part, followed) {
 function readSourceDefaults(project, sourceFile, { exportName, member, label }, declared) {
   const exported = exportedNamed(sourceFile, exportName);
   const chain = member === undefined ? exportName : `${exportName}.${member}`;
+  const reflective = reflectiveEscape(sourceFile);
+  if (reflective) {
+    throw new ApiExtractionError(chain, `the source reaches ${spelled(reflective)} other than by calling Object or Reflect directly by name, as Object.assign(target, ...); a property-writing member reached any other way hides what it writes to`);
+  }
   const initializer = exported?.node.initializer;
   const wrapped = isWrapperCall(initializer);
   const followed = new Set();

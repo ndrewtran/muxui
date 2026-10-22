@@ -1181,14 +1181,129 @@ test('a part cannot be replaced through an alias of the component', () => {
     `${setup}: ${label}`, () => read(`${declaration}${statement}\n`, 'declare const label: string;\n'), through,
   ]));
   assert.deepEqual(accepted(cases), []);
-  // An alias that is only read, and a variable that is not the component, write nothing.
-  assert.deepEqual(read("const alias = Thing;\nvoid alias.Item;\nvoid alias.displayName;\nlet other: unknown;\nother = replacement;\nObject.assign({}, alias);\n").partApis.item.defaults, { tone: 'quiet' });
+  // An alias is refused even when it only reads: no scan follows where a component goes once it is a value. A variable that is not the component writes nothing.
+  assert.throws(() => read("const alias = Thing;\nvoid alias.Item;\n"), /Thing: the source uses Thing as a value, which could hand an alias of the component to code that replaces a part; /u);
+  assert.deepEqual(read("let other: unknown;\nother = replacement;\nObject.assign({}, { a: 1 });\n").partApis.item.defaults, { tone: 'quiet' });
   // The same holds for a component read without a wrapper, and for a compound.
   const plain = (statement) => `import { forwardRef } from 'react';\ndeclare const replacement: unknown;\nexport const Thing = forwardRef(${callableRender});\nconst alias = Thing;\n${statement}\n`;
   assert.throws(() => extract({ declarations: ownProps("  size?: 'sm' | 'md';"), source: plain('alias.render = replacement;') }), /Thing: the source writes to Thing, which the component's defaults are read through/u);
   const compound = (statement) => `import { forwardRef } from 'react';\ndeclare const replacement: unknown;\nconst ThingRoot = forwardRef(${callableRender});\nexport const Thing = Object.freeze({ Root: ThingRoot });\nconst alias = Thing;\n${statement}\n`;
   assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('Object.assign(alias, { Root: replacement });') }), /Thing\.Root: the source writes to the compound Thing after declaring it/u);
   assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('(alias as { Root: unknown }).Root = replacement;') }), /Thing\.Root: the source writes to the compound Thing after declaring it/u);
+});
+
+// Following every way a value moves is a losing game, so the extractor admits the component only where it is declared,
+// exported, assigned its parts, returned, or read as a part that is called or passed on directly. Everything else fails,
+// whether or not it is a write, because it could be the alias a later write goes through.
+test('a component used as a value anywhere but its own wrapper, export, and direct part reads fails extraction', () => {
+  const item = `Thing.Root = Thing;\n  Thing.Item = forwardRef(${callableItem});`;
+  const read = (after, before = '') => extract({
+    declarations: callableDeclarations,
+    source: callableSource({ before: `declare function use(...values: unknown[]): void;\ndeclare function identity<T>(value: T): T;\n${before}`, statics: item, after }),
+    parts: { item: 'Item' },
+  });
+  const value = /Thing: the source uses Thing as a value, which could hand an alias of the component to code that replaces a part; /u;
+  const aliases = {
+    'a destructured alias': 'const { value: alias } = { value: Thing };\n',
+    'an array-destructured alias': 'const [alias] = [Thing];\n',
+    'a destructuring assignment alias': 'let alias: unknown;\n({ value: alias } = { value: Thing });\n',
+    'an array destructuring assignment alias': 'let alias: unknown;\n[alias] = [Thing];\n',
+    'a conditional alias': 'const alias = Date.now() ? Thing : Thing;\n',
+    'a logical alias': 'const alias = replacement || Thing;\n',
+    'a nullish alias': 'const alias = replacement ?? Thing;\n',
+    'a Root alias': 'const alias = Thing.Root;\n',
+    'a Root alias through an assertion': 'const alias = (Thing as { Root: unknown }).Root;\n',
+    'a destructured Root alias': 'const { Root: alias } = Thing;\n',
+    'an element-access Root alias': "const alias = Thing['Root'];\n",
+    'an alias returned from a function': 'const alias = (() => Thing)();\n',
+    'an alias through a call': 'const alias = identity(Thing);\n',
+    'a property of an object': 'const alias = { Thing };\n',
+    'a spread': 'const alias = [...[Thing]];\n',
+  };
+  const writes = {
+    'a part write': 'alias.Item = replacement;',
+    'an Object.assign': 'Object.assign(alias, { Item: replacement });',
+  };
+  const cases = Object.entries(aliases).flatMap(([setup, declaration]) => Object.entries(writes).map(([label, statement]) => [
+    `${setup}: ${label}`, () => read(`${declaration}${statement}\n`), value,
+  ]));
+  assert.deepEqual(accepted(cases), []);
+  // The reads the rule admits: a part called or passed on, a type query, an export, and Root assigned in the wrapper.
+  const admitted = [
+    ['a part passed to a call', 'use(Thing.Item);'],
+    ['a part called', 'Thing.Item({ value: "a" } as never);'],
+    ['a part passed through an assertion', 'use((Thing as { Item: unknown }).Item);'],
+    ['a type query', 'export type ThingItem = typeof Thing.Item;\nexport type ThingSelf = typeof Thing;'],
+    ['an export of the binding', 'export { Thing as OtherThing };'],
+  ];
+  for (const [label, statement] of admitted) assert.deepEqual(read(`${statement}\n`).partApis.item.defaults, { tone: 'quiet' }, label);
+  // Root is the component itself, so it is read as nothing: not passed on, not called.
+  assert.throws(() => read('use(Thing.Root);\n'), value);
+  assert.throws(() => read('use(Thing);\n'), value);
+  assert.throws(() => read('const alias = Thing.Item;\nuse(alias);\n'), value, 'a part held in a variable is not read directly');
+  // A wrapper const that is not returned is held to the same rule.
+  assert.throws(() => extract({
+    declarations: callableDeclarations,
+    source: callableSource({ before: 'declare function use(...values: unknown[]): void;\n', inside: 'const other = forwardRef(function Other() { return null; });\n  const holder = forwardRef(function Holder() { use(other); return null; });', statics: `${item}\n  Thing.Group = holder;` }),
+    parts: { item: 'Item' },
+  }), /Thing: the source uses other as a value, which could hand an alias of the component to code that replaces a part; /u);
+  // A frozen compound is held to it too.
+  const compound = (statement) => `import { forwardRef } from 'react';\ndeclare const replacement: unknown;\nconst ThingRoot = forwardRef(${callableRender});\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${statement}\n`;
+  const frozen = /Thing\.Root: the source uses the compound Thing as a value, which could hand an alias of it to code that replaces a part/u;
+  assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('const alias = Thing;\nvoid alias;') }), frozen);
+  assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('const { Root: alias } = Thing;\nvoid alias;') }), frozen);
+  assert.equal(extract({ declarations: compoundDeclarations, part: 'Root', source: compound('export type ThingRootType = typeof Thing.Root;') }).defaults.size, 'md');
+});
+
+test('Object and Reflect members that write properties are only called directly, by name', () => {
+  const item = `Thing.Root = Thing;\n  Thing.Item = forwardRef(${callableItem});`;
+  const read = (after) => extract({ declarations: callableDeclarations, source: callableSource({ statics: item, after }), parts: { item: 'Item' } });
+  const direct = /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u;
+  const hidden = /Thing: the source reaches (?<spelling>[^ ]+) other than by calling Object or Reflect directly by name, as Object\.assign\(target, \.\.\.\); /u;
+  // A direct call names its target, so the write scan sees it.
+  for (const call of [
+    "Object.assign(Thing, { Item: replacement });",
+    "Object.defineProperty(Thing, 'Item', { value: replacement });",
+    "Object.defineProperties(Thing, { Item: { value: replacement } });",
+    "Object.setPrototypeOf(Thing, null);",
+    "Reflect.set(Thing, 'Item', replacement);",
+    "Reflect.defineProperty(Thing, 'Item', { value: replacement });",
+    "Reflect.deleteProperty(Thing, 'Item');",
+    "Reflect.setPrototypeOf(Thing, null);",
+    "Reflect.set(Thing.Root, 'Item', replacement);",
+  ]) assert.throws(() => read(`${call}\n`), direct, call);
+  // A mutator reached any other way hides its target, so it is refused wherever it is used and whatever it writes to.
+  const spelled = [
+    ['const assign = Object.assign;\nassign(Thing, { Item: replacement });', 'Object.assign'],
+    ["const define = Object.defineProperty;\ndefine(Thing, 'Item', { value: replacement });", 'Object.defineProperty'],
+    ['const define = Object.defineProperties;\ndefine(Thing, { Item: { value: replacement } });', 'Object.defineProperties'],
+    ['const set = Object.setPrototypeOf;\nset(Thing, null);', 'Object.setPrototypeOf'],
+    ["const set = Reflect.set;\nset(Thing, 'Item', replacement);", 'Reflect.set'],
+    ["const define = Reflect.defineProperty;\ndefine(Thing, 'Item', { value: replacement });", 'Reflect.defineProperty'],
+    ["Object['assign'](Thing, { Item: replacement });", 'Object[…]'],
+    ["Object[\\`assign\\`](Thing, { Item: replacement });", 'Object[…]'],
+    ["const key = 'assign';\nObject[key](Thing, { Item: replacement });", 'Object[…]'],
+    ["Reflect['set'](Thing, 'Item', replacement);", 'Reflect[…]'],
+    ['const { assign } = Object;\nassign(Thing, { Item: replacement });', 'Object'],
+    ['const { set } = Reflect;\nset(Thing, "Item", replacement);', 'Reflect'],
+    ['const O = Object;\nO.assign(Thing, { Item: replacement });', 'Object'],
+    ['const R = Reflect;\nR.set(Thing, "Item", replacement);', 'Reflect'],
+    ['use(Object);', 'Object'],
+    ['globalThis.Object.assign(Thing, { Item: replacement });', 'globalThis.Object.assign'],
+    ['const { assign } = globalThis.Object;\nassign(Thing, { Item: replacement });', 'globalThis.Object'],
+    ["globalThis['Object'].assign(Thing, { Item: replacement });", 'globalThis[…].assign'],
+    ["const g = globalThis;\ng.Object.assign(Thing, { Item: replacement });", 'globalThis'],
+    ['[Object.assign][0](Thing, { Item: replacement });', 'Object.assign'],
+    ['Object.assign.call(null, Thing, { Item: replacement });', 'Object.assign'],
+    ['const target = { assign: Object.assign };\ntarget.assign(Thing, { Item: replacement });', 'Object.assign'],
+    ['Thing.assign(Thing, { Item: replacement });', 'Thing.assign'],
+  ];
+  for (const [statement, spelling] of spelled) {
+    assert.throws(() => read(`declare function use(...values: unknown[]): void;\n${statement}\n`), (error) => error instanceof ApiExtractionError && hidden.exec(error.message)?.groups.spelling === spelling, statement);
+  }
+  // What reads and writes something else is untouched: other Object and Reflect members, and a mutator called on another target.
+  const harmless = "const copy = Object.assign({}, { a: 1 });\nObject.defineProperty(copy, 'b', { value: 1 });\nvoid Object.keys(copy);\nvoid Reflect.get(copy, 'a');\nvoid Reflect.has(copy, 'a');\nconst freeze = Object.freeze;\nvoid freeze(copy);\n";
+  assert.deepEqual(read(harmless).partApis.item.defaults, { tone: 'quiet' });
 });
 
 test('a part read through a top-level const or function is checked for writes like any component', () => {
