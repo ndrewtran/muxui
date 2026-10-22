@@ -145,6 +145,8 @@ const GUIDES = {
   'range-calendar': {},
   'radio-group': {},
   slider: {},
+  // FormData.getAll and FormData.get read a named field's entries, and user:42 is the example token the common mistake warns against.
+  'token-field': { native: ['FormData.getAll', 'FormData.get', 'user:42'] },
   // ToggleButtonGroup's guide words its missing form name as "no `name` prop", which the check reads.
   'toggle-button-group': {},
   toolbar: {},

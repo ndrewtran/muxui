@@ -10855,7 +10855,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/token-field/artifact.json#bindings/web.react",
-          "packages/react/src/token-field.mjs#TokenField",
+          "packages/react/src/token-field.ts#TokenField",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

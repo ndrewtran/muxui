@@ -1842,6 +1842,18 @@ test('R1.3 RadioGroup options claims no empty-list default, and an omitted optio
   assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: null })), /Cannot read properties of null/u);
 });
 
+// Likewise defaultValue: a parameter default of [] would be published as an empty-list default. The field copies a
+// supplied list once and treats an omitted one as empty, and null still fails in the copy.
+test('R1.3 TokenField defaultValue claims no empty-list default, and an omitted defaultValue is empty', async () => {
+  const { api } = JSON.parse(await readFile(resolve(import.meta.dirname, '../api/token-field.json'), 'utf8'));
+  assert.equal(Object.hasOwn(api.defaults, 'defaultValue'), false);
+  const named = (props) => renderToString(React.createElement(TokenField, { 'aria-label': 'Tags', name: 'tags', ...props }));
+  assert.doesNotMatch(named({}), /name="tags"/u);
+  assert.match(named({ defaultValue: ['one'] }), /name="tags" value="one"/u);
+  // null is not an omitted list: spreading it fails, as it did when the default was a parameter default.
+  assert.throws(() => named({ defaultValue: null }), TypeError);
+});
+
 test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a bounded window', async () => {
   const invalidVirtualizerInputs = [
     [{ itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],

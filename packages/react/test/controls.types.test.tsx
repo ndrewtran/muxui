@@ -2,6 +2,7 @@ import type { ControlSize, FieldValidationProps, MuxUIAccessibleName } from '../
 import type { RadioGroupOwnProps } from '../generated/radio-group.js';
 import type { SliderOwnProps } from '../generated/slider.js';
 import type { ToggleButtonGroupOwnProps } from '../generated/toggle-button-group.js';
+import type { TokenFieldOwnProps } from '../generated/token-field.js';
 
 // The control families restate the members they share with the fields, because the catalog's grammar lets
 // a type list its members and nothing else. These pins keep each copy equal to the shared member, so one
@@ -20,6 +21,8 @@ export type Pins = [
   Expect<PinsMembers<RadioGroupOwnProps, 'errorMessage' | 'disabled' | 'readOnly' | 'required' | 'invalid'>>,
   Expect<PinsLabel<SliderOwnProps>>,
   Expect<PinsMembers<SliderOwnProps, 'disabled' | 'readOnly'>>,
+  Expect<PinsLabel<TokenFieldOwnProps>>,
+  Expect<PinsMembers<TokenFieldOwnProps, 'disabled' | 'readOnly'>>,
   Expect<PinsMembers<ToggleButtonGroupOwnProps, 'disabled'>>,
   // The size is the shared ControlSize, written out as its three values.
   Expect<Same<NonNullable<RadioGroupOwnProps['size']>, ControlSize>>,

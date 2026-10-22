@@ -17,7 +17,7 @@ export { Table } from './table.mjs';
 export { Tabs } from './tabs.mjs';
 export { TagGroup } from './tag-group.mjs';
 export { ToggleButtonGroup } from './toggle-button-group.ts';
-export { TokenField } from './token-field.mjs';
+export { TokenField } from './token-field.ts';
 export { Toolbar } from './toolbar.ts';
 export { Tree } from './tree.mjs';
 export { Virtualizer } from './virtualizer.mjs';

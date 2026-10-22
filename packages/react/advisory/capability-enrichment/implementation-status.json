@@ -8753,7 +8753,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/token-field.mjs",
+          "path": "packages/react/src/token-field.ts",
           "lines": null,
           "anchor": "#TokenField"
         }
@@ -8792,7 +8792,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/token-field.mjs",
+          "path": "packages/react/src/token-field.ts",
           "lines": null,
           "anchor": "#TokenField"
         }
@@ -8831,7 +8831,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/token-field.mjs",
+          "path": "packages/react/src/token-field.ts",
           "lines": null,
           "anchor": "#TokenField"
         }
@@ -8870,7 +8870,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/token-field.mjs",
+          "path": "packages/react/src/token-field.ts",
           "lines": null,
           "anchor": "#TokenField"
         }
@@ -8909,7 +8909,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/token-field.mjs",
+          "path": "packages/react/src/token-field.ts",
           "lines": null,
           "anchor": "#TokenField"
         }
@@ -8948,7 +8948,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/token-field.mjs",
+          "path": "packages/react/src/token-field.ts",
           "lines": null,
           "anchor": "#TokenField"
         }

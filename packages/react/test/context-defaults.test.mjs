@@ -65,6 +65,8 @@ const audited = [
       ...expand(['toggle-button-group'], ['selectionMode', 'disabled', 'disallowEmptySelection']),
       // RadioGroup sends isDisabled, isReadOnly, isRequired, and orientation to React Aria as its own values, false, false, false, and vertical when omitted, as it did before the move.
       ...expand(['radio-group'], ['disabled', 'readOnly', 'required', 'orientation']),
+      // TokenField sends isDisabled and isReadOnly to React Aria as its own values, false when omitted, as it did before the move.
+      ...expand(['token-field'], ['disabled', 'readOnly']),
       // Slider sends minValue, maxValue, step, isDisabled, and orientation to React Aria as its own values, 0, 100, 1, false, and horizontal when omitted, as it did before the move.
       ...expand(['slider'], ['min', 'max', 'step', 'disabled', 'orientation']),
     ],

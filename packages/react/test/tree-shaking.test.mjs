@@ -204,6 +204,7 @@ test('a bundle that uses one control family keeps its own module and only the sh
   const kept = {
     RadioGroup: ['choice-context.mjs', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'radio-group.js', 'radio-motion.mjs'],
     Slider: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'slider-motion.mjs', 'slider.js'],
+    TokenField: ['control-utils.js', 'token-field.js'],
     ToggleButtonGroup: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
     Toolbar: ['control-utils.js', 'toolbar.js'],
   };

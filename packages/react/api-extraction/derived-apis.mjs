@@ -66,6 +66,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'toggle-button-group', name: 'ToggleButtonGroup', source: 'packages/react/src/toggle-button-group.ts' },
   { slug: 'slider', name: 'Slider', source: 'packages/react/src/slider.ts' },
   { slug: 'radio-group', name: 'RadioGroup', source: 'packages/react/src/radio-group.ts' },
+  { slug: 'token-field', name: 'TokenField', source: 'packages/react/src/token-field.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';
