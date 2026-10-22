@@ -59,6 +59,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'color-slider', name: 'ColorSlider', source: 'packages/react/src/color-slider.ts' },
   { slug: 'color-picker', name: 'ColorPicker', source: 'packages/react/src/color-picker.ts' },
   { slug: 'color-area', name: 'ColorArea', source: 'packages/react/src/color-area.ts' },
+  { slug: 'color-field', name: 'ColorField', source: 'packages/react/src/color-field.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

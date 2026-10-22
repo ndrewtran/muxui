@@ -4561,7 +4561,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4600,7 +4600,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4639,7 +4639,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4678,7 +4678,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4717,7 +4717,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4756,7 +4756,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }

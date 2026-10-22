@@ -6291,7 +6291,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-field/artifact.json#bindings/web.react",
-          "packages/react/src/color-field.mjs#ColorField",
+          "packages/react/src/color-field.ts#ColorField",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

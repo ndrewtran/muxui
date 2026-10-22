@@ -13,9 +13,10 @@ import type {
   TextFieldOwnProps,
   TimeFieldOwnProps,
 } from '../generated/fields.js';
+import type { ColorFieldOwnProps } from '../generated/color-field.js';
 
 // Each field's OwnProps restates the members every field shares, because the catalog's grammar lets a
-// type list its members and nothing else. These pins keep the ten copies equal to FieldValidationProps
+// type list its members and nothing else. These pins keep the eleven copies equal to FieldValidationProps
 // and the shared size and label types, so one cannot drift from the rest.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Expect<T extends true> = T;
@@ -41,6 +42,7 @@ export type Pins = [
   Expect<PinsSharedMembers<DatePickerOwnProps>>,
   Expect<PinsSharedMembers<DateRangePickerOwnProps>>,
   Expect<PinsSharedMembers<AutocompleteOwnProps>>,
+  Expect<PinsSharedMembers<ColorFieldOwnProps>>,
   // The size is the shared ControlSize, whether a family names it or writes its three values out.
   Expect<Same<NonNullable<CheckboxGroupOwnProps['size']>, ControlSize>>,
   Expect<Same<NonNullable<AutocompleteOwnProps['size']>, ControlSize>>,

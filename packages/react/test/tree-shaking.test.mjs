@@ -178,6 +178,7 @@ test('a bundle that uses one color family keeps its own module and only the shar
   const slider = ['color-context.js', 'color-slider-motion.mjs', 'color-slider.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
   const kept = {
     ColorArea: ['color-area.js', 'color-context.js', 'control-utils.js', 'read-only-guard.js'],
+    ColorField: ['choice-context.mjs', 'color-context.js', 'color-field.js', 'control-utils.js'],
     ColorPicker: ['color-context.js', 'color-picker.js', 'control-utils.js'],
     ColorSlider: slider,
     ColorSwatch: ['color-context.js', 'color-swatch.js', 'control-utils.js'],

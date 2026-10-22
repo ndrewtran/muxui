@@ -133,8 +133,10 @@ const GUIDES = {
   'color-wheel': { native: ['rgba()', 'hsla()'] },
   'color-slider': { native: ['rgba()', 'hsla()'] },
   'color-area': { native: ['rgba()', 'hsla()'] },
-  // colorSpace, hsb, and hsl are the slider's: the guide tells a hex picker's slider to set them.
-  'color-picker': { native: ['rgba()', 'hsla()'], from: { 'color-slider': ['colorSpace', 'hsb', 'hsl'] } },
+  // #336699 is the uppercase hex a named field submits.
+  'color-field': { native: ['rgba()', 'hsla()', '#336699'] },
+  // colorSpace, hsb, and hsl are the slider's, which the guide tells a hex picker to set, and the form name is the field's.
+  'color-picker': { native: ['rgba()', 'hsla()'], from: { 'color-slider': ['colorSpace', 'hsb', 'hsl'], 'color-field': ['name'] } },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

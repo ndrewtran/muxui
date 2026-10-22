@@ -53,7 +53,8 @@ const audited = [
       ...expand(overlayFamilies, ['placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding']),
       ...expand(['preview-trigger', 'tooltip'], ['delay', 'closeDelay']),
       // The color controls send isDisabled (and ColorField isReadOnly and isRequired) as a boolean: their own flag, else the enclosing ColorPicker's.
-      ...expand(['color-swatch', 'color-area', 'color-slider', 'color-wheel'], ['disabled']),
+      ...expand(['color-swatch', 'color-field', 'color-area', 'color-slider', 'color-wheel'], ['disabled']),
+      ...expand(['color-field'], ['readOnly', 'required']),
       // color-slider sends orientation to React Aria as its own value, horizontal when omitted, as it did before the move.
       ...expand(['color-slider'], ['orientation']),
     ],
@@ -83,6 +84,8 @@ const audited = [
       ...expand(validationFamilies, ['invalid']),
       // Link sends aria-current: current ? 'page' : undefined.
       ...expand(['link'], ['current']),
+      // color-field sends isInvalid: invalid ? invalid : undefined, so a React Aria context can still make it invalid.
+      ...expand(['color-field'], ['invalid']),
     ],
   },
 ];
