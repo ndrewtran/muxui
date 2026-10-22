@@ -156,6 +156,8 @@ const GUIDES = {
   'grid-list': { native: ['className', 'style', 'grid-template-columns', '@container', '@media', 'container-type: inline-size', 'gap', 'width', 'height', 'inline-size: 100%', 'overflow: hidden'] },
   // The two JSX snippets show the grid composition, whose GridList carries its own layout; the rest are CSS (the gap and column tracks, the container and media queries), the browser APIs the column-count advice names, and the GridList's block size.
   virtualizer: { native: ['<GridList layout="grid">', '<Virtualizer layout="grid">', 'gap', 'grid-template-columns', '@container', '@media', 'column-gap', 'row-gap', 'matchMedia', 'ResizeObserver', 'window', 'rem', "style={{ blockSize: '40rem' }}"] },
+  // item.value is a field of an item record, which the guide says a named Select does not submit.
+  select: { native: ['item.value'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

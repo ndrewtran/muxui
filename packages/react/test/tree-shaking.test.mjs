@@ -115,7 +115,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
     'list-box.js': ['ListBox'],
     'menu.js': ['Menu'],
     'radio-group.js': ['RadioGroup'],
-    'select.mjs': ['Select'],
+    'select.js': ['Select'],
     'tabs.mjs': ['Tabs'],
     'toggle-button-group.js': ['ToggleButtonGroup'],
     'tree.mjs': ['Tree'],
@@ -196,6 +196,15 @@ test('a bundle that uses Menu keeps its own module, the collection helpers, and 
   const kept = ['collection-items.js', 'collection-trigger.js', 'control-utils.js', 'menu-motion.mjs', 'menu.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs'];
   assert.deepEqual((await bundledModules('Menu', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('Menu', 'index.mjs')).sort(), kept);
+});
+
+// Select keeps its own module, the item helpers it normalizes with, the trigger it renders, the shared class and name helper,
+// the choice size and overlay geometry helpers, and the popup motion. Through the barrel or the index, a bundle keeps exactly
+// these package modules and no other family's, which the context and the geometry constant at the module's top level must not change.
+test('a bundle that uses Select keeps its own module, the collection helpers, and the popup motion modules', async () => {
+  const kept = ['choice-context.mjs', 'collection-items.js', 'collection-trigger.js', 'control-utils.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'select.js'];
+  assert.deepEqual((await bundledModules('Select', 'collections.mjs')).sort(), kept);
+  assert.deepEqual((await bundledModules('Select', 'index.mjs')).sort(), kept);
 });
 
 // The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only

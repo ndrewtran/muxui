@@ -10,7 +10,7 @@ export { ListBox } from './list-box.ts';
 export { GridList } from './grid-list.ts';
 export { Menu } from './menu.ts';
 export { ComboBox } from './combo-box.mjs';
-export { Select } from './select.mjs';
+export { Select } from './select.ts';
 export { RadioGroup } from './radio-group.ts';
 export { Slider } from './slider.ts';
 export { Table } from './table.mjs';

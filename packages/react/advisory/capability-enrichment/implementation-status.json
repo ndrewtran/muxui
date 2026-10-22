@@ -7310,7 +7310,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/select.mjs",
+          "path": "packages/react/src/select.ts",
           "lines": null,
           "anchor": "#Select"
         }
@@ -7349,7 +7349,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/select.mjs",
+          "path": "packages/react/src/select.ts",
           "lines": null,
           "anchor": "#Select"
         }
@@ -7388,7 +7388,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/select.mjs",
+          "path": "packages/react/src/select.ts",
           "lines": null,
           "anchor": "#Select"
         }
@@ -7427,7 +7427,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/select.mjs",
+          "path": "packages/react/src/select.ts",
           "lines": null,
           "anchor": "#Select"
         }
@@ -7466,7 +7466,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/select.mjs",
+          "path": "packages/react/src/select.ts",
           "lines": null,
           "anchor": "#Select"
         }
@@ -7505,7 +7505,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/select.mjs",
+          "path": "packages/react/src/select.ts",
           "lines": null,
           "anchor": "#Select"
         }

@@ -84,6 +84,9 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'grid-list', name: 'GridList', source: 'packages/react/src/grid-list.ts', parts: { item: 'Item' } },
   // Virtualizer is one component with two layouts: its own props are one all-optional type, and its public type is two arms built from it.
   { slug: 'virtualizer', name: 'Virtualizer', source: 'packages/react/src/virtualizer.ts' },
+  // Select is its own root; Select.Root takes the same props with `label` as any node, so the derivation checks both. Its anatomy calls Select.Item the option.
+  // Label, Value, Description, and Error own no props.
+  { slug: 'select', name: 'Select', also: [{ member: 'Root', widen: ['label'] }], source: 'packages/react/src/select.ts', parts: { trigger: 'Trigger', popup: 'Popup', list: 'List', option: 'Item' } },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

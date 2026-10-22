@@ -524,10 +524,10 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   }
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
-  assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
-  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
+  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
   assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json'], 'the files FileTrigger selects, and the File a DropZone item reads');
@@ -538,6 +538,12 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
   assert.deepEqual(reached.get('HTMLDivElement'), ['virtualizer.json'], 'the element a scroll event reports');
   assert.deepEqual(reached.get(hostEntryKey(host('React.UIEvent', host('HTMLDivElement')))), ['virtualizer.json'], 'the scroll event of the Virtualizer viewport');
+  // Select's trigger: a button element with the attributes and ref a button takes, each application listed.
+  const buttonAttributes = host('React.ButtonHTMLAttributes', host('HTMLButtonElement'));
+  const buttonProps = host('React.DetailedHTMLProps', buttonAttributes, host('HTMLButtonElement'));
+  assert.deepEqual(reached.get(hostEntryKey(buttonAttributes)), ['select.json'], 'the native attributes of the trigger');
+  assert.deepEqual(reached.get(hostEntryKey(buttonProps)), ['select.json'], 'the attributes and ref of the trigger');
+  assert.deepEqual(reached.get(hostEntryKey(host('React.ReactElement', buttonProps, { kind: 'literal', value: 'button' }))), ['select.json'], 'the trigger element');
   // DropZone's drop items: a file item reads a File or its text, a text item lists its formats, a directory its entries.
   const dropItems = [
     [host('Promise', host('File')), 'a file item\'s read'],
@@ -563,6 +569,29 @@ test('inputProps admits the exact Omit of the input\'s attributes and nothing ne
     ['another element', omitInputAttributes(OWNED_INPUT_PROPS, 'HTMLTextAreaElement'), /Thing\.bad -> Omit<0> -> React\.InputHTMLAttributes<0> -> HTMLTextAreaElement: HTMLTextAreaElement is outside @muxui\/react and not in the host allowlist/u],
     ['a Pick', 'Pick<React.InputHTMLAttributes<HTMLInputElement>, \'placeholder\'>', /Thing\.bad -> Pick: Pick<React\.InputHTMLAttributes<HTMLInputElement>, "placeholder"> is not an application on the host allowlist/u],
     ['a Partial of the Omit', `Partial<${omitInputAttributes(OWNED_INPUT_PROPS)}>`, /Thing\.bad -> Partial: Partial<Omit<.*>> is not an application on the host allowlist/u],
+  ];
+  for (const [reason, type, pattern] of near) {
+    assert.throws(() => extract({ declarations: ownProps(`  bad?: ${type};`) }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, pattern, reason);
+      return true;
+    }, reason);
+  }
+});
+
+test('a trigger prop admits the exact button element Select takes and nothing near it', () => {
+  const buttonElement = "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>";
+  const exact = extract({ declarations: ownProps(`  trigger?: ${buttonElement};`) });
+  const attributes = host('React.ButtonHTMLAttributes', host('HTMLButtonElement'));
+  assert.deepEqual(exact.propDetails.trigger.type, host('React.ReactElement', host('React.DetailedHTMLProps', attributes, host('HTMLButtonElement')), { kind: 'literal', value: 'button' }));
+  // The intersection main spelled is outside the grammar, and another tag, element, or wrapper is another type.
+  const near = [
+    ['the intersection of attributes and ref', "React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>", /Thing\.bad -> React\.ReactElement<0>: an intersection type is not in the grammar/u],
+    ['no tag', 'React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>>', /Thing\.bad -> React\.ReactElement: React\.ReactElement<React\.DetailedHTMLProps<React\.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>> is not an application on the host allowlist/u],
+    ['another tag', "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'a'>", /Thing\.bad -> React\.ReactElement: React\.ReactElement<.*"a"> is not an application on the host allowlist/u],
+    ['another element', "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLAnchorElement>, 'button'>", /Thing\.bad -> React\.ReactElement<0> -> React\.DetailedHTMLProps: React\.DetailedHTMLProps<React\.ButtonHTMLAttributes<HTMLButtonElement>, HTMLAnchorElement> is not an application on the host allowlist/u],
+    ['other attributes', "React.ReactElement<React.DetailedHTMLProps<React.HTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>", /Thing\.bad -> React\.ReactElement<0> -> React\.DetailedHTMLProps<0> -> React\.HTMLAttributes: React\.HTMLAttributes<HTMLButtonElement> is not an application on the host allowlist/u],
+    ['the attributes alone', 'React.DetailedHTMLProps<React.HTMLAttributes<HTMLButtonElement>, HTMLButtonElement>', /Thing\.bad -> React\.DetailedHTMLProps<0> -> React\.HTMLAttributes: React\.HTMLAttributes<HTMLButtonElement> is not an application on the host allowlist/u],
   ];
   for (const [reason, type, pattern] of near) {
     assert.throws(() => extract({ declarations: ownProps(`  bad?: ${type};`) }), (error) => {

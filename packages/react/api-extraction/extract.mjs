@@ -40,6 +40,7 @@ const deepFreeze = (value) => {
 const hostApplication = (name, ...typeArguments) => deepFreeze({ kind: 'host', name, typeArguments });
 
 const INPUT_ATTRIBUTES = hostApplication('React.InputHTMLAttributes', { kind: 'host', name: 'HTMLInputElement' });
+const BUTTON_PROPS = hostApplication('React.DetailedHTMLProps', hostApplication('React.ButtonHTMLAttributes', { kind: 'host', name: 'HTMLButtonElement' }), { kind: 'host', name: 'HTMLButtonElement' });
 
 /** The props of a field's inner input that the field owns, in the order FieldInputProps omits them. */
 const FIELD_INPUT_OWNED_PROPS = Object.freeze([
@@ -62,8 +63,10 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * Dialog, and Toast, and Promise<File>, Promise<string>, ReadonlySet<string>, and
  * AsyncIterable<MuxUIDropItem> for DropZone's drop items, and HTMLInputElement,
  * React.InputHTMLAttributes<HTMLInputElement>, and the Omit of it that FieldInputProps declares for
- * TextField's and SearchField's inputProps, and HTMLDivElement with React.UIEvent<HTMLDivElement>, the event
- * of Virtualizer's onScroll, which its React.UIEventHandler<HTMLDivElement> alias reads as.
+ * TextField's and SearchField's inputProps, HTMLDivElement with React.UIEvent<HTMLDivElement>, the event
+ * of Virtualizer's onScroll, which its React.UIEventHandler<HTMLDivElement> alias reads as, and the button
+ * element Select's trigger takes, written
+ * ReactElement<DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -89,6 +92,10 @@ export const HOST_ALLOWLIST = Object.freeze([
   // Virtualizer's onScroll event: a scroll of the viewport, which is a div.
   'HTMLDivElement',
   hostApplication('React.UIEvent', { kind: 'host', name: 'HTMLDivElement' }),
+  // Select's trigger: a native button element with the attributes and ref a button takes (DetailedHTMLProps adds React's ClassAttributes, the ref).
+  hostApplication('React.ButtonHTMLAttributes', { kind: 'host', name: 'HTMLButtonElement' }),
+  BUTTON_PROPS,
+  hostApplication('React.ReactElement', BUTTON_PROPS, { kind: 'literal', value: 'button' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.
