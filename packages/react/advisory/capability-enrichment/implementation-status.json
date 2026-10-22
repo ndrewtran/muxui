@@ -8519,7 +8519,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/toggle-button-group.mjs",
+          "path": "packages/react/src/toggle-button-group.ts",
           "lines": null,
           "anchor": "#ToggleButtonGroup"
         }
@@ -8558,7 +8558,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/toggle-button-group.mjs",
+          "path": "packages/react/src/toggle-button-group.ts",
           "lines": null,
           "anchor": "#ToggleButtonGroup"
         }
@@ -8597,7 +8597,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/toggle-button-group.mjs",
+          "path": "packages/react/src/toggle-button-group.ts",
           "lines": null,
           "anchor": "#ToggleButtonGroup"
         }
@@ -8636,7 +8636,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/toggle-button-group.mjs",
+          "path": "packages/react/src/toggle-button-group.ts",
           "lines": null,
           "anchor": "#ToggleButtonGroup"
         }
@@ -8675,7 +8675,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/toggle-button-group.mjs",
+          "path": "packages/react/src/toggle-button-group.ts",
           "lines": null,
           "anchor": "#ToggleButtonGroup"
         }
@@ -8714,7 +8714,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/toggle-button-group.mjs",
+          "path": "packages/react/src/toggle-button-group.ts",
           "lines": null,
           "anchor": "#ToggleButtonGroup"
         }

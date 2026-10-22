@@ -143,6 +143,8 @@ const GUIDES = {
   // YYYY-MM-DD is Mux UI's own value format, not a native one: MuxUIDateValue's description states it, and the check reads it there.
   calendar: { described: { MuxUIDateValue: ['YYYY-MM-DD'] } },
   'range-calendar': {},
+  // ToggleButtonGroup's guide words its missing form name as "no `name` prop", which the check reads.
+  'toggle-button-group': {},
   toolbar: {},
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
@@ -411,6 +413,11 @@ test('the defaults and finite values the derived guides state are their derived 
   // CheckboxGroup stacks its options vertically by default, which its guide teaches before the horizontal choice.
   const [checkboxGroup, checkboxGroupApi] = await Promise.all([guide('checkbox-group'), derivedApi('checkbox-group')]);
   assert.equal(/Use the default (\w+) layout/u.exec(checkboxGroup)?.[1], checkboxGroupApi.api.defaults.orientation);
+
+  // ToggleButtonGroup selects a single button by default, which its guide teaches before the multiple choice.
+  const [toggleButtonGroup, toggleButtonGroupApi] = await Promise.all([guide('toggle-button-group'), derivedApi('toggle-button-group')]);
+  assert.match(toggleButtonGroup, /Keep the default single selection/u);
+  assert.equal(toggleButtonGroupApi.api.defaults.selectionMode, 'single');
 
   // Popover is modal by default, which its guide teaches before the non-modal choice.
   const [popover, popoverApi] = await Promise.all([guide('popover'), derivedApi('popover')]);

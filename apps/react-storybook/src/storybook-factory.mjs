@@ -133,7 +133,6 @@ const FAMILY_SELECT_PROPS = Object.freeze({
   Text: TEXT_SELECT_PROPS,
   Tabs: { variant: ['underline', 'pill', 'overflow', 'segment'] },
   Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
-  ToggleButtonGroup: { selectionMode: ['single', 'multiple'] },
   Sidebar: { status: ['online', 'offline'] },
   // SelectNative's derived size is a visual size or a positive number, the native list's visible row count.
   SelectNative: { size: [...literalMembers(selectNativeApi.api.propDetails.size.type, selectNativeApi.api.types), 4] },

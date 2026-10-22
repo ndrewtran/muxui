@@ -10604,7 +10604,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/toggle-button-group/artifact.json#bindings/web.react",
-          "packages/react/src/toggle-button-group.mjs#ToggleButtonGroup",
+          "packages/react/src/toggle-button-group.ts#ToggleButtonGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

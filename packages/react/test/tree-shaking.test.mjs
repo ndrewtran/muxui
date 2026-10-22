@@ -117,7 +117,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
     'radio-group.mjs': ['RadioGroup'],
     'select.mjs': ['Select'],
     'tabs.mjs': ['Tabs'],
-    'toggle-button-group.mjs': ['ToggleButtonGroup'],
+    'toggle-button-group.js': ['ToggleButtonGroup'],
     'tree.mjs': ['Tree'],
     'color-slider.js': ['ColorSlider'],
     'color-wheel.js': ['ColorWheel'],
@@ -202,6 +202,7 @@ test('a bundle that uses one color family keeps its own module and only the shar
 // a toolbar needs nothing else, and no bundle pulls in another family's module.
 test('a bundle that uses one control family keeps its own module and only the shared and motion modules it needs', async () => {
   const kept = {
+    ToggleButtonGroup: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
     Toolbar: ['control-utils.js', 'toolbar.js'],
   };
   for (const [name, expected] of Object.entries(kept)) {

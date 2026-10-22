@@ -16,7 +16,7 @@ const contextMergedProps = new Set([
   'selectionMode', 'selected', 'isSelected', 'defaultSelected', 'checked', 'defaultChecked', 'indeterminate', 'isIndeterminate',
   'selectedKey', 'defaultSelectedKey', 'selectedKeys', 'defaultSelectedKeys',
   'expanded', 'isExpanded', 'defaultExpanded', 'defaultExpandedIds', 'multiple', 'items',
-  'orientation', 'role', 'current', 'allowsMultiple', 'acceptDirectory',
+  'orientation', 'role', 'current', 'allowsMultiple', 'acceptDirectory', 'disallowEmptySelection',
   'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'delay', 'closeDelay',
 ]);
 
@@ -59,8 +59,10 @@ const audited = [
       ...expand(['color-slider'], ['orientation']),
       // RangeCalendar already sent isDisabled, isReadOnly, and isRequired as booleans, so a RangeCalendarContext cannot supply them. Calendar claims none of the three: it sends the prop as given, so a CalendarContext still can.
       ...expand(['range-calendar'], ['disabled', 'readOnly', 'required']),
-      // Toolbar sends orientation to React Aria as its own value, horizontal when omitted, as it did before the move.
-      ...expand(['toolbar'], ['orientation']),
+      // Toolbar and ToggleButtonGroup send orientation to React Aria as their own value, horizontal when omitted, as they did before the move.
+      ...expand(['toolbar', 'toggle-button-group'], ['orientation']),
+      // ToggleButtonGroup sends selectionMode, isDisabled, and disallowEmptySelection to React Aria as its own values, single, false, and false when omitted, as it did before the move.
+      ...expand(['toggle-button-group'], ['selectionMode', 'disabled', 'disallowEmptySelection']),
     ],
   },
   {

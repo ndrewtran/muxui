@@ -446,6 +446,8 @@ export { Calendar, RangeCalendar } from './calendar.js';
 export type { CalendarProps, RangeCalendarProps } from './calendar.js';
 export { Toolbar } from './toolbar.js';
 export type { ToolbarProps } from './toolbar.js';
+export { ToggleButtonGroup } from './toggle-button-group.js';
+export type { ToggleButtonGroupProps } from './toggle-button-group.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
@@ -528,8 +530,6 @@ export type TagGroupVariant = 'soft' | 'outline' | 'dot' | 'strong';
 export type TagGroupItem = MuxUICollectionItem & { /** Overrides the group's color for this tag. */ color?: TagGroupColor; };
 export type TagGroupProps = MuxUIAccessibleName & { items?: Array<TagGroupItem | string>; variant?: TagGroupVariant; /** The default color of every tag; an item's own color wins. */ color?: TagGroupColor; selectionMode?: 'none' | 'single' | 'multiple'; /** The selected item ids. */ selectedKeys?: Set<string>; defaultSelectedKeys?: Set<string>; onSelectionChange?: (keys: Set<string>) => void; disabled?: boolean; onRemove?: (items: TagGroupItem[]) => void; onAction?: (item?: TagGroupItem) => void; className?: string; };
 export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type ToggleButtonGroupProps = MuxUIAriaAccessibleName & { selectedIds?: readonly string[]; defaultSelectedIds?: readonly string[]; selectionMode?: 'single' | 'multiple'; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; disallowEmptySelection?: boolean; size?: 'sm' | 'md' | 'lg'; onSelectionChange?: (ids: readonly string[]) => void; children?: React.ReactNode; className?: string; };
-export declare const ToggleButtonGroup: React.ForwardRefExoticComponent<ToggleButtonGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type TokenFieldProps = MuxUIAccessibleName & { value?: string[]; defaultValue?: string[]; disabled?: boolean; readOnly?: boolean; name?: string; placeholder?: string; onChange?: (value: string[]) => void; className?: string; };
 export declare const TokenField: React.ForwardRefExoticComponent<TokenFieldProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }

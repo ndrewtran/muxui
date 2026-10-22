@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:01c3a54d6d386b9f301b3e7b9d7132aa4d512ce01c0d220d72d6fdc50685a037 -->
+<!-- @generated-content-sha256: sha256:a4f7ddc710ea995f82ae1a4e433f5fa69c65e58ba5d7b8b62e4de0a61d2f9bee -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -180,7 +180,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration |
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
-| ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | aria-label, aria-labelledby, selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
+| ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
 | TokenField | experimental | . | .muxui-token-field | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, name, placeholder |
 | Toolbar | experimental | . | .muxui-toolbar | orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
