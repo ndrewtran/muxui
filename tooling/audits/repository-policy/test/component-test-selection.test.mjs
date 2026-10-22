@@ -30,6 +30,8 @@ const parity = await readFile(resolve(packageRoot, 'test/r1-3-parity.test.mjs'),
 test('default component routing retains shared source and integrity coverage', () => {
   const selected = selectComponentTestFiles([records[0]], availableFiles);
   assert.ok(selected.includes('test/fixture.test.mjs'));
+  // Every family check also holds the public types against the declarations from before the TypeScript moves.
+  assert.ok(selected.includes('test/public-surface-baseline.test.mjs'));
   assert.ok(selected.includes('test/style-scopes.test.mjs'));
   assert.ok(selected.includes('test/styling-tokens.test.mjs'));
 });
@@ -163,7 +165,7 @@ test('a family with no test, no source group, and no BrowserProof still fails ex
   );
 });
 
-const sharedFiles = ['test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs'];
+const sharedFiles = ['test/public-surface-baseline.test.mjs', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs'];
 
 test('slug-named tests route by convention without a map entry', () => {
   const record = { family: 'ScratchWidget', slug: 'scratch-widget', source: 'packages/react/src/elsewhere.mjs' };
@@ -171,12 +173,12 @@ test('slug-named tests route by convention without a map entry', () => {
   for (const includeSharedSource of [true, false]) {
     assert.deepEqual(
       selectComponentTestFiles([record], both, { includeSharedSource }),
-      ['test/browser/scratch-widget.test.mjs', 'test/scratch-widget.test.mjs', ...sharedFiles],
+      ['test/browser/scratch-widget.test.mjs', sharedFiles[0], 'test/scratch-widget.test.mjs', ...sharedFiles.slice(1)],
     );
   }
   assert.deepEqual(
     selectComponentTestFiles([record], [...sharedFiles, 'test/scratch-widget.test.mjs'], { includeSharedSource: false }),
-    ['test/scratch-widget.test.mjs', ...sharedFiles],
+    [sharedFiles[0], 'test/scratch-widget.test.mjs', ...sharedFiles.slice(1)],
   );
 });
 
@@ -227,7 +229,7 @@ test('a family no test names runs its source group whole instead of failing', ()
   const own = { family: 'ScratchOwn', slug: 'scratch-own', source: supplemental.source };
   assert.deepEqual(
     selectComponentTestFiles([own], [...availableFiles, 'test/scratch-own.test.mjs'], { includeSharedSource: true }),
-    ['test/scratch-own.test.mjs', ...sharedFiles],
+    [sharedFiles[0], 'test/scratch-own.test.mjs', ...sharedFiles.slice(1)],
   );
 });
 

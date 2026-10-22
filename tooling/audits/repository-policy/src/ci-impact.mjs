@@ -21,6 +21,11 @@ const reactDescriptorPath = 'packages/react/generated/descriptor.json';
 const storybookManifestPath = 'apps/react-storybook/.storybook/generated/manifest.mjs';
 const motionBoundaryTestFile = 'test/motion-package-boundary.test.mjs';
 const catalogExampleTypesTestFile = 'test/catalog-examples-types.test.mjs';
+// The check of the public type surface against the declarations from before the TypeScript moves, and
+// the controls that show it can fail. Any React source can change that surface, and the fixtures and
+// harness decide what it proves.
+const publicSurfaceTestFile = 'test/public-surface-baseline.test.mjs';
+const publicSurfaceControlsTestFile = 'test/public-surface-controls.test.mjs';
 const patternManifestPath = 'packages/catalog/catalog-sources.json';
 const componentDocsTestFile = 'test/component-docs.test.mjs';
 const componentReferencePath = 'apps/component-reference.mjs';
@@ -536,6 +541,16 @@ async function reactTestSources() {
   }
   await visit(root);
   return sources;
+}
+
+// The public-surface tests a change to one of their inputs reruns: the frozen declarations and their
+// records run the check, and the harness (and the runner it shares) runs the check and its controls.
+export function publicSurfaceTestsFor(path) {
+  if (path.startsWith('packages/react/test/fixtures/public-surface-')) return [publicSurfaceTestFile];
+  if (path.startsWith('packages/react/test/support/public-surface-') || path === 'packages/react/test/support/declaration-surface.mjs') {
+    return [publicSurfaceTestFile, publicSurfaceControlsTestFile];
+  }
+  return [];
 }
 
 // Tracked files outside packages/react/src whose text names `needle`.
@@ -1353,7 +1368,7 @@ export async function buildPullRequestImpact({
         plan.packageChecks.add('@muxui/react');
         plan.reasons.push(`${path} is React type-test input; run the React package check that typechecks it`);
       } else {
-        const testFiles = reactTestFilesReferencing(testPath, reactTestReferenceSources);
+        const testFiles = [...new Set([...reactTestFilesReferencing(testPath, reactTestReferenceSources), ...publicSurfaceTestsFor(path)])].sort();
         if (testFiles.length === 0 && await readHeadText(path) !== null) {
           plan.reactPackageFull = true;
           widen(`${path} is not referenced by any React test file; running the full React proof (reference it from a test or remove it to narrow this)`);
@@ -1639,6 +1654,9 @@ export async function buildPullRequestImpact({
   if (reactSourcePaths.length > 0 && !plan.reactPackageFull && !plan.packageChecks.has('@muxui/react')) {
     plan.reactTestFiles.add(motionBoundaryTestFile);
     plan.reasons.push('React runtime source changed; verify public export bundles keep their Motion boundary');
+    // A type-only edit affects no family, so family routing cannot see that it changed the public types.
+    plan.reactTestFiles.add(publicSurfaceTestFile);
+    plan.reasons.push('React runtime source changed; verify the public types still match the declarations from before the TypeScript moves');
     // Guards on a module's text and bundles that no affected family predicts.
     reactSourcePaths.flatMap(sourceGuardTests).forEach((file) => plan.reactTestFiles.add(file));
   }

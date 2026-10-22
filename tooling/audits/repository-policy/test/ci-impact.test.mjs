@@ -141,6 +141,7 @@ const packages = [
 const componentTestPaths = [
   'test/browser/tag-select-focus.test.mjs',
   'test/browser/tree-toggle-browser.test.mjs',
+  'test/public-surface-baseline.test.mjs',
   'test/r1-3-parity.test.mjs',
   'test/style-scopes.test.mjs',
   'test/styling-tokens.test.mjs',
@@ -244,6 +245,7 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
   const selection = selectComponentTests(['TagSelect']);
   assert.deepEqual(selection.files, [
     'test/browser/tag-select-focus.test.mjs',
+    'test/public-surface-baseline.test.mjs',
     'test/style-scopes.test.mjs',
     'test/styling-tokens.test.mjs',
     'test/supplemental.test.mjs',
@@ -1423,7 +1425,7 @@ test('a change to a collections module runs the collections guards even when it 
     moduleSources: { ...cssModuleSources, [sliderPath]: { before, after } },
   });
   assert.deepEqual(result.reactFamilies, []);
-  assert.deepEqual(result.reactTestFiles, ['test/collections-modules.test.mjs', 'test/motion-package-boundary.test.mjs', 'test/tree-shaking.test.mjs']);
+  assert.deepEqual(result.reactTestFiles, ['test/collections-modules.test.mjs', 'test/motion-package-boundary.test.mjs', 'test/public-surface-baseline.test.mjs', 'test/tree-shaking.test.mjs']);
   const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
   assert.ok(commands.includes('test/collections-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
 });
@@ -3691,6 +3693,90 @@ test('the React public-surface test runs for every input it reads', async () => 
       textSnapshots: { [`packages/react/test/support/${helper}`]: { after: 'present' } },
     });
     assert.ok(result.reactTestFiles.includes(surfaceTest), helper);
+  }
+});
+
+// The public types are held against the declarations from before the TypeScript moves (test/public-surface-baseline.test.mjs).
+// Every change that can alter them must plan that test, and a change that cannot must not.
+test('the public-surface check is planned for every change that can alter the public types', async () => {
+  const surface = 'test/public-surface-baseline.test.mjs';
+  const controls = 'test/public-surface-controls.test.mjs';
+  const manifest = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8'));
+  for (const file of [surface, controls]) assert.ok(existsSync(resolve(repositoryRoot, 'packages/react', file)), `${file} exists`);
+  // The full React check's test glob excludes only the serial files, so it runs both.
+  assert.match(manifest.scripts.check, /node --test 'test\/!\(capability-enrichment\|catalog-examples-types\|code-block\|code-block-highlight\|code-block-lifecycle\|code-block-package-boundary\)\.test\.mjs'/u);
+
+  const reactCheck = (result) => executionCommands(result, { packages }).some(({ args }) => args.join(' ') === '--filter @muxui/react run check');
+  const runs = (result) => {
+    const commands = executionCommands(result, { packages });
+    if (result.reactPackageFull || result.packageChecks.includes('@muxui/react')) return reactCheck(result);
+    // A family check runs its selection, which includes the shared tests.
+    if (result.reactComponentTests.includes(surface)) return commands.some(({ args }) => args.includes('check:component'));
+    return commands.some(({ args }) => args.at(-1) === surface && args.includes('--test'));
+  };
+  const once = (result) => [result.reactTestFiles.includes(surface), result.reactComponentTests.includes(surface)].filter(Boolean).length <= 1;
+
+  // A family source edit: the family check selects it as a shared test, and the plan does not run it twice.
+  const family = await plan([collectionsPath], treeRuntimeChange);
+  assert.deepEqual(family.reactFamilies, ['Tree']);
+  assert.ok(family.reactComponentTests.includes(surface));
+  assert.ok(runs(family) && once(family));
+
+  // A type-only edit affects no family, so only the source route can plan it.
+  const sliderPath = 'packages/react/src/color-slider.ts';
+  const before = 'export const ColorSlider = /* @__PURE__ */ (() => () => null)();\n';
+  const after = 'export const ColorSlider = (() => () => null)();\n';
+  const typeOnly = await plan([sliderPath], {
+    records: [...records, { family: 'ColorSlider', export: 'ColorSlider', slug: 'color-slider', source: sliderPath, parts: ['root'] }],
+    textSnapshots: { [sliderPath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [sliderPath]: { before, after } },
+  });
+  assert.deepEqual(typeOnly.reactFamilies, []);
+  assert.ok(typeOnly.reactTestFiles.includes(surface) && runs(typeOnly));
+
+  // A declaration-only edit, the generator, and the manifest exports plan the full React check.
+  for (const path of ['packages/react/src/supplemental/index.d.ts', 'packages/react/src/generate.mjs']) {
+    const result = await plan([path]);
+    assert.equal(result.reactPackageFull, true, path);
+    assert.ok(runs(result), path);
+  }
+  const exported = JSON.stringify({ ...manifest, exports: { ...manifest.exports, './surface.css': './generated/surface.css' } });
+  const exportMap = await plan(['packages/react/package.json'], { reactPackageBefore: JSON.stringify(manifest), reactPackageAfter: exported });
+  assert.equal(exportMap.reactPackageFull, true);
+  assert.ok(runs(exportMap));
+
+  // A bump of @types/react or either compiler, development dependencies of the package, plans the package check;
+  // react-dom is a peer dependency, so it is a runtime boundary change.
+  for (const [field, name] of [['devDependencies', '@types/react'], ['devDependencies', 'typescript'], ['devDependencies', 'typescript-6'], ['peerDependencies', 'react-dom']]) {
+    const bumped = JSON.stringify({ ...manifest, [field]: { ...manifest[field], [name]: '99.0.0' } });
+    const result = await plan(['packages/react/package.json'], { reactPackageBefore: JSON.stringify(manifest), reactPackageAfter: bumped });
+    assert.ok(runs(result), `${name} bump`);
+    assert.ok(result.reactPackageFull || result.packageChecks.includes('@muxui/react'), name);
+  }
+
+  // The fixture and the harness plan the check without widening to the full React proof; the harness plans its controls too.
+  for (const [path, tests] of [
+    ['packages/react/test/fixtures/public-surface-baseline/lightbox.d.ts', [surface]],
+    ['packages/react/test/fixtures/public-surface-baseline/provenance.json', [surface]],
+    ['packages/react/test/fixtures/public-surface-accepted.json', [surface]],
+    ['packages/react/test/fixtures/public-surface-inventory.json', [surface]],
+    ['packages/react/test/support/public-surface-probes.mjs', [controls, surface]],
+    ['packages/react/test/support/public-surface-snapshots.mjs', [controls, surface]],
+    ['packages/react/test/support/public-surface-subjects.mjs', [controls, surface]],
+    ['packages/react/test/support/declaration-surface.mjs', [controls, surface]],
+  ]) {
+    const result = await plan([path], { textSnapshots: { [path]: { before: 'before\n', after: 'after\n' } }, reactTestReferenceSources: await reactTestTexts() });
+    assert.equal(result.reactPackageFull, false, path);
+    for (const test of tests) assert.ok(result.reactTestFiles.includes(test), `${path} plans ${test}`);
+    assert.deepEqual(result.notices, [], path);
+  }
+
+  // Documentation and a catalog guide cannot change the public types.
+  for (const path of ['apps/docs/src/content/docs/index.mdx', 'catalog/guides/accessibility.md']) {
+    const result = await plan([path]);
+    assert.equal(result.reactPackageFull, false, path);
+    assert.ok(!result.reactTestFiles.includes(surface) && !result.reactComponentTests.includes(surface) && !result.packageChecks.includes('@muxui/react'), path);
+    assert.ok(!executionCommands(result, { packages }).some(({ args }) => args.includes(surface)), path);
   }
 });
 

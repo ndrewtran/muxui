@@ -370,8 +370,8 @@ async function writeStorybookWorkspace(root) {
     '',
   ].join('\n'));
   await writeFile(join(root, 'packages/react/src/slider.mjs'), 'export const Slider = () => null;\n');
-  // The component route needs a test that names the family plus the shared style tests.
-  for (const [file, name] of [['slider', 'Slider renders'], ['style-scopes', 'style scopes'], ['styling-tokens', 'styling tokens']]) {
+  // The component route needs a test that names the family plus the shared tests.
+  for (const [file, name] of [['slider', 'Slider renders'], ['public-surface-baseline', 'public surface'], ['style-scopes', 'style scopes'], ['styling-tokens', 'styling tokens']]) {
     await writeFile(join(root, `packages/react/test/${file}.test.mjs`), `import test from 'node:test';\ntest('${name}', () => {});\n`);
   }
   await writeFile(join(root, 'bin/pnpm'), [

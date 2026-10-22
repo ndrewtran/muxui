@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { componentTestSelection, isBrowserTestFile, testNamePattern } from './component-test-selection.mjs';
+import { SHARED_TESTS, componentTestSelection, isBrowserTestFile, testNamePattern } from './component-test-selection.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../../../../packages/react');
 const rawFamilyValues = process.env.MUXUI_COMPONENT_FAMILIES ?? '';
@@ -58,7 +58,7 @@ console.log(`[component-check] tests=${selection.files.join(', ')}`);
 if (selection.behaviorProofFamilies.length > 0) {
   console.log(`[component-check] Storybook BrowserProof families=${selection.behaviorProofFamilies.join(', ')}`);
 }
-console.log('[component-check] shared integrity tests=test/style-scopes.test.mjs, test/styling-tokens.test.mjs');
+console.log(`[component-check] shared integrity tests=${SHARED_TESTS.join(', ')}`);
 const focusedFiles = Object.entries(selection.testNamesByFile);
 if (focusedFiles.length > 0) {
   console.log(`[component-check] focused test names=${focusedFiles.map(([file, names]) => `${file}: ${names.join(' | ')}`).join('; ')}`);
