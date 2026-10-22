@@ -233,9 +233,9 @@ const markupValues = {
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   defaultValue: (doc) => doc.querySelector('input')?.getAttribute('value'),
-  // A list marks each option with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
+  // A list marks each option or row with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
   selectionMode: (doc) => {
-    const option = doc.querySelector('[role="option"]');
+    const option = doc.querySelector('[role="option"], [role="row"]');
     return option === null ? ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')] : (option.getAttribute('data-selection-mode') ?? 'none');
   },
   layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
@@ -256,6 +256,7 @@ const minimalRenders = {
   ListBox: () => h(generated.ListBox, { 'aria-label': 'Options', items: ['One', 'Two'] }),
   // Menu's block is Menu.Root's, so the menu is the triggered composition, closed.
   Menu: () => menuRoot(),
+  GridList: () => h(generated.GridList, { 'aria-label': 'Cards', items: ['One', 'Two'] }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -269,6 +270,7 @@ const partRenders = {
   // A closed popup and a submenu render no markup of their own; their defaults are observed by what each sends React Aria.
   'Menu.popup': { render: () => menuRoot() },
   'Menu.submenu': { render: () => menuRoot() },
+  'GridList.item': { scope: '[role="row"]', render: () => h(generated.GridList, { 'aria-label': 'Cards' }, h(generated.GridList.Item, { id: 'one' }, 'One')) },
 };
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
 

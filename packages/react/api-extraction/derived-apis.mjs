@@ -78,6 +78,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'list-box', name: 'ListBox', source: 'packages/react/src/list-box.ts', parts: { section: 'Section', item: 'Item' } },
   // Menu.Root is the root; the standalone Menu is Menu.List, which `callable` checks. Header and Separator own no props.
   { slug: 'menu', name: 'Menu', part: 'Root', callable: 'list', source: 'packages/react/src/menu.ts', parts: { trigger: 'Trigger', popup: 'Popup', list: 'List', item: 'Item', submenu: 'Submenu', section: 'Section' } },
+  // GridList is its own root and has no Root part; Item owns props beside it.
+  { slug: 'grid-list', name: 'GridList', source: 'packages/react/src/grid-list.ts', parts: { item: 'Item' } },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

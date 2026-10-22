@@ -22,7 +22,7 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/color-swatch.ts',
   'packages/react/src/color-wheel.ts',
   'packages/react/src/combo-box.mjs',
-  'packages/react/src/grid-list.mjs',
+  'packages/react/src/grid-list.ts',
   'packages/react/src/list-box.ts',
   'packages/react/src/menu.ts',
   'packages/react/src/radio-group.ts',

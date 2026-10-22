@@ -7,7 +7,7 @@ export { ColorWheel } from './color-wheel.ts';
 export { ColorPicker } from './color-picker.ts';
 export { ColorSwatchPicker } from './color-swatch-picker.mjs';
 export { ListBox } from './list-box.ts';
-export { GridList } from './grid-list.mjs';
+export { GridList } from './grid-list.ts';
 export { Menu } from './menu.ts';
 export { ComboBox } from './combo-box.mjs';
 export { Select } from './select.mjs';

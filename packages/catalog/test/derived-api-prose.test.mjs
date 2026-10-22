@@ -152,6 +152,8 @@ const GUIDES = {
   toolbar: {},
   'list-box': {},
   menu: {},
+  // className and style are the native attributes of the item and the list. The rest are CSS the guide teaches (a responsive column track, a size container, the card's gap and sizing) and the width and height attributes of the Image it names.
+  'grid-list': { native: ['className', 'style', 'grid-template-columns', '@container', '@media', 'container-type: inline-size', 'gap', 'width', 'height', 'inline-size: 100%', 'overflow: hidden'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

@@ -8043,7 +8043,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/grid-list/artifact.json#bindings/web.react",
-          "packages/react/src/grid-list.mjs#GridList",
+          "packages/react/src/grid-list.ts#GridList",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

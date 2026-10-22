@@ -79,6 +79,10 @@ const audited = [
       ...expand(['menu.trigger', 'menu.item'], ['disabled']),
       ...expand(['menu.popup'], ['offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal']),
       ...expand(['menu.submenu'], ['delay']),
+      // GridList sent selectionMode, isDisabled, and orientation to React Aria as its own values, single, false, and vertical when omitted,
+      // before the move, so a GridListContext never supplied them. Each GridList.Item sent isDisabled as a boolean: its own flag, else the list's.
+      ...expand(['grid-list'], ['selectionMode', 'disabled', 'orientation']),
+      ...expand(['grid-list.item'], ['disabled']),
     ],
   },
   {

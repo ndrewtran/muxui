@@ -2523,6 +2523,34 @@ test('R1.3 GridList layout and orientation reach the root and reject unsupported
   assert.throws(() => renderToString(React.createElement(GridList, { 'aria-label': 'Files', orientation: 'diagonal' })), /GridList orientation/u);
 });
 
+// Several inputs can be invalid at once, and the caller sees the first one the component checks.
+test('R1.3 GridList reports the first invalid input in the order it checks: items, name, selection, layout, orientation', () => {
+  const failure = (props) => {
+    try {
+      renderToString(React.createElement(GridList, props));
+      return 'rendered';
+    } catch (error) {
+      return error.message;
+    }
+  };
+  const named = { 'aria-label': 'Files' };
+  const name = /requires label, aria-label, or aria-labelledby/u;
+  const shape = /GridList (?:layout|orientation) must be/u;
+  // Items first: neither the missing name nor a bad layout is reported over them.
+  assert.doesNotMatch(failure({ items: 5, layout: 'masonry' }), name);
+  assert.doesNotMatch(failure({ ...named, items: 5, layout: 'masonry' }), shape);
+  // Then the name, ahead of the selection and the layout.
+  assert.match(failure({ selectedIds: 5, layout: 'masonry' }), name);
+  assert.match(failure({ layout: 'masonry' }), name);
+  // Then the selection, controlled and then uncontrolled, ahead of the layout.
+  assert.doesNotMatch(failure({ ...named, selectedIds: 5, layout: 'masonry' }), shape);
+  assert.doesNotMatch(failure({ ...named, defaultSelectedIds: 5, layout: 'masonry' }), shape);
+  assert.notEqual(failure({ ...named, selectedIds: 5 }), 'rendered');
+  // Then the layout, ahead of the orientation.
+  assert.match(failure({ ...named, layout: 'masonry', orientation: 'diagonal' }), /GridList layout must be stack or grid/u);
+  assert.match(failure({ ...named, orientation: 'diagonal' }), /GridList orientation must be vertical or horizontal/u);
+});
+
 test('R1.3 GridList.Item composes items, ignores items, and selects when controlled or uncontrolled', async () => {
   const env = createDom();
   const container = document.querySelector('#root');

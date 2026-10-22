@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:57b9a531d706a96f39493abd4eba9ea97f7fb3b51109722119e10500f55a372a -->
+<!-- @generated-content-sha256: sha256:d1e7c9209364c0c873dffc6344cf7eb0fc66c9ebd8c100b59b651f7ef63f2ef2 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -135,7 +135,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DropZone | experimental | . | .muxui-drop-zone | disabled |
 | FileTrigger | experimental | . | .muxui-file-trigger | acceptedFileTypes, allowsMultiple, acceptDirectory, defaultCamera, disabled |
 | Form | experimental | . | .muxui-form | validationBehavior, validationErrors |
-| GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
+| GridList | experimental | . | .muxui-grid-list | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; item: id, textValue, disabled |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
