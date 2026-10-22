@@ -5,6 +5,7 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
+import { DatePickerContext, DateRangePickerContext } from 'react-aria-components';
 import { Checkbox } from '../src/components.ts';
 import {
   Autocomplete,
@@ -732,6 +733,63 @@ test('temporal picker open ownership is independent and honors disabled/read-onl
     dom.window.close();
   }
 });
+
+// A full pointer sequence: React Aria ignores a bare click() on a picker that is already open.
+function pressElement(element) {
+  const init = { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse', detail: 1 };
+  return act(async () => {
+    element.dispatchEvent(new PointerEvent('pointerdown', init));
+    element.dispatchEvent(new MouseEvent('mousedown', init));
+    element.dispatchEvent(new PointerEvent('pointerup', init));
+    element.dispatchEvent(new MouseEvent('mouseup', init));
+    element.dispatchEvent(new MouseEvent('click', init));
+  });
+}
+
+// An omitted defaultOpen must reach React Aria as undefined: its useContextProps
+// merge lets DatePickerContext or DateRangePickerContext supply it, but an explicit
+// false from a parameter default would override that context.
+async function assertPickerDefaultOpen({ Picker, Context, selector, props }) {
+  for (const { scenario, context, extraProps, openAtMount } of [
+    { scenario: 'without a context', context: undefined, extraProps: {}, openAtMount: false },
+    { scenario: 'with a context that sets defaultOpen', context: { defaultOpen: true }, extraProps: {}, openAtMount: true },
+    { scenario: 'with a context that sets defaultOpen and a defaultOpen={false} prop', context: { defaultOpen: true }, extraProps: { defaultOpen: false }, openAtMount: false },
+  ]) {
+    const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
+    const restore = installDom(dom);
+    let root;
+    try {
+      const host = document.querySelector('#root');
+      root = createRoot(host);
+      const picker = React.createElement(Picker, { ...props, ...extraProps });
+      await act(async () => root.render(context ? React.createElement(Context.Provider, { value: context }, picker) : picker));
+      const trigger = host.querySelector(`${selector} .muxui-date-trigger`);
+      const isOpen = () => host.querySelector(selector).getAttribute('data-open') === 'true';
+      assert.equal(isOpen(), openAtMount, `${scenario}: open at mount`);
+      assert.equal(trigger.getAttribute('aria-expanded'), String(openAtMount), `${scenario}: aria-expanded at mount`);
+      await pressElement(trigger);
+      assert.equal(isOpen(), !openAtMount, `${scenario}: open after a trigger press`);
+      assert.equal(trigger.getAttribute('aria-expanded'), String(!openAtMount), `${scenario}: aria-expanded after a trigger press`);
+    } finally {
+      await act(async () => root?.unmount());
+      restore();
+    }
+  }
+}
+
+test('DatePicker takes defaultOpen from DatePickerContext', () => assertPickerDefaultOpen({
+  Picker: DatePicker,
+  Context: DatePickerContext,
+  selector: '.muxui-date-picker',
+  props: { label: 'Due date' },
+}));
+
+test('DateRangePicker takes defaultOpen from DateRangePickerContext', () => assertPickerDefaultOpen({
+  Picker: DateRangePicker,
+  Context: DateRangePickerContext,
+  selector: '.muxui-date-range-picker',
+  props: { label: 'Trip' },
+}));
 
 test('read-only date segments retain accessible semantic contrast', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');

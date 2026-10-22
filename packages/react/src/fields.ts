@@ -419,7 +419,7 @@ export type DatePickerOwnProps = {
   unavailableDateMatcher?: (date: MuxUIDateValue) => boolean;
   /** Whether the calendar is open, when the caller controls it. It is independent of the date: controlling one does not control the other. */
   open?: boolean;
-  /** Whether the calendar starts open, when the picker controls itself. */
+  /** Whether the calendar starts open, when the picker controls itself. Omitted, it starts closed unless a React Aria context supplies defaultOpen. */
   defaultOpen?: boolean;
   /** Disables the field: it can be neither focused nor changed. */
   disabled?: boolean;
@@ -461,7 +461,7 @@ export type DateRangePickerOwnProps = {
   unavailableDateMatcher?: (date: MuxUIDateValue, anchorDate: MuxUIDateValue | null) => boolean;
   /** Whether the calendar is open, when the caller controls it. It is independent of the range: controlling one does not control the other. */
   open?: boolean;
-  /** Whether the calendar starts open, when the picker controls itself. */
+  /** Whether the calendar starts open, when the picker controls itself. Omitted, it starts closed unless a React Aria context supplies defaultOpen. */
   defaultOpen?: boolean;
   /** Disables the field: it can be neither focused nor changed. */
   disabled?: boolean;
@@ -1464,7 +1464,7 @@ export const DatePicker: ForwardRefExoticComponent<DatePickerProps & RefAttribut
     onChange,
     onOpenChange,
     open,
-    defaultOpen = false,
+    defaultOpen,
     disabled = false,
     readOnly = false,
     required = false,
@@ -1526,7 +1526,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     onChange,
     onOpenChange,
     open,
-    defaultOpen = false,
+    defaultOpen,
     disabled = false,
     readOnly = false,
     required = false,
