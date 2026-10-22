@@ -8,7 +8,7 @@ import test from 'node:test';
 import { consumerTsc, tscDiagnostics, typeScript7Tsc } from './support/declaration-surface.mjs';
 import { applyAccepted, comparePublicSurfaces, interpretDiagnostics } from './support/public-surface-probes.mjs';
 import { assertResolution, createSnapshots, entrySpecifier } from './support/public-surface-snapshots.mjs';
-import { inventoryOf, inventoryProblems, listSubjects } from './support/public-surface-subjects.mjs';
+import { MAX_NESTED_DEPTH, inventoryOf, inventoryProblems, listSubjects } from './support/public-surface-subjects.mjs';
 
 const compilers = [{ label: 'TypeScript 7', tsc: typeScript7Tsc() }, { label: 'TypeScript 6', tsc: consumerTsc() }];
 
@@ -202,7 +202,8 @@ export declare const Kept: { Search: React.${component}<{ label?: string } & Rea
     const comparison = comparePublicSurfaces(snapshots, compilers);
     for (const mode of ['loose', 'exact']) {
       const failed = comparison.runs.map((run) => run[mode].failures.filter(({ subject }) => subject.includes('Search')).map(({ subject, assertion }) => `${subject} ${assertion}`).sort());
-      assert.deepEqual(failed, compilers.map(() => ['.:partValue:Kept.Search explicitUndefined', '.:partValue:Kept.Search explicitUndefinedLiteral', '.:partValue:Kept.Search keyof', '.:partValue:Kept.Search optional']), mode);
+      // propTypes is typed any, so its loss shows in the any members as well as in the keys.
+      assert.deepEqual(failed, compilers.map(() => ['.:partValue:Kept.Search any', '.:partValue:Kept.Search explicitUndefined', '.:partValue:Kept.Search explicitUndefinedLiteral', '.:partValue:Kept.Search keyof', '.:partValue:Kept.Search optional']), mode);
     }
     // Nothing about the props of the part differs, so only its value subject shows it.
     assert.ok(!comparison.runs.some((run) => run.loose.failures.some(({ subject }) => subject === '.:part:Kept.Search')));
@@ -257,6 +258,68 @@ test('a member that becomes or stops being any fails, because mutual assignabili
   withPair(alias('any'), alias('string'), (snapshots) => {
     assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected(['Handler mutual']));
   });
+});
+
+test('a readonly index signature that loses its modifier fails the pair proof, beside a named member or alone', () => {
+  // Assignability ignores readonly on an index signature as on a property, and an index signature is no named member.
+  const indexed = (modifier) => `export interface Dictionary { ${modifier}[key: string]: string }
+export interface Indexed { ${modifier}[key: number]: string; name: string }
+export interface Patterned { ${modifier}[key: \`data-\${string}\`]: string }
+`;
+  withPair(indexed('readonly '), indexed(''), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['Dictionary readonly', 'Indexed readonly', 'Patterned readonly']));
+    const payloads = Object.fromEntries(comparison.runs[0].loose.failures.map(({ subject, old, new: next }) => [subject.replace(/^\.:\w+:/u, ''), [old, next]]));
+    assert.deepEqual(payloads, { Dictionary: ['string', 'never'], Indexed: ['number', 'never'], Patterned: ['`data-${string}`', 'never'] });
+  });
+});
+
+test('a readonly modifier that goes missing from a nested object member fails the pair proof, at any depth up to the bound', () => {
+  // A named exported type is its own subject; an anonymous object, optional or not, is read through its member.
+  const nested = (modifier) => `export interface Settings { data?: { ${modifier}id: string }; label?: string }
+export interface Deep { a: { b: { ${modifier}c: string } } }
+`;
+  withPair(nested('readonly '), nested(''), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['Settings readonly:data', 'Deep readonly:a.b']));
+    assert.deepEqual(failuresOf(comparison, 'exact'), expected(['Settings readonly:data', 'Deep readonly:a.b']));
+    const payloads = Object.fromEntries(comparison.runs[0].loose.failures.map(({ subject, old, new: next }) => [subject.replace(/^\.:\w+:/u, ''), [old, next]]));
+    assert.deepEqual(payloads, { Settings: ['"id"', 'never'], Deep: ['"c"', 'never'] });
+  });
+  // A nested member that becomes any is read the same way.
+  const anyMember = (type) => `export interface Options { data: { value: ${type} } }\n`;
+  withPair(anyMember('any'), anyMember('(x: never) => any'), (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected(['Options any:data']));
+  });
+});
+
+test('nested objects are followed through own members only, stop at a cycle and at a type both sides share, and fail closed at the depth bound', () => {
+  const chain = (levels, modifier) => `export interface Holder { ${'a: { '.repeat(levels)}${modifier}id: string${' }'.repeat(levels)} }\n`;
+  // Up to the bound the chain is read; one level more stops the check instead of passing unread.
+  withPair(chain(MAX_NESTED_DEPTH, 'readonly '), chain(MAX_NESTED_DEPTH, ''), (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected([`Holder readonly:${Array(MAX_NESTED_DEPTH).fill('a').join('.')}`]));
+  });
+  withPair(chain(MAX_NESTED_DEPTH + 1, 'readonly '), chain(MAX_NESTED_DEPTH + 1, ''), (snapshots) => {
+    assert.throws(() => comparePublicSurfaces(snapshots, compilers), new RegExp(`Holder nests object members more than ${MAX_NESTED_DEPTH} levels deep at ${Array(MAX_NESTED_DEPTH + 1).fill('a').join('\\.')}`, 'u'));
+  });
+  // A type that refers to itself is read once; React's own types are the same on both sides, and a callable or
+  // constructable member is no nested object, so none of them is followed.
+  const cyclic = (modifier) => `import type * as React from 'react';
+interface Node { ${modifier}id: string; next?: Node }
+interface Thing { id: string }
+export interface Holder { head: Node; style?: React.CSSProperties; view: React.ComponentType<{ id: string }>; ref: React.RefObject<Thing> }
+export {};
+`;
+  const seen = [];
+  withPair(cyclic('readonly '), cyclic(''), (snapshots) => {
+    const tamper = (members) => {
+      seen.push(members.get('.:type:Holder').nested.map(({ path }) => path.join('.')));
+      return members;
+    };
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers, { tamper }), 'loose'), expected(['Holder readonly:head']));
+  });
+  // React's `current` is typed by this package's Thing, but it is not an own member, so it is not followed from `ref`.
+  assert.deepEqual(seen, [['head', 'ref']]);
 });
 
 // Two packages whose declarations import their own name: the self-import is what a wrong layout redirects.

@@ -23,6 +23,8 @@ const SPELLING = NodeBuilderFlags.UseFullyQualifiedType | NodeBuilderFlags.NoTru
 const READONLY_CHECK_FLAG = 8;
 // The depth static parts are followed to (`Sidebar.AccountCard.Something`); a cycle stops sooner.
 const MAX_PART_DEPTH = 4;
+// The depth of object members the readonly probe follows (`settings.data.options.flags`); a chain that goes deeper stops the check.
+export const MAX_NESTED_DEPTH = 4;
 
 const calls = (checker, type) => checker.getSignaturesOfType(type, SignatureKind.Call).length;
 const isObjectLike = (type) => (type.flags & (TypeFlags.Object | TypeFlags.Intersection)) !== 0;
@@ -192,29 +194,30 @@ export function classifyMembers(snapshots, common) {
         throw new Error(`${where} is a callback with a rest parameter, which the handler probes do not cover: extend them to vary the rest element before accepting one`);
       }
     };
-    const result = new Map();
-    for (const { old } of common) {
-      const [oldType, newType] = [aliases.get(names.get(old.id).old), aliases.get(names.get(old.id).new)];
-      for (const type of [oldType, newType]) if (type.isErrorType()) throw new Error(`${old.id} resolves to an error type`);
-      const [oldArms, newArms] = [armsOf(oldType), armsOf(newType)];
-      if (oldArms.length + newArms.length === 0) {
-        result.set(old.id, { shape: 'value', selfCallable: false, examined: [], callable: [] });
-        continue;
-      }
-      const selfCallable = old.kind === 'type' && [...oldArms, ...newArms].some((arm) => calls(checker, arm) > 0);
-      if (selfCallable) [...oldArms, ...newArms].forEach((arm) => rejectVariadic(arm, old.id));
-      if (old.kind === 'value' || old.kind === 'partValue') {
-        result.set(old.id, { shape: 'object', selfCallable: false, examined: [], callable: [] });
-        continue;
+    // The declared type of each exported type: a member typed by one is that subject's own, not a nested object of this one.
+    const subjectTypes = new Set(common.filter(({ old }) => old.kind === 'type').flatMap(({ old }) => [aliases.get(names.get(old.id).old).id, aliases.get(names.get(old.id).new).id]));
+    // A nested object is neither callable nor constructable (a class or React.ComponentType is a callback's kind), nor an array.
+    const isNestedObject = (type) => isObjectLike(type) && !checker.isArrayType(type) && !checker.isTupleType(type) && !subjectTypes.has(type.id)
+      && calls(checker, type) === 0 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0;
+    const membersOf = (arms) => arms.map((arm) => new Map(checker.getPropertiesOfType(arm).map((property) => [property.name, property])));
+    const hasOwnDeclaration = (property) => (property.declarations ?? []).some(isOwn);
+
+    // The names of the members of two sets of arms a probe reads: own ones, and inherited ones that are not the same declaration,
+    // resolved type and readonly modifier in the arms that pair. Arms are paired by mutual assignability; with an unpaired arm
+    // every member is examined. `own` stops at the own members, for a value, whose statics have no inherited twin to compare.
+    const examine = (oldArms, newArms, { own: ownOnly = false } = {}) => {
+      const properties = membersOf([...oldArms, ...newArms]);
+      const allNames = new Set(properties.flatMap((map) => [...map.keys()]));
+      const examined = new Set();
+      if (ownOnly) {
+        for (const name of allNames) if (properties.some((map) => map.has(name) && hasOwnDeclaration(map.get(name)))) examined.add(name);
+        return { properties, oldCount: oldArms.length, examined, allNames };
       }
       const pairs = oldArms.flatMap((oldArm, i) => newArms.flatMap((newArm, j) => (mutual(oldArm, newArm) ? [[i, j]] : [])));
       const paired = oldArms.every((_, i) => pairs.some(([a]) => a === i)) && newArms.every((_, j) => pairs.some(([, b]) => b === j));
-      const properties = [...oldArms, ...newArms].map((arm) => new Map(checker.getPropertiesOfType(arm).map((property) => [property.name, property])));
-      const examined = new Set();
-      const allNames = new Set(properties.flatMap((map) => [...map.keys()]));
       for (const name of allNames) {
         const symbols = properties.map((map) => map.get(name)).filter(Boolean);
-        if (!paired || symbols.some((property) => property.declarations.some(isOwn))) {
+        if (!paired || symbols.some(hasOwnDeclaration)) {
           examined.add(name);
           continue;
         }
@@ -222,11 +225,65 @@ export function classifyMembers(snapshots, common) {
         const identical = pairs.every(([i, j]) => {
           const [left, right] = [properties[i].get(name), properties[oldArms.length + j].get(name)];
           if (!left || !right) return !left && !right;
-          return declarationKey(left) === declarationKey(right) && checker.getTypeOfSymbol(left)?.id === checker.getTypeOfSymbol(right)?.id
+          return left.declarations && right.declarations && declarationKey(left) === declarationKey(right) && checker.getTypeOfSymbol(left)?.id === checker.getTypeOfSymbol(right)?.id
             && (left.checkFlags & READONLY_CHECK_FLAG) === (right.checkFlags & READONLY_CHECK_FLAG);
         });
         if (!identical) examined.add(name);
       }
+      return { properties, oldCount: oldArms.length, examined, allNames };
+    };
+
+    // The object types one side holds under `name`: the constituents of the member's type, without null and undefined.
+    const objectsOf = (maps, name) => {
+      const found = new Map();
+      for (const map of maps) {
+        const type = map.has(name) && checker.getTypeOfSymbol(map.get(name));
+        for (const part of type ? (type.isUnionType() ? type.getTypes() : [type]) : []) if (isNestedObject(part)) found.set(part.id, part);
+      }
+      return [...found.values()].sort((left, right) => left.id - right.id);
+    };
+
+    // The object-typed members of a subject, at any depth, whose readonly modifiers the probe reads: `[{ path, examined }]`. A type
+    // that is the same on both sides (React's) has nothing to compare, a cycle stops where it repeats, and the depth is bounded:
+    // a bound that is reached stops the check.
+    const nestedMembers = (id, level, chain) => {
+      const found = [];
+      const visit = ({ properties, oldCount, examined }, path, ancestors) => {
+        for (const name of [...examined].sort()) {
+          // Own members only: an inherited one that differs is React's, retyped by this package's type arguments.
+          if (name.startsWith('__@') || !properties.some((map) => map.has(name) && hasOwnDeclaration(map.get(name)))) continue;
+          const [before, after] = [objectsOf(properties.slice(0, oldCount), name), objectsOf(properties.slice(oldCount), name)];
+          const [beforeKey, afterKey] = [before, after].map((types) => types.map((type) => type.id).join(','));
+          const key = `${beforeKey}|${afterKey}`;
+          if (before.length + after.length === 0 || beforeKey === afterKey || ancestors.has(key)) continue;
+          if (path.length >= MAX_NESTED_DEPTH) throw new Error(`${id} nests object members more than ${MAX_NESTED_DEPTH} levels deep at ${[...path, name].join('.')}, which the readonly probe does not follow`);
+          const inner = examine(before, after);
+          found.push({ path: [...path, name], examined: [...inner.examined].sort() });
+          visit(inner, [...path, name], new Set([...ancestors, key]));
+        }
+      };
+      visit(level, [], chain);
+      return found;
+    };
+
+    const result = new Map();
+    for (const { old } of common) {
+      const [oldType, newType] = [aliases.get(names.get(old.id).old), aliases.get(names.get(old.id).new)];
+      for (const type of [oldType, newType]) if (type.isErrorType()) throw new Error(`${old.id} resolves to an error type`);
+      const [oldArms, newArms] = [armsOf(oldType), armsOf(newType)];
+      if (oldArms.length + newArms.length === 0) {
+        result.set(old.id, { shape: 'value', selfCallable: false, examined: [], callable: [], nested: [] });
+        continue;
+      }
+      const selfCallable = old.kind === 'type' && [...oldArms, ...newArms].some((arm) => calls(checker, arm) > 0);
+      if (selfCallable) [...oldArms, ...newArms].forEach((arm) => rejectVariadic(arm, old.id));
+      const chain = new Set([`${oldType.id}|${newType.id}`]);
+      if (old.kind === 'value' || old.kind === 'partValue') {
+        result.set(old.id, { shape: 'object', selfCallable: false, examined: [], callable: [], nested: nestedMembers(old.id, examine(oldArms, newArms, { own: true }), chain) });
+        continue;
+      }
+      const level = examine(oldArms, newArms);
+      const { properties, examined, allNames } = level;
       const callable = [...examined].filter((name) => {
         if (name.startsWith('__@')) throw new Error(`${old.id} has the symbol-keyed member ${name}, which the probe cannot name`);
         return properties.some((map) => {
@@ -237,7 +294,7 @@ export function classifyMembers(snapshots, common) {
           });
         });
       });
-      result.set(old.id, { shape: 'object', selfCallable, examined: [...examined].sort(), callable: callable.sort(), inherited: [...allNames].filter((name) => !examined.has(name)).sort() });
+      result.set(old.id, { shape: 'object', selfCallable, examined: [...examined].sort(), callable: callable.sort(), inherited: [...allNames].filter((name) => !examined.has(name)).sort(), nested: nestedMembers(old.id, level, chain) });
     }
     return result;
   });

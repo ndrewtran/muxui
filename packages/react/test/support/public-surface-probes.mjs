@@ -65,10 +65,14 @@ type Bits<F, TO, TN, Tag extends string> = {
     Q extends \`\${string}:exact\` ? [Takes<TO, F>, Takes<TN, F>]
     : Q extends \`\${string}:\${infer K}:\${infer I}\` ? [Takes<TO, Build<F, K, I>>, Takes<TN, Build<F, K, I>>] : never;
 };
-type ReadonlyIn<T, E> = T extends object ? ({ [K in keyof T as K extends E ? K : never]-?: Same<{ [Q in K]: T[K] }, { -readonly [Q in K]: T[K] }> extends true ? never : K } extends infer M ? M[keyof M] : never) : never;
+type ReadonlyIn<T, E> = T extends object ? ({ [K in keyof T as Read<K, E>]-?: Same<{ [Q in K]: T[K] }, { -readonly [Q in K]: T[K] }> extends true ? never : K } extends infer M ? M[keyof M] : never) : never;
 type IsAny<T> = 0 extends 1 & T ? true : false;
-// The members of E typed any: assignability both ways cannot tell an any from anything else.
-type AnyIn<T, E> = T extends object ? ({ [K in keyof T as K extends E ? K : never]-?: IsAny<T[K]> extends true ? K : never } extends infer M ? M[keyof M] : never) : never;
+// The keys a probe reads: those of E, and the index signatures (string, number, symbol and pattern keys), which accept any key.
+type Read<K, E> = K extends E ? K : ({} extends { [P in K & PropertyKey]: 0 } ? K : never);
+// The members typed any: assignability both ways cannot tell an any from anything else.
+type AnyIn<T, E> = T extends object ? ({ [K in keyof T as Read<K, E>]-?: IsAny<T[K]> extends true ? K : never } extends infer M ? M[keyof M] : never) : never;
+// The object member K of each arm, as a type to compare: the nested objects of a subject.
+type Dig<T, K extends PropertyKey> = NonNullable<Member<T, K>>;
 type ReadonlyKeys<P> = P extends object ? { [K in keyof P]-?: Same<{ [Q in K]: P[K] }, { -readonly [Q in K]: P[K] }> extends true ? never : K }[keyof P] : never;
 type ParamAt<F, I> = I extends keyof Params<F> ? Params<F>[I] : never;
 type Writes<FO, FN> = { [Q in \`readonly:\${Pos<FO> | Pos<FN>}\`]: Q extends \`readonly:\${infer I}\` ? [ReadonlyKeys<ParamAt<FO, I>>, ReadonlyKeys<ParamAt<FN, I>>] : never };
@@ -78,7 +82,9 @@ type HandlerTwin<A, X, K extends PropertyKey> = X extends unknown ? (Mutual<A, X
 type VarianceDiff<O, N, K extends PropertyKey> =
   | (O extends unknown ? (true extends HandlerTwin<O, N, K> ? never : Quiet<Disagree<Evidence<Member<O, K>, Member<Pair<O, N>, K>>>>) : never)
   | (N extends unknown ? (true extends HandlerTwin<N, O, K> ? never : Quiet<Disagree<Evidence<Member<Pair<N, O>, K>, Member<N, K>>>>) : never);
-type Keys<T> = T extends unknown ? (string extends keyof T ? never : Extract<keyof T, string>) : never;
+// The named keys of T: not the index signatures, whose pattern keys no list of names can write.
+type Literal<K> = K extends unknown ? ({} extends { [P in K & PropertyKey]: 0 } ? never : K) : never;
+type Keys<T> = T extends unknown ? Literal<Extract<keyof T, string>> : never;
 type Callable<T, E> = T extends unknown ? { [K in keyof T & E]-?: [Fn<T[K]>] extends [never] ? never : K }[keyof T & E] : never;
 `;
 
@@ -109,17 +115,20 @@ export function buildProbe(snapshots, common, members) {
   };
   for (const { old } of common) {
     const [O, N] = [names.get(old.id).old, names.get(old.id).new];
-    const { shape, selfCallable, examined, callable, inherited } = members.get(old.id);
+    const { shape, selfCallable, examined, callable, inherited, nested } = members.get(old.id);
     assert(old, 'mutual', `Mutual<${O}, ${N}> extends true ? Same<IsAny<${O}>, IsAny<${N}>> : false`);
     if (shape === 'object') {
       assert(old, 'arms', `Clean<Unpaired<${O}, ${N}>>`);
       for (const [field, assertion] of FIELDS) assert(old, assertion, `Clean<FieldDiff<${O}, ${N}, '${field}'>>`);
       // Readonly is read for the members the probe examines: the others are the same declaration with the same readonly
       // modifier. A value or part value classifies no members (its statics are its own), so it is read for every key.
-      const readonlyKeys = old.kind === 'value' || old.kind === 'partValue' ? 'PropertyKey' : examined.length > 0 ? union(examined) : undefined;
-      if (readonlyKeys) {
-        assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${readonlyKeys}>>`);
-        assert(old, 'any', `Clean<FieldDiff<${O}, ${N}, 'any', ${readonlyKeys}>>`);
+      const readKeys = old.kind === 'value' || old.kind === 'partValue' ? 'PropertyKey' : listOf(union(examined));
+      assert(old, 'readonly', `Clean<FieldDiff<${O}, ${N}, 'readonly', ${readKeys}>>`);
+      assert(old, 'any', `Clean<FieldDiff<${O}, ${N}, 'any', ${readKeys}>>`);
+      // The object members at each depth, which the pair proof reads as their own subjects.
+      for (const { path, examined: inner } of nested) {
+        const dig = (type) => path.reduce((expression, name) => `Dig<${expression}, ${JSON.stringify(name)}>`, type);
+        for (const field of ['readonly', 'any']) assert(old, `${field}:${path.join('.')}`, `Clean<FieldDiff<${dig(O)}, ${dig(N)}, '${field}', ${listOf(union(inner))}>>`);
       }
     }
     if (selfCallable) assert(old, 'handler', `Clean<Quiet<Disagree<Evidence<${O}, ${N}>>>>`);
