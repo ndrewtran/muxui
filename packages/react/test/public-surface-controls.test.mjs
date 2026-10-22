@@ -126,7 +126,7 @@ export declare const Kept: React.FC<{ label?: string }> & { Other: React.FC<{ ot
     const current = listSubjects(snapshots, snapshots.current);
     const recorded = { baseline: inventoryOf(baseline), added: {} };
     assert.deepEqual(inventoryProblems({ baseline, current, manifest: recorded }).vanished, [
-      '.:components:Panel', '.:parts:Kept.Part', '.:types:Dropped', '.:values:Gone', '.:values:Panel',
+      '.:components:Panel', '.:partValues:Kept.Part', '.:parts:Kept.Part', '.:types:Dropped', '.:values:Gone', '.:values:Panel',
     ]);
     // A subject added since is only reported until it is recorded, and then it may not go away either.
     const grown = [...current, { id: '.:type:Extra', entry: '.', kind: 'type', name: 'Extra' }];
@@ -136,6 +136,23 @@ export declare const Kept: React.FC<{ label?: string }> & { Other: React.FC<{ ot
     assert.ok(inventoryProblems({ baseline, current, manifest: withExtra }).vanished.includes('.:types:Extra'));
     // A baseline that enumerates differently from its record means the enumerator or the fixture changed.
     assert.equal(inventoryProblems({ baseline: baseline.slice(1), current, manifest: recorded }).drifted.length, 1);
+  });
+});
+
+test('a part that loses its own statics fails through its value subject, which its props cannot show', () => {
+  const part = (component) => `import type * as React from 'react';
+export declare const Kept: { Search: React.${component}<{ label?: string } & React.RefAttributes<HTMLDivElement>> };
+`;
+  // ForwardRefExoticComponent carries displayName, defaultProps and propTypes; ExoticComponent does not, and the
+  // props the part takes are the same either way.
+  withPair(part('ForwardRefExoticComponent'), part('ExoticComponent'), (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    for (const mode of ['loose', 'exact']) {
+      const failed = comparison.runs.map((run) => run[mode].failures.filter(({ subject }) => subject.includes('Search')).map(({ subject, assertion }) => `${subject} ${assertion}`).sort());
+      assert.deepEqual(failed, compilers.map(() => ['.:partValue:Kept.Search explicitUndefined', '.:partValue:Kept.Search explicitUndefinedLiteral', '.:partValue:Kept.Search keyof', '.:partValue:Kept.Search optional']), mode);
+    }
+    // Nothing about the props of the part differs, so only its value subject shows it.
+    assert.ok(!comparison.runs.some((run) => run.loose.failures.some(({ subject }) => subject === '.:part:Kept.Search')));
   });
 });
 

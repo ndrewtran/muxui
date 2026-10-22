@@ -4,6 +4,7 @@
 //   value  `typeof` an exported value, with its call and construct signatures and statics
 //   props  `ComponentProps<typeof X>` of an exported component
 //   part   `ComponentProps` of a static part of an exported value, at any depth (`Sidebar.Provider`)
+//   partValue  `typeof` that static part itself, so its own statics (`displayName`) are held too
 // `listSubjects` reads them off one snapshot's declarations, `inventoryProblems` holds them against the
 // recorded manifest, and `classifyMembers` says, for the subjects both snapshots share, which callable
 // members need a handler probe.
@@ -32,11 +33,13 @@ const subjectId = (entry, kind, name) => `${entry}:${kind}:${name}`;
  * root value by indexed access, which needs no identifier-shaped names.
  */
 export function subjectExpression(subject, ns) {
+  const part = () => subject.path.slice(1).reduce((expression, key) => `${expression}[${JSON.stringify(key)}]`, `(typeof ${ns}.${subject.path[0]})`);
   switch (subject.kind) {
     case 'type': return `${ns}.${subject.name}${subject.args ? `<${subject.args.join(', ')}>` : ''}`;
     case 'value': return `typeof ${ns}.${subject.name}`;
     case 'props': return `React.ComponentProps<typeof ${ns}.${subject.name}>`;
-    default: return `React.ComponentProps<${subject.path.slice(1).reduce((expression, key) => `${expression}[${JSON.stringify(key)}]`, `(typeof ${ns}.${subject.path[0]})`)}>`;
+    case 'partValue': return part();
+    default: return `React.ComponentProps<${part()}>`;
   }
 }
 
@@ -61,7 +64,7 @@ export function listSubjects(snapshots, snapshot) {
         if (!propertyType) continue;
         const partPath = [...path, property.name];
         if (isComponent(property.name, propertyType)) {
-          subjects.push({ id: subjectId(entry, 'part', partPath.join('.')), entry, kind: 'part', name: partPath.join('.'), path: partPath });
+          for (const kind of ['part', 'partValue']) subjects.push({ id: subjectId(entry, kind, partPath.join('.')), entry, kind, name: partPath.join('.'), path: partPath });
           walkParts(entry, propertyType, partPath, seen);
         } else if (calls(checker, propertyType) === 0) {
           walkParts(entry, propertyType, partPath, seen);
@@ -96,11 +99,11 @@ export function listSubjects(snapshots, snapshot) {
   });
 }
 
-/** The subjects as the manifest records them: `{ [entry]: { types, values, components, parts } }`, each list of names sorted. */
+/** The subjects as the manifest records them: `{ [entry]: { types, values, components, parts, partValues } }`, each list of names sorted. */
 export function inventoryOf(subjects) {
-  const lists = { type: 'types', value: 'values', props: 'components', part: 'parts' };
+  const lists = { type: 'types', value: 'values', props: 'components', part: 'parts', partValue: 'partValues' };
   const inventory = {};
-  for (const { entry, kind, name } of subjects) (inventory[entry] ??= { types: [], values: [], components: [], parts: [] })[lists[kind]].push(name);
+  for (const { entry, kind, name } of subjects) (inventory[entry] ??= { types: [], values: [], components: [], parts: [], partValues: [] })[lists[kind]].push(name);
   for (const entry of Object.values(inventory)) for (const names of Object.values(entry)) names.sort();
   return Object.fromEntries(Object.entries(inventory).sort(([left], [right]) => left.localeCompare(right)));
 }
@@ -186,7 +189,7 @@ export function classifyMembers(snapshots, common) {
         continue;
       }
       const selfCallable = old.kind === 'type' && [...oldArms, ...newArms].some((arm) => calls(checker, arm) > 0);
-      if (old.kind === 'value') {
+      if (old.kind === 'value' || old.kind === 'partValue') {
         result.set(old.id, { shape: 'object', selfCallable: false, examined: [], callable: [] });
         continue;
       }
