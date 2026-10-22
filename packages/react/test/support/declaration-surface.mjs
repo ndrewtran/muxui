@@ -70,48 +70,76 @@ export function consumerTsc() {
 }
 
 /**
+ * Opens `files` as one TypeScript 7 API project and runs `use({ checker, program })` on it. The project's
+ * config goes in `directory` (a fresh temporary one when omitted, removed afterwards), where module
+ * resolution of any generated file placed there also starts.
+ */
+export function withDeclarationProject({ files, compilerOptions, directory }, use) {
+  const owned = directory === undefined;
+  const root = directory ?? mkdtempSync(join(tmpdir(), 'muxui-declaration-kinds-'));
+  const config = join(root, 'tsconfig.declaration-project.json');
+  writeFileSync(config, `${JSON.stringify({
+    compilerOptions: { target: 'ESNext', module: 'NodeNext', moduleResolution: 'NodeNext', types: [], strict: true, noEmit: true, skipLibCheck: true, ...compilerOptions },
+    files,
+  })}\n`);
+  const api = new API({ cwd: root });
+  try {
+    const { checker, program } = api.updateSnapshot({ openProjects: [config] }).getProject(config);
+    return use({ checker, program });
+  } finally {
+    api.close();
+    rmSync(config, { force: true });
+    if (owned) rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/** What an export resolves to: the symbol behind any re-export, with the kind of each declaration. */
+export function exportedDeclarations(checker, symbol) {
+  const resolved = symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+  const kinds = resolved.declarations.map(({ kind }) => DECLARATION_KINDS[kind] ?? SyntaxKind[kind]);
+  return { symbol: resolved, kinds: [...new Set(kinds)].sort() };
+}
+
+/**
  * Each name the barrel exports with the kind of declaration it resolves to through any re-export
  * (`kind`, the kinds joined by `+` when merged) and whether it takes type parameters.
  */
 export function barrelDeclarations(entry) {
-  const directory = mkdtempSync(join(tmpdir(), 'muxui-declaration-kinds-'));
-  const config = join(directory, 'tsconfig.json');
-  writeFileSync(config, `${JSON.stringify({
-    compilerOptions: { target: 'ESNext', module: 'NodeNext', moduleResolution: 'NodeNext', types: [], strict: true, noEmit: true, skipLibCheck: true },
-    files: [entry],
-  })}\n`);
-  const api = new API({ cwd: directory });
-  try {
-    const { checker, program } = api.updateSnapshot({ openProjects: [config] }).getProject(config);
+  return withDeclarationProject({ files: [entry] }, ({ checker, program }) => {
     const barrel = checker.getSymbolAtLocation(program.getSourceFile(entry));
-    return Object.fromEntries(checker.getExportsOfModule(barrel).map((symbol) => {
-      const { declarations } = symbol.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
-      const kinds = declarations.map(({ kind }) => DECLARATION_KINDS[kind] ?? SyntaxKind[kind]);
-      return [symbol.name, { kind: [...new Set(kinds)].sort().join('+'), generic: declarations.some((declaration) => declaration.resolve()?.typeParameters?.length > 0) }];
+    return Object.fromEntries(checker.getExportsOfModule(barrel).map((exported) => {
+      const { symbol, kinds } = exportedDeclarations(checker, exported);
+      return [exported.name, { kind: kinds.join('+'), generic: symbol.declarations.some((declaration) => declaration.resolve()?.typeParameters?.length > 0) }];
     }));
-  } finally {
-    api.close();
-    rmSync(directory, { recursive: true, force: true });
-  }
+  });
 }
 
 /**
- * Runs `tsc -p config` (`tsc` is the compiler's script) and returns the diagnostic line each error
- * printed, elaborations left out. An absent diagnostic means a pair passed, so a compile that did not
- * run to completion must fail rather than read as every pair passing: a spawn error or a truncated
- * read (`maxBuffer`), a signal, anything on stderr, an exit status other than the compiler's own
- * 0, 1, and 2, and an exit status that disagrees with whether any diagnostic printed all throw.
+ * Runs `tsc --noEmit --pretty false -p config` plus `args` (`tsc` is the compiler's script) and returns its
+ * output and exit status. A run that did not complete throws: a spawn error or a truncated read
+ * (`maxBuffer`), a signal, and anything on stderr.
  */
-export function tscDiagnostics({ tsc, config, directory, maxBuffer = 1 << 28 }) {
-  const result = spawnSync(process.execPath, [tsc, '--noEmit', '--pretty', 'false', '-p', config], { cwd: directory, encoding: 'utf8', maxBuffer });
+export function runTsc({ tsc, config, directory, args = [], maxBuffer = 1 << 28 }) {
+  const result = spawnSync(process.execPath, [tsc, '--noEmit', '--pretty', 'false', '-p', config, ...args], { cwd: directory, encoding: 'utf8', maxBuffer });
   const label = `tsc ${tsc} -p ${config}`;
   if (result.error) throw new Error(`${label} did not complete: ${result.error.message}`, { cause: result.error });
   if (result.signal) throw new Error(`${label} was stopped by ${result.signal}`);
   if (result.stderr !== '') throw new Error(`${label} wrote to stderr: ${result.stderr.trim().slice(0, 500)}`);
+  return { stdout: result.stdout, status: result.status, label };
+}
+
+/**
+ * Runs `tsc -p config` and returns the diagnostic line each error printed, elaborations left out. An
+ * absent diagnostic means a pair passed, so a compile that did not run to completion must fail rather
+ * than read as every pair passing: see `runTsc`, and an exit status other than the compiler's own 0, 1,
+ * and 2, and an exit status that disagrees with whether any diagnostic printed also throw.
+ */
+export function tscDiagnostics({ tsc, config, directory, maxBuffer }) {
+  const { stdout, status, label } = runTsc({ tsc, config, directory, maxBuffer });
   // The compiler prints each diagnostic on a line of its own, with any elaboration indented below it.
-  const diagnostics = result.stdout.split('\n').filter((text) => text !== '' && !/^\s/u.test(text));
-  if (![0, 1, 2].includes(result.status) || (result.status === 0) !== (diagnostics.length === 0)) {
-    throw new Error(`${label} exited ${result.status} with ${diagnostics.length} diagnostics`);
+  const diagnostics = stdout.split('\n').filter((text) => text !== '' && !/^\s/u.test(text));
+  if (![0, 1, 2].includes(status) || (status === 0) !== (diagnostics.length === 0)) {
+    throw new Error(`${label} exited ${status} with ${diagnostics.length} diagnostics`);
   }
   return diagnostics;
 }

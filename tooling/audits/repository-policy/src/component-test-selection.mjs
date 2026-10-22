@@ -1,6 +1,9 @@
 import { parse } from 'acorn';
 
-const SHARED_TESTS = Object.freeze([
+// Every family check runs these: the style integrity tests, and the public types against the declarations from
+// before the TypeScript moves, which any family's TypeScript can change.
+export const SHARED_TESTS = Object.freeze([
+  'test/public-surface-baseline.test.mjs',
   'test/style-scopes.test.mjs',
   'test/styling-tokens.test.mjs',
 ]);

@@ -1,0 +1,440 @@
+import type * as React from 'react';
+import type { IconButtonProps, MenuListProps } from '@muxui/react';
+
+export type SupplementalActivation = {
+  type: 'activate';
+  pointerType?: string;
+  target?: EventTarget | null;
+};
+
+export type SupplementalFieldProps = {
+  disabled?: boolean;
+  invalid?: boolean;
+  required?: boolean;
+  readOnly?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+};
+
+type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & { className?: string };
+type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  disabled?: boolean;
+  onActivate?: (event: SupplementalActivation) => void;
+  className?: string;
+};
+
+export type AlertDialogRootProps = {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children?: React.ReactNode;
+};
+export type AlertDialogActionsProps = PartProps<HTMLDivElement>;
+export type AlertDialogTriggerProps = ButtonPartProps;
+export type AlertDialogCloseProps = ButtonPartProps;
+
+export declare const AlertDialog: {
+  Root: React.ForwardRefExoticComponent<AlertDialogRootProps & React.RefAttributes<HTMLElement>>;
+  Backdrop: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Popup: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Content: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Title: React.ForwardRefExoticComponent<PartProps<HTMLHeadingElement> & React.RefAttributes<HTMLHeadingElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLParagraphElement> & React.RefAttributes<HTMLParagraphElement>>;
+  Trigger: React.ForwardRefExoticComponent<AlertDialogTriggerProps & React.RefAttributes<HTMLButtonElement>>;
+  Actions: React.ForwardRefExoticComponent<AlertDialogActionsProps & React.RefAttributes<HTMLDivElement>>;
+  Close: React.ForwardRefExoticComponent<AlertDialogCloseProps & React.RefAttributes<HTMLButtonElement>>;
+};
+
+export type ButtonGroupProps = React.HTMLAttributes<HTMLDivElement> & {
+  orientation?: 'horizontal' | 'vertical';
+  attached?: boolean;
+  disabled?: boolean;
+  role?: 'group' | 'region' | 'presentation';
+  children?: React.ReactNode;
+};
+export declare const ButtonGroup: React.ForwardRefExoticComponent<ButtonGroupProps & React.RefAttributes<HTMLDivElement>>;
+
+export type CardVariant = 'elevated' | 'outlined' | 'filled';
+export type CardPadding = 'sm' | 'md' | 'lg';
+export type CardRootProps = React.HTMLAttributes<HTMLDivElement> & { variant?: CardVariant; padding?: CardPadding };
+export type CardButtonProps = ButtonPartProps & { variant?: CardVariant; padding?: CardPadding; selected?: boolean; pending?: boolean };
+export type CardHeaderProps = PartProps<HTMLDivElement>;
+export type CardBodyProps = PartProps<HTMLDivElement>;
+export type CardFooterProps = PartProps<HTMLDivElement>;
+export declare const Card: {
+  Root: React.ForwardRefExoticComponent<CardRootProps & React.RefAttributes<HTMLDivElement>>;
+  Button: React.ForwardRefExoticComponent<CardButtonProps & React.RefAttributes<HTMLButtonElement>>;
+  Header: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Body: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Footer: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+};
+
+export type CheckboxFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & { checked?: boolean; defaultChecked?: boolean; indeterminate?: boolean; name?: string; value?: string; onChange?: (checked: boolean) => void };
+export type CheckboxFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & { disabled?: boolean };
+export type CheckboxFieldIndicatorProps = PartProps<HTMLSpanElement>;
+export type CheckboxFieldDescriptionProps = PartProps<HTMLElement>;
+export type CheckboxFieldErrorProps = PartProps<HTMLElement>;
+export declare const CheckboxField: {
+  Root: React.ForwardRefExoticComponent<CheckboxFieldRootProps & React.RefAttributes<HTMLDivElement>>;
+  Button: React.ForwardRefExoticComponent<CheckboxFieldButtonProps & React.RefAttributes<HTMLLabelElement>>;
+  Indicator: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+};
+
+export type ColorMode = 'light' | 'dark';
+export type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> & {
+  mode?: ColorMode;
+  defaultMode?: ColorMode;
+  storageKey?: string;
+  disabled?: boolean;
+  onModeChange?: (mode: ColorMode) => void;
+};
+export declare const ColorModeToggle: React.ForwardRefExoticComponent<ColorModeToggleProps & React.RefAttributes<HTMLLabelElement>>;
+
+export type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; size?: 'sm' | 'md' | 'lg'; closeOnSelect?: boolean };
+export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; target?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
+export interface CommandPaletteCommand {
+  id: string;
+  title: string;
+  subtitle?: string;
+  keywords?: readonly string[];
+  group?: string;
+  icon?: React.ReactNode;
+  shortcut?: readonly string[];
+  disabled?: boolean;
+  href?: string;
+  target?: string;
+  action?: () => void | Promise<void>;
+  closeOnSelect?: boolean;
+}
+export interface CommandPaletteGroup<T extends CommandPaletteCommand = CommandPaletteCommand> {
+  id: string;
+  title: string;
+  commands: readonly T[];
+}
+export interface UseCommandPaletteOptions<T extends CommandPaletteCommand> {
+  commands: readonly T[];
+  query?: string;
+  defaultQuery?: string;
+  onQueryChange?: (query: string) => void;
+  filter?: false | ((command: T, query: string) => boolean);
+  sort?: false | ((a: T, b: T, query: string) => number);
+  groupBy?: (command: T) => string | null | undefined;
+  getGroupTitle?: (groupId: string) => string;
+  onAction?: (command: T) => void | Promise<void>;
+  onError?: (error: unknown, command: T) => void;
+  close?: () => void;
+  closeOnSelect?: boolean;
+}
+export interface UseCommandPaletteReturn<T extends CommandPaletteCommand> {
+  query: string;
+  setQuery: (query: string) => void;
+  filteredCommands: readonly T[];
+  groupedCommands: readonly CommandPaletteGroup<T>[];
+  runCommand: (commandOrId: T | string) => Promise<void>;
+  getItemProps: (command: T) => CommandPaletteItemProps;
+}
+export declare function useCommandPalette<T extends CommandPaletteCommand>(options: UseCommandPaletteOptions<T>): UseCommandPaletteReturn<T>;
+export type CommandPaletteTriggerProps = ButtonPartProps;
+export type CommandPaletteBackdropProps = PartProps<HTMLDivElement> & { dismissable?: boolean };
+export type CommandPalettePopupProps = PartProps<HTMLElement>;
+export type CommandPaletteTitleProps = PartProps<HTMLHeadingElement>;
+export type CommandPaletteDescriptionProps = PartProps<HTMLParagraphElement>;
+export type CommandPaletteCloseProps = ButtonPartProps;
+export type CommandPaletteContentProps = PartProps<HTMLDivElement>;
+export type CommandPaletteSearchFieldProps = React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'inline' };
+export type CommandPaletteInputProps = React.InputHTMLAttributes<HTMLInputElement>;
+export type CommandPaletteClearButtonProps = ButtonPartProps;
+// Static children, or items with a render function that returns one element per item.
+// A render function without items renders nothing, and items without a render function are ignored.
+type CommandPaletteItemsProps<T> =
+  | { items?: undefined; dependencies?: undefined; children?: React.ReactNode }
+  | { items: Iterable<T>; dependencies?: readonly unknown[]; children: (item: T) => React.ReactElement };
+export type CommandPaletteListBoxProps<T = unknown> = Omit<PartProps<HTMLDivElement>, 'children'> & CommandPaletteItemsProps<T>;
+export type CommandPaletteSectionProps<T = unknown> = Omit<PartProps<HTMLElement>, 'children'> & CommandPaletteItemsProps<T>;
+export type CommandPaletteSectionHeaderProps = PartProps<HTMLElement>;
+export type CommandPaletteSeparatorProps = PartProps<HTMLHRElement>;
+export type CommandPaletteItemIconProps = PartProps<HTMLSpanElement>;
+export type CommandPaletteItemContentProps = PartProps<HTMLDivElement>;
+export type CommandPaletteItemTitleProps = PartProps<HTMLSpanElement>;
+export type CommandPaletteItemDescriptionProps = PartProps<HTMLSpanElement>;
+export type CommandPaletteItemMetaProps = PartProps<HTMLSpanElement>;
+export type CommandPaletteShortcutProps = PartProps<HTMLSpanElement> & { keys?: readonly string[] };
+export type CommandPaletteLoadMoreItemProps = PartProps<HTMLDivElement>;
+export type CommandPaletteCollectionProps<T = unknown> = CommandPaletteItemsProps<T>;
+export type CommandPaletteEmptyProps = PartProps<HTMLDivElement>;
+export type CommandPaletteFooterProps = PartProps<HTMLDivElement>;
+export type CommandPaletteChipsProps = PartProps<HTMLDivElement>;
+export type CommandPaletteChipProps = PartProps<HTMLSpanElement>;
+export type CommandPaletteChipRemoveProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
+export interface CommandPaletteListBoxComponent {
+  <T = unknown>(props: CommandPaletteListBoxProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
+}
+export interface CommandPaletteSectionComponent {
+  <T = unknown>(props: CommandPaletteSectionProps<T> & React.RefAttributes<HTMLElement>): React.ReactElement | null;
+}
+export interface CommandPaletteCollectionComponent {
+  <T = unknown>(props: CommandPaletteCollectionProps<T>): React.ReactElement | null;
+}
+export declare const CommandPalette: {
+  Root: React.ForwardRefExoticComponent<CommandPaletteRootProps & React.RefAttributes<HTMLDivElement>>;
+  Trigger: React.ForwardRefExoticComponent<ButtonPartProps & React.RefAttributes<HTMLButtonElement>>;
+  Backdrop: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { dismissable?: boolean } & React.RefAttributes<HTMLDivElement>>;
+  Popup: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Title: React.ForwardRefExoticComponent<PartProps<HTMLHeadingElement> & React.RefAttributes<HTMLHeadingElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLParagraphElement> & React.RefAttributes<HTMLParagraphElement>>;
+  Close: React.ForwardRefExoticComponent<ButtonPartProps & React.RefAttributes<HTMLButtonElement>>;
+  Content: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  SearchField: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'inline' } & React.RefAttributes<HTMLDivElement>>;
+  Input: React.ForwardRefExoticComponent<React.InputHTMLAttributes<HTMLInputElement> & React.RefAttributes<HTMLInputElement>>;
+  ClearButton: React.ForwardRefExoticComponent<ButtonPartProps & React.RefAttributes<HTMLButtonElement>>;
+  ListBox: CommandPaletteListBoxComponent;
+  Section: CommandPaletteSectionComponent;
+  SectionHeader: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Item: React.ForwardRefExoticComponent<CommandPaletteItemProps & React.RefAttributes<HTMLDivElement>>;
+  Separator: React.ForwardRefExoticComponent<PartProps<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
+  Collection: CommandPaletteCollectionComponent;
+  ItemIcon: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  ItemContent: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  ItemTitle: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  ItemDescription: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  ItemMeta: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  Shortcut: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & { keys?: readonly string[] } & React.RefAttributes<HTMLSpanElement>>;
+  LoadMoreItem: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Empty: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Footer: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Chips: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Chip: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  ChipRemove: React.ForwardRefExoticComponent<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>>;
+};
+
+export type HeaderNavRootProps = React.HTMLAttributes<HTMLElement>;
+export type HeaderNavNavButtonProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & { current?: boolean };
+export declare const HeaderNav: {
+  Root: React.ForwardRefExoticComponent<HeaderNavRootProps & React.RefAttributes<HTMLElement>>;
+  Logo: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { href?: string } & React.RefAttributes<HTMLDivElement>>;
+  NavButton: React.ForwardRefExoticComponent<HeaderNavNavButtonProps & React.RefAttributes<HTMLAnchorElement>>;
+  Actions: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Secondary: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  MobileTrigger: React.ComponentType<{ children?: React.ReactNode }>;
+};
+
+export type InputTagsProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
+  tagPlacement?: 'inline' | 'below';
+  placeholder?: string;
+  value?: string[];
+  defaultValue?: string[];
+  onChange?: (tags: string[]) => void;
+  onTagAdded?: (tag: string) => void;
+  onTagRemoved?: (tag: string) => void;
+  allowDuplicates?: boolean;
+  maxTags?: number;
+  validate?: (value: string) => boolean;
+  label?: React.ReactNode;
+  description?: React.ReactNode;
+  errorMessage?: React.ReactNode;
+};
+export type InputTagsRootProps = InputTagsProps;
+export declare const InputTags: { Root: React.ForwardRefExoticComponent<InputTagsProps & React.RefAttributes<HTMLDivElement>> };
+
+export type InputRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+};
+export type InputControlProps = React.InputHTMLAttributes<HTMLInputElement>;
+export type InputProps = InputControlProps;
+export type InputLabelProps = PartProps<HTMLLabelElement>;
+export type InputDescriptionProps = PartProps<HTMLElement>;
+export type InputErrorProps = PartProps<HTMLElement>;
+export declare const Input: {
+  Root: React.ForwardRefExoticComponent<InputRootProps & React.RefAttributes<HTMLDivElement>>;
+  Input: React.ForwardRefExoticComponent<InputControlProps & React.RefAttributes<HTMLInputElement>>;
+  Label: React.ForwardRefExoticComponent<PartProps<HTMLLabelElement> & React.RefAttributes<HTMLLabelElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+};
+
+export type MultiSelectItem = { id: React.Key; [key: string]: unknown };
+export type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; supportingText?: React.ReactNode; emptyStateTitle?: string; emptyStateDescription?: string; items?: Iterable<T>; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key> | 'all'; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key> | 'all') => void; showSearch?: boolean; showFooter?: boolean; onReset?: () => void; onSelectAll?: () => void; selectedCountFormatter?: (count: number) => React.ReactNode };
+export type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;
+export type MultiSelectItemProps = React.HTMLAttributes<HTMLDivElement> & { disabled?: boolean; textValue?: string };
+export interface MultiSelectRootComponent {
+  <T extends MultiSelectItem = MultiSelectItem>(props: MultiSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
+}
+export declare const MultiSelect: {
+  Root: MultiSelectRootComponent;
+  Item: React.ForwardRefExoticComponent<MultiSelectItemProps & React.RefAttributes<HTMLDivElement>>;
+};
+
+export type PaymentInputProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & { value?: string; defaultValue?: string; onChange?: (value: string) => void };
+export type PaymentInputRootProps = PaymentInputProps;
+export type PaymentInputGroupProps = PartProps<HTMLDivElement>;
+export type PaymentInputInputProps = InputControlProps;
+export type PaymentInputLabelProps = PartProps<HTMLLabelElement>;
+export type PaymentInputDescriptionProps = PartProps<HTMLElement>;
+export type PaymentInputErrorProps = PartProps<HTMLElement>;
+export type PaymentInputCardIconProps = Omit<PartProps<HTMLSpanElement>, 'aria-label' | 'children'> & { cardType?: 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown' };
+export declare const PaymentInput: {
+  Root: React.ForwardRefExoticComponent<PaymentInputProps & React.RefAttributes<HTMLDivElement>>;
+  Group: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Input: React.ForwardRefExoticComponent<InputControlProps & React.RefAttributes<HTMLInputElement>>;
+  Label: React.ForwardRefExoticComponent<PartProps<HTMLLabelElement> & React.RefAttributes<HTMLLabelElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  CardIcon: React.ForwardRefExoticComponent<PaymentInputCardIconProps & React.RefAttributes<HTMLSpanElement>>;
+};
+
+export type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & { value?: number | null; minValue?: number; maxValue?: number; size?: 'sm' | 'md' | 'lg'; /** Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence. */ label?: string };
+export type ProgressCircleRootProps = ProgressCircleProps;
+export type ProgressCircleTrackProps = React.SVGAttributes<SVGSVGElement>;
+export type ProgressCircleLabelProps = PartProps<HTMLSpanElement>;
+export type ProgressCircleValueProps = PartProps<HTMLSpanElement>;
+export declare const ProgressCircle: {
+  Root: React.ForwardRefExoticComponent<ProgressCircleProps & React.RefAttributes<HTMLDivElement>>;
+  Track: React.ForwardRefExoticComponent<React.SVGAttributes<SVGSVGElement> & React.RefAttributes<SVGSVGElement>>;
+  Label: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  Value: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+};
+
+export type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size' | 'readOnly'> & { size?: 'sm' | 'md' | 'lg'; value: string };
+export type RadioFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & { disabled?: boolean };
+export type RadioFieldIndicatorProps = PartProps<HTMLSpanElement>;
+export type RadioFieldDotProps = PartProps<HTMLSpanElement>;
+export type RadioFieldDescriptionProps = PartProps<HTMLElement>;
+export type RadioFieldErrorProps = PartProps<HTMLElement>;
+export declare const RadioField: {
+  Root: React.ForwardRefExoticComponent<RadioFieldRootProps & React.RefAttributes<HTMLDivElement>>;
+  Button: React.ForwardRefExoticComponent<RadioFieldButtonProps & React.RefAttributes<HTMLLabelElement>>;
+  Indicator: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  Dot: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+};
+
+export type SidebarProps = React.HTMLAttributes<HTMLElement> & {
+  hideBorder?: boolean;
+  /** `compact` tightens nav rows, gaps, section labels, and nesting; text sizes and focus rings are unchanged. */
+  density?: 'default' | 'compact';
+};
+export type SidebarProviderProps = {
+  /** Folded state; supply it with `onCollapsedChange` to control the rail. */
+  collapsed?: boolean;
+  defaultCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  /** A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor. */
+  shortcut?: string;
+  children?: React.ReactNode;
+};
+/** Names the control "Toggle sidebar" unless `aria-label` or `aria-labelledby` says otherwise. */
+export type SidebarToggleProps = Omit<IconButtonProps, 'aria-label' | 'aria-labelledby'> & { 'aria-label'?: string; 'aria-labelledby'?: string };
+export type SidebarSectionProps = PartProps<HTMLLIElement> & { label: React.ReactNode };
+/** Open state shared by every nav group: supply `expanded` with `onExpandedChange` to control it, or `defaultExpanded` to start it open. */
+export type SidebarExpandedProps = {
+  expanded?: boolean;
+  defaultExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+};
+/**
+ * A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a
+ * toggle button. `id` is a stable React key and defaults to `href`.
+ */
+export type SidebarNavEntry = SidebarExpandedProps & { id?: string; label: React.ReactNode; current?: boolean } & (
+  | { href: string; items?: SidebarNavEntry[] }
+  | { href?: string; items: SidebarNavEntry[] }
+);
+export type SidebarNavItemProps = SidebarExpandedProps & {
+  href?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  badge?: React.ReactNode;
+  /** Marks the item's page with `aria-current="page"`; on a group without `href` it only styles the header. */
+  current?: boolean;
+  children?: React.ReactNode;
+  items?: SidebarNavEntry[];
+  external?: boolean;
+};
+/** The part of Menu's list props that AccountMenu supports. The card's button names the menu and owns its open state. */
+export type SidebarAccountMenuProps = Pick<MenuListProps, 'items' | 'children' | 'onAction' | 'className'>;
+export declare const Sidebar: {
+  Provider: React.ComponentType<SidebarProviderProps>;
+  Root: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<HTMLElement>>;
+  Toggle: React.ForwardRefExoticComponent<SidebarToggleProps & React.RefAttributes<HTMLButtonElement>>;
+  Header: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
+  Search: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { placeholder?: string; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement> } & React.RefAttributes<HTMLDivElement>>;
+  Divider: React.ForwardRefExoticComponent<PartProps<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
+  NavList: React.ForwardRefExoticComponent<PartProps<HTMLUListElement> & React.RefAttributes<HTMLUListElement>>;
+  Section: React.ForwardRefExoticComponent<SidebarSectionProps & React.RefAttributes<HTMLLIElement>>;
+  NavItem: React.ComponentType<SidebarNavItemProps>;
+  NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
+  /** Shows the account. While an `AccountMenu` is mounted inside it, its Account options button opens that menu; without one the card has no button. */
+  AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;
+  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`, and read the chosen item from `onAction`. Only valid inside `AccountCard`, one per card. */
+  AccountMenu: React.ForwardRefExoticComponent<SidebarAccountMenuProps & React.RefAttributes<HTMLDivElement>>;
+  MobileTrigger: React.ComponentType<{ children?: React.ReactNode; logo?: React.ReactNode }>;
+  FeatureCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { title?: string; description?: string; dismissLabel?: string; onDismiss?: () => void } & React.RefAttributes<HTMLDivElement>>;
+};
+
+export type SwitchFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & { checked?: boolean; defaultChecked?: boolean; name?: string; value?: string; onChange?: (checked: boolean) => void };
+export type SwitchFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & { disabled?: boolean };
+export type SwitchFieldThumbProps = PartProps<HTMLSpanElement>;
+export type SwitchFieldDescriptionProps = PartProps<HTMLElement>;
+export type SwitchFieldErrorProps = PartProps<HTMLElement>;
+export declare const SwitchField: {
+  Root: React.ForwardRefExoticComponent<SwitchFieldRootProps & React.RefAttributes<HTMLDivElement>>;
+  Button: React.ForwardRefExoticComponent<SwitchFieldButtonProps & React.RefAttributes<HTMLLabelElement>>;
+  Thumb: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+};
+
+export type TagSelectItem = { id: React.Key; [key: string]: unknown };
+export type TagSelectProps<T extends TagSelectItem = TagSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; items?: T[]; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key>; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key>) => void; getItemLabel?: (item: T) => string };
+export type TagSelectRootProps<T extends TagSelectItem = TagSelectItem> = TagSelectProps<T>;
+export type TagSelectItemProps = React.HTMLAttributes<HTMLDivElement> & { disabled?: boolean; textValue?: string };
+export interface TagSelectRootComponent {
+  <T extends TagSelectItem = TagSelectItem>(props: TagSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
+}
+export declare const TagSelect: {
+  Root: TagSelectRootComponent;
+  Item: React.ForwardRefExoticComponent<TagSelectItemProps & React.RefAttributes<HTMLDivElement>>;
+};
+
+export type TextVariant = 'display' | 'heading' | 'title' | 'label' | 'body' | 'expressive' | 'mono';
+export type TextSize = 'xs' | 'sm' | 'md' | 'lg';
+export type TextColor = 'default' | 'muted';
+export type TextElement = 'p' | 'span' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'div' | 'label';
+type TextVisualProps =
+  | { variant?: 'body'; size?: TextSize }
+  | { variant: 'display' | 'heading' | 'title'; size?: Exclude<TextSize, 'xs'> }
+  | { variant: 'label' | 'expressive' | 'mono'; size?: TextSize };
+export type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & {
+  as?: T;
+  color?: TextColor;
+  truncate?: boolean;
+  className?: string;
+};
+export interface TextComponent {
+  <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;
+}
+export declare const Text: TextComponent;
+
+export type TextAreaRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+};
+export type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+export type TextAreaLabelProps = PartProps<HTMLLabelElement>;
+export type TextAreaDescriptionProps = PartProps<HTMLElement>;
+export type TextAreaErrorProps = PartProps<HTMLElement>;
+export declare const TextArea: {
+  Root: React.ForwardRefExoticComponent<TextAreaRootProps & React.RefAttributes<HTMLDivElement>>;
+  TextArea: React.ForwardRefExoticComponent<React.TextareaHTMLAttributes<HTMLTextAreaElement> & React.RefAttributes<HTMLTextAreaElement>>;
+  Label: React.ForwardRefExoticComponent<PartProps<HTMLLabelElement> & React.RefAttributes<HTMLLabelElement>>;
+  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
+};
+
+export declare const supplementalFamilies: readonly [
+  'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text'
+];
