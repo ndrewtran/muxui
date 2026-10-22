@@ -419,6 +419,7 @@ const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nex
 // (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type * as React from 'react';
 import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
+import type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 import type { MuxUIColorValue } from './color-context.js';
 import type { ControlSize, FieldValidationProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, NamedFieldProps } from './fields.js';
 import type { MuxUIPlacement } from './overlays.js';
@@ -455,14 +456,12 @@ export type { RadioGroupProps, RadioOption } from './radio-group.js';
 export { TokenField } from './token-field.js';
 export type { TokenFieldProps } from './token-field.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
+export type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const collectionsTypes = `
-export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; /** Consumer data; named Select and ComboBox forms submit the item \`id\`, not \`value\`. */ value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
-export type MuxUISelection = string[] | 'all';
-export type MuxUIItems = Array<MuxUICollectionItem | string>;
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
@@ -1031,7 +1030,7 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // The collections barrel and the modules its families share. None declares a registry family, so
 // the loop above skips them; assertFlatImports below fails the build if a family imports one that
 // is not listed.
-for (const name of ['collections', 'collection-items', 'collection-trigger', 'grid-virtualizer-context']) {
+for (const name of ['collections', 'collection-trigger', 'grid-virtualizer-context']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
 }
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {

@@ -9,7 +9,7 @@ import {
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { TabsMotion } from './tabs-motion.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
-import { normalizeItems } from './collection-items.mjs';
+import { normalizeItems } from './collection-items.ts';
 
 const TABS_VARIANTS = new Set(['underline', 'pill', 'overflow', 'segment']);
 

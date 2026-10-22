@@ -8,7 +8,7 @@ import {
 } from 'react-aria-components';
 import { IconButton } from './supplemental/icon-button.ts';
 import { classNames, accessibleName } from './control-utils.ts';
-import { normalizeItems } from './collection-items.mjs';
+import { normalizeItems } from './collection-items.ts';
 
 const TAG_VARIANTS = ['soft', 'outline', 'dot', 'strong'];
 const TAG_COLORS = [

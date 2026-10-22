@@ -7,7 +7,7 @@ import {
   Header as AriaHeader,
 } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
-import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.mjs';
+import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.ts';
 
 const ListBoxContext = React.createContext({ disabled: false });
 

@@ -16,7 +16,7 @@ import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { createFocusManager } from 'react-aria/private/focus/FocusScope';
 import { PopoverMotion } from './popover-motion.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
-import { textContent, normalizeItems, collectionItem } from './collection-items.mjs';
+import { textContent, normalizeItems, collectionItem } from './collection-items.ts';
 import { CollectionTrigger } from './collection-trigger.mjs';
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
