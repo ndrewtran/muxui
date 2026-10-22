@@ -606,6 +606,49 @@ test('the nested submenu story is a closed menu with a submenu and a control aft
   }
 });
 
+// Menu's part-owned controls reach the elements the Anatomy story composes. The adapter has no submenu to give the delay to, so the story builds
+// one with it, and a popup inside it, and the root's popup and list take theirs from the adapter. What each element sends React Aria is read where it is sent.
+test('the Menu Anatomy story forwards the delay, popup, and close-on-select controls to its submenu, popups, and list', async () => {
+  const menu = currentRecord('Menu');
+  const story = createAnatomyStory(menu);
+  const controls = ['delay', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal', 'shouldCloseOnSelect'];
+  assert.deepEqual(controls.filter((control) => !(control in story.argTypes)), [], 'the controls are advertised');
+  const sentToReactAria = async (values) => {
+    const sent = { delays: [], popups: [], closes: [] };
+    const create = React.createElement;
+    React.createElement = (type, props, ...children) => {
+      if (props !== null && typeof props === 'object') {
+        if ('delay' in props && Array.isArray(props.children)) sent.delays.push(props.delay);
+        if ('isNonModal' in props && 'offset' in props) {
+          const { offset, crossOffset, shouldFlip, containerPadding, isNonModal } = props;
+          sent.popups.push(JSON.stringify({ offset, crossOffset, shouldFlip, containerPadding, modal: !isNonModal }));
+        }
+        if ('shouldCloseOnSelect' in props && 'disabledKeys' in props) sent.closes.push(props.shouldCloseOnSelect);
+      }
+      return create(type, props, ...children);
+    };
+    try {
+      await withRuntime(async ({ root }) => {
+        await act(async () => root.render(story.render({ ...story.args, ...values })));
+        await settleRuntime();
+      });
+    } finally {
+      React.createElement = create;
+    }
+    return { delays: [...new Set(sent.delays)], popups: [...new Set(sent.popups)], closes: [...new Set(sent.closes)], rendered: sent.popups.length };
+  };
+  const changed = await sentToReactAria({ delay: 987, offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false, shouldCloseOnSelect: false });
+  assert.ok(changed.rendered > 0 && changed.delays.length > 0 && changed.closes.length > 0, 'each element was rendered');
+  assert.deepEqual(changed.delays, [987], 'every submenu takes the delay control');
+  assert.deepEqual(changed.popups, [JSON.stringify({ offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false })], 'every popup, the submenu\'s too, takes the geometry controls');
+  assert.deepEqual(changed.closes, [false], 'every list takes the close-on-select control');
+  // Left alone, the controls are the components' own defaults.
+  const unset = await sentToReactAria({});
+  assert.deepEqual([unset.delays, unset.popups], [[200], [JSON.stringify({ offset: 4, crossOffset: 0, shouldFlip: true, containerPadding: 12, modal: true })]]);
+  // The nested specimen offers no controls to follow.
+  assert.equal(createMenuNestedStory(menu).parameters.controls.disable, true);
+});
+
 test('the native selection story follows a controlled value through its change event beside a default-value select', async () => {
   const env = installRuntimeDom();
   const host = document.querySelector('#root');

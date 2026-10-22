@@ -1966,15 +1966,17 @@ function anatomyArgsForBinding(record, sourceArgs) {
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
       e(MuxUI.ListBox.Item, { id: 'two' }, 'Two'));
   }
-  // Sections, a separator, and a submenu give the list and the open popup every Menu part.
+  // Sections, a separator, and a submenu give the list and the open popup every Menu part. The adapter has no submenu of its own to
+  // give the delay control to, so the one built here takes it, and its popup takes the geometry the adapter gives the root's popup.
   if (record.family === 'Menu') {
     args.children = [
       e(MuxUI.Menu.Section, { key: 'editing', title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save' }, 'Save')),
       e(MuxUI.Menu.Separator, { key: 'separator' }),
       e(MuxUI.Menu.Item, { key: 'delete', id: 'delete' }, 'Delete'),
-      e(MuxUI.Menu.Submenu, { key: 'share' },
+      e(MuxUI.Menu.Submenu, { key: 'share', delay: args.delay },
         e(MuxUI.Menu.Item, { id: 'share' }, 'Share'),
-        e(MuxUI.Menu.Popup, null, e(MuxUI.Menu.List, { 'aria-label': 'Share' }, e(MuxUI.Menu.Item, { id: 'copy-link' }, 'Copy link')))),
+        e(MuxUI.Menu.Popup, { placement: args.placement, offset: args.offset, crossOffset: args.crossOffset, shouldFlip: args.shouldFlip, containerPadding: args.containerPadding, modal: args.modal },
+          e(MuxUI.Menu.List, { 'aria-label': 'Share' }, e(MuxUI.Menu.Item, { id: 'copy-link' }, 'Copy link')))),
     ];
   }
   if (record.family === 'CodeBlock') args.mode = 'diff';
