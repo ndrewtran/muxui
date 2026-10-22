@@ -11,8 +11,8 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 // from its trigger, however it was opened, with a submenu open, and past a disabled fieldset,
 // a positive tabindex or a radio group; Escape still returns focus to the trigger. Runs in
 // every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs). The popup's placement and geometry fall back to the values
-// the catalog states, measured here as laid out: bottom-start at the top level and end-top inside a submenu, the offset,
-// the cross offset, the container padding, and the flip.
+// the catalog states, measured here as laid out: bottom-start at the top level, the offset, the cross offset, the container
+// padding, and the flip. The nested end-top the source aims for is a known defect, kept as a TODO below.
 
 const entry = `
 import React from 'react';
@@ -299,9 +299,14 @@ for (const engine of browserEngines()) {
     const { partApis } = JSON.parse(await readFile(resolve(packageRoot, 'api/menu.json'), 'utf8')).api;
     const { offset, crossOffset, containerPadding, shouldFlip } = partApis.popup.defaults;
     assert.equal(partApis.popup.props.includes('placement') && 'placement' in partApis.popup.defaults, false, 'the placement has no single default: it depends on the submenu');
-    // The wording is checked, not just written: both fallbacks are in the behaviour, and the measurements below hold them.
+    // The wording is checked, not just written: the top-level fallback is in the behaviour and the source's description, the
+    // measurements below hold it, and neither text claims the nested placement, which does not happen (see the TODO below).
     const placement = artifact.bindings['web.react'].behavior.find((line) => line.startsWith('Menu.Popup accepts'));
-    assert.match(placement, /Without a placement, a top-level popup opens at bottom-start and a popup inside a Menu\.Submenu opens at end-top\./u);
+    assert.match(placement, /Without a placement, a top-level popup opens at bottom-start\./u);
+    assert.doesNotMatch(placement, /Menu\.Submenu opens/u);
+    const described = partApis.popup.propDetails.placement.description;
+    assert.match(described, /Without one, a top-level popup opens at `bottom-start`\./u);
+    assert.doesNotMatch(described, /Submenu/u);
     assert.equal(shouldFlip, true);
     const { url, close } = await startServer({
       entries: ['src/button.ts', 'src/collections.mjs'],
@@ -350,11 +355,11 @@ for (const engine of browserEngines()) {
           near(popup.left, trigger.left + crossOffset, 'the popup starts at its trigger\'s start edge');
         });
 
-        // Not yet true, on the code before this move as well: the Menu.Submenu element sits in the hidden tree React Aria builds its
-        // collection in, so the submenu context never reaches the popup React Aria renders for it, and the popup takes the
-        // top-level fallback (placement bottom, under its item). Passing placement="end-top" gives the geometry below. The
-        // behaviour text states end-top, so this stays a TODO until the context reaches the popup or the text changes.
-        await t.test('a popup inside a submenu opens at end-top, the offset beside its item', { todo: 'the submenu context does not reach the popup, so it opens at bottom-start' }, async () => {
+        // Not true, on the code before this move as well: React Aria renders a submenu's popup outside MenuSubmenuContext.Provider
+        // (the Menu.Submenu element sits in the hidden tree it builds its collection in), so an implicit nested popup takes the
+        // top-level fallback, bottom-start (data-placement="bottom", under its item). Passing placement="end-top" gives the
+        // geometry below. The source aims for end-top, but no text claims it; this stays a TODO until the context reaches the popup.
+        await t.test('a popup inside a submenu opens at end-top, the offset beside its item', { todo: 'React Aria renders the submenu popup outside MenuSubmenuContext.Provider, so an implicit nested popup falls back to bottom-start' }, async () => {
           await visit('?submenu');
           await tab.keyboard.press('ArrowDown');
           await tab.keyboard.press('ArrowDown');

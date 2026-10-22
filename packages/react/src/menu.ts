@@ -77,7 +77,7 @@ export type MenuTriggerProps = ButtonHTMLAttributes<HTMLButtonElement> & MenuTri
 
 /** The props Mux UI defines for Menu.Popup. Every other attribute of a div passes through to the popup. */
 export type MenuPopupOwnProps = {
-  /** Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a popup opens at `bottom-start`, and a popup inside a Menu.Submenu opens at `end-top`. */
+  /** Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`. */
   placement?: MuxUIPlacement;
   /** The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. */
   offset?: number;
@@ -242,7 +242,8 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
 
   const MenuPopup = /*#__PURE__*/ React.forwardRef<HTMLDivElement, MenuPopupProps>(function MenuPopup({ children, placement, offset = MENU_POPUP_GEOMETRY.offset, crossOffset = MENU_POPUP_GEOMETRY.crossOffset, shouldFlip = MENU_POPUP_GEOMETRY.shouldFlip, containerPadding = MENU_POPUP_GEOMETRY.containerPadding, anchorRef, modal = true, className, ...props }, ref) {
     const submenu = React.useContext(MenuSubmenuContext);
-    // The placement has no default of its own to state: it depends on whether a submenu holds the popup.
+    // The placement has no default of its own to state: it depends on whether a submenu holds the popup. Today `submenu` is never true here:
+    // React Aria renders a submenu's popup outside MenuSubmenuContext.Provider, so an implicit nested popup falls back to bottom-start too.
     const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, { ...MENU_POPUP_GEOMETRY, placement: submenu ? 'end-top' : 'bottom-start' }, 'Menu.Popup');
     return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) },
       React.createElement(MenuAnchorContext.Provider, { value: anchorRef ?? null }, children));
