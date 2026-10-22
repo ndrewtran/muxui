@@ -88,7 +88,7 @@ export type RangeCalendarOwnProps = {
   readOnly?: boolean;
   /** Marks the calendar required. It currently has no effect on a calendar, which submits no form value. */
   required?: boolean;
-  /** Forces the invalid state when true. Left false, validation follows the selected range, so a date before minValue, after maxValue, or marked unavailable still makes the calendar invalid. */
+  /** Forces the invalid state when true. Left false, validation follows the selected range, so the calendar is still invalid when either endpoint is before minValue, after maxValue, or marked unavailable. Dates between the endpoints are not checked. */
   invalid?: boolean;
 };
 

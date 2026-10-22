@@ -151,7 +151,7 @@
           "kind": "boolean"
         },
         "required": false,
-        "description": "Forces the invalid state when true. Left false, validation follows the selected range, so a date before minValue, after maxValue, or marked unavailable still makes the calendar invalid."
+        "description": "Forces the invalid state when true. Left false, validation follows the selected range, so the calendar is still invalid when either endpoint is before minValue, after maxValue, or marked unavailable. Dates between the endpoints are not checked."
       }
     },
     "eventDetails": {
