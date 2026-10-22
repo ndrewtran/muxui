@@ -20,20 +20,20 @@ export interface ThingProps extends ThingOwnProps, Omit<React.ButtonHTMLAttribut
 export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLButtonElement>>;
 `;
 
-function extract({ declarations, source, hostAllowlist, files = {}, part, callable, parts }) {
+function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, files = {}, part, callable, parts }) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const root = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
   try {
     for (const [name, text] of Object.entries(files)) writeFileSync(join(root, name), text);
     writeFileSync(join(root, 'thing.d.ts'), declarations);
-    if (source !== undefined) writeFileSync(join(root, 'thing.ts'), source);
+    if (source !== undefined) writeFileSync(join(root, sourceName), source);
     const component = {
       name: 'Thing',
       ...(part === undefined ? {} : { part }),
       ...(callable === undefined ? {} : { callable }),
       ...(parts === undefined ? {} : { parts }),
       declarations: join(root, 'thing.d.ts'),
-      ...(source === undefined ? {} : { source: join(root, 'thing.ts') }),
+      ...(source === undefined ? {} : { source: join(root, sourceName) }),
     };
     return extractApis({ declarationRoot: root, components: [component], ...(hostAllowlist ? { hostAllowlist } : {}) }).get('Thing');
   } finally {
@@ -1253,6 +1253,47 @@ test('a component used as a value anywhere but its own wrapper, export, and dire
   assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('const alias = Thing;\nvoid alias;') }), frozen);
   assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound('const { Root: alias } = Thing;\nvoid alias;') }), frozen);
   assert.equal(extract({ declarations: compoundDeclarations, part: 'Root', source: compound('export type ThingRootType = typeof Thing.Root;') }).defaults.size, 'md');
+});
+
+// A module that imports itself holds its own component under a second name, so a write through that name cannot be seen.
+test('a source that imports or requires itself fails extraction', () => {
+  const read = (after, { before = '', sourceName } = {}) => extract({
+    declarations: callableDeclarations,
+    source: callableSource({ before, statics: `Thing.Root = Thing;\n  Thing.Item = forwardRef(${callableItem});`, after }),
+    sourceName,
+    parts: { item: 'Item' },
+  });
+  const replace = "forwardRef(function Replacement({ tone = 'loud' }: Record<string, unknown>) { return tone; })";
+  const itself = (specifier) => new RegExp(`Thing: the source imports itself \\(${specifier.replaceAll('.', '\\.')}\\), which gives its own component a second name this scan does not follow`, 'u');
+  // The repro: re-export under another name, import that name from the module, and replace the part.
+  assert.throws(() => read(`export { Thing as Alias };\nimport { Alias } from './thing.js';\nAlias.Item = ${replace};\n`), itself('./thing.js'));
+  assert.throws(() => read(`export { Thing as default };\nimport Alias from './thing.js';\nAlias.Item = ${replace};\n`), itself('./thing.js'));
+  // Every spelling of the module's own path: with or without an extension, by its built names, and round about.
+  for (const specifier of ['./thing', './thing.js', './thing.ts', './thing.mjs', './thing.d.ts', './sub/../thing.js']) {
+    assert.throws(() => read(`import { Thing as Alias } from '${specifier}';\nvoid Alias;\n`), itself(specifier), specifier);
+  }
+  const forms = [
+    ['a re-export', "export { Thing as Alias } from './thing.js';"],
+    ['a star re-export', "export * from './thing.js';"],
+    ['a type-only import', "import type { Thing as Alias } from './thing.js';"],
+    ['a side-effect import', "import './thing.js';"],
+    ['an import-equals', "import Alias = require('./thing.js');"],
+    ['a dynamic import', "const loaded = await import('./thing.js');\nvoid loaded;"],
+    ['a dynamic import in a function', "export async function load() { return import('./thing.js'); }"],
+    ['a template dynamic import', 'const loaded = await import(`./thing.js`);\nvoid loaded;'],
+    ['a require', "declare function require(name: string): { Thing: typeof Thing };\nconst loaded = require('./thing.js');\nvoid loaded;"],
+  ];
+  for (const [label, statement] of forms) assert.throws(() => read(`${statement}\n`), itself('./thing.js'), label);
+  // A module named by an expression could be the source itself, so it fails too.
+  assert.throws(() => read("const name = './thing' + '.js';\nconst loaded = await import(name);\nvoid loaded;\n"), /Thing: the source imports or requires a module by an expression, which may name the source itself; name it by a literal specifier/u, 'a computed dynamic import');
+  assert.throws(() => read("declare function require(name: string): unknown;\nconst name = './thing.js';\nvoid require(name);\n"), /imports or requires a module by an expression/u, 'a computed require');
+  // The source's own index module is also its directory.
+  assert.throws(() => read("import { Thing as Alias } from '.';\nvoid Alias;\n", { sourceName: 'index.ts' }), /Thing: the source imports itself \(\.\)/u, 'a directory import of index');
+  assert.throws(() => read("import { Thing as Alias } from './index.js';\nvoid Alias;\n", { sourceName: 'index.ts' }), itself('./index.js'), 'index by name');
+  // Other modules, other directories, packages, and a sibling whose name merely starts with the source's are other modules.
+  const others = "import { forwardRef as again } from 'react';\nimport { motion } from './thing-motion.js';\nimport { helper } from './helper.js';\nimport { far } from '../thing.js';\nimport { deep } from './thing/deep.js';\nimport type { Element } from 'react';\nvoid [again, motion, helper, far, deep];\nconst later = import('./other.js');\nvoid later;\n";
+  assert.deepEqual(read(others).partApis.item.defaults, { tone: 'quiet' });
+  assert.deepEqual(read("import { Thing as Alias } from '.';\nvoid Alias;\n").partApis.item.defaults, { tone: 'quiet' }, 'a directory import is not a thing.ts self import');
 });
 
 test('Object and Reflect members that write properties are only called directly, by name', () => {

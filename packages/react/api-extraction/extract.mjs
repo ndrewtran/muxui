@@ -10,7 +10,8 @@
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { NodeFlags, SyntaxKind, getTextOfJSDocComment, isAssignmentOperator } from 'typescript/unstable/ast';
 import { API, SignatureKind, SymbolFlags } from 'typescript/unstable/sync';
 
@@ -1070,6 +1071,45 @@ function reflectiveEscape(sourceFile) {
   return found;
 }
 
+const MODULE_EXTENSION = /\.(?:d\.[cm]?ts|[cm]?[jt]sx?)$/u;
+
+/**
+ * The first import, re-export, dynamic import, or require in the source that names the source file
+ * itself, by its own path or its built `.js` or `.mjs` name, or that names a module by an expression
+ * a reader cannot resolve. `export { Thing as Alias }` followed by `import { Alias } from './thing.js'`
+ * hands the source a second name for its own component, and a write through that name is invisible
+ * to the scan above. The rule needs no alias resolution: a module does not import itself.
+ * @returns {{ node: object, specifier: string | undefined } | undefined}
+ */
+function selfReference(sourceFile) {
+  const self = sourceFile.fileName.replace(MODULE_EXTENSION, '');
+  // A directory's index module is also named by the directory.
+  const directory = self.endsWith('/index') ? self.slice(0, -'/index'.length) : undefined;
+  const names = (specifier) => {
+    if (!specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) return false;
+    const target = (specifier.startsWith('file:') ? fileURLToPath(specifier) : resolve(dirname(sourceFile.fileName), specifier)).replace(MODULE_EXTENSION, '');
+    return target === self || target === directory;
+  };
+  const literal = (node) => node?.kind === SyntaxKind.StringLiteral || node?.kind === SyntaxKind.NoSubstitutionTemplateLiteral;
+  let found;
+  const visit = (node) => {
+    if (found) return;
+    let specifier;
+    let dynamic = false;
+    if ((node.kind === SyntaxKind.ImportDeclaration || node.kind === SyntaxKind.ExportDeclaration) && node.moduleSpecifier) specifier = node.moduleSpecifier;
+    else if (node.kind === SyntaxKind.ImportEqualsDeclaration && node.moduleReference.kind === SyntaxKind.ExternalModuleReference) specifier = node.moduleReference.expression;
+    else if (node.kind === SyntaxKind.CallExpression && (node.expression.kind === SyntaxKind.ImportKeyword || (node.expression.kind === SyntaxKind.Identifier && node.expression.text === 'require'))) {
+      [specifier] = node.arguments;
+      dynamic = true;
+    }
+    if (dynamic && !literal(specifier)) found = { node, specifier: undefined };
+    else if (literal(specifier) && names(specifier.text)) found = { node, specifier: specifier.text };
+    node.forEachChild(visit);
+  };
+  visit(sourceFile);
+  return found;
+}
+
 /**
  * The first reference to one of `bindings` that could hand the component itself to other code, or
  * undefined. A part is replaced by writing it on the component, and a write through an alias of
@@ -1176,6 +1216,12 @@ function compoundPart(project, sourceFile, exported, name, part, followed) {
 function readSourceDefaults(project, sourceFile, { exportName, member, label }, declared) {
   const exported = exportedNamed(sourceFile, exportName);
   const chain = member === undefined ? exportName : `${exportName}.${member}`;
+  const self = selfReference(sourceFile);
+  if (self) {
+    throw new ApiExtractionError(chain, self.specifier === undefined
+      ? 'the source imports or requires a module by an expression, which may name the source itself; name it by a literal specifier'
+      : `the source imports itself (${self.specifier}), which gives its own component a second name this scan does not follow`);
+  }
   const reflective = reflectiveEscape(sourceFile);
   if (reflective) {
     throw new ApiExtractionError(chain, `the source reaches ${spelled(reflective)} other than by calling Object or Reflect directly by name, as Object.assign(target, ...); a property-writing member reached any other way hides what it writes to`);
