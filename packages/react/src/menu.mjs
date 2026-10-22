@@ -17,7 +17,7 @@ import { createFocusManager } from 'react-aria/private/focus/FocusScope';
 import { PopoverMotion } from './popover-motion.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems, collectionItem } from './collection-items.ts';
-import { CollectionTrigger } from './collection-trigger.mjs';
+import { CollectionTrigger } from './collection-trigger.ts';
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
