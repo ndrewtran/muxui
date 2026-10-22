@@ -2675,10 +2675,13 @@ export function createEventsStory(record) {
 }
 
 export function createAnatomyStory(record) {
+  const argTypes = argTypesForBinding(record.binding);
+  // Menu's Anatomy is a fixed composition (see anatomyArgsForBinding): its children take precedence over `items`, so that control is not offered.
+  if (record.family === 'Menu') argTypes.items = { ...argTypes.items, control: false };
   return {
     name: 'Anatomy / Composition',
     args: storyArgsForBinding(record.binding, 'states', record.family),
-    argTypes: argTypesForBinding(record.binding),
+    argTypes,
     render: (args) => e(AnatomyHarness, { record, args }),
   };
 }

@@ -12,7 +12,7 @@ import test from 'node:test';
 import { compilePureTokenGraph } from '@muxui/tokens/core';
 import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
-import { ToastProvider } from '@muxui/react';
+import { Menu, ToastProvider } from '@muxui/react';
 import { isTextEditorDocument } from '@muxui/react/text-editor';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
@@ -606,18 +606,43 @@ test('the nested submenu story is a closed menu with a submenu and a control aft
   }
 });
 
+// The Anatomy story composes Menu from fixed children, which take precedence over `items`, so offering that control would promise what the story ignores.
+test('the Menu Anatomy story offers no items or children control, though the other stories do', async () => {
+  const menu = currentRecord('Menu');
+  const anatomy = createAnatomyStory(menu);
+  assert.equal(anatomy.argTypes.items.control, false, 'items is listed without a control');
+  assert.equal(anatomy.argTypes.children?.control ?? false, false, 'children is not a control');
+  assert.ok(createStory(menu, 'default').argTypes.items.control, 'the Default story keeps the items control');
+  assert.ok(createStory(menu, 'states').argTypes.items.control, 'the States story keeps the items control');
+  // The reason, as rendered: items given to the story change nothing in the composition.
+  const rendered = async (values) => {
+    let labels;
+    await withRuntime(async ({ root }) => {
+      await act(async () => root.render(anatomy.render({ ...anatomy.args, ...values })));
+      await settleRuntime();
+      labels = [...new Set([...document.querySelectorAll('.muxui-menu-item')].map((item) => item.textContent))].sort();
+    });
+    return labels;
+  };
+  const fixed = await rendered({});
+  assert.deepEqual(fixed, ['Delete', 'Save', 'Share']);
+  assert.deepEqual(await rendered({ items: [{ id: 'probe', label: 'Review probe' }] }), fixed, 'the supplied item is not rendered');
+});
+
 // Menu's part-owned controls reach the elements the Anatomy story composes. The adapter has no submenu to give the delay to, so the story builds
 // one with it, and a popup inside it, and the root's popup and list take theirs from the adapter. What each element sends React Aria is read where it is sent.
 test('the Menu Anatomy story forwards the delay, popup, and close-on-select controls to its submenu, popups, and list', async () => {
   const menu = currentRecord('Menu');
   const story = createAnatomyStory(menu);
-  const controls = ['delay', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal', 'shouldCloseOnSelect'];
+  const controls = ['delay', 'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal', 'shouldCloseOnSelect'];
   assert.deepEqual(controls.filter((control) => !(control in story.argTypes)), [], 'the controls are advertised');
   const sentToReactAria = async (values) => {
-    const sent = { delays: [], popups: [], closes: [] };
+    const sent = { delays: [], popups: [], closes: [], placements: { root: [], submenu: [] } };
     const create = React.createElement;
     React.createElement = (type, props, ...children) => {
       if (props !== null && typeof props === 'object') {
+        // The placement a Menu.Popup is given, by whether it is the submenu's (the one whose list is named Share) or the root's.
+        if (type === Menu.Popup) sent.placements[children[0].props['aria-label'] === 'Share' ? 'submenu' : 'root'].push(props.placement);
         if ('delay' in props && Array.isArray(props.children)) sent.delays.push(props.delay);
         if ('isNonModal' in props && 'offset' in props) {
           const { offset, crossOffset, shouldFlip, containerPadding, isNonModal } = props;
@@ -635,13 +660,16 @@ test('the Menu Anatomy story forwards the delay, popup, and close-on-select cont
     } finally {
       React.createElement = create;
     }
-    return { delays: [...new Set(sent.delays)], popups: [...new Set(sent.popups)], closes: [...new Set(sent.closes)], rendered: sent.popups.length };
+    const placements = { root: [...new Set(sent.placements.root)].sort(), submenu: [...new Set(sent.placements.submenu)].sort() };
+    return { delays: [...new Set(sent.delays)], popups: [...new Set(sent.popups)], closes: [...new Set(sent.closes)], placements, rendered: sent.popups.length };
   };
-  const changed = await sentToReactAria({ delay: 987, offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false, shouldCloseOnSelect: false });
+  const changed = await sentToReactAria({ delay: 987, placement: 'end-bottom', offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false, shouldCloseOnSelect: false });
   assert.ok(changed.rendered > 0 && changed.delays.length > 0 && changed.closes.length > 0, 'each element was rendered');
   assert.deepEqual(changed.delays, [987], 'every submenu takes the delay control');
   assert.deepEqual(changed.popups, [JSON.stringify({ offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false })], 'every popup, the submenu\'s too, takes the geometry controls');
   assert.deepEqual(changed.closes, [false], 'every list takes the close-on-select control');
+  // The placement is read on the popup elements themselves, the root's and the submenu's, which React Aria turns into its own spelling.
+  assert.deepEqual(changed.placements, { root: ['end-bottom'], submenu: ['end-bottom'] }, 'both popups take the placement control');
   // Left alone, the controls are the components' own defaults.
   const unset = await sentToReactAria({});
   assert.deepEqual([unset.delays, unset.popups], [[200], [JSON.stringify({ offset: 4, crossOffset: 0, shouldFlip: true, containerPadding: 12, modal: true })]]);
