@@ -11,11 +11,19 @@
 // - generic binders and inference: a generic type is compared at its defaults or constraints;
 // - JSX use: props are compared as types, and no element is compiled against them;
 // - the statics of a `typeof` value or part value, which are held by the pair proof (mutual assignability, key
-//   sets, readonly modifiers) and not probed by name;
-// - an `any` member, which has no call signature to probe, and an index-signature type, whose named keys the
-//   key check cannot read;
+//   sets, readonly modifiers, which members are `any`) and not probed by name;
+// - callbacks inside the object members of a type, which are not probed, and the key sets of those objects, which
+//   only their parent's mutual assignability constrains. Their readonly modifiers and `any` members are read, through own
+//   members that are not callable, constructable or arrays, to a depth of four (MAX_NESTED_DEPTH); deeper stops
+//   the check. A named exported type is its own subject, and a type React declares or a member it inherits is
+//   the same on both sides, so none of them is followed;
+// - a member typed `any` has no call signature, so no handler probe: only that it is `any`, and the same on both
+//   sides, is compared. An index-signature type has no named keys for the key check to list; its index
+//   signatures are compared for readonly and `any`;
 // - a member inherited unchanged: the same declaration, resolved type and readonly modifier on both sides is
-//   not examined (React's own attributes are shared by both snapshots).
+//   not examined (React's own attributes are shared by both snapshots);
+// - a union whose arms overlap: an arm is matched by one twin that is as before on every field and handler
+//   probe together (`twins`); the readonly and `any` probes of nested objects are matched per probe.
 // A symbol-keyed own member, or a callback with a rest parameter, stops the check instead of passing unprobed.
 //
 // The declarations are generated, so this test runs whenever one of its generating inputs changes: the sources
