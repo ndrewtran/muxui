@@ -143,6 +143,7 @@ const GUIDES = {
   // YYYY-MM-DD is Mux UI's own value format, not a native one: MuxUIDateValue's description states it, and the check reads it there.
   calendar: { described: { MuxUIDateValue: ['YYYY-MM-DD'] } },
   'range-calendar': {},
+  toolbar: {},
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

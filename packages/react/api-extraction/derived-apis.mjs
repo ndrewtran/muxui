@@ -62,6 +62,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'color-field', name: 'ColorField', source: 'packages/react/src/color-field.ts' },
   { slug: 'calendar', name: 'Calendar', source: 'packages/react/src/calendar.ts' },
   { slug: 'range-calendar', name: 'RangeCalendar', source: 'packages/react/src/calendar.ts' },
+  { slug: 'toolbar', name: 'Toolbar', source: 'packages/react/src/toolbar.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

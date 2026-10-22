@@ -33,7 +33,7 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/tag-group.mjs',
   'packages/react/src/toggle-button-group.mjs',
   'packages/react/src/token-field.mjs',
-  'packages/react/src/toolbar.mjs',
+  'packages/react/src/toolbar.ts',
   'packages/react/src/tree.mjs',
   'packages/react/src/virtualizer.mjs',
   'packages/react/src/overlays.ts',

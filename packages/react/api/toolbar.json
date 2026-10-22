@@ -1,0 +1,41 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/toolbar.ts",
+  "component": "muxui:component:toolbar",
+  "binding": "web.react",
+  "export": "Toolbar",
+  "api": {
+    "props": [
+      "orientation"
+    ],
+    "events": [],
+    "defaults": {
+      "orientation": "horizontal"
+    },
+    "propDetails": {
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            },
+            {
+              "kind": "literal",
+              "value": "vertical"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "horizontal",
+          "vertical"
+        ],
+        "description": "The direction the controls are laid out and the arrow keys move focus along. Vertical stacks them in a column."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

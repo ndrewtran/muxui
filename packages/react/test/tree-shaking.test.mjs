@@ -197,3 +197,14 @@ test('a bundle that uses one color family keeps its own module and only the shar
     assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), expected, name);
   }
 });
+
+// The control families share control-utils, and each takes only the other shared and motion modules it uses:
+// a toolbar needs nothing else, and no bundle pulls in another family's module.
+test('a bundle that uses one control family keeps its own module and only the shared and motion modules it needs', async () => {
+  const kept = {
+    Toolbar: ['control-utils.js', 'toolbar.js'],
+  };
+  for (const [name, expected] of Object.entries(kept)) {
+    assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), expected, name);
+  }
+});

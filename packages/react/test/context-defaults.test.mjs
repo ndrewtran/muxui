@@ -59,6 +59,8 @@ const audited = [
       ...expand(['color-slider'], ['orientation']),
       // RangeCalendar already sent isDisabled, isReadOnly, and isRequired as booleans, so a RangeCalendarContext cannot supply them. Calendar claims none of the three: it sends the prop as given, so a CalendarContext still can.
       ...expand(['range-calendar'], ['disabled', 'readOnly', 'required']),
+      // Toolbar sends orientation to React Aria as its own value, horizontal when omitted, as it did before the move.
+      ...expand(['toolbar'], ['orientation']),
     ],
   },
   {

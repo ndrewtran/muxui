@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:372132c534e05593f997d6f296f1110d4534a800ca1d8c2b814d4f5b559df5bc -->
+<!-- @generated-content-sha256: sha256:01c3a54d6d386b9f301b3e7b9d7132aa4d512ce01c0d220d72d6fdc50685a037 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -182,7 +182,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
 | ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | aria-label, aria-labelledby, selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
 | TokenField | experimental | . | .muxui-token-field | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, name, placeholder |
-| Toolbar | experimental | . | .muxui-toolbar | aria-label, aria-labelledby, orientation |
+| Toolbar | experimental | . | .muxui-toolbar | orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
 | Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | aria-label, items, height, itemHeight, overscan, disabled, layout, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |

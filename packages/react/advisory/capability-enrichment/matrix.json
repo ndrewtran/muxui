@@ -11106,7 +11106,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/toolbar/artifact.json#bindings/web.react",
-          "packages/react/src/toolbar.mjs#Toolbar",
+          "packages/react/src/toolbar.ts#Toolbar",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
