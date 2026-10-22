@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:372132c534e05593f997d6f296f1110d4534a800ca1d8c2b814d4f5b559df5bc -->
+<!-- @generated-content-sha256: sha256:688cab7a7e959f52756deb3d67d045c186fab63b92a920552c01703093674c6a -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -158,7 +158,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
 | PromptComposer | experimental | . | .muxui-prompt-composer | inputLabel, value, defaultValue, inputProps, inputRef, pending, disabled, error, sources, commands, attachments, accept, multiple, models, selectedModel, defaultSelectedModel |
 | RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, value |
-| RadioGroup | experimental | . | .muxui-radio-group | label, errorMessage, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
+| RadioGroup | experimental | . | .muxui-radio-group | label, errorMessage, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, keyboardStep, keyboardLargeStep, precision, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, inputProps |
@@ -166,7 +166,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, disabled, required, invalid, size |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | collapsed, defaultCollapsed, onCollapsedChange, shortcut, hideBorder, density, label, href, current, external, items, expanded, defaultExpanded, onExpandedChange, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss, onAction |
-| Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
+| Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
 | Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
@@ -180,9 +180,9 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration |
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
-| ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | aria-label, aria-labelledby, selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
-| TokenField | experimental | . | .muxui-token-field | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, name, placeholder |
-| Toolbar | experimental | . | .muxui-toolbar | aria-label, aria-labelledby, orientation |
+| ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
+| TokenField | experimental | . | .muxui-token-field | label, value, defaultValue, disabled, readOnly, name, placeholder |
+| Toolbar | experimental | . | .muxui-toolbar | orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
 | Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | aria-label, items, height, itemHeight, overscan, disabled, layout, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |

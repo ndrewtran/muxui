@@ -1829,6 +1829,31 @@ test('R1.3 TokenField Enter ignores empty drafts and read-only fields', async ()
   }
 });
 
+// A parameter default of [] on options would be published as an empty-list default, which the Storybook default
+// story takes as its args and renders empty. The component turns an omitted options into an empty list itself
+// and leaves every other value to fail where it always has.
+test('R1.3 RadioGroup options claims no empty-list default, and an omitted options is empty', async () => {
+  const { api } = JSON.parse(await readFile(resolve(import.meta.dirname, '../api/radio-group.json'), 'utf8'));
+  assert.equal(Object.hasOwn(api.defaults, 'options'), false);
+  assert.doesNotMatch(renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan' })), /type="radio"/u);
+  assert.match(renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: [{ value: 'a' }] })), /type="radio"/u);
+  // The message names the local that holds the options, so it stays `options.map`.
+  assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: { length: 1 } })), /options\.map is not a function/u);
+  assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: null })), /Cannot read properties of null/u);
+});
+
+// Likewise defaultValue: a parameter default of [] would be published as an empty-list default. The field copies a
+// supplied list once and treats an omitted one as empty, and null still fails in the copy.
+test('R1.3 TokenField defaultValue claims no empty-list default, and an omitted defaultValue is empty', async () => {
+  const { api } = JSON.parse(await readFile(resolve(import.meta.dirname, '../api/token-field.json'), 'utf8'));
+  assert.equal(Object.hasOwn(api.defaults, 'defaultValue'), false);
+  const named = (props) => renderToString(React.createElement(TokenField, { 'aria-label': 'Tags', name: 'tags', ...props }));
+  assert.doesNotMatch(named({}), /name="tags"/u);
+  assert.match(named({ defaultValue: ['one'] }), /name="tags" value="one"/u);
+  // null is not an omitted list: spreading it fails, as it did when the default was a parameter default.
+  assert.throws(() => named({ defaultValue: null }), TypeError);
+});
+
 test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a bounded window', async () => {
   const invalidVirtualizerInputs = [
     [{ itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],

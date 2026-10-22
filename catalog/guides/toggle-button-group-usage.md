@@ -5,7 +5,7 @@ Use the Mux UI ToggleButtonGroup contract and provide an accessible name.
 ## ToggleButtonGroup or RadioGroup
 
 - Use ToggleButtonGroup for modes or options that apply as soon as they are chosen, such as text alignment or a view mode in an editor.
-- Use [RadioGroup](/components/radio-group/) for a named choice in a form. ToggleButtonGroup has no `name`, so it adds nothing to the form's data.
+- Use [RadioGroup](/components/radio-group/) for a named choice in a form. ToggleButtonGroup has no `name` prop, so it adds nothing to the form's data.
 - Use a single [ToggleButton](/components/toggle-button/) for one independent option, such as Bold.
 
 ## Single or multiple
@@ -23,4 +23,4 @@ Give each ToggleButton in the group a stable id. The group's selection is a list
 
 ## Common mistake
 
-Putting a ToggleButtonGroup in a form and expecting it to submit its selection. It has no `name` and adds nothing to the form's data, so read its selection from state, or use a RadioGroup for the choice.
+Putting a ToggleButtonGroup in a form and expecting it to submit its selection. It has no `name` prop and adds nothing to the form's data, so read its selection from state, or use a RadioGroup for the choice.

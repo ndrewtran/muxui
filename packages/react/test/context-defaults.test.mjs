@@ -13,10 +13,10 @@ const contextMergedProps = new Set([
   'open', 'isOpen', 'defaultOpen', 'modal', 'dismissable',
   'disabled', 'isDisabled', 'readOnly', 'isReadOnly', 'required', 'isRequired', 'invalid', 'isInvalid', 'pending', 'isPending', 'validationBehavior',
   'value', 'defaultValue', 'minValue', 'maxValue', 'step', 'type',
-  'selectionMode', 'selected', 'isSelected', 'defaultSelected', 'checked', 'defaultChecked', 'indeterminate', 'isIndeterminate',
+  'min', 'max', 'selectionMode', 'selected', 'isSelected', 'defaultSelected', 'checked', 'defaultChecked', 'indeterminate', 'isIndeterminate',
   'selectedKey', 'defaultSelectedKey', 'selectedKeys', 'defaultSelectedKeys',
   'expanded', 'isExpanded', 'defaultExpanded', 'defaultExpandedIds', 'multiple', 'items',
-  'orientation', 'role', 'current', 'allowsMultiple', 'acceptDirectory',
+  'orientation', 'role', 'current', 'allowsMultiple', 'acceptDirectory', 'disallowEmptySelection',
   'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'delay', 'closeDelay',
 ]);
 
@@ -59,6 +59,16 @@ const audited = [
       ...expand(['color-slider'], ['orientation']),
       // RangeCalendar already sent isDisabled, isReadOnly, and isRequired as booleans, so a RangeCalendarContext cannot supply them. Calendar claims none of the three: it sends the prop as given, so a CalendarContext still can.
       ...expand(['range-calendar'], ['disabled', 'readOnly', 'required']),
+      // Toolbar and ToggleButtonGroup send orientation to React Aria as their own value, horizontal when omitted, as they did before the move.
+      ...expand(['toolbar', 'toggle-button-group'], ['orientation']),
+      // ToggleButtonGroup sends selectionMode, isDisabled, and disallowEmptySelection to React Aria as its own values, single, false, and false when omitted, as it did before the move.
+      ...expand(['toggle-button-group'], ['selectionMode', 'disabled', 'disallowEmptySelection']),
+      // RadioGroup sends isDisabled, isReadOnly, isRequired, and orientation to React Aria as its own values, false, false, false, and vertical when omitted, as it did before the move.
+      ...expand(['radio-group'], ['disabled', 'readOnly', 'required', 'orientation']),
+      // TokenField sends isDisabled and isReadOnly to React Aria as its own values, false when omitted, as it did before the move.
+      ...expand(['token-field'], ['disabled', 'readOnly']),
+      // Slider sends minValue, maxValue, step, isDisabled, and orientation to React Aria as its own values, 0, 100, 1, false, and horizontal when omitted, as it did before the move.
+      ...expand(['slider'], ['min', 'max', 'step', 'disabled', 'orientation']),
     ],
   },
   {
@@ -77,6 +87,8 @@ const audited = [
       // The color controls enforce readOnly themselves, with a data attribute and guards, and send React Aria no isReadOnly. ColorPicker's flags reach its children through a Mux UI context, and React Aria's picker takes neither.
       ...expand(['color-picker'], ['disabled', 'readOnly']),
       ...expand(['color-area', 'color-slider', 'color-wheel'], ['readOnly']),
+      // Slider enforces readOnly itself, with a data attribute and guards, and sends React Aria no isReadOnly.
+      ...expand(['slider'], ['readOnly']),
     ],
   },
   {
@@ -86,8 +98,8 @@ const audited = [
       ...expand(validationFamilies, ['invalid']),
       // Link sends aria-current: current ? 'page' : undefined.
       ...expand(['link'], ['current']),
-      // color-field sends isInvalid: invalid ? invalid : undefined, so a React Aria context can still make it invalid.
-      ...expand(['color-field'], ['invalid']),
+      // color-field and radio-group send isInvalid: invalid ? invalid : undefined, so a React Aria context can still make them invalid.
+      ...expand(['color-field', 'radio-group'], ['invalid']),
       // The calendars send isInvalid the same way, so a CalendarContext or RangeCalendarContext can still make them invalid.
       ...expand(['calendar', 'range-calendar'], ['invalid']),
     ],

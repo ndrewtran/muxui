@@ -444,6 +444,16 @@ export { ColorField } from './color-field.js';
 export type { ColorFieldProps } from './color-field.js';
 export { Calendar, RangeCalendar } from './calendar.js';
 export type { CalendarProps, RangeCalendarProps } from './calendar.js';
+export { Toolbar } from './toolbar.js';
+export type { ToolbarProps } from './toolbar.js';
+export { ToggleButtonGroup } from './toggle-button-group.js';
+export type { ToggleButtonGroupProps } from './toggle-button-group.js';
+export { Slider } from './slider.js';
+export type { SliderProps } from './slider.js';
+export { RadioGroup } from './radio-group.js';
+export type { RadioGroupProps, RadioOption } from './radio-group.js';
+export { TokenField } from './token-field.js';
+export type { TokenFieldProps } from './token-field.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
@@ -489,9 +499,6 @@ export declare const Menu: React.ForwardRefExoticComponent<MenuProps & React.Ref
   Header: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>>;
   Separator: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
 };
-export type RadioOption = { id?: string; value: string; label?: React.ReactNode; disabled?: boolean; };
-export type RadioGroupProps = MuxUIAccessibleName & { /** Shown once for the whole group, only while the group is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the group invalid by itself. */ errorMessage?: React.ReactNode; options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; name?: string; onChange?: (value: string) => void; className?: string; };
-export declare const RadioGroup: React.ForwardRefExoticComponent<RadioGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type SelectProps = NamedFieldProps & SelectOptions;
 export type SelectOptions = { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; selectedContent?: React.ReactNode; trigger?: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>; placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; children?: React.ReactNode; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
 export type SelectRootProps = SelectOptions & FieldValidationProps & (MuxUIAccessibleName | { children: React.ReactNode; label?: React.ReactNode; 'aria-label'?: string; 'aria-labelledby'?: string; });
@@ -511,8 +518,6 @@ export declare const Select: React.ForwardRefExoticComponent<SelectProps & React
 };
 export type ComboBoxProps = NamedFieldProps & { /** The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. */ items?: MuxUIItems; value?: string; defaultValue?: string; /** The selected item's id. A controlled field with no selection passes null; an empty string throws. */ selectedId?: string | null; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; /** Called with the chosen item, or with no item when the selection clears. */ onSelect?: (item?: MuxUICollectionItem) => void; };
 export declare const ComboBox: React.ForwardRefExoticComponent<ComboBoxProps & React.RefAttributes<HTMLDivElement>>;
-export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; name?: string; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
-export declare const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
 export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }
 export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };
@@ -526,12 +531,6 @@ export type TagGroupVariant = 'soft' | 'outline' | 'dot' | 'strong';
 export type TagGroupItem = MuxUICollectionItem & { /** Overrides the group's color for this tag. */ color?: TagGroupColor; };
 export type TagGroupProps = MuxUIAccessibleName & { items?: Array<TagGroupItem | string>; variant?: TagGroupVariant; /** The default color of every tag; an item's own color wins. */ color?: TagGroupColor; selectionMode?: 'none' | 'single' | 'multiple'; /** The selected item ids. */ selectedKeys?: Set<string>; defaultSelectedKeys?: Set<string>; onSelectionChange?: (keys: Set<string>) => void; disabled?: boolean; onRemove?: (items: TagGroupItem[]) => void; onAction?: (item?: TagGroupItem) => void; className?: string; };
 export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type ToggleButtonGroupProps = MuxUIAriaAccessibleName & { selectedIds?: readonly string[]; defaultSelectedIds?: readonly string[]; selectionMode?: 'single' | 'multiple'; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; disallowEmptySelection?: boolean; size?: 'sm' | 'md' | 'lg'; onSelectionChange?: (ids: readonly string[]) => void; children?: React.ReactNode; className?: string; };
-export declare const ToggleButtonGroup: React.ForwardRefExoticComponent<ToggleButtonGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type TokenFieldProps = MuxUIAccessibleName & { value?: string[]; defaultValue?: string[]; disabled?: boolean; readOnly?: boolean; name?: string; placeholder?: string; onChange?: (value: string[]) => void; className?: string; };
-export declare const TokenField: React.ForwardRefExoticComponent<TokenFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type ToolbarProps = MuxUIAriaAccessibleName & { orientation?: 'horizontal' | 'vertical'; children?: React.ReactNode; className?: string; };
-export declare const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }
 export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; expansionTrigger?: 'chevron' | 'row'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
 export declare const Tree: React.ForwardRefExoticComponent<TreeProps & React.RefAttributes<HTMLDivElement>>;

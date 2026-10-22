@@ -1,0 +1,132 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/token-field.ts",
+  "component": "muxui:component:token-field",
+  "binding": "web.react",
+  "export": "TokenField",
+  "api": {
+    "props": [
+      "label",
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly",
+      "name",
+      "placeholder"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "value": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The tokens, in order, when the caller controls them."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The tokens the field starts with, when it controls itself. Form reset restores them."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed, and it submits no tokens."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its tokens stay visible and focusable but cannot be changed, and it still submits them."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named field submits one entry per token under it."
+      },
+      "placeholder": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "Text shown while the field holds no tokens and no typed text."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the token array each time the tokens change, and only then: typed text that is not yet a token does not call it. A disabled or read-only field does not call it."
+      }
+    },
+    "types": {}
+  }
+}
