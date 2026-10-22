@@ -56,6 +56,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'lightbox', name: 'Lightbox', source: 'packages/react/src/supplemental/lightbox.ts' },
   { slug: 'color-swatch', name: 'ColorSwatch', source: 'packages/react/src/color-swatch.ts' },
   { slug: 'color-wheel', name: 'ColorWheel', source: 'packages/react/src/color-wheel.ts' },
+  { slug: 'color-slider', name: 'ColorSlider', source: 'packages/react/src/color-slider.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

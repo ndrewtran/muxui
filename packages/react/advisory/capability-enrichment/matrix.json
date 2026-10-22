@@ -6794,7 +6794,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-slider/artifact.json#bindings/web.react",
-          "packages/react/src/color-slider.mjs#ColorSlider",
+          "packages/react/src/color-slider.ts#ColorSlider",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

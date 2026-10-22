@@ -1,0 +1,230 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/color-slider.ts",
+  "component": "muxui:component:color-slider",
+  "binding": "web.react",
+  "export": "ColorSlider",
+  "api": {
+    "props": [
+      "label",
+      "value",
+      "defaultValue",
+      "channel",
+      "colorSpace",
+      "disabled",
+      "readOnly",
+      "orientation"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "channel": "red",
+      "disabled": false,
+      "readOnly": false,
+      "orientation": "horizontal"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the slider. Without one, the slider needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "value": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The slider's color, when the caller controls it."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The starting color, when the slider controls itself."
+      },
+      "channel": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorChannel"
+        },
+        "required": false,
+        "enum": [
+          "red",
+          "green",
+          "blue",
+          "hue",
+          "saturation",
+          "lightness",
+          "brightness",
+          "alpha"
+        ],
+        "description": "The channel the slider adjusts. It must belong to colorSpace or, without colorSpace, to the space of the enclosing ColorPicker's color, otherwise of value or defaultValue; any other pair throws a TypeError."
+      },
+      "colorSpace": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorSpace"
+        },
+        "required": false,
+        "enum": [
+          "rgb",
+          "hsl",
+          "hsb"
+        ],
+        "description": "The color space the slider reads and reports in. Without it the slider uses the enclosing ColorPicker's space, otherwise the space of the value."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the slider: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the slider read-only: it stays focusable but its channel cannot be changed. A read-only enclosing ColorPicker does the same."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            },
+            {
+              "kind": "literal",
+              "value": "vertical"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "horizontal",
+          "vertical"
+        ],
+        "description": "The direction of the track."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIColorValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new color as a CSS string each time the channel changes. It is in the slider's color space when colorSpace is set, and otherwise in the space of the value, the enclosing ColorPicker, or defaultValue. A disabled or read-only slider does not call it."
+      }
+    },
+    "types": {
+      "MuxUIColorChannel": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "red"
+            },
+            {
+              "kind": "literal",
+              "value": "green"
+            },
+            {
+              "kind": "literal",
+              "value": "blue"
+            },
+            {
+              "kind": "literal",
+              "value": "hue"
+            },
+            {
+              "kind": "literal",
+              "value": "saturation"
+            },
+            {
+              "kind": "literal",
+              "value": "lightness"
+            },
+            {
+              "kind": "literal",
+              "value": "brightness"
+            },
+            {
+              "kind": "literal",
+              "value": "alpha"
+            }
+          ]
+        },
+        "description": "Channels must belong to colorSpace, or, when colorSpace is omitted, to the space of an enclosing ColorPicker's color, otherwise value or defaultValue."
+      },
+      "MuxUIColorSpace": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "rgb"
+            },
+            {
+              "kind": "literal",
+              "value": "hsl"
+            },
+            {
+              "kind": "literal",
+              "value": "hsb"
+            }
+          ]
+        }
+      },
+      "MuxUIColorValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color."
+      }
+    }
+  }
+}

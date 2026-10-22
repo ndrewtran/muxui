@@ -119,7 +119,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
     'tabs.mjs': ['Tabs'],
     'toggle-button-group.mjs': ['ToggleButtonGroup'],
     'tree.mjs': ['Tree'],
-    'color-slider.mjs': ['ColorSlider'],
+    'color-slider.js': ['ColorSlider'],
     'color-wheel.js': ['ColorWheel'],
     'slider.mjs': ['Slider'],
   };
@@ -175,7 +175,9 @@ test('a bundle that uses one collections family keeps its own module and only th
 // guard and a picker no motion. Through the barrel, a bundle keeps exactly these package modules.
 test('a bundle that uses one color family keeps its own module and only the shared and motion modules it needs', async () => {
   const wheel = ['color-context.js', 'color-wheel-motion.mjs', 'color-wheel.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
+  const slider = ['color-context.js', 'color-slider-motion.mjs', 'color-slider.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
   const kept = {
+    ColorSlider: slider,
     ColorSwatch: ['color-context.js', 'color-swatch.js', 'control-utils.js'],
     ColorWheel: wheel,
   };

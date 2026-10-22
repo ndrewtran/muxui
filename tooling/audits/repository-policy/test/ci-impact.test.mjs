@@ -1413,7 +1413,7 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
 });
 
 test('a change to a collections module runs the collections guards even when it affects no family', async () => {
-  const sliderPath = 'packages/react/src/color-slider.mjs';
+  const sliderPath = 'packages/react/src/color-slider.ts';
   // Dropping the pure annotation changes no export, so no family is affected.
   const before = 'export const ColorSlider = /* @__PURE__ */ (() => () => null)();\n';
   const after = 'export const ColorSlider = (() => () => null)();\n';
