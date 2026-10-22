@@ -63,6 +63,8 @@ const audited = [
       ...expand(['toolbar', 'toggle-button-group'], ['orientation']),
       // ToggleButtonGroup sends selectionMode, isDisabled, and disallowEmptySelection to React Aria as its own values, single, false, and false when omitted, as it did before the move.
       ...expand(['toggle-button-group'], ['selectionMode', 'disabled', 'disallowEmptySelection']),
+      // RadioGroup sends isDisabled, isReadOnly, isRequired, and orientation to React Aria as its own values, false, false, false, and vertical when omitted, as it did before the move.
+      ...expand(['radio-group'], ['disabled', 'readOnly', 'required', 'orientation']),
       // Slider sends minValue, maxValue, step, isDisabled, and orientation to React Aria as its own values, 0, 100, 1, false, and horizontal when omitted, as it did before the move.
       ...expand(['slider'], ['min', 'max', 'step', 'disabled', 'orientation']),
     ],
@@ -94,8 +96,8 @@ const audited = [
       ...expand(validationFamilies, ['invalid']),
       // Link sends aria-current: current ? 'page' : undefined.
       ...expand(['link'], ['current']),
-      // color-field sends isInvalid: invalid ? invalid : undefined, so a React Aria context can still make it invalid.
-      ...expand(['color-field'], ['invalid']),
+      // color-field and radio-group send isInvalid: invalid ? invalid : undefined, so a React Aria context can still make them invalid.
+      ...expand(['color-field', 'radio-group'], ['invalid']),
       // The calendars send isInvalid the same way, so a CalendarContext or RangeCalendarContext can still make them invalid.
       ...expand(['calendar', 'range-calendar'], ['invalid']),
     ],

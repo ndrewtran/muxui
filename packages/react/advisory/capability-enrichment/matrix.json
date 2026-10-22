@@ -8797,7 +8797,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/radio-group/artifact.json#bindings/web.react",
-          "packages/react/src/radio-group.mjs#RadioGroup",
+          "packages/react/src/radio-group.ts#RadioGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

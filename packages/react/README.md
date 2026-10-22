@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:bc2e862ec7699bcd221d5e54bf2ada156a7c33aa567bb46d33a115a70a1deb66 -->
+<!-- @generated-content-sha256: sha256:b4904daf79fa5bb76c2ac3a1ed2abf90e607add90f5c0d8594641bdc472e1fc7 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -158,7 +158,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
 | PromptComposer | experimental | . | .muxui-prompt-composer | inputLabel, value, defaultValue, inputProps, inputRef, pending, disabled, error, sources, commands, attachments, accept, multiple, models, selectedModel, defaultSelectedModel |
 | RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, value |
-| RadioGroup | experimental | . | .muxui-radio-group | label, errorMessage, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
+| RadioGroup | experimental | . | .muxui-radio-group | label, errorMessage, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, keyboardStep, keyboardLargeStep, precision, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, inputProps |

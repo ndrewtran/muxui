@@ -6803,7 +6803,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/radio-group.mjs",
+          "path": "packages/react/src/radio-group.ts",
           "lines": null,
           "anchor": "#RadioGroup"
         }
@@ -6842,7 +6842,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/radio-group.mjs",
+          "path": "packages/react/src/radio-group.ts",
           "lines": null,
           "anchor": "#RadioGroup"
         }
@@ -6881,7 +6881,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/radio-group.mjs",
+          "path": "packages/react/src/radio-group.ts",
           "lines": null,
           "anchor": "#RadioGroup"
         }
@@ -6920,7 +6920,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/radio-group.mjs",
+          "path": "packages/react/src/radio-group.ts",
           "lines": null,
           "anchor": "#RadioGroup"
         }
@@ -6959,7 +6959,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/radio-group.mjs",
+          "path": "packages/react/src/radio-group.ts",
           "lines": null,
           "anchor": "#RadioGroup"
         }
@@ -6998,7 +6998,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/radio-group.mjs",
+          "path": "packages/react/src/radio-group.ts",
           "lines": null,
           "anchor": "#RadioGroup"
         }

@@ -1829,6 +1829,19 @@ test('R1.3 TokenField Enter ignores empty drafts and read-only fields', async ()
   }
 });
 
+// A parameter default of [] on options would be published as an empty-list default, which the Storybook default
+// story takes as its args and renders empty. The component turns an omitted options into an empty list itself
+// and leaves every other value to fail where it always has.
+test('R1.3 RadioGroup options claims no empty-list default, and an omitted options is empty', async () => {
+  const { api } = JSON.parse(await readFile(resolve(import.meta.dirname, '../api/radio-group.json'), 'utf8'));
+  assert.equal(Object.hasOwn(api.defaults, 'options'), false);
+  assert.doesNotMatch(renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan' })), /type="radio"/u);
+  assert.match(renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: [{ value: 'a' }] })), /type="radio"/u);
+  // The message names the local that holds the options, so it stays `options.map`.
+  assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: { length: 1 } })), /options\.map is not a function/u);
+  assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Plan', options: null })), /Cannot read properties of null/u);
+});
+
 test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a bounded window', async () => {
   const invalidVirtualizerInputs = [
     [{ itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],

@@ -114,7 +114,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
     'grid-list.mjs': ['GridList'],
     'list-box.mjs': ['ListBox'],
     'menu.mjs': ['Menu'],
-    'radio-group.mjs': ['RadioGroup'],
+    'radio-group.js': ['RadioGroup'],
     'select.mjs': ['Select'],
     'tabs.mjs': ['Tabs'],
     'toggle-button-group.js': ['ToggleButtonGroup'],
@@ -202,6 +202,7 @@ test('a bundle that uses one color family keeps its own module and only the shar
 // a toolbar needs nothing else, and no bundle pulls in another family's module.
 test('a bundle that uses one control family keeps its own module and only the shared and motion modules it needs', async () => {
   const kept = {
+    RadioGroup: ['choice-context.mjs', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'radio-group.js', 'radio-motion.mjs'],
     Slider: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'slider-motion.mjs', 'slider.js'],
     ToggleButtonGroup: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
     Toolbar: ['control-utils.js', 'toolbar.js'],

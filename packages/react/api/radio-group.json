@@ -1,0 +1,258 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/radio-group.ts",
+  "component": "muxui:component:radio-group",
+  "binding": "web.react",
+  "export": "RadioGroup",
+  "api": {
+    "props": [
+      "label",
+      "errorMessage",
+      "options",
+      "children",
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly",
+      "required",
+      "invalid",
+      "orientation",
+      "size",
+      "name"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false,
+      "required": false,
+      "invalid": false,
+      "orientation": "vertical",
+      "size": "md"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the group. Without one, the group needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Shown once for the whole group, only while the group is invalid, through the invalid prop or failed native, custom, or server validation. It replaces the built-in message and never makes the group invalid by itself."
+      },
+      "options": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "RadioOption"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The radios the group builds, one per option. A non-empty options cannot be combined with children: passing both throws a TypeError."
+      },
+      "children": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "RadioField radios, when the group does not build them from options. They cannot be combined with a non-empty options."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The value of the selected radio, when the caller controls it."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The value of the radio that starts selected, when the group controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the group and every radio in it."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the group read-only: its radios stay visible and focusable but cannot be changed."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group required, so a form with native validation does not submit while no radio is selected."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the group invalid."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "vertical"
+            },
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "vertical",
+          "horizontal"
+        ],
+        "description": "Whether the radios stack in a column or sit in a row."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size. The radios take it from the group."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named group submits the selected value under it."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the value of the radio each time one is selected. A disabled or read-only group does not call it."
+      }
+    },
+    "types": {
+      "RadioOption": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "The radio's key, which also stands in for the value when the option has none."
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false,
+              "description": "What the group's value, change callback, and form field carry when this option is selected."
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "What the radio shows beside its indicator. Without one it shows the value."
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Disables this radio alone. A disabled group disables them all."
+            }
+          ]
+        },
+        "description": "One radio the group builds from its options."
+      }
+    }
+  }
+}
