@@ -117,28 +117,24 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
       }
     }
     const sharedCollectionSurface = ['grid-list', 'list-box'].includes(slug) ? runtime.slice(runtime.indexOf('function collectionProps'), runtimeStart) : '';
-    const sharedCalendarSurface = ['calendar', 'range-calendar'].includes(slug) ? runtime.slice(runtime.indexOf('function calendarProps'), runtimeStart) : '';
     if (name === 'Tree') assert.doesNotMatch(typeSurface, /\bchildren\??\s*:/u, 'Tree must not expose children customization');
     if (name === 'Virtualizer') assert.doesNotMatch(typeSurface, /\brenderItem\??\s*:/u, 'Virtualizer must not expose renderItem customization');
-    if (name === 'Calendar' || name === 'RangeCalendar') {
-      assert.doesNotMatch(typeSurface, /\b(?:description|errorMessage)\??\s*:/u, `${name} must not expose unsupported validation messaging`);
-    }
     const rejectedProps = REJECTED_PROPS[name];
     if (rejectedProps) {
       for (const prop of rejectedProps) {
         assert.doesNotMatch(typeSurface, propPattern(prop), `${name} must not expose unsupported ${prop}`);
-        assert.doesNotMatch(`${runtimeSurface}\n${sharedCollectionSurface}\n${sharedCalendarSurface}`, propPattern(prop), `${name} must not forward unsupported ${prop}`);
+        assert.doesNotMatch(`${runtimeSurface}\n${sharedCollectionSurface}`, propPattern(prop), `${name} must not forward unsupported ${prop}`);
       }
     }
     for (const prop of api.props) {
       assert.match(typeSurface, propPattern(prop), `${name}.${prop} is missing from generated type surface`);
-      assert.match(`${runtimeSurface}\n${sharedCollectionSurface}\n${sharedCalendarSurface}`, propPattern(prop), `${name}.${prop} is missing from runtime surface`);
+      assert.match(`${runtimeSurface}\n${sharedCollectionSurface}`, propPattern(prop), `${name}.${prop} is missing from runtime surface`);
     }
     for (const event of api.events) {
       const callback = events.get(event);
       assert.ok(callback, `${name}.${event} needs a MuxUI callback mapping`);
       assert.match(typeSurface, propPattern(callback), `${name}.${callback} is missing from generated type surface`);
-      assert.match(`${runtimeSurface}\n${sharedCollectionSurface}\n${sharedCalendarSurface}`, propPattern(callback), `${name}.${callback} is missing from runtime surface`);
+      assert.match(`${runtimeSurface}\n${sharedCollectionSurface}`, propPattern(callback), `${name}.${callback} is missing from runtime surface`);
     }
   }
 });

@@ -13,7 +13,7 @@ Choose by where the date lives.
 
 ## Selection and focus
 
-Calendar tracks a selected date and a separate focused date. Moving focus does not select, and controlling the focused date also controls the month shown. The Controlled selection and focus example controls both and moves focus from a button. A read-only calendar still moves focus but cannot select, and an unavailable date can take focus but cannot be selected.
+Calendar tracks a selected date and a separate focused date. Moving focus does not select, and controlling the focused date also controls the month shown. The Controlled selection and focus example controls both and moves focus from a button. A read-only calendar still moves focus but cannot select, and a date that `unavailableDateMatcher` marks can take focus but cannot be selected.
 
 ## Content
 

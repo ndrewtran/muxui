@@ -68,6 +68,9 @@ test('the Button guide covers exactly the variants its derived API declares', as
 // `from` lists, by slug, the spans a guide states about a neighbouring component's API, such as the slider
 // props a picker's advice names; each must be a prop, event prop, or finite value of that component's derived
 // API, so the claim moves with the neighbour. It excuses prose spans only, like `declared`.
+// `described` lists, by derived type name, the spans a guide states about a format that type's description
+// states, such as the date format; each must appear in that description, so a changed format fails the guide.
+// It excuses prose spans only too.
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },
@@ -137,6 +140,9 @@ const GUIDES = {
   'color-field': { native: ['rgba()', 'hsla()', '#336699'] },
   // colorSpace, hsb, and hsl are the slider's, which the guide tells a hex picker to set, and the form name is the field's.
   'color-picker': { native: ['rgba()', 'hsla()'], from: { 'color-slider': ['colorSpace', 'hsb', 'hsl'], 'color-field': ['name'] } },
+  // YYYY-MM-DD is Mux UI's own value format, not a native one: MuxUIDateValue's description states it, and the check reads it there.
+  calendar: { described: { MuxUIDateValue: ['YYYY-MM-DD'] } },
+  'range-calendar': {},
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 
@@ -152,7 +158,7 @@ const undeclaredOwners = (guides) => Object.entries(guides)
  * package's own names. An example's attributes are checked against `attributes`; the guide's
  * prose also gets the `declared` spans.
  */
-function guideNames({ derived, record, entry: { native = [], declared = [], from = {} }, importPaths, componentNames }) {
+function guideNames({ derived, record, entry: { native = [], declared = [], from = {}, described = {} }, importPaths, componentNames }) {
   const { api } = derived;
   const attributes = new Set([
     ...importPaths,
@@ -166,7 +172,7 @@ function guideNames({ derived, record, entry: { native = [], declared = [], from
     ...memberNames(api.propDetails),
     ...native,
   ]);
-  return { attributes, prose: new Set([...attributes, ...declared, ...Object.values(from).flat()]) };
+  return { attributes, prose: new Set([...attributes, ...declared, ...Object.values(from).flat(), ...Object.values(described).flat()]) };
 }
 
 /** The spans of `spans` that `api` (another component's derived API) does not own as a prop, event prop, or finite value. */
@@ -179,6 +185,10 @@ function missingFromOwner(api, spans) {
   ]);
   return spans.filter((span) => !owned.has(span));
 }
+
+/** The `Type: span` pairs of `described` whose span `api`'s description of that derived type does not contain. */
+const missingFromDescription = (api, described) => Object.entries(described)
+  .flatMap(([type, spans]) => spans.filter((span) => !api.types[type]?.description.includes(span)).map((span) => `${type}: ${span}`));
 
 /** The attribute names an example gives the component that `checked` does not hold. */
 function unknownExampleAttributes(code, exportName, checked) {
@@ -229,7 +239,7 @@ test('every API name a derived component\'s guide states is in its derived API o
   const layerOrder = /^@layer reset, [^\n]+;$/mu.exec(readme)?.[0];
   assert.ok(layerOrder, 'the React README states the layer order');
 
-  for (const [slug, { native = [], declared = [], from = {} }] of Object.entries(GUIDES)) {
+  for (const [slug, { native = [], declared = [], from = {}, described = {} }] of Object.entries(GUIDES)) {
     const [guide, derived, record] = await Promise.all([
       read(`catalog/guides/${slug}-usage.md`),
       derivedApi(slug),
@@ -254,6 +264,8 @@ test('every API name a derived component\'s guide states is in its derived API o
     // The list names only what the guide still states.
     const stated = new Set([...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' ')));
     assert.deepEqual(declared.filter((span) => !stated.has(span)), [], `${slug} declares spans its guide no longer states`);
+    assert.deepEqual(Object.values(described).flat().filter((span) => !stated.has(span)), [], `${slug} describes spans its guide no longer states`);
+    assert.deepEqual(missingFromDescription(api, described), [], `${slug} guide states a format its derived types do not describe`);
     for (const [owner, spans] of Object.entries(from)) {
       assert.notEqual(owner, slug, `${slug} takes its own spans from another component`);
       assert.deepEqual(spans.filter((span) => !stated.has(span)), [], `${slug} lists ${owner} spans its guide no longer states`);
@@ -289,6 +301,24 @@ test('spans a guide states about a neighbour are checked against the neighbour\'
   assert.equal(prose.has('colorSpace'), true);
   assert.equal(attributes.has('colorSpace'), false);
   assert.deepEqual(unknownExampleAttributes('<ColorPicker colorSpace="hsb" />', 'ColorPicker', attributes), ['colorSpace']);
+});
+
+// The Calendar guide states YYYY-MM-DD, Mux UI's own value format. It is checked against MuxUIDateValue's description,
+// not excused as native, so a changed format fails the guide.
+test('a format a guide states is checked against the derived type that describes it', async () => {
+  const [{ api }, record] = await Promise.all([derivedApi('calendar'), read('catalog/components/calendar/artifact.json').then(JSON.parse)]);
+  const { described } = GUIDES.calendar;
+  assert.deepEqual(missingFromDescription(api, described), []);
+  // The type's description changes the format, or the type leaves the block.
+  const description = api.types.MuxUIDateValue.description;
+  assert.match(description, /YYYY-MM-DD/u);
+  const reformatted = { ...api, types: { ...api.types, MuxUIDateValue: { ...api.types.MuxUIDateValue, description: description.replace('YYYY-MM-DD', 'DD/MM/YYYY') } } };
+  assert.deepEqual(missingFromDescription(reformatted, described), ['MuxUIDateValue: YYYY-MM-DD']);
+  assert.deepEqual(missingFromDescription({ ...api, types: {} }, described), ['MuxUIDateValue: YYYY-MM-DD']);
+  // The span excuses prose only: an example may not pass it as an attribute.
+  const { attributes, prose } = guideNames({ derived: { api, export: 'Calendar' }, record, entry: GUIDES.calendar, importPaths: [], componentNames: [] });
+  assert.equal(prose.has('YYYY-MM-DD'), true);
+  assert.equal(attributes.has('YYYY-MM-DD'), false);
 });
 
 test('declared spans belong to the declaration-only guide and never excuse an example attribute', async () => {

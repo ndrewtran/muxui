@@ -1,0 +1,207 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/calendar.ts",
+  "component": "muxui:component:calendar",
+  "binding": "web.react",
+  "export": "Calendar",
+  "api": {
+    "props": [
+      "label",
+      "value",
+      "defaultValue",
+      "focusedValue",
+      "minValue",
+      "maxValue",
+      "unavailableDateMatcher",
+      "disabled",
+      "readOnly",
+      "required",
+      "invalid"
+    ],
+    "events": [
+      "change",
+      "focusChange"
+    ],
+    "defaults": {
+      "invalid": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the calendar. Without one, the calendar needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIDateValue"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The selected date as YYYY-MM-DD, when the caller controls it. null keeps a controlled calendar empty. An empty string counts as no date, and any other string that is not a valid date throws a TypeError."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The starting selected date as YYYY-MM-DD, when the calendar controls itself."
+      },
+      "focusedValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The focused date as YYYY-MM-DD, when the caller controls it. It is separate from the selected date, and controlling it also controls the month shown. Moving focus does not select."
+      },
+      "minValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The earliest date, inclusive, that can be focused or selected."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIDateValue"
+        },
+        "required": false,
+        "description": "The latest date, inclusive, that can be focused or selected."
+      },
+      "unavailableDateMatcher": {
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "date",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "boolean"
+          }
+        },
+        "required": false,
+        "description": "Returns true for a date that is unavailable, given as a YYYY-MM-DD string. An unavailable date can take focus but cannot be selected."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the calendar: no date can be focused or selected."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the calendar read-only: focus still moves between dates, but selecting a date does nothing."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the calendar required. It currently has no effect on a calendar, which submits no form value."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Forces the invalid state when true. Left false, validation follows the selected dates, so a date before minValue, after maxValue, or marked unavailable still makes the calendar invalid."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the date the user selects, as YYYY-MM-DD. It is not called while the calendar is disabled or read-only."
+      },
+      "focusChange": {
+        "prop": "onFocusChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIDateValue"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the focused date as YYYY-MM-DD when focus moves to another date, by the arrow keys or the month buttons. It is not called while the calendar is disabled."
+      }
+    },
+    "types": {
+      "MuxUIDateValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A calendar date as an ISO string, `YYYY-MM-DD`, with no time or time zone."
+      }
+    }
+  }
+}

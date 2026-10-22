@@ -109,7 +109,7 @@ test('a bundle that uses one field keeps only the motion modules that field need
 // that ignores the package's sideEffects flag still drops the motion modules of an unused family.
 test('the collections family modules keep the pure annotation on each wrapper', () => {
   const wrappers = {
-    'calendar.mjs': ['Calendar', 'RangeCalendar'],
+    'calendar.js': ['Calendar', 'RangeCalendar'],
     'combo-box.mjs': ['ComboBox'],
     'grid-list.mjs': ['GridList'],
     'list-box.mjs': ['ListBox'],

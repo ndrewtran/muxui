@@ -5788,7 +5788,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/calendar/artifact.json#bindings/web.react",
-          "packages/react/src/calendar.mjs#Calendar",
+          "packages/react/src/calendar.ts#Calendar",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -9048,7 +9048,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/range-calendar/artifact.json#bindings/web.react",
-          "packages/react/src/calendar.mjs#RangeCalendar",
+          "packages/react/src/calendar.ts#RangeCalendar",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
