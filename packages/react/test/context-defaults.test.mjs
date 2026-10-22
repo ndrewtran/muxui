@@ -89,6 +89,8 @@ const audited = [
       // through the overlay geometry helper, before the move, so no React Aria context supplied them. Select.Trigger and Select.Item sent isDisabled as a boolean: their own flag, else the Select's.
       ...expand(['select'], ['disabled', 'required', 'defaultOpen', 'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal']),
       ...expand(['select.trigger', 'select.option'], ['disabled']),
+      // ComboBox sent isDisabled, isReadOnly, and isRequired to React Aria as its own values (false when omitted) before the move, so no React Aria context supplied them.
+      ...expand(['combo-box'], ['disabled', 'readOnly', 'required']),
     ],
   },
   {
@@ -130,8 +132,8 @@ const audited = [
       ...expand(['color-field', 'radio-group'], ['invalid']),
       // The calendars send isInvalid the same way, so a CalendarContext or RangeCalendarContext can still make them invalid.
       ...expand(['calendar', 'range-calendar'], ['invalid']),
-      // Select sends isInvalid the same way, so a React Aria context can still make it invalid.
-      ...expand(['select'], ['invalid']),
+      // Select and ComboBox send isInvalid the same way, so a React Aria context can still make them invalid.
+      ...expand(['select', 'combo-box'], ['invalid']),
     ],
   },
 ];

@@ -1,0 +1,317 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/combo-box.ts",
+  "component": "muxui:component:combo-box",
+  "binding": "web.react",
+  "export": "ComboBox",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "items",
+      "value",
+      "defaultValue",
+      "selectedId",
+      "defaultSelectedId",
+      "disabled",
+      "size",
+      "readOnly",
+      "required",
+      "invalid",
+      "name",
+      "placeholder"
+    ],
+    "events": [
+      "change",
+      "select"
+    ],
+    "defaults": {
+      "disabled": false,
+      "size": "md",
+      "readOnly": false,
+      "required": false,
+      "invalid": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed validation. It never makes the field invalid by itself."
+      },
+      "items": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIItems"
+        },
+        "required": false,
+        "description": "The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. Pass every option rather than a pre-filtered list."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text in the input, when the caller controls it. When the selected id is also controlled, choosing an option does not update the text: the application sets it, usually to the option's label."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text in the input at first, when the field controls itself."
+      },
+      "selectedId": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "string"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The id of the selected item, when the caller controls the selection. A controlled field with no selection passes null; an empty string is not an id and throws. A controlled selectedId stays until the application changes it."
+      },
+      "defaultSelectedId": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the item selected at first, when the field controls its selection. An empty string is not an id and throws."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size. The option list takes it too."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its text stays visible and focusable but cannot be changed, and no option can be chosen."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required, so a form with native validation does not submit while it is empty."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named field submits the selected item's id, not the item's `value`, or an empty value when nothing is selected."
+      },
+      "placeholder": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "An example value shown while the field is empty. It does not name the field."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the text each time it changes, including when choosing an option sets it to the option's label."
+      },
+      "select": {
+        "prop": "onSelect",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the chosen item, or with no item when the selection clears. Emptying the input clears the selection."
+      }
+    },
+    "types": {
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      },
+      "MuxUIItems": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        }
+      }
+    }
+  }
+}

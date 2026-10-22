@@ -260,6 +260,7 @@ const minimalRenders = {
   Virtualizer: () => h(generated.Virtualizer, { 'aria-label': 'Results', items: ['One', 'Two'] }),
   // Select's block is the callable's, which is also Select.Root's.
   Select: () => selectField(),
+  ComboBox: () => h(generated.ComboBox, { label: 'City', items: ['Melbourne'] }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -597,6 +598,15 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual([select.partApis.popup.defaults, select.partApis.list.defaults], [{}, {}]);
   assert.deepEqual(await changedSelect('popup', { offset: 5 }), ['offset: no observer']);
   assert.deepEqual(await partProblems(types, 'Select', 'popup', { ...select.partApis.popup, props: [...select.partApis.popup.props, 'missingProp'] }), ['missingProp: not declared']);
+  // ComboBox has no part of its own, and every default it states shows in the markup: its flags on the input and group, its size on the root.
+  const combo = apis.ComboBox;
+  assert.deepEqual(Object.keys(combo.defaults), ['disabled', 'size', 'readOnly', 'required', 'invalid']);
+  assert.equal(combo.partApis, undefined);
+  for (const key of ['disabled', 'readOnly', 'required', 'invalid']) {
+    assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ComboBox()), { ...combo.defaults, [key]: true }), [`${key}: catalog true, rendered false`], key);
+  }
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ComboBox()), { ...combo.defaults, size: 'sm' }), ['size: catalog "sm", rendered "md"']);
+  assert.deepEqual(undeclaredProps(types, 'ComboBox', [...combo.props, 'missingProp']), ['missingProp']);
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);

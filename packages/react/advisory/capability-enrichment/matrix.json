@@ -7791,7 +7791,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/combo-box/artifact.json#bindings/web.react",
-          "packages/react/src/combo-box.mjs#ComboBox",
+          "packages/react/src/combo-box.ts#ComboBox",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

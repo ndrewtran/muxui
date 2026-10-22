@@ -110,7 +110,7 @@ test('a bundle that uses one field keeps only the motion modules that field need
 test('the collections family modules keep the pure annotation on each wrapper', () => {
   const wrappers = {
     'calendar.js': ['Calendar', 'RangeCalendar'],
-    'combo-box.mjs': ['ComboBox'],
+    'combo-box.js': ['ComboBox'],
     'grid-list.js': ['GridList'],
     'list-box.js': ['ListBox'],
     'menu.js': ['Menu'],
@@ -205,6 +205,14 @@ test('a bundle that uses Select keeps its own module, the collection helpers, an
   const kept = ['choice-context.mjs', 'collection-items.js', 'collection-trigger.js', 'control-utils.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'select.js'];
   assert.deepEqual((await bundledModules('Select', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('Select', 'index.mjs')).sort(), kept);
+});
+
+// ComboBox keeps its own module, the item helper it normalizes with, the icon button its trigger renders, the shared class and name
+// helper, the choice size helper, and the popup motion. Through the barrel or the index, a bundle keeps exactly these package modules.
+test('a bundle that uses ComboBox keeps its own module, the collection helper, the icon button, and the popup motion modules', async () => {
+  const kept = ['button.js', 'choice-context.mjs', 'collection-items.js', 'combo-box.js', 'control-utils.js', 'icon-button.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'popover-motion.mjs'];
+  assert.deepEqual((await bundledModules('ComboBox', 'collections.mjs')).sort(), kept);
+  assert.deepEqual((await bundledModules('ComboBox', 'index.mjs')).sort(), kept);
 });
 
 // The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
