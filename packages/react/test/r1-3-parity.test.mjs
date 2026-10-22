@@ -2589,7 +2589,7 @@ test('R1.3 GridList layout and orientation reach the root and reject unsupported
 });
 
 // Several inputs can be invalid at once, and the caller sees the first one the component checks.
-test('R1.3 GridList reports the first invalid input in the order it checks: items, name, selection, layout, orientation', () => {
+test('R1.3 GridList reports the first invalid input in the order it checks: items, name, selection, className, layout, orientation', () => {
   const failure = (props) => {
     try {
       renderToString(React.createElement(GridList, props));
@@ -2611,6 +2611,15 @@ test('R1.3 GridList reports the first invalid input in the order it checks: item
   assert.doesNotMatch(failure({ ...named, selectedIds: 5, layout: 'masonry' }), shape);
   assert.doesNotMatch(failure({ ...named, defaultSelectedIds: 5, layout: 'masonry' }), shape);
   assert.notEqual(failure({ ...named, selectedIds: 5 }), 'rendered');
+  // Then the className, which cannot be turned into text when it is a symbol, ahead of the layout and the orientation.
+  const symbol = /Cannot convert a Symbol value to a string/u;
+  const className = Symbol('invalid');
+  assert.match(failure({ ...named, className, layout: 'masonry' }), symbol);
+  assert.match(failure({ ...named, className, orientation: 'diagonal' }), symbol);
+  assert.match(failure({ ...named, className, layout: 'masonry', orientation: 'diagonal' }), symbol);
+  assert.doesNotMatch(failure({ ...named, className, selectedIds: 5 }), symbol);
+  assert.doesNotMatch(failure({ className, layout: 'masonry' }), symbol);
+  assert.doesNotMatch(failure({ ...named, className, items: 5 }), symbol);
   // Then the layout, ahead of the orientation.
   assert.match(failure({ ...named, layout: 'masonry', orientation: 'diagonal' }), /GridList layout must be stack or grid/u);
   assert.match(failure({ ...named, orientation: 'diagonal' }), /GridList orientation must be vertical or horizontal/u);
@@ -2726,6 +2735,48 @@ test('R1.3 Virtualizer fails loudly on props that belong to the other layout', (
   // An undefined prop is absent, and stack mode has always ignored children.
   assert.doesNotThrow(() => renderToString(h(Virtualizer, { layout: 'grid', 'aria-label': undefined, items: undefined, className: undefined }, poster)));
   assert.doesNotThrow(() => renderToString(h(Virtualizer, { 'aria-label': 'Results', items: ['One'], minItemWidth: undefined, maxColumns: undefined }, 'ignored')));
+});
+
+// Several inputs can be invalid at once, and the caller sees the first one the component checks. Each step below is invalid together
+// with every later step, so it is the message only while nothing before it is wrong.
+test('R1.3 Virtualizer reports the first invalid input in the order it checks, in stack and in grid layout', () => {
+  const h = React.createElement;
+  const poster = h(GridList, { 'aria-label': 'Posters', layout: 'grid' });
+  const failure = (props, ...children) => {
+    try {
+      renderToString(h(Virtualizer, props, ...children));
+      return 'rendered';
+    } catch (error) {
+      return error.message;
+    }
+  };
+  const inOrder = (steps, render) => steps.forEach(([props, message], index) => {
+    const together = Object.assign({}, ...steps.slice(index).reverse().map(([later]) => later));
+    assert.match(render(together, index), message, `step ${index}: ${JSON.stringify(props)}`);
+  });
+  const symbol = /Cannot convert a Symbol value to a string/u;
+  inOrder([
+    [{ layout: 'masonry' }, /Virtualizer layout must be stack or grid/u],
+    [{ layout: 'stack', minItemWidth: 100 }, /minItemWidth applies to layout="grid" only/u],
+    [{ 'aria-label': undefined }, /Virtualizer requires label, aria-label, or aria-labelledby/u],
+    [{ 'aria-label': 'Results', itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],
+    [{ 'aria-label': 'Results', height: 0 }, /Virtualizer height must be a finite number greater than 0/u],
+    [{ 'aria-label': 'Results', overscan: -1 }, /Virtualizer overscan must be a finite number greater than or equal to 0/u],
+    // An items list that is not a list fails ahead of the className, whose symbol cannot be turned into text.
+    [{ 'aria-label': 'Results', items: 5 }, /items\.map is not a function/u],
+    [{ 'aria-label': 'Results', className: Symbol('invalid') }, symbol],
+  ], (props) => failure(props));
+  inOrder([
+    [{ layout: 'masonry' }, /Virtualizer layout must be stack or grid/u],
+    [{ layout: 'grid', height: 10 }, /layout="grid" takes no height; set it on the GridList/u],
+    [{ layout: 'grid', minItemWidth: 0 }, /Virtualizer minItemWidth must be a finite number greater than 0/u],
+    [{ layout: 'grid', estimatedItemHeight: 0 }, /Virtualizer estimatedItemHeight must be a finite number greater than 0/u],
+    [{ layout: 'grid', maxItemWidth: 50 }, /Virtualizer maxItemWidth must be Infinity or a finite number no smaller than minItemWidth/u],
+    [{ layout: 'grid', maxColumns: 0 }, /Virtualizer maxColumns must be Infinity or an integer greater than 0/u],
+    [{ layout: 'grid', overscan: -1 }, /Virtualizer overscan must be a finite number greater than or equal to 0/u],
+    [{ layout: 'grid' }, /Virtualizer grid layout requires a single GridList element as its child/u],
+    [{ layout: 'grid', ref: React.createRef() }, /renders no element of its own, so it takes no ref/u],
+  ], (props, index) => failure(props, ...(index < 8 ? [] : [poster])));
 });
 
 test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {

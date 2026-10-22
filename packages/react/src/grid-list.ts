@@ -168,9 +168,10 @@ export const GridList: GridListComponent = /*#__PURE__*/ (() => {
     const normalized = normalizeItems(items);
     accessibleName({ ariaLabel: rest['aria-label'], ariaLabelledby: rest['aria-labelledby'] }, 'grid-list');
     const disabledKeys = disabled ? new Set(normalized.map((item) => item.id)) : new Set(normalized.filter((item) => item.disabled).map((item) => item.id));
-    // A selection that is not a list throws here, ahead of the layout checks below, as it did before the move.
+    // A selection that is not a list, or a className that is not text, throws here, ahead of the layout checks below, as it did before the move.
     const selectedKeys = keySet(selectedIds);
     const defaultSelectedKeys = keySet(defaultSelectedIds);
+    const rootClassName = classNames('muxui-grid-list', className);
     const reportGap = React.useContext(GridVirtualizerContext);
     const [gapRoot, setGapRoot] = React.useState<HTMLDivElement | null>(null);
     useVirtualizedGap(gapRoot, reportGap);
@@ -213,7 +214,7 @@ export const GridList: GridListComponent = /*#__PURE__*/ (() => {
       keyboardNavigationBehavior: orientation === 'horizontal' ? 'tab' : 'arrow',
       ...{ 'data-muxui-virtualized': virtualized || undefined },
       style,
-      className: classNames('muxui-grid-list', className),
+      className: rootClassName,
       children: hasChildren ? children : (item: NormalizedItem) => React.createElement(component.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label),
     });
     // Only this list's own root reports its gap, so a GridList nested in an item stays a plain list.
