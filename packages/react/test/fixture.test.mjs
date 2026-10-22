@@ -231,7 +231,12 @@ const markupValues = {
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   defaultValue: (doc) => doc.querySelector('input')?.getAttribute('value'),
-  selectionMode: (doc) => ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')],
+  // A list marks each option with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
+  selectionMode: (doc) => {
+    const option = doc.querySelector('[role="option"]');
+    return option === null ? ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')] : (option.getAttribute('data-selection-mode') ?? 'none');
+  },
+  layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
 };
 const h = React.createElement;
 const minimalRenders = {
@@ -246,6 +251,12 @@ const minimalRenders = {
   Calendar: () => h(generated.Calendar, { label: 'Date', defaultValue: '2025-01-15' }),
   RangeCalendar: () => h(generated.RangeCalendar, { label: 'Range', defaultValue: { start: '2025-01-10', end: '2025-01-12' } }),
   Tabs: () => h(generated.Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }),
+  ListBox: () => h(generated.ListBox, { 'aria-label': 'Options', items: ['One', 'Two'] }),
+};
+// The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
+// part's own element from the markup, so the root's attributes cannot stand in for the part's.
+const partRenders = {
+  'ListBox.item': { scope: '[role="option"]', render: () => h(generated.ListBox, { 'aria-label': 'Options' }, h(generated.ListBox.Item, { id: 'one' }, 'One')) },
 };
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
 
@@ -297,12 +308,15 @@ const behaviourObservers = {
 
 const kebab = (name) => name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
 
-/** Catalog defaults the server-rendered markup contradicts. */
-function defaultMismatches(markup, defaults) {
+/** Catalog defaults the server-rendered markup contradicts. A `scope` limits the search to one part's element. */
+function defaultMismatches(markup, defaults, scope) {
   const { document } = new JSDOM(markup).window;
+  const container = scope === undefined ? document : document.querySelector(scope);
+  if (container === null) return [`scope ${scope} is not rendered`];
+  const present = (selector) => (container === document ? document.querySelector(selector) !== null : container.matches(selector) || container.querySelector(selector) !== null);
   const mismatches = [];
   for (const [key, expected] of Object.entries(defaults)) {
-    const observed = key in markupFlags ? document.querySelector(markupFlags[key]) !== null : markupValues[key]?.(document);
+    const observed = key in markupFlags ? present(markupFlags[key]) : markupValues[key]?.(container);
     if ((key in markupFlags || key in markupValues) && observed !== expected) mismatches.push(`${key}: catalog ${JSON.stringify(expected)}, rendered ${JSON.stringify(observed)}`);
   }
   return mismatches;
@@ -341,6 +355,15 @@ test('catalog defaults and props agree with the renderer for every generator-gua
     assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
     assert.deepEqual(unobservedDefaults(name, api.defaults), [], `${name} defaults each have a markup or behaviour observer`);
     assert.deepEqual(undeclaredProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
+    // Each part that owns props is observed on its own: its defaults render in its element, and its props are declared.
+    for (const [part, block] of Object.entries(api.partApis ?? {})) {
+      const qualified = `${name}.${part}`;
+      const observed = partRenders[qualified];
+      assert.ok(observed !== undefined || Object.keys(block.defaults).length === 0, `${qualified} defaults have a render`);
+      if (observed !== undefined) assert.deepEqual(defaultMismatches(renderToString(observed.render()), block.defaults, observed.scope), [], `${qualified} renders the catalog defaults`);
+      assert.deepEqual(unobservedDefaults(qualified, block.defaults), [], `${qualified} defaults each have a markup or behaviour observer`);
+      assert.deepEqual(undeclaredProps(types, `${name}${block.member}`, block.props), [], `${qualified} generated declarations list the catalog props`);
+    }
     if ('size' in api.defaults) assert.equal(markupValues.size(new JSDOM(markup).window.document), api.defaults.size, `${name} exposes its size default`);
   }
   // Catalog drift is caught: a different default or an undeclared prop fails.
@@ -351,6 +374,21 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   // Observers outlive the defaults they check: a pending default, were Button to declare one, is still observed.
   assert.deepEqual(unobservedDefaults('Button', { ...apis.Button.defaults, pending: false }), []);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Button()), { pending: true }), ['pending: catalog true, rendered false']);
+  // A part's catalog default is compared with the part's element: a changed default, an unrendered part, or a prop its
+  // declarations do not list fails, and a root default stays the root's.
+  const item = apis.ListBox.partApis.item;
+  const itemMarkup = renderToString(partRenders['ListBox.item'].render());
+  assert.deepEqual(defaultMismatches(itemMarkup, item.defaults, partRenders['ListBox.item'].scope), []);
+  assert.deepEqual(defaultMismatches(itemMarkup, { ...item.defaults, disabled: true }, partRenders['ListBox.item'].scope), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(defaultMismatches(itemMarkup, item.defaults, '[role="gone"]'), ['scope [role="gone"] is not rendered']);
+  assert.deepEqual(unobservedDefaults('ListBox.item', { ...item.defaults, tone: 'quiet' }), ['tone'], 'a part default with no observer is reported');
+  assert.deepEqual(undeclaredProps(types, 'ListBoxItem', [...item.props, 'missingProp']), ['missingProp']);
+  // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
+  const listMarkup = renderToString(minimalRenders.ListBox());
+  assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
+  assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, orientation: 'horizontal' }), ['orientation: catalog "horizontal", rendered "vertical"']);
+  assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, selectionMode: 'multiple' }), ['selectionMode: catalog "multiple", rendered "single"']);
+  assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, selectionMode: 'none' }), ['selectionMode: catalog "none", rendered "single"']);
   // Selection mode follows the role each mode renders: radiogroup for single, toolbar for multiple.
   const multiple = renderToString(h(generated.ToggleButtonGroup, { 'aria-label': 'Format', selectionMode: 'multiple' }, h(generated.ToggleButton, { id: 'a' }, 'A')));
   assert.equal(markupValues.selectionMode(new JSDOM(multiple).window.document), 'multiple');

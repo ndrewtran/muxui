@@ -7,7 +7,7 @@ Use the Mux UI ListBox contract and provide an accessible name.
 Choose by the options and by whether the choice is a form field.
 
 - Use ListBox when the options are rich, such as a title with a description, when the list is long enough to scroll, or when more than one option can be selected.
-- Use [RadioGroup](/components/radio-group/) for a short set of one choice that the user should scan together. It is a form field with a `name`, which ListBox is not.
+- Use [RadioGroup](/components/radio-group/) for a short set of one choice that the user should scan together. It is a form field that submits its value, which ListBox is not.
 - For a compact trigger and popup, use [Select](/components/select/).
 
 The Rich scrollable ListBox with multiple selection example shows titled options that scroll and can be selected together.
@@ -34,4 +34,4 @@ ListBox takes its options from one source. Pass data as items for a plain list, 
 
 ## Common mistake
 
-Using ListBox as a form field. It has no `name` and submits nothing, so read the selected IDs in `onSelectionChange` and send them yourself, or use RadioGroup for a single choice.
+Using ListBox as a form field. It has no `name` prop and submits nothing, so read the selected IDs in `onSelectionChange` and send them yourself, or use RadioGroup for a single choice.

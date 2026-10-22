@@ -74,6 +74,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'slider', name: 'Slider', source: 'packages/react/src/slider.ts' },
   { slug: 'radio-group', name: 'RadioGroup', source: 'packages/react/src/radio-group.ts' },
   { slug: 'token-field', name: 'TokenField', source: 'packages/react/src/token-field.ts' },
+  // ListBox is its own root (ListBox.Root is ListBox); Section and Item own props beside it, and Header owns none.
+  { slug: 'list-box', name: 'ListBox', source: 'packages/react/src/list-box.ts', parts: { section: 'Section', item: 'Item' } },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

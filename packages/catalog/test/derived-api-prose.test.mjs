@@ -150,6 +150,7 @@ const GUIDES = {
   // ToggleButtonGroup's guide words its missing form name as "no `name` prop", which the check reads.
   'toggle-button-group': {},
   toolbar: {},
+  'list-box': {},
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

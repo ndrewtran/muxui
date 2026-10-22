@@ -112,7 +112,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
     'calendar.js': ['Calendar', 'RangeCalendar'],
     'combo-box.mjs': ['ComboBox'],
     'grid-list.mjs': ['GridList'],
-    'list-box.mjs': ['ListBox'],
+    'list-box.js': ['ListBox'],
     'menu.mjs': ['Menu'],
     'radio-group.js': ['RadioGroup'],
     'select.mjs': ['Select'],
@@ -178,6 +178,14 @@ test('a bundle that uses Calendar or RangeCalendar keeps its own module, the ico
   for (const name of ['Calendar', 'RangeCalendar']) {
     assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), kept, name);
   }
+});
+
+// ListBox keeps its own module, the item helpers it normalizes with, the shared class and name helper, and its selection
+// motion. Through the barrel or the index, a bundle keeps exactly these package modules and no other family's.
+test('a bundle that uses ListBox keeps its own module, the collection item helpers, and the list motion modules', async () => {
+  const kept = ['collection-items.js', 'control-utils.js', 'list-box.js', 'listbox-motion.mjs', 'motion-geometry.mjs', 'motion.mjs'];
+  assert.deepEqual((await bundledModules('ListBox', 'collections.mjs')).sort(), kept);
+  assert.deepEqual((await bundledModules('ListBox', 'index.mjs')).sort(), kept);
 });
 
 // The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
