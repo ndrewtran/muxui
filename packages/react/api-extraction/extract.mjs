@@ -1026,14 +1026,19 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
 /**
  * The first place the source reaches a property-writing member of Object or Reflect other than by
  * calling it directly by its plain name (`Object.assign(target, ...)`). `const assign = Object.assign`,
- * `Object['assign']`, `const { assign } = Object`, `globalThis.Object.assign`, and `Reflect.set` passed
- * on all hide the target of a write from the scan above, so each fails here, whatever it writes to.
+ * `Object['assign']`, `const { assign } = Object`, `globalThis.Object.assign`, `({}).constructor.assign`,
+ * and `Reflect.set` passed on all hide the target of a write from the scan above, so each fails here,
+ * whatever it writes to. A mutator's name alone is not enough: `selection.assign()` on a class of the
+ * source's own is a different method, so a name counts only on `Object`, `Reflect`, or a constructor.
  * The rule is conservative on purpose: it refuses the spelling instead of following the value. No
  * static reader can see through arbitrary dynamic code, so what it cannot follow it does not admit.
  */
 function reflectiveEscape(sourceFile) {
   const globals = new Set(['Object', 'Reflect']);
-  const named = (key) => key.kind === SyntaxKind.StringLiteral || key.kind === SyntaxKind.NoSubstitutionTemplateLiteral;
+  const literal = (key) => key.kind === SyntaxKind.StringLiteral || key.kind === SyntaxKind.NoSubstitutionTemplateLiteral;
+  // `.constructor` of anything is, for a plain object, Object itself.
+  const constructorAccess = (node) => (node.kind === SyntaxKind.PropertyAccessExpression && node.name.text === 'constructor')
+    || (node.kind === SyntaxKind.ElementAccessExpression && literal(node.argumentExpression) && node.argumentExpression.text === 'constructor');
   let found;
   const visit = (node) => {
     if (found) return;
@@ -1042,14 +1047,15 @@ function reflectiveEscape(sourceFile) {
       const { expression: receiver, name } = node;
       const direct = parent.kind === SyntaxKind.CallExpression && parent.expression === node;
       const global = receiver.kind === SyntaxKind.Identifier && globals.has(receiver.text) ? receiver.text : undefined;
-      // The global reached through another object (globalThis.Object), or a mutator not called as Object.<mutator>(...) or Reflect.<mutator>(...).
-      const called = direct && global !== undefined && MUTATORS.get(global).has(name.text);
-      if (globals.has(name.text) || (MUTATORS.get('Object').has(name.text) && !called)) found = node;
-      else if (global === 'Reflect' && !direct) found = node;
+      if (globals.has(name.text)) found = node; // The global reached through another object: globalThis.Object.
+      else if (global === 'Object') found = MUTATORS.get('Object').has(name.text) && !direct ? node : undefined; // Object.assign as a value.
+      else if (global === 'Reflect') found = direct ? undefined : node; // Any Reflect member not called in place.
+      else if (MUTATORS.get('Object').has(name.text) && constructorAccess(receiver)) found = node; // ({}).constructor.assign
     } else if (node.kind === SyntaxKind.ElementAccessExpression) {
       const { expression: receiver, argumentExpression: key } = node;
       const global = receiver.kind === SyntaxKind.Identifier && (globals.has(receiver.text) || receiver.text === 'globalThis');
-      if (global || (named(key) && (globals.has(key.text) || MUTATORS.get('Object').has(key.text)))) found = node;
+      // A computed spelling hides which member is read: Object['assign'], Reflect[name], globalThis['Object'], x['constructor']['assign'].
+      if (global || (literal(key) && (globals.has(key.text) || (MUTATORS.get('Object').has(key.text) && constructorAccess(receiver))))) found = node;
     } else if (node.kind === SyntaxKind.Identifier && (globals.has(node.text) || node.text === 'globalThis')) {
       // The global itself as a value: const O = Object, const { assign } = Object, use(Reflect).
       const member = (parent.kind === SyntaxKind.PropertyAccessExpression || parent.kind === SyntaxKind.ElementAccessExpression) && parent.expression === node;

@@ -1272,6 +1272,11 @@ test('Object and Reflect members that write properties are only called directly,
     "Reflect.setPrototypeOf(Thing, null);",
     "Reflect.set(Thing.Root, 'Item', replacement);",
   ]) assert.throws(() => read(`${call}\n`), direct, call);
+  // A shadowing local named Object or Reflect is still read as the global: the call is a write whatever it is bound to.
+  for (const call of [
+    'const Object = { assign: (target: unknown) => target };\nObject.assign(Thing, { Item: replacement });',
+    'const Reflect = { set: (target: unknown) => target };\nReflect.set(Thing, "Item", replacement);',
+  ]) assert.throws(() => read(`${call}\n`), direct, call);
   // A mutator reached any other way hides its target, so it is refused wherever it is used and whatever it writes to.
   const spelled = [
     ['const assign = Object.assign;\nassign(Thing, { Item: replacement });', 'Object.assign'],
@@ -1281,7 +1286,7 @@ test('Object and Reflect members that write properties are only called directly,
     ["const set = Reflect.set;\nset(Thing, 'Item', replacement);", 'Reflect.set'],
     ["const define = Reflect.defineProperty;\ndefine(Thing, 'Item', { value: replacement });", 'Reflect.defineProperty'],
     ["Object['assign'](Thing, { Item: replacement });", 'Object[…]'],
-    ["Object[\\`assign\\`](Thing, { Item: replacement });", 'Object[…]'],
+    ["Object[`assign`](Thing, { Item: replacement });", 'Object[…]'],
     ["const key = 'assign';\nObject[key](Thing, { Item: replacement });", 'Object[…]'],
     ["Reflect['set'](Thing, 'Item', replacement);", 'Reflect[…]'],
     ['const { assign } = Object;\nassign(Thing, { Item: replacement });', 'Object'],
@@ -1289,18 +1294,30 @@ test('Object and Reflect members that write properties are only called directly,
     ['const O = Object;\nO.assign(Thing, { Item: replacement });', 'Object'],
     ['const R = Reflect;\nR.set(Thing, "Item", replacement);', 'Reflect'],
     ['use(Object);', 'Object'],
-    ['globalThis.Object.assign(Thing, { Item: replacement });', 'globalThis.Object.assign'],
+    ['globalThis.Object.assign(Thing, { Item: replacement });', 'globalThis.Object'],
     ['const { assign } = globalThis.Object;\nassign(Thing, { Item: replacement });', 'globalThis.Object'],
-    ["globalThis['Object'].assign(Thing, { Item: replacement });", 'globalThis[…].assign'],
+    ["globalThis['Object'].assign(Thing, { Item: replacement });", 'globalThis[…]'],
     ["const g = globalThis;\ng.Object.assign(Thing, { Item: replacement });", 'globalThis'],
     ['[Object.assign][0](Thing, { Item: replacement });', 'Object.assign'],
     ['Object.assign.call(null, Thing, { Item: replacement });', 'Object.assign'],
     ['const target = { assign: Object.assign };\ntarget.assign(Thing, { Item: replacement });', 'Object.assign'],
-    ['Thing.assign(Thing, { Item: replacement });', 'Thing.assign'],
+    // The Object constructor reached without naming it: the constructor of any plain object.
+    ['({}).constructor.assign(Thing, { Item: replacement });', '….constructor.assign'],
+    ["const plain = {};\nplain.constructor.defineProperty(Thing, 'Item', { value: replacement });", 'plain.constructor.defineProperty'],
+    ["({})['constructor'].assign(Thing, { Item: replacement });", '…[…].assign'],
+    ["({})['constructor']['assign'](Thing, { Item: replacement });", '…[…][…]'],
   ];
   for (const [statement, spelling] of spelled) {
     assert.throws(() => read(`declare function use(...values: unknown[]): void;\n${statement}\n`), (error) => error instanceof ApiExtractionError && hidden.exec(error.message)?.groups.spelling === spelling, statement);
   }
+  // The name alone is not the Object method: the source's own classes, maps and objects keep their assign, set and defineProperty.
+  const own = [
+    'class Selection { assign() {} defineProperty() {} setPrototypeOf() {} defineProperties() {} }\nnew Selection().assign();\nnew Selection().defineProperty();\nnew Selection().setPrototypeOf();\nnew Selection().defineProperties();',
+    'const foo = { defineProperty: (_name: string) => 1, assign: (_value: object) => 2 };\nfoo.defineProperty("x");\nfoo.assign({});',
+    'const map = new Map<string, number>();\nmap.set("a", 1);\nconst params = new URLSearchParams();\nparams.set("a", "b");\nvoid map.get("a");',
+    'class Box { constructor(public value: number) {} assign(other: Box) { this.value = other.value; } }\nconst box = new Box(1);\nbox.assign(new Box(2));\nvoid box.constructor;',
+  ];
+  for (const statement of own) assert.deepEqual(read(`${statement}\n`).partApis.item.defaults, { tone: 'quiet' }, statement);
   // What reads and writes something else is untouched: other Object and Reflect members, and a mutator called on another target.
   const harmless = "const copy = Object.assign({}, { a: 1 });\nObject.defineProperty(copy, 'b', { value: 1 });\nvoid Object.keys(copy);\nvoid Reflect.get(copy, 'a');\nvoid Reflect.has(copy, 'a');\nconst freeze = Object.freeze;\nvoid freeze(copy);\n";
   assert.deepEqual(read(harmless).partApis.item.defaults, { tone: 'quiet' });
