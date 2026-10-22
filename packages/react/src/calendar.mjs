@@ -19,7 +19,7 @@ import {
 import { parseDate } from '@internationalized/date';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 
 function dateValue(value, name = 'Calendar') {
   if (value === undefined || value === null || value === '') return undefined;

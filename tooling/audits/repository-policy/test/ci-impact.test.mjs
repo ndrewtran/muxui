@@ -1413,7 +1413,7 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
 });
 
 test('a change to a collections module runs the collections guards even when it affects no family', async () => {
-  const sliderPath = 'packages/react/src/color-slider.mjs';
+  const sliderPath = 'packages/react/src/color-slider.ts';
   // Dropping the pure annotation changes no export, so no family is affected.
   const before = 'export const ColorSlider = /* @__PURE__ */ (() => () => null)();\n';
   const after = 'export const ColorSlider = (() => () => null)();\n';
@@ -1426,6 +1426,34 @@ test('a change to a collections module runs the collections guards even when it 
   assert.deepEqual(result.reactTestFiles, ['test/collections-modules.test.mjs', 'test/motion-package-boundary.test.mjs', 'test/tree-shaking.test.mjs']);
   const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
   assert.ok(commands.includes('test/collections-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
+});
+
+test('a family module that moves from .mjs to .ts is planned through the barrel that re-exports it', async () => {
+  const mjsPath = 'packages/react/src/color-area.mjs';
+  const tsPath = 'packages/react/src/color-area.ts';
+  const moduleText = 'export const ColorArea = () => null;\n';
+  const barrel = { before: "export const Tree = () => null;\nexport { ColorArea } from './color-area.mjs';\n" };
+  barrel.after = barrel.before.replace('color-area.mjs', 'color-area.ts');
+  const changes = {
+    [collectionsPath]: barrel,
+    [mjsPath]: { before: moduleText, after: null },
+    [tsPath]: { before: null, after: moduleText },
+  };
+  const result = await plan([collectionsPath, mjsPath, tsPath], {
+    records: [...records, { family: 'ColorArea', export: 'ColorArea', slug: 'color-area', source: tsPath, parts: ['root'] }],
+    textSnapshots: changes,
+    moduleSources: { ...cssModuleSources, ...changes },
+  });
+  // The deleted module's only importer is the barrel, which changed in the same PR, so the barrel and the new module carry the change.
+  assert.deepEqual(result.reactFamilies, ['ColorArea', 'Tree']);
+  assert.ok(result.packageChecks.includes('@muxui/react'));
+
+  // An importer the PR did not change would be left importing a module that no longer exists, so the analysis still owns it.
+  await assert.rejects(plan([mjsPath], {
+    records: [...records, { family: 'ColorArea', export: 'ColorArea', slug: 'color-area', source: tsPath, parts: ['root'] }],
+    textSnapshots: { [mjsPath]: changes[mjsPath] },
+    moduleSources: { ...cssModuleSources, [collectionsPath]: barrel.before, [mjsPath]: changes[mjsPath] },
+  }), /MUXUI_CI_IMPACT_SOURCE_OWNERSHIP/u);
 });
 
 test('a TypeScript React source takes the runtime source route; a declaration file does not', async () => {

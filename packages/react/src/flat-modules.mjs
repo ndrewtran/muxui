@@ -27,7 +27,7 @@ const langOf = (path) => (/\.d\.m?ts$/u.test(path) ? 'dts' : /\.m?ts$/u.test(pat
 
 // The specifier node of every static import, re-export, dynamic import, type-level
 // import('...'), and `import x = require('...')` in a module.
-function moduleSpecifiers(text, lang, label) {
+export function moduleSpecifiers(text, lang, label) {
   let program;
   try {
     program = parseAst(text, { lang });
@@ -59,7 +59,7 @@ function moduleSpecifiers(text, lang, label) {
 }
 
 // A specifier written as a string or a template without substitutions, with the span of its text.
-function literalSpecifier(node) {
+export function literalSpecifier(node) {
   if (node?.type === 'Literal' && typeof node.value === 'string') return { value: node.value, start: node.start + 1, end: node.end - 1 };
   if (node?.type === 'TemplateLiteral' && node.expressions.length === 0) {
     const [quasi] = node.quasis;

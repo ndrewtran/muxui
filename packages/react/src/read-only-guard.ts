@@ -1,24 +1,25 @@
 import React from 'react';
+import type { ForwardedRef, KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 const readOnlyInteractionEvents = [
   'beforeinput', 'change', 'click', 'input', 'keydown', 'mousedown', 'mousemove',
   'pointerdown', 'pointermove', 'touchstart', 'touchmove',
 ];
-const readOnlyTargetGuards = new WeakMap();
+const readOnlyTargetGuards = new WeakMap<Element, EventListener>();
 
 // Read-only controls stay focusable and navigable. Keys that change the value are
 // blocked with any modifier, because React Aria acts on them regardless; Tab and
 // Escape are never blocked.
-const READ_ONLY_ADJUSTMENT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
+const READ_ONLY_ADJUSTMENT_KEYS: ReadonlySet<string> = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
 // Swatch pickers move focus with arrows, so only the selection keys are blocked.
-export const READ_ONLY_SELECTION_KEYS = new Set(['Enter', ' ']);
+export const READ_ONLY_SELECTION_KEYS: ReadonlySet<string> = new Set(['Enter', ' ']);
 
-function readOnlyBlocksKey(event, keys) {
+function readOnlyBlocksKey(event: { key: string }, keys: ReadonlySet<string>) {
   return keys.has(event.key);
 }
 
-export function readOnlyKeyGuard(readOnly, keys = READ_ONLY_ADJUSTMENT_KEYS) {
-  return (event) => {
+export function readOnlyKeyGuard(readOnly: boolean, keys: ReadonlySet<string> = READ_ONLY_ADJUSTMENT_KEYS) {
+  return (event: ReactKeyboardEvent) => {
     if (readOnly && readOnlyBlocksKey(event, keys)) {
       event.preventDefault();
       event.stopPropagation();
@@ -26,12 +27,13 @@ export function readOnlyKeyGuard(readOnly, keys = READ_ONLY_ADJUSTMENT_KEYS) {
   };
 }
 
-function setReadOnlyTargetGuard(target, readOnly) {
+function setReadOnlyTargetGuard(target: Element, readOnly: boolean) {
   const existingGuard = readOnlyTargetGuards.get(target);
   if (readOnly && !existingGuard) {
     const keys = target.getAttribute('role') === 'listbox' ? READ_ONLY_SELECTION_KEYS : READ_ONLY_ADJUSTMENT_KEYS;
-    const guard = (event) => {
-      if (event.type === 'keydown' && !readOnlyBlocksKey(event, keys)) return;
+    const guard = (event: Event) => {
+      // A keydown listener receives a KeyboardEvent; the other events carry no key to test.
+      if (event.type === 'keydown' && !readOnlyBlocksKey(event as KeyboardEvent, keys)) return;
       event.preventDefault();
       event.stopPropagation();
     };
@@ -43,7 +45,7 @@ function setReadOnlyTargetGuard(target, readOnly) {
   }
 }
 
-function updateReadOnlyTargets(scope, readOnly, selector) {
+function updateReadOnlyTargets(scope: Element | null, readOnly: boolean, selector: string) {
   if (!scope) return;
   const targets = [
     ...(scope.matches(selector) ? [scope] : []),
@@ -61,9 +63,9 @@ function updateReadOnlyTargets(scope, readOnly, selector) {
   }
 }
 
-export function useReadOnlyTargets(forwardedRef, readOnly, selector) {
-  const scopeRef = React.useRef(null);
-  const assignRef = React.useCallback((node) => {
+export function useReadOnlyTargets<T extends Element>(forwardedRef: ForwardedRef<T>, readOnly: boolean, selector: string) {
+  const scopeRef = React.useRef<T | null>(null);
+  const assignRef = React.useCallback((node: T | null) => {
     scopeRef.current = node;
     if (typeof forwardedRef === 'function') forwardedRef(node);
     else if (forwardedRef) forwardedRef.current = node;

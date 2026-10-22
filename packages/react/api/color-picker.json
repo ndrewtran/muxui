@@ -1,0 +1,85 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/color-picker.ts",
+  "component": "muxui:component:color-picker",
+  "binding": "web.react",
+  "export": "ColorPicker",
+  "api": {
+    "props": [
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The picker's color, when the caller controls it. The picker keeps its color in this value's color space."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The starting color, when the picker controls itself. It also sets the color space the picker keeps its color in."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables every Mux UI color control inside the picker, at any depth. A child cannot turn it off, and native elements inside are not affected."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes every Mux UI color control inside the picker read-only, at any depth. A child cannot turn it off, and native elements inside are not affected."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIColorValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new color as a CSS string each time a color control inside changes it, in the color space of the value, or of defaultValue when uncontrolled, and in rgba() form with neither. A disabled or read-only picker does not call it."
+      }
+    },
+    "types": {
+      "MuxUIColorValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color."
+      }
+    }
+  }
+}

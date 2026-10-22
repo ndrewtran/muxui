@@ -7,7 +7,7 @@ import {
   Label as AriaLabel,
 } from 'react-aria-components';
 import { IconButton } from './supplemental/icon-button.ts';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.mjs';
 
 const TAG_VARIANTS = ['soft', 'outline', 'dot', 'strong'];

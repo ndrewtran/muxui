@@ -13,7 +13,7 @@ Use ColorField for an exact color that people type or paste, and add visual cont
 
 ## Whole color value
 
-ColorField edits the whole color as one text value and has no channel or color-space props. A ColorSlider adjusts a single channel.
+ColorField edits the whole color as one text value and has no `channel` prop and no `colorSpace` prop. A ColorSlider adjusts a single channel.
 
 ## Output format
 

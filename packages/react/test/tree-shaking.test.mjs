@@ -109,30 +109,25 @@ test('a bundle that uses one field keeps only the motion modules that field need
 // that ignores the package's sideEffects flag still drops the motion modules of an unused family.
 test('the collections family modules keep the pure annotation on each wrapper', () => {
   const wrappers = {
-    '/*#__PURE__*/': {
-      'calendar.mjs': ['Calendar', 'RangeCalendar'],
-      'combo-box.mjs': ['ComboBox'],
-      'grid-list.mjs': ['GridList'],
-      'list-box.mjs': ['ListBox'],
-      'menu.mjs': ['Menu'],
-      'radio-group.mjs': ['RadioGroup'],
-      'select.mjs': ['Select'],
-      'tabs.mjs': ['Tabs'],
-      'toggle-button-group.mjs': ['ToggleButtonGroup'],
-      'tree.mjs': ['Tree'],
-    },
-    '/* @__PURE__ */': {
-      'color-slider.mjs': ['ColorSlider'],
-      'color-wheel.mjs': ['ColorWheel'],
-      'slider.mjs': ['Slider'],
-    },
+    'calendar.mjs': ['Calendar', 'RangeCalendar'],
+    'combo-box.mjs': ['ComboBox'],
+    'grid-list.mjs': ['GridList'],
+    'list-box.mjs': ['ListBox'],
+    'menu.mjs': ['Menu'],
+    'radio-group.mjs': ['RadioGroup'],
+    'select.mjs': ['Select'],
+    'tabs.mjs': ['Tabs'],
+    'toggle-button-group.mjs': ['ToggleButtonGroup'],
+    'tree.mjs': ['Tree'],
+    'color-slider.js': ['ColorSlider'],
+    'color-wheel.js': ['ColorWheel'],
+    'slider.mjs': ['Slider'],
   };
-  for (const [annotation, modules] of Object.entries(wrappers)) {
-    for (const [module, names] of Object.entries(modules)) {
-      const emitted = readFileSync(resolve(generated, module), 'utf8');
-      for (const name of names) {
-        assert.ok(emitted.includes(`\nexport const ${name} = ${annotation} (() => {\n`), `${module}: ${name}`);
-      }
+  for (const [module, names] of Object.entries(wrappers)) {
+    const emitted = readFileSync(resolve(generated, module), 'utf8');
+    for (const name of names) {
+      // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
+      assert.match(emitted, new RegExp(`^export const ${name} = /\\*\\s*[#@]__PURE__\\s*\\*/ \\(\\(\\) => \\{$`, 'mu'), `${module}: ${name}`);
     }
   }
   assert.match(readFileSync(resolve(generated, 'menu.mjs'), 'utf8'), /^ {2}const MenuPopup = \/\*#__PURE__\*\/ React\.forwardRef\(function MenuPopup/mu);
@@ -162,7 +157,7 @@ test('a bundle that uses one collections family keeps its own module and only th
   const motionModules = new Set(readdirSync(generated).filter((name) => /(?:^|-)motion(?:-[\w-]+)?\.mjs$|^(?:grid-list-item|toggle-button)-context\.mjs$|^overlay-positioning\.mjs$/u.test(name)));
   // The family modules are the barrel's re-export targets, and each name's module is its owner.
   const owners = new Map();
-  for (const [, names, module] of readFileSync(resolve(generated, 'collections.mjs'), 'utf8').matchAll(/^export \{ ([^}]+) \} from '\.\/([\w-]+\.mjs)';$/gmu)) {
+  for (const [, names, module] of readFileSync(resolve(generated, 'collections.mjs'), 'utf8').matchAll(/^export \{ ([^}]+) \} from '\.\/([\w-]+\.m?js)';$/gmu)) {
     for (const name of names.split(', ')) owners.set(name, module);
   }
   assert.equal(owners.size, 24);
@@ -173,5 +168,23 @@ test('a bundle that uses one collections family keeps its own module and only th
     // No other family's code comes along, which is what one module per family buys over one file.
     assert.deepEqual(kept.filter((module) => familyModules.has(module)), [owner], name);
     assert.deepEqual(kept.filter((module) => motionModules.has(module)).sort(), [...(motionKept[name] ?? [])].sort(), name);
+  }
+});
+
+// The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
+// guard and a picker no motion. Through the barrel, a bundle keeps exactly these package modules.
+test('a bundle that uses one color family keeps its own module and only the shared and motion modules it needs', async () => {
+  const wheel = ['color-context.js', 'color-wheel-motion.mjs', 'color-wheel.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
+  const slider = ['color-context.js', 'color-slider-motion.mjs', 'color-slider.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
+  const kept = {
+    ColorArea: ['color-area.js', 'color-context.js', 'control-utils.js', 'read-only-guard.js'],
+    ColorField: ['choice-context.mjs', 'color-context.js', 'color-field.js', 'control-utils.js'],
+    ColorPicker: ['color-context.js', 'color-picker.js', 'control-utils.js'],
+    ColorSlider: slider,
+    ColorSwatch: ['color-context.js', 'color-swatch.js', 'control-utils.js'],
+    ColorWheel: wheel,
+  };
+  for (const [name, expected] of Object.entries(kept)) {
+    assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), expected, name);
   }
 });

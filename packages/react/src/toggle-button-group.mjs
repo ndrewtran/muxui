@@ -2,7 +2,7 @@ import React from 'react';
 import { ToggleButtonGroup as AriaToggleButtonGroup } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { ToggleButtonGroupMotion } from './toggle-button-group-motion.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 
 function readonlyKeyArray(value, property) {
   if (value === undefined) return undefined;

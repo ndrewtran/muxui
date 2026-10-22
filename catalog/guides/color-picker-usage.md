@@ -25,7 +25,7 @@ The picker's `onChange` returns the color as a CSS string in the color space of 
 ## Content
 
 - Label each control inside by what it edits, such as Color or Hue.
-- The picker has no `name`. To submit the color in a form, give the ColorField a `name`.
+- The picker has no `name` prop. To submit the color in a form, give the ColorField a `name`.
 
 ## Common mistake
 

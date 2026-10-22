@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:94e114cbe9796b21576d1a24fec28178561e3fab5d6ee5eb55c6f7d1c8385af6 -->
+<!-- @generated-content-sha256: sha256:91b7629f7c1197e59e9342fcb784aeec5e11831711f7abf323154de3b78b7221 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -115,14 +115,14 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, size, disabled, invalid, required, readOnly, onChange |
 | CheckboxGroup | experimental | . | .muxui-checkbox-group | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, name, orientation, size |
 | CodeBlock | experimental | . | .muxui-code-block | mode, source, before, after, language, filename, lineNumbers, copyable, wrap |
-| ColorArea | experimental | . | .muxui-color-area | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly |
-| ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name |
+| ColorArea | experimental | . | .muxui-color-area | label, value, defaultValue, disabled, readOnly |
+| ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, size, name |
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
-| ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly, children |
-| ColorSlider | experimental | . | .muxui-color-slider | label, aria-label, aria-labelledby, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
+| ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
+| ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
-| ColorWheel | experimental | . | .muxui-color-wheel | aria-label, aria-labelledby, value, defaultValue, outerRadius, innerRadius, readOnly, disabled |
+| ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
 | DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |

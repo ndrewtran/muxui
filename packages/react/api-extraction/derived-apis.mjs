@@ -54,6 +54,12 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'code-block', name: 'CodeBlock', source: 'packages/react/src/supplemental/code-block.ts' },
   // Lightbox is flat exports, so its API is that of the root, Lightbox itself.
   { slug: 'lightbox', name: 'Lightbox', source: 'packages/react/src/supplemental/lightbox.ts' },
+  { slug: 'color-swatch', name: 'ColorSwatch', source: 'packages/react/src/color-swatch.ts' },
+  { slug: 'color-wheel', name: 'ColorWheel', source: 'packages/react/src/color-wheel.ts' },
+  { slug: 'color-slider', name: 'ColorSlider', source: 'packages/react/src/color-slider.ts' },
+  { slug: 'color-picker', name: 'ColorPicker', source: 'packages/react/src/color-picker.ts' },
+  { slug: 'color-area', name: 'ColorArea', source: 'packages/react/src/color-area.ts' },
+  { slug: 'color-field', name: 'ColorField', source: 'packages/react/src/color-field.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

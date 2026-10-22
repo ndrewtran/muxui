@@ -6,7 +6,7 @@ import {
   ListBoxSection as AriaListBoxSection,
   Header as AriaHeader,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.mjs';
 
 const ListBoxContext = React.createContext({ disabled: false });

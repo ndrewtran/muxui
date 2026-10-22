@@ -100,8 +100,6 @@ const PLACEMENTS = Object.freeze([
 ]);
 
 const SELECT_PROPS = Object.freeze({
-  channel: ['red', 'green', 'blue', 'hue', 'saturation', 'lightness', 'brightness', 'alpha'],
-  colorSpace: ['rgb', 'hsl', 'hsb'],
   density: ['default', 'compact'],
   orientation: ['horizontal', 'vertical'],
   placement: PLACEMENTS,

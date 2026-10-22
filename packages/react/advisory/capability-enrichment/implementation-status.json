@@ -4327,7 +4327,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4366,7 +4366,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4405,7 +4405,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4444,7 +4444,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4483,7 +4483,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4522,7 +4522,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-area.mjs",
+          "path": "packages/react/src/color-area.ts",
           "lines": null,
           "anchor": "#ColorArea"
         }
@@ -4561,7 +4561,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4600,7 +4600,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4639,7 +4639,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4678,7 +4678,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4717,7 +4717,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4756,7 +4756,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-field.mjs",
+          "path": "packages/react/src/color-field.ts",
           "lines": null,
           "anchor": "#ColorField"
         }
@@ -4795,7 +4795,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4834,7 +4834,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4873,7 +4873,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4912,7 +4912,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4951,7 +4951,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -4990,7 +4990,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-picker.mjs",
+          "path": "packages/react/src/color-picker.ts",
           "lines": null,
           "anchor": "#ColorPicker"
         }
@@ -5029,7 +5029,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-slider.mjs",
+          "path": "packages/react/src/color-slider.ts",
           "lines": null,
           "anchor": "#ColorSlider"
         }
@@ -5068,7 +5068,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-slider.mjs",
+          "path": "packages/react/src/color-slider.ts",
           "lines": null,
           "anchor": "#ColorSlider"
         }
@@ -5107,7 +5107,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-slider.mjs",
+          "path": "packages/react/src/color-slider.ts",
           "lines": null,
           "anchor": "#ColorSlider"
         }
@@ -5146,7 +5146,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-slider.mjs",
+          "path": "packages/react/src/color-slider.ts",
           "lines": null,
           "anchor": "#ColorSlider"
         }
@@ -5185,7 +5185,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-slider.mjs",
+          "path": "packages/react/src/color-slider.ts",
           "lines": null,
           "anchor": "#ColorSlider"
         }
@@ -5224,7 +5224,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-slider.mjs",
+          "path": "packages/react/src/color-slider.ts",
           "lines": null,
           "anchor": "#ColorSlider"
         }
@@ -5263,7 +5263,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5297,7 +5297,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5331,7 +5331,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5365,7 +5365,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5633,7 +5633,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5672,7 +5672,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5711,7 +5711,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5750,7 +5750,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5789,7 +5789,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5828,7 +5828,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }
@@ -5867,7 +5867,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-wheel.mjs",
+          "path": "packages/react/src/color-wheel.ts",
           "lines": null,
           "anchor": "#ColorWheel"
         }

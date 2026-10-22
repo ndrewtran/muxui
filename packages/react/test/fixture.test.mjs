@@ -12,6 +12,7 @@ import { Button } from '../src/button.ts';
 import * as generated from '../generated/index.mjs';
 import { R1ButtonFixture } from '../src/button-fixture.mjs';
 import { createDom } from './support/dom.mjs';
+import { familyDeclarations, joinedDeclarations } from './support/declarations.mjs';
 
 test('Button owns MuxUI selectors and required token bindings', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
@@ -321,25 +322,13 @@ const unobservedDefaults = (name, defaults) => Object.keys(defaults)
 
 /** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. */
 function undeclaredProps(types, name, props) {
-  const declaration = (identifier) => {
-    const start = types.search(new RegExp(`^export (?:interface|type) ${identifier}\\b`, 'mu'));
-    const end = types.indexOf('\nexport ', start + 1);
-    return start === -1 ? '' : types.slice(start, end === -1 ? undefined : end);
-  };
-  const seen = new Set();
-  const collect = (identifier) => {
-    if (seen.has(identifier)) return '';
-    seen.add(identifier);
-    const text = declaration(identifier);
-    return text + [...text.matchAll(/\b[A-Z][A-Za-z]+\b/gu)].map(([reference]) => collect(reference)).join('\n');
-  };
-  const surface = collect(`${name}Props`);
+  const surface = familyDeclarations(types, name);
   return props.filter((prop) => !new RegExp(`(?:\\b|['"])${prop}['"]?\\??\\s*:`, 'u').test(surface));
 }
 
 test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
-  // The index names the types of Button, the R1.1 families, the fields, and the overlays from tsc's declarations of src/button.ts, src/components.ts, src/fields.ts, and src/overlays.ts.
-  const types = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'fields.d.ts', 'overlays.d.ts'].map((name) => readFile(resolve(import.meta.dirname, '../generated', name), 'utf8')))).join('\n');
+  // A family's types sit in the index or in the declarations of the module that owns it, so every shipped declaration is read.
+  const types = joinedDeclarations();
   const apis = {};
   for (const [name, render] of Object.entries(minimalRenders)) {
     const api = await catalogApi(kebab(name));
@@ -364,6 +353,17 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.equal(markupValues.selectionMode(new JSDOM(multiple).window.document), 'multiple');
   assert.deepEqual(defaultMismatches(multiple, { ...apis.ToggleButtonGroup.defaults, selectionMode: 'multiple' }), []);
   assert.equal(defaultMismatches(renderToString(minimalRenders.ToggleButtonGroup()), { selectionMode: 'multiple' }).length, 1);
+});
+
+test('a catalog prop only an unrelated declaration names is undeclared', () => {
+  const types = [
+    'export type FooProps = Omit<FooOwnProps, never> & { id?: string };',
+    '/** onChange: described here, not declared. */',
+    'export type FooOwnProps = { a?: string };',
+    'export type OtherProps = { onChange?: () => void; b?: string };',
+    'export declare const Foo: ForwardRefExoticComponent<FooProps & RefAttributes<HTMLDivElement>>;',
+  ].join('\n');
+  assert.deepEqual(undeclaredProps(types, 'Foo', ['a', 'id', 'onChange', 'b']), ['onChange', 'b']);
 });
 
 test('catalog defaults only behaviour shows are compared with what the renderer does', async () => {

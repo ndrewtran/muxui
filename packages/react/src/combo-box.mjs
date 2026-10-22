@@ -13,7 +13,7 @@ import {
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.mjs';
 
 export const ComboBox = /*#__PURE__*/ (() => {

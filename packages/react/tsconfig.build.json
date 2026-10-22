@@ -10,6 +10,7 @@
     "verbatimModuleSyntax": true,
     "rewriteRelativeImportExtensions": true,
     "declaration": true,
+    "stripInternal": true,
     "noEmitOnError": true,
     "skipLibCheck": true,
     "newLine": "lf",

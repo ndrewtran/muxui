@@ -1,0 +1,209 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/color-field.ts",
+  "component": "muxui:component:color-field",
+  "binding": "web.react",
+  "export": "ColorField",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly",
+      "required",
+      "invalid",
+      "size",
+      "name"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false,
+      "required": false,
+      "invalid": false,
+      "size": "md"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed validation. It never makes the field invalid by itself."
+      },
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIColorValue"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The color, when the caller controls it. `null` is controlled and empty."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The starting color, when the field controls itself. It also sets the color space onChange reports in, when there is no value and no enclosing ColorPicker."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the field: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the field read-only: its color stays visible and focusable but cannot be changed. A read-only enclosing ColorPicker does the same."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required, so a form with native validation does not submit while it is empty."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ControlSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named field submits its color as uppercase hex, #RRGGBB."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUIColorValue"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the typed color as a CSS string once the field applies it, when it loses focus or Enter is pressed, and with `null` when the field is cleared. It is in the color space of the value, of the enclosing ColorPicker, or of defaultValue, and in rgba() form with none of them. The field shows and submits uppercase hex whatever the space."
+      }
+    },
+    "types": {
+      "ControlSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The shared control sizes."
+      },
+      "MuxUIColorValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color."
+      }
+    }
+  }
+}

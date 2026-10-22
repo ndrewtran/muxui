@@ -2,7 +2,7 @@ import React from 'react';
 import { Radio as AriaRadio, RadioGroup as AriaRadioGroup, FieldError as AriaFieldError } from 'react-aria-components';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { RadioGroupMotion, RadioMotionIndicator } from './radio-motion.mjs';
-import { classNames, accessibleName } from './control-utils.mjs';
+import { classNames, accessibleName } from './control-utils.ts';
 
 export const RadioGroup = /*#__PURE__*/ (() => {
   const component = React.forwardRef(function RadioGroup({ label, errorMessage, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {

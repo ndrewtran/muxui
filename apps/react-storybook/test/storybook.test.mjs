@@ -19,6 +19,7 @@ import defaultTheme from '../../../catalog/tokens/default-theme.json' with { typ
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
 import { componentRecordCategory } from '../src/component-categories.mjs';
 import { exactLockedProblems, readLockfile } from '../../../packages/react/test/support/locked-dependencies.mjs';
+import { familyDeclarations, joinedDeclarations } from '../../../packages/react/test/support/declarations.mjs';
 import {
   argTypesForBinding,
   adapterNames,
@@ -300,9 +301,8 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     historicalManifest.families.map(({ family }) => family).sort(),
     'every exact manifest family has a substantive Browser Proof plan',
   );
-  // The index names the types of Button, the R1.1 families, the fields, and the overlays from tsc's declarations of their sources.
-  const publicTypes = (await Promise.all(['index.d.ts', 'button.d.ts', 'components.d.ts', 'fields.d.ts', 'overlays.d.ts']
-    .map((name) => readFile(resolve(repositoryRoot, 'packages/react/generated', name), 'utf8')))).join('\n');
+  // Every shipped declaration: a family's types sit in the index or in the declarations of the module that owns it.
+  const publicTypes = joinedDeclarations();
   let pairCount = 0;
   let eventCount = 0;
   let partCount = 0;
@@ -339,7 +339,8 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     );
     const events = eventBindingsForBinding(binding);
     eventCount += events.length;
-    for (const { prop } of events) assert.match(publicTypes, new RegExp(`\\b${prop}\\b`, 'u'), `${record.family}/${prop} must be a real public callback`);
+    // The callback is a member of this family's own declarations, not a name found anywhere in the package.
+    for (const { prop } of events) assert.match(familyDeclarations(publicTypes, record.family), declaresCallback(prop), `${record.family}/${prop} must be a real public callback`);
     partCount += binding.api.parts.length;
     const anatomyMarkup = renderToStaticMarkup(story.Anatomy.render(story.Anatomy.args));
     assert.equal(
@@ -351,6 +352,28 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
   assert.equal(pairCount, descriptor.bindings.reduce((count, binding) => count + controlledDefaultPairsForBinding(binding).length, 0), 'every descriptor controlled/default pair gets a pair of proof stories');
   assert.equal(eventCount, descriptor.bindings.reduce((count, binding) => count + eventBindingsForBinding(binding).length, 0), 'every descriptor event channel gets a live event binding');
   assert.equal(partCount, descriptor.bindings.reduce((count, binding) => count + binding.api.parts.length, 0), 'every descriptor API part gets an anatomy proof row');
+});
+
+/** A pattern for the member `prop` of a declaration, so a description that mentions the name does not match. */
+const declaresCallback = (prop) => new RegExp(`\\b${prop}\\??\\s*:`, 'u');
+
+test('a family\'s callback must be declared by that family, not by an unrelated declaration', () => {
+  const unrelated = [
+    'export type SliderProps = { onChange?: (value: number) => void };',
+    'export declare const Slider: ForwardRefExoticComponent<SliderProps & RefAttributes<HTMLDivElement>>;',
+    'export type HelperProps = { onChange?: (value: string) => void; onClear?: () => void };',
+    '/** Called with the value when the user changes it, onClear: also described here. */',
+    'export type ClearProps = { /** onClear: describes the member. */ label?: string };',
+    'export declare const Clear: ForwardRefExoticComponent<ClearProps & RefAttributes<HTMLDivElement>>;',
+  ].join('\n');
+  assert.match(familyDeclarations(unrelated, 'Slider'), declaresCallback('onChange'));
+  // Slider declares onChange; it does not declare onClear, which only an unrelated helper does.
+  assert.doesNotMatch(familyDeclarations(unrelated, 'Slider'), declaresCallback('onClear'));
+  // The name in a member's description is not the member.
+  assert.doesNotMatch(familyDeclarations(unrelated, 'Clear'), declaresCallback('onClear'));
+  // A compound's parts are part of its declaration.
+  const compound = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport declare const Menu: ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport type MenuProps = {};';
+  assert.match(familyDeclarations(compound, 'Menu'), declaresCallback('onOpenChange'));
 });
 
 test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {

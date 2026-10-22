@@ -6039,7 +6039,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-area/artifact.json#bindings/web.react",
-          "packages/react/src/color-area.mjs#ColorArea",
+          "packages/react/src/color-area.ts#ColorArea",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6291,7 +6291,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-field/artifact.json#bindings/web.react",
-          "packages/react/src/color-field.mjs#ColorField",
+          "packages/react/src/color-field.ts#ColorField",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6542,7 +6542,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-picker/artifact.json#bindings/web.react",
-          "packages/react/src/color-picker.mjs#ColorPicker",
+          "packages/react/src/color-picker.ts#ColorPicker",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -6794,7 +6794,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-slider/artifact.json#bindings/web.react",
-          "packages/react/src/color-slider.mjs#ColorSlider",
+          "packages/react/src/color-slider.ts#ColorSlider",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -7038,7 +7038,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-swatch/artifact.json#bindings/web.react",
-          "packages/react/src/color-swatch.mjs#ColorSwatch",
+          "packages/react/src/color-swatch.ts#ColorSwatch",
           "packages/react/test/r1-3-parity.test.mjs"
         ],
         "rac": [
@@ -7539,7 +7539,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-wheel/artifact.json#bindings/web.react",
-          "packages/react/src/color-wheel.mjs#ColorWheel",
+          "packages/react/src/color-wheel.ts#ColorWheel",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

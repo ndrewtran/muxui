@@ -52,6 +52,11 @@ const audited = [
       ...expand(['popover'], ['modal']),
       ...expand(overlayFamilies, ['placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding']),
       ...expand(['preview-trigger', 'tooltip'], ['delay', 'closeDelay']),
+      // The color controls send isDisabled (and ColorField isReadOnly and isRequired) as a boolean: their own flag, else the enclosing ColorPicker's.
+      ...expand(['color-swatch', 'color-field', 'color-area', 'color-slider', 'color-wheel'], ['disabled']),
+      ...expand(['color-field'], ['readOnly', 'required']),
+      // color-slider sends orientation to React Aria as its own value, horizontal when omitted, as it did before the move.
+      ...expand(['color-slider'], ['orientation']),
     ],
   },
   {
@@ -67,6 +72,9 @@ const audited = [
       ...expand(['activity'], ['defaultExpanded']),
       // CheckboxGroup keeps its orientation for CSS and gives React Aria none.
       ...expand(['checkbox-group'], ['orientation']),
+      // The color controls enforce readOnly themselves, with a data attribute and guards, and send React Aria no isReadOnly. ColorPicker's flags reach its children through a Mux UI context, and React Aria's picker takes neither.
+      ...expand(['color-picker'], ['disabled', 'readOnly']),
+      ...expand(['color-area', 'color-slider', 'color-wheel'], ['readOnly']),
     ],
   },
   {
@@ -76,6 +84,8 @@ const audited = [
       ...expand(validationFamilies, ['invalid']),
       // Link sends aria-current: current ? 'page' : undefined.
       ...expand(['link'], ['current']),
+      // color-field sends isInvalid: invalid ? invalid : undefined, so a React Aria context can still make it invalid.
+      ...expand(['color-field'], ['invalid']),
     ],
   },
 ];

@@ -413,11 +413,13 @@ const compatibility = {
 };
 const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
 const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';\nexport { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.js';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.js';\n";
-// The types of Button, the R1.1 families, the fields, and the overlays are tsc's declarations of
-// src/button.ts, src/components.ts, src/fields.ts, and src/overlays.ts (Decision 0031); the index
-// names them, so the modules' other exports (usePendingSubmitProps, the OwnProps types) stay private.
+// The types of Button, the R1.1 families, the fields, the overlays, and the color values are tsc's
+// declarations of src/button.ts, src/components.ts, src/fields.ts, src/overlays.ts, and
+// src/color-context.ts (Decision 0031); the index names them, so the modules' other exports
+// (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type * as React from 'react';
 import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
+import type { MuxUIColorValue } from './color-context.js';
 import type { ControlSize, FieldValidationProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, MuxUIDateRange, MuxUIDateValue, NamedFieldProps } from './fields.js';
 import type { MuxUIPlacement } from './overlays.js';
 
@@ -428,16 +430,24 @@ export { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter,
 export type { BreadcrumbItem, BreadcrumbsProps, CheckboxProps, DisclosureGroupProps, DisclosureProps, GroupProps, LinkActivationEvent, LinkProps, MeterProps, ProgressBarProps, SeparatorProps, ToggleButtonActivationEvent, ToggleButtonProps } from './components.js';
 export { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.js';
 export type { AutocompleteItem, AutocompleteProps, AutocompleteSelectionItem, CheckboxGroupProps, ControlSize, DateFieldProps, DatePickerProps, DateRangePickerProps, FieldInputProps, FieldValidationProps, FormProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, MuxUIDateRange, MuxUIDateValue, MuxUITimeValue, MuxUIValidationErrors, NamedFieldProps, NumberFieldProps, SearchFieldProps, SwitchProps, TextFieldProps, TimeFieldProps } from './fields.js';
+export { ColorSwatch } from './color-swatch.js';
+export type { ColorSwatchProps } from './color-swatch.js';
+export { ColorWheel } from './color-wheel.js';
+export type { ColorWheelProps } from './color-wheel.js';
+export { ColorSlider } from './color-slider.js';
+export type { ColorSliderProps } from './color-slider.js';
+export { ColorPicker } from './color-picker.js';
+export type { ColorPickerProps } from './color-picker.js';
+export { ColorArea } from './color-area.js';
+export type { ColorAreaProps } from './color-area.js';
+export { ColorField } from './color-field.js';
+export type { ColorFieldProps } from './color-field.js';
+export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const collectionsTypes = `
-/** A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color. */
-export type MuxUIColorValue = string;
-export type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';
-/** Channels must belong to colorSpace, or, when colorSpace is omitted, to the space of an enclosing ColorPicker's color, otherwise value or defaultValue. */
-export type MuxUIColorChannel = 'red' | 'green' | 'blue' | 'hue' | 'saturation' | 'lightness' | 'brightness' | 'alpha';
 export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; /** Consumer data; named Select and ComboBox forms submit the item \`id\`, not \`value\`. */ value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
 export type MuxUISelection = string[] | 'all';
 export type MuxUIItems = Array<MuxUICollectionItem | string>;
@@ -445,20 +455,8 @@ export type CalendarProps = MuxUIAccessibleName & { value?: MuxUIDateValue | nul
 export declare const Calendar: React.ForwardRefExoticComponent<CalendarProps & React.RefAttributes<HTMLDivElement>>;
 export type RangeCalendarProps = MuxUIAccessibleName & { value?: MuxUIDateRange | null; defaultValue?: MuxUIDateRange; focusedValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateRange) => void; onFocusChange?: (value?: MuxUIDateValue) => void; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; };
 export declare const RangeCalendar: React.ForwardRefExoticComponent<RangeCalendarProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorAreaProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
-export declare const ColorArea: React.ForwardRefExoticComponent<ColorAreaProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; onChange?: (value: MuxUIColorValue | null) => void; name?: string; size?: ControlSize; };
-export declare const ColorField: React.ForwardRefExoticComponent<ColorFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; children?: React.ReactNode; className?: string; };
-export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: MuxUIColorChannel; colorSpace?: MuxUIColorSpace; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
-export declare const ColorSlider: React.ForwardRefExoticComponent<ColorSliderProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSwatchProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'color'> & { color: MuxUIColorValue; secondaryColor?: MuxUIColorValue; shape?: 'square' | 'circle'; colorName?: string; disabled?: boolean; };
-export declare const ColorSwatch: React.ForwardRefExoticComponent<ColorSwatchProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorWheelProps = MuxUIAriaAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; outerRadius?: number; innerRadius?: number; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
-export declare const ColorWheel: React.ForwardRefExoticComponent<ColorWheelProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
 export type GridListProps = CollectionProps & { children?: React.ReactNode; style?: React.CSSProperties; layout?: 'stack' | 'grid'; orientation?: 'vertical' | 'horizontal'; };
 export type GridListItemProps = { id: string; textValue?: string; disabled?: boolean; className?: string; style?: React.CSSProperties; children?: React.ReactNode; };
@@ -1036,7 +1034,7 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // The collections barrel and the modules its families share. None declares a registry family, so
 // the loop above skips them; assertFlatImports below fails the build if a family imports one that
 // is not listed.
-for (const name of ['collections', 'control-utils', 'collection-items', 'read-only-guard', 'color-context', 'collection-trigger', 'grid-virtualizer-context']) {
+for (const name of ['collections', 'collection-items', 'collection-trigger', 'grid-virtualizer-context']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
 }
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {
