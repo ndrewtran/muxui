@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { componentTestSelection, selectComponentTestFiles } from '../src/component-test-selection.mjs';
+import { componentTestSelection, selectComponentTestFiles, sourceGuardTests } from '../src/component-test-selection.mjs';
 import { runtimeSourcePaths } from '../../../../packages/react/src/runtime-sources.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../../../../packages/react');
@@ -20,7 +20,7 @@ async function testFiles(root, prefix = '') {
 
 const records = [
   { family: 'Button', export: 'Button', slug: 'button', source: 'packages/react/src/button.mjs' },
-  { family: 'Tree', export: 'Tree', slug: 'tree', source: 'packages/react/src/collections.mjs' },
+  { family: 'Tree', export: 'Tree', slug: 'tree', source: 'packages/react/src/tree.mjs' },
   { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: 'packages/react/src/supplemental/index.mjs' },
 ];
 const availableFiles = (await testFiles(resolve(packageRoot, 'test'))).map((file) => `test/${file}`);
@@ -38,6 +38,22 @@ test('every fixed-registry source module has a source test group', () => {
   for (const source of runtimeSourcePaths) {
     const record = { family: 'ScratchRegistryFamily', slug: 'scratch-registry-family', source };
     assert.doesNotThrow(() => componentTestSelection([record], availableFiles, { includeSharedSource: false }), source);
+  }
+});
+
+test('any change to a collections module selects the collections guards, whatever families it affects', async () => {
+  const guards = ['test/collections-modules.test.mjs', 'test/tree-shaking.test.mjs'];
+  // A change that only drops ColorSlider's pure annotation affects no family, so family routing cannot select them.
+  assert.deepEqual(sourceGuardTests('packages/react/src/color-slider.mjs'), guards);
+  // The barrel, every module it re-exports, and the helpers the families share.
+  const barrel = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
+  const families = [...barrel.matchAll(/ from '\.\/([\w-]+)\.mjs';/gu)].map(([, name]) => name);
+  assert.equal(families.length, 23);
+  const helpers = ['control-utils', 'collection-items', 'read-only-guard', 'color-context', 'collection-trigger', 'grid-virtualizer-context'];
+  for (const name of ['collections', ...families, ...helpers]) assert.deepEqual(sourceGuardTests(`packages/react/src/${name}.mjs`), guards, name);
+  assert.deepEqual(sourceGuardTests('packages/react/src/color-slider.ts'), guards);
+  for (const path of ['components.ts', 'fields.ts', 'motion.mjs', 'constructor.mjs', 'supplemental/index.mjs', 'styles/collections.css']) {
+    assert.deepEqual(sourceGuardTests(`packages/react/src/${path}`), [], path);
   }
 });
 
@@ -75,7 +91,7 @@ test('focused Tree and TagSelect retain only their named shared-source behavior 
 });
 
 test('GridList routes to its cross-engine layout proof and its collection cases in both modes', () => {
-  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/collections.mjs' };
+  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/grid-list.mjs' };
   const layoutProof = 'test/browser/grid-list-layout.test.mjs';
   assert.ok(selectComponentTestFiles([record], availableFiles).includes(layoutProof));
   assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
@@ -89,7 +105,7 @@ test('GridList routes to its cross-engine layout proof and its collection cases 
 });
 
 test('Virtualizer routes to its cross-engine grid proof and its named R1.3 cases in both modes', () => {
-  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/collections.mjs' };
+  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/virtualizer.mjs' };
   const gridProof = 'test/browser/virtualizer-grid.test.mjs';
   assert.ok(selectComponentTestFiles([record], availableFiles).includes(gridProof));
   assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
@@ -215,7 +231,7 @@ test('a family no test names runs its source group whole instead of failing', ()
 });
 
 test('a whole-group fallback is never narrowed to another selected family\'s cases', () => {
-  const field = { family: 'ScratchCollection', slug: 'scratch-collection', source: 'packages/react/src/collections.mjs' };
+  const field = { family: 'ScratchCollection', slug: 'scratch-collection', source: 'packages/react/src/tree.mjs' };
   const selected = componentTestSelection([records[1], field], availableFiles, {
     includeSharedSource: false,
     testSources: { 'test/r1-3-parity.test.mjs': parity },

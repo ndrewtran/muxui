@@ -12,6 +12,7 @@ import {
   TokenField, ToggleButtonGroup, Toolbar, Tree, Virtualizer,
 } from '../src/collections.mjs';
 import { ToggleButton } from '../src/components.ts';
+import { readRuntimeSources, runtimeSourceFor } from '../src/runtime-sources.mjs';
 import { createDom } from './support/dom.mjs';
 
 const slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
@@ -33,10 +34,10 @@ function propPattern(prop) {
 
 test('R1.3 artifact declarations have a generated MuxUI type and runtime surface', async () => {
   const repositoryRoot = resolve(import.meta.dirname, '../../..');
-  const [fieldTypes, indexTypes, runtime, styles] = await Promise.all([
+  const [fieldTypes, indexTypes, sources, styles] = await Promise.all([
     readFile(resolve(import.meta.dirname, '../generated/fields.d.ts'), 'utf8'),
     readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8'),
-    readFile(resolve(import.meta.dirname, '../src/collections.mjs'), 'utf8'),
+    readRuntimeSources(repositoryRoot),
     readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8'),
   ]);
   // The field types a collection inherits are declared by fields.ts, ahead of the index that names them.
@@ -61,6 +62,10 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
         if (inheritedStart !== -1) typeSurface += types.slice(inheritedStart, inheritedEnd === -1 ? undefined : inheritedEnd);
       }
     }
+    // The module that declares the family: collections.mjs is only a barrel over the family modules.
+    const owner = runtimeSourceFor(sources, name);
+    assert.ok(owner, `${name} has no runtime source`);
+    const runtime = sources[owner];
     const runtimeStart = runtime.indexOf(`export const ${name}`);
     assert.notEqual(runtimeStart, -1, `${name} runtime export is missing`);
     const runtimeNext = runtime.indexOf('\nexport const ', runtimeStart + 1);
