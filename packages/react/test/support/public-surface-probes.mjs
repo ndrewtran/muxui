@@ -1,8 +1,11 @@
 // The probe program of the public-surface check. For every subject both snapshots hold (`O` the baseline,
 // `N` the current build) it asserts, one assertion a line so a compile diagnostic names its subject:
-//   pair proof    mutual assignability (and the subject being any on neither or both sides), and the key set, required keys, optional keys, readonly keys (of the
-//                 examined members, below), keys that accept an explicit `undefined` (read through
-//                 `Required<Pick<T, K>>[K]`, and as an object literal) and open or closed index sets
+//   pair proof    mutual assignability (and the subject being any on neither or both sides), the key set,
+//                 required keys, optional keys, keys that accept an explicit `undefined` (read through
+//                 `Required<Pick<T, K>>[K]`, and as an object literal), open or closed index sets, and the
+//                 readonly keys and the members typed any: of every key of a value or part value, of the
+//                 examined members (below) of any other subject, of its index signatures, and of the object
+//                 members it holds at any depth (`readonly:path`, `any:path`)
 //   handler probes for each callable member that is declared in a snapshot's own files, or differs from
 //                 React's, and for each exported callback type: at every parameter position, a narrow, a
 //                 wide and a record (`Record<string, unknown>`) handler built from each side, assigned to
@@ -10,7 +13,8 @@
 //                 handler; and the readonly keys of each parameter object must match
 // A union is compared arm by arm: an arm of one side is paired with the arms of the other it is mutually
 // assignable with (an arm with none, which `arms` reports, with the whole other side), because an aggregate
-// can stay equal while one arm changes its variance.
+// can stay equal while one arm changes its variance. Each assertion accepts an arm when one of its twins is as
+// before on that probe, and `twins` requires one twin that is as before on all of them together.
 // An absent diagnostic is a pass, so the program starts with an assertion that must fail (the canary), and
 // every other diagnostic is a failure: see `interpretDiagnostics`.
 import { writeFileSync } from 'node:fs';
@@ -92,6 +96,31 @@ const FIELDS = [['keyof', 'keyof'], ['required', 'required'], ['optional', 'opti
 const union = (names) => (names.length === 0 ? 'never' : names.map((name) => JSON.stringify(name)).join(' | '));
 
 /**
+ * Declares, for one subject, the alias `<name>Diff<O, N>` of the arms of either side that no single arm of the other
+ * side matches on every probe at once, and returns its name. An arm is matched by a mutual twin whose failing
+ * probes (`Fails`: field names, and `handler:<member>`) are only those that fail against every twin, which the
+ * assertion for each probe reports itself. Only a union with several arms can have more than one twin.
+ */
+function twinProbe(head, name, readKeys, callable) {
+  const fields = [...FIELDS.map(([field]) => field), 'readonly', 'any'];
+  const keyed = (field) => (field === 'readonly' || field === 'any' ? `, ${readKeys}` : '');
+  const fails = [
+    ...fields.map((field) => `([Diff<Field<A, '${field}'${keyed(field)}>, Field<X, '${field}'${keyed(field)}>>] extends [never] ? never : '${field}')`),
+    ...callable.map((member) => `([Quiet<Disagree<Evidence<Member<A, ${JSON.stringify(member)}>, Member<X, ${JSON.stringify(member)}>>>>] extends [never] ? never : ${JSON.stringify(`handler:${member}`)})`),
+  ];
+  const probes = [...fields, ...callable.map((member) => `handler:${member}`)].map((probe) => JSON.stringify(probe)).join(' | ');
+  head.push(
+    `type ${name}Fails<A, X> = ${fails.join(' | ')};`,
+    `type ${name}Always<A, N> = { [F in ${probes}]: [N extends unknown ? (Mutual<A, N> extends true ? (F extends ${name}Fails<A, N> ? 1 : 0) : never) : never] extends [1] ? F : never }[${probes}];`,
+    `type ${name}Left<A, N, X = N> = X extends unknown ? (Mutual<A, X> extends true ? Exclude<${name}Fails<A, X>, ${name}Always<A, N>> : never) : never;`,
+    `type ${name}Match<A, N, X = N> = X extends unknown ? (Mutual<A, X> extends true ? ([Exclude<${name}Fails<A, X>, ${name}Always<A, N>>] extends [never] ? true : false) : never) : never;`,
+    `type ${name}Arm<A, N> = [Twin<A, N>] extends [never] ? never : true extends ${name}Match<A, N> ? never : ${name}Left<A, N>;`,
+    `type ${name}Diff<O, N> = ((O extends unknown ? ${name}Arm<O, N> : never) | (N extends unknown ? ${name}Arm<N, O> : never)) extends infer R ? R : never;`,
+  );
+  return `${name}Diff`;
+}
+
+/**
  * The probe source for `common` subjects (pairs `{ old, new }`, with `members` from `classifyMembers`),
  * and the record of each assertion line: `[{ subject, assertion }]` in line order.
  */
@@ -109,13 +138,14 @@ export function buildProbe(snapshots, common, members) {
     }
     return lists.get(text);
   };
+  let twinCount = 0;
   const assert = (subject, assertion, expression) => {
     records.push({ subject: subject.id, assertion });
     body.push(`type L${records.length - 1} = Assert<${expression}>;`);
   };
   for (const { old } of common) {
     const [O, N] = [names.get(old.id).old, names.get(old.id).new];
-    const { shape, selfCallable, examined, callable, inherited, nested } = members.get(old.id);
+    const { shape, selfCallable, unionArms, examined, callable, inherited, nested } = members.get(old.id);
     assert(old, 'mutual', `Mutual<${O}, ${N}> extends true ? Same<IsAny<${O}>, IsAny<${N}>> : false`);
     if (shape === 'object') {
       assert(old, 'arms', `Clean<Unpaired<${O}, ${N}>>`);
@@ -130,6 +160,11 @@ export function buildProbe(snapshots, common, members) {
         const dig = (type) => path.reduce((expression, name) => `Dig<${expression}, ${JSON.stringify(name)}>`, type);
         for (const field of ['readonly', 'any']) assert(old, `${field}:${path.join('.')}`, `Clean<FieldDiff<${dig(O)}, ${dig(N)}, '${field}', ${listOf(union(inner))}>>`);
       }
+    }
+    // The assertions above each find a twin for an arm; the twin has to be the same one for all of them.
+    if (shape === 'object' && unionArms) {
+      const readKeys = listOf(union(examined));
+      assert(old, 'twins', `Clean<${twinProbe(head, `T${twinCount++}`, readKeys, callable)}<${O}, ${N}>>`);
     }
     if (selfCallable) assert(old, 'handler', `Clean<Quiet<Disagree<Evidence<${O}, ${N}>>>>`);
     // The compiler's own keys of the subject are the classification's, so a member cannot lose its probes by losing its entry.

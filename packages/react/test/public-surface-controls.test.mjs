@@ -150,6 +150,32 @@ export type Keys = { a?: 1 } | { a?: 1; b?: undefined };
   });
 });
 
+test('an arm that no single arm of the other side matches fails, though each of its probes finds a twin', () => {
+  // The first two arms of each side are mutually assignable (a function property and its method form are). Each member is
+  // matched by some twin, yet `{ a: narrow, b: narrow }` compiles against the first arm before and against no arm after.
+  const arms = (union) => `export interface E { id: string }
+export type S = (e: E) => void;
+export type B = { m(e: E): void }['m'];
+export type Props = ${union};
+`;
+  const before = arms('{ a?: S; b?: S } | { a?: B; b?: B } | { c: 1 }');
+  const after = arms('{ a?: S; b?: B } | { a?: B; b?: S } | { c: 1 }');
+  withPair(before, after, (snapshots) => {
+    const comparison = comparePublicSurfaces(snapshots, compilers);
+    assert.deepEqual(failuresOf(comparison, 'loose'), expected(['Props twins']));
+    assert.deepEqual(failuresOf(comparison, 'exact'), expected(['Props twins']));
+    assert.deepEqual(comparison.runs[0].loose.failures.map(({ message }) => message), ['"handler:a" | "handler:b"']);
+  });
+  // The same arms in the same pairing pass: each arm has a twin that is as before on every probe.
+  withPair(before, before, (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected([]));
+  });
+  // Exchanging whole arms is not a change.
+  withPair(before, arms('{ c: 1 } | { a?: B; b?: B } | { a?: S; b?: S }'), (snapshots) => {
+    assert.deepEqual(failuresOf(comparePublicSurfaces(snapshots, compilers), 'loose'), expected([]));
+  });
+});
+
 test('a callback with a rest parameter stops the check, because no probe varies the rest element', () => {
   const item = 'export interface Item { id: string }\n';
   // A function property turned into its bivariant method form accepts narrower handlers; no position names a rest element.

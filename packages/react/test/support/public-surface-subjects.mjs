@@ -163,9 +163,10 @@ export function commonSubjects(baseline, current) {
 }
 
 /**
- * For each common subject, how it is probed: `{ shape, selfCallable, examined, callable, inherited }`.
+ * For each common subject, how it is probed: `{ shape, selfCallable, unionArms, examined, callable, inherited, nested }`.
  * - `shape` is `object` when either snapshot's type has an object or intersection arm, else `value`.
- * - `selfCallable`: an exported callback type, probed as a handler target itself.
+ * - `selfCallable`: an exported callback type, probed as a handler target itself;
+ * - `unionArms`: either snapshot's type has more than one object arm, so a probe must match whole arms;
  * - `examined`: the members the probe looks at by name, because some declaration of theirs is in a
  *   snapshot's own files, or an inherited one is not the same declaration, resolved type and readonly
  *   modifier on both sides (React's own members that are, are not examined: the shared checker shows
@@ -294,7 +295,7 @@ export function classifyMembers(snapshots, common) {
           });
         });
       });
-      result.set(old.id, { shape: 'object', selfCallable, examined: [...examined].sort(), callable: callable.sort(), inherited: [...allNames].filter((name) => !examined.has(name)).sort(), nested: nestedMembers(old.id, level, chain) });
+      result.set(old.id, { shape: 'object', selfCallable, unionArms: oldArms.length > 1 || newArms.length > 1, examined: [...examined].sort(), callable: callable.sort(), inherited: [...allNames].filter((name) => !examined.has(name)).sort(), nested: nestedMembers(old.id, level, chain) });
     }
     return result;
   });
