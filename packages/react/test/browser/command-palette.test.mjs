@@ -4,7 +4,8 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 
 // CommandPalette.Trigger draws Button's keyboard focus ring, never for the first pointer
 // click on a fresh page, and the focused CommandPalette.Input draws the field focus
-// border, both from the focus tokens.
+// border, both from the focus tokens. ListBox autoFocus focuses a row virtually: the Input keeps
+// DOM focus and points aria-activedescendant at the row, so Enter in the Input activates it.
 // Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -131,6 +132,115 @@ for (const engine of browserEngines()) {
         await fresh.close();
       });
       assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+// The ?autofocus value is passed to ListBox as its autoFocus strategy; ?prevent cancels Enter in Input onKeyDown.
+const listFocusEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { CommandPalette } from '/src/supplemental/index.mjs';
+
+const h = React.createElement;
+const params = new URLSearchParams(location.search);
+const activated = [];
+window.__activated = activated;
+const item = (id, title) => h(CommandPalette.Item, { key: id, id, title, onActivate: () => activated.push(id) });
+createRoot(document.getElementById('root')).render(
+  h(CommandPalette.Root, { defaultOpen: true },
+    h(CommandPalette.Backdrop, null, h(CommandPalette.Popup, null,
+      h(CommandPalette.Title, null, 'Commands'),
+      h(CommandPalette.Content, null,
+        h(CommandPalette.SearchField, null, h(CommandPalette.Input, {
+          id: 'palette-input',
+          placeholder: 'Search commands',
+          onKeyDown: params.has('prevent') ? (event) => { if (event.key === 'Enter') event.preventDefault(); } : undefined,
+        })),
+        h(CommandPalette.ListBox, { autoFocus: params.get('autofocus') ?? undefined }, item('alpha', 'Alpha'), item('beta', 'Beta'), item('gamma', 'Gamma')))))));
+`;
+
+const listFocusPage = pageShell({
+  attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"',
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  body: '<div id="root"></div>',
+  entry: '/command-palette-list-focus-entry.mjs',
+});
+
+for (const engine of browserEngines()) {
+  test(`CommandPalette ListBox autoFocus focuses a row virtually in ${engine}`, { timeout: 120_000 }, async (t) => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/command-palette-list-focus.html': listFocusPage },
+      modules: { '/command-palette-list-focus-entry.mjs': listFocusEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      const open = async (query) => {
+        const tab = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        await tab.goto(`${url}/command-palette-list-focus.html${query}`, { waitUntil: 'networkidle' });
+        await tab.locator('#palette-input').waitFor();
+        // Two frames let a mount-time autoFocus settle before the absence of a focused row is read.
+        await tab.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        return { tab, errors };
+      };
+      // The text of the row the Input points at, or null when it points at none.
+      const activeRow = (tab) => tab.evaluate(() => {
+        const id = document.querySelector('#palette-input').getAttribute('aria-activedescendant');
+        return id ? document.getElementById(id)?.textContent ?? null : null;
+      });
+      const activated = (tab) => tab.evaluate(() => window.__activated);
+
+      await t.test('first and last focus that row while the Input keeps DOM focus', async () => {
+        for (const [strategy, title] of [['first', 'Alpha'], ['last', 'Gamma']]) {
+          const { tab, errors } = await open(`?autofocus=${strategy}`);
+          assert.equal(await activeRow(tab), title, `autoFocus ${strategy} focuses ${title}`);
+          assert.ok(await tab.locator('#palette-input').evaluate((node) => node === document.activeElement), 'the Input keeps DOM focus');
+          assert.deepEqual(errors, []);
+          await tab.close();
+        }
+      });
+
+      await t.test('Enter in the Input activates the focused row and the arrow keys move from it', async () => {
+        const { tab } = await open('?autofocus=first');
+        await tab.keyboard.press('ArrowDown');
+        await tab.waitForFunction(() => document.getElementById(document.querySelector('#palette-input').getAttribute('aria-activedescendant') ?? '')?.textContent === 'Beta');
+        assert.equal(await activeRow(tab), 'Beta', 'ArrowDown moves from the initial row');
+        await tab.keyboard.press('Enter');
+        assert.deepEqual(await activated(tab), ['beta']);
+        // The exit motion keeps the dialog mounted until it ends.
+        await tab.getByRole('dialog').waitFor({ state: 'detached' });
+        await tab.close();
+
+        const initial = await open('?autofocus=first');
+        await initial.tab.keyboard.press('Enter');
+        assert.deepEqual(await activated(initial.tab), ['alpha'], 'Enter activates the initial row');
+        await initial.tab.close();
+      });
+
+      await t.test('Input onKeyDown can still cancel Enter', async () => {
+        const { tab } = await open('?autofocus=first&prevent');
+        assert.equal(await activeRow(tab), 'Alpha');
+        await tab.keyboard.press('Enter');
+        assert.deepEqual(await activated(tab), []);
+        assert.equal(await tab.getByRole('dialog').count(), 1, 'the palette stays open');
+        await tab.close();
+      });
+
+      await t.test('without autoFocus no row is focused and Enter activates nothing', async () => {
+        const { tab } = await open('');
+        assert.equal(await activeRow(tab), null);
+        await tab.keyboard.press('Enter');
+        assert.deepEqual(await activated(tab), []);
+        assert.equal(await tab.getByRole('dialog').count(), 1);
+        await tab.close();
+      });
     } finally {
       await browser?.close();
       await close();

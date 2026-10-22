@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:688cab7a7e959f52756deb3d67d045c186fab63b92a920552c01703093674c6a -->
+<!-- @generated-content-sha256: sha256:5c66d908e076c9100022f119845211f766df755f20269be44daae1924cfa2ea4 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -124,7 +124,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
-| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
+| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError, autoFocus |
 | DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
@@ -337,6 +337,12 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Applications may compose loading content, Empty, Footer, and custom Item content.
 - Enter during IME composition, or cancelled by Input onKeyDown, does not activate a command.
 - Input defaults autoFocus to true when the palette opens.
+- ListBox autoFocus takes 'first' or 'last' to focus that enabled row when the ListBox mounts, or true to focus the list with no row.
+- Without ListBox autoFocus no row is focused when the palette opens.
+- ListBox autoFocus is read on mount only, so change the ListBox key to apply it again.
+- The row that ListBox autoFocus focuses is focused virtually: Input keeps DOM focus and aria-activedescendant names the row.
+- With a focused row, ArrowUp and ArrowDown in Input move from it and Enter in Input activates it.
+- Deleting text in Input clears the focused row.
 - Collection takes items and a render function that returns an Item or Section element for each, and adds no element or class of its own.
 - Shortcut displays key text, with each key in a kbd element, and registers no keyboard shortcut.
 - Shortcut is aria-hidden by default.

@@ -150,7 +150,16 @@ export type CommandPaletteClearButtonProps = ButtonPartProps;
 type CommandPaletteItemsProps<T> =
   | { items?: undefined; dependencies?: undefined; children?: React.ReactNode }
   | { items: Iterable<T>; dependencies?: readonly unknown[]; children: (item: T) => React.ReactElement };
-export type CommandPaletteListBoxProps<T = unknown> = Omit<PartProps<HTMLDivElement>, 'children'> & CommandPaletteItemsProps<T>;
+type CommandPaletteListBoxFocusProps = {
+  /**
+   * Which row is focused when the ListBox mounts: the 'first' or 'last' enabled row, or
+   * true to focus the list with no row. Omitted or false focuses nothing.
+   * The Input keeps DOM focus and the row is focused virtually, so Enter in the Input
+   * activates it. Read on mount only; change the ListBox key to apply it again.
+   */
+  autoFocus?: boolean | 'first' | 'last';
+};
+export type CommandPaletteListBoxProps<T = unknown> = Omit<PartProps<HTMLDivElement>, 'children' | 'autoFocus'> & CommandPaletteListBoxFocusProps & CommandPaletteItemsProps<T>;
 export type CommandPaletteSectionProps<T = unknown> = Omit<PartProps<HTMLElement>, 'children'> & CommandPaletteItemsProps<T>;
 export type CommandPaletteSectionHeaderProps = PartProps<HTMLElement>;
 export type CommandPaletteSeparatorProps = PartProps<HTMLHRElement>;

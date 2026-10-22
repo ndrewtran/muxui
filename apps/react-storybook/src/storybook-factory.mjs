@@ -133,6 +133,8 @@ const FAMILY_SELECT_PROPS = Object.freeze({
   Text: TEXT_SELECT_PROPS,
   Tabs: { variant: ['underline', 'pill', 'overflow', 'segment'] },
   Card: { variant: ['elevated', 'outlined', 'filled'], padding: ['sm', 'md', 'lg'] },
+  // autoFocus is ListBox's focus strategy; the true and false members have no row to show.
+  CommandPalette: { autoFocus: ['first', 'last'] },
   Sidebar: { status: ['online', 'offline'] },
   // SelectNative's derived size is a visual size or a positive number, the native list's visible row count.
   SelectNative: { size: [...literalMembers(selectNativeApi.api.propDetails.size.type, selectNativeApi.api.types), 4] },
@@ -1123,14 +1125,14 @@ const COMMAND_PALETTE_SAMPLE_COMMANDS = [
 
 /**
  * The flat CommandPalette props belong to different parts. Root owns open state, size, and closeOnSelect.
- * The Trigger owns disabled and the Backdrop owns dismissable. The useCommandPalette hook owns the commands,
+ * The Trigger owns disabled, the Backdrop owns dismissable, and the ListBox owns autoFocus. The useCommandPalette hook owns the commands,
  * the query, filtering, sorting, grouping, and the action and error callbacks. Each Item reports activation
  * through the hook's item props plus the caller's onActivate. The first command takes title, description,
  * href, and target when no command list is supplied.
  */
 function CommandPalettePreview({
   open, defaultOpen = false, onOpenChange, size, closeOnSelect, id,
-  disabled, dismissable,
+  disabled, dismissable, autoFocus,
   commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, close,
   title, description, href, target, onActivate,
 }) {
@@ -1162,7 +1164,7 @@ function CommandPalettePreview({
             onChange: (event) => palette.setQuery(event.currentTarget.value),
           })),
           // A group heading, an item description, and an item's meta and shortcut each carry text the open palette must keep readable.
-          e(MuxUI.CommandPalette.ListBox, null, palette.groupedCommands.map((group) => e(MuxUI.CommandPalette.Section, { key: group.id },
+          e(MuxUI.CommandPalette.ListBox, { autoFocus }, palette.groupedCommands.map((group) => e(MuxUI.CommandPalette.Section, { key: group.id },
             group.title ? e(MuxUI.CommandPalette.SectionHeader, null, group.title) : null,
             group.commands.map((command) => {
               const item = palette.getItemProps(command);

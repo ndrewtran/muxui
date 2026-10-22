@@ -68,4 +68,10 @@ const nonIterableItems = <CommandPalette.Collection items={3}>{() => <CommandPal
 const orphanDependencies = <CommandPalette.Collection dependencies={[1]}><CommandPalette.Item id="one" title="One" /></CommandPalette.Collection>;
 // @ts-expect-error Collection adds no element, so it takes no host props.
 const hostProps = <CommandPalette.Collection className="results"><CommandPalette.Item id="one" title="One" /></CommandPalette.Collection>;
-void [dynamicList, flatList, flatSection, iterableCollection, staticList, wrongField, wrongCollectionField, wrongSectionField, functionWithoutItems, itemsWithoutFunction, stringResult, nullResult, nonIterableItems, orphanDependencies, hostProps];
+// ListBox autoFocus takes React Aria's focus strategy: 'first', 'last', or a boolean, with the static and items forms alike.
+const focusFirst = <CommandPalette.ListBox aria-label="Commands" autoFocus="first"><CommandPalette.Item id="one" title="One" /></CommandPalette.ListBox>;
+const focusLast = <CommandPalette.ListBox aria-label="Commands" autoFocus="last" items={commands}>{(command) => <CommandPalette.Item id={command.id} title={command.title} />}</CommandPalette.ListBox>;
+const focusList = <CommandPalette.ListBox aria-label="Commands" autoFocus />;
+// @ts-expect-error Only 'first' and 'last' are focus strategies.
+const wrongStrategy = <CommandPalette.ListBox aria-label="Commands" autoFocus="middle" />;
+void [dynamicList, flatList, flatSection, iterableCollection, staticList, wrongField, wrongCollectionField, wrongSectionField, functionWithoutItems, itemsWithoutFunction, stringResult, nullResult, nonIterableItems, orphanDependencies, hostProps, focusFirst, focusLast, focusList, wrongStrategy];
