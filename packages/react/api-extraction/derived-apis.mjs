@@ -16,7 +16,9 @@ import { extractApis } from './extract.mjs';
  *   - `part`: the export's part that is the root, when the root is not the export itself;
  *   - `parts`: each other anatomy part that owns Mux UI props, mapped to its export member
  *     (`{ item: 'Item' }`), which becomes that part's entry in `partApis`; and
- *   - `callable`: the anatomy part whose props the export itself must also carry unchanged.
+ *   - `callable`: the anatomy part whose props the export itself must also carry unchanged; and
+ *   - `also`: other members of the export whose props must carry the root's props as well, each with the
+ *     props it may `widen` (Select, whose Select.Root takes `label` as any node).
  */
 export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'button', name: 'Button', source: 'packages/react/src/button.ts' },
@@ -91,6 +93,13 @@ function documentText(document) {
 }
 
 /**
+ * What `extractApis` reads of an entry, with the paths its declarations and source sit at. Every caller maps
+ * an entry through this, so a field the entry sets (`also`, say) cannot reach the committed outputs and miss
+ * the packed declarations, or the reverse.
+ */
+export const extractionComponent = ({ name, part, callable, also, parts }, paths) => ({ name, part, callable, also, parts, ...paths });
+
+/**
  * Each derived component's document by slug. With `declarationRoot` (the tsc
  * output directory) it extracts them; without one (--list-outputs, which runs
  * no tsc) it reads the committed files.
@@ -105,13 +114,9 @@ export async function deriveApis({ packageRoot, repositoryRoot, declarationRoot,
   }
   const apis = extractApis({
     declarationRoot,
-    components: components.map(({ name, part, callable, parts, source }) => ({
-      name,
-      part,
-      callable,
-      parts,
-      declarations: resolve(declarationRoot, source.slice(SOURCE_ROOT.length).replace(/\.ts$/u, '.d.ts')),
-      source: resolve(repositoryRoot, source),
+    components: components.map((component) => extractionComponent(component, {
+      declarations: resolve(declarationRoot, component.source.slice(SOURCE_ROOT.length).replace(/\.ts$/u, '.d.ts')),
+      source: resolve(repositoryRoot, component.source),
     })),
   });
   return new Map(components.map(({ slug, name, source }) => [slug, validateDerivedApi({

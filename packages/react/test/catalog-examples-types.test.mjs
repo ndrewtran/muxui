@@ -6,7 +6,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
-import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
+import { DERIVED_API_COMPONENTS, extractionComponent } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
 import { flatModuleName } from '../src/flat-modules.mjs';
 import { STRICT_CONSUMER_COMPILER_OPTIONS, augmentationReach, consumerTsc, indexSignatureCompatible, lostAugmentationReach, tscDiagnostics, typeScript7Tsc } from './support/declaration-surface.mjs';
@@ -207,13 +207,9 @@ export const handled = <LightboxTrigger itemKey="one" onActivate={onRecord}>Open
     const packedGenerated = join(packageScope, 'react', 'generated');
     const packedApis = extractApis({
       declarationRoot: packedGenerated,
-      components: DERIVED_API_COMPONENTS.map(({ name, part, callable, parts, source }) => ({
-        name,
-        part,
-        callable,
-        parts,
+      components: DERIVED_API_COMPONENTS.map((component) => extractionComponent(component, {
         // generated/ is flat: a subpath module's index.ts ships under its directory's name.
-        declarations: join(packedGenerated, flatModuleName(source).replace(/\.js$/u, '.d.ts')),
+        declarations: join(packedGenerated, flatModuleName(component.source).replace(/\.js$/u, '.d.ts')),
       })),
     });
     // The typed fields of the root and, recursively, of each part (with the member that renders it).

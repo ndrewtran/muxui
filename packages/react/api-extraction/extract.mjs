@@ -586,10 +586,10 @@ function ownPropsOf(checker, sourceFile, ownName, label) {
   return declaration.type.members;
 }
 
-// The props the exported component accepts: the first parameter of its one call signature.
+// The props type the exported component accepts: the first parameter of its one call signature.
 // A compound export (Avatar) names the part whose props the binding's API is: its root. A
 // callable compound (ListBox) is its own root, and its other parts are members of the export.
-function publicProps(checker, sourceFile, name, part) {
+function publicPropsType(checker, sourceFile, name, part) {
   const exported = exportedNamed(sourceFile, name);
   if (!exported) throw new ApiExtractionError(name, `the declarations export no ${name}`);
   let type = checker.getTypeOfSymbol(checker.getSymbolAtLocation(exported.name));
@@ -603,8 +603,11 @@ function publicProps(checker, sourceFile, name, part) {
   if (signatures.length !== 1 || signatures[0].getParameters().length === 0) {
     throw new ApiExtractionError(name, `the exported ${component} must be a component with one call signature that takes props`);
   }
-  return new Map(checker.getPropertiesOfType(checker.getParameterType(signatures[0], 0)).map((property) => [property.name, property]));
+  return checker.getParameterType(signatures[0], 0);
 }
+
+const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(type).map((property) => [property.name, property]));
+const publicProps = (checker, sourceFile, name, part) => propertiesByName(checker, publicPropsType(checker, sourceFile, name, part));
 
 /**
  * The typed block of one component, read from its emitted declarations: the members
@@ -613,25 +616,62 @@ function publicProps(checker, sourceFile, name, part) {
  * same way is the same type; anything else, including an equal inline object, fails.
  * `member` is the export's part whose props are read (none: the export itself), and
  * `label` is the component in a diagnostic.
+ *
+ * `also` names other members of the export whose props must carry the same members (Select.Root,
+ * whose props are not the callable Select's): each is checked as the export is, for the type's
+ * identity and for optionality. A member a signature lists in `widen` may instead be a supertype
+ * there, which Select.Root's `label` is: it takes any node, so that `children` can name the field.
+ * Widening is checked on the arms: some arm of the signature's props, a union of arms, must accept
+ * everything the owned type does, so an arm that narrows the member is not hidden by the others.
  */
-function readDeclaredApi(reader, checker, sourceFile, { exportName, ownName, member, label }) {
+function readDeclaredApi(reader, checker, sourceFile, { exportName, ownName, member, label, also = [] }) {
   const members = ownPropsOf(checker, sourceFile, ownName, label);
-  const exposed = publicProps(checker, sourceFile, exportName, member);
+  const signatures = [
+    { name: label, widen: [], props: publicProps(checker, sourceFile, exportName, member), type: undefined },
+    ...also.map(({ member: alsoMember, widen = [] }) => {
+      const type = publicPropsType(checker, sourceFile, exportName, alsoMember);
+      return { name: `${exportName}.${alsoMember}`, widen, props: propertiesByName(checker, type), type };
+    }),
+  ];
+  const owned = new Set(members.map((ownMember) => ownMember.name?.text));
+  for (const { name, widen } of signatures) {
+    for (const prop of widen) {
+      if (!owned.has(prop)) throw new ApiExtractionError(name, `widen names ${prop}, which ${ownName}OwnProps does not declare`);
+    }
+  }
   const props = [];
   const events = [];
   const propDetails = {};
   const eventDetails = {};
+  const shown = (symbol, type) => `${symbol.flags & SymbolFlags.Optional ? 'optional' : 'required'} ${checker.typeToString(type)}`;
   for (const ownMember of members) {
     const { name: prop, type, required, readonly: _readonly, ...documented } = reader.memberOf(ownMember, `${label}.`);
     if (type.kind === 'never') throw new ApiExtractionError(`${label}.${prop}`, `a member that must be absent is no prop; leave ${prop} to the host part of the props`);
     const own = checker.getSymbolAtLocation(ownMember.name);
-    const accepted = exposed.get(prop);
-    if (!accepted) throw new ApiExtractionError(`${label}.${prop}`, `the exported ${label}'s props do not include ${prop}`);
     const ownType = checker.getTypeOfSymbol(own);
-    const acceptedType = checker.getTypeOfSymbol(accepted);
-    if (acceptedType.id !== ownType.id || Boolean(accepted.flags & SymbolFlags.Optional) !== !required) {
-      const shown = (symbol, type) => `${symbol.flags & SymbolFlags.Optional ? 'optional' : 'required'} ${checker.typeToString(type)}`;
-      throw new ApiExtractionError(`${label}.${prop}`, `the exported ${label}'s props redeclare ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}`);
+    for (const signature of signatures) {
+      const accepted = signature.props.get(prop);
+      if (!accepted) throw new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props do not include ${prop}`);
+      const acceptedType = checker.getTypeOfSymbol(accepted);
+      const redeclared = (reason) => new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props ${reason} ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}`);
+      const optionalityKept = Boolean(accepted.flags & SymbolFlags.Optional) === !required;
+      if (!signature.widen.includes(prop)) {
+        if (acceptedType.id !== ownType.id || !optionalityKept) throw redeclared('redeclare');
+        continue;
+      }
+      if (!optionalityKept) throw redeclared('change the optionality of');
+      // Some arm must take everything the owned type does; the union of all arms taking it is not enough.
+      const arms = signature.type.isUnionType() ? signature.type.getTypes() : [signature.type];
+      const takes = arms.some((arm) => {
+        const armProp = checker.getPropertyOfType(arm, prop);
+        return armProp !== undefined && checker.isTypeAssignableTo(ownType, checker.getTypeOfSymbol(armProp));
+      });
+      if (!takes) {
+        throw new ApiExtractionError(`${label}.${prop}`, `no arm of the exported ${signature.name}'s props takes ${prop} as ${ownName}OwnProps declares it, ${shown(own, ownType)}; ${prop} may widen there, never narrow (if ${signature.name} declares it as ${ownName}OwnProps does, remove it from widen)`);
+      }
+      if (acceptedType.id === ownType.id) {
+        throw new ApiExtractionError(`${label}.${prop}`, `${prop} is listed to widen on ${signature.name}, whose props declare it as ${shown(accepted, acceptedType)}, the type ${ownName}OwnProps declares; remove it from widen`);
+      }
     }
     if (/^on[A-Z]/u.test(prop)) {
       // Decision 0031 item 7: on<Event> maps to <event>, recorded with its callback signature.
@@ -1038,8 +1078,8 @@ const WRAPPER_RULE = 'an exported component\'s wrapper is called with no argumen
  * Anything else fails naming the component and this rule, so nothing the wrapper runs can
  * change which function renders. The source must write to neither the exported binding nor
  * a wrapper const other than through those statements: a part assigned later would publish
- * a stale part. Nor may either, or a part, be used as a value except where it is rendered
- * (`valueEscape`), since an alias is a write path the scan cannot follow. A top-level const
+ * a stale part. Nor may either, or a part, be used as a value except where it is rendered or
+ * compared by identity (`valueEscape`), since an alias is a write path the scan cannot follow. A top-level const
  * a wrapper const or part follows is collected in `followed` and checked by the caller like
  * any other.
  * @returns {{ callable: object, parts: Map<string, object> }} the callable's function and each part's, by member name
@@ -1228,15 +1268,20 @@ function reactImports({ checker }, sourceFile) {
   return { namespaces, createElements };
 }
 
+// The strict comparisons, which never coerce an operand.
+const IDENTITY_COMPARISONS = new Set([SyntaxKind.EqualsEqualsEqualsToken, SyntaxKind.ExclamationEqualsEqualsToken]);
+
 /**
  * The first reference to one of `bindings` that could hand the component, or one of its parts, to other
  * code, or undefined. A part is replaced by writing it on the component, or changed by writing to the
  * part (`value.render = ...`), and a write through an alias is as good as one through the name, so the
  * scan above must see every write. It cannot follow every way a value moves (a destructuring, a
  * conditional, `Thing.Root`, a closure, an argument, `.apply`), and the rule does not try. The component
- * or a part is a value only where it is rendered and goes nowhere else:
+ * or a part is a value only where it is rendered or compared, and goes nowhere else:
  *   - as a JSX tag, or the first argument of React's `createElement` (`createElement(Thing.Item, ...)`,
  *     `React.createElement(Sibling, ...)`), which may hold parentheses and a type assertion around it;
+ *   - as an operand of `===` or `!==` (`child.type === Thing.Label`), which yields a boolean and hands
+ *     the value to nothing. Loose `==` and `!=` are not admitted: they can coerce an operand;
  *   - and for the component itself, in its declaration, an export, a `typeof` query, the target or the
  *     value of an `allowed` assignment, and the wrapper's final return.
  * `<component>.<Part>` is a part, so it is a value only as a JSX tag or the first argument of createElement,
@@ -1262,6 +1307,7 @@ function valueEscape(project, sourceFile, bindings, { allowed = new Set(), final
     const { parent } = outer;
     if (jsxTag.has(parent.kind) && parent.tagName === outer) return true;
     if (parent.kind === SyntaxKind.CallExpression && parent.arguments[0] === outer && isCreateElement(parent.expression)) return true;
+    if (parent.kind === SyntaxKind.BinaryExpression && IDENTITY_COMPARISONS.has(parent.operatorToken.kind)) return true;
     if (kind === 'part') return false;
     if ((parent.kind === SyntaxKind.VariableDeclaration && parent.name === node) || parent.kind === SyntaxKind.ExportSpecifier) return true;
     let name = parent;
@@ -1420,23 +1466,25 @@ const ANATOMY_PART = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
  * maps each of its other anatomy parts that owns Mux UI props to its export member
  * (`{ item: 'Item' }`); each is read like the root, from `<Name><Member>OwnProps`, into
  * `partApis`, with defaults when the component's source is given, as for the root. `callable` names the anatomy part whose props the export itself must also carry
- * unchanged (Menu, whose callable is its List): a check, not data. Types declared under
+ * unchanged (Menu, whose callable is its List): a check, not data. `also` names other members of the
+ * export whose props must carry the root's props too (Select, whose root is the callable and whose
+ * Select.Root takes the same props), each with the props it may `widen`: a check, not data. Types declared under
  * `declarationRoot` are Mux UI-owned; any other reference must be an exact host type on
  * the allowlist. Returns a Map from export name to `{ props, events, defaults?,
  * propDetails, eventDetails, types, partApis? }`, with `types` sorted by name.
- * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string, callable?: string, parts?: Record<string, string> }[], hostAllowlist?: readonly string[] }} options
+ * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string, callable?: string, also?: { member: string, widen?: string[] }[], parts?: Record<string, string> }[], hostAllowlist?: readonly string[] }} options
  */
 export function extractApis({ declarationRoot, components, hostAllowlist = HOST_ALLOWLIST }) {
   const allowed = assertHostAllowlist(hostAllowlist);
   const root = resolve(declarationRoot);
   const files = components.flatMap(({ declarations, source }) => [resolve(declarations), ...(source ? [resolve(source)] : [])]);
-  return withProject(files, (project) => new Map(components.map(({ name, declarations, source, part, callable, parts = {} }) => {
+  return withProject(files, (project) => new Map(components.map(({ name, declarations, source, part, callable, also = [], parts = {} }) => {
     const declarationFile = project.program.getSourceFile(resolve(declarations));
     const sourceFile = source ? project.program.getSourceFile(resolve(source)) : undefined;
     // One block: the API of the export's root, or of one part of it.
-    const read = ({ ownName, member, label, part: isPart = false }) => {
+    const read = ({ ownName, member, label, also: rootAlso = [], part: isPart = false }) => {
       const reader = declarationReader({ project, declarationRoot: root, allowed });
-      const declared = readDeclaredApi(reader, project.checker, declarationFile, { exportName: name, ownName, member, label });
+      const declared = readDeclaredApi(reader, project.checker, declarationFile, { exportName: name, ownName, member, label, also: rootAlso });
       if (isPart && declared.props.length === 0 && declared.events.length === 0) {
         throw new ApiExtractionError(label, `${ownName}OwnProps declares no Mux UI-owned prop; a part without Mux UI-owned props has no partApis entry`);
       }
@@ -1457,7 +1505,16 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
         types,
       };
     };
-    const api = read({ ownName: name, member: part, label: name });
+    const alsoMembers = new Set();
+    for (const { member, widen = [] } of also) {
+      if (!REFERENCE_NAME.test(member)) throw new ApiExtractionError(name, `also names an export member, such as Root; not ${member}`);
+      if (member === part || alsoMembers.has(member)) throw new ApiExtractionError(`${name}.${member}`, `${member} is ${member === part ? 'the root part, whose props are read' : 'named twice'} in also`);
+      alsoMembers.add(member);
+      if (!Array.isArray(widen) || widen.some((prop) => typeof prop !== 'string') || new Set(widen).size !== widen.length) {
+        throw new ApiExtractionError(`${name}.${member}`, 'widen lists each prop once, by name');
+      }
+    }
+    const api = read({ ownName: name, member: part, label: name, also });
     const members = new Map();
     const partApis = Object.fromEntries(Object.entries(parts).map(([anatomyPart, member]) => {
       const label = `${name}.${member}`;
