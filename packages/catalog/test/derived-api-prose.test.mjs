@@ -158,6 +158,8 @@ const GUIDES = {
   virtualizer: { native: ['<GridList layout="grid">', '<Virtualizer layout="grid">', 'gap', 'grid-template-columns', '@container', '@media', 'column-gap', 'row-gap', 'matchMedia', 'ResizeObserver', 'window', 'rem', "style={{ blockSize: '40rem' }}"] },
   // null is the value a controlled selectedId takes to mean nothing selected.
   'combo-box': { native: ['null'] },
+  // onSubmit is the form's native event, @ and / are the characters that open suggestions, and placeholder and maxLength are the native textarea attributes inputProps takes.
+  'prompt-composer': { native: ['onSubmit', '@', '/', 'inputProps.placeholder', 'inputProps.maxLength'] },
   // item.value is a field of an item record, which the guide says a named Select does not submit.
   select: { native: ['item.value'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },

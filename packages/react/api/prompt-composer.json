@@ -1,0 +1,461 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/prompt-composer.ts",
+  "component": "muxui:component:prompt-composer",
+  "binding": "web.react",
+  "export": "PromptComposer",
+  "api": {
+    "props": [
+      "inputLabel",
+      "value",
+      "defaultValue",
+      "inputProps",
+      "pending",
+      "disabled",
+      "error",
+      "sources",
+      "commands",
+      "attachments",
+      "accept",
+      "multiple",
+      "models",
+      "selectedModel",
+      "defaultSelectedModel"
+    ],
+    "events": [
+      "valueChange",
+      "send",
+      "stop",
+      "suggestionSelect",
+      "removeAttachment",
+      "filesSelected",
+      "modelChange",
+      "dictation"
+    ],
+    "defaults": {
+      "inputLabel": "Message",
+      "defaultValue": "",
+      "pending": false,
+      "disabled": false,
+      "multiple": true
+    },
+    "propDetails": {
+      "inputLabel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The accessible name of the textarea, when `inputProps` gives it neither an `aria-label` nor an `aria-labelledby`."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text, when the caller controls it."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text at first, when the composer controls itself. A form reset restores it."
+      },
+      "inputProps": {
+        "type": {
+          "kind": "host",
+          "name": "Omit",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.TextareaHTMLAttributes",
+              "typeArguments": [
+                {
+                  "kind": "host",
+                  "name": "HTMLTextAreaElement"
+                }
+              ]
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "value"
+                },
+                {
+                  "kind": "literal",
+                  "value": "defaultValue"
+                },
+                {
+                  "kind": "literal",
+                  "value": "children"
+                },
+                {
+                  "kind": "literal",
+                  "value": "dangerouslySetInnerHTML"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "Native textarea props. `form` associates text and Send with that external form's validation, submission and reset."
+      },
+      "pending": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the text read-only and disables the auxiliary actions. Stop replaces Send when `onStop` is given."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Prevents all editing and actions."
+      },
+      "error": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "A message shown with the composer, associated with the textarea and announced; it also marks the textarea invalid."
+      },
+      "sources": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "PromptComposerSuggestion"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The records a caret token beginning with @ at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses."
+      },
+      "commands": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "PromptComposerSuggestion"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The records a caret token beginning with / at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses."
+      },
+      "attachments": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "PromptComposerAttachment"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "Display records for the files attached. Each shows with a remove button when `onRemoveAttachment` is given."
+      },
+      "accept": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The file types the attach picker accepts, as the native input's `accept`."
+      },
+      "multiple": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the attach picker admits several files."
+      },
+      "models": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "PromptComposerModel"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The models the picker offers. It renders only with `models` and `onModelChange`."
+      },
+      "selectedModel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the selected model, when the caller controls it."
+      },
+      "defaultSelectedModel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the model selected at first, when the composer controls itself; without one, the first model. A form reset restores it."
+      }
+    },
+    "eventDetails": {
+      "valueChange": {
+        "prop": "onValueChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new text each time it changes."
+      },
+      "send": {
+        "prop": "onSend",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Runs only when the composer host form receives an uncancelled submission, with the text."
+      },
+      "stop": {
+        "prop": "onStop",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called when Stop is pressed. Stop replaces Send while `pending`, and shows only with this callback."
+      },
+      "suggestionSelect": {
+        "prop": "onSuggestionSelect",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "PromptComposerSuggestion"
+              },
+              "required": true
+            },
+            {
+              "name": "kind",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "literal",
+                    "value": "source"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "command"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the chosen record and its kind when a suggestion is inserted. Insertion replaces only the current token, respects `maxLength`, and never sends."
+      },
+      "removeAttachment": {
+        "prop": "onRemoveAttachment",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the id of an attachment whose remove button was pressed."
+      },
+      "filesSelected": {
+        "prop": "onFilesSelected",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "files",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "host",
+                  "name": "File"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Shows an attach button that opens a native file picker, and receives the chosen files. Nothing is uploaded."
+      },
+      "modelChange": {
+        "prop": "onModelChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the id of the chosen model."
+      },
+      "dictation": {
+        "prop": "onDictation",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Shows a dictation button that calls this when pressed. Mux UI performs no recognition."
+      }
+    },
+    "types": {
+      "PromptComposerAttachment": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "PromptComposerModel": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "PromptComposerSuggestion": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "description",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "insertText",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      }
+    }
+  }
+}

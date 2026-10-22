@@ -46,54 +46,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "inputLabel",
-          "value",
-          "defaultValue",
-          "inputProps",
-          "inputRef",
-          "pending",
-          "disabled",
-          "error",
-          "sources",
-          "commands",
-          "attachments",
-          "accept",
-          "multiple",
-          "models",
-          "selectedModel",
-          "defaultSelectedModel"
-        ],
-        "events": [
-          "submit",
-          "change",
-          "reset",
-          "valueChange",
-          "send",
-          "stop",
-          "suggestionSelect",
-          "filesSelected",
-          "removeAttachment",
-          "modelChange",
-          "dictation"
-        ],
-        "parts": [
-          "root",
-          "input",
-          "controls",
-          "attachments",
-          "suggestions",
-          "error",
-          "status"
-        ],
-        "defaults": {
-          "inputLabel": "Message",
-          "pending": false,
-          "disabled": false,
-          "multiple": true
-        }
-      },
       "behavior": [
         "The native form host/ref and native onSubmit, onChange and onReset retain their event meanings. onSend(value) is the domain callback. Submission of the composer host prevents page navigation; a consumer-cancelled onSubmit also cancels onSend. An inputProps.form association instead gives the external form ownership of native validation and submission for both Enter and Send; its consumer prevents navigation, and local onSend/onSubmit do not run. Auxiliary controls use type=button.",
         "value/onValueChange or defaultValue govern controlled/uncontrolled text. inputProps forwards native textarea attributes and events, including name, required, maxLength, rows and form; inputRef points to that textarea. Enter requests native form submission and validity; Shift+Enter inserts a newline and composition never submits.",

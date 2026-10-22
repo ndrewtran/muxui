@@ -40,6 +40,7 @@ const deepFreeze = (value) => {
 const hostApplication = (name, ...typeArguments) => deepFreeze({ kind: 'host', name, typeArguments });
 
 const INPUT_ATTRIBUTES = hostApplication('React.InputHTMLAttributes', { kind: 'host', name: 'HTMLInputElement' });
+const TEXTAREA_ATTRIBUTES = hostApplication('React.TextareaHTMLAttributes', { kind: 'host', name: 'HTMLTextAreaElement' });
 const BUTTON_PROPS = hostApplication('React.DetailedHTMLProps', hostApplication('React.ButtonHTMLAttributes', { kind: 'host', name: 'HTMLButtonElement' }), { kind: 'host', name: 'HTMLButtonElement' });
 
 /** The props of a field's inner input that the field owns, in the order FieldInputProps omits them. */
@@ -64,9 +65,11 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * AsyncIterable<MuxUIDropItem> for DropZone's drop items, and HTMLInputElement,
  * React.InputHTMLAttributes<HTMLInputElement>, and the Omit of it that FieldInputProps declares for
  * TextField's and SearchField's inputProps, HTMLDivElement with React.UIEvent<HTMLDivElement>, the event
- * of Virtualizer's onScroll, which its React.UIEventHandler<HTMLDivElement> alias reads as, and the button
+ * of Virtualizer's onScroll, which its React.UIEventHandler<HTMLDivElement> alias reads as, the button
  * element Select's trigger takes, written
- * ReactElement<DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>.
+ * ReactElement<DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>,
+ * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
+ * PromptComposer's inputProps declares.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -96,6 +99,13 @@ export const HOST_ALLOWLIST = Object.freeze([
   hostApplication('React.ButtonHTMLAttributes', { kind: 'host', name: 'HTMLButtonElement' }),
   BUTTON_PROPS,
   hostApplication('React.ReactElement', BUTTON_PROPS, { kind: 'literal', value: 'button' }),
+  // PromptComposer's inputProps: the native attributes of its textarea, less the four it owns.
+  'HTMLTextAreaElement',
+  TEXTAREA_ATTRIBUTES,
+  hostApplication('Omit', TEXTAREA_ATTRIBUTES, {
+    kind: 'union',
+    members: ['value', 'defaultValue', 'children', 'dangerouslySetInnerHTML'].map((value) => ({ kind: 'literal', value })),
+  }),
 ]);
 
 // A namespace or wildcard would admit every type under it.

@@ -318,7 +318,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/prompt-composer.mjs",
+      "runtimeSource": "packages/react/src/supplemental/prompt-composer.ts",
       "styleSource": "packages/react/src/supplemental/prompt-composer.css"
     },
     {

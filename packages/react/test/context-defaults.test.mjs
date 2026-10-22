@@ -119,6 +119,8 @@ const audited = [
       ...expand(['menu.list'], ['disabled']),
       // Select enforces readOnly itself, with a data attribute and a guard on the selection, and sends React Aria no isReadOnly.
       ...expand(['select'], ['readOnly']),
+      // PromptComposer renders a native form, textarea, and buttons, and gives its model Select explicit flags, so no React Aria context reaches its own disabled, pending, defaultValue, or multiple.
+      ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
     ],
   },
   {

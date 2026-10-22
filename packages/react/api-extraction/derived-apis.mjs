@@ -84,6 +84,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'grid-list', name: 'GridList', source: 'packages/react/src/grid-list.ts', parts: { item: 'Item' } },
   // Virtualizer is one component with two layouts: its own props are one all-optional type, and its public type is two arms built from it.
   { slug: 'virtualizer', name: 'Virtualizer', source: 'packages/react/src/virtualizer.ts' },
+  // PromptComposer is one form with no part; its inputRef and the form's own events stay in the public type.
+  { slug: 'prompt-composer', name: 'PromptComposer', source: 'packages/react/src/supplemental/prompt-composer.ts' },
   // ComboBox has no part that owns props: its input, list, and option are rendered, not exported.
   { slug: 'combo-box', name: 'ComboBox', source: 'packages/react/src/combo-box.ts' },
   // Select is its own root; Select.Root takes the same props with `label` as any node, so the derivation checks both. Its anatomy calls Select.Item the option.

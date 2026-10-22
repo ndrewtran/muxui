@@ -1,5 +1,6 @@
 import React from 'react';
-import { Select } from '../collections.mjs';
+import type { ForwardRefExoticComponent, FormHTMLAttributes, ReactNode, Ref, RefAttributes, SubmitEvent as FormSubmitEvent, TextareaHTMLAttributes } from 'react';
+import { Select } from '../select.ts';
 import Plus from 'lucide-react/dist/esm/icons/plus.mjs';
 import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up.mjs';
 import Square from 'lucide-react/dist/esm/icons/square.mjs';
@@ -7,51 +8,129 @@ import Mic from 'lucide-react/dist/esm/icons/mic.mjs';
 import X from 'lucide-react/dist/esm/icons/x.mjs';
 import { useCandidateMotion } from './candidate-motion.mjs';
 
+export type PromptComposerSuggestion = { id: string; label: string; description?: string; insertText?: string };
+export type PromptComposerAttachment = { id: string; label: string };
+export type PromptComposerModel = { id: string; label: string };
+
+/**
+ * The props Mux UI defines for PromptComposer; the catalog's web.react API is derived from this type
+ * (Decision 0031). It is a type literal, so the public props type stays assignable to Record<string, unknown>,
+ * as it was before the move, and it is not exported: this module is re-exported whole, so exporting it would add
+ * it to the package's surface. Every other attribute of a form passes through to the form, and `inputRef`, a ref,
+ * stays in the public type beside it. The form's own `submit`, `change`, and `reset` events are native events the
+ * form passes through, so they are not Mux UI-owned. Cancelling `submit` stops `onSend`, and cancelling `reset`
+ * stops the composer restoring its text and model.
+ */
+type PromptComposerOwnProps = {
+  /** The accessible name of the textarea, when `inputProps` gives it neither an `aria-label` nor an `aria-labelledby`. */
+  inputLabel?: string;
+  /** The text, when the caller controls it. */
+  value?: string;
+  /** The text at first, when the composer controls itself. A form reset restores it. */
+  defaultValue?: string;
+  /** Called with the new text each time it changes. */
+  onValueChange?: (value: string) => void;
+  /** Native textarea props. `form` associates text and Send with that external form's validation, submission and reset. */
+  inputProps?: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'defaultValue' | 'children' | 'dangerouslySetInnerHTML'>;
+  /** Runs only when the composer host form receives an uncancelled submission, with the text. */
+  onSend?: (value: string) => void;
+  /** Called when Stop is pressed. Stop replaces Send while `pending`, and shows only with this callback. */
+  onStop?: () => void;
+  /** Makes the text read-only and disables the auxiliary actions. Stop replaces Send when `onStop` is given. */
+  pending?: boolean;
+  /** Prevents all editing and actions. */
+  disabled?: boolean;
+  /** A message shown with the composer, associated with the textarea and announced; it also marks the textarea invalid. */
+  error?: ReactNode;
+  /** The records a caret token beginning with @ at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses. */
+  sources?: readonly PromptComposerSuggestion[];
+  /** The records a caret token beginning with / at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses. */
+  commands?: readonly PromptComposerSuggestion[];
+  /** Called with the chosen record and its kind when a suggestion is inserted. Insertion replaces only the current token, respects `maxLength`, and never sends. */
+  onSuggestionSelect?: (item: PromptComposerSuggestion, kind: 'source' | 'command') => void;
+  /** Display records for the files attached. Each shows with a remove button when `onRemoveAttachment` is given. */
+  attachments?: readonly PromptComposerAttachment[];
+  /** Called with the id of an attachment whose remove button was pressed. */
+  onRemoveAttachment?: (id: string) => void;
+  /** Shows an attach button that opens a native file picker, and receives the chosen files. Nothing is uploaded. */
+  onFilesSelected?: (files: File[]) => void;
+  /** The file types the attach picker accepts, as the native input's `accept`. */
+  accept?: string;
+  /** Whether the attach picker admits several files. */
+  multiple?: boolean;
+  /** The models the picker offers. It renders only with `models` and `onModelChange`. */
+  models?: readonly PromptComposerModel[];
+  /** The id of the selected model, when the caller controls it. */
+  selectedModel?: string;
+  /** The id of the model selected at first, when the composer controls itself; without one, the first model. A form reset restores it. */
+  defaultSelectedModel?: string;
+  /** Called with the id of the chosen model. */
+  onModelChange?: (id: string) => void;
+  /** Shows a dictation button that calls this when pressed. Mux UI performs no recognition. */
+  onDictation?: () => void;
+};
+
+export type PromptComposerProps = Omit<FormHTMLAttributes<HTMLFormElement>, 'children' | 'dangerouslySetInnerHTML' | keyof PromptComposerOwnProps> & PromptComposerOwnProps & { inputRef?: Ref<HTMLTextAreaElement> };
+
+// Props the form does not publish. The component destructures them so a value an untyped caller passes never reaches the form.
+type DiscardedPromptComposerProps = { children?: unknown; dangerouslySetInnerHTML?: unknown };
+
+/** A caret token that starts a suggestion: its kind, the text after the trigger character, and where it sits in the text. */
+type SuggestionTrigger = { kind: 'source' | 'command'; query: string; start: number; end: number; text: string };
+
 const e = React.createElement;
 const modelKeyPrefix = 'model:';
-const px = (value) => Number.parseFloat(value) || 0;
-function triggerAt(node) {
+const px = (value: string) => Number.parseFloat(value) || 0;
+function triggerAt(node: HTMLTextAreaElement | null): SuggestionTrigger | null {
   if (!node || node.selectionStart !== node.selectionEnd) return null;
   const position = node.selectionStart;
   const match = /(?:^|\s)([@/])([^\s@/]*)$/u.exec(node.value.slice(0, position));
   return match ? { kind: match[1] === '@' ? 'source' : 'command', query: match[2], start: position - match[2].length - 1, end: position, text: node.value } : null;
 }
-function sameTrigger(left, right) {
+function sameTrigger(left: SuggestionTrigger | null, right: SuggestionTrigger | null) {
   return left?.kind === right?.kind && left?.query === right?.query && left?.start === right?.start && left?.end === right?.end && left?.text === right?.text;
 }
 
 
-/** Presentation and local editing only. Files, models, requests and dictation stay caller-owned. */
-export const PromptComposer = React.forwardRef(function PromptComposer({
-  inputLabel = 'Message', value, defaultValue = '', onValueChange, inputProps = {}, inputRef,
-  onSend, onStop, pending = false, disabled = false, error, sources = [], commands = [], onSuggestionSelect,
-  attachments = [], onRemoveAttachment, onFilesSelected, accept, multiple = true,
-  models = [], selectedModel, defaultSelectedModel, onModelChange, onDictation,
-  onSubmit, onReset, onResetCapture, className, children, dangerouslySetInnerHTML, ...props
+/** Native form host; Enter submits through native validation, Shift+Enter adds a line. Presentation and local editing only: files, models, requests and dictation stay caller-owned. */
+export const PromptComposer: ForwardRefExoticComponent<PromptComposerProps & RefAttributes<HTMLFormElement>> = React.forwardRef<HTMLFormElement, PromptComposerProps & DiscardedPromptComposerProps>(function PromptComposer({
+  inputLabel = 'Message', value, defaultValue = '', onValueChange, inputProps: suppliedInputProps, inputRef,
+  onSend, onStop, pending = false, disabled = false, error, sources: suppliedSources, commands: suppliedCommands, onSuggestionSelect,
+  attachments: suppliedAttachments, onRemoveAttachment, onFilesSelected, accept, multiple = true,
+  models: suppliedModels, selectedModel, defaultSelectedModel, onModelChange, onDictation,
+  onSubmit, onReset, onResetCapture, className, children: _children, dangerouslySetInnerHTML: _dangerouslySetInnerHTML, ...props
 }, ref) {
+  // Undefined-only fallbacks in the body: an empty container is no executed default to state, and a null stays a null.
+  const inputProps: Required<PromptComposerOwnProps>['inputProps'] = suppliedInputProps === undefined ? {} : suppliedInputProps;
+  const sources = suppliedSources === undefined ? [] : suppliedSources;
+  const commands = suppliedCommands === undefined ? [] : suppliedCommands;
+  const attachments = suppliedAttachments === undefined ? [] : suppliedAttachments;
+  const models = suppliedModels === undefined ? [] : suppliedModels;
+  // Conditionals, not ?? and || on the owned props: extraction reads a fallback on an owned prop as an executed default.
   const [localValue, setLocalValue] = React.useState(defaultValue);
-  const [localModel, setLocalModel] = React.useState(defaultSelectedModel ?? models[0]?.id ?? '');
+  const [localModel, setLocalModel] = React.useState(defaultSelectedModel === undefined || defaultSelectedModel === null ? (models[0]?.id ?? '') : defaultSelectedModel);
   const [modelOpen, setModelOpen] = React.useState(false);
-  const text = value ?? localValue;
-  const textarea = React.useRef(null);
-  const suggestions = React.useRef(null);
-  const sendIcon = React.useRef(null);
+  const text = value === undefined || value === null ? localValue : value;
+  const textarea = React.useRef<HTMLTextAreaElement>(null);
+  const suggestions = React.useRef<HTMLDivElement>(null);
+  const sendIcon = React.useRef<HTMLSpanElement>(null);
   useCandidateMotion(sendIcon, pending);
-  const files = React.useRef(null);
+  const files = React.useRef<HTMLInputElement>(null);
   const resettingModel = React.useRef(false);
   const composing = React.useRef(false);
-  const caret = React.useRef(null);
-  const [trigger, setTrigger] = React.useState(null);
+  const caret = React.useRef<number | null>(null);
+  const [trigger, setTrigger] = React.useState<SuggestionTrigger | null>(null);
   const [active, setActive] = React.useState(0);
   const [dismissed, setDismissed] = React.useState(false);
-  const [menu, setMenu] = React.useState({ placement: 'above', height: 256 });
+  const [menu, setMenu] = React.useState<{ placement: 'above' | 'below'; height: number }>({ placement: 'above', height: 256 });
   const id = React.useId();
-  const locked = disabled || Boolean(inputProps.disabled);
-  const readonly = pending || Boolean(inputProps.readOnly);
+  const locked = disabled ? disabled : Boolean(inputProps.disabled);
+  const readonly = pending ? pending : Boolean(inputProps.readOnly);
   const hasModelPicker = models.length > 0 && Boolean(onModelChange);
-  const modelValue = selectedModel ?? (models.some((model) => model.id === localModel) ? localModel : models[0]?.id ?? '');
+  const modelValue = selectedModel === undefined || selectedModel === null ? (models.some((model) => model.id === localModel) ? localModel : models[0]?.id ?? '') : selectedModel;
   React.useLayoutEffect(() => { if (locked || pending || !hasModelPicker) setModelOpen(false); }, [locked, pending, hasModelPicker]);
-  React.useImperativeHandle(inputRef, () => textarea.current);
+  // The handle is the textarea, or null before it mounts, as the ref reports it.
+  React.useImperativeHandle(inputRef, () => textarea.current as HTMLTextAreaElement);
   function fitInput() {
     const node = textarea.current;
     if (!node) return;
@@ -84,13 +163,13 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
     view.addEventListener('resize', resize);
     return () => view.removeEventListener('resize', resize);
   }, []);
-  function change(next) {
+  function change(next: string) {
     if (value === undefined) setLocalValue(next);
     onValueChange?.(next);
   }
   function resetText() {
     if (value === undefined) change(defaultValue);
-    textarea.current.value = value ?? defaultValue;
+    textarea.current!.value = value === undefined || value === null ? defaultValue : value;
     caret.current = null;
     setTrigger(null);
     fitInput();
@@ -100,13 +179,13 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
     const form = node?.form;
     if (!form || form === node.closest('form')) return;
     // A reset on the associated form cannot bubble through the composer host.
-    const reset = (event) => queueMicrotask(() => {
+    const reset = (event: Event) => queueMicrotask(() => {
       if (!event.defaultPrevented && textarea.current?.form === form) resetText();
     });
     form.addEventListener('reset', reset);
     return () => form.removeEventListener('reset', reset);
   }, [inputProps.form, value, defaultValue, onValueChange]);
-  function updateTrigger(node) {
+  function updateTrigger(node: HTMLTextAreaElement | null) {
     const next = triggerAt(node);
     if (!sameTrigger(next, trigger)) {
       setTrigger(next);
@@ -126,7 +205,7 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
     const list = node?.ownerDocument.getElementById(`${id}-suggestions`);
     if (!node || !view || !list) return;
     const place = () => {
-      const form = node.closest('form');
+      const form = node.closest('form')!;
       const rect = form.getBoundingClientRect();
       const formStyle = view.getComputedStyle(form);
       const listStyle = view.getComputedStyle(list);
@@ -143,7 +222,7 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
       const wanted = Math.min(256, list.scrollHeight + frame);
       const placement = above >= wanted || above >= below ? 'above' : 'below';
       const available = placement === 'above' ? above : below;
-      const next = { placement, height: Math.min(256, available) };
+      const next = { placement, height: Math.min(256, available) } as const;
       setMenu((current) => current.placement === next.placement && current.height === next.height ? current : next);
     };
     place();
@@ -163,10 +242,10 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
     if (row.top < viewport.top) list.scrollTop -= viewport.top - row.top;
     if (row.bottom > viewport.bottom) list.scrollTop += row.bottom - viewport.bottom;
   }, [open, index, id, menu.height, menu.placement]);
-  function choose(item) {
+  function choose(item: PromptComposerSuggestion) {
     if (!trigger || locked || readonly) return;
     const current = triggerAt(textarea.current);
-    if (!sameTrigger(current, trigger) || current.text !== text || !options.includes(item)) {
+    if (!current || !sameTrigger(current, trigger) || current.text !== text || !options.includes(item)) {
       updateTrigger(textarea.current);
       return;
     }
@@ -182,14 +261,15 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
     textarea.current?.focus();
   }
   const canSend = Boolean(onSend || onSubmit);
-  const submit = (event) => {
+  const submit = (event: FormSubmitEvent<HTMLFormElement>) => {
     onSubmit?.(event);
     const cancelled = event.defaultPrevented;
     // Always keep this local form on the current page, including native-only handlers.
     event.preventDefault();
     if (!cancelled && !locked && !pending && text.trim()) onSend?.(text);
   };
-  return e('form', { ...props, ref, className: ['muxui-prompt-composer', className].filter(Boolean).join(' '), 'data-pending': pending || undefined, 'data-disabled': locked || undefined, 'data-invalid': Boolean(error) || inputProps['aria-invalid'] === true || inputProps['aria-invalid'] === 'true' || undefined,
+  // React's types do not name the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
+  return e('form', { ...props, ref, className: ['muxui-prompt-composer', className].filter(Boolean).join(' '), ...{ 'data-pending': pending ? pending : undefined, 'data-disabled': locked || undefined, 'data-invalid': Boolean(error) || inputProps['aria-invalid'] === true || inputProps['aria-invalid'] === 'true' || undefined },
     onSubmit: submit,
     onResetCapture: (event) => {
       // Select's hidden native field resets before bubbling reaches onReset.
@@ -204,21 +284,23 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
       queueMicrotask(() => {
         if (event.defaultPrevented || event.nativeEvent.defaultPrevented || !textarea.current) return;
         if (textarea.current.form === host) resetText();
-        const nextModel = selectedModel ?? defaultSelectedModel ?? models[0]?.id ?? '';
+        const nextModel = selectedModel === undefined || selectedModel === null
+          ? (defaultSelectedModel === undefined || defaultSelectedModel === null ? (models[0]?.id ?? '') : defaultSelectedModel)
+          : selectedModel;
         if (selectedModel === undefined) setLocalModel(nextModel);
       });
     },
   },
-  open && e('div', { ref: suggestions, className: 'muxui-prompt-composer-suggestions', 'data-placement': menu.placement, style: { maxBlockSize: menu.height }, role: 'listbox', id: `${id}-suggestions`, 'aria-label': trigger.kind === 'source' ? 'Sources' : 'Commands' },
+  open && trigger && e('div', { ref: suggestions, className: 'muxui-prompt-composer-suggestions', ...{ 'data-placement': menu.placement }, style: { maxBlockSize: menu.height }, role: 'listbox', id: `${id}-suggestions`, 'aria-label': trigger.kind === 'source' ? 'Sources' : 'Commands' },
     options.map((item, position) => e('div', { key: item.id, role: 'option', id: `${id}-option-${position}`, 'aria-selected': position === index, className: 'muxui-prompt-composer-option',
       onPointerDown: (event) => event.preventDefault(), onClick: () => choose(item),
     }, e('span', { className: 'muxui-prompt-composer-option-symbol', 'aria-hidden': true }, trigger.kind === 'source' ? '@' : '/'),
     e('span', null, e('span', { className: 'muxui-prompt-composer-option-label' }, item.label), item.description && e('span', { className: 'muxui-prompt-composer-option-description' }, item.description))))),
-  attachments.length > 0 && e('ul', { className: 'muxui-prompt-composer-attachments', 'aria-label': 'Attachments' }, attachments.map((item) => e('li', { key: item.id }, e('span', null, item.label), onRemoveAttachment && e('button', { 'data-size': 'sm', 'data-variant': 'ghost', 'data-muxui-icon-button': '', className: 'muxui-button muxui-icon-button', type: 'button', disabled: locked || pending, 'data-disabled': locked || pending || undefined, 'aria-label': `Remove ${item.label}`, onClick: () => onRemoveAttachment(item.id) }, e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(X, { 'aria-hidden': true, focusable: 'false' })))))),
+  attachments.length > 0 && e('ul', { className: 'muxui-prompt-composer-attachments', 'aria-label': 'Attachments' }, attachments.map((item) => e('li', { key: item.id }, e('span', null, item.label), onRemoveAttachment && e('button', { ...{ 'data-size': 'sm', 'data-variant': 'ghost', 'data-muxui-icon-button': '' }, className: 'muxui-button muxui-icon-button', type: 'button', disabled: locked || pending, ...{ 'data-disabled': locked || pending || undefined }, 'aria-label': `Remove ${item.label}`, onClick: () => onRemoveAttachment(item.id) }, e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(X, { 'aria-hidden': true, focusable: 'false' })))))),
   e('div', { className: 'muxui-prompt-composer-field' },
     onFilesSelected && e(React.Fragment, null,
       e('input', { type: 'file', ref: files, hidden: true, accept, multiple, disabled: locked || pending, onChange: (event) => { const selected = Array.from(event.currentTarget.files ?? []); if (selected.length) onFilesSelected(selected); event.currentTarget.value = ''; } }),
-      e('button', { 'data-size': 'sm', 'data-variant': 'ghost', 'data-muxui-icon-button': '', type: 'button', className: 'muxui-button muxui-icon-button muxui-prompt-composer-button', disabled: locked || pending, 'data-disabled': locked || pending || undefined, 'aria-label': 'Attach files', onClick: () => files.current?.click() }, e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(Plus, { 'aria-hidden': true, focusable: 'false' })))),
+      e('button', { ...{ 'data-size': 'sm', 'data-variant': 'ghost', 'data-muxui-icon-button': '' }, type: 'button', className: 'muxui-button muxui-icon-button muxui-prompt-composer-button', disabled: locked || pending, ...{ 'data-disabled': locked || pending || undefined }, 'aria-label': 'Attach files', onClick: () => files.current?.click() }, e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(Plus, { 'aria-hidden': true, focusable: 'false' })))),
     e('textarea', { ...inputProps, ref: textarea, className: ['muxui-prompt-composer-input', inputProps.className].filter(Boolean).join(' '), value: text, rows: inputProps.rows ?? 1, disabled: locked, readOnly: readonly,
       'aria-label': inputProps['aria-label'] ?? (inputProps['aria-labelledby'] ? undefined : inputLabel),
       'aria-describedby': [inputProps['aria-describedby'], error ? `${id}-error` : null, open ? `${id}-hint` : null].filter(Boolean).join(' ') || undefined,
@@ -246,11 +328,11 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
         const model = models.find((model) => modelKeyPrefix + model.id === next);
         if (!model) return;
         if (selectedModel === undefined) setLocalModel(model.id);
-        onModelChange(model.id);
+        onModelChange!(model.id);
       } }),
-      onDictation && e('button', { 'data-size': 'sm', 'data-variant': 'ghost', 'data-muxui-icon-button': '', type: 'button', className: 'muxui-button muxui-icon-button muxui-prompt-composer-button', disabled: locked || pending, 'data-disabled': locked || pending || undefined, 'aria-label': 'Start dictation', onClick: onDictation }, e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(Mic, { 'aria-hidden': true, focusable: 'false' }))),
-      pending ? onStop && e('button', { 'data-size': 'sm', 'data-variant': 'primary', type: 'button', 'data-muxui-icon-button': '', className: 'muxui-button muxui-icon-button muxui-prompt-composer-send', disabled: locked, 'data-disabled': locked || undefined, 'aria-label': 'Stop response', onClick: onStop }, e('span', { ref: sendIcon, className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(Square, { 'aria-hidden': true, focusable: 'false' })))
-        : canSend && e('button', { 'data-size': 'sm', 'data-variant': 'primary', type: 'submit', form: inputProps.form, 'data-muxui-icon-button': '', className: 'muxui-button muxui-icon-button muxui-prompt-composer-send', disabled: locked || readonly || !text.trim(), 'data-disabled': locked || readonly || !text.trim() || undefined, 'aria-label': 'Send message' }, e('span', { ref: sendIcon, className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(ArrowUp, { 'aria-hidden': true, focusable: 'false' }))))),
+      onDictation && e('button', { ...{ 'data-size': 'sm', 'data-variant': 'ghost', 'data-muxui-icon-button': '' }, type: 'button', className: 'muxui-button muxui-icon-button muxui-prompt-composer-button', disabled: locked || pending, ...{ 'data-disabled': locked || pending || undefined }, 'aria-label': 'Start dictation', onClick: onDictation }, e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(Mic, { 'aria-hidden': true, focusable: 'false' }))),
+      pending ? onStop && e('button', { ...{ 'data-size': 'sm', 'data-variant': 'primary' }, type: 'button', ...{ 'data-muxui-icon-button': '' }, className: 'muxui-button muxui-icon-button muxui-prompt-composer-send', disabled: locked, ...{ 'data-disabled': locked || undefined }, 'aria-label': 'Stop response', onClick: onStop }, e('span', { ref: sendIcon, className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(Square, { 'aria-hidden': true, focusable: 'false' })))
+        : canSend && e('button', { ...{ 'data-size': 'sm', 'data-variant': 'primary' }, type: 'submit', form: inputProps.form, ...{ 'data-muxui-icon-button': '' }, className: 'muxui-button muxui-icon-button muxui-prompt-composer-send', disabled: locked || readonly || !text.trim(), ...{ 'data-disabled': locked || readonly || !text.trim() || undefined }, 'aria-label': 'Send message' }, e('span', { ref: sendIcon, className: 'muxui-icon-button-icon', 'aria-hidden': true }, e(ArrowUp, { 'aria-hidden': true, focusable: 'false' }))))),
   open && e('span', { className: 'muxui-prompt-composer-sr-only', id: `${id}-hint` }, 'Use Up and Down to choose a suggestion, Enter to insert, and Escape to dismiss.'),
   error && e('p', { className: 'muxui-prompt-composer-error', id: `${id}-error`, role: 'alert' }, error),
   e('span', { className: 'muxui-prompt-composer-sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, pending ? 'Response in progress.' : ''));

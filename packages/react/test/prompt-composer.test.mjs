@@ -3,7 +3,7 @@ import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { PromptComposer } from '../src/supplemental/prompt-composer.mjs';
+import { PromptComposer } from '../src/supplemental/prompt-composer.ts';
 import { createDom } from './support/dom.mjs';
 const e = (props) => React.createElement(PromptComposer, props);
 

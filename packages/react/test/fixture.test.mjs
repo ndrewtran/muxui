@@ -232,7 +232,11 @@ const markupValues = {
   size: (doc) => doc.querySelector('[data-size]')?.getAttribute('data-size'),
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
-  defaultValue: (doc) => doc.querySelector('input')?.getAttribute('value'),
+  // A text field shows its starting text as its input's value; a composer, in its textarea.
+  defaultValue: (doc) => {
+    const input = doc.querySelector('input');
+    return input === null ? doc.querySelector('textarea')?.textContent : input.getAttribute('value');
+  },
   // A list marks each option or row with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
   selectionMode: (doc) => {
     const option = doc.querySelector('[role="option"], [role="row"]');
@@ -261,6 +265,7 @@ const minimalRenders = {
   // Select's block is the callable's, which is also Select.Root's.
   Select: () => selectField(),
   ComboBox: () => h(generated.ComboBox, { label: 'City', items: ['Melbourne'] }),
+  PromptComposer: () => composer(),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -304,6 +309,11 @@ function menuRoot(rootProps = null, popupProps = null, ...items) {
 /** The simple Select with a label and two items, closed unless `props` open it. */
 function selectField(props = null) {
   return h(generated.Select, { label: 'Fruit', items: ['One', 'Two'], ...props });
+}
+
+/** A PromptComposer, with `props` over none. */
+function composer(props = null) {
+  return h(generated.PromptComposer, props);
 }
 
 /** Select.Root composed from its parts: a trigger, and a popup with `popupProps` holding a list, closed unless `rootProps` opens it. */
@@ -410,6 +420,11 @@ const behaviourObservers = {
       const option = document.querySelector('[role="option"]');
       return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
     }),
+  },
+  // The textarea's accessible name, when inputProps gives none, and whether the attach picker admits several files, which the hidden file input shows.
+  PromptComposer: {
+    inputLabel: (props) => new JSDOM(renderToString(composer(props))).window.document.querySelector('textarea').getAttribute('aria-label'),
+    multiple: (props) => new JSDOM(renderToString(composer({ onFilesSelected: () => {}, ...props }))).window.document.querySelector('input[type="file"]').hasAttribute('multiple'),
   },
   Tabs: {
     // An arrow key either selects the next tab at once (automatic) or only moves focus (manual).
@@ -607,6 +622,21 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   }
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ComboBox()), { ...combo.defaults, size: 'sm' }), ['size: catalog "sm", rendered "md"']);
   assert.deepEqual(undeclaredProps(types, 'ComboBox', [...combo.props, 'missingProp']), ['missingProp']);
+  // PromptComposer is one form with no part of its own. Its flags show on the form and textarea, its starting text in the textarea, its
+  // textarea name in the label the textarea carries, and the attach picker's multiple on the hidden file input, so each catalog value is
+  // compared with what the composer renders.
+  const composerApi = apis.PromptComposer;
+  assert.deepEqual(Object.keys(composerApi.defaults), ['inputLabel', 'defaultValue', 'pending', 'disabled', 'multiple']);
+  assert.equal(composerApi.partApis, undefined);
+  assert.equal(markupValues.defaultValue(new JSDOM(renderToString(composer({ defaultValue: 'Draft' }))).window.document), 'Draft', 'the starting text shows in the textarea');
+  assert.deepEqual(defaultMismatches(renderToString(composer()), { ...composerApi.defaults, defaultValue: 'Draft' }), ['defaultValue: catalog "Draft", rendered ""']);
+  for (const key of ['pending', 'disabled']) {
+    assert.deepEqual(defaultMismatches(renderToString(composer()), { ...composerApi.defaults, [key]: true }), [`${key}: catalog true, rendered false`], key);
+  }
+  assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, inputLabel: 'Prompt' }), ['inputLabel: catalog "Prompt", behaves "Message"']);
+  assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, multiple: false }), ['multiple: catalog false, behaves true']);
+  assert.deepEqual(unobservedDefaults('PromptComposer', composerApi.defaults), []);
+  assert.deepEqual(undeclaredProps(types, 'PromptComposer', [...composerApi.props, 'missingProp']), ['missingProp']);
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
@@ -653,6 +683,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
+    inputLabel: ['Message', 'Prompt'], multiple: [true, false],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {
