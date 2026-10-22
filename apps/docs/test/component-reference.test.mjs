@@ -3,6 +3,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
+import { parse } from 'parse5';
+import { expectedEventGroups, renderedEventGroups } from '../scripts/event-groups.mjs';
+import { attributeValue, elements } from '../scripts/html-tree.mjs';
 import { componentReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 
 const requirement = (token, extra = {}) => ({ token, requirement: 'required', ...extra });
@@ -132,4 +135,30 @@ test('package facts verify the descriptor, renderer contract and stylesheet agai
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('the docs checker holds each part\'s event group to its owner heading, its event list and the anatomy order', () => {
+  const partApis = [['section', { member: 'Section', events: [] }], ['item', { member: 'Item', events: ['pick'] }], ['row', { member: 'Row', events: ['drop'] }]];
+  const group = (owner, part, events) => `<h3><code>${owner}</code></h3><p data-fact="binding.api.partApis.${part}.events">${events.map((event) => `<code class="inline-code">${event}</code>`).join('')}</p>`;
+  const rendered = (...groups) => renderedEventGroups(elements(parse(`<html><body><section id="events"><h2>Events</h2><p data-fact="binding.api.events"><code class="inline-code">select</code></p>${groups.join('')}</section></body></html>`))
+    .find((node) => attributeValue(node, 'id') === 'events'));
+  const expected = expectedEventGroups('ListBox', partApis);
+  assert.deepEqual(expected, ['ListBox.Item', 'binding.api.partApis.item.events', 'ListBox.Row', 'binding.api.partApis.row.events'], 'a part with no events has no group');
+  assert.deepEqual(rendered(group('ListBox.Item', 'item', ['pick']), group('ListBox.Row', 'row', ['drop'])), expected);
+  // Each of these is a docs page the checker must refuse.
+  const refused = {
+    'a renamed owner heading': rendered(group('ListBox.Wrong', 'item', ['pick']), group('ListBox.Row', 'row', ['drop'])),
+    'a missing owner heading': rendered('<p data-fact="binding.api.partApis.item.events"><code class="inline-code">pick</code></p>', group('ListBox.Row', 'row', ['drop'])),
+    'a missing event list': rendered('<h3><code>ListBox.Item</code></h3>', group('ListBox.Row', 'row', ['drop'])),
+    'a missing part group': rendered(group('ListBox.Item', 'item', ['pick'])),
+    'groups out of anatomy order': rendered(group('ListBox.Row', 'row', ['drop']), group('ListBox.Item', 'item', ['pick'])),
+    'a heading over another part\'s list': rendered(group('ListBox.Item', 'row', ['drop']), group('ListBox.Row', 'item', ['pick'])),
+    'a group for a part with no events': rendered(group('ListBox.Section', 'section', []), group('ListBox.Item', 'item', ['pick']), group('ListBox.Row', 'row', ['drop'])),
+    'an extra heading': rendered(group('ListBox.Item', 'item', ['pick']), '<h3><code>ListBox.Extra</code></h3>', group('ListBox.Row', 'row', ['drop'])),
+  };
+  for (const [label, groups] of Object.entries(refused)) assert.notDeepEqual(groups, expected, label);
+  // With no part events there are no groups, and a stray heading is refused.
+  assert.deepEqual(expectedEventGroups('ListBox', [['section', { member: 'Section', events: [] }]]), []);
+  assert.deepEqual(rendered(), []);
+  assert.notDeepEqual(rendered('<h3><code>ListBox.Item</code></h3>'), []);
 });

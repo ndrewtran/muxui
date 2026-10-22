@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
 import { linkedFamilies } from '../../guide-links.mjs';
+import { renderedEventGroups, expectedEventGroups } from './event-groups.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
@@ -174,6 +175,13 @@ for (const component of listComponents()) {
 			`${route} ${part} events differ from the catalog.`,
 		);
 	}
+	// Each event group is headed by its owner, in anatomy order, and the heading is followed by that part's event list.
+	const eventGroups = renderedEventGroups(section('events'));
+	const expectedEvents = expectedEventGroups(exported.export, partApis);
+	assert(
+		JSON.stringify(eventGroups) === JSON.stringify(expectedEvents),
+		`${route} event groups are not headed by their owners in the catalog's order: ${eventGroups.join(', ') || 'none'}, expected ${expectedEvents.join(', ') || 'none'}.`,
+	);
 	const projectedParts = new Set(elements(main).map((node) => /^binding\.api\.partApis\.([^.]+)\./u.exec(attributeValue(node, 'data-fact') ?? '')?.[1]).filter((part) => part !== undefined));
 	assert(
 		JSON.stringify([...projectedParts].sort()) === JSON.stringify(partApis.filter(([, api]) => api.props.length + api.events.length > 0).map(([part]) => part).sort()),
