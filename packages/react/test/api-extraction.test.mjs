@@ -477,6 +477,11 @@ test('a handler alias is read by the shape of its declarations in @types/react: 
     ['the method takes the alias\'s type parameter', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: SyntheticEvent): void }["bivarianceHack"];' }],
     ['the index names the method', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event: E): void }["other"];' }],
     ['the method is a method, not a function-typed property', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack: (event: E) => void }["bivarianceHack"];' }],
+    // Each of these reads as a required positional event callback if the shape is only checked loosely, and is not one.
+    ['the method is not optional, which would allow undefined on a required prop', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack?(event: E): void }["bivarianceHack"];' }],
+    ['the one parameter is not a this parameter, which takes no positional argument', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(this: E): void }["bivarianceHack"];' }],
+    ['the one parameter is not optional', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(event?: E): void }["bivarianceHack"];' }],
+    ['the one parameter is not a rest parameter', { handler: 'export type EventHandler<E extends SyntheticEvent<any>> = { bivarianceHack(...event: E): void }["bivarianceHack"];' }],
     ['the handler alias passes its own type parameter', { alias: 'export type UIEventHandler<T = Element> = EventHandler<UIEvent<Element>>;' }],
     ['the handler alias takes one type parameter', { alias: 'export type UIEventHandler<T = Element, U = Element> = EventHandler<UIEvent<T>>;' }],
     ['the event type takes the alias\'s type parameter alone', { alias: 'export type UIEventHandler<T = Element> = EventHandler<UIEvent<T, Event>>;' }],

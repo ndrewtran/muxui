@@ -293,7 +293,8 @@ const refersTo = (project, node, parameter) => node.kind === SyntaxKind.TypeRefe
 
 /**
  * The parameter name of React's `EventHandler<E>`, when `declaration` is `{ bivarianceHack(event: E): void }["bivarianceHack"]`:
- * an indexed access of the one method of an object type, which takes the alias's type parameter and returns void.
+ * an indexed access of the one method of an object type. The method is not optional, which would allow undefined, and
+ * takes the alias's type parameter as its one positional parameter, which is not optional, rest or `this`, and returns void.
  * That declaration is why such a handler accepts a narrower event than it is typed with; null for any other.
  */
 function bivarianceHackParameter(project, declaration) {
@@ -301,10 +302,10 @@ function bivarianceHackParameter(project, declaration) {
   if (body.kind !== SyntaxKind.IndexedAccessType || body.objectType.kind !== SyntaxKind.TypeLiteral || body.objectType.members.length !== 1) return null;
   const [method] = body.objectType.members;
   const { indexType } = body;
-  if (method.kind !== SyntaxKind.MethodSignature || method.name.kind !== SyntaxKind.Identifier || method.typeParameters?.length || method.parameters.length !== 1) return null;
+  if (method.kind !== SyntaxKind.MethodSignature || method.postfixToken || method.name.kind !== SyntaxKind.Identifier || method.typeParameters?.length || method.parameters.length !== 1) return null;
   if (indexType.kind !== SyntaxKind.LiteralType || indexType.literal.kind !== SyntaxKind.StringLiteral || indexType.literal.text !== method.name.text) return null;
   const [parameter] = method.parameters;
-  if (parameter.name.kind !== SyntaxKind.Identifier || parameter.dotDotDotToken || parameter.questionToken || !parameter.type) return null;
+  if (parameter.name.kind !== SyntaxKind.Identifier || parameter.name.text === 'this' || parameter.dotDotDotToken || parameter.questionToken || !parameter.type) return null;
   if (!refersTo(project, parameter.type, declaration.typeParameters[0]) || method.type?.kind !== SyntaxKind.VoidKeyword) return null;
   return parameter.name.text;
 }
