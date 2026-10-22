@@ -44,13 +44,14 @@ test('every fixed-registry source module has a source test group', () => {
 test('any change to a collections module selects the collections guards, whatever families it affects', async () => {
   const guards = ['test/collections-modules.test.mjs', 'test/tree-shaking.test.mjs'];
   // A change that only drops ColorSlider's pure annotation affects no family, so family routing cannot select them.
-  assert.deepEqual(sourceGuardTests('packages/react/src/color-slider.mjs'), guards);
+  assert.deepEqual(sourceGuardTests('packages/react/src/color-slider.ts'), guards);
   // The barrel, every module it re-exports, and the helpers the families share.
   const barrel = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
-  const families = [...barrel.matchAll(/ from '\.\/([\w-]+)\.mjs';/gu)].map(([, name]) => name);
+  const families = [...barrel.matchAll(/ from '\.\/([\w-]+)\.(?:mjs|js|ts)';/gu)].map(([, name]) => name);
   assert.equal(families.length, 23);
   const helpers = ['control-utils', 'collection-items', 'read-only-guard', 'color-context', 'collection-trigger', 'grid-virtualizer-context'];
-  for (const name of ['collections', ...families, ...helpers]) assert.deepEqual(sourceGuardTests(`packages/react/src/${name}.mjs`), guards, name);
+  // A module moves between .mjs and .ts without leaving the guards' selection.
+  for (const name of ['collections', ...families, ...helpers]) for (const extension of ['mjs', 'ts']) assert.deepEqual(sourceGuardTests(`packages/react/src/${name}.${extension}`), guards, name);
   assert.deepEqual(sourceGuardTests('packages/react/src/color-slider.ts'), guards);
   for (const path of ['components.ts', 'fields.ts', 'motion.mjs', 'constructor.mjs', 'supplemental/index.mjs', 'styles/collections.css']) {
     assert.deepEqual(sourceGuardTests(`packages/react/src/${path}`), [], path);

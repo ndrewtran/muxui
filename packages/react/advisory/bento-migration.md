@@ -18,7 +18,7 @@ exists in Mux; it does not mean Bento has migrated or a package has been release
 | B23 | Reusable command data management | Implemented: Mux-owned `useCommandPalette` for query, matching, ranking, grouping, action execution, and dismissal |
 
 B21 is owned by the [ColorSwatch binding](../../../catalog/components/color-swatch/artifact.json)
-and [React implementation](../src/color-swatch.mjs), with a
+and [React implementation](../src/color-swatch.ts), with a
 [two-tone example](../../../catalog/components/color-swatch/examples/react/two-tone.tsx).
 B23 is owned by the [CommandPalette binding](../../../catalog/components/command-palette/artifact.json)
 and [React implementation](../src/supplemental/index.mjs), with a

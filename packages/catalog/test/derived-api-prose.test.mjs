@@ -124,6 +124,8 @@ const GUIDES = {
   // The patch markers a mistaken source starts its lines with.
   'code-block': { native: ['+', '-'] },
   markdown: { native: ['#', '##', '###', 'h1', 'h2', 'pre', '#summary', 'http', 'https', 'mailto'] },
+  // aria-label is the native attribute the example names the swatch with.
+  'color-swatch': { native: ['aria-label'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

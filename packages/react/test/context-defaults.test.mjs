@@ -52,6 +52,8 @@ const audited = [
       ...expand(['popover'], ['modal']),
       ...expand(overlayFamilies, ['placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding']),
       ...expand(['preview-trigger', 'tooltip'], ['delay', 'closeDelay']),
+      // The color controls send isDisabled (and ColorField isReadOnly and isRequired) as a boolean: their own flag, else the enclosing ColorPicker's.
+      ...expand(['color-swatch'], ['disabled']),
     ],
   },
   {

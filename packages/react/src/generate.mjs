@@ -430,6 +430,8 @@ export { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter,
 export type { BreadcrumbItem, BreadcrumbsProps, CheckboxProps, DisclosureGroupProps, DisclosureProps, GroupProps, LinkActivationEvent, LinkProps, MeterProps, ProgressBarProps, SeparatorProps, ToggleButtonActivationEvent, ToggleButtonProps } from './components.js';
 export { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.js';
 export type { AutocompleteItem, AutocompleteProps, AutocompleteSelectionItem, CheckboxGroupProps, ControlSize, DateFieldProps, DatePickerProps, DateRangePickerProps, FieldInputProps, FieldValidationProps, FormProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, MuxUIDateRange, MuxUIDateValue, MuxUITimeValue, MuxUIValidationErrors, NamedFieldProps, NumberFieldProps, SearchFieldProps, SwitchProps, TextFieldProps, TimeFieldProps } from './fields.js';
+export { ColorSwatch } from './color-swatch.js';
+export type { ColorSwatchProps } from './color-swatch.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
@@ -451,8 +453,6 @@ export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUICo
 export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: MuxUIColorChannel; colorSpace?: MuxUIColorSpace; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSlider: React.ForwardRefExoticComponent<ColorSliderProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSwatchProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'color'> & { color: MuxUIColorValue; secondaryColor?: MuxUIColorValue; shape?: 'square' | 'circle'; colorName?: string; disabled?: boolean; };
-export declare const ColorSwatch: React.ForwardRefExoticComponent<ColorSwatchProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorWheelProps = MuxUIAriaAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; outerRadius?: number; innerRadius?: number; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };

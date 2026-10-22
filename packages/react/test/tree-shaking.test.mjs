@@ -162,7 +162,7 @@ test('a bundle that uses one collections family keeps its own module and only th
   const motionModules = new Set(readdirSync(generated).filter((name) => /(?:^|-)motion(?:-[\w-]+)?\.mjs$|^(?:grid-list-item|toggle-button)-context\.mjs$|^overlay-positioning\.mjs$/u.test(name)));
   // The family modules are the barrel's re-export targets, and each name's module is its owner.
   const owners = new Map();
-  for (const [, names, module] of readFileSync(resolve(generated, 'collections.mjs'), 'utf8').matchAll(/^export \{ ([^}]+) \} from '\.\/([\w-]+\.mjs)';$/gmu)) {
+  for (const [, names, module] of readFileSync(resolve(generated, 'collections.mjs'), 'utf8').matchAll(/^export \{ ([^}]+) \} from '\.\/([\w-]+\.m?js)';$/gmu)) {
     for (const name of names.split(', ')) owners.set(name, module);
   }
   assert.equal(owners.size, 24);
@@ -173,5 +173,16 @@ test('a bundle that uses one collections family keeps its own module and only th
     // No other family's code comes along, which is what one module per family buys over one file.
     assert.deepEqual(kept.filter((module) => familyModules.has(module)), [owner], name);
     assert.deepEqual(kept.filter((module) => motionModules.has(module)).sort(), [...(motionKept[name] ?? [])].sort(), name);
+  }
+});
+
+// The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
+// guard and a picker no motion. Through the barrel, a bundle keeps exactly these package modules.
+test('a bundle that uses one color family keeps its own module and only the shared and motion modules it needs', async () => {
+  const kept = {
+    ColorSwatch: ['color-context.js', 'color-swatch.js', 'control-utils.js'],
+  };
+  for (const [name, expected] of Object.entries(kept)) {
+    assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), expected, name);
   }
 });

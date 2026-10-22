@@ -5263,7 +5263,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5297,7 +5297,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5331,7 +5331,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }
@@ -5365,7 +5365,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch.mjs",
+          "path": "packages/react/src/color-swatch.ts",
           "lines": null,
           "anchor": "#ColorSwatch"
         }

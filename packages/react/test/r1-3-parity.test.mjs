@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import React, { act } from 'react';
@@ -13,6 +14,7 @@ import {
 } from '../src/collections.mjs';
 import { ToggleButton } from '../src/components.ts';
 import { readRuntimeSources, runtimeSourceFor } from '../src/runtime-sources.mjs';
+import { familyDeclarations, generatedDeclarations, joinedDeclarations } from './support/declarations.mjs';
 import { createDom } from './support/dom.mjs';
 
 const slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
@@ -32,16 +34,56 @@ function propPattern(prop) {
   return new RegExp(`\\b${prop}\\b`, 'u');
 }
 
+// A family with a committed packages/react/api/<slug>.json has its props, events, and defaults derived from its
+// TypeScript source (Decision 0031), and extraction checks them against the declarations and the code the component
+// executes. Only what extraction cannot see stays here: the props a family must not take, in its declarations
+// and in what its source forwards. The check retires with this test when the last family is derived.
+const derivedSlugs = new Set(readdirSync(resolve(import.meta.dirname, '../api')).map((file) => file.replace(/\.json$/u, '')));
+
+// Props a family must leave out of its public type and must not forward.
+const REJECTED_PROPS = {
+  RadioGroup: ['description'],
+  TagGroup: ['description', 'errorMessage', 'readOnly', 'required', 'invalid'],
+  TokenField: ['description', 'errorMessage', 'required', 'invalid'],
+};
+
+// Props a family must leave out of its public type; its source may name them.
+const UNDECLARED_PROPS = {
+  Calendar: ['description', 'errorMessage'],
+  RangeCalendar: ['description', 'errorMessage'],
+  Tree: ['children'],
+  Virtualizer: ['renderItem'],
+};
+
+// A property signature of a declaration, in any quoting: `prop?:`, `'prop':`. A description that mentions the name is not one.
+const memberPattern = (prop) => new RegExp(`(?<![\\w-])['"]?${prop}['"]?\\??\\s*:`, 'u');
+const withoutComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
+
+/**
+ * The rejected props a derived family still takes or forwards. `declarations` is what its public type declares
+ * (comments left out) and `runtime` the source it executes; a rejected prop counts when a declaration has it as
+ * a member, and, separately, when the source names it. An undeclared prop counts only as a member.
+ */
+function rejectedPropFindings({ declarations, runtime, rejected = [], undeclared = [] }) {
+  return [
+    ...rejected.flatMap((prop) => [
+      ...(memberPattern(prop).test(declarations) ? [`declares ${prop}`] : []),
+      ...(propPattern(prop).test(withoutComments(runtime)) ? [`forwards ${prop}`] : []),
+    ]),
+    ...undeclared.filter((prop) => memberPattern(prop).test(declarations)).map((prop) => `declares ${prop}`),
+  ];
+}
+
 test('R1.3 artifact declarations have a generated MuxUI type and runtime surface', async () => {
   const repositoryRoot = resolve(import.meta.dirname, '../../..');
-  const [fieldTypes, indexTypes, sources, styles] = await Promise.all([
-    readFile(resolve(import.meta.dirname, '../generated/fields.d.ts'), 'utf8'),
+  const [indexTypes, sources, styles] = await Promise.all([
     readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8'),
     readRuntimeSources(repositoryRoot),
     readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8'),
   ]);
   // The field types a collection inherits are declared by fields.ts, ahead of the index that names them.
-  const types = `${fieldTypes}\n${indexTypes}`;
+  const allTypes = joinedDeclarations();
+  const types = `${generatedDeclarations()['fields.d.ts']}\n${indexTypes}`;
   assert.match(styles, /\.muxui-radio-indicator\b/u, 'RadioGroup needs a Mux UI-owned visible indicator');
   assert.match(styles, /\.muxui-radio\[data-selected\] \.muxui-radio-indicator/u, 'RadioGroup needs selected indicator styling');
   assert.match(styles, /\.muxui-radio\[data-focus-visible\]/u, 'RadioGroup needs a focus-visible affordance');
@@ -49,6 +91,18 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
   assert.match(styles, /@media \(prefers-contrast: more\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-width: 3px/u, 'collection focus needs high-contrast treatment');
   for (const slug of slugs) {
     const name = componentName(slug);
+    // The module that declares the family: collections.mjs is only a barrel over the family modules.
+    const owner = runtimeSourceFor(sources, name);
+    assert.ok(owner, `${name} has no runtime source`);
+    const runtime = sources[owner];
+    const runtimeStart = runtime.indexOf(`export const ${name}`);
+    assert.notEqual(runtimeStart, -1, `${name} runtime export is missing`);
+    const runtimeNext = runtime.indexOf('\nexport const ', runtimeStart + 1);
+    const runtimeSurface = runtime.slice(runtimeStart, runtimeNext === -1 ? undefined : runtimeNext);
+    if (derivedSlugs.has(slug)) {
+      assert.deepEqual(rejectedPropFindings({ declarations: familyDeclarations(allTypes, name), runtime: runtimeSurface, rejected: REJECTED_PROPS[name], undeclared: UNDECLARED_PROPS[name] }), [], `${name} rejected props`);
+      continue;
+    }
     const artifact = JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8'));
     const api = artifact.bindings['web.react'].api;
     const typeStart = types.search(new RegExp(`export (?:interface|type) ${name}Props\\b`, 'u'));
@@ -62,14 +116,6 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
         if (inheritedStart !== -1) typeSurface += types.slice(inheritedStart, inheritedEnd === -1 ? undefined : inheritedEnd);
       }
     }
-    // The module that declares the family: collections.mjs is only a barrel over the family modules.
-    const owner = runtimeSourceFor(sources, name);
-    assert.ok(owner, `${name} has no runtime source`);
-    const runtime = sources[owner];
-    const runtimeStart = runtime.indexOf(`export const ${name}`);
-    assert.notEqual(runtimeStart, -1, `${name} runtime export is missing`);
-    const runtimeNext = runtime.indexOf('\nexport const ', runtimeStart + 1);
-    const runtimeSurface = runtime.slice(runtimeStart, runtimeNext === -1 ? undefined : runtimeNext);
     const sharedCollectionSurface = ['grid-list', 'list-box'].includes(slug) ? runtime.slice(runtime.indexOf('function collectionProps'), runtimeStart) : '';
     const sharedCalendarSurface = ['calendar', 'range-calendar'].includes(slug) ? runtime.slice(runtime.indexOf('function calendarProps'), runtimeStart) : '';
     if (name === 'Tree') assert.doesNotMatch(typeSurface, /\bchildren\??\s*:/u, 'Tree must not expose children customization');
@@ -77,11 +123,7 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
     if (name === 'Calendar' || name === 'RangeCalendar') {
       assert.doesNotMatch(typeSurface, /\b(?:description|errorMessage)\??\s*:/u, `${name} must not expose unsupported validation messaging`);
     }
-    const rejectedProps = {
-      RadioGroup: ['description'],
-      TagGroup: ['description', 'errorMessage', 'readOnly', 'required', 'invalid'],
-      TokenField: ['description', 'errorMessage', 'required', 'invalid'],
-    }[name];
+    const rejectedProps = REJECTED_PROPS[name];
     if (rejectedProps) {
       for (const prop of rejectedProps) {
         assert.doesNotMatch(typeSurface, propPattern(prop), `${name} must not expose unsupported ${prop}`);
@@ -99,6 +141,36 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
       assert.match(`${runtimeSurface}\n${sharedCollectionSurface}\n${sharedCalendarSurface}`, propPattern(callback), `${name}.${callback} is missing from runtime surface`);
     }
   }
+});
+
+// A derived family keeps its rejected-prop checks through two readings that do not share a failure: its
+// declarations by member, which a description naming the prop cannot fool, and its source by name.
+test('the rejected-prop check of a derived family reads members and source, not descriptions', () => {
+  const declarations = [
+    'export type GroupOwnProps = {',
+    '  /** Supporting text is not part of this family: description is left out on purpose. */',
+    '  label?: string;',
+    '};',
+    "export type GroupProps = Omit<GroupOwnProps, 'label'> & { className?: string };",
+  ].join('\n');
+  const clean = { declarations: familyDeclarations(`${declarations}\nexport declare const Group: ForwardRefExoticComponent<GroupProps>;`, 'Group'), runtime: 'function Group({ label, className }, ref) { return label; }', rejected: ['description', 'errorMessage'] };
+  assert.deepEqual(rejectedPropFindings(clean), []);
+  // The description alone would fool a search of the declaration text.
+  assert.match(declarations, propPattern('description'));
+  // A member counts, however it is quoted or made optional.
+  assert.deepEqual(rejectedPropFindings({ ...clean, declarations: `${clean.declarations}\nexport type Extra = { description?: ReactNode; 'errorMessage': string };` }), ['declares description', 'declares errorMessage']);
+  // A declaration that only names the prop, as an Omit does, is not a member.
+  assert.deepEqual(rejectedPropFindings({ ...clean, declarations: `${clean.declarations}\nexport type Narrowed = Omit<Base, 'description' | 'errorMessage'>;` }), []);
+  // Source that forwards the prop counts even when the declaration does not name it, and its comments do not.
+  assert.deepEqual(rejectedPropFindings({ ...clean, runtime: 'function Group({ description }, ref) { return description; }' }), ['forwards description']);
+  assert.deepEqual(rejectedPropFindings({ ...clean, runtime: '// no description here\nfunction Group({ label }) { return label; }' }), []);
+  // A prop the type must leave out is a finding as a member alone, and its source may name it.
+  const undeclared = { ...clean, rejected: [], undeclared: ['description'] };
+  assert.deepEqual(rejectedPropFindings(undeclared), []);
+  assert.deepEqual(rejectedPropFindings({ ...undeclared, runtime: 'function Group({ description }) {}' }), []);
+  assert.deepEqual(rejectedPropFindings({ ...undeclared, declarations: `${clean.declarations}\nexport type Extra = { description?: string };` }), ['declares description']);
+  // The families whose props are checked are named, so the check runs once they derive.
+  assert.deepEqual([...Object.keys(REJECTED_PROPS), ...Object.keys(UNDECLARED_PROPS)].sort(), ['Calendar', 'RadioGroup', 'RangeCalendar', 'TagGroup', 'TokenField', 'Tree', 'Virtualizer']);
 });
 
 // jsdom has no layout. `measuredItemHeight` makes every element scroll that tall,

@@ -7038,7 +7038,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-swatch/artifact.json#bindings/web.react",
-          "packages/react/src/color-swatch.mjs#ColorSwatch",
+          "packages/react/src/color-swatch.ts#ColorSwatch",
           "packages/react/test/r1-3-parity.test.mjs"
         ],
         "rac": [

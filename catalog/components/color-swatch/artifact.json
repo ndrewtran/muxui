@@ -33,23 +33,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "color",
-          "secondaryColor",
-          "shape",
-          "colorName",
-          "disabled"
-        ],
-        "events": [],
-        "parts": [
-          "root"
-        ],
-        "defaults": {
-          "disabled": false,
-          "shape": "square"
-        }
-      },
       "behavior": [
         "Valid Core color strings are converted internally for rendering.",
         "secondaryColor adds a diagonal two-tone preview; both colours retain their alpha without painting one over the other.",
