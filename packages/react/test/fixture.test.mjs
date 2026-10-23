@@ -697,6 +697,17 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
   }
 });
 
+// The popup's own fallback is no catalog default: a Select's popup reads its modal setting from the root's context, so the observers above,
+// which always supply a root, never reach it. Outside a Select there is no context, and a popup is modal unless it says otherwise.
+test('a Select.Popup with no Select around it is modal unless it says otherwise', async () => {
+  const isNonModal = async (props) => (await sentUpstream(() => renderToString(h(generated.Select.Popup, props, h(generated.Select.List, { items: ['One'] }))), (sent) => 'isNonModal' in sent)).isNonModal;
+  assert.equal(await isNonModal(null), false);
+  assert.equal(await isNonModal({ modal: true }), false);
+  assert.equal(await isNonModal({ modal: false }), true);
+  // Inside a Select that says it is not modal, the popup follows the root, so the fallback is for the missing context only.
+  assert.equal((await selectPopupSent({ modal: false })).isNonModal, true);
+});
+
 test('MuxUI styles bind states and public theme hooks', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
 
