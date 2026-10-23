@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:6d4c9881c140f7cb732bdac7eebc91f5b16d0a5d7602c2c0a81653a8c3f1ef79 -->
+<!-- @generated-content-sha256: sha256:5466a364560c4bd52980bff3d2ea6afe82cefdae777d1c3431da789e9d058abc -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -108,7 +108,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Avatar | experimental | . | .muxui-avatar | size |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
-| ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
+| ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, role |
 | Calendar | experimental | . | .muxui-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Card | experimental | . | .muxui-card | variant, padding, selected, pending, disabled, onActivate |
 | Checkbox | experimental | . | .muxui-checkbox | checked, defaultChecked, disabled, size, indeterminate, name, required, value, invalid |
@@ -117,7 +117,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | CodeBlock | experimental | . | .muxui-code-block | mode, source, before, after, language, filename, lineNumbers, copyable, wrap |
 | ColorArea | experimental | . | .muxui-color-area | label, value, defaultValue, disabled, readOnly |
 | ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, size, name |
-| ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
+| ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |

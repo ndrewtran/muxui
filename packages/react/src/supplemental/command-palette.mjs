@@ -19,7 +19,7 @@ import {
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { Button as MuxUIButton } from '../button.ts';
 import { IconButton } from './icon-button.ts';
-import { h, cx, dataState, nativePart, pressHandler } from './part-utils.mjs';
+import { h, cx, dataState, nativePart, pressHandler } from './part-utils.ts';
 import { MotionModalBackdropForwardRef, MotionModalPopupForwardRef } from './modal-parts.mjs';
 
 /* CommandPalette */

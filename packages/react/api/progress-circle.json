@@ -1,0 +1,89 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/progress-circle.ts",
+  "component": "muxui:component:progress-circle",
+  "binding": "web.react",
+  "export": "ProgressCircle",
+  "api": {
+    "props": [
+      "value",
+      "minValue",
+      "maxValue",
+      "size",
+      "label"
+    ],
+    "events": [],
+    "defaults": {
+      "value": null,
+      "minValue": 0,
+      "maxValue": 100,
+      "size": "md"
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "number"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The progress between `minValue` and `maxValue`; `null` shows indeterminate progress."
+      },
+      "minValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The value at which the circle is empty."
+      },
+      "maxValue": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The value at which the circle is full."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The circle's diameter."
+      },
+      "label": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

@@ -8,19 +8,17 @@ import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { RadioGroup as AriaRadioGroup } from 'react-aria-components';
 import { Form as AriaForm } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
+import { parseAst } from 'vite';
 import {
   AlertDialog,
-  ButtonGroup,
   Card,
   CheckboxField,
-  ColorModeToggle,
   CommandPalette,
   HeaderNav,
   Input,
   InputTags,
   MultiSelect,
   PaymentInput,
-  ProgressCircle,
   RadioField,
   Sidebar,
   SwitchField,
@@ -28,6 +26,9 @@ import {
   TextArea,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
+import { ButtonGroup } from '../src/supplemental/button-group.ts';
+import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
+import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';
 import { installDom } from './support/dom.mjs';
 
@@ -362,6 +363,23 @@ test('supplemental declarations and CSS do not leak external API names or select
   assert.match(styles, /--muxui-semantic-typography-text-font-weight/u);
   assert.match(styles, /\.muxui-multi-select__value--placeholder\s*\{\s*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /\btransparent\b/u);
+});
+
+// A declaration file with any export clause stops exporting its unmarked declarations, which would silently drop
+// PartProps, ButtonPartProps, CommandPaletteItemsProps and TextVisualProps from the package. `export type X = ...` is
+// a declaration with a modifier, so it is fine: this is how SupplementalActivation reaches the public surface.
+const exportClauses = (text) => parseAst(text, { lang: 'dts' }).body
+  .filter((node) => node.type === 'ExportAllDeclaration' || node.type === 'ExportDefaultDeclaration' || node.type === 'TSExportAssignment'
+    || node.type === 'TSNamespaceExportDeclaration' || (node.type === 'ExportNamedDeclaration' && node.declaration === null))
+  .map((node) => text.slice(node.start, node.end));
+
+test('the authored supplemental declarations use export modifiers, never an export clause or export *', async () => {
+  assert.deepEqual(exportClauses(await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8')), []);
+  const clean = "import type { A } from './a.ts';\nexport type B = A;\ntype C = string;\nexport interface E {}\n";
+  assert.deepEqual(exportClauses(clean), []);
+  for (const clause of ['export { C };', 'export type { C };', "export type { A } from './a.ts';", "export * from './a.ts';", "export * as ns from './a.ts';", 'export {};', 'export default C;', 'export = C;']) {
+    assert.equal(exportClauses(`${clean}${clause}\n`).length, 1, clause);
+  }
 });
 
 test('supplemental CSS classifies foundation tokens separately from local component hooks', async () => {

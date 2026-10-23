@@ -1,11 +1,8 @@
 import type * as React from 'react';
 import type { IconButtonProps, MenuListProps } from '@muxui/react';
+import type { SupplementalActivation as PartUtilsActivation } from './part-utils.ts';
 
-export type SupplementalActivation = {
-  type: 'activate';
-  pointerType?: string;
-  target?: EventTarget | null;
-};
+export type SupplementalActivation = PartUtilsActivation;
 
 export type SupplementalFieldProps = {
   disabled?: boolean;
@@ -44,15 +41,6 @@ export declare const AlertDialog: {
   Close: React.ForwardRefExoticComponent<AlertDialogCloseProps & React.RefAttributes<HTMLButtonElement>>;
 };
 
-export type ButtonGroupProps = React.HTMLAttributes<HTMLDivElement> & {
-  orientation?: 'horizontal' | 'vertical';
-  attached?: boolean;
-  disabled?: boolean;
-  role?: 'group' | 'region' | 'presentation';
-  children?: React.ReactNode;
-};
-export declare const ButtonGroup: React.ForwardRefExoticComponent<ButtonGroupProps & React.RefAttributes<HTMLDivElement>>;
-
 export type CardVariant = 'elevated' | 'outlined' | 'filled';
 export type CardPadding = 'sm' | 'md' | 'lg';
 export type CardRootProps = React.HTMLAttributes<HTMLDivElement> & { variant?: CardVariant; padding?: CardPadding };
@@ -80,16 +68,6 @@ export declare const CheckboxField: {
   Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
   Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
 };
-
-export type ColorMode = 'light' | 'dark';
-export type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> & {
-  mode?: ColorMode;
-  defaultMode?: ColorMode;
-  storageKey?: string;
-  disabled?: boolean;
-  onModeChange?: (mode: ColorMode) => void;
-};
-export declare const ColorModeToggle: React.ForwardRefExoticComponent<ColorModeToggleProps & React.RefAttributes<HTMLLabelElement>>;
 
 export type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; size?: 'sm' | 'md' | 'lg'; closeOnSelect?: boolean };
 export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; target?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
@@ -283,18 +261,6 @@ export declare const PaymentInput: {
   Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
   Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
   CardIcon: React.ForwardRefExoticComponent<PaymentInputCardIconProps & React.RefAttributes<HTMLSpanElement>>;
-};
-
-export type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & { value?: number | null; minValue?: number; maxValue?: number; size?: 'sm' | 'md' | 'lg'; /** Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence. */ label?: string };
-export type ProgressCircleRootProps = ProgressCircleProps;
-export type ProgressCircleTrackProps = React.SVGAttributes<SVGSVGElement>;
-export type ProgressCircleLabelProps = PartProps<HTMLSpanElement>;
-export type ProgressCircleValueProps = PartProps<HTMLSpanElement>;
-export declare const ProgressCircle: {
-  Root: React.ForwardRefExoticComponent<ProgressCircleProps & React.RefAttributes<HTMLDivElement>>;
-  Track: React.ForwardRefExoticComponent<React.SVGAttributes<SVGSVGElement> & React.RefAttributes<SVGSVGElement>>;
-  Label: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
-  Value: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
 };
 
 export type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size' | 'readOnly'> & { size?: 'sm' | 'md' | 'lg'; value: string };

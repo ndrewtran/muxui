@@ -4,7 +4,7 @@ import {
   TextContext as AriaTextContext,
   DEFAULT_SLOT as ARIA_DEFAULT_SLOT,
 } from 'react-aria-components';
-import { h, cx } from './part-utils.mjs';
+import { h, cx } from './part-utils.ts';
 
 const TEXT_VARIANTS = new Set(['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono']);
 const TEXT_SIZES = Object.freeze({

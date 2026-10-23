@@ -99,6 +99,12 @@ const audited = [
       ...expand(['table'], ['selectionMode', 'disabled']),
       // Tree sent selectionMode and isDisabled to React Aria as its own values, single and false when omitted, before the move, so a TreeContext never supplied them.
       ...expand(['tree'], ['selectionMode', 'disabled']),
+      // ButtonGroup sent isDisabled and role to React Aria's Group as its own values, false and the resolved role, before the move, so a GroupContext never supplied them.
+      ...expand(['button-group'], ['disabled', 'role']),
+      // ColorModeToggle sent isDisabled to React Aria's Switch as its own value, false when omitted, before the move.
+      ...expand(['color-mode-toggle'], ['disabled']),
+      // ProgressCircle sent value (undefined for null), minValue and maxValue to React Aria's ProgressBar as its own values before the move.
+      ...expand(['progress-circle'], ['value', 'minValue', 'maxValue']),
     ],
   },
   {
@@ -127,6 +133,8 @@ const audited = [
       ...expand(['menu.list'], ['disabled']),
       // Select enforces readOnly itself, with a data attribute and a guard on the selection, and sends React Aria no isReadOnly.
       ...expand(['select'], ['readOnly']),
+      // ButtonGroup keeps its orientation for CSS, a data attribute and a class, and gives React Aria none.
+      ...expand(['button-group'], ['orientation']),
       // PromptComposer renders a native form, textarea, and buttons, and gives its model Select explicit flags, so no React Aria context reaches its own disabled, pending, defaultValue, or multiple.
       ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
       // TextEditor renders its own contenteditable and buttons and sends React Aria no isDisabled, isReadOnly, isRequired, or isInvalid, so no React Aria context reaches its flags.

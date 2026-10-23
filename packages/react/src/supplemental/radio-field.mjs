@@ -5,7 +5,7 @@ import {
   RadioGroupStateContext as AriaRadioGroupStateContext,
 } from 'react-aria-components';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
-import { h, cx, nativePart } from './part-utils.mjs';
+import { h, cx, nativePart } from './part-utils.ts';
 import { fieldText, mappedFieldProps } from './field-utils.mjs';
 
 const RadioFieldContext = React.createContext(undefined);

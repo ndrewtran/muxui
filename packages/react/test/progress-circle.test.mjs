@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { ProgressCircle } from '../src/supplemental/index.mjs';
+import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { ProgressCircleConsumerFixture } from './fixtures/progress-circle-consumer-fixture.mjs';
 
 function elementFor(html, selector = '[role="progressbar"]') {

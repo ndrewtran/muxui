@@ -6,7 +6,7 @@ import {
   TagGroup as AriaTagGroup,
   TagList as AriaTagList,
 } from 'react-aria-components';
-import { h, cx, dataState } from './part-utils.mjs';
+import { h, cx, dataState } from './part-utils.ts';
 
 /* InputTags */
 export const InputTags = {

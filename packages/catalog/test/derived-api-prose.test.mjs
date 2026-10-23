@@ -172,7 +172,14 @@ const GUIDES = {
   // item.value is a field of an item record, which the guide says a named Select does not submit.
   select: { native: ['item.value'] },
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
+  // aria-label and aria-labelledby name the group, which the public type offers beside the derived props; neutral is the Button variant the guide advises for attached buttons.
+  'button-group': { native: ['aria-label', 'aria-labelledby'], from: { button: ['neutral'] } },
+  // null and 0 are the values the guide states for an indeterminate and an empty circle.
+  'progress-circle': { native: ['null', '0'] },
 };
+
+// Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.
+const WITHOUT_GUIDE = ['color-mode-toggle'];
 
 // The guides whose declaration-only surface (ToastProvider and useToast) the check cannot read yet.
 const DECLARATION_ONLY_GUIDES = ['toast'];
@@ -285,7 +292,7 @@ test('every API name a derived component\'s guide states is in its derived API o
     readdir(resolve(repositoryRoot, 'catalog/components')),
   ]);
   const derivedSlugs = (await readdir(resolve(repositoryRoot, 'packages/react/api'))).map((file) => file.replace(/\.json$/u, '')).sort();
-  assert.deepEqual(Object.keys(GUIDES).sort(), derivedSlugs, 'each derived component\'s guide is checked');
+  assert.deepEqual(Object.keys(GUIDES).sort(), derivedSlugs.filter((slug) => !WITHOUT_GUIDE.includes(slug)), 'each derived component\'s guide is checked');
   assert.deepEqual(undeclaredOwners(GUIDES), [], 'only a declaration-only guide lists declared spans');
   const componentNames = new Set(await Promise.all(components.map((slug) => read(`catalog/components/${slug}/artifact.json`).then((text) => JSON.parse(text).name, () => undefined))));
   const importPaths = Object.keys(reactPackage.exports).map((path) => `${reactPackage.name}${path.slice(1)}`);

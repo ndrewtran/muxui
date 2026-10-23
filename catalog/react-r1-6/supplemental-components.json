@@ -54,7 +54,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/button-group.mjs",
+      "runtimeSource": "packages/react/src/supplemental/button-group.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -110,7 +110,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/color-mode-toggle.mjs",
+      "runtimeSource": "packages/react/src/supplemental/color-mode-toggle.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -304,7 +304,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/progress-circle.mjs",
+      "runtimeSource": "packages/react/src/supplemental/progress-circle.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

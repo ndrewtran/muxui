@@ -28,7 +28,6 @@ import {
   AlertDialog,
   CheckboxField,
   CommandPalette,
-  ColorModeToggle,
   HeaderNav,
   Input,
   InputTags,
@@ -39,6 +38,7 @@ import {
   Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
+import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 
 const h = React.createElement;
 

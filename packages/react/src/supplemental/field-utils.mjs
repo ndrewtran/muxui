@@ -1,5 +1,5 @@
 import { Text as AriaText } from 'react-aria-components';
-import { h, cx } from './part-utils.mjs';
+import { h, cx } from './part-utils.ts';
 
 export function fieldText(slot, className, props, ref) {
   return h(AriaText, { ...props, ref, slot, className: cx(className, props?.className) });

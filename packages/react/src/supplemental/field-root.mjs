@@ -1,6 +1,6 @@
 import React from 'react';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
-import { h, cx } from './part-utils.mjs';
+import { h, cx } from './part-utils.ts';
 import { mappedFieldProps } from './field-utils.mjs';
 
 /* Input and TextArea */
