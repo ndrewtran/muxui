@@ -40,6 +40,30 @@
       "new": "never",
       "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Against unaugmented React, assignment, reading, and JSX accept the same values, and each type is assignable to the other. The old branch string & readonly string[] has no real values, so there the difference shows only where the type is reflected: the readonly keys of its apparent members (number | \"length\" before, never now), and conditional types over it, where Extract<NonNullable<PromptComposerProps['defaultValue']>, readonly string[]> was string & readonly string[] and is now never. A consumer's augmentation of React's FormHTMLAttributes defaultValue no longer narrows PromptComposer's defaultValue: with defaultValue?: 'draft' augmented, defaultValue=\"other\" was rejected and is now accepted. Keeping the branch would mean loosening the extractor's identity check on owned props.",
       "tranche": "Decision 0031 tranche 8b"
+    },
+    {
+      "subject": ".:part:PaymentInput.Root",
+      "assertion": "readonly:defaultValue",
+      "old": "number | \"length\"",
+      "new": "never",
+      "reason": "PaymentInput.Root no longer intersects the div's own defaultValue (string | number | readonly string[]) with the field's string: the old type was string | (string & readonly string[]), the new one is string. Against unaugmented React, reading, assignment in both directions, JSX and keyof are unchanged, and each type is assignable to the other. The old branch string & readonly string[] has no real values, so the difference shows only where the type is reflected: the readonly keys of its apparent members (number | \"length\" before, never now), and conditional types over it, where Extract<NonNullable<PaymentInput.Root['defaultValue']>, readonly string[]> was string & readonly string[] and is now never. The equivalence is stated for unaugmented React only: merging a narrower defaultValue into React's HTMLAttributes is itself a compile error (TS2717), so no consumer regression under augmentation is claimed. Keeping the branch would mean loosening the extractor's identity check on owned props.",
+      "tranche": "Decision 0031 tranche 9"
+    },
+    {
+      "subject": ".:type:PaymentInputProps",
+      "assertion": "readonly:defaultValue",
+      "old": "number | \"length\"",
+      "new": "never",
+      "reason": "PaymentInputProps no longer intersects the div's own defaultValue (string | number | readonly string[]) with the field's string: the old type was string | (string & readonly string[]), the new one is string. Against unaugmented React, reading, assignment in both directions, JSX and keyof are unchanged, and each type is assignable to the other. The old branch string & readonly string[] has no real values, so the difference shows only where the type is reflected: the readonly keys of its apparent members (number | \"length\" before, never now), and conditional types over it, where Extract<NonNullable<PaymentInputProps['defaultValue']>, readonly string[]> was string & readonly string[] and is now never. The equivalence is stated for unaugmented React only: merging a narrower defaultValue into React's HTMLAttributes is itself a compile error (TS2717), so no consumer regression under augmentation is claimed. Keeping the branch would mean loosening the extractor's identity check on owned props.",
+      "tranche": "Decision 0031 tranche 9"
+    },
+    {
+      "subject": ".:type:PaymentInputRootProps",
+      "assertion": "readonly:defaultValue",
+      "old": "number | \"length\"",
+      "new": "never",
+      "reason": "PaymentInputRootProps no longer intersects the div's own defaultValue (string | number | readonly string[]) with the field's string: the old type was string | (string & readonly string[]), the new one is string. Against unaugmented React, reading, assignment in both directions, JSX and keyof are unchanged, and each type is assignable to the other. The old branch string & readonly string[] has no real values, so the difference shows only where the type is reflected: the readonly keys of its apparent members (number | \"length\" before, never now), and conditional types over it, where Extract<NonNullable<PaymentInputRootProps['defaultValue']>, readonly string[]> was string & readonly string[] and is now never. The equivalence is stated for unaugmented React only: merging a narrower defaultValue into React's HTMLAttributes is itself a compile error (TS2717), so no consumer regression under augmentation is claimed. Keeping the branch would mean loosening the extractor's identity check on owned props.",
+      "tranche": "Decision 0031 tranche 9"
     }
   ]
 }

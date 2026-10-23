@@ -1,0 +1,97 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/radio-field.ts",
+  "component": "muxui:component:radio-field",
+  "binding": "web.react",
+  "export": "RadioField",
+  "api": {
+    "props": [
+      "value",
+      "disabled",
+      "invalid",
+      "required",
+      "size"
+    ],
+    "events": [],
+    "defaults": {},
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": true,
+        "description": "The option's value, which the enclosing RadioGroup selects by."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the option disabled."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the option invalid."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the option required."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The option's size, in place of the enclosing RadioGroup's."
+      }
+    },
+    "eventDetails": {},
+    "types": {},
+    "partApis": {
+      "button": {
+        "member": "Button",
+        "props": [
+          "disabled"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the option disabled, whatever its field says."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

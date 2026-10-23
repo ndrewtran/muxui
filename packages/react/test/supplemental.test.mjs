@@ -12,23 +12,23 @@ import { parseAst } from 'vite';
 import {
   AlertDialog,
   Card,
-  CheckboxField,
   CommandPalette,
   HeaderNav,
   Input,
   MultiSelect,
-  PaymentInput,
-  RadioField,
   Sidebar,
-  SwitchField,
   TagSelect,
   TextArea,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
+import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
 import { InputTags } from '../src/supplemental/input-tags.ts';
+import { PaymentInput } from '../src/supplemental/payment-input.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
+import { RadioField } from '../src/supplemental/radio-field.ts';
+import { SwitchField } from '../src/supplemental/switch-field.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';
 import { installDom } from './support/dom.mjs';
 
@@ -104,6 +104,14 @@ test('supplemental field and collection modules preserve accessible state hooks 
 test('RadioField outside a RadioGroup throws a Mux error that names the group', () => {
   assert.throws(
     () => renderToStaticMarkup(React.createElement(RadioField.Root, { value: 'monthly' }, React.createElement(RadioField.Button, null, 'Monthly'))),
+    { message: 'RadioField must be used inside RadioGroup' },
+  );
+});
+
+// The group check comes before the size check, so a root with a bad size outside a group names the group.
+test('RadioField reports a missing RadioGroup before it checks its size', () => {
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(RadioField.Root, { value: 'monthly', size: 'xl' })),
     { message: 'RadioField must be used inside RadioGroup' },
   );
 });
@@ -401,14 +409,21 @@ test('Input and TextArea roots retain native string field props in their declara
   assert.match(declaration, /export type InputRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
   assert.match(declaration, /export type TextAreaRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
   assert.match(declaration, /MultiSelectItemProps[\s\S]*?textValue\?: string/u);
-  assert.match(declaration, /CheckboxFieldRootProps[\s\S]*?name\?: string;[\s\S]*?value\?: string/u);
-  assert.match(declaration, /SwitchFieldRootProps[\s\S]*?name\?: string;[\s\S]*?value\?: string/u);
-  assert.match(declaration, /RadioFieldRootProps[\s\S]*?value: string/u);
-  assert.doesNotMatch(declaration, /export type RadioFieldButtonProps = [^\n]*?(?:value|selected|onChange)\?:/u);
   assert.match(declaration, /TagSelectItemProps[\s\S]*?textValue\?: string/u);
   assert.match(declaration, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
   assert.match(declaration, /interface TagSelectRootComponent[\s\S]*?<T extends TagSelectItem/u);
   assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
+});
+
+// The three field compounds own their root props in a type of their own, which the Root type intersects with the div's attributes.
+test('the field compounds keep their native string props on the root', async () => {
+  const source = (slug) => readFile(resolve(packageRoot, `src/supplemental/${slug}.ts`), 'utf8');
+  assert.match(await source('checkbox-field'), /type CheckboxFieldOwnProps = \{[^}]*?name\?: string;[^}]*?value\?: string;/u);
+  assert.match(await source('switch-field'), /type SwitchFieldOwnProps = \{[^}]*?name\?: string;[^}]*?value\?: string;/u);
+  const radio = await source('radio-field');
+  assert.match(radio, /type RadioFieldOwnProps = \{[^}]*?value: string;/u);
+  assert.match(radio, /type RadioFieldButtonOwnProps = \{[^}]*?\};/u);
+  assert.doesNotMatch(radio.match(/type RadioFieldButtonOwnProps = \{[^}]*?\};/u)[0], /\b(?:value|selected|onChange)\??:/u);
 });
 
 test('Input uses the Mux-owned root and control anatomy', () => {
@@ -550,6 +565,19 @@ test('MultiSelect materializes iterable items once for all-selection counts', ()
     (item) => React.createElement(MultiSelect.Item, { id: item.id, textValue: item.label }, item.label),
   ));
   assert.match(html, /2 selected/u);
+});
+
+// The size check is the first statement of the root, so a bad size is reported before the starting value is read.
+test('PaymentInput checks its size before it reads the starting value', () => {
+  const defaultValue = { toString() { throw new Error('the starting value was read'); } };
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(PaymentInput.Root, { size: 'xl', defaultValue })),
+    { message: 'PaymentInput size must be one of: sm, md, lg' },
+  );
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(PaymentInput.Root, { defaultValue })),
+    { message: 'the starting value was read' },
+  );
 });
 
 test('PaymentInput applies the exact Mastercard 2221-2720 range', () => {

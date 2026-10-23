@@ -1,7 +1,7 @@
 import React from 'react';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx } from './part-utils.ts';
-import { mappedFieldProps } from './field-utils.mjs';
+import { mappedFieldProps } from './field-utils.ts';
 
 /* Input and TextArea */
 export const InputAssociationContext = React.createContext(null);

@@ -291,6 +291,10 @@ const annotatedFamilies = [
   ['color-mode-toggle', 'ColorModeToggle', 1],
   ['progress-circle', 'ProgressCircle', 4],
   ['input-tags', 'InputTags', 1],
+  ['payment-input', 'PaymentInput', 7],
+  ['checkbox-field', 'CheckboxField', 5],
+  ['switch-field', 'SwitchField', 5],
+  ['radio-field', 'RadioField', 6],
 ];
 
 test('a bundle that uses nothing from a TypeScript supplemental family keeps none of its forwardRef calls, and one that uses it keeps them all', async () => {

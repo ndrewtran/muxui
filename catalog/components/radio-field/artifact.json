@@ -41,30 +41,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "size",
-          "disabled",
-          "invalid",
-          "required",
-          "value"
-        ],
-        "events": [],
-        "parts": [
-          "root",
-          "button",
-          "indicator",
-          "dot",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "size": "md",
-          "disabled": false,
-          "invalid": false,
-          "required": false
-        }
-      },
       "behavior": [
         "A RadioField must sit inside a RadioGroup and throws without one.",
         "Root needs a stable string value, the same value the group reports in its onChange.",

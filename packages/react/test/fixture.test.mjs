@@ -302,9 +302,14 @@ const minimalRenders = {
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
   InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),
+  PaymentInput: () => h(generated.PaymentInput.Root, { 'aria-label': 'Card number' }, h(generated.PaymentInput.Group, null, h(generated.PaymentInput.Input), h(generated.PaymentInput.CardIcon))),
+  CheckboxField: () => h(generated.CheckboxField.Root, null, h(generated.CheckboxField.Button, null, h(generated.CheckboxField.Indicator), 'Accept')),
+  SwitchField: () => h(generated.SwitchField.Root, null, h(generated.SwitchField.Button, null, h(generated.SwitchField.Thumb), 'Updates')),
+  // RadioField takes its size from the group around it, so its block states no defaults.
+  RadioField: () => h(generated.RadioGroup, { 'aria-label': 'Plan' }, h(generated.RadioField.Root, { value: 'monthly' }, h(generated.RadioField.Button, null, h(generated.RadioField.Indicator, null, h(generated.RadioField.Dot)), 'Monthly'))),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
-const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot' };
+const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
@@ -813,6 +818,11 @@ test('every default a simple supplemental family states is compared with what th
     ColorModeToggle: { disabled: true, storageKey: 'theme' },
     ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
     InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
+    PaymentInput: { defaultValue: '4111', size: 'lg' },
+    CheckboxField: { size: 'lg' },
+    SwitchField: { size: 'lg' },
+    // RadioField states none: its size follows the enclosing RadioGroup.
+    RadioField: {},
   };
   for (const [name, values] of Object.entries(different)) {
     const api = await catalogApi(kebab(name));

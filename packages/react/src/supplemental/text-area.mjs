@@ -6,7 +6,7 @@ import {
   TextField as AriaTextField,
 } from 'react-aria-components';
 import { h, cx } from './part-utils.ts';
-import { fieldText } from './field-utils.mjs';
+import { fieldText } from './field-utils.ts';
 import { fieldRoot } from './field-root.mjs';
 
 export const TextArea = {

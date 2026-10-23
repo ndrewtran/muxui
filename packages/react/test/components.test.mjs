@@ -19,7 +19,7 @@ import {
 } from '../src/components.ts';
 import { ToggleButtonGroup, RadioGroup } from '../src/collections.mjs';
 import { CheckboxGroup, Form } from '../src/fields.ts';
-import { RadioField } from '../src/supplemental/index.mjs';
+import { RadioField } from '../src/supplemental/radio-field.ts';
 import { installDom } from './support/dom.mjs';
 
 function allComponents({ onCheck, onDisclosure, onToggle, onLink } = {}) {
