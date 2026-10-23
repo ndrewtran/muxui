@@ -7288,7 +7288,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-swatch-picker/artifact.json#bindings/web.react",
-          "packages/react/src/color-swatch-picker.mjs#ColorSwatchPicker",
+          "packages/react/src/color-swatch-picker.ts#ColorSwatchPicker",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

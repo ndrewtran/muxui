@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:7df7ee57686b90160035fbfdf5c8b8a25742fb9a3a70118ca491ed20ca3b8279 -->
+<!-- @generated-content-sha256: sha256:107a49c37dd01202f11f781a3831a07cc5f76a6df270312118dd2f0b61c72cc2 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -121,7 +121,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
-| ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
+| ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |

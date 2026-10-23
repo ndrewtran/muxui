@@ -5399,7 +5399,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5438,7 +5438,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5477,7 +5477,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5516,7 +5516,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5555,7 +5555,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5594,7 +5594,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }

@@ -1,0 +1,179 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/color-swatch-picker.ts",
+  "component": "muxui:component:color-swatch-picker",
+  "binding": "web.react",
+  "export": "ColorSwatchPicker",
+  "api": {
+    "props": [
+      "items",
+      "value",
+      "defaultValue",
+      "disabled",
+      "readOnly"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false
+    },
+    "propDetails": {
+      "items": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIItems"
+        },
+        "required": false,
+        "description": "The swatches as data: color strings, or items whose `color` or `value` is a valid CSS color string. Each item needs a distinct color, because options are keyed by color, and duplicate colors throw a TypeError. An item's `label` or `textValue` names its swatch; otherwise the swatch uses its color name."
+      },
+      "value": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIColorValue"
+            },
+            {
+              "kind": "null"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The selected color, when the caller controls it. `null` is controlled and empty; `undefined` leaves the value uncontrolled."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIColorValue"
+        },
+        "required": false,
+        "description": "The color selected at first, when the picker controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the picker and every swatch. A disabled enclosing ColorPicker disables it too."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the picker read-only: arrow keys still move focus between swatches, but presses, Space, and Enter do not select one. A read-only enclosing ColorPicker does the same."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIColorValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the selected swatch's color as a CSS string in that swatch's color space: rgba(r, g, b, a) for a hex or RGB swatch, and hsla(h, s%, l%, a) for an HSL or HSB swatch. A disabled or read-only picker does not call it."
+      }
+    },
+    "types": {
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      },
+      "MuxUIColorValue": {
+        "type": {
+          "kind": "string"
+        },
+        "description": "A CSS color string. A color control's onChange returns one in the color space of its value, of an enclosing ColorPicker's color, or of its defaultValue: rgba(r, g, b, a) for hex and rgb, hsla(h, s%, l%, a) for hsl and hsb. ColorSlider with colorSpace uses that space, and ColorSwatchPicker returns the chosen item's color."
+      },
+      "MuxUIItems": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        }
+      }
+    }
+  }
+}

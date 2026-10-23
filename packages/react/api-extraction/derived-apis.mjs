@@ -91,6 +91,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   // Select is its own root; Select.Root takes the same props with `label` as any node, so the derivation checks both. Its anatomy calls Select.Item the option.
   // Label, Value, Description, and Error own no props.
   { slug: 'select', name: 'Select', also: [{ member: 'Root', widen: ['label'] }], source: 'packages/react/src/select.ts', parts: { trigger: 'Trigger', popup: 'Popup', list: 'List', option: 'Item' } },
+  // ColorSwatchPicker is one component with no part that owns props: its swatches are rendered, not exported.
+  { slug: 'color-swatch-picker', name: 'ColorSwatchPicker', source: 'packages/react/src/color-swatch-picker.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

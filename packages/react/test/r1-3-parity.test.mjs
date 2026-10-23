@@ -2672,6 +2672,41 @@ test('R1.3 Virtualizer reports the first invalid input in the order it checks, i
   ], (props, index) => failure(props, ...(index < 8 ? [] : [poster])));
 });
 
+/**
+ * Asserts the order a component checks its inputs in. `steps` lists them in that order, each a patch that makes one input
+ * invalid and the message it is reported with; `base` makes every input valid. Step n is rendered invalid together with every
+ * later step, so its message appears only while nothing before it is wrong, and rendering `base` alone is clean.
+ */
+function reportsInOrder(Component, base, steps) {
+  const failure = (props) => {
+    try {
+      renderToString(React.createElement(Component, props));
+      return 'rendered';
+    } catch (error) {
+      return error.message;
+    }
+  };
+  assert.equal(failure(base), 'rendered');
+  steps.forEach(([patch, message], index) => {
+    const together = Object.assign({}, base, ...steps.slice(index).reverse().map(([later]) => later));
+    assert.match(failure(together), message, `step ${index}: ${JSON.stringify(patch)}`);
+    // The step on its own is the same failure, so nothing else stands in for it.
+    assert.match(failure({ ...base, ...patch }), message, `step ${index} alone`);
+  });
+}
+
+test('R1.3 ColorSwatchPicker reports the first invalid input in the order it checks: items, name, value, defaultValue', () => {
+  reportsInOrder(ColorSwatchPicker, { 'aria-label': 'Colors', items: ['#ff0000', '#00ff00'] }, [
+    [{ items: 5 }, /items\.map is not a function/u],
+    // An item that is not a color fails ahead of a later duplicate, in item order.
+    [{ items: ['nope'] }, /ColorSwatchPicker values must be valid CSS color strings/u],
+    [{ items: ['#ff0000', '#f00'] }, /ColorSwatchPicker items must have distinct colors: /u],
+    [{ 'aria-label': undefined }, /ColorSwatchPicker requires label, aria-label, or aria-labelledby/u],
+    [{ value: 5 }, /ColorSwatchPicker values must be Mux UI color strings/u],
+    [{ defaultValue: 'nope' }, /ColorSwatchPicker values must be valid CSS color strings/u],
+  ]);
+});
+
 test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {
   const h = React.createElement;
   const grid = (props) => renderToString(h(Virtualizer, { layout: 'grid' }, h(GridList, { 'aria-label': 'Posters', ...props }, h(GridList.Item, { id: 'a' }, 'Alpha'))));

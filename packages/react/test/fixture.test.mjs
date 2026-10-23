@@ -266,6 +266,7 @@ const minimalRenders = {
   Select: () => selectField(),
   ComboBox: () => h(generated.ComboBox, { label: 'City', items: ['Melbourne'] }),
   PromptComposer: () => composer(),
+  ColorSwatchPicker: () => h(generated.ColorSwatchPicker, { 'aria-label': 'Colors', items: ['#ff0000', '#00ff00'] }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -637,6 +638,13 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, multiple: false }), ['multiple: catalog false, behaves true']);
   assert.deepEqual(unobservedDefaults('PromptComposer', composerApi.defaults), []);
   assert.deepEqual(undeclaredProps(types, 'PromptComposer', [...composerApi.props, 'missingProp']), ['missingProp']);
+  // ColorSwatchPicker's flags show as data attributes on its root, which an enclosing ColorPicker can also set, so a picker that is neither disabled nor read-only renders neither.
+  const swatchMarkup = renderToString(minimalRenders.ColorSwatchPicker());
+  assert.deepEqual(Object.keys(apis.ColorSwatchPicker.defaults), ['disabled', 'readOnly']);
+  for (const key of ['disabled', 'readOnly']) {
+    assert.deepEqual(defaultMismatches(swatchMarkup, { ...apis.ColorSwatchPicker.defaults, [key]: true }), [`${key}: catalog true, rendered false`], key);
+  }
+  assert.deepEqual(undeclaredProps(types, 'ColorSwatchPicker', [...apis.ColorSwatchPicker.props, 'missingProp']), ['missingProp']);
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);

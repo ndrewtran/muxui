@@ -442,6 +442,8 @@ export { ColorArea } from './color-area.js';
 export type { ColorAreaProps } from './color-area.js';
 export { ColorField } from './color-field.js';
 export type { ColorFieldProps } from './color-field.js';
+export { ColorSwatchPicker } from './color-swatch-picker.js';
+export type { ColorSwatchPickerProps } from './color-swatch-picker.js';
 export { Calendar, RangeCalendar } from './calendar.js';
 export type { CalendarProps, RangeCalendarProps } from './calendar.js';
 export { Toolbar } from './toolbar.js';
@@ -473,8 +475,6 @@ export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropIt
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const collectionsTypes = `
-export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
-export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
 export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
 export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }
