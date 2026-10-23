@@ -1,11 +1,7 @@
 import React from 'react';
-import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
-import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import {
   Autocomplete as AriaAutocomplete,
   Button as AriaButton,
-  CheckboxField as AriaCheckboxField,
-  CheckboxButton as AriaCheckboxButton,
   Collection as AriaCollection,
   ComboBox as AriaComboBox,
   Dialog as AriaDialog,
@@ -26,12 +22,7 @@ import {
   MenuTrigger as AriaMenuTrigger,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
-  RadioField as AriaRadioField,
-  RadioButton as AriaRadioButton,
-  RadioGroupStateContext as AriaRadioGroupStateContext,
   SearchField as AriaSearchField,
-  SwitchField as AriaSwitchField,
-  SwitchButton as AriaSwitchButton,
   Tag as AriaTag,
   TagGroup as AriaTagGroup,
   TagList as AriaTagList,
@@ -49,7 +40,7 @@ import ChevronsUpDownIcon from 'lucide-react/dist/esm/icons/chevrons-up-down.mjs
 import PanelLeftIcon from 'lucide-react/dist/esm/icons/panel-left.mjs';
 import ExternalLinkIcon from 'lucide-react/dist/esm/icons/external-link.mjs';
 import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
-import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
+import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.ts';
 import { PopoverMotion } from '../popover-motion.mjs';
@@ -67,8 +58,6 @@ function normalizeKeys(value) {
   if (value === 'all') return 'all';
   return value instanceof Set ? value : new Set(value ?? []);
 }
-
-const CheckboxFieldIndicatorContext = React.createContext(null);
 
 function AlertDialogRoot({ open, defaultOpen = false, onOpenChange, children, ...props }) {
   return h(AriaDialogTrigger, {
@@ -142,111 +131,6 @@ const AlertDialog = /*#__PURE__*/ (() => ({
       : h(MuxUIButton, buttonProps, children);
   }),
 }))();
-
-/* Field compounds */
-function makeCheckboxField() {
-  const Root = React.forwardRef(function CheckboxFieldRoot({ checked, defaultChecked, indeterminate, onChange, name, value, disabled, invalid, required, readOnly, size = 'md', className, ...props }, ref) {
-    const resolvedSize = normalizeChoiceControlSize(size, 'CheckboxField');
-    return h(AriaCheckboxField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...props }), ref, isSelected: checked, defaultSelected: defaultChecked, isIndeterminate: indeterminate, onChange, name, value, 'data-size': resolvedSize, className: cx('muxui-checkbox-field', resolvedSize !== 'md' && `muxui-checkbox-field--${resolvedSize}`, className) });
-  });
-  const Button = React.forwardRef(function CheckboxFieldButton({ disabled, className, children, ...props }, ref) {
-    return h(AriaCheckboxButton, { ...props, ref, isDisabled: disabled, className: cx('muxui-checkbox-field__button', className) },
-      (renderProps) => h(CheckboxFieldIndicatorContext.Provider, { value: renderProps },
-        typeof children === 'function' ? children(renderProps) : children));
-  });
-  const Indicator = React.forwardRef(function CheckboxFieldIndicator({ className, children, ...props }, ref) {
-    const renderProps = React.useContext(CheckboxFieldIndicatorContext);
-    const content = children === undefined || children === null
-      ? renderProps?.isIndeterminate
-        ? h(MinusIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
-        : renderProps?.isSelected
-          ? h(CheckIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
-          : null
-      : children;
-    return nativePart('span', 'muxui-checkbox-field__indicator', props, ref, content);
-  });
-  const Description = React.forwardRef(function CheckboxFieldDescription(props, ref) { return fieldText('description', 'muxui-checkbox-field__description', props, ref); });
-  const Error = React.forwardRef(function CheckboxFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-checkbox-field__error', props.className) }); });
-  return Object.freeze({ Root, Button, Indicator, Description, Error });
-}
-
-const RadioFieldContext = React.createContext(undefined);
-
-function useRadioGroupState() {
-  const state = React.useContext(AriaRadioGroupStateContext);
-  if (!state) throw new Error('RadioField must be used inside RadioGroup');
-  return state;
-}
-
-function splitIds(value) {
-  return typeof value === 'string' ? value.trim().split(/\s+/u).filter(Boolean) : [];
-}
-
-function makeRadioField() {
-  const Root = React.forwardRef(function RadioFieldRoot({ onChange: _onChange, disabled, invalid, required, size: sizeProp, className, ...props }, ref) {
-    const inheritedSize = React.useContext(ChoiceControlSizeContext);
-    const radioGroupState = useRadioGroupState();
-    const size = normalizeChoiceControlSize(sizeProp ?? inheritedSize, 'RadioField');
-    const fallbackErrorId = React.useId();
-    const inputRef = React.useRef(null);
-    const [errorId, setErrorId] = React.useState(undefined);
-    const effectiveInvalid = Boolean(invalid || radioGroupState.isInvalid);
-    const context = React.useMemo(() => ({ effectiveInvalid, errorId, fallbackErrorId, inputRef, setErrorId }), [effectiveInvalid, errorId, fallbackErrorId]);
-    return h(RadioFieldContext.Provider, { value: context }, h(AriaRadioField, { ...mappedFieldProps({ disabled, invalid, required, ...props }), ref, inputRef, 'data-size': size, className: cx('muxui-radio-field', size !== 'md' && `muxui-radio-field--${size}`, className) }));
-  });
-  const Button = React.forwardRef(function RadioFieldButton({ disabled, className, 'aria-describedby': ariaDescribedBy, 'aria-errormessage': ariaErrorMessage, ...props }, ref) {
-    const field = React.useContext(RadioFieldContext);
-    const priorCallerIds = React.useRef([]);
-    React.useEffect(() => {
-      const input = field?.inputRef.current;
-      if (!input) return;
-      const callerIds = splitIds(ariaDescribedBy);
-      const baseIds = splitIds(input.getAttribute('aria-describedby')).filter((id) => !priorCallerIds.current.includes(id));
-      const describedBy = [...new Set([...baseIds, ...callerIds])].join(' ');
-      if (describedBy) input.setAttribute('aria-describedby', describedBy);
-      else input.removeAttribute('aria-describedby');
-      priorCallerIds.current = callerIds;
-      const errorMessage = ariaErrorMessage ?? field?.errorId;
-      if (errorMessage) input.setAttribute('aria-errormessage', errorMessage);
-      else input.removeAttribute('aria-errormessage');
-    }, [ariaDescribedBy, ariaErrorMessage, field?.errorId, field?.inputRef]);
-    return h(AriaRadioButton, { ...props, ref, isDisabled: disabled, className: cx('muxui-radio-field__button', className) });
-  });
-  const Indicator = React.forwardRef(function RadioFieldIndicator(props, ref) { return nativePart('span', 'muxui-radio-field__indicator', props, ref); });
-  const Dot = React.forwardRef(function RadioFieldDot(props, ref) { return nativePart('span', 'muxui-radio-field__dot', props, ref); });
-  const Description = React.forwardRef(function RadioFieldDescription(props, ref) { return fieldText('description', 'muxui-radio-field__description', props, ref); });
-  const Error = React.forwardRef(function RadioFieldError({ className, id, role, ...props }, ref) {
-    const field = React.useContext(RadioFieldContext);
-    const errorId = id ?? field?.fallbackErrorId;
-    const effectiveInvalid = field?.effectiveInvalid;
-    const setErrorId = field?.setErrorId;
-    React.useEffect(() => {
-      if (!effectiveInvalid || !errorId || !setErrorId) return undefined;
-      setErrorId((current) => current === errorId ? current : errorId);
-      return () => setErrorId((current) => current === errorId ? undefined : current);
-    }, [effectiveInvalid, errorId, setErrorId]);
-    if (!effectiveInvalid || !errorId) return null;
-    return nativePart('span', 'muxui-radio-field__error', { ...props, id: errorId, className, role: role ?? 'alert' }, ref);
-  });
-  return Object.freeze({ Root, Button, Indicator, Dot, Description, Error });
-}
-function makeSwitchField() {
-  const Root = React.forwardRef(function SwitchFieldRoot({ checked, defaultChecked, onChange, name, value, disabled, invalid, required, readOnly, size = 'md', className, ...props }, ref) {
-    const resolvedSize = normalizeChoiceControlSize(size, 'SwitchField');
-    return h(AriaSwitchField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...props }), ref, isSelected: checked, defaultSelected: defaultChecked, onChange, name, value, 'data-size': resolvedSize, className: cx('muxui-switch-field', className) });
-  });
-  const Button = React.forwardRef(function SwitchFieldButton({ disabled, className, ...props }, ref) {
-    return h(AriaSwitchButton, { ...props, ref, isDisabled: disabled, className: cx('muxui-switch-field__button', className) });
-  });
-  const Thumb = React.forwardRef(function SwitchFieldThumb(props, ref) { return nativePart('span', 'muxui-switch-field__thumb', props, ref); });
-  const Description = React.forwardRef(function SwitchFieldDescription(props, ref) { return fieldText('description', 'muxui-switch-field__description', props, ref); });
-  const Error = React.forwardRef(function SwitchFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-switch-field__error', props.className) }); });
-  return Object.freeze({ Root, Button, Thumb, Description, Error });
-}
-
-export const CheckboxField = /*#__PURE__*/ makeCheckboxField();
-export const RadioField = /*#__PURE__*/ makeRadioField();
-export const SwitchField = /*#__PURE__*/ makeSwitchField();
 
 function associatedFieldText(slot, className, props, ref, register) {
   const association = React.useContext(InputAssociationContext);
@@ -1148,8 +1032,11 @@ const Sidebar = {
 
 export { ButtonGroup } from './button-group.mjs';
 export { Card } from './card.mjs';
+export { CheckboxField } from './checkbox-field.mjs';
 export { ColorModeToggle } from './color-mode-toggle.mjs';
 export { ProgressCircle } from './progress-circle.mjs';
+export { RadioField } from './radio-field.mjs';
+export { SwitchField } from './switch-field.mjs';
 export { Text } from './text.mjs';
 
 export { AlertDialog, Input, TextArea, CommandPalette, HeaderNav, Sidebar };

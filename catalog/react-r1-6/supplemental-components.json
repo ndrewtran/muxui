@@ -83,7 +83,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/checkbox-field.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -332,7 +332,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/radio-field.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -390,7 +390,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/switch-field.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
