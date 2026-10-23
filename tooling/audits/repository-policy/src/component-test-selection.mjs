@@ -50,6 +50,8 @@ const SOURCE_ROUTES = Object.freeze({
   'input-tags': ['test/supplemental.test.mjs'],
   'alert-dialog': ['test/supplemental.test.mjs'],
   'command-palette': ['test/supplemental.test.mjs'],
+  'multi-select': ['test/supplemental.test.mjs'],
+  'tag-select': ['test/supplemental.test.mjs'],
   overlays: ['test/r1-4-overlays.test.mjs'],
   markdown: ['test/heavy-components.test.mjs'],
   'text-editor': ['test/heavy-components.test.mjs'],
