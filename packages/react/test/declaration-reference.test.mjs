@@ -22,7 +22,7 @@ import { consumerTsc, typeScript7Tsc } from './support/declaration-surface.mjs';
 import { typescript6Host } from './support/reference-host-typescript6.mjs';
 import { realInputs } from './support/reference-inputs.mjs';
 import { crossCheckAuthored, crossCheckDerived, loadReference, referenceDirectory, repositoryRoot } from './support/reference-catalog.mjs';
-import { WITNESSES, buildProbe, runProbe } from './support/reference-probes.mjs';
+import { PROBE_HEADER, WITNESSES, buildProbe, runProbe } from './support/reference-probes.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const { declarations, manifest, families } = realInputs();
@@ -364,7 +364,7 @@ const probeOfEverything = () => (fullProbe ??= buildProbe({ files, entries: type
 for (const [compiler, tsc, exact] of CONFIGURATIONS) {
   test(`the compiler agrees with the reference and with the hand-written witnesses: ${compiler}, exactOptionalPropertyTypes ${exact ? 'on' : 'off'}`, () => {
     const probe = probeOfEverything();
-    assert.ok(probe.probes.length > 1400, `${probe.probes.length} probes`);
+    assert.ok(probe.probes.length > 9000, `${probe.probes.length} probes`);
     assert.equal(probe.probes.filter(({ id }) => id.startsWith('witness ')).length, WITNESSES.length + 1);
     assert.deepEqual(runProbe({ probe, tsc, exactOptionalPropertyTypes: exact, declarations, manifest }), []);
   });
@@ -384,13 +384,25 @@ const MODEL_MUTANTS = [
   ['a required member is made optional', (map) => { partOf(map, 'text.json', 'Text').alternatives[1].members.find(({ name }) => name === 'variant').optional = true; }],
   ['a generic default is wrong', (map) => { partOf(map, 'text.json', 'Text').typeParameters[0].default = "'a'"; }],
   ['a native envelope is wrong', (map) => { partOf(map, 'resizable.json', 'Resizable').natives[0].type = 'React.AnchorHTMLAttributes<HTMLAnchorElement>'; }],
+  // The next ones keep every name right and get a type, a value, a flag or a ref wrong.
+  // The Text ref is right for the default element only, so it takes a second instantiation to see it.
+  ['a ref type is wrong for another element (the Text ref)', (map) => { partOf(map, 'text.json', 'Text').ref.type = 'HTMLSpanElement'; }],
+  ['a member type is wrong (the ListBox items)', (map) => { partOf(map, 'list-box.json', 'ListBox').members.find(({ name }) => name === 'items').type = 'string[]'; }],
+  ['a native envelope names the wrong element (the Input.Input native)', (map) => { partOf(map, 'input.json', 'Input', 'Input').natives[0].type = 'React.InputHTMLAttributes<HTMLButtonElement>'; }],
+  ['a member type no longer matches its values (the CodeBlock mode)', (map) => { partOf(map, 'code-block.json', 'CodeBlock').alternatives[1].members.find(({ name }) => name === 'mode').type = "'code'"; }],
+  ['a member value list no longer matches its type (the CodeBlock mode)', (map) => { partOf(map, 'code-block.json', 'CodeBlock').alternatives[1].members.find(({ name }) => name === 'mode').values = ['code', 'diff']; }],
+  ['a member is called required that is optional', (map) => { delete partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'variant').optional; }],
+  ['a member is called readonly that is not', (map) => { partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'variant').readonly = true; }],
+  ['a listed undefined is forgotten (the Menu.Trigger disabled)', (map) => { delete partOf(map, 'menu.json', 'Menu', 'Trigger').members.find(({ name }) => name === 'disabled').explicitUndefined; }],
+  ['an undefined is invented', (map) => { partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'className').explicitUndefined = true; }],
+  ['a ref is called required that is optional', (map) => { partOf(map, 'virtualizer.json', 'Virtualizer').alternatives[1].ref = { never: true, required: true }; }],
 ];
 
 for (const [change, mutate] of MODEL_MUTANTS) {
   test(`the probes can fail: ${change}`, () => {
     const mutated = clone(files);
     mutate(mutated);
-    const include = sampleOf('resizable', 'virtualizer', 'button', 'text');
+    const include = sampleOf('resizable', 'virtualizer', 'button', 'text', 'list-box', 'input', 'code-block', 'menu');
     const control = buildProbe({ files, entries: typedEntries, include, witnesses: false });
     assert.deepEqual(runProbe({ probe: control, tsc: typeScript7Tsc(), exactOptionalPropertyTypes: false, declarations, manifest }), [], 'the unchanged model passes the same probes');
     const probe = buildProbe({ files: mutated, entries: typedEntries, include, witnesses: false });
@@ -398,6 +410,26 @@ for (const [change, mutate] of MODEL_MUTANTS) {
     assert.ok(failures.length > 0, 'the compiler rejects the changed model');
   });
 }
+
+// The probes' own vocabulary, read off known shapes (the shipped model has no readonly member to show it on).
+test('the probe vocabulary tells optional, required, never, readonly and an any apart', () => {
+  const claims = [
+    ["type S0 = { readonly a: 1; b?: 2; c: never; d?: never; e?: undefined };", 'ok'],
+    ["type S1 = Assert<Mut<Sig<S0, 'a'>, 'required/live/readonly'>>;", 'ok'],
+    ["type S2 = Assert<Mut<Sig<S0, 'b'>, 'optional/live'>>;", 'ok'],
+    ["type S3 = Assert<Mut<Sig<S0, 'c'>, 'required/never'>>;", 'ok'],
+    ["type S4 = Assert<Mut<Sig<S0, 'd'>, 'optional/never'>>;", 'ok'],
+    ["type S5 = Assert<Mut<Sig<S0, 'e'>, 'optional/never'>>;", 'ok'],
+    ["type S6 = Assert<Mut<Sig<S0, 'f'>, 'absent'>>;", 'ok'],
+    ["type S7 = Assert<Mut<Sig<S0, 'a'>, 'required/live'>>;", 'error'],
+    ["type S8 = Assert<Mut<Ty<any>, string>>;", 'error'],
+    ["type S9 = Assert<Mut<Ty<string[]>, readonly string[]>>;", 'error'],
+  ];
+  const source = `${[...PROBE_HEADER, ...claims.map(([line]) => line)].join('\n')}\n`;
+  const first = PROBE_HEADER.length;
+  const probe = { source, probes: claims.slice(1).map(([, expect], at) => ({ id: claims[at + 1][0], line: first + at + 2, expect })) };
+  for (const exact of [false, true]) assert.deepEqual(runProbe({ probe, tsc: typeScript7Tsc(), exactOptionalPropertyTypes: exact, declarations, manifest }), []);
+});
 
 test('the probes can fail: a native claim on the wrong part', () => {
   const claim = { file: 'input.json', export: 'Input', member: 'Input', key: 'type' };
