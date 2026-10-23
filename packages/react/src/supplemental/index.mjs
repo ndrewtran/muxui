@@ -26,14 +26,11 @@ import {
   MenuTrigger as AriaMenuTrigger,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
-  OverlayTriggerStateContext,
-  PopoverContext,
   ProgressBar as AriaProgressBar,
   RadioField as AriaRadioField,
   RadioButton as AriaRadioButton,
   RadioGroupStateContext as AriaRadioGroupStateContext,
   SearchField as AriaSearchField,
-  Section as AriaSection,
   Switch as AriaSwitch,
   SwitchField as AriaSwitchField,
   SwitchButton as AriaSwitchButton,
@@ -57,39 +54,22 @@ import PanelLeftIcon from 'lucide-react/dist/esm/icons/panel-left.mjs';
 import ExternalLinkIcon from 'lucide-react/dist/esm/icons/external-link.mjs';
 import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
-import { useModalMotion } from '../dialog-motion.mjs';
-import { observeReducedMotion } from '../motion.mjs';
 import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.ts';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { Button as MuxUIButton, usePendingSubmitProps } from '../button.ts';
 import { IconButton } from './icon-button.ts';
-
-const h = React.createElement;
-const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-
-function cx(...values) {
-  return values.filter(Boolean).join(' ');
-}
-
-function dataState(value) {
-  return value ? '' : undefined;
-}
-
-function nativePart(tag, base, props, ref, children) {
-  const { className, ...rest } = props ?? {};
-  const attributes = { ...rest, ref, className: cx(base, className) };
-  return children === undefined ? h(tag, attributes) : h(tag, attributes, children);
-}
+import { h, useIsomorphicLayoutEffect, cx, dataState, nativePart, pressHandler } from './part-utils.mjs';
+import { fieldText, mappedFieldProps } from './field-utils.mjs';
+import { InputAssociationContext, fieldRoot } from './field-root.mjs';
+import { MotionModalBackdropForwardRef, MotionModalPopupForwardRef } from './modal-parts.mjs';
+import { defaultItemLabel, useItemRenderer } from './item-renderer.mjs';
+import { sidebarUnreachable, sidebarFocusFirst, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.mjs';
 
 function normalizeKeys(value) {
   if (value === 'all') return 'all';
   return value instanceof Set ? value : new Set(value ?? []);
-}
-
-function fieldText(slot, className, props, ref) {
-  return h(AriaText, { ...props, ref, slot, className: cx(className, props?.className) });
 }
 
 const TEXT_VARIANTS = new Set(['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono']);
@@ -151,104 +131,7 @@ export const Text = React.forwardRef(function Text({
 
 Text.displayName = 'Text';
 
-function mappedFieldProps({ disabled, invalid, required, readOnly, ...props }) {
-  return {
-    ...props,
-    isDisabled: disabled,
-    isInvalid: invalid,
-    isRequired: required,
-    isReadOnly: readOnly,
-  };
-}
-
 const CheckboxFieldIndicatorContext = React.createContext(null);
-
-function pressHandler(onActivate) {
-  return onActivate
-    ? (event) => onActivate({ type: 'activate', pointerType: event?.pointerType, target: event?.target })
-    : undefined;
-}
-
-/* AlertDialog */
-const ModalMotionContext = React.createContext(null);
-const DIALOG_REDUCED_ATTRIBUTE = 'data-muxui-dialog-reduced';
-
-function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: providedTriggerRef, ...props }, ref) {
-  const state = React.useContext(OverlayTriggerStateContext);
-  const popoverContext = React.useContext(PopoverContext);
-  const triggerRef = providedTriggerRef ?? popoverContext?.triggerRef;
-  const isOpen = props.isOpen ?? state?.isOpen ?? false;
-  const [backdropNode, setBackdropNode] = React.useState(null);
-  const [phase, setPhase] = React.useState({ open: Boolean(isOpen), exiting: false });
-  if (phase.open !== Boolean(isOpen)) setPhase({ open: Boolean(isOpen), exiting: !isOpen });
-  const releaseExit = React.useCallback(() => {
-    setPhase((current) => current.open || !current.exiting ? current : { ...current, exiting: false });
-  }, []);
-  const setBackdropRef = React.useCallback((node) => {
-    setBackdropNode(node);
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-  }, [ref]);
-  useIsomorphicLayoutEffect(() => {
-    if (!backdropNode) return undefined;
-    const originalOpacity = backdropNode.style.opacity;
-    const originalOpacityPriority = backdropNode.style.getPropertyPriority('opacity');
-    const originalTransition = backdropNode.style.transition;
-    const originalTransitionPriority = backdropNode.style.getPropertyPriority('transition');
-    const restoreStyle = () => {
-      if (originalOpacity) backdropNode.style.setProperty('opacity', originalOpacity, originalOpacityPriority);
-      else backdropNode.style.removeProperty('opacity');
-      if (originalTransition) backdropNode.style.setProperty('transition', originalTransition, originalTransitionPriority);
-      else backdropNode.style.removeProperty('transition');
-    };
-    const disconnect = observeReducedMotion(backdropNode, triggerRef?.current, (reduced) => {
-      backdropNode.toggleAttribute(DIALOG_REDUCED_ATTRIBUTE, reduced);
-      if (reduced) {
-        backdropNode.style.setProperty('opacity', '1', 'important');
-        backdropNode.style.setProperty('transition', 'none', 'important');
-      } else {
-        restoreStyle();
-      }
-    });
-    return () => {
-      disconnect();
-      backdropNode.removeAttribute(DIALOG_REDUCED_ATTRIBUTE);
-      restoreStyle();
-    };
-  }, [backdropNode, triggerRef]);
-  return h(AriaModalOverlay, {
-    ...props,
-    ref: setBackdropRef,
-    onOpenChange,
-    isExiting: !isOpen && phase.exiting,
-    className,
-  }, h(ModalMotionContext.Provider, { value: { isOpen: Boolean(isOpen), isExiting: !isOpen && phase.exiting, triggerRef, onExitComplete: releaseExit } }, children));
-}
-
-const MotionModalBackdropForwardRef = /*#__PURE__*/ React.forwardRef(MotionModalBackdrop);
-
-function MotionModalPopup({ children, className, ...props }, ref) {
-  const state = React.useContext(OverlayTriggerStateContext);
-  const motion = React.useContext(ModalMotionContext);
-  const popoverContext = React.useContext(PopoverContext);
-  const isOpen = motion?.isOpen ?? state?.isOpen ?? true;
-  const [popupNode, setPopupNode] = React.useState(null);
-  useModalMotion({
-    node: popupNode,
-    isOpen,
-    triggerRef: motion?.triggerRef ?? popoverContext?.triggerRef,
-    reducedAttribute: 'data-muxui-motion-reduced',
-    onExitComplete: motion?.onExitComplete,
-  });
-  const setRef = React.useCallback((node) => {
-    setPopupNode(node);
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-  }, [ref]);
-  return h(AriaModal, { ...props, ref: setRef, isExiting: props.isExiting ?? motion?.isExiting, className }, children);
-}
-
-const MotionModalPopupForwardRef = /*#__PURE__*/ React.forwardRef(MotionModalPopup);
 
 function AlertDialogRoot({ open, defaultOpen = false, onOpenChange, children, ...props }) {
   return h(AriaDialogTrigger, {
@@ -522,26 +405,6 @@ export const ColorModeToggle = React.forwardRef(function ColorModeToggle({
   return h(AriaSwitch, { ...props, ref, 'aria-label': props['aria-label'] ?? 'Toggle dark mode', isSelected: currentMode === 'dark', isDisabled: disabled, onChange: update, className: cx('muxui-color-mode-toggle', className), 'data-mode': currentMode }, children);
 });
 
-/* Input and TextArea */
-const InputAssociationContext = React.createContext(null);
-
-function fieldRoot(Component, rootClass) {
-  return React.forwardRef(function SupplementalFieldRoot({ disabled, invalid, required, readOnly, size = 'md', className, children, ...props }, ref) {
-    const resolvedSize = normalizeChoiceControlSize(size, rootClass === 'muxui-text-area' ? 'TextArea' : 'Input');
-    const [descriptionId, setDescriptionId] = React.useState(undefined);
-    const [errorId, setErrorId] = React.useState(undefined);
-    const association = React.useMemo(() => ({
-      setDescriptionId,
-      setErrorId,
-      descriptionId,
-      errorId,
-      size: resolvedSize,
-    }), [descriptionId, errorId, resolvedSize]);
-    const renderChildren = (renderProps) => h(InputAssociationContext.Provider, { value: { ...association, invalid: Boolean(invalid || renderProps?.isInvalid) } }, typeof children === 'function' ? children(renderProps) : children);
-    return h(Component, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...props }), ref, 'data-size': resolvedSize, className: cx(rootClass, resolvedSize !== 'md' && `${rootClass}--${resolvedSize}`, className), children: renderChildren });
-  });
-}
-
 function associatedFieldText(slot, className, props, ref, register) {
   const association = React.useContext(InputAssociationContext);
   const nodeRef = React.useRef(null);
@@ -744,28 +607,6 @@ export const PaymentInput = {
   Error: React.forwardRef(function PaymentInputError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-payment-input__error', props.className) }); }),
   CardIcon: React.forwardRef(function PaymentInputCardIcon({ cardType: suppliedType, className, 'aria-label': _ariaLabel, ...props }, ref) { const contextType = React.useContext(PaymentInputContext); const type = suppliedType ?? contextType; return h('span', { ...props, ref, className: cx('muxui-payment-input__card-icon', className), 'data-card-type': type, 'aria-hidden': true }, h(CreditCardIcon, { size: 16, 'aria-hidden': true, focusable: 'false' })); }),
 };
-
-const defaultItemLabel = (item) => String(item.name ?? item.label ?? item.id);
-
-// react-aria collection render functions must return an item element: its
-// useCachedChildren reads `rendered.props.id`, and fragments or host elements
-// cannot become collection nodes. The public type allows any ReactNode, so
-// wrap everything except a composite element (such as the component's Item).
-// `getTextValue(item, rendered)` names the wrapped item for search/typeahead.
-function useItemRenderer(children, Item, getTextValue) {
-  return React.useMemo(() => {
-    if (typeof children !== 'function') return children;
-    const renderItem = (item) => {
-      const rendered = children(item);
-      const isItemElement = React.isValidElement(rendered) && rendered.type !== React.Fragment && typeof rendered.type !== 'string';
-      return isItemElement ? rendered : h(Item, { id: item.id, textValue: getTextValue(item, rendered) }, rendered);
-    };
-    // react-aria resets its item cache in development when children.toString()
-    // changes (hot reload), so expose the caller's source text.
-    renderItem.toString = () => String(children);
-    return renderItem;
-  }, [children, Item, getTextValue]);
-}
 
 // MultiSelect has no label prop, so plain text content doubles as search text.
 const multiSelectTextValue = (item, rendered) => (
@@ -1201,45 +1042,13 @@ function handleSidebarShortcut(event, capturing) {
 }
 const onSidebarShortcutCapture = (event) => handleSidebarShortcut(event, true);
 const onSidebarShortcutBubble = (event) => handleSidebarShortcut(event, false);
-// The focus helpers from here through SidebarDrawerExit also serve HeaderNav's drawer.
-// Focus that folding would hide: a display:none or visibility:hidden control.
-const sidebarUnreachable = (node) => node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden';
-/** Focuses the first candidate that is rendered and really takes focus, and says whether one did; a Root reached this way gets a tabindex only then. */
-function sidebarFocusFirst(candidates, roots) {
-  for (const candidate of candidates) {
-    if (!candidate?.isConnected || sidebarUnreachable(candidate)) continue;
-    if (roots.has(candidate) && !candidate.hasAttribute('tabindex')) candidate.tabIndex = -1;
-    candidate.focus({ preventScroll: true });
-    if (candidate.getRootNode().activeElement === candidate) return true;
-  }
-  return false;
-}
+
 /** The column's focus candidates after its drawer is gone: the link matching the drawer's focused link, the current link, a Toggle, then Root. */
 function sidebarColumnCandidates({ roots, toggles }, href) {
   const links = [...roots].flatMap((root) => [...root.querySelectorAll('a[href]')]);
   return [links.find((link) => link.getAttribute('href') === href), links.find((link) => link.getAttribute('aria-current') === 'page'), ...toggles, ...roots];
 }
-/**
- * Hands lost focus over to the first candidate that takes it, retrying on animation frames for about half a second:
- * an overlay that is still closing keeps the target inert. It only acts while focus is lost, on nothing, on the body,
- * or on `stale` content, so a newer deliberate focus is never overwritten.
- */
-function sidebarHandoff(candidates, roots, stale) {
-  const started = performance.now();
-  const attempt = () => {
-    const active = document.activeElement;
-    if (active && active !== document.body && !stale(active)) return;
-    if (!sidebarFocusFirst(candidates(), roots) && performance.now() - started < 500) requestAnimationFrame(attempt);
-  };
-  attempt();
-}
-/** Runs `exit` once the drawer content unmounts, after any exit animation. */
-function SidebarDrawerExit({ exit }) {
-  const latest = React.useRef(exit);
-  latest.current = exit;
-  React.useEffect(() => () => latest.current(), []);
-  return null;
-}
+
 /** The text a NavItem label spells out, through elements and fragments. */
 function sidebarLabelText(node) {
   if (typeof node === 'string' || typeof node === 'number') return String(node);

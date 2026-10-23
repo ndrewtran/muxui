@@ -765,7 +765,9 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
   };
 }))).sort((left, right) => left.slug.localeCompare(right.slug));
 const currentSubpathRecords = currentMappedRecords.filter(({ subpath }) => subpath);
-const currentEagerRecords = currentMappedRecords.filter(({ subpath, source }) => !subpath && source !== 'packages/react/src/supplemental/index.mjs');
+// An eager record is a root family in its own TypeScript module, exported straight from the root index. A JavaScript
+// family ships beside the supplemental barrel instead, in the loop over the mapped records further down.
+const currentEagerRecords = currentMappedRecords.filter(({ subpath, source }) => !subpath && source.endsWith('.ts'));
 const currentFamilyRecords = [
   ...r15Families.map((source) => {
     const artifact = artifactBySlug.get(source.slug);
@@ -969,6 +971,15 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // is not listed.
 for (const name of ['collections']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
+}
+// The modules the supplemental families share. None declares a family, so the mapping does not name them. A helper
+// that moves to TypeScript leaves this list in the same change, even while JavaScript modules still import it.
+for (const name of ['part-utils', 'field-utils', 'field-root', 'modal-parts', 'item-renderer', 'navigation-drawer']) {
+  outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/supplemental/${name}.mjs`, await readFile(resolve(packageRoot, `src/supplemental/${name}.mjs`), 'utf8')));
+}
+// Each JavaScript family the mapping places in a module of its own ships beside the barrel it is re-exported from.
+for (const record of currentMappedRecords.filter((candidate) => !candidate.subpath && !isTypeScriptFamily(candidate) && candidate.source !== 'packages/react/src/supplemental/index.mjs')) {
+  outputs.set(flatModuleName(record.source), shippedModule(record.source, record.sourceText));
 }
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {
   outputs.set(`${source.slug}.mjs`, shippedModule(source.source, source.sourceText));
