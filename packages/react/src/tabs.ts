@@ -72,7 +72,7 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
       ref,
       selectedKey: value,
       // Conditionals, not ?? and ||: extraction reads a fallback on an owned prop as an executed default.
-      defaultSelectedKey: defaultValue == null ? (normalized.find((item) => !item.disabled) ?? normalized[0])?.id : defaultValue,
+      defaultSelectedKey: defaultValue === undefined || defaultValue === null ? (normalized.find((item) => !item.disabled) ?? normalized[0])?.id : defaultValue,
       onSelectionChange: (key: Key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); },
       orientation,
       keyboardActivation,
