@@ -1116,6 +1116,7 @@ export async function buildPullRequestImpact({
     tokens: false,
     reactTheme: false,
     reactProjectionCheck: false,
+    generationIdentity: false,
     reactPackageFull: false,
     reactFamilies: new Set(),
     reactBehaviorProofFamilies: [],
@@ -1332,6 +1333,8 @@ export async function buildPullRequestImpact({
     // and checks. A family's file routes like its component record; the files no family owns reach every page.
     const reference = declarationReferencePath.exec(path);
     if (reference) {
+      // Generation rewrites a stale committed reference before any test reads it, so only the clean-checkout proof can fail one.
+      plan.generationIdentity = true;
       if (sharedDeclarationReferences.has(reference[1])) {
         plan.reactTestFiles.add(declarationReferenceTestFile);
         plan.docs = true;
@@ -1349,6 +1352,8 @@ export async function buildPullRequestImpact({
 
     if (isReactModuleSource(path)) {
       plan.reactProjectionCheck = true;
+      // React source emits the declarations the committed reference describes.
+      plan.generationIdentity = true;
       plan.reasons.push(`${path} is React runtime or compiler source; AST ownership determines the affected families`);
       continue;
     }
@@ -2317,6 +2322,9 @@ function plannedCommands(plan, {
   if (plan.reactProjectionCheck && !plan.reactPackageFull && !plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
   }
+  // Generation above repairs the committed reference and API files, so a stale one passes every check that follows.
+  // The identity proof generates in clean checkouts of HEAD and fails when generation changes a committed file.
+  if (plan.generationIdentity || plan.reactPackageFull) add('react', ['generate:check']);
   if (plan.reactPackageFull) {
     add('react', ['--filter', '@muxui/react', 'run', 'check']);
   } else if (plan.reactFamilies.length > 0) {
@@ -2535,6 +2543,7 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, groups }) {
       scale: plan.scale,
       reactTheme: plan.reactTheme,
       reactProjectionCheck: plan.reactProjectionCheck,
+      generationIdentity: plan.generationIdentity,
       reactPackageFull: plan.reactPackageFull,
       reactFamilies: plan.reactFamilies,
       reactBehaviorProofFamilies: plan.reactBehaviorProofFamilies,
