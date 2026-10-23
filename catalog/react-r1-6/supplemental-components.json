@@ -155,7 +155,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/header-nav.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -376,7 +376,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/sidebar.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
