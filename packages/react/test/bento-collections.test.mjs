@@ -3,6 +3,7 @@ import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
+import { DEFAULT_SLOT, PopoverContext } from 'react-aria-components';
 import { ListBox, Menu, Select } from '../src/collections.mjs';
 import { createDom } from './support/dom.mjs';
 
@@ -144,4 +145,35 @@ test('collection layout and popup geometry reject unsupported or nonfinite input
     }
   }
   assert.throws(() => renderToString(h(Menu.Submenu, { delay: Infinity })), /delay/u);
+});
+
+// Menu.Popup tells a submenu's popup by React Aria's PopoverContext, which names the trigger, and reads it through the popup's own slot, as React
+// Aria does. A popup with no placement of its own sends React Aria bottom-start, or none inside a submenu, which leaves it React Aria's end top.
+test('Menu.Popup reads the popover context through its own slot', () => {
+  // The placement Menu.Popup sends React Aria, read where it is sent: `undefined` is none, and the render must not throw.
+  const sentPlacement = (slots, popupProps) => {
+    const create = React.createElement;
+    const sent = [];
+    React.createElement = (type, props, ...children) => {
+      if (props !== null && typeof props === 'object' && 'isNonModal' in props) sent.push(props.placement);
+      return create(type, props, ...children);
+    };
+    try {
+      renderToString(h(Menu.Root, null, h(PopoverContext.Provider, { value: { slots } }, h(Menu.Popup, popupProps))));
+    } finally {
+      React.createElement = create;
+    }
+    return sent[0];
+  };
+  const top = { trigger: 'MenuTrigger' };
+  const nested = { trigger: 'SubmenuTrigger' };
+  // A named slot that no default slot sits beside: the popup reads it, and a placement it is given is kept.
+  assert.equal(sentPlacement({ menu: top }, { slot: 'menu', placement: 'end-top' }), 'end top');
+  assert.equal(sentPlacement({ menu: top }, { slot: 'menu' }), 'bottom start');
+  assert.equal(sentPlacement({ menu: nested }, { slot: 'menu', placement: 'end-top' }), 'end top');
+  // A default slot beside a named one: each popup reads its own, not the other's.
+  assert.equal(sentPlacement({ [DEFAULT_SLOT]: nested, menu: top }, { slot: 'menu' }), 'bottom start');
+  assert.equal(sentPlacement({ [DEFAULT_SLOT]: nested, menu: top }, {}), undefined);
+  assert.equal(sentPlacement({ [DEFAULT_SLOT]: top, sub: nested }, { slot: 'sub' }), undefined);
+  assert.equal(sentPlacement({ [DEFAULT_SLOT]: top, sub: nested }, {}), 'bottom start');
 });

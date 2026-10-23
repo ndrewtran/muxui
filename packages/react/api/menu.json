@@ -335,7 +335,7 @@
               "end-top",
               "end-bottom"
             ],
-            "description": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`."
+            "description": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`, and a popup inside a Menu.Submenu opens beside its item at `end-top`."
           },
           "offset": {
             "type": {
