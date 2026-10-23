@@ -242,8 +242,9 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
   const MenuPopup = /*#__PURE__*/ React.forwardRef<HTMLDivElement, MenuPopupProps>(function MenuPopup({ children, placement, offset = MENU_POPUP_GEOMETRY.offset, crossOffset = MENU_POPUP_GEOMETRY.crossOffset, shouldFlip = MENU_POPUP_GEOMETRY.shouldFlip, containerPadding = MENU_POPUP_GEOMETRY.containerPadding, anchorRef, modal = true, className, ...props }, ref) {
     // The placement has no default of its own to state: a top-level popup falls back to bottom-start, and a popup in a submenu to none, so the
     // placement React Aria gives a submenu, beside its item (end top), applies. React Aria renders that popup outside Menu.Submenu's React
-    // subtree, so only its PopoverContext, which names the trigger, says the popup is nested.
-    const nested = useSlottedContext(PopoverContext)?.trigger === 'SubmenuTrigger';
+    // subtree, so only its PopoverContext, which names the trigger, says the popup is nested; it is read through the popup's own slot, as
+    // React Aria reads it. A SubmenuTrigger marker a consumer puts directly around a popup reads as nested too, and Menu.Root replaces any outside it.
+    const nested = useSlottedContext(PopoverContext, props.slot)?.trigger === 'SubmenuTrigger';
     const { placement: validPlacement, ...geometry } = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, { ...MENU_POPUP_GEOMETRY, placement: 'bottom-start' }, 'Menu.Popup');
     return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, placement: nested && placement === undefined ? undefined : validPlacement, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) },
       React.createElement(MenuAnchorContext.Provider, { value: anchorRef ?? null }, children));
