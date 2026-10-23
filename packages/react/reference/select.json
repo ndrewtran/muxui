@@ -1,0 +1,1087 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "select",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "overlays": "packages/react/src/overlays.ts",
+    "select": "packages/react/src/select.ts"
+  },
+  "exports": [
+    {
+      "name": "Select",
+      "entry": ".",
+      "module": "select",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            { "name": "description", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the trigger and every option. A Select.Trigger or Select.Item's own `disabled={false}` cannot re-enable them under a disabled Select."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the Select read-only: it keeps its value, and `onChange` is not called when an option is chosen."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ControlSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["fields#ControlSize"],
+              "doc": "The control size. The popup and its options take it too."
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the selected item, when the caller controls it. A named Select submits this id, not the item's `value`."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the item selected at first, when the Select controls itself."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup is open, when the caller controls it. A disabled Select is closed whatever this says."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup starts open, when the Select controls itself. A disabled Select starts closed."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named Select submits the selected item's id, not the item's `value`."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "The text the default trigger shows while nothing is selected."
+            },
+            {
+              "name": "children",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+            },
+            {
+              "name": "selectedContent",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Content the default trigger shows in place of the selected item's text."
+            },
+            {
+              "name": "trigger",
+              "optional": true,
+              "type": "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>",
+              "doc": "A native button element that replaces the default trigger, keeping its ref, attributes, and handlers. A Select that is disabled disables it. Any other element throws a TypeError."
+            },
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. A Select.Popup's own placement wins over this."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. A Select.Popup's own offset wins over this."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the popup is placed against. Must be finite. A Select.Popup's own crossOffset wins over this."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup moves to the opposite side when the placed side has no room. A Select.Popup's own shouldFlip wins over this."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. A Select.Popup's own containerPadding wins over this."
+            },
+            {
+              "name": "modal",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. A Select.Popup's own modal wins over this."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value?: string) => void",
+              "doc": "Called with the id of the chosen item, or with no value when the selection clears. It is not called while the Select is disabled or read-only."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Called with the next open state when the popup opens or closes. It is not called for a request to open a disabled Select."
+            },
+            { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        },
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the selected item, when the caller controls it. A named Select submits this id, not the item's `value`."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the item selected at first, when the Select controls itself."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup is open, when the caller controls it. A disabled Select is closed whatever this says."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup starts open, when the Select controls itself. A disabled Select starts closed."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the trigger and every option. A Select.Trigger or Select.Item's own `disabled={false}` cannot re-enable them under a disabled Select."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size. The popup and its options take it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the Select read-only: it keeps its value, and `onChange` is not called when an option is chosen."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named Select submits the selected item's id, not the item's `value`."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "The text the default trigger shows while nothing is selected."
+            },
+            {
+              "name": "selectedContent",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Content the default trigger shows in place of the selected item's text."
+            },
+            {
+              "name": "trigger",
+              "optional": true,
+              "type": "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>",
+              "doc": "A native button element that replaces the default trigger, keeping its ref, attributes, and handlers. A Select that is disabled disables it. Any other element throws a TypeError."
+            },
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. A Select.Popup's own placement wins over this."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. A Select.Popup's own offset wins over this."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the popup is placed against. Must be finite. A Select.Popup's own crossOffset wins over this."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup moves to the opposite side when the placed side has no room. A Select.Popup's own shouldFlip wins over this."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. A Select.Popup's own containerPadding wins over this."
+            },
+            {
+              "name": "modal",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. A Select.Popup's own modal wins over this."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value?: string) => void",
+              "doc": "Called with the id of the chosen item, or with no value when the selection clears. It is not called while the Select is disabled or read-only."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Called with the next open state when the popup opens or closes. It is not called for a request to open a disabled Select."
+            },
+            { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" },
+            { "name": "description", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                {
+                  "name": "children",
+                  "optional": true,
+                  "type": "React.ReactNode",
+                  "doc": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+                },
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                {
+                  "name": "children",
+                  "optional": true,
+                  "type": "React.ReactNode",
+                  "doc": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+                },
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                {
+                  "name": "children",
+                  "optional": true,
+                  "type": "React.ReactNode",
+                  "doc": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+                },
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            },
+            {
+              "members": [
+                {
+                  "name": "children",
+                  "type": "React.ReactNode",
+                  "doc": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+                },
+                { "name": "label", "optional": true, "type": "React.ReactNode" },
+                { "name": "aria-label", "optional": true, "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "type": "string" }
+              ]
+            }
+          ]
+        },
+        {
+          "member": "Label",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Trigger",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "disabled",
+              "optional": true,
+              "explicitUndefined": true,
+              "type": "boolean | undefined",
+              "doc": "Disables the trigger: it can be neither focused nor activated. A disabled Select disables it whatever this says."
+            }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        },
+        {
+          "member": "Value",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Popup",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, the Select's placement applies."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. Without one, the Select's offset applies."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the popup is placed against. Must be finite. Without one, the Select's crossOffset applies."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup moves to the opposite side when the placed side has no room. Without one, the Select's shouldFlip applies."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. Without one, the Select's containerPadding applies."
+            },
+            {
+              "name": "modal",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. Without one, the Select's modal applies."
+            },
+            { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "List",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Item",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "id",
+              "type": "string",
+              "doc": "The stable string id the selection reports. A named Select submits it."
+            },
+            {
+              "name": "textValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the item. A disabled Select disables every item whatever this says."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["id"]
+            }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Error",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#FieldValidationProps",
+      "name": "FieldValidationProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldValidationProps" }
+      ],
+      "owner": "shared",
+      "text": "interface FieldValidationProps {\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  size?: ControlSize;\n  className?: string;\n}",
+      "members": [
+        { "name": "description", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["fields#ControlSize"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#NamedFieldProps",
+      "name": "NamedFieldProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "NamedFieldProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "FieldValidationProps",
+          "refs": ["fields#FieldValidationProps"]
+        },
+        {
+          "type": "MuxUIAccessibleName",
+          "refs": ["fields#MuxUIAccessibleName"]
+        }
+      ],
+      "text": "type NamedFieldProps = FieldValidationProps & MuxUIAccessibleName;",
+      "refs": ["fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "overlays#MuxUIPlacement",
+      "name": "MuxUIPlacement",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIPlacement" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'start-top' | 'start-bottom' | 'end-top' | 'end-bottom';",
+      "values": [
+        "top",
+        "bottom",
+        "start",
+        "end",
+        "top-start",
+        "top-end",
+        "bottom-start",
+        "bottom-end",
+        "start-top",
+        "start-bottom",
+        "end-top",
+        "end-bottom"
+      ]
+    },
+    {
+      "id": "select#SelectItemOwnProps",
+      "name": "SelectItemOwnProps",
+      "module": "select",
+      "text": "type SelectItemOwnProps = {\n  id: string;\n  textValue?: string;\n  disabled?: boolean;\n};",
+      "members": [
+        {
+          "name": "id",
+          "type": "string",
+          "doc": "The stable string id the selection reports. A named Select submits it."
+        },
+        {
+          "name": "textValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the item. A disabled Select disables every item whatever this says."
+        }
+      ]
+    },
+    {
+      "id": "select#SelectItemProps",
+      "name": "SelectItemProps",
+      "module": "select",
+      "public": [
+        { "entry": ".", "name": "SelectItemProps" }
+      ],
+      "owner": "select",
+      "text": "type SelectItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'id'> & SelectItemOwnProps;",
+      "refs": ["select#SelectItemOwnProps"]
+    },
+    {
+      "id": "select#SelectOptions",
+      "name": "SelectOptions",
+      "module": "select",
+      "public": [
+        { "entry": ".", "name": "SelectOptions" }
+      ],
+      "owner": "select",
+      "text": "type SelectOptions = Omit<SelectOwnProps, 'label' | 'description' | 'errorMessage'> & {\n  anchorRef?: React.RefObject<Element | null>;\n};",
+      "refs": ["select#SelectOwnProps"]
+    },
+    {
+      "id": "select#SelectOwnProps",
+      "name": "SelectOwnProps",
+      "module": "select",
+      "text": "type SelectOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  items?: MuxUIItems;\n  value?: string;\n  defaultValue?: string;\n  open?: boolean;\n  defaultOpen?: boolean;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  placeholder?: string;\n  children?: React.ReactNode;\n  selectedContent?: React.ReactNode;\n  trigger?: React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>;\n  placement?: MuxUIPlacement;\n  offset?: number;\n  crossOffset?: number;\n  shouldFlip?: boolean;\n  containerPadding?: number;\n  modal?: boolean;\n  onChange?: (value?: string) => void;\n  onOpenChange?: (open: boolean) => void;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the field. Without one, name the Select with an aria-label, an aria-labelledby, or a nonempty Select.Label among its children; an empty label does not count."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown with the field, which also describes it."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed validation. It never makes the field invalid by itself."
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the selected item, when the caller controls it. A named Select submits this id, not the item's `value`."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the item selected at first, when the Select controls itself."
+        },
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the popup is open, when the caller controls it. A disabled Select is closed whatever this says."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the popup starts open, when the Select controls itself. A disabled Select starts closed."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the trigger and every option. A Select.Trigger or Select.Item's own `disabled={false}` cannot re-enable them under a disabled Select."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size. The popup and its options take it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the Select read-only: it keeps its value, and `onChange` is not called when an option is chosen."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named Select submits the selected item's id, not the item's `value`."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "The text the default trigger shows while nothing is selected."
+        },
+        {
+          "name": "children",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+        },
+        {
+          "name": "selectedContent",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Content the default trigger shows in place of the selected item's text."
+        },
+        {
+          "name": "trigger",
+          "optional": true,
+          "type": "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>",
+          "doc": "A native button element that replaces the default trigger, keeping its ref, attributes, and handlers. A Select that is disabled disables it. Any other element throws a TypeError."
+        },
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "MuxUIPlacement",
+          "values": [
+            "top",
+            "bottom",
+            "start",
+            "end",
+            "top-start",
+            "top-end",
+            "bottom-start",
+            "bottom-end",
+            "start-top",
+            "start-bottom",
+            "end-top",
+            "end-bottom"
+          ],
+          "refs": ["overlays#MuxUIPlacement"],
+          "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. A Select.Popup's own placement wins over this."
+        },
+        {
+          "name": "offset",
+          "optional": true,
+          "type": "number",
+          "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. A Select.Popup's own offset wins over this."
+        },
+        {
+          "name": "crossOffset",
+          "optional": true,
+          "type": "number",
+          "doc": "The shift in pixels along the side the popup is placed against. Must be finite. A Select.Popup's own crossOffset wins over this."
+        },
+        {
+          "name": "shouldFlip",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the popup moves to the opposite side when the placed side has no room. A Select.Popup's own shouldFlip wins over this."
+        },
+        {
+          "name": "containerPadding",
+          "optional": true,
+          "type": "number",
+          "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. A Select.Popup's own containerPadding wins over this."
+        },
+        {
+          "name": "modal",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. A Select.Popup's own modal wins over this."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value?: string) => void",
+          "doc": "Called with the id of the chosen item, or with no value when the selection clears. It is not called while the Select is disabled or read-only."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Called with the next open state when the popup opens or closes. It is not called for a request to open a disabled Select."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "overlays#MuxUIPlacement"]
+    },
+    {
+      "id": "select#SelectPopupOwnProps",
+      "name": "SelectPopupOwnProps",
+      "module": "select",
+      "text": "type SelectPopupOwnProps = {\n  placement?: MuxUIPlacement;\n  offset?: number;\n  crossOffset?: number;\n  shouldFlip?: boolean;\n  containerPadding?: number;\n  modal?: boolean;\n};",
+      "members": [
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "MuxUIPlacement",
+          "values": [
+            "top",
+            "bottom",
+            "start",
+            "end",
+            "top-start",
+            "top-end",
+            "bottom-start",
+            "bottom-end",
+            "start-top",
+            "start-bottom",
+            "end-top",
+            "end-bottom"
+          ],
+          "refs": ["overlays#MuxUIPlacement"],
+          "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, the Select's placement applies."
+        },
+        {
+          "name": "offset",
+          "optional": true,
+          "type": "number",
+          "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. Without one, the Select's offset applies."
+        },
+        {
+          "name": "crossOffset",
+          "optional": true,
+          "type": "number",
+          "doc": "The shift in pixels along the side the popup is placed against. Must be finite. Without one, the Select's crossOffset applies."
+        },
+        {
+          "name": "shouldFlip",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the popup moves to the opposite side when the placed side has no room. Without one, the Select's shouldFlip applies."
+        },
+        {
+          "name": "containerPadding",
+          "optional": true,
+          "type": "number",
+          "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. Without one, the Select's containerPadding applies."
+        },
+        {
+          "name": "modal",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. Without one, the Select's modal applies."
+        }
+      ],
+      "refs": ["overlays#MuxUIPlacement"]
+    },
+    {
+      "id": "select#SelectPopupProps",
+      "name": "SelectPopupProps",
+      "module": "select",
+      "public": [
+        { "entry": ".", "name": "SelectPopupProps" }
+      ],
+      "owner": "select",
+      "text": "type SelectPopupProps = React.HTMLAttributes<HTMLDivElement> & SelectPopupOwnProps & {\n  anchorRef?: React.RefObject<Element | null>;\n};",
+      "refs": ["select#SelectPopupOwnProps"]
+    },
+    {
+      "id": "select#SelectProps",
+      "name": "SelectProps",
+      "module": "select",
+      "public": [
+        { "entry": ".", "name": "SelectProps" }
+      ],
+      "owner": "select",
+      "extends": [
+        {
+          "type": "NamedFieldProps",
+          "refs": ["fields#NamedFieldProps"]
+        },
+        {
+          "type": "SelectOptions",
+          "refs": ["select#SelectOptions"]
+        }
+      ],
+      "text": "type SelectProps = NamedFieldProps & SelectOptions;",
+      "refs": ["fields#NamedFieldProps", "select#SelectOptions"]
+    },
+    {
+      "id": "select#SelectRootProps",
+      "name": "SelectRootProps",
+      "module": "select",
+      "public": [
+        { "entry": ".", "name": "SelectRootProps" }
+      ],
+      "owner": "select",
+      "text": "type SelectRootProps = SelectOptions & FieldValidationProps & (MuxUIAccessibleName | { children: React.ReactNode; label?: React.ReactNode; 'aria-label'?: string; 'aria-labelledby'?: string });",
+      "refs": ["select#SelectOptions", "fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "select#SelectTriggerOwnProps",
+      "name": "SelectTriggerOwnProps",
+      "module": "select",
+      "text": "type SelectTriggerOwnProps = {\n  disabled?: boolean | undefined;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "explicitUndefined": true,
+          "type": "boolean | undefined",
+          "doc": "Disables the trigger: it can be neither focused nor activated. A disabled Select disables it whatever this says."
+        }
+      ]
+    },
+    {
+      "id": "select#SelectTriggerProps",
+      "name": "SelectTriggerProps",
+      "module": "select",
+      "public": [
+        { "entry": ".", "name": "SelectTriggerProps" }
+      ],
+      "owner": "select",
+      "text": "type SelectTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & SelectTriggerOwnProps;",
+      "refs": ["select#SelectTriggerOwnProps"]
+    }
+  ]
+}

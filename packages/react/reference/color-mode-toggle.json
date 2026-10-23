@@ -1,0 +1,71 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-mode-toggle",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "ColorModeToggle",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "mode",
+              "optional": true,
+              "type": "ColorMode",
+              "values": ["light", "dark"],
+              "refs": ["supplemental#ColorMode"]
+            },
+            {
+              "name": "defaultMode",
+              "optional": true,
+              "type": "ColorMode",
+              "values": ["light", "dark"],
+              "refs": ["supplemental#ColorMode"]
+            },
+            { "name": "storageKey", "optional": true, "type": "string" },
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onModeChange",
+              "optional": true,
+              "type": "(mode: ColorMode) => void",
+              "refs": ["supplemental#ColorMode"]
+            }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            { "type": "React.LabelHTMLAttributes<HTMLLabelElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#ColorMode",
+      "name": "ColorMode",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ColorMode" }
+      ],
+      "owner": "color-mode-toggle",
+      "text": "type ColorMode = 'light' | 'dark';",
+      "values": ["light", "dark"]
+    },
+    {
+      "id": "supplemental#ColorModeToggleProps",
+      "name": "ColorModeToggleProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ColorModeToggleProps" }
+      ],
+      "owner": "color-mode-toggle",
+      "text": "type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  mode?: ColorMode;\n  defaultMode?: ColorMode;\n  storageKey?: string;\n  disabled?: boolean;\n  onModeChange?: (mode: ColorMode) => void;\n};",
+      "refs": ["supplemental#ColorMode"]
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "multi-select",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "MultiSelect",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "call",
+          "typeParameters": [
+            {
+              "name": "T",
+              "constraint": "MultiSelectItem",
+              "default": "MultiSelectItem",
+              "refs": ["supplemental#MultiSelectItem"]
+            }
+          ],
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "label", "optional": true, "type": "React.ReactNode" },
+            { "name": "placeholder", "optional": true, "type": "string" },
+            { "name": "description", "optional": true, "type": "React.ReactNode" },
+            { "name": "errorMessage", "optional": true, "type": "React.ReactNode" },
+            { "name": "supportingText", "optional": true, "type": "React.ReactNode" },
+            { "name": "emptyStateTitle", "optional": true, "type": "string" },
+            { "name": "emptyStateDescription", "optional": true, "type": "string" },
+            { "name": "items", "optional": true, "type": "Iterable<T>" },
+            {
+              "name": "children",
+              "optional": true,
+              "type": "React.ReactNode | ((item: T) => React.ReactNode)"
+            },
+            { "name": "selectedKeys", "optional": true, "type": "Set<React.Key> | 'all'" },
+            { "name": "defaultSelectedKeys", "optional": true, "type": "Set<React.Key>" },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(keys: Set<React.Key> | 'all') => void"
+            },
+            { "name": "showSearch", "optional": true, "type": "boolean" },
+            { "name": "showFooter", "optional": true, "type": "boolean" },
+            { "name": "onReset", "optional": true, "type": "() => void" },
+            { "name": "onSelectAll", "optional": true, "type": "() => void" },
+            {
+              "name": "selectedCountFormatter",
+              "optional": true,
+              "type": "(count: number) => React.ReactNode"
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["children"]
+            }
+          ]
+        },
+        {
+          "member": "Item",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "textValue", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#MultiSelectItem",
+      "name": "MultiSelectItem",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "MultiSelectItem" }
+      ],
+      "owner": "multi-select",
+      "text": "type MultiSelectItem = {\n  id: React.Key;\n  [key: string]: unknown;\n};",
+      "members": [
+        { "name": "id", "type": "React.Key" }
+      ]
+    },
+    {
+      "id": "supplemental#MultiSelectItemProps",
+      "name": "MultiSelectItemProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "MultiSelectItemProps" }
+      ],
+      "owner": "multi-select",
+      "text": "type MultiSelectItemProps = React.HTMLAttributes<HTMLDivElement> & {\n  disabled?: boolean;\n  textValue?: string;\n};"
+    },
+    {
+      "id": "supplemental#MultiSelectProps",
+      "name": "MultiSelectProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "MultiSelectProps" }
+      ],
+      "owner": "multi-select",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "MultiSelectItem",
+          "default": "MultiSelectItem",
+          "refs": ["supplemental#MultiSelectItem"]
+        }
+      ],
+      "text": "type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & {\n  label?: React.ReactNode;\n  placeholder?: string;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  supportingText?: React.ReactNode;\n  emptyStateTitle?: string;\n  emptyStateDescription?: string;\n  items?: Iterable<T>;\n  children?: React.ReactNode | ((item: T) => React.ReactNode);\n  selectedKeys?: Set<React.Key> | 'all';\n  defaultSelectedKeys?: Set<React.Key>;\n  onSelectionChange?: (keys: Set<React.Key> | 'all') => void;\n  showSearch?: boolean;\n  showFooter?: boolean;\n  onReset?: () => void;\n  onSelectAll?: () => void;\n  selectedCountFormatter?: (count: number) => React.ReactNode;\n};",
+      "refs": ["supplemental#SupplementalFieldProps", "supplemental#MultiSelectItem"]
+    },
+    {
+      "id": "supplemental#MultiSelectRootComponent",
+      "name": "MultiSelectRootComponent",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "MultiSelectRootComponent" }
+      ],
+      "owner": "multi-select",
+      "text": "interface MultiSelectRootComponent {\n  <T extends MultiSelectItem = MultiSelectItem>(props: MultiSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;\n}",
+      "refs": ["supplemental#MultiSelectItem", "supplemental#MultiSelectRootProps"]
+    },
+    {
+      "id": "supplemental#MultiSelectRootProps",
+      "name": "MultiSelectRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "MultiSelectRootProps" }
+      ],
+      "owner": "multi-select",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "MultiSelectItem",
+          "default": "MultiSelectItem",
+          "refs": ["supplemental#MultiSelectItem"]
+        }
+      ],
+      "text": "type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;",
+      "refs": ["supplemental#MultiSelectProps", "supplemental#MultiSelectItem"]
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "text",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "Text",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "call",
+          "typeParameters": [
+            {
+              "name": "T",
+              "constraint": "TextElement",
+              "default": "'span'",
+              "refs": ["supplemental#TextElement"]
+            }
+          ],
+          "members": [
+            { "name": "as", "optional": true, "type": "T" },
+            {
+              "name": "color",
+              "optional": true,
+              "type": "TextColor",
+              "values": ["default", "muted"],
+              "refs": ["supplemental#TextColor"]
+            },
+            { "name": "truncate", "optional": true, "type": "boolean" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElementTagNameMap[T]" },
+          "natives": [
+            {
+              "type": "React.ComponentPropsWithoutRef<T>",
+              "omit": ["as", "className", "color", "size", "variant"]
+            }
+          ],
+          "alternatives": [
+            {
+              "members": [
+                {
+                  "name": "variant",
+                  "optional": true,
+                  "type": "'body'",
+                  "values": ["body"]
+                },
+                {
+                  "name": "size",
+                  "optional": true,
+                  "type": "TextSize",
+                  "values": ["xs", "sm", "md", "lg"],
+                  "refs": ["supplemental#TextSize"]
+                }
+              ]
+            },
+            {
+              "members": [
+                {
+                  "name": "variant",
+                  "type": "'display' | 'heading' | 'title'",
+                  "values": ["display", "heading", "title"]
+                },
+                {
+                  "name": "size",
+                  "optional": true,
+                  "type": "Exclude<TextSize, 'xs'>",
+                  "values": ["sm", "md", "lg"],
+                  "refs": ["supplemental#TextSize"]
+                }
+              ]
+            },
+            {
+              "members": [
+                {
+                  "name": "variant",
+                  "type": "'label' | 'expressive' | 'mono'",
+                  "values": ["label", "expressive", "mono"]
+                },
+                {
+                  "name": "size",
+                  "optional": true,
+                  "type": "TextSize",
+                  "values": ["xs", "sm", "md", "lg"],
+                  "refs": ["supplemental#TextSize"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#TextColor",
+      "name": "TextColor",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextColor" }
+      ],
+      "owner": "text",
+      "text": "type TextColor = 'default' | 'muted';",
+      "values": ["default", "muted"]
+    },
+    {
+      "id": "supplemental#TextComponent",
+      "name": "TextComponent",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextComponent" }
+      ],
+      "owner": "text",
+      "text": "interface TextComponent {\n  <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;\n}",
+      "refs": ["supplemental#TextElement", "supplemental#TextProps"]
+    },
+    {
+      "id": "supplemental#TextElement",
+      "name": "TextElement",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextElement" }
+      ],
+      "owner": "text",
+      "text": "type TextElement = 'p' | 'span' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'div' | 'label';",
+      "values": ["p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "div", "label"]
+    },
+    {
+      "id": "supplemental#TextProps",
+      "name": "TextProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextProps" }
+      ],
+      "owner": "text",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "TextElement",
+          "default": "'span'",
+          "refs": ["supplemental#TextElement"]
+        }
+      ],
+      "text": "type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & {\n  as?: T;\n  color?: TextColor;\n  truncate?: boolean;\n  className?: string;\n};",
+      "refs": ["supplemental#TextVisualProps", "supplemental#TextColor", "supplemental#TextElement"]
+    },
+    {
+      "id": "supplemental#TextSize",
+      "name": "TextSize",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextSize" }
+      ],
+      "owner": "text",
+      "text": "type TextSize = 'xs' | 'sm' | 'md' | 'lg';",
+      "values": ["xs", "sm", "md", "lg"]
+    },
+    {
+      "id": "supplemental#TextVariant",
+      "name": "TextVariant",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextVariant" }
+      ],
+      "owner": "text",
+      "text": "type TextVariant = 'display' | 'heading' | 'title' | 'label' | 'body' | 'expressive' | 'mono';",
+      "values": ["display", "heading", "title", "label", "body", "expressive", "mono"]
+    },
+    {
+      "id": "supplemental#TextVisualProps",
+      "name": "TextVisualProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextVisualProps" }
+      ],
+      "owner": "text",
+      "text": "type TextVisualProps = {\n  variant?: 'body';\n  size?: TextSize;\n} | {\n  variant: 'display' | 'heading' | 'title';\n  size?: Exclude<TextSize, 'xs'>;\n} | {\n  variant: 'label' | 'expressive' | 'mono';\n  size?: TextSize;\n};",
+      "refs": ["supplemental#TextSize"]
+    }
+  ]
+}

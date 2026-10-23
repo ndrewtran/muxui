@@ -1,0 +1,1786 @@
+{
+  "schema": "muxui-declaration-inventory-v1",
+  "package": "@muxui/react",
+  "entries": [
+    {
+      "key": ".",
+      "exports": [
+        { "name": "Activity", "kind": "value", "owner": "activity", "module": "activity" },
+        { "name": "ActivityAction", "kind": "type", "owner": "activity", "module": "activity" },
+        { "name": "ActivityItem", "kind": "type", "owner": "activity", "module": "activity" },
+        { "name": "ActivityProps", "kind": "type", "owner": "activity", "module": "activity" },
+        { "name": "ActivityStatus", "kind": "type", "owner": "activity", "module": "activity" },
+        {
+          "name": "AlertDialog",
+          "kind": "value",
+          "owner": "alert-dialog",
+          "module": "supplemental"
+        },
+        {
+          "name": "AlertDialogActionsProps",
+          "kind": "type",
+          "owner": "alert-dialog",
+          "module": "supplemental"
+        },
+        {
+          "name": "AlertDialogCloseProps",
+          "kind": "type",
+          "owner": "alert-dialog",
+          "module": "supplemental"
+        },
+        {
+          "name": "AlertDialogRootProps",
+          "kind": "type",
+          "owner": "alert-dialog",
+          "module": "supplemental"
+        },
+        {
+          "name": "AlertDialogTriggerProps",
+          "kind": "type",
+          "owner": "alert-dialog",
+          "module": "supplemental"
+        },
+        { "name": "Autocomplete", "kind": "value", "owner": "autocomplete", "module": "fields" },
+        { "name": "AutocompleteItem", "kind": "type", "owner": "autocomplete", "module": "fields" },
+        { "name": "AutocompleteProps", "kind": "type", "owner": "autocomplete", "module": "fields" },
+        {
+          "name": "AutocompleteSelectionItem",
+          "kind": "type",
+          "owner": "autocomplete",
+          "module": "fields"
+        },
+        { "name": "Avatar", "kind": "value", "owner": "avatar", "module": "avatar" },
+        { "name": "AvatarFallbackProps", "kind": "type", "owner": "avatar", "module": "avatar" },
+        { "name": "AvatarImageProps", "kind": "type", "owner": "avatar", "module": "avatar" },
+        { "name": "AvatarRootProps", "kind": "type", "owner": "avatar", "module": "avatar" },
+        { "name": "AvatarSize", "kind": "type", "owner": "avatar", "module": "avatar" },
+        {
+          "name": "BreadcrumbItem",
+          "kind": "type",
+          "owner": "breadcrumbs",
+          "module": "components",
+          "reason": "the item type of Breadcrumbs, whose name is the singular of the family name"
+        },
+        { "name": "Breadcrumbs", "kind": "value", "owner": "breadcrumbs", "module": "components" },
+        {
+          "name": "BreadcrumbsProps",
+          "kind": "type",
+          "owner": "breadcrumbs",
+          "module": "components"
+        },
+        { "name": "Button", "kind": "value", "owner": "button", "module": "button" },
+        { "name": "ButtonActivationEvent", "kind": "type", "owner": "button", "module": "button" },
+        {
+          "name": "ButtonGroup",
+          "kind": "value",
+          "owner": "button-group",
+          "module": "supplemental"
+        },
+        {
+          "name": "ButtonGroupProps",
+          "kind": "type",
+          "owner": "button-group",
+          "module": "supplemental"
+        },
+        { "name": "ButtonPartProps", "kind": "type", "owner": "button", "module": "supplemental" },
+        { "name": "ButtonPointerType", "kind": "type", "owner": "button", "module": "button" },
+        { "name": "ButtonProps", "kind": "type", "owner": "button", "module": "button" },
+        { "name": "Calendar", "kind": "value", "owner": "calendar", "module": "calendar" },
+        { "name": "CalendarProps", "kind": "type", "owner": "calendar", "module": "calendar" },
+        { "name": "Card", "kind": "value", "owner": "card", "module": "supplemental" },
+        { "name": "CardBodyProps", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "CardButtonProps", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "CardFooterProps", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "CardHeaderProps", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "CardPadding", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "CardRootProps", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "CardVariant", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "Checkbox", "kind": "value", "owner": "checkbox", "module": "components" },
+        {
+          "name": "CheckboxField",
+          "kind": "value",
+          "owner": "checkbox-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "CheckboxFieldButtonProps",
+          "kind": "type",
+          "owner": "checkbox-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "CheckboxFieldDescriptionProps",
+          "kind": "type",
+          "owner": "checkbox-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "CheckboxFieldErrorProps",
+          "kind": "type",
+          "owner": "checkbox-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "CheckboxFieldIndicatorProps",
+          "kind": "type",
+          "owner": "checkbox-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "CheckboxFieldRootProps",
+          "kind": "type",
+          "owner": "checkbox-field",
+          "module": "supplemental"
+        },
+        { "name": "CheckboxGroup", "kind": "value", "owner": "checkbox-group", "module": "fields" },
+        {
+          "name": "CheckboxGroupProps",
+          "kind": "type",
+          "owner": "checkbox-group",
+          "module": "fields"
+        },
+        { "name": "CheckboxProps", "kind": "type", "owner": "checkbox", "module": "components" },
+        { "name": "CodeBlock", "kind": "value", "owner": "code-block", "module": "code-block" },
+        { "name": "CodeBlockProps", "kind": "type", "owner": "code-block", "module": "code-block" },
+        {
+          "name": "CollectionProps",
+          "kind": "type",
+          "owner": "shared",
+          "module": "index",
+          "reason": "the collection families share these item and selection types"
+        },
+        { "name": "ColorArea", "kind": "value", "owner": "color-area", "module": "color-area" },
+        { "name": "ColorAreaProps", "kind": "type", "owner": "color-area", "module": "color-area" },
+        { "name": "ColorField", "kind": "value", "owner": "color-field", "module": "color-field" },
+        {
+          "name": "ColorFieldProps",
+          "kind": "type",
+          "owner": "color-field",
+          "module": "color-field"
+        },
+        {
+          "name": "ColorMode",
+          "kind": "type",
+          "owner": "color-mode-toggle",
+          "module": "supplemental",
+          "reason": "the mode type of ColorModeToggle"
+        },
+        {
+          "name": "ColorModeToggle",
+          "kind": "value",
+          "owner": "color-mode-toggle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ColorModeToggleProps",
+          "kind": "type",
+          "owner": "color-mode-toggle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ColorPicker",
+          "kind": "value",
+          "owner": "color-picker",
+          "module": "color-picker"
+        },
+        {
+          "name": "ColorPickerProps",
+          "kind": "type",
+          "owner": "color-picker",
+          "module": "color-picker"
+        },
+        {
+          "name": "ColorSlider",
+          "kind": "value",
+          "owner": "color-slider",
+          "module": "color-slider"
+        },
+        {
+          "name": "ColorSliderProps",
+          "kind": "type",
+          "owner": "color-slider",
+          "module": "color-slider"
+        },
+        {
+          "name": "ColorSwatch",
+          "kind": "value",
+          "owner": "color-swatch",
+          "module": "color-swatch"
+        },
+        {
+          "name": "ColorSwatchPicker",
+          "kind": "value",
+          "owner": "color-swatch-picker",
+          "module": "color-swatch-picker"
+        },
+        {
+          "name": "ColorSwatchPickerProps",
+          "kind": "type",
+          "owner": "color-swatch-picker",
+          "module": "color-swatch-picker"
+        },
+        {
+          "name": "ColorSwatchProps",
+          "kind": "type",
+          "owner": "color-swatch",
+          "module": "color-swatch"
+        },
+        { "name": "ColorWheel", "kind": "value", "owner": "color-wheel", "module": "color-wheel" },
+        {
+          "name": "ColorWheelProps",
+          "kind": "type",
+          "owner": "color-wheel",
+          "module": "color-wheel"
+        },
+        { "name": "ComboBox", "kind": "value", "owner": "combo-box", "module": "combo-box" },
+        { "name": "ComboBoxProps", "kind": "type", "owner": "combo-box", "module": "combo-box" },
+        {
+          "name": "CommandPalette",
+          "kind": "value",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteBackdropProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteChipProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteChipRemoveProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteChipsProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteClearButtonProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteCloseProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteCollectionComponent",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteCollectionProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteCommand",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteContentProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteDescriptionProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteEmptyProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteFooterProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteGroup",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteInputProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemContentProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemDescriptionProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemIconProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemMetaProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemTitleProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteItemsProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteListBoxComponent",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteListBoxProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteLoadMoreItemProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPalettePopupProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteRootProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteSearchFieldProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteSectionComponent",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteSectionHeaderProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteSectionProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteSeparatorProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteShortcutProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteTitleProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "CommandPaletteTriggerProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental"
+        },
+        {
+          "name": "ComponentPointerType",
+          "kind": "type",
+          "owner": "shared",
+          "module": "index",
+          "reason": "a button-derived pointer type that other families re-export"
+        },
+        {
+          "name": "ControlSize",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        { "name": "DataDiff", "kind": "value", "owner": "data-diff", "module": "data-diff" },
+        { "name": "DataDiffColumn", "kind": "type", "owner": "data-diff", "module": "data-diff" },
+        { "name": "DataDiffProps", "kind": "type", "owner": "data-diff", "module": "data-diff" },
+        { "name": "DataDiffRow", "kind": "type", "owner": "data-diff", "module": "data-diff" },
+        {
+          "name": "DataDiffRowIdentity",
+          "kind": "type",
+          "owner": "data-diff",
+          "module": "data-diff"
+        },
+        { "name": "DataDiffValue", "kind": "type", "owner": "data-diff", "module": "data-diff" },
+        { "name": "DataDiffValues", "kind": "type", "owner": "data-diff", "module": "data-diff" },
+        { "name": "DateField", "kind": "value", "owner": "date-field", "module": "fields" },
+        { "name": "DateFieldProps", "kind": "type", "owner": "date-field", "module": "fields" },
+        { "name": "DatePicker", "kind": "value", "owner": "date-picker", "module": "fields" },
+        { "name": "DatePickerProps", "kind": "type", "owner": "date-picker", "module": "fields" },
+        {
+          "name": "DateRangePicker",
+          "kind": "value",
+          "owner": "date-range-picker",
+          "module": "fields"
+        },
+        {
+          "name": "DateRangePickerProps",
+          "kind": "type",
+          "owner": "date-range-picker",
+          "module": "fields"
+        },
+        { "name": "Dialog", "kind": "value", "owner": "dialog", "module": "overlays" },
+        { "name": "DialogProps", "kind": "type", "owner": "dialog", "module": "overlays" },
+        { "name": "Disclosure", "kind": "value", "owner": "disclosure", "module": "components" },
+        {
+          "name": "DisclosureGroup",
+          "kind": "value",
+          "owner": "disclosure-group",
+          "module": "components"
+        },
+        {
+          "name": "DisclosureGroupProps",
+          "kind": "type",
+          "owner": "disclosure-group",
+          "module": "components"
+        },
+        { "name": "DisclosureProps", "kind": "type", "owner": "disclosure", "module": "components" },
+        { "name": "DropZone", "kind": "value", "owner": "drop-zone", "module": "overlays" },
+        { "name": "DropZoneProps", "kind": "type", "owner": "drop-zone", "module": "overlays" },
+        {
+          "name": "FieldInputProps",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "FieldValidationProps",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        { "name": "FileTrigger", "kind": "value", "owner": "file-trigger", "module": "overlays" },
+        {
+          "name": "FileTriggerProps",
+          "kind": "type",
+          "owner": "file-trigger",
+          "module": "overlays"
+        },
+        { "name": "Form", "kind": "value", "owner": "form", "module": "fields" },
+        { "name": "FormProps", "kind": "type", "owner": "form", "module": "fields" },
+        { "name": "GridList", "kind": "value", "owner": "grid-list", "module": "grid-list" },
+        { "name": "GridListItemProps", "kind": "type", "owner": "grid-list", "module": "grid-list" },
+        { "name": "GridListProps", "kind": "type", "owner": "grid-list", "module": "grid-list" },
+        { "name": "Group", "kind": "value", "owner": "group", "module": "components" },
+        { "name": "GroupProps", "kind": "type", "owner": "group", "module": "components" },
+        { "name": "HeaderNav", "kind": "value", "owner": "header-nav", "module": "supplemental" },
+        {
+          "name": "HeaderNavNavButtonProps",
+          "kind": "type",
+          "owner": "header-nav",
+          "module": "supplemental"
+        },
+        {
+          "name": "HeaderNavRootProps",
+          "kind": "type",
+          "owner": "header-nav",
+          "module": "supplemental"
+        },
+        { "name": "IconButton", "kind": "value", "owner": "icon-button", "module": "icon-button" },
+        {
+          "name": "IconButtonProps",
+          "kind": "type",
+          "owner": "icon-button",
+          "module": "icon-button"
+        },
+        { "name": "Image", "kind": "value", "owner": "image", "module": "image" },
+        { "name": "ImageFit", "kind": "type", "owner": "image", "module": "image" },
+        { "name": "ImageProps", "kind": "type", "owner": "image", "module": "image" },
+        { "name": "ImageRadius", "kind": "type", "owner": "image", "module": "image" },
+        { "name": "Input", "kind": "value", "owner": "input", "module": "supplemental" },
+        { "name": "InputControlProps", "kind": "type", "owner": "input", "module": "supplemental" },
+        {
+          "name": "InputDescriptionProps",
+          "kind": "type",
+          "owner": "input",
+          "module": "supplemental"
+        },
+        { "name": "InputErrorProps", "kind": "type", "owner": "input", "module": "supplemental" },
+        { "name": "InputLabelProps", "kind": "type", "owner": "input", "module": "supplemental" },
+        { "name": "InputProps", "kind": "type", "owner": "input", "module": "supplemental" },
+        { "name": "InputRootProps", "kind": "type", "owner": "input", "module": "supplemental" },
+        { "name": "InputTags", "kind": "value", "owner": "input-tags", "module": "supplemental" },
+        {
+          "name": "InputTagsProps",
+          "kind": "type",
+          "owner": "input-tags",
+          "module": "supplemental"
+        },
+        {
+          "name": "InputTagsRootProps",
+          "kind": "type",
+          "owner": "input-tags",
+          "module": "supplemental"
+        },
+        { "name": "Lightbox", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxBackdrop", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxCaption", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxClose", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxContent", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        {
+          "name": "LightboxContentRenderContext",
+          "kind": "type",
+          "owner": "lightbox",
+          "module": "lightbox"
+        },
+        {
+          "name": "LightboxControlActivation",
+          "kind": "type",
+          "owner": "lightbox",
+          "module": "lightbox"
+        },
+        {
+          "name": "LightboxControlProps",
+          "kind": "type",
+          "owner": "lightbox",
+          "module": "lightbox"
+        },
+        { "name": "LightboxItem", "kind": "type", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxKey", "kind": "type", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxNext", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxPopup", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxPrevious", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        { "name": "LightboxProps", "kind": "type", "owner": "lightbox", "module": "lightbox" },
+        {
+          "name": "LightboxRenderContent",
+          "kind": "type",
+          "owner": "lightbox",
+          "module": "lightbox"
+        },
+        {
+          "name": "LightboxRenderContext",
+          "kind": "type",
+          "owner": "lightbox",
+          "module": "lightbox"
+        },
+        { "name": "LightboxTrigger", "kind": "value", "owner": "lightbox", "module": "lightbox" },
+        {
+          "name": "LightboxTriggerProps",
+          "kind": "type",
+          "owner": "lightbox",
+          "module": "lightbox"
+        },
+        { "name": "Link", "kind": "value", "owner": "link", "module": "components" },
+        { "name": "LinkActivationEvent", "kind": "type", "owner": "link", "module": "components" },
+        { "name": "LinkProps", "kind": "type", "owner": "link", "module": "components" },
+        { "name": "ListBox", "kind": "value", "owner": "list-box", "module": "list-box" },
+        { "name": "ListBoxItemProps", "kind": "type", "owner": "list-box", "module": "list-box" },
+        { "name": "ListBoxProps", "kind": "type", "owner": "list-box", "module": "list-box" },
+        { "name": "ListBoxSectionProps", "kind": "type", "owner": "list-box", "module": "list-box" },
+        { "name": "Menu", "kind": "value", "owner": "menu", "module": "menu" },
+        { "name": "MenuItemProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuListProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuPopupProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuRootProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuSectionProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuSubmenuProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuTriggerProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "Message", "kind": "value", "owner": "message", "module": "message" },
+        { "name": "MessageAction", "kind": "type", "owner": "message", "module": "message" },
+        { "name": "MessageFollowUp", "kind": "type", "owner": "message", "module": "message" },
+        { "name": "MessageProps", "kind": "type", "owner": "message", "module": "message" },
+        { "name": "MessageSource", "kind": "type", "owner": "message", "module": "message" },
+        { "name": "Meter", "kind": "value", "owner": "meter", "module": "components" },
+        { "name": "MeterProps", "kind": "type", "owner": "meter", "module": "components" },
+        {
+          "name": "MultiSelect",
+          "kind": "value",
+          "owner": "multi-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "MultiSelectItem",
+          "kind": "type",
+          "owner": "multi-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "MultiSelectItemProps",
+          "kind": "type",
+          "owner": "multi-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "MultiSelectProps",
+          "kind": "type",
+          "owner": "multi-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "MultiSelectRootComponent",
+          "kind": "type",
+          "owner": "multi-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "MultiSelectRootProps",
+          "kind": "type",
+          "owner": "multi-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "MuxUIAccessibleName",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "MuxUIAriaAccessibleName",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "MuxUIAriaLabel",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "MuxUICollectionItem",
+          "kind": "type",
+          "owner": "shared",
+          "module": "collection-items",
+          "reason": "the collection families share these item and selection types"
+        },
+        {
+          "name": "MuxUIColorChannel",
+          "kind": "type",
+          "owner": "shared",
+          "module": "color-context",
+          "reason": "the colour families share these colour value types"
+        },
+        {
+          "name": "MuxUIColorSpace",
+          "kind": "type",
+          "owner": "shared",
+          "module": "color-context",
+          "reason": "the colour families share these colour value types"
+        },
+        {
+          "name": "MuxUIColorValue",
+          "kind": "type",
+          "owner": "shared",
+          "module": "color-context",
+          "reason": "the colour families share these colour value types"
+        },
+        {
+          "name": "MuxUIDateRange",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "MuxUIDateValue",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "MuxUIDirectoryDropItem",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUIDropActivateEvent",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUIDropEvent",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUIDropItem",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUIDropOperation",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUIFileDropItem",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUIItems",
+          "kind": "type",
+          "owner": "shared",
+          "module": "collection-items",
+          "reason": "the collection families share these item and selection types"
+        },
+        {
+          "name": "MuxUIPlacement",
+          "kind": "type",
+          "owner": "shared",
+          "module": "overlays",
+          "reason": "the overlay families share these placement and accessible-name types"
+        },
+        {
+          "name": "MuxUISelection",
+          "kind": "type",
+          "owner": "shared",
+          "module": "collection-items",
+          "reason": "the collection families share these item and selection types"
+        },
+        { "name": "MuxUITableColumn", "kind": "type", "owner": "table", "module": "table" },
+        { "name": "MuxUITableRow", "kind": "type", "owner": "table", "module": "table" },
+        { "name": "MuxUITableSortDescriptor", "kind": "type", "owner": "table", "module": "table" },
+        {
+          "name": "MuxUITextDropItem",
+          "kind": "type",
+          "owner": "drop-zone",
+          "module": "overlays",
+          "reason": "the drop item and event types are the DropZone API"
+        },
+        {
+          "name": "MuxUITimeValue",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        { "name": "MuxUITreeItem", "kind": "type", "owner": "tree", "module": "tree" },
+        {
+          "name": "MuxUIValidationErrors",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        {
+          "name": "NamedFieldProps",
+          "kind": "type",
+          "owner": "shared",
+          "module": "fields",
+          "reason": "the field families share these control, label and validation types"
+        },
+        { "name": "NumberField", "kind": "value", "owner": "number-field", "module": "fields" },
+        { "name": "NumberFieldProps", "kind": "type", "owner": "number-field", "module": "fields" },
+        {
+          "name": "OverlayAccessibleName",
+          "kind": "type",
+          "owner": "shared",
+          "module": "overlays",
+          "reason": "the overlay families share these placement and accessible-name types"
+        },
+        {
+          "name": "PartProps",
+          "kind": "type",
+          "owner": "shared",
+          "module": "supplemental",
+          "reason": "helper types of the supplemental declarations that several supplemental families use"
+        },
+        {
+          "name": "PaymentInput",
+          "kind": "value",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputCardIconProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputDescriptionProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputErrorProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputGroupProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputInputProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputLabelProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        {
+          "name": "PaymentInputRootProps",
+          "kind": "type",
+          "owner": "payment-input",
+          "module": "supplemental"
+        },
+        { "name": "Popover", "kind": "value", "owner": "popover", "module": "overlays" },
+        { "name": "PopoverProps", "kind": "type", "owner": "popover", "module": "overlays" },
+        {
+          "name": "PreviewTrigger",
+          "kind": "value",
+          "owner": "preview-trigger",
+          "module": "overlays"
+        },
+        {
+          "name": "PreviewTriggerProps",
+          "kind": "type",
+          "owner": "preview-trigger",
+          "module": "overlays"
+        },
+        { "name": "ProgressBar", "kind": "value", "owner": "progress-bar", "module": "components" },
+        {
+          "name": "ProgressBarProps",
+          "kind": "type",
+          "owner": "progress-bar",
+          "module": "components"
+        },
+        {
+          "name": "ProgressCircle",
+          "kind": "value",
+          "owner": "progress-circle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ProgressCircleLabelProps",
+          "kind": "type",
+          "owner": "progress-circle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ProgressCircleProps",
+          "kind": "type",
+          "owner": "progress-circle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ProgressCircleRootProps",
+          "kind": "type",
+          "owner": "progress-circle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ProgressCircleTrackProps",
+          "kind": "type",
+          "owner": "progress-circle",
+          "module": "supplemental"
+        },
+        {
+          "name": "ProgressCircleValueProps",
+          "kind": "type",
+          "owner": "progress-circle",
+          "module": "supplemental"
+        },
+        {
+          "name": "PromptComposer",
+          "kind": "value",
+          "owner": "prompt-composer",
+          "module": "prompt-composer"
+        },
+        {
+          "name": "PromptComposerAttachment",
+          "kind": "type",
+          "owner": "prompt-composer",
+          "module": "prompt-composer"
+        },
+        {
+          "name": "PromptComposerModel",
+          "kind": "type",
+          "owner": "prompt-composer",
+          "module": "prompt-composer"
+        },
+        {
+          "name": "PromptComposerProps",
+          "kind": "type",
+          "owner": "prompt-composer",
+          "module": "prompt-composer"
+        },
+        {
+          "name": "PromptComposerSuggestion",
+          "kind": "type",
+          "owner": "prompt-composer",
+          "module": "prompt-composer"
+        },
+        { "name": "RadioField", "kind": "value", "owner": "radio-field", "module": "supplemental" },
+        {
+          "name": "RadioFieldButtonProps",
+          "kind": "type",
+          "owner": "radio-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "RadioFieldDescriptionProps",
+          "kind": "type",
+          "owner": "radio-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "RadioFieldDotProps",
+          "kind": "type",
+          "owner": "radio-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "RadioFieldErrorProps",
+          "kind": "type",
+          "owner": "radio-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "RadioFieldIndicatorProps",
+          "kind": "type",
+          "owner": "radio-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "RadioFieldRootProps",
+          "kind": "type",
+          "owner": "radio-field",
+          "module": "supplemental"
+        },
+        { "name": "RadioGroup", "kind": "value", "owner": "radio-group", "module": "radio-group" },
+        {
+          "name": "RadioGroupProps",
+          "kind": "type",
+          "owner": "radio-group",
+          "module": "radio-group"
+        },
+        { "name": "RadioOption", "kind": "type", "owner": "radio-group", "module": "radio-group" },
+        {
+          "name": "RangeCalendar",
+          "kind": "value",
+          "owner": "range-calendar",
+          "module": "calendar"
+        },
+        {
+          "name": "RangeCalendarProps",
+          "kind": "type",
+          "owner": "range-calendar",
+          "module": "calendar"
+        },
+        { "name": "Resizable", "kind": "value", "owner": "resizable", "module": "resizable" },
+        {
+          "name": "ResizableBaseProps",
+          "kind": "type",
+          "owner": "resizable",
+          "module": "resizable"
+        },
+        { "name": "ResizableChange", "kind": "type", "owner": "resizable", "module": "resizable" },
+        { "name": "ResizableHandle", "kind": "value", "owner": "resizable", "module": "resizable" },
+        { "name": "ResizablePanel", "kind": "value", "owner": "resizable", "module": "resizable" },
+        { "name": "ResizableProps", "kind": "type", "owner": "resizable", "module": "resizable" },
+        { "name": "ResizableSizes", "kind": "type", "owner": "resizable", "module": "resizable" },
+        { "name": "SearchField", "kind": "value", "owner": "search-field", "module": "fields" },
+        { "name": "SearchFieldProps", "kind": "type", "owner": "search-field", "module": "fields" },
+        { "name": "Select", "kind": "value", "owner": "select", "module": "select" },
+        { "name": "SelectItemProps", "kind": "type", "owner": "select", "module": "select" },
+        {
+          "name": "SelectNative",
+          "kind": "value",
+          "owner": "select-native",
+          "module": "select-native"
+        },
+        {
+          "name": "SelectNativeProps",
+          "kind": "type",
+          "owner": "select-native",
+          "module": "select-native"
+        },
+        {
+          "name": "SelectNativeVisualSize",
+          "kind": "type",
+          "owner": "select-native",
+          "module": "select-native"
+        },
+        { "name": "SelectOptions", "kind": "type", "owner": "select", "module": "select" },
+        { "name": "SelectPopupProps", "kind": "type", "owner": "select", "module": "select" },
+        { "name": "SelectProps", "kind": "type", "owner": "select", "module": "select" },
+        { "name": "SelectRootProps", "kind": "type", "owner": "select", "module": "select" },
+        { "name": "SelectTriggerProps", "kind": "type", "owner": "select", "module": "select" },
+        { "name": "Separator", "kind": "value", "owner": "separator", "module": "components" },
+        { "name": "SeparatorProps", "kind": "type", "owner": "separator", "module": "components" },
+        { "name": "Sidebar", "kind": "value", "owner": "sidebar", "module": "supplemental" },
+        {
+          "name": "SidebarAccountMenuProps",
+          "kind": "type",
+          "owner": "sidebar",
+          "module": "supplemental"
+        },
+        {
+          "name": "SidebarExpandedProps",
+          "kind": "type",
+          "owner": "sidebar",
+          "module": "supplemental"
+        },
+        { "name": "SidebarNavEntry", "kind": "type", "owner": "sidebar", "module": "supplemental" },
+        {
+          "name": "SidebarNavItemProps",
+          "kind": "type",
+          "owner": "sidebar",
+          "module": "supplemental"
+        },
+        { "name": "SidebarProps", "kind": "type", "owner": "sidebar", "module": "supplemental" },
+        {
+          "name": "SidebarProviderProps",
+          "kind": "type",
+          "owner": "sidebar",
+          "module": "supplemental"
+        },
+        {
+          "name": "SidebarSectionProps",
+          "kind": "type",
+          "owner": "sidebar",
+          "module": "supplemental"
+        },
+        {
+          "name": "SidebarToggleProps",
+          "kind": "type",
+          "owner": "sidebar",
+          "module": "supplemental"
+        },
+        { "name": "Slider", "kind": "value", "owner": "slider", "module": "slider" },
+        { "name": "SliderProps", "kind": "type", "owner": "slider", "module": "slider" },
+        {
+          "name": "SupplementalActivation",
+          "kind": "type",
+          "owner": "shared",
+          "module": "supplemental",
+          "reason": "helper types of the supplemental declarations that several supplemental families use"
+        },
+        {
+          "name": "SupplementalFieldProps",
+          "kind": "type",
+          "owner": "shared",
+          "module": "supplemental",
+          "reason": "helper types of the supplemental declarations that several supplemental families use"
+        },
+        { "name": "Switch", "kind": "value", "owner": "switch", "module": "fields" },
+        {
+          "name": "SwitchField",
+          "kind": "value",
+          "owner": "switch-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "SwitchFieldButtonProps",
+          "kind": "type",
+          "owner": "switch-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "SwitchFieldDescriptionProps",
+          "kind": "type",
+          "owner": "switch-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "SwitchFieldErrorProps",
+          "kind": "type",
+          "owner": "switch-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "SwitchFieldRootProps",
+          "kind": "type",
+          "owner": "switch-field",
+          "module": "supplemental"
+        },
+        {
+          "name": "SwitchFieldThumbProps",
+          "kind": "type",
+          "owner": "switch-field",
+          "module": "supplemental"
+        },
+        { "name": "SwitchProps", "kind": "type", "owner": "switch", "module": "fields" },
+        { "name": "Table", "kind": "value", "owner": "table", "module": "table" },
+        { "name": "TableProps", "kind": "type", "owner": "table", "module": "table" },
+        { "name": "Tabs", "kind": "value", "owner": "tabs", "module": "tabs" },
+        { "name": "TabsProps", "kind": "type", "owner": "tabs", "module": "tabs" },
+        { "name": "TagGroup", "kind": "value", "owner": "tag-group", "module": "tag-group" },
+        { "name": "TagGroupColor", "kind": "type", "owner": "tag-group", "module": "tag-group" },
+        { "name": "TagGroupItem", "kind": "type", "owner": "tag-group", "module": "tag-group" },
+        { "name": "TagGroupProps", "kind": "type", "owner": "tag-group", "module": "tag-group" },
+        { "name": "TagGroupVariant", "kind": "type", "owner": "tag-group", "module": "tag-group" },
+        { "name": "TagSelect", "kind": "value", "owner": "tag-select", "module": "supplemental" },
+        { "name": "TagSelectItem", "kind": "type", "owner": "tag-select", "module": "supplemental" },
+        {
+          "name": "TagSelectItemProps",
+          "kind": "type",
+          "owner": "tag-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "TagSelectProps",
+          "kind": "type",
+          "owner": "tag-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "TagSelectRootComponent",
+          "kind": "type",
+          "owner": "tag-select",
+          "module": "supplemental"
+        },
+        {
+          "name": "TagSelectRootProps",
+          "kind": "type",
+          "owner": "tag-select",
+          "module": "supplemental"
+        },
+        { "name": "Text", "kind": "value", "owner": "text", "module": "supplemental" },
+        { "name": "TextArea", "kind": "value", "owner": "text-area", "module": "supplemental" },
+        {
+          "name": "TextAreaDescriptionProps",
+          "kind": "type",
+          "owner": "text-area",
+          "module": "supplemental"
+        },
+        {
+          "name": "TextAreaErrorProps",
+          "kind": "type",
+          "owner": "text-area",
+          "module": "supplemental"
+        },
+        {
+          "name": "TextAreaLabelProps",
+          "kind": "type",
+          "owner": "text-area",
+          "module": "supplemental"
+        },
+        { "name": "TextAreaProps", "kind": "type", "owner": "text-area", "module": "supplemental" },
+        {
+          "name": "TextAreaRootProps",
+          "kind": "type",
+          "owner": "text-area",
+          "module": "supplemental"
+        },
+        { "name": "TextColor", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TextComponent", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TextElement", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TextField", "kind": "value", "owner": "text-field", "module": "fields" },
+        { "name": "TextFieldProps", "kind": "type", "owner": "text-field", "module": "fields" },
+        { "name": "TextProps", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TextSize", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TextVariant", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TextVisualProps", "kind": "type", "owner": "text", "module": "supplemental" },
+        { "name": "TimeField", "kind": "value", "owner": "time-field", "module": "fields" },
+        { "name": "TimeFieldProps", "kind": "type", "owner": "time-field", "module": "fields" },
+        { "name": "Toast", "kind": "value", "owner": "toast", "module": "overlays" },
+        { "name": "ToastManager", "kind": "type", "owner": "toast", "module": "overlays" },
+        { "name": "ToastOptions", "kind": "type", "owner": "toast", "module": "overlays" },
+        { "name": "ToastProps", "kind": "type", "owner": "toast", "module": "overlays" },
+        { "name": "ToastProvider", "kind": "value", "owner": "toast", "module": "overlays" },
+        { "name": "ToastProviderProps", "kind": "type", "owner": "toast", "module": "overlays" },
+        {
+          "name": "ToggleButton",
+          "kind": "value",
+          "owner": "toggle-button",
+          "module": "components"
+        },
+        {
+          "name": "ToggleButtonActivationEvent",
+          "kind": "type",
+          "owner": "toggle-button",
+          "module": "components"
+        },
+        {
+          "name": "ToggleButtonGroup",
+          "kind": "value",
+          "owner": "toggle-button-group",
+          "module": "toggle-button-group"
+        },
+        {
+          "name": "ToggleButtonGroupProps",
+          "kind": "type",
+          "owner": "toggle-button-group",
+          "module": "toggle-button-group"
+        },
+        {
+          "name": "ToggleButtonProps",
+          "kind": "type",
+          "owner": "toggle-button",
+          "module": "components"
+        },
+        { "name": "TokenField", "kind": "value", "owner": "token-field", "module": "token-field" },
+        {
+          "name": "TokenFieldProps",
+          "kind": "type",
+          "owner": "token-field",
+          "module": "token-field"
+        },
+        { "name": "Toolbar", "kind": "value", "owner": "toolbar", "module": "toolbar" },
+        { "name": "ToolbarProps", "kind": "type", "owner": "toolbar", "module": "toolbar" },
+        { "name": "Tooltip", "kind": "value", "owner": "tooltip", "module": "overlays" },
+        { "name": "TooltipProps", "kind": "type", "owner": "tooltip", "module": "overlays" },
+        { "name": "Tree", "kind": "value", "owner": "tree", "module": "tree" },
+        { "name": "TreeProps", "kind": "type", "owner": "tree", "module": "tree" },
+        {
+          "name": "UseCommandPaletteOptions",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental",
+          "reason": "the hook and its option and result types belong to CommandPalette"
+        },
+        {
+          "name": "UseCommandPaletteReturn",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "supplemental",
+          "reason": "the hook and its option and result types belong to CommandPalette"
+        },
+        { "name": "Virtualizer", "kind": "value", "owner": "virtualizer", "module": "virtualizer" },
+        {
+          "name": "VirtualizerGridProps",
+          "kind": "type",
+          "owner": "virtualizer",
+          "module": "virtualizer"
+        },
+        {
+          "name": "VirtualizerProps",
+          "kind": "type",
+          "owner": "virtualizer",
+          "module": "virtualizer"
+        },
+        {
+          "name": "VirtualizerStackProps",
+          "kind": "type",
+          "owner": "virtualizer",
+          "module": "virtualizer"
+        },
+        {
+          "name": "reactCompatibility",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "index",
+          "reason": "the compatibility record of the package, not a component"
+        },
+        {
+          "name": "supplementalFamilies",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "supplemental",
+          "reason": "the list of supplemental family names, not a component"
+        },
+        {
+          "name": "useCommandPalette",
+          "kind": "value",
+          "owner": "command-palette",
+          "module": "supplemental",
+          "reason": "the hook and its option and result types belong to CommandPalette"
+        },
+        {
+          "name": "useToast",
+          "kind": "value",
+          "owner": "toast",
+          "module": "overlays",
+          "reason": "the hook that reaches the toast manager of ToastProvider"
+        }
+      ]
+    },
+    {
+      "key": "./compatibility",
+      "untyped": true,
+      "reason": "a JavaScript module the package ships without declarations"
+    },
+    { "key": "./styles.css", "untyped": true, "reason": "a stylesheet" },
+    {
+      "key": "./themes",
+      "exports": [
+        {
+          "name": "MUXUI_DEFAULT_THEME_PRESET_ID",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MUXUI_THEME_PRESETS",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MUXUI_THEME_PRESETS_BY_ID",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MuxUIMonochromeThemeId",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MuxUIStandardThemeId",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MuxUIThemeCollection",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MuxUIThemeId",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MuxUIThemePreset",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MuxUIThemeSwatch",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        }
+      ]
+    },
+    { "key": "./themes.css", "untyped": true, "reason": "a stylesheet" },
+    {
+      "key": "./testing",
+      "untyped": true,
+      "reason": "a JavaScript module the package ships without declarations"
+    },
+    {
+      "key": "./text-editor",
+      "exports": [
+        { "name": "TextEditor", "kind": "value", "owner": "text-editor", "module": "text-editor" },
+        {
+          "name": "TextEditorActionCallbacks",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorAlignment",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorBlockNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorBlockquoteNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorBulletListNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorCodeBlockNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorCommand",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorDocument",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorFontFamily",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorFontSize",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorHandle",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorHardBreakNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorHeadingNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorHorizontalRuleNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorImageNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorInlineNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorListItemNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorListNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorMark",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorOrderedListNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorOrderedListType",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorParagraphNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorPlainTextNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorProps",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorSelectionAction",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorSelectionActions",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorSelectionRequest",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "TextEditorTextNode",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "isTextEditorDocument",
+          "kind": "value",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "normalizeTextEditorDocument",
+          "kind": "value",
+          "owner": "text-editor",
+          "module": "text-editor"
+        }
+      ]
+    },
+    {
+      "key": "./markdown",
+      "exports": [
+        {
+          "name": "MARKDOWN_DEPTH_LIMIT",
+          "kind": "value",
+          "owner": "markdown",
+          "module": "markdown"
+        },
+        {
+          "name": "MARKDOWN_LINE_LENGTH_LIMIT",
+          "kind": "value",
+          "owner": "markdown",
+          "module": "markdown"
+        },
+        {
+          "name": "MARKDOWN_LINE_LIMIT",
+          "kind": "value",
+          "owner": "markdown",
+          "module": "markdown"
+        },
+        {
+          "name": "MARKDOWN_NODE_LIMIT",
+          "kind": "value",
+          "owner": "markdown",
+          "module": "markdown"
+        },
+        {
+          "name": "MARKDOWN_SOURCE_LIMIT",
+          "kind": "value",
+          "owner": "markdown",
+          "module": "markdown"
+        },
+        { "name": "Markdown", "kind": "value", "owner": "markdown", "module": "markdown" },
+        { "name": "MarkdownProps", "kind": "type", "owner": "markdown", "module": "markdown" }
+      ]
+    }
+  ],
+  "owners": {
+    "activity": "activity.json",
+    "alert-dialog": "alert-dialog.json",
+    "autocomplete": "autocomplete.json",
+    "avatar": "avatar.json",
+    "breadcrumbs": "breadcrumbs.json",
+    "button": "button.json",
+    "button-group": "button-group.json",
+    "calendar": "calendar.json",
+    "card": "card.json",
+    "checkbox": "checkbox.json",
+    "checkbox-field": "checkbox-field.json",
+    "checkbox-group": "checkbox-group.json",
+    "code-block": "code-block.json",
+    "color-area": "color-area.json",
+    "color-field": "color-field.json",
+    "color-mode-toggle": "color-mode-toggle.json",
+    "color-picker": "color-picker.json",
+    "color-slider": "color-slider.json",
+    "color-swatch": "color-swatch.json",
+    "color-swatch-picker": "color-swatch-picker.json",
+    "color-wheel": "color-wheel.json",
+    "combo-box": "combo-box.json",
+    "command-palette": "command-palette.json",
+    "data-diff": "data-diff.json",
+    "date-field": "date-field.json",
+    "date-picker": "date-picker.json",
+    "date-range-picker": "date-range-picker.json",
+    "dialog": "dialog.json",
+    "disclosure": "disclosure.json",
+    "disclosure-group": "disclosure-group.json",
+    "drop-zone": "drop-zone.json",
+    "file-trigger": "file-trigger.json",
+    "form": "form.json",
+    "grid-list": "grid-list.json",
+    "group": "group.json",
+    "header-nav": "header-nav.json",
+    "icon-button": "icon-button.json",
+    "image": "image.json",
+    "input": "input.json",
+    "input-tags": "input-tags.json",
+    "lightbox": "lightbox.json",
+    "link": "link.json",
+    "list-box": "list-box.json",
+    "markdown": "markdown.json",
+    "menu": "menu.json",
+    "message": "message.json",
+    "meter": "meter.json",
+    "multi-select": "multi-select.json",
+    "number-field": "number-field.json",
+    "package-level": "package-level.json",
+    "payment-input": "payment-input.json",
+    "popover": "popover.json",
+    "preview-trigger": "preview-trigger.json",
+    "progress-bar": "progress-bar.json",
+    "progress-circle": "progress-circle.json",
+    "prompt-composer": "prompt-composer.json",
+    "radio-field": "radio-field.json",
+    "radio-group": "radio-group.json",
+    "range-calendar": "range-calendar.json",
+    "resizable": "resizable.json",
+    "search-field": "search-field.json",
+    "select": "select.json",
+    "select-native": "select-native.json",
+    "separator": "separator.json",
+    "shared": "shared.json",
+    "sidebar": "sidebar.json",
+    "slider": "slider.json",
+    "switch": "switch.json",
+    "switch-field": "switch-field.json",
+    "table": "table.json",
+    "tabs": "tabs.json",
+    "tag-group": "tag-group.json",
+    "tag-select": "tag-select.json",
+    "text": "text.json",
+    "text-area": "text-area.json",
+    "text-editor": "text-editor.json",
+    "text-field": "text-field.json",
+    "time-field": "time-field.json",
+    "toast": "toast.json",
+    "toggle-button": "toggle-button.json",
+    "toggle-button-group": "toggle-button-group.json",
+    "token-field": "token-field.json",
+    "toolbar": "toolbar.json",
+    "tooltip": "tooltip.json",
+    "tree": "tree.json",
+    "virtualizer": "virtualizer.json"
+  }
+}

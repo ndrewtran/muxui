@@ -1541,6 +1541,35 @@ test('a derived API routes like its family\'s component record', async () => {
   await assert.rejects(plan(['packages/react/api/missing.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: packages\/react\/api\/missing\.json/u);
 });
 
+test('a model-only change to the declaration reference plans the docs and Storybook generation and checks', async () => {
+  const family = await plan(['packages/react/reference/tree.json']);
+  const record = await plan(['catalog/components/tree/artifact.json']);
+  for (const field of ['reactFamilies', 'storyFamilies', 'catalog', 'docs', 'storyTooling', 'storyUnitTests', 'packageChecks']) {
+    assert.deepEqual(family[field], record[field], field);
+  }
+  assert.ok(family.reasons.includes('packages/react/reference/tree.json is the declaration reference of Tree; validate it like the canonical component record'));
+  assert.equal(needsStorybookGeneration(['packages/react/reference/tree.json'], {}), true);
+  assert.ok(family.reactTestFiles.includes('test/declaration-reference.test.mjs'));
+  assert.ok(existsSync(resolve(repositoryRoot, 'packages/react', 'test/declaration-reference.test.mjs')));
+
+  // The files no family owns reach every component page.
+  for (const name of ['inventory', 'package-level', 'shared']) {
+    const path = `packages/react/reference/${name}.json`;
+    const shared = await plan([path]);
+    assert.equal(shared.docs, true, path);
+    assert.equal(shared.storyTooling, true, path);
+    assert.deepEqual(shared.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree'], path);
+    assert.ok(shared.reactTestFiles.includes('test/declaration-reference.test.mjs'), path);
+    assert.equal(needsStorybookGeneration([path], {}), true, path);
+  }
+  await assert.rejects(plan(['packages/react/reference/missing.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: packages\/react\/reference\/missing\.json/u);
+
+  // The plan runs the docs check and Storybook generation, not only the React package.
+  const commands = executionCommands(family, { packages }).map(({ args }) => args.join(' '));
+  assert.ok(commands.includes('--filter @muxui/docs run check'), commands.join('\n'));
+  assert.ok(commands.some((command) => command.includes('@muxui/react-storybook')), commands.join('\n'));
+});
+
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
   const result = await plan([collectionsPath, '.github/CODEOWNERS'], treeRuntimeChange);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });

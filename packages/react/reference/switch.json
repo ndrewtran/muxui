@@ -1,0 +1,244 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "switch",
+  "sources": { "fields": "packages/react/src/fields.ts" },
+  "exports": [
+    {
+      "name": "Switch",
+      "entry": ".",
+      "module": "fields",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text shown with the Switch, which also describes it."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The message the Switch shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the Switch invalid by itself."
+            },
+            {
+              "name": "selected",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Switch is on, when the caller controls it."
+            },
+            {
+              "name": "defaultSelected",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Switch starts on, when it controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(selected: boolean) => void",
+              "doc": "Called with the new on or off state each time it changes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the Switch: it can be neither focused nor changed."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ControlSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["fields#ControlSize"],
+              "doc": "The control size."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the Switch read-only: its state stays visible and focusable but cannot be changed."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the Switch required, so a form with native validation does not submit while it is off."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the Switch invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the Switch invalid."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named Switch submits its value while it is on."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "What a named Switch submits while it is on."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#SwitchOwnProps",
+      "name": "SwitchOwnProps",
+      "module": "fields",
+      "text": "type SwitchOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  selected?: boolean;\n  defaultSelected?: boolean;\n  onChange?: (selected: boolean) => void;\n  disabled?: boolean;\n  size?: ControlSize;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  value?: string;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the Switch. Without one, the Switch needs an aria-label or aria-labelledby, and children do not count as a name. When both label and children are given, label is shown."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown with the Switch, which also describes it."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message the Switch shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the Switch invalid by itself."
+        },
+        {
+          "name": "selected",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Switch is on, when the caller controls it."
+        },
+        {
+          "name": "defaultSelected",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Switch starts on, when it controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(selected: boolean) => void",
+          "doc": "Called with the new on or off state each time it changes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the Switch: it can be neither focused nor changed."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"],
+          "doc": "The control size."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the Switch read-only: its state stays visible and focusable but cannot be changed."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the Switch required, so a form with native validation does not submit while it is off."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the Switch invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the Switch invalid."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named Switch submits its value while it is on."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "What a named Switch submits while it is on."
+        }
+      ],
+      "refs": ["fields#ControlSize"]
+    },
+    {
+      "id": "fields#SwitchProps",
+      "name": "SwitchProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "SwitchProps" }
+      ],
+      "owner": "switch",
+      "text": "type SwitchProps = Omit<SwitchOwnProps, 'label'> & {\n  children?: React.ReactNode;\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["fields#SwitchOwnProps", "fields#MuxUIAccessibleName"]
+    }
+  ]
+}

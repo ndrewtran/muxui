@@ -1,0 +1,302 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "tree",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "tree": "packages/react/src/tree.ts"
+  },
+  "exports": [
+    {
+      "name": "Tree",
+      "entry": ".",
+      "module": "tree",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUITreeItem[]",
+              "refs": ["tree#MuxUITreeItem"],
+              "doc": "The tree as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and nested `children` (or `items`). Give every item an id that is unique across the whole tree and stable when the data changes. An item without an id takes its key, value, or position among its siblings as its id, and a repeated id gets a numeric suffix in tree order. A disabled item disables all of its descendants."
+            },
+            {
+              "name": "selectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The selected item ids when the caller controls the selection, or `'all'`."
+            },
+            {
+              "name": "defaultSelectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The ids selected at first when the tree controls its own selection, or `'all'`."
+            },
+            {
+              "name": "expandedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The expanded item ids when the caller controls expansion, or `'all'`."
+            },
+            {
+              "name": "defaultExpandedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The ids expanded at first when the tree controls its own expansion, or `'all'`."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every item and stops the selection, expansion, and action callbacks."
+            },
+            {
+              "name": "selectionMode",
+              "optional": true,
+              "type": "'none' | 'single' | 'multiple'",
+              "values": ["none", "single", "multiple"],
+              "doc": "How many items can be selected."
+            },
+            {
+              "name": "expansionTrigger",
+              "optional": true,
+              "type": "'chevron' | 'row'",
+              "values": ["chevron", "row"],
+              "doc": "What expands a parent item. With `row`, a click or tap on its label or row space expands or collapses it; with `chevron`, only its chevron control does."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(ids: MuxUISelection) => void",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "Called with the selected item ids, or `'all'`, when the selection changes. It is not called while the tree is disabled."
+            },
+            {
+              "name": "onExpandedChange",
+              "optional": true,
+              "type": "(ids: MuxUISelection) => void",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "Called with the expanded item ids, or `'all'`, when an item expands or collapses. It is not called while the tree is disabled."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: MuxUITreeItem) => void",
+              "refs": ["tree#MuxUITreeItem"],
+              "doc": "Called with the item record when the user activates an item. With selection on, a click or Enter runs it while nothing is selected and Space starts a selection; once an item is selected, a click changes the selection instead. It is not called for a disabled item or while the tree is disabled."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUISelection",
+      "name": "MuxUISelection",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUISelection" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUISelection = string[] | 'all';"
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "tree#MuxUITreeItem",
+      "name": "MuxUITreeItem",
+      "module": "tree",
+      "public": [
+        { "entry": ".", "name": "MuxUITreeItem" }
+      ],
+      "owner": "tree",
+      "extends": [
+        {
+          "type": "MuxUICollectionItem",
+          "refs": ["collection-items#MuxUICollectionItem"]
+        }
+      ],
+      "text": "interface MuxUITreeItem extends MuxUICollectionItem {\n  children?: MuxUITreeItem[];\n  items?: MuxUITreeItem[];\n}",
+      "members": [
+        {
+          "name": "children",
+          "optional": true,
+          "type": "MuxUITreeItem[]",
+          "refs": ["tree#MuxUITreeItem"]
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUITreeItem[]",
+          "refs": ["tree#MuxUITreeItem"]
+        }
+      ],
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "tree#TreeOwnProps",
+      "name": "TreeOwnProps",
+      "module": "tree",
+      "text": "type TreeOwnProps = {\n  items?: MuxUITreeItem[];\n  selectedIds?: MuxUISelection;\n  defaultSelectedIds?: MuxUISelection;\n  expandedIds?: MuxUISelection;\n  defaultExpandedIds?: MuxUISelection;\n  disabled?: boolean;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  expansionTrigger?: 'chevron' | 'row';\n  onSelectionChange?: (ids: MuxUISelection) => void;\n  onExpandedChange?: (ids: MuxUISelection) => void;\n  onAction?: (item?: MuxUITreeItem) => void;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUITreeItem[]",
+          "refs": ["tree#MuxUITreeItem"],
+          "doc": "The tree as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and nested `children` (or `items`). Give every item an id that is unique across the whole tree and stable when the data changes. An item without an id takes its key, value, or position among its siblings as its id, and a repeated id gets a numeric suffix in tree order. A disabled item disables all of its descendants."
+        },
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The selected item ids when the caller controls the selection, or `'all'`."
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The ids selected at first when the tree controls its own selection, or `'all'`."
+        },
+        {
+          "name": "expandedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The expanded item ids when the caller controls expansion, or `'all'`."
+        },
+        {
+          "name": "defaultExpandedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The ids expanded at first when the tree controls its own expansion, or `'all'`."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every item and stops the selection, expansion, and action callbacks."
+        },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'none' | 'single' | 'multiple'",
+          "values": ["none", "single", "multiple"],
+          "doc": "How many items can be selected."
+        },
+        {
+          "name": "expansionTrigger",
+          "optional": true,
+          "type": "'chevron' | 'row'",
+          "values": ["chevron", "row"],
+          "doc": "What expands a parent item. With `row`, a click or tap on its label or row space expands or collapses it; with `chevron`, only its chevron control does."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: MuxUISelection) => void",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "Called with the selected item ids, or `'all'`, when the selection changes. It is not called while the tree is disabled."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(ids: MuxUISelection) => void",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "Called with the expanded item ids, or `'all'`, when an item expands or collapses. It is not called while the tree is disabled."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUITreeItem) => void",
+          "refs": ["tree#MuxUITreeItem"],
+          "doc": "Called with the item record when the user activates an item. With selection on, a click or Enter runs it while nothing is selected and Space starts a selection; once an item is selected, a click changes the selection instead. It is not called for a disabled item or while the tree is disabled."
+        }
+      ],
+      "refs": ["tree#MuxUITreeItem", "collection-items#MuxUISelection"]
+    },
+    {
+      "id": "tree#TreeProps",
+      "name": "TreeProps",
+      "module": "tree",
+      "public": [
+        { "entry": ".", "name": "TreeProps" }
+      ],
+      "owner": "tree",
+      "extends": [
+        {
+          "type": "TreeOwnProps",
+          "refs": ["tree#TreeOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type TreeProps = TreeOwnProps & {\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["tree#TreeOwnProps", "fields#MuxUIAriaAccessibleName"]
+    }
+  ]
+}

@@ -2,9 +2,9 @@
 // name, and that TypeScript 7 (the production host) and TypeScript 6 (a test-only host) read the same bytes.
 // The synthetic declarations in support/reference-inputs.mjs hold every construct the reader admits.
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { API } from 'typescript/unstable/sync';
 import { ReferenceReadError } from '../reference-reader/errors.mjs';
@@ -201,6 +201,24 @@ test('every public type is in its owner file with its printed declaration, membe
   });
 });
 
+test('an interface lists its bases, and an alias of Base & { ... } lists the same, so no member is repeated or lost', () => {
+  const declarations = single(`
+export interface Base { id: string; label?: string }
+export interface Extended extends Base { extra: number }
+export type Mixed = Base & { color?: 'a' | 'b' };
+export type Opaque<T> = Base & T;
+`);
+  const graph = read(declarations);
+  const { files } = readReference({ declarations, manifest: fixtureManifest, families: [], exceptions: ownedByFixture(graph), untypedEntries: {} });
+  const byName = Object.fromEntries(files.get('shared.json').types.map((type) => [type.name, type]));
+  assert.deepEqual(byName.Extended.extends, [{ type: 'Base', refs: ['index#Base'] }]);
+  assert.deepEqual(byName.Extended.members.map(({ name }) => name), ['extra']);
+  assert.deepEqual(byName.Mixed.extends, [{ type: 'Base', refs: ['index#Base'] }]);
+  assert.deepEqual(byName.Mixed.members.map(({ name, values }) => [name, values]), [['color', ['a', 'b']]]);
+  assert.equal('extends' in byName.Opaque, false, 'an intersection with a type parameter is text only');
+  assert.equal(byName.Opaque.members, undefined);
+});
+
 // ---- what the reader refuses, by name -------------------------------------------------------------
 
 const REFUSED = [
@@ -330,19 +348,26 @@ test('the compiler session closes and the scratch directories go when reading su
     closes.push(this);
     return close.call(this);
   };
-  const scratch = () => readdirSync(tmpdir()).filter((entry) => entry.startsWith('muxui-reference-')).sort();
-  const before = scratch();
+  // Test files run side by side and the others read declarations too, so this one watches a temporary directory of its own.
+  const outer = process.env.TMPDIR;
+  const own = mkdtempSync(join(tmpdir(), 'muxui-scratch-watch-'));
+  process.env.TMPDIR = own;
   try {
     read(CONFORMANCE);
     assert.equal(closes.length, 1);
     assert.throws(() => read(single('export type C<T> = T extends string ? 1 : 2;')));
     assert.equal(closes.length, 2, 'a refusal closes the session too');
-    assert.throws(() => typescript7Host.open({ directory: tmpdir(), files: [] }, () => { throw new Error('inside'); }), /inside/u);
+    let during = 0;
+    assert.throws(() => typescript7Host.open({ directory: own, files: [] }, () => { during = readdirSync(own).length; throw new Error('inside'); }), /inside/u);
     assert.equal(closes.length, 3);
+    assert.ok(during > 0, 'the host did make a scratch directory');
+    assert.deepEqual(readdirSync(own), [], 'no scratch directory is left behind');
   } finally {
     API.prototype.close = close;
+    if (outer === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = outer;
+    rmSync(own, { recursive: true, force: true });
   }
-  assert.deepEqual(scratch(), before);
 });
 
 // ---- the same bytes under both compilers ----------------------------------------------------------

@@ -1,0 +1,167 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "token-field",
+  "sources": { "fields": "packages/react/src/fields.ts", "token-field": "packages/react/src/token-field.ts" },
+  "exports": [
+    {
+      "name": "TokenField",
+      "entry": ".",
+      "module": "token-field",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string[]",
+              "doc": "The tokens, in order, when the caller controls them."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string[]",
+              "doc": "The tokens the field starts with, when it controls itself. Form reset restores them."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string[]) => void",
+              "doc": "Called with the token array each time the tokens change, and only then: typed text that is not yet a token does not call it. A disabled or read-only field does not call it."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the field: it can be neither focused nor changed, and it submits no tokens."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the field read-only: its tokens stay visible and focusable but cannot be changed, and it still submits them."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named field submits one entry per token under it."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "Text shown while the field holds no tokens and no typed text."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "token-field#TokenFieldOwnProps",
+      "name": "TokenFieldOwnProps",
+      "module": "token-field",
+      "text": "type TokenFieldOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  value?: string[];\n  defaultValue?: string[];\n  onChange?: (value: string[]) => void;\n  disabled?: boolean;\n  readOnly?: boolean;\n  name?: string;\n  placeholder?: string;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string[]",
+          "doc": "The tokens, in order, when the caller controls them."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string[]",
+          "doc": "The tokens the field starts with, when it controls itself. Form reset restores them."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string[]) => void",
+          "doc": "Called with the token array each time the tokens change, and only then: typed text that is not yet a token does not call it. A disabled or read-only field does not call it."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the field: it can be neither focused nor changed, and it submits no tokens."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the field read-only: its tokens stay visible and focusable but cannot be changed, and it still submits them."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named field submits one entry per token under it."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "Text shown while the field holds no tokens and no typed text."
+        }
+      ]
+    },
+    {
+      "id": "token-field#TokenFieldProps",
+      "name": "TokenFieldProps",
+      "module": "token-field",
+      "public": [
+        { "entry": ".", "name": "TokenFieldProps" }
+      ],
+      "owner": "token-field",
+      "text": "type TokenFieldProps = Omit<TokenFieldOwnProps, 'label'> & {\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["token-field#TokenFieldOwnProps", "fields#MuxUIAccessibleName"]
+    }
+  ]
+}

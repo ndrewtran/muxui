@@ -1,0 +1,139 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "image",
+  "sources": { "image": "packages/react/src/supplemental/image.ts" },
+  "exports": [
+    {
+      "name": "Image",
+      "entry": ".",
+      "module": "image",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "alt",
+              "type": "string",
+              "doc": "What the picture shows in its context, or an empty string for a decorative image. Required."
+            },
+            {
+              "name": "fallbackSrc",
+              "optional": true,
+              "type": "string",
+              "doc": "A source tried once after the primary source fails to load."
+            },
+            {
+              "name": "fallbackSrcSet",
+              "optional": true,
+              "type": "string",
+              "doc": "A source set tried once, with fallbackSrc, after the primary source fails to load."
+            },
+            {
+              "name": "radius",
+              "optional": true,
+              "type": "ImageRadius",
+              "values": ["none", "sm", "md", "lg", "full"],
+              "refs": ["image#ImageRadius"],
+              "doc": "The corner radius."
+            },
+            {
+              "name": "fit",
+              "optional": true,
+              "type": "ImageFit",
+              "values": ["cover", "contain", "fill", "none"],
+              "refs": ["image#ImageFit"],
+              "doc": "How the picture fills the box its width and height declare."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLImageElement" },
+          "natives": [
+            {
+              "type": "React.ImgHTMLAttributes<HTMLImageElement>",
+              "omit": ["alt", "fallbackSrc", "fallbackSrcSet", "radius", "fit", "className"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "image#ImageFit",
+      "name": "ImageFit",
+      "module": "image",
+      "public": [
+        { "entry": ".", "name": "ImageFit" }
+      ],
+      "owner": "image",
+      "text": "type ImageFit = 'cover' | 'contain' | 'fill' | 'none';",
+      "values": ["cover", "contain", "fill", "none"]
+    },
+    {
+      "id": "image#ImageOwnProps",
+      "name": "ImageOwnProps",
+      "module": "image",
+      "text": "type ImageOwnProps = {\n  alt: string;\n  fallbackSrc?: string;\n  fallbackSrcSet?: string;\n  radius?: ImageRadius;\n  fit?: ImageFit;\n};",
+      "members": [
+        {
+          "name": "alt",
+          "type": "string",
+          "doc": "What the picture shows in its context, or an empty string for a decorative image. Required."
+        },
+        {
+          "name": "fallbackSrc",
+          "optional": true,
+          "type": "string",
+          "doc": "A source tried once after the primary source fails to load."
+        },
+        {
+          "name": "fallbackSrcSet",
+          "optional": true,
+          "type": "string",
+          "doc": "A source set tried once, with fallbackSrc, after the primary source fails to load."
+        },
+        {
+          "name": "radius",
+          "optional": true,
+          "type": "ImageRadius",
+          "values": ["none", "sm", "md", "lg", "full"],
+          "refs": ["image#ImageRadius"],
+          "doc": "The corner radius."
+        },
+        {
+          "name": "fit",
+          "optional": true,
+          "type": "ImageFit",
+          "values": ["cover", "contain", "fill", "none"],
+          "refs": ["image#ImageFit"],
+          "doc": "How the picture fills the box its width and height declare."
+        }
+      ],
+      "refs": ["image#ImageRadius", "image#ImageFit"]
+    },
+    {
+      "id": "image#ImageProps",
+      "name": "ImageProps",
+      "module": "image",
+      "public": [
+        { "entry": ".", "name": "ImageProps" }
+      ],
+      "owner": "image",
+      "text": "type ImageProps = ImageOwnProps & Omit<React.ImgHTMLAttributes<HTMLImageElement>, keyof ImageOwnProps | 'className'> & {\n  className?: string;\n};",
+      "refs": ["image#ImageOwnProps"]
+    },
+    {
+      "id": "image#ImageRadius",
+      "name": "ImageRadius",
+      "module": "image",
+      "public": [
+        { "entry": ".", "name": "ImageRadius" }
+      ],
+      "owner": "image",
+      "text": "type ImageRadius = 'none' | 'sm' | 'md' | 'lg' | 'full';",
+      "values": ["none", "sm", "md", "lg", "full"]
+    }
+  ]
+}

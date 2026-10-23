@@ -1,0 +1,385 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "prompt-composer",
+  "sources": { "prompt-composer": "packages/react/src/supplemental/prompt-composer.ts" },
+  "exports": [
+    {
+      "name": "PromptComposer",
+      "entry": ".",
+      "module": "prompt-composer",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "inputLabel",
+              "optional": true,
+              "type": "string",
+              "doc": "The accessible name of the textarea, when `inputProps` gives it neither an `aria-label` nor an `aria-labelledby`."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The text, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text at first, when the composer controls itself. A form reset restores it."
+            },
+            {
+              "name": "onValueChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the new text each time it changes."
+            },
+            {
+              "name": "inputProps",
+              "optional": true,
+              "type": "Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'defaultValue' | 'children' | 'dangerouslySetInnerHTML'>",
+              "doc": "Native textarea props. `form` associates text and Send with that external form's validation, submission and reset."
+            },
+            {
+              "name": "onSend",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Runs only when the composer host form receives an uncancelled submission, with the text."
+            },
+            {
+              "name": "onStop",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called when Stop is pressed. Stop replaces Send while `pending`, and shows only with this callback."
+            },
+            {
+              "name": "pending",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the text read-only and disables the auxiliary actions. Stop replaces Send when `onStop` is given."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Prevents all editing and actions."
+            },
+            {
+              "name": "error",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A message shown with the composer, associated with the textarea and announced; it also marks the textarea invalid."
+            },
+            {
+              "name": "sources",
+              "optional": true,
+              "type": "readonly PromptComposerSuggestion[]",
+              "refs": ["prompt-composer#PromptComposerSuggestion"],
+              "doc": "The records a caret token beginning with @ at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses."
+            },
+            {
+              "name": "commands",
+              "optional": true,
+              "type": "readonly PromptComposerSuggestion[]",
+              "refs": ["prompt-composer#PromptComposerSuggestion"],
+              "doc": "The records a caret token beginning with / at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses."
+            },
+            {
+              "name": "onSuggestionSelect",
+              "optional": true,
+              "type": "(item: PromptComposerSuggestion, kind: 'source' | 'command') => void",
+              "refs": ["prompt-composer#PromptComposerSuggestion"],
+              "doc": "Called with the chosen record and its kind when a suggestion is inserted. Insertion replaces only the current token, respects `maxLength`, and never sends."
+            },
+            {
+              "name": "attachments",
+              "optional": true,
+              "type": "readonly PromptComposerAttachment[]",
+              "refs": ["prompt-composer#PromptComposerAttachment"],
+              "doc": "Display records for the files attached. Each shows with a remove button when `onRemoveAttachment` is given."
+            },
+            {
+              "name": "onRemoveAttachment",
+              "optional": true,
+              "type": "(id: string) => void",
+              "doc": "Called with the id of an attachment whose remove button was pressed."
+            },
+            {
+              "name": "onFilesSelected",
+              "optional": true,
+              "type": "(files: File[]) => void",
+              "doc": "Shows an attach button that opens a native file picker, and receives the chosen files. Nothing is uploaded."
+            },
+            {
+              "name": "accept",
+              "optional": true,
+              "type": "string",
+              "doc": "The file types the attach picker accepts, as the native input's `accept`."
+            },
+            {
+              "name": "multiple",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the attach picker admits several files."
+            },
+            {
+              "name": "models",
+              "optional": true,
+              "type": "readonly PromptComposerModel[]",
+              "refs": ["prompt-composer#PromptComposerModel"],
+              "doc": "The models the picker offers. It renders only with `models` and `onModelChange`."
+            },
+            {
+              "name": "selectedModel",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the selected model, when the caller controls it."
+            },
+            {
+              "name": "defaultSelectedModel",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the model selected at first, when the composer controls itself; without one, the first model. A form reset restores it."
+            },
+            {
+              "name": "onModelChange",
+              "optional": true,
+              "type": "(id: string) => void",
+              "doc": "Called with the id of the chosen model."
+            },
+            {
+              "name": "onDictation",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Shows a dictation button that calls this when pressed. Mux UI performs no recognition."
+            },
+            { "name": "inputRef", "optional": true, "type": "React.Ref<HTMLTextAreaElement>" }
+          ],
+          "ref": { "type": "HTMLFormElement" },
+          "natives": [
+            {
+              "type": "React.FormHTMLAttributes<HTMLFormElement>",
+              "omit": ["children", "dangerouslySetInnerHTML", "defaultValue"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "prompt-composer#PromptComposerAttachment",
+      "name": "PromptComposerAttachment",
+      "module": "prompt-composer",
+      "public": [
+        { "entry": ".", "name": "PromptComposerAttachment" }
+      ],
+      "owner": "prompt-composer",
+      "text": "type PromptComposerAttachment = {\n  id: string;\n  label: string;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" }
+      ]
+    },
+    {
+      "id": "prompt-composer#PromptComposerModel",
+      "name": "PromptComposerModel",
+      "module": "prompt-composer",
+      "public": [
+        { "entry": ".", "name": "PromptComposerModel" }
+      ],
+      "owner": "prompt-composer",
+      "text": "type PromptComposerModel = {\n  id: string;\n  label: string;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" }
+      ]
+    },
+    {
+      "id": "prompt-composer#PromptComposerOwnProps",
+      "name": "PromptComposerOwnProps",
+      "module": "prompt-composer",
+      "text": "type PromptComposerOwnProps = {\n  inputLabel?: string;\n  value?: string;\n  defaultValue?: string;\n  onValueChange?: (value: string) => void;\n  inputProps?: Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'defaultValue' | 'children' | 'dangerouslySetInnerHTML'>;\n  onSend?: (value: string) => void;\n  onStop?: () => void;\n  pending?: boolean;\n  disabled?: boolean;\n  error?: React.ReactNode;\n  sources?: readonly PromptComposerSuggestion[];\n  commands?: readonly PromptComposerSuggestion[];\n  onSuggestionSelect?: (item: PromptComposerSuggestion, kind: 'source' | 'command') => void;\n  attachments?: readonly PromptComposerAttachment[];\n  onRemoveAttachment?: (id: string) => void;\n  onFilesSelected?: (files: File[]) => void;\n  accept?: string;\n  multiple?: boolean;\n  models?: readonly PromptComposerModel[];\n  selectedModel?: string;\n  defaultSelectedModel?: string;\n  onModelChange?: (id: string) => void;\n  onDictation?: () => void;\n};",
+      "members": [
+        {
+          "name": "inputLabel",
+          "optional": true,
+          "type": "string",
+          "doc": "The accessible name of the textarea, when `inputProps` gives it neither an `aria-label` nor an `aria-labelledby`."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The text, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text at first, when the composer controls itself. A form reset restores it."
+        },
+        {
+          "name": "onValueChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the new text each time it changes."
+        },
+        {
+          "name": "inputProps",
+          "optional": true,
+          "type": "Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'defaultValue' | 'children' | 'dangerouslySetInnerHTML'>",
+          "doc": "Native textarea props. `form` associates text and Send with that external form's validation, submission and reset."
+        },
+        {
+          "name": "onSend",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Runs only when the composer host form receives an uncancelled submission, with the text."
+        },
+        {
+          "name": "onStop",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Called when Stop is pressed. Stop replaces Send while `pending`, and shows only with this callback."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the text read-only and disables the auxiliary actions. Stop replaces Send when `onStop` is given."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Prevents all editing and actions."
+        },
+        {
+          "name": "error",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "A message shown with the composer, associated with the textarea and announced; it also marks the textarea invalid."
+        },
+        {
+          "name": "sources",
+          "optional": true,
+          "type": "readonly PromptComposerSuggestion[]",
+          "refs": ["prompt-composer#PromptComposerSuggestion"],
+          "doc": "The records a caret token beginning with @ at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses."
+        },
+        {
+          "name": "commands",
+          "optional": true,
+          "type": "readonly PromptComposerSuggestion[]",
+          "refs": ["prompt-composer#PromptComposerSuggestion"],
+          "doc": "The records a caret token beginning with / at a word boundary suggests. Up and Down choose, Enter inserts, and Escape dismisses."
+        },
+        {
+          "name": "onSuggestionSelect",
+          "optional": true,
+          "type": "(item: PromptComposerSuggestion, kind: 'source' | 'command') => void",
+          "refs": ["prompt-composer#PromptComposerSuggestion"],
+          "doc": "Called with the chosen record and its kind when a suggestion is inserted. Insertion replaces only the current token, respects `maxLength`, and never sends."
+        },
+        {
+          "name": "attachments",
+          "optional": true,
+          "type": "readonly PromptComposerAttachment[]",
+          "refs": ["prompt-composer#PromptComposerAttachment"],
+          "doc": "Display records for the files attached. Each shows with a remove button when `onRemoveAttachment` is given."
+        },
+        {
+          "name": "onRemoveAttachment",
+          "optional": true,
+          "type": "(id: string) => void",
+          "doc": "Called with the id of an attachment whose remove button was pressed."
+        },
+        {
+          "name": "onFilesSelected",
+          "optional": true,
+          "type": "(files: File[]) => void",
+          "doc": "Shows an attach button that opens a native file picker, and receives the chosen files. Nothing is uploaded."
+        },
+        {
+          "name": "accept",
+          "optional": true,
+          "type": "string",
+          "doc": "The file types the attach picker accepts, as the native input's `accept`."
+        },
+        {
+          "name": "multiple",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the attach picker admits several files."
+        },
+        {
+          "name": "models",
+          "optional": true,
+          "type": "readonly PromptComposerModel[]",
+          "refs": ["prompt-composer#PromptComposerModel"],
+          "doc": "The models the picker offers. It renders only with `models` and `onModelChange`."
+        },
+        {
+          "name": "selectedModel",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the selected model, when the caller controls it."
+        },
+        {
+          "name": "defaultSelectedModel",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the model selected at first, when the composer controls itself; without one, the first model. A form reset restores it."
+        },
+        {
+          "name": "onModelChange",
+          "optional": true,
+          "type": "(id: string) => void",
+          "doc": "Called with the id of the chosen model."
+        },
+        {
+          "name": "onDictation",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Shows a dictation button that calls this when pressed. Mux UI performs no recognition."
+        }
+      ],
+      "refs": [
+        "prompt-composer#PromptComposerSuggestion",
+        "prompt-composer#PromptComposerAttachment",
+        "prompt-composer#PromptComposerModel"
+      ]
+    },
+    {
+      "id": "prompt-composer#PromptComposerProps",
+      "name": "PromptComposerProps",
+      "module": "prompt-composer",
+      "public": [
+        { "entry": ".", "name": "PromptComposerProps" }
+      ],
+      "owner": "prompt-composer",
+      "text": "type PromptComposerProps = Omit<React.FormHTMLAttributes<HTMLFormElement>, 'children' | 'dangerouslySetInnerHTML' | 'defaultValue'> & PromptComposerOwnProps & {\n  inputRef?: React.Ref<HTMLTextAreaElement>;\n};",
+      "refs": ["prompt-composer#PromptComposerOwnProps"]
+    },
+    {
+      "id": "prompt-composer#PromptComposerSuggestion",
+      "name": "PromptComposerSuggestion",
+      "module": "prompt-composer",
+      "public": [
+        { "entry": ".", "name": "PromptComposerSuggestion" }
+      ],
+      "owner": "prompt-composer",
+      "text": "type PromptComposerSuggestion = {\n  id: string;\n  label: string;\n  description?: string;\n  insertText?: string;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" },
+        { "name": "description", "optional": true, "type": "string" },
+        { "name": "insertText", "optional": true, "type": "string" }
+      ]
+    }
+  ]
+}

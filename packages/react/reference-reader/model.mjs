@@ -132,11 +132,23 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
   function modelType(declaration) {
     const publics = (publicNames.get(declaration.id) ?? []).map(({ entry, name }) => ({ entry, name }));
     const owner = publicNames.get(declaration.id)?.[0]?.owner;
-    const object = declaration.kind === 'interface' ? declaration.members : (declaration.type.kind === 'object' ? declaration.type.members : null);
+    // An alias of `Base & { ... }` is an interface that extends Base: its references are its bases, its literals its members.
+    const parts = declaration.kind === 'alias' && declaration.type.kind === 'intersection'
+      && declaration.type.members.every((part) => part.kind === 'object' || (part.kind === 'reference' && !part.typeArguments))
+      ? declaration.type.members
+      : null;
+    const object = declaration.kind === 'interface'
+      ? declaration.members
+      : (declaration.type.kind === 'object' ? declaration.type.members : parts?.filter(({ kind }) => kind === 'object').flatMap(({ members: literal }) => literal));
     const members = object?.filter((member) => member.member === 'property' || member.member === 'method').map((member) => modelMember(member, types));
     const finite = declaration.kind === 'alias' && !declaration.typeParameters ? valuesOf(declaration.type, types) : null;
     const refs = [...referencedIds(declaration.kind === 'interface' ? [declaration.extends, declaration.members, declaration.typeParameters] : [declaration.type, declaration.typeParameters])].filter((id) => id !== declaration.id);
     const typeParameters = modelTypeParameters(declaration.typeParameters);
+    // The bases an interface extends, as the declaration writes them; their own members are not repeated in `members`.
+    const bases = (declaration.extends ?? parts?.filter(({ kind }) => kind === 'reference'))?.map((base) => {
+      const baseRefs = [...referencedIds(base)];
+      return { type: printType(base), ...(baseRefs.length > 0 && { refs: baseRefs }) };
+    });
     return {
       id: declaration.id,
       name: declaration.name,
@@ -144,6 +156,7 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
       ...(publics.length > 0 && { public: publics }),
       ...(owner && { owner }),
       ...(typeParameters && { typeParameters }),
+      ...(bases && { extends: bases }),
       text: printDeclaration(declaration),
       ...(members && members.length > 0 && { members }),
       ...(finite !== null && { values: finite }),

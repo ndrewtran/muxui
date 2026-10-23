@@ -1,0 +1,116 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "meter",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "Meter",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "number",
+              "doc": "The reading, clamped to the range."
+            },
+            {
+              "name": "minValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The bottom of the range."
+            },
+            {
+              "name": "maxValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The top of the range."
+            },
+            {
+              "name": "label",
+              "type": "React.ReactNode",
+              "doc": "The visible name of what is measured. Meter renders it unless aria-label or aria-labelledby names the Meter."
+            },
+            {
+              "name": "formatOptions",
+              "optional": true,
+              "type": "Intl.NumberFormatOptions",
+              "doc": "How the value text is formatted. Omitted, it formats the position in the range as a percentage."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["value", "minValue", "maxValue", "label", "formatOptions", "children", "className"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#MeterOwnProps",
+      "name": "MeterOwnProps",
+      "module": "components",
+      "text": "interface MeterOwnProps {\n  value?: number;\n  minValue?: number;\n  maxValue?: number;\n  label: React.ReactNode;\n  formatOptions?: Intl.NumberFormatOptions;\n}",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "number",
+          "doc": "The reading, clamped to the range."
+        },
+        {
+          "name": "minValue",
+          "optional": true,
+          "type": "number",
+          "doc": "The bottom of the range."
+        },
+        { "name": "maxValue", "optional": true, "type": "number", "doc": "The top of the range." },
+        {
+          "name": "label",
+          "type": "React.ReactNode",
+          "doc": "The visible name of what is measured. Meter renders it unless aria-label or aria-labelledby names the Meter."
+        },
+        {
+          "name": "formatOptions",
+          "optional": true,
+          "type": "Intl.NumberFormatOptions",
+          "doc": "How the value text is formatted. Omitted, it formats the position in the range as a percentage."
+        }
+      ]
+    },
+    {
+      "id": "components#MeterProps",
+      "name": "MeterProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "MeterProps" }
+      ],
+      "owner": "meter",
+      "extends": [
+        {
+          "type": "MeterOwnProps",
+          "refs": ["components#MeterOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLDivElement>, keyof MeterOwnProps | 'children' | 'className'>",
+          "refs": ["components#MeterOwnProps"]
+        }
+      ],
+      "text": "interface MeterProps extends MeterOwnProps, Omit<React.HTMLAttributes<HTMLDivElement>, keyof MeterOwnProps | 'children' | 'className'> {\n  className?: string;\n}",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#MeterOwnProps"]
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "toggle-button",
+  "sources": { "button": "packages/react/src/button.ts", "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "ToggleButton",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "selected",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the ToggleButton is on, when the caller controls it."
+            },
+            {
+              "name": "defaultSelected",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the ToggleButton starts on, when it controls itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the ToggleButton: it can be neither focused nor toggled."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(selected: boolean) => void",
+              "doc": "Reports the new selected state."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: ToggleButtonActivationEvent) => void",
+              "refs": ["components#ToggleButtonActivationEvent"],
+              "doc": "Reports an activation of the ToggleButton."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            {
+              "type": "React.ButtonHTMLAttributes<HTMLButtonElement>",
+              "omit": [
+                "selected",
+                "defaultSelected",
+                "disabled",
+                "size",
+                "onChange",
+                "onActivate",
+                "children",
+                "className",
+                "onClick"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "components#ToggleButtonActivationEvent",
+      "name": "ToggleButtonActivationEvent",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "ToggleButtonActivationEvent" }
+      ],
+      "owner": "toggle-button",
+      "text": "interface ToggleButtonActivationEvent {\n  readonly type: 'activate';\n  readonly pointerType: ButtonPointerType;\n  readonly target: HTMLButtonElement;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        {
+          "name": "pointerType",
+          "readonly": true,
+          "type": "ButtonPointerType",
+          "refs": ["button#ButtonPointerType"]
+        },
+        { "name": "target", "readonly": true, "type": "HTMLButtonElement" }
+      ],
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "components#ToggleButtonOwnProps",
+      "name": "ToggleButtonOwnProps",
+      "module": "components",
+      "text": "interface ToggleButtonOwnProps {\n  selected?: boolean;\n  defaultSelected?: boolean;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  onChange?: (selected: boolean) => void;\n  onActivate?: (event: ToggleButtonActivationEvent) => void;\n}",
+      "members": [
+        {
+          "name": "selected",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the ToggleButton is on, when the caller controls it."
+        },
+        {
+          "name": "defaultSelected",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the ToggleButton starts on, when it controls itself."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the ToggleButton: it can be neither focused nor toggled."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(selected: boolean) => void",
+          "doc": "Reports the new selected state."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: ToggleButtonActivationEvent) => void",
+          "refs": ["components#ToggleButtonActivationEvent"],
+          "doc": "Reports an activation of the ToggleButton."
+        }
+      ],
+      "refs": ["components#ToggleButtonActivationEvent"]
+    },
+    {
+      "id": "components#ToggleButtonProps",
+      "name": "ToggleButtonProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "ToggleButtonProps" }
+      ],
+      "owner": "toggle-button",
+      "extends": [
+        {
+          "type": "ToggleButtonOwnProps",
+          "refs": ["components#ToggleButtonOwnProps"]
+        },
+        {
+          "type": "Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof ToggleButtonOwnProps | 'children' | 'className' | 'onClick'>",
+          "refs": ["components#ToggleButtonOwnProps"]
+        }
+      ],
+      "text": "interface ToggleButtonProps extends ToggleButtonOwnProps, Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof ToggleButtonOwnProps | 'children' | 'className' | 'onClick'> {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#ToggleButtonOwnProps"]
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "input",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "Input",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "value", "optional": true, "type": "string" },
+            { "name": "defaultValue", "optional": true, "type": "string" },
+            { "name": "onChange", "optional": true, "type": "(value: string) => void" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onChange"]
+            }
+          ]
+        },
+        {
+          "member": "Input",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLInputElement" },
+          "natives": [
+            { "type": "React.InputHTMLAttributes<HTMLInputElement>" }
+          ]
+        },
+        {
+          "member": "Label",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLLabelElement>" }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Error",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#InputControlProps",
+      "name": "InputControlProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputControlProps" }
+      ],
+      "owner": "input",
+      "text": "type InputControlProps = React.InputHTMLAttributes<HTMLInputElement>;"
+    },
+    {
+      "id": "supplemental#InputDescriptionProps",
+      "name": "InputDescriptionProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputDescriptionProps" }
+      ],
+      "owner": "input",
+      "text": "type InputDescriptionProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#InputErrorProps",
+      "name": "InputErrorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputErrorProps" }
+      ],
+      "owner": "input",
+      "text": "type InputErrorProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#InputLabelProps",
+      "name": "InputLabelProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputLabelProps" }
+      ],
+      "owner": "input",
+      "text": "type InputLabelProps = PartProps<HTMLLabelElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#InputProps",
+      "name": "InputProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputProps" }
+      ],
+      "owner": "input",
+      "text": "type InputProps = InputControlProps;",
+      "refs": ["supplemental#InputControlProps"]
+    },
+    {
+      "id": "supplemental#InputRootProps",
+      "name": "InputRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputRootProps" }
+      ],
+      "owner": "input",
+      "text": "type InputRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n};",
+      "refs": ["supplemental#SupplementalFieldProps"]
+    },
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    }
+  ]
+}

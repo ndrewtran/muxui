@@ -9,6 +9,7 @@ import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
+import { syncDeclarationReference } from '../reference-reader/sync.mjs';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, carriesUpstreamPropName, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
@@ -1032,5 +1033,14 @@ if (listing) {
 
 if (!listing) {
   await syncDerivedApis({ packageRoot, documents: derivedApis, checking });
+  // reference/ is read from the declarations in `outputs`, which are the ones this run emitted, so it is written
+  // after them and never from a generated/ left over from an earlier build.
+  await syncDeclarationReference({
+    packageRoot,
+    outputs,
+    manifest,
+    families: currentFamilyRecords.map(({ slug, exportName, source, module }) => ({ slug, exportName, source, module })),
+    checking,
+  });
   console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');
 }

@@ -1,0 +1,172 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "tag-select",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "TagSelect",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "call",
+          "typeParameters": [
+            {
+              "name": "T",
+              "constraint": "TagSelectItem",
+              "default": "TagSelectItem",
+              "refs": ["supplemental#TagSelectItem"]
+            }
+          ],
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "label", "optional": true, "type": "React.ReactNode" },
+            { "name": "placeholder", "optional": true, "type": "string" },
+            { "name": "description", "optional": true, "type": "React.ReactNode" },
+            { "name": "errorMessage", "optional": true, "type": "React.ReactNode" },
+            { "name": "items", "optional": true, "type": "T[]" },
+            {
+              "name": "children",
+              "optional": true,
+              "type": "React.ReactNode | ((item: T) => React.ReactNode)"
+            },
+            { "name": "selectedKeys", "optional": true, "type": "Set<React.Key>" },
+            { "name": "defaultSelectedKeys", "optional": true, "type": "Set<React.Key>" },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(keys: Set<React.Key>) => void"
+            },
+            { "name": "getItemLabel", "optional": true, "type": "(item: T) => string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["children"]
+            }
+          ]
+        },
+        {
+          "member": "Item",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "textValue", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    },
+    {
+      "id": "supplemental#TagSelectItem",
+      "name": "TagSelectItem",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TagSelectItem" }
+      ],
+      "owner": "tag-select",
+      "text": "type TagSelectItem = {\n  id: React.Key;\n  [key: string]: unknown;\n};",
+      "members": [
+        { "name": "id", "type": "React.Key" }
+      ]
+    },
+    {
+      "id": "supplemental#TagSelectItemProps",
+      "name": "TagSelectItemProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TagSelectItemProps" }
+      ],
+      "owner": "tag-select",
+      "text": "type TagSelectItemProps = React.HTMLAttributes<HTMLDivElement> & {\n  disabled?: boolean;\n  textValue?: string;\n};"
+    },
+    {
+      "id": "supplemental#TagSelectProps",
+      "name": "TagSelectProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TagSelectProps" }
+      ],
+      "owner": "tag-select",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "TagSelectItem",
+          "default": "TagSelectItem",
+          "refs": ["supplemental#TagSelectItem"]
+        }
+      ],
+      "text": "type TagSelectProps<T extends TagSelectItem = TagSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & {\n  label?: React.ReactNode;\n  placeholder?: string;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  items?: T[];\n  children?: React.ReactNode | ((item: T) => React.ReactNode);\n  selectedKeys?: Set<React.Key>;\n  defaultSelectedKeys?: Set<React.Key>;\n  onSelectionChange?: (keys: Set<React.Key>) => void;\n  getItemLabel?: (item: T) => string;\n};",
+      "refs": ["supplemental#SupplementalFieldProps", "supplemental#TagSelectItem"]
+    },
+    {
+      "id": "supplemental#TagSelectRootComponent",
+      "name": "TagSelectRootComponent",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TagSelectRootComponent" }
+      ],
+      "owner": "tag-select",
+      "text": "interface TagSelectRootComponent {\n  <T extends TagSelectItem = TagSelectItem>(props: TagSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;\n}",
+      "refs": ["supplemental#TagSelectItem", "supplemental#TagSelectRootProps"]
+    },
+    {
+      "id": "supplemental#TagSelectRootProps",
+      "name": "TagSelectRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TagSelectRootProps" }
+      ],
+      "owner": "tag-select",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "TagSelectItem",
+          "default": "TagSelectItem",
+          "refs": ["supplemental#TagSelectItem"]
+        }
+      ],
+      "text": "type TagSelectRootProps<T extends TagSelectItem = TagSelectItem> = TagSelectProps<T>;",
+      "refs": ["supplemental#TagSelectProps", "supplemental#TagSelectItem"]
+    }
+  ]
+}

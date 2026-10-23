@@ -1,0 +1,164 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-area",
+  "sources": {
+    "color-area": "packages/react/src/color-area.ts",
+    "color-context": "packages/react/src/color-context.ts",
+    "fields": "packages/react/src/fields.ts"
+  },
+  "exports": [
+    {
+      "name": "ColorArea",
+      "entry": ".",
+      "module": "color-area",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The area's color, when the caller controls it. The area edits its saturation and brightness and keeps the hue."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The starting color, when the area controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: MuxUIColorValue) => void",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "Called with the new color as a CSS string each time saturation or brightness changes, in the color space of the value, of the enclosing ColorPicker, or of defaultValue, and in rgba() form with none of them. A disabled or read-only area does not call it."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the area: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the area read-only: it stays focusable but its color cannot be changed. A read-only enclosing ColorPicker does the same."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "color-area#ColorAreaOwnProps",
+      "name": "ColorAreaOwnProps",
+      "module": "color-area",
+      "text": "type ColorAreaOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  value?: MuxUIColorValue;\n  defaultValue?: MuxUIColorValue;\n  onChange?: (value: MuxUIColorValue) => void;\n  disabled?: boolean;\n  readOnly?: boolean;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the area. Without one, the area needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The area's color, when the caller controls it. The area edits its saturation and brightness and keeps the hue."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The starting color, when the area controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: MuxUIColorValue) => void",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "Called with the new color as a CSS string each time saturation or brightness changes, in the color space of the value, of the enclosing ColorPicker, or of defaultValue, and in rgba() form with none of them. A disabled or read-only area does not call it."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the area: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the area read-only: it stays focusable but its color cannot be changed. A read-only enclosing ColorPicker does the same."
+        }
+      ],
+      "refs": ["color-context#MuxUIColorValue"]
+    },
+    {
+      "id": "color-area#ColorAreaProps",
+      "name": "ColorAreaProps",
+      "module": "color-area",
+      "public": [
+        { "entry": ".", "name": "ColorAreaProps" }
+      ],
+      "owner": "color-area",
+      "text": "type ColorAreaProps = Omit<ColorAreaOwnProps, 'label'> & {\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["color-area#ColorAreaOwnProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "color-context#MuxUIColorValue",
+      "name": "MuxUIColorValue",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorValue = string;"
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    }
+  ]
+}

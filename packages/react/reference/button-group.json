@@ -1,0 +1,52 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "button-group",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "ButtonGroup",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"]
+            },
+            { "name": "attached", "optional": true, "type": "boolean" },
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "role",
+              "optional": true,
+              "type": "'group' | 'region' | 'presentation'",
+              "values": ["group", "region", "presentation"]
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#ButtonGroupProps",
+      "name": "ButtonGroupProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ButtonGroupProps" }
+      ],
+      "owner": "button-group",
+      "text": "type ButtonGroupProps = React.HTMLAttributes<HTMLDivElement> & {\n  orientation?: 'horizontal' | 'vertical';\n  attached?: boolean;\n  disabled?: boolean;\n  role?: 'group' | 'region' | 'presentation';\n  children?: React.ReactNode;\n};"
+    }
+  ]
+}

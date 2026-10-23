@@ -1,0 +1,102 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "input-tags",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "InputTags",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            {
+              "name": "tagPlacement",
+              "optional": true,
+              "type": "'inline' | 'below'",
+              "values": ["inline", "below"]
+            },
+            { "name": "placeholder", "optional": true, "type": "string" },
+            { "name": "value", "optional": true, "type": "string[]" },
+            { "name": "defaultValue", "optional": true, "type": "string[]" },
+            { "name": "onChange", "optional": true, "type": "(tags: string[]) => void" },
+            { "name": "onTagAdded", "optional": true, "type": "(tag: string) => void" },
+            { "name": "onTagRemoved", "optional": true, "type": "(tag: string) => void" },
+            { "name": "allowDuplicates", "optional": true, "type": "boolean" },
+            { "name": "maxTags", "optional": true, "type": "number" },
+            { "name": "validate", "optional": true, "type": "(value: string) => boolean" },
+            { "name": "label", "optional": true, "type": "React.ReactNode" },
+            { "name": "description", "optional": true, "type": "React.ReactNode" },
+            { "name": "errorMessage", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onChange"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#InputTagsProps",
+      "name": "InputTagsProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputTagsProps" }
+      ],
+      "owner": "input-tags",
+      "text": "type InputTagsProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  tagPlacement?: 'inline' | 'below';\n  placeholder?: string;\n  value?: string[];\n  defaultValue?: string[];\n  onChange?: (tags: string[]) => void;\n  onTagAdded?: (tag: string) => void;\n  onTagRemoved?: (tag: string) => void;\n  allowDuplicates?: boolean;\n  maxTags?: number;\n  validate?: (value: string) => boolean;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n};",
+      "refs": ["supplemental#SupplementalFieldProps"]
+    },
+    {
+      "id": "supplemental#InputTagsRootProps",
+      "name": "InputTagsRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "InputTagsRootProps" }
+      ],
+      "owner": "input-tags",
+      "text": "type InputTagsRootProps = InputTagsProps;",
+      "refs": ["supplemental#InputTagsProps"]
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    }
+  ]
+}

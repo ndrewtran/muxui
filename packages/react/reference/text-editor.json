@@ -1,0 +1,911 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "text-editor",
+  "sources": { "text-editor": "packages/react/src/text-editor/index.ts" },
+  "exports": [
+    {
+      "name": "TextEditor",
+      "entry": "./text-editor",
+      "module": "text-editor",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "TextEditorDocument",
+              "refs": ["text-editor#TextEditorDocument"],
+              "doc": "The document, when the application controls it. The editor normalizes it, and an edit reports through `onChange`."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "TextEditorDocument",
+              "refs": ["text-editor#TextEditorDocument"],
+              "doc": "The first document, when the editor manages its own. It is normalized: a value that is not a document, or has nothing left after normalizing, becomes one empty paragraph."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: TextEditorDocument) => void",
+              "refs": ["text-editor#TextEditorDocument"],
+              "doc": "Called with the normalized document after an edit the editor accepts. It does not run at mount, when `disabled` or `readOnly` changes, or when `value` changes from outside."
+            },
+            {
+              "name": "label",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The visible label, which names the editable content."
+            },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Help text below the content, which describes it."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The error text below the content. Setting it also marks the content invalid and names the text as its error message."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the editor and its toolbar."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Keeps the content readable but not editable."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the content required."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the content invalid."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "The text shown while the document is empty."
+            },
+            {
+              "name": "limit",
+              "optional": true,
+              "type": "number",
+              "doc": "The most characters of plain text the document may hold; a fraction is rounded down, and a negative, infinite, or omitted limit means no limit. An edit past it is refused and not reported."
+            },
+            {
+              "name": "toolbar",
+              "optional": true,
+              "type": "false | 'simple' | 'advanced' | 'floating'",
+              "values": [false, "simple", "advanced", "floating"],
+              "doc": "`simple` or `advanced` shows that toolbar, `floating` shows the simple one as a floating bar, and `false` shows none."
+            },
+            {
+              "name": "floating",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Floats the toolbar over the content."
+            },
+            {
+              "name": "bubbleMenu",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows a formatting menu while text is selected."
+            },
+            {
+              "name": "onLinkRequest",
+              "optional": true,
+              "type": "(actions: TextEditorActionCallbacks) => void",
+              "refs": ["text-editor#TextEditorActionCallbacks"],
+              "doc": "Called instead of the link prompt, with the actions that apply the address."
+            },
+            {
+              "name": "onImageRequest",
+              "optional": true,
+              "type": "(actions: { insertImage(src: string, alt?: string): boolean }) => void",
+              "doc": "Called instead of the image prompt, with the action that inserts the image."
+            },
+            {
+              "name": "onColorRequest",
+              "optional": true,
+              "type": "(actions: { setColor(value: string): boolean }) => void",
+              "doc": "Called instead of applying a picked color, with the action that applies it."
+            },
+            {
+              "name": "onGenerate",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called by the Generate with AI action. Returning `false` reports that nothing happened."
+            },
+            {
+              "name": "selectionActions",
+              "optional": true,
+              "type": "readonly TextEditorSelectionAction[]",
+              "refs": ["text-editor#TextEditorSelectionAction"],
+              "doc": "Actions in the selection bar. Enabled with `onSelectionRequest`."
+            },
+            {
+              "name": "selectionInstruction",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the \"Describe edits\" field in the selection bar. Defaults to true."
+            },
+            {
+              "name": "onSelectionRequest",
+              "optional": true,
+              "type": "(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>",
+              "refs": ["text-editor#TextEditorSelectionRequest", "text-editor#TextEditorSelectionActions"],
+              "doc": "Called when an action or instruction is sent. A returned promise shows the pending state; a rejection shows\na failure message with Try again and Dismiss."
+            }
+          ],
+          "ref": {
+            "type": "TextEditorHandle",
+            "refs": ["text-editor#TextEditorHandle"]
+          },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["value", "defaultValue", "onChange"]
+            }
+          ]
+        },
+        { "member": "Root", "sameAs": "TextEditor" }
+      ]
+    },
+    {
+      "name": "isTextEditorDocument",
+      "entry": "./text-editor",
+      "module": "text-editor",
+      "kind": "function",
+      "doc": "True for Mux's finite portable editor document grammar.",
+      "signature": "isTextEditorDocument(value: unknown): value is TextEditorDocument",
+      "parameters": [
+        { "name": "value", "type": "unknown" }
+      ],
+      "returns": {
+        "type": "value is TextEditorDocument",
+        "predicate": true,
+        "refs": ["text-editor#TextEditorDocument"]
+      }
+    },
+    {
+      "name": "normalizeTextEditorDocument",
+      "entry": "./text-editor",
+      "module": "text-editor",
+      "kind": "function",
+      "signature": "normalizeTextEditorDocument(value: unknown): TextEditorDocument",
+      "parameters": [
+        { "name": "value", "type": "unknown" }
+      ],
+      "returns": {
+        "type": "TextEditorDocument",
+        "refs": ["text-editor#TextEditorDocument"]
+      }
+    }
+  ],
+  "types": [
+    {
+      "id": "text-editor#TextEditorActionCallbacks",
+      "name": "TextEditorActionCallbacks",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorActionCallbacks" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorActionCallbacks = {\n  setLink(href: string): boolean;\n  unsetLink(): boolean;\n};",
+      "members": [
+        { "name": "setLink", "method": true, "type": "(href: string): boolean" },
+        { "name": "unsetLink", "method": true, "type": "(): boolean" }
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorAlignment",
+      "name": "TextEditorAlignment",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorAlignment" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorAlignment = 'left' | 'center' | 'right' | 'justify';",
+      "values": ["left", "center", "right", "justify"]
+    },
+    {
+      "id": "text-editor#TextEditorBlockNode",
+      "name": "TextEditorBlockNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorBlockNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorBlockNode = TextEditorParagraphNode | TextEditorHeadingNode | TextEditorListNode | TextEditorBlockquoteNode | TextEditorCodeBlockNode | TextEditorImageNode | TextEditorHorizontalRuleNode;",
+      "refs": [
+        "text-editor#TextEditorParagraphNode",
+        "text-editor#TextEditorHeadingNode",
+        "text-editor#TextEditorListNode",
+        "text-editor#TextEditorBlockquoteNode",
+        "text-editor#TextEditorCodeBlockNode",
+        "text-editor#TextEditorImageNode",
+        "text-editor#TextEditorHorizontalRuleNode"
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorBlockquoteNode",
+      "name": "TextEditorBlockquoteNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorBlockquoteNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorBlockquoteNode = {\n  type: 'blockquote';\n  content: [TextEditorBlockNode, ...TextEditorBlockNode[]];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'blockquote'",
+          "values": ["blockquote"]
+        },
+        {
+          "name": "content",
+          "type": "[TextEditorBlockNode, ...TextEditorBlockNode[]]",
+          "refs": ["text-editor#TextEditorBlockNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorBlockNode"]
+    },
+    {
+      "id": "text-editor#TextEditorBulletListNode",
+      "name": "TextEditorBulletListNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorBulletListNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorBulletListNode = {\n  type: 'bulletList';\n  content: [TextEditorListItemNode, ...TextEditorListItemNode[]];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'bulletList'",
+          "values": ["bulletList"]
+        },
+        {
+          "name": "content",
+          "type": "[TextEditorListItemNode, ...TextEditorListItemNode[]]",
+          "refs": ["text-editor#TextEditorListItemNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorListItemNode"]
+    },
+    {
+      "id": "text-editor#TextEditorCodeBlockNode",
+      "name": "TextEditorCodeBlockNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorCodeBlockNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorCodeBlockNode = {\n  type: 'codeBlock';\n  attrs?: { language?: string };\n  content?: TextEditorPlainTextNode[];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'codeBlock'",
+          "values": ["codeBlock"]
+        },
+        { "name": "attrs", "optional": true, "type": "{ language?: string }" },
+        {
+          "name": "content",
+          "optional": true,
+          "type": "TextEditorPlainTextNode[]",
+          "refs": ["text-editor#TextEditorPlainTextNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorPlainTextNode"]
+    },
+    {
+      "id": "text-editor#TextEditorCommand",
+      "name": "TextEditorCommand",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorCommand" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorCommand = {\n  type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate';\n} | {\n  type: 'align';\n  value: TextEditorAlignment;\n} | {\n  type: 'color';\n  value: string;\n} | {\n  type: 'fontFamily';\n  value: TextEditorFontFamily;\n} | {\n  type: 'fontSize';\n  value: TextEditorFontSize;\n} | {\n  type: 'link';\n  href: string;\n} | {\n  type: 'image';\n  src: string;\n  alt?: string;\n};",
+      "refs": [
+        "text-editor#TextEditorAlignment",
+        "text-editor#TextEditorFontFamily",
+        "text-editor#TextEditorFontSize"
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorDocument",
+      "name": "TextEditorDocument",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorDocument" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorDocument = {\n  type: 'doc';\n  content: [TextEditorBlockNode, ...TextEditorBlockNode[]];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'doc'",
+          "values": ["doc"]
+        },
+        {
+          "name": "content",
+          "type": "[TextEditorBlockNode, ...TextEditorBlockNode[]]",
+          "refs": ["text-editor#TextEditorBlockNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorBlockNode"]
+    },
+    {
+      "id": "text-editor#TextEditorFontFamily",
+      "name": "TextEditorFontFamily",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorFontFamily" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorFontFamily = 'Inter' | 'Comic Sans MS, Comic Sans' | 'serif' | 'monospace' | 'cursive';",
+      "values": ["Inter", "Comic Sans MS, Comic Sans", "serif", "monospace", "cursive"]
+    },
+    {
+      "id": "text-editor#TextEditorFontSize",
+      "name": "TextEditorFontSize",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorFontSize" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorFontSize = '12px' | '14px' | '16px' | '18px' | '20px' | '24px' | '28px' | '32px';",
+      "values": ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"]
+    },
+    {
+      "id": "text-editor#TextEditorHandle",
+      "name": "TextEditorHandle",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorHandle" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorHandle = {\n  focus(): void;\n  execute(command: TextEditorCommand): boolean;\n};",
+      "members": [
+        { "name": "focus", "method": true, "type": "(): void" },
+        {
+          "name": "execute",
+          "method": true,
+          "type": "(command: TextEditorCommand): boolean",
+          "refs": ["text-editor#TextEditorCommand"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorCommand"]
+    },
+    {
+      "id": "text-editor#TextEditorHardBreakNode",
+      "name": "TextEditorHardBreakNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorHardBreakNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorHardBreakNode = {\n  type: 'hardBreak';\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'hardBreak'",
+          "values": ["hardBreak"]
+        }
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorHeadingNode",
+      "name": "TextEditorHeadingNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorHeadingNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorHeadingNode = {\n  type: 'heading';\n  attrs: { level: 1 | 2 | 3 | 4 | 5 | 6; textAlign?: TextEditorAlignment };\n  content?: TextEditorInlineNode[];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'heading'",
+          "values": ["heading"]
+        },
+        {
+          "name": "attrs",
+          "type": "{ level: 1 | 2 | 3 | 4 | 5 | 6; textAlign?: TextEditorAlignment }",
+          "refs": ["text-editor#TextEditorAlignment"]
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "type": "TextEditorInlineNode[]",
+          "refs": ["text-editor#TextEditorInlineNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorAlignment", "text-editor#TextEditorInlineNode"]
+    },
+    {
+      "id": "text-editor#TextEditorHorizontalRuleNode",
+      "name": "TextEditorHorizontalRuleNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorHorizontalRuleNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorHorizontalRuleNode = {\n  type: 'horizontalRule';\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'horizontalRule'",
+          "values": ["horizontalRule"]
+        }
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorImageNode",
+      "name": "TextEditorImageNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorImageNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorImageNode = {\n  type: 'image';\n  attrs: { src: string; alt?: string };\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'image'",
+          "values": ["image"]
+        },
+        { "name": "attrs", "type": "{ src: string; alt?: string }" }
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorInlineNode",
+      "name": "TextEditorInlineNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorInlineNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorInlineNode = TextEditorTextNode | TextEditorHardBreakNode;",
+      "refs": ["text-editor#TextEditorTextNode", "text-editor#TextEditorHardBreakNode"]
+    },
+    {
+      "id": "text-editor#TextEditorListItemNode",
+      "name": "TextEditorListItemNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorListItemNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorListItemNode = {\n  type: 'listItem';\n  content: [TextEditorParagraphNode, ...TextEditorBlockNode[]];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'listItem'",
+          "values": ["listItem"]
+        },
+        {
+          "name": "content",
+          "type": "[TextEditorParagraphNode, ...TextEditorBlockNode[]]",
+          "refs": ["text-editor#TextEditorParagraphNode", "text-editor#TextEditorBlockNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorParagraphNode", "text-editor#TextEditorBlockNode"]
+    },
+    {
+      "id": "text-editor#TextEditorListNode",
+      "name": "TextEditorListNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorListNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorListNode = TextEditorBulletListNode | TextEditorOrderedListNode;",
+      "refs": ["text-editor#TextEditorBulletListNode", "text-editor#TextEditorOrderedListNode"]
+    },
+    {
+      "id": "text-editor#TextEditorMark",
+      "name": "TextEditorMark",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorMark" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorMark = {\n  type: 'bold' | 'italic' | 'underline' | 'strike' | 'code';\n} | {\n  type: 'link';\n  attrs: { href: string };\n} | {\n  type: 'textStyle';\n  attrs: { color?: string; fontFamily?: TextEditorFontFamily; fontSize?: TextEditorFontSize };\n};",
+      "refs": ["text-editor#TextEditorFontFamily", "text-editor#TextEditorFontSize"]
+    },
+    {
+      "id": "text-editor#TextEditorNode",
+      "name": "TextEditorNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorNode = TextEditorInlineNode | TextEditorBlockNode | TextEditorListItemNode;",
+      "refs": [
+        "text-editor#TextEditorInlineNode",
+        "text-editor#TextEditorBlockNode",
+        "text-editor#TextEditorListItemNode"
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorOrderedListNode",
+      "name": "TextEditorOrderedListNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorOrderedListNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorOrderedListNode = {\n  type: 'orderedList';\n  attrs?: { start?: number; type?: TextEditorOrderedListType };\n  content: [TextEditorListItemNode, ...TextEditorListItemNode[]];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'orderedList'",
+          "values": ["orderedList"]
+        },
+        {
+          "name": "attrs",
+          "optional": true,
+          "type": "{ start?: number; type?: TextEditorOrderedListType }",
+          "refs": ["text-editor#TextEditorOrderedListType"]
+        },
+        {
+          "name": "content",
+          "type": "[TextEditorListItemNode, ...TextEditorListItemNode[]]",
+          "refs": ["text-editor#TextEditorListItemNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorOrderedListType", "text-editor#TextEditorListItemNode"]
+    },
+    {
+      "id": "text-editor#TextEditorOrderedListType",
+      "name": "TextEditorOrderedListType",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorOrderedListType" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorOrderedListType = '1' | 'a' | 'A' | 'i' | 'I';",
+      "values": ["1", "a", "A", "i", "I"]
+    },
+    {
+      "id": "text-editor#TextEditorOwnProps",
+      "name": "TextEditorOwnProps",
+      "module": "text-editor",
+      "text": "type TextEditorOwnProps = {\n  value?: TextEditorDocument;\n  defaultValue?: TextEditorDocument;\n  onChange?: (value: TextEditorDocument) => void;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  placeholder?: string;\n  limit?: number;\n  toolbar?: false | 'simple' | 'advanced' | 'floating';\n  floating?: boolean;\n  bubbleMenu?: boolean;\n  onLinkRequest?: (actions: TextEditorActionCallbacks) => void;\n  onImageRequest?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;\n  onColorRequest?: (actions: { setColor(value: string): boolean }) => void;\n  onGenerate?: () => void;\n  selectionActions?: readonly TextEditorSelectionAction[];\n  selectionInstruction?: boolean;\n  onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "TextEditorDocument",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "The document, when the application controls it. The editor normalizes it, and an edit reports through `onChange`."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "TextEditorDocument",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "The first document, when the editor manages its own. It is normalized: a value that is not a document, or has nothing left after normalizing, becomes one empty paragraph."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: TextEditorDocument) => void",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "Called with the normalized document after an edit the editor accepts. It does not run at mount, when `disabled` or `readOnly` changes, or when `value` changes from outside."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The visible label, which names the editable content."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Help text below the content, which describes it."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The error text below the content. Setting it also marks the content invalid and names the text as its error message."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the editor and its toolbar."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps the content readable but not editable."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the content required."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the content invalid."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "The text shown while the document is empty."
+        },
+        {
+          "name": "limit",
+          "optional": true,
+          "type": "number",
+          "doc": "The most characters of plain text the document may hold; a fraction is rounded down, and a negative, infinite, or omitted limit means no limit. An edit past it is refused and not reported."
+        },
+        {
+          "name": "toolbar",
+          "optional": true,
+          "type": "false | 'simple' | 'advanced' | 'floating'",
+          "values": [false, "simple", "advanced", "floating"],
+          "doc": "`simple` or `advanced` shows that toolbar, `floating` shows the simple one as a floating bar, and `false` shows none."
+        },
+        {
+          "name": "floating",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Floats the toolbar over the content."
+        },
+        {
+          "name": "bubbleMenu",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows a formatting menu while text is selected."
+        },
+        {
+          "name": "onLinkRequest",
+          "optional": true,
+          "type": "(actions: TextEditorActionCallbacks) => void",
+          "refs": ["text-editor#TextEditorActionCallbacks"],
+          "doc": "Called instead of the link prompt, with the actions that apply the address."
+        },
+        {
+          "name": "onImageRequest",
+          "optional": true,
+          "type": "(actions: { insertImage(src: string, alt?: string): boolean }) => void",
+          "doc": "Called instead of the image prompt, with the action that inserts the image."
+        },
+        {
+          "name": "onColorRequest",
+          "optional": true,
+          "type": "(actions: { setColor(value: string): boolean }) => void",
+          "doc": "Called instead of applying a picked color, with the action that applies it."
+        },
+        {
+          "name": "onGenerate",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Called by the Generate with AI action. Returning `false` reports that nothing happened."
+        },
+        {
+          "name": "selectionActions",
+          "optional": true,
+          "type": "readonly TextEditorSelectionAction[]",
+          "refs": ["text-editor#TextEditorSelectionAction"],
+          "doc": "Actions in the selection bar. Enabled with `onSelectionRequest`."
+        },
+        {
+          "name": "selectionInstruction",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the \"Describe edits\" field in the selection bar. Defaults to true."
+        },
+        {
+          "name": "onSelectionRequest",
+          "optional": true,
+          "type": "(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>",
+          "refs": ["text-editor#TextEditorSelectionRequest", "text-editor#TextEditorSelectionActions"],
+          "doc": "Called when an action or instruction is sent. A returned promise shows the pending state; a rejection shows\na failure message with Try again and Dismiss."
+        }
+      ],
+      "refs": [
+        "text-editor#TextEditorDocument",
+        "text-editor#TextEditorActionCallbacks",
+        "text-editor#TextEditorSelectionAction",
+        "text-editor#TextEditorSelectionRequest",
+        "text-editor#TextEditorSelectionActions"
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorParagraphNode",
+      "name": "TextEditorParagraphNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorParagraphNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorParagraphNode = {\n  type: 'paragraph';\n  attrs?: { textAlign?: TextEditorAlignment };\n  content?: TextEditorInlineNode[];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'paragraph'",
+          "values": ["paragraph"]
+        },
+        {
+          "name": "attrs",
+          "optional": true,
+          "type": "{ textAlign?: TextEditorAlignment }",
+          "refs": ["text-editor#TextEditorAlignment"]
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "type": "TextEditorInlineNode[]",
+          "refs": ["text-editor#TextEditorInlineNode"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorAlignment", "text-editor#TextEditorInlineNode"]
+    },
+    {
+      "id": "text-editor#TextEditorPlainTextNode",
+      "name": "TextEditorPlainTextNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorPlainTextNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorPlainTextNode = {\n  type: 'text';\n  text: string;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'text'",
+          "values": ["text"]
+        },
+        { "name": "text", "type": "string" }
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorProps",
+      "name": "TextEditorProps",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorProps" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & TextEditorOwnProps;",
+      "refs": ["text-editor#TextEditorOwnProps"]
+    },
+    {
+      "id": "text-editor#TextEditorSelectionAction",
+      "name": "TextEditorSelectionAction",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorSelectionAction" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorSelectionAction = {\n  id: string;\n  label: string;\n  icon?: React.ReactNode;\n  pendingLabel?: string;\n  overflow?: boolean;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" },
+        { "name": "icon", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "pendingLabel",
+          "optional": true,
+          "type": "string",
+          "doc": "Text shown while the request runs. Defaults to \"Editing…\"."
+        },
+        {
+          "name": "overflow",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shown only after \"More actions\" expands the bar."
+        }
+      ]
+    },
+    {
+      "id": "text-editor#TextEditorSelectionActions",
+      "name": "TextEditorSelectionActions",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorSelectionActions" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorSelectionActions = {\n  readonly selection: { readonly text: string; readonly document: TextEditorDocument };\n  readonly signal: AbortSignal;\n  replace(content: string | TextEditorDocument): boolean;\n  insertAfter(content: string | TextEditorDocument): boolean;\n  close(): void;\n};",
+      "members": [
+        {
+          "name": "selection",
+          "readonly": true,
+          "type": "{ readonly text: string; readonly document: TextEditorDocument }",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "The selected text and content when the request started."
+        },
+        {
+          "name": "signal",
+          "readonly": true,
+          "type": "AbortSignal",
+          "doc": "Aborts on Escape or Cancel, an edit or formatting change of the selected range, a new request, `close()`, and unmount."
+        },
+        {
+          "name": "replace",
+          "method": true,
+          "type": "(content: string | TextEditorDocument): boolean",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "Replaces the selection and starts the Keep, Discard, and Try again review.\nA string is plain text that takes the formatting at the start of the selection and turns line breaks into\nhard breaks; a document keeps its own formatting. Only the first successful edit of a request applies.\nReturns false when the request is stale or aborted, the editor is disabled or read-only, `limit` would be\nexceeded, or the content is invalid."
+        },
+        {
+          "name": "insertAfter",
+          "method": true,
+          "type": "(content: string | TextEditorDocument): boolean",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "Like `replace`, but leaves the selection in place. A string is inserted right after the selection with the\nformatting at the start of the selection; a document is inserted as blocks after the block that holds the end\nof the selection."
+        },
+        {
+          "name": "close",
+          "method": true,
+          "type": "(): void",
+          "doc": "Ends the request and hides the bar until the selection changes, keeping any applied edit."
+        }
+      ],
+      "refs": ["text-editor#TextEditorDocument"]
+    },
+    {
+      "id": "text-editor#TextEditorSelectionRequest",
+      "name": "TextEditorSelectionRequest",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorSelectionRequest" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorSelectionRequest = {\n  type: 'action';\n  id: string;\n} | {\n  type: 'instruction';\n  text: string;\n};"
+    },
+    {
+      "id": "text-editor#TextEditorTextNode",
+      "name": "TextEditorTextNode",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorTextNode" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorTextNode = {\n  type: 'text';\n  text: string;\n  marks?: TextEditorMark[];\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'text'",
+          "values": ["text"]
+        },
+        { "name": "text", "type": "string" },
+        {
+          "name": "marks",
+          "optional": true,
+          "type": "TextEditorMark[]",
+          "refs": ["text-editor#TextEditorMark"]
+        }
+      ],
+      "refs": ["text-editor#TextEditorMark"]
+    }
+  ]
+}

@@ -36,6 +36,11 @@ const familyUsageGuidePath = /^catalog\/guides\/([a-z0-9-]+)-usage\.(?:md|json)$
 const accessibilityGuidePath = /^catalog\/guides\/accessibility\.(?:md|json)$/u;
 // A family's derived web.react API (Decision 0031), which the catalog merges into its component record.
 const derivedApiPath = /^packages\/react\/api\/([a-z0-9-]+)\.json$/u;
+// The declaration reference (Decision 0031): one file per owning family, plus the files no family owns.
+const declarationReferencePath = /^packages\/react\/reference\/([a-z0-9-]+)\.json$/u;
+const sharedDeclarationReferences = new Set(['inventory', 'package-level', 'shared']);
+// The React test that checks the reference against the catalog and the compiler; every route that changes either runs it.
+const declarationReferenceTestFile = 'test/declaration-reference.test.mjs';
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
 const tailwindFixture = 'tests/fixtures/tailwind-consumer';
 
@@ -441,6 +446,7 @@ function addComponentDocsProof(plan) {
 // A change to a family's compiled component record: its React and Storybook
 // proof, the catalog, the docs that render every record, and its Docs page.
 function routeComponentRecord(plan, record) {
+  plan.reactTestFiles.add(declarationReferenceTestFile);
   plan.reactFamilies.add(record.family);
   plan.storyFamilies.add(record.export ?? record.family);
   plan.catalog = true;
@@ -1322,6 +1328,25 @@ export async function buildPullRequestImpact({
       continue;
     }
 
+    // The declaration reference is read by the docs and Storybook, so a model-only change runs their generation
+    // and checks. A family's file routes like its component record; the files no family owns reach every page.
+    const reference = declarationReferencePath.exec(path);
+    if (reference) {
+      if (sharedDeclarationReferences.has(reference[1])) {
+        plan.reactTestFiles.add(declarationReferenceTestFile);
+        plan.docs = true;
+        storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+        addComponentDocsProof(plan);
+        plan.reasons.push(`${path} is the declaration reference shared by every component; validate the docs and every Storybook page`);
+      } else {
+        const record = recordForSlug(records, reference[1]);
+        if (!record) throw new Error(`MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: ${path} names no canonical React component ${reference[1]}`);
+        routeComponentRecord(plan, record);
+        plan.reasons.push(`${path} is the declaration reference of ${record.family}; validate it like the canonical component record`);
+      }
+      continue;
+    }
+
     if (isReactModuleSource(path)) {
       plan.reactProjectionCheck = true;
       plan.reasons.push(`${path} is React runtime or compiler source; AST ownership determines the affected families`);
@@ -1820,6 +1845,7 @@ export function needsStorybookGeneration(paths, config, {
 } = {}) {
   const sourceNeedsMetadata = paths.some((path) => path.startsWith('packages/react/src/')
     || derivedApiPath.test(path)
+    || declarationReferencePath.test(path)
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
     || (path.startsWith('catalog/components/') && (/\/artifact\.json$/u.test(path)
       || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))

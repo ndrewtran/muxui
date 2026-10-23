@@ -1,0 +1,178 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "switch-field",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "SwitchField",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "checked", "optional": true, "type": "boolean" },
+            { "name": "defaultChecked", "optional": true, "type": "boolean" },
+            { "name": "name", "optional": true, "type": "string" },
+            { "name": "value", "optional": true, "type": "string" },
+            { "name": "onChange", "optional": true, "type": "(checked: boolean) => void" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onChange"]
+            }
+          ]
+        },
+        {
+          "member": "Button",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            { "type": "React.LabelHTMLAttributes<HTMLLabelElement>" }
+          ]
+        },
+        {
+          "member": "Thumb",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Error",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    },
+    {
+      "id": "supplemental#SwitchFieldButtonProps",
+      "name": "SwitchFieldButtonProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SwitchFieldButtonProps" }
+      ],
+      "owner": "switch-field",
+      "text": "type SwitchFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  disabled?: boolean;\n};"
+    },
+    {
+      "id": "supplemental#SwitchFieldDescriptionProps",
+      "name": "SwitchFieldDescriptionProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SwitchFieldDescriptionProps" }
+      ],
+      "owner": "switch-field",
+      "text": "type SwitchFieldDescriptionProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#SwitchFieldErrorProps",
+      "name": "SwitchFieldErrorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SwitchFieldErrorProps" }
+      ],
+      "owner": "switch-field",
+      "text": "type SwitchFieldErrorProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#SwitchFieldRootProps",
+      "name": "SwitchFieldRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SwitchFieldRootProps" }
+      ],
+      "owner": "switch-field",
+      "text": "type SwitchFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  name?: string;\n  value?: string;\n  onChange?: (checked: boolean) => void;\n};",
+      "refs": ["supplemental#SupplementalFieldProps"]
+    },
+    {
+      "id": "supplemental#SwitchFieldThumbProps",
+      "name": "SwitchFieldThumbProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SwitchFieldThumbProps" }
+      ],
+      "owner": "switch-field",
+      "text": "type SwitchFieldThumbProps = PartProps<HTMLSpanElement>;",
+      "refs": ["supplemental#PartProps"]
+    }
+  ]
+}

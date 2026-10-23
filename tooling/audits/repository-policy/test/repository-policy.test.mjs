@@ -10,6 +10,7 @@ import {
   auditCurrentIdentity,
   auditRepository,
   auditRootContract,
+  classifyPath,
   generatedText,
   loadPolicy,
   projectionFilesToValidate,
@@ -326,4 +327,12 @@ test('E-G0.0-04 negative: independent projection output drift is nondeterministi
     (error) => error instanceof GenerationProofError
       && error.code === 'GENERATION_NONDETERMINISTIC',
   );
+});
+
+test('the committed declaration reference is source that generation must reproduce', async () => {
+  // reference/ is not a projection segment, so clean generation has to leave every committed file unchanged
+  // (E-G0.0-04): a stale reference fails generate:check instead of passing as regenerable output.
+  assert.equal(classifyPath('packages/react/reference/button.json', policy), 'source');
+  assert.equal(classifyPath('packages/react/reference/inventory.json', policy), 'source');
+  assert.equal(classifyPath('packages/react/generated/index.d.ts', policy), 'projection');
 });

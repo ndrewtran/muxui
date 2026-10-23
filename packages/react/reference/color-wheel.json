@@ -1,0 +1,186 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-wheel",
+  "sources": {
+    "color-context": "packages/react/src/color-context.ts",
+    "color-wheel": "packages/react/src/color-wheel.ts",
+    "fields": "packages/react/src/fields.ts"
+  },
+  "exports": [
+    {
+      "name": "ColorWheel",
+      "entry": ".",
+      "module": "color-wheel",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The wheel's color, when the caller controls it. The wheel edits its hue and keeps the rest."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The starting color, when the wheel controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: MuxUIColorValue) => void",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "Called with the new color as a CSS string each time the hue changes. It is in the color space of the value, of the enclosing ColorPicker, or of defaultValue, and in hsla() form with none of them. A disabled or read-only wheel does not call it."
+            },
+            {
+              "name": "outerRadius",
+              "optional": true,
+              "type": "number",
+              "doc": "The wheel's outer radius in pixels: the wheel is twice this wide and tall. It must be a finite number of 0 or more, and more than innerRadius."
+            },
+            {
+              "name": "innerRadius",
+              "optional": true,
+              "type": "number",
+              "doc": "The radius of the hole in the middle, in pixels. It must be a finite number of 0 or more, and less than outerRadius."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the wheel: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the wheel read-only: it stays focusable but its hue cannot be changed. A read-only enclosing ColorPicker does the same."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "color-context#MuxUIColorValue",
+      "name": "MuxUIColorValue",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorValue = string;"
+    },
+    {
+      "id": "color-wheel#ColorWheelOwnProps",
+      "name": "ColorWheelOwnProps",
+      "module": "color-wheel",
+      "text": "type ColorWheelOwnProps = {\n  value?: MuxUIColorValue;\n  defaultValue?: MuxUIColorValue;\n  onChange?: (value: MuxUIColorValue) => void;\n  outerRadius?: number;\n  innerRadius?: number;\n  disabled?: boolean;\n  readOnly?: boolean;\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The wheel's color, when the caller controls it. The wheel edits its hue and keeps the rest."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The starting color, when the wheel controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: MuxUIColorValue) => void",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "Called with the new color as a CSS string each time the hue changes. It is in the color space of the value, of the enclosing ColorPicker, or of defaultValue, and in hsla() form with none of them. A disabled or read-only wheel does not call it."
+        },
+        {
+          "name": "outerRadius",
+          "optional": true,
+          "type": "number",
+          "doc": "The wheel's outer radius in pixels: the wheel is twice this wide and tall. It must be a finite number of 0 or more, and more than innerRadius."
+        },
+        {
+          "name": "innerRadius",
+          "optional": true,
+          "type": "number",
+          "doc": "The radius of the hole in the middle, in pixels. It must be a finite number of 0 or more, and less than outerRadius."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the wheel: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the wheel read-only: it stays focusable but its hue cannot be changed. A read-only enclosing ColorPicker does the same."
+        }
+      ],
+      "refs": ["color-context#MuxUIColorValue"]
+    },
+    {
+      "id": "color-wheel#ColorWheelProps",
+      "name": "ColorWheelProps",
+      "module": "color-wheel",
+      "public": [
+        { "entry": ".", "name": "ColorWheelProps" }
+      ],
+      "owner": "color-wheel",
+      "extends": [
+        {
+          "type": "ColorWheelOwnProps",
+          "refs": ["color-wheel#ColorWheelOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type ColorWheelProps = ColorWheelOwnProps & {\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["color-wheel#ColorWheelOwnProps", "fields#MuxUIAriaAccessibleName"]
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    }
+  ]
+}

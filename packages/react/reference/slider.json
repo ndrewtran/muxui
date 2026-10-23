@@ -1,0 +1,217 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "slider",
+  "sources": { "fields": "packages/react/src/fields.ts", "slider": "packages/react/src/slider.ts" },
+  "exports": [
+    {
+      "name": "Slider",
+      "entry": ".",
+      "module": "slider",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "number",
+              "doc": "The value, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The starting value, when the slider controls itself."
+            },
+            {
+              "name": "min",
+              "optional": true,
+              "type": "number",
+              "doc": "The smallest value the thumb can take."
+            },
+            {
+              "name": "max",
+              "optional": true,
+              "type": "number",
+              "doc": "The largest value the thumb can take."
+            },
+            {
+              "name": "step",
+              "optional": true,
+              "type": "number",
+              "doc": "How far one arrow key press moves the value, and the increment the value snaps to."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the slider: it can be neither focused nor changed."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the slider read-only: it stays focusable but its value cannot be changed."
+            },
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "The direction of the track."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named slider submits its value."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: number) => void",
+              "doc": "Called with the new value each time it changes while the thumb moves. A disabled or read-only slider does not call it."
+            },
+            {
+              "name": "onChangeEnd",
+              "optional": true,
+              "type": "(value: number) => void",
+              "doc": "Called with the current value when an interaction ends, such as a key press or a drag release, even when the value did not move. A disabled or read-only slider does not call it."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "slider#SliderOwnProps",
+      "name": "SliderOwnProps",
+      "module": "slider",
+      "text": "type SliderOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  value?: number;\n  defaultValue?: number;\n  min?: number;\n  max?: number;\n  step?: number;\n  disabled?: boolean;\n  readOnly?: boolean;\n  orientation?: 'horizontal' | 'vertical';\n  name?: string;\n  onChange?: (value: number) => void;\n  onChangeEnd?: (value: number) => void;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the slider. Without one, the slider needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "number",
+          "doc": "The value, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "number",
+          "doc": "The starting value, when the slider controls itself."
+        },
+        {
+          "name": "min",
+          "optional": true,
+          "type": "number",
+          "doc": "The smallest value the thumb can take."
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "type": "number",
+          "doc": "The largest value the thumb can take."
+        },
+        {
+          "name": "step",
+          "optional": true,
+          "type": "number",
+          "doc": "How far one arrow key press moves the value, and the increment the value snaps to."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the slider: it can be neither focused nor changed."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the slider read-only: it stays focusable but its value cannot be changed."
+        },
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "The direction of the track."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named slider submits its value."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: number) => void",
+          "doc": "Called with the new value each time it changes while the thumb moves. A disabled or read-only slider does not call it."
+        },
+        {
+          "name": "onChangeEnd",
+          "optional": true,
+          "type": "(value: number) => void",
+          "doc": "Called with the current value when an interaction ends, such as a key press or a drag release, even when the value did not move. A disabled or read-only slider does not call it."
+        }
+      ]
+    },
+    {
+      "id": "slider#SliderProps",
+      "name": "SliderProps",
+      "module": "slider",
+      "public": [
+        { "entry": ".", "name": "SliderProps" }
+      ],
+      "owner": "slider",
+      "text": "type SliderProps = Omit<SliderOwnProps, 'label'> & {\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["slider#SliderOwnProps", "fields#MuxUIAccessibleName"]
+    }
+  ]
+}

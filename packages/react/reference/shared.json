@@ -1,0 +1,423 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "shared",
+  "sources": {
+    "button": "packages/react/src/button.ts",
+    "collection-items": "packages/react/src/collection-items.ts",
+    "color-context": "packages/react/src/color-context.ts",
+    "fields": "packages/react/src/fields.ts",
+    "index": "packages/react/src/generate.mjs",
+    "overlays": "packages/react/src/overlays.ts",
+    "supplemental": "packages/react/src/supplemental/index.d.ts"
+  },
+  "exports": [],
+  "types": [
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "collection-items#MuxUISelection",
+      "name": "MuxUISelection",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUISelection" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUISelection = string[] | 'all';"
+    },
+    {
+      "id": "color-context#MuxUIColorChannel",
+      "name": "MuxUIColorChannel",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorChannel" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorChannel = 'red' | 'green' | 'blue' | 'hue' | 'saturation' | 'lightness' | 'brightness' | 'alpha';",
+      "values": ["red", "green", "blue", "hue", "saturation", "lightness", "brightness", "alpha"]
+    },
+    {
+      "id": "color-context#MuxUIColorSpace",
+      "name": "MuxUIColorSpace",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorSpace" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';",
+      "values": ["rgb", "hsl", "hsb"]
+    },
+    {
+      "id": "color-context#MuxUIColorValue",
+      "name": "MuxUIColorValue",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorValue = string;"
+    },
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#FieldInputProps",
+      "name": "FieldInputProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldInputProps" }
+      ],
+      "owner": "shared",
+      "text": "type FieldInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'children' | 'dangerouslySetInnerHTML' | 'slot' | 'type' | 'id' | 'name' | 'value' | 'defaultValue' | 'checked' | 'defaultChecked' | 'disabled' | 'readOnly' | 'required' | 'onChange' | 'onInput' | 'aria-label' | 'aria-labelledby' | 'aria-describedby' | 'aria-errormessage' | 'aria-invalid' | 'aria-required' | 'aria-disabled' | 'aria-readonly'>;"
+    },
+    {
+      "id": "fields#FieldValidationProps",
+      "name": "FieldValidationProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldValidationProps" }
+      ],
+      "owner": "shared",
+      "text": "interface FieldValidationProps {\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  size?: ControlSize;\n  className?: string;\n}",
+      "members": [
+        { "name": "description", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["fields#ControlSize"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#MuxUIAriaLabel",
+      "name": "MuxUIAriaLabel",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaLabel" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaLabel = {\n  'aria-label': string;\n};",
+      "members": [
+        { "name": "aria-label", "type": "string" }
+      ]
+    },
+    {
+      "id": "fields#MuxUIDateRange",
+      "name": "MuxUIDateRange",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIDateRange" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUIDateRange {\n  start: MuxUIDateValue;\n  end: MuxUIDateValue;\n}",
+      "members": [
+        {
+          "name": "start",
+          "type": "MuxUIDateValue",
+          "refs": ["fields#MuxUIDateValue"]
+        },
+        {
+          "name": "end",
+          "type": "MuxUIDateValue",
+          "refs": ["fields#MuxUIDateValue"]
+        }
+      ],
+      "refs": ["fields#MuxUIDateValue"]
+    },
+    {
+      "id": "fields#MuxUIDateValue",
+      "name": "MuxUIDateValue",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIDateValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIDateValue = string;"
+    },
+    {
+      "id": "fields#MuxUITimeValue",
+      "name": "MuxUITimeValue",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUITimeValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUITimeValue = string;"
+    },
+    {
+      "id": "fields#MuxUIValidationErrors",
+      "name": "MuxUIValidationErrors",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIValidationErrors" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIValidationErrors = {\n  readonly [key: string]: string | string[];\n};"
+    },
+    {
+      "id": "fields#NamedFieldProps",
+      "name": "NamedFieldProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "NamedFieldProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "FieldValidationProps",
+          "refs": ["fields#FieldValidationProps"]
+        },
+        {
+          "type": "MuxUIAccessibleName",
+          "refs": ["fields#MuxUIAccessibleName"]
+        }
+      ],
+      "text": "type NamedFieldProps = FieldValidationProps & MuxUIAccessibleName;",
+      "refs": ["fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "index#CollectionProps",
+      "name": "CollectionProps",
+      "module": "index",
+      "public": [
+        { "entry": ".", "name": "CollectionProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type CollectionProps = MuxUIAriaAccessibleName & {\n  items?: MuxUIItems;\n  selectedIds?: MuxUISelection;\n  defaultSelectedIds?: MuxUISelection;\n  disabled?: boolean;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  onSelectionChange?: (ids: MuxUISelection) => void;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  className?: string;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"]
+        },
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"]
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"]
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'none' | 'single' | 'multiple'",
+          "values": ["none", "single", "multiple"]
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: MuxUISelection) => void",
+          "refs": ["collection-items#MuxUISelection"]
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": [
+        "fields#MuxUIAriaAccessibleName",
+        "collection-items#MuxUIItems",
+        "collection-items#MuxUISelection",
+        "collection-items#MuxUICollectionItem"
+      ]
+    },
+    {
+      "id": "index#ComponentPointerType",
+      "name": "ComponentPointerType",
+      "module": "index",
+      "public": [
+        { "entry": ".", "name": "ComponentPointerType" }
+      ],
+      "owner": "shared",
+      "text": "type ComponentPointerType = ButtonPointerType;",
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "overlays#MuxUIPlacement",
+      "name": "MuxUIPlacement",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIPlacement" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'start-top' | 'start-bottom' | 'end-top' | 'end-bottom';",
+      "values": [
+        "top",
+        "bottom",
+        "start",
+        "end",
+        "top-start",
+        "top-end",
+        "bottom-start",
+        "bottom-end",
+        "start-top",
+        "start-bottom",
+        "end-top",
+        "end-bottom"
+      ]
+    },
+    {
+      "id": "overlays#OverlayAccessibleName",
+      "name": "OverlayAccessibleName",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "OverlayAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type OverlayAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalActivation",
+      "name": "SupplementalActivation",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalActivation" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "pointerType", "optional": true, "type": "string" },
+        { "name": "target", "optional": true, "type": "EventTarget | null" }
+      ]
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    }
+  ]
+}

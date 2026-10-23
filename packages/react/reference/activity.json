@@ -1,0 +1,204 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "activity",
+  "sources": { "activity": "packages/react/src/supplemental/activity.ts" },
+  "exports": [
+    {
+      "name": "Activity",
+      "entry": ".",
+      "module": "activity",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            { "name": "label", "type": "string", "doc": "Names the group of tasks." },
+            {
+              "name": "items",
+              "type": "readonly ActivityItem[]",
+              "refs": ["activity#ActivityItem"],
+              "doc": "The tasks, each with the status the application supplies. Each id is unique and nonempty."
+            },
+            {
+              "name": "status",
+              "optional": true,
+              "type": "ActivityStatus",
+              "values": ["queued", "running", "completed", "failed", "cancelled"],
+              "refs": ["activity#ActivityStatus"],
+              "doc": "The group status. Without it the group follows its items: failed first, then running, queued, cancelled, and completed."
+            },
+            {
+              "name": "expanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the group is open, when the caller controls it."
+            },
+            {
+              "name": "defaultExpanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the group starts open, when Activity controls it."
+            },
+            {
+              "name": "onExpandedChange",
+              "optional": true,
+              "type": "(expanded: boolean) => void",
+              "doc": "Reports the group opening or closing."
+            },
+            {
+              "name": "actions",
+              "optional": true,
+              "type": "readonly ActivityAction[]",
+              "refs": ["activity#ActivityAction"],
+              "doc": "Buttons that act on the whole group."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": [
+                "label",
+                "items",
+                "status",
+                "expanded",
+                "defaultExpanded",
+                "onExpandedChange",
+                "actions",
+                "children",
+                "dangerouslySetInnerHTML"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "activity#ActivityAction",
+      "name": "ActivityAction",
+      "module": "activity",
+      "public": [
+        { "entry": ".", "name": "ActivityAction" }
+      ],
+      "owner": "activity",
+      "text": "type ActivityAction = {\n  id: string;\n  label: string;\n  onAction: () => void;\n  disabled?: boolean;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" },
+        { "name": "onAction", "type": "() => void" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "activity#ActivityItem",
+      "name": "ActivityItem",
+      "module": "activity",
+      "public": [
+        { "entry": ".", "name": "ActivityItem" }
+      ],
+      "owner": "activity",
+      "text": "type ActivityItem = {\n  id: string;\n  label: string;\n  status: ActivityStatus;\n  details?: React.ReactNode;\n  context?: React.ReactNode;\n  meta?: React.ReactNode;\n  time?: string;\n  actions?: readonly ActivityAction[];\n  defaultExpanded?: boolean;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" },
+        {
+          "name": "status",
+          "type": "ActivityStatus",
+          "values": ["queued", "running", "completed", "failed", "cancelled"],
+          "refs": ["activity#ActivityStatus"]
+        },
+        { "name": "details", "optional": true, "type": "React.ReactNode" },
+        { "name": "context", "optional": true, "type": "React.ReactNode" },
+        { "name": "meta", "optional": true, "type": "React.ReactNode" },
+        { "name": "time", "optional": true, "type": "string" },
+        {
+          "name": "actions",
+          "optional": true,
+          "type": "readonly ActivityAction[]",
+          "refs": ["activity#ActivityAction"]
+        },
+        {
+          "name": "defaultExpanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Starts the item's disclosure open. Read at mount, so later changes do not open or close it; an item without details, context, or actions ignores it."
+        }
+      ],
+      "refs": ["activity#ActivityStatus", "activity#ActivityAction"]
+    },
+    {
+      "id": "activity#ActivityOwnProps",
+      "name": "ActivityOwnProps",
+      "module": "activity",
+      "text": "type ActivityOwnProps = {\n  label: string;\n  items: readonly ActivityItem[];\n  status?: ActivityStatus;\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  actions?: readonly ActivityAction[];\n};",
+      "members": [
+        { "name": "label", "type": "string", "doc": "Names the group of tasks." },
+        {
+          "name": "items",
+          "type": "readonly ActivityItem[]",
+          "refs": ["activity#ActivityItem"],
+          "doc": "The tasks, each with the status the application supplies. Each id is unique and nonempty."
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "type": "ActivityStatus",
+          "values": ["queued", "running", "completed", "failed", "cancelled"],
+          "refs": ["activity#ActivityStatus"],
+          "doc": "The group status. Without it the group follows its items: failed first, then running, queued, cancelled, and completed."
+        },
+        {
+          "name": "expanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the group is open, when the caller controls it."
+        },
+        {
+          "name": "defaultExpanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the group starts open, when Activity controls it."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(expanded: boolean) => void",
+          "doc": "Reports the group opening or closing."
+        },
+        {
+          "name": "actions",
+          "optional": true,
+          "type": "readonly ActivityAction[]",
+          "refs": ["activity#ActivityAction"],
+          "doc": "Buttons that act on the whole group."
+        }
+      ],
+      "refs": ["activity#ActivityItem", "activity#ActivityStatus", "activity#ActivityAction"]
+    },
+    {
+      "id": "activity#ActivityProps",
+      "name": "ActivityProps",
+      "module": "activity",
+      "public": [
+        { "entry": ".", "name": "ActivityProps" }
+      ],
+      "owner": "activity",
+      "text": "type ActivityProps = ActivityOwnProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof ActivityOwnProps | 'children' | 'dangerouslySetInnerHTML'>;",
+      "refs": ["activity#ActivityOwnProps"]
+    },
+    {
+      "id": "activity#ActivityStatus",
+      "name": "ActivityStatus",
+      "module": "activity",
+      "public": [
+        { "entry": ".", "name": "ActivityStatus" }
+      ],
+      "owner": "activity",
+      "text": "type ActivityStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';",
+      "values": ["queued", "running", "completed", "failed", "cancelled"]
+    }
+  ]
+}

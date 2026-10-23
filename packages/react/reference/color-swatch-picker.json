@@ -1,0 +1,211 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-swatch-picker",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "color-context": "packages/react/src/color-context.ts",
+    "color-swatch-picker": "packages/react/src/color-swatch-picker.ts",
+    "fields": "packages/react/src/fields.ts"
+  },
+  "exports": [
+    {
+      "name": "ColorSwatchPicker",
+      "entry": ".",
+      "module": "color-swatch-picker",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The swatches as data: color strings, or items whose `color` or `value` is a valid CSS color string. Each item needs a distinct color, because options are keyed by color, and duplicate colors throw a TypeError. An item's `label` or `textValue` names its swatch; otherwise the swatch uses its color name."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "MuxUIColorValue | null",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The selected color, when the caller controls it. `null` is controlled and empty; `undefined` leaves the value uncontrolled."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The color selected at first, when the picker controls itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the picker and every swatch. A disabled enclosing ColorPicker disables it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the picker read-only: arrow keys still move focus between swatches, but presses, Space, and Enter do not select one. A read-only enclosing ColorPicker does the same."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: MuxUIColorValue) => void",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "Called with the selected swatch's color as a CSS string in that swatch's color space: rgba(r, g, b, a) for a hex or RGB swatch, and hsla(h, s%, l%, a) for an HSL or HSB swatch. A disabled or read-only picker does not call it."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "color-context#MuxUIColorValue",
+      "name": "MuxUIColorValue",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorValue = string;"
+    },
+    {
+      "id": "color-swatch-picker#ColorSwatchPickerOwnProps",
+      "name": "ColorSwatchPickerOwnProps",
+      "module": "color-swatch-picker",
+      "text": "type ColorSwatchPickerOwnProps = {\n  items?: MuxUIItems;\n  value?: MuxUIColorValue | null;\n  defaultValue?: MuxUIColorValue;\n  disabled?: boolean;\n  readOnly?: boolean;\n  onChange?: (value: MuxUIColorValue) => void;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The swatches as data: color strings, or items whose `color` or `value` is a valid CSS color string. Each item needs a distinct color, because options are keyed by color, and duplicate colors throw a TypeError. An item's `label` or `textValue` names its swatch; otherwise the swatch uses its color name."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "MuxUIColorValue | null",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The selected color, when the caller controls it. `null` is controlled and empty; `undefined` leaves the value uncontrolled."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The color selected at first, when the picker controls itself."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the picker and every swatch. A disabled enclosing ColorPicker disables it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the picker read-only: arrow keys still move focus between swatches, but presses, Space, and Enter do not select one. A read-only enclosing ColorPicker does the same."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: MuxUIColorValue) => void",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "Called with the selected swatch's color as a CSS string in that swatch's color space: rgba(r, g, b, a) for a hex or RGB swatch, and hsla(h, s%, l%, a) for an HSL or HSB swatch. A disabled or read-only picker does not call it."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "color-context#MuxUIColorValue"]
+    },
+    {
+      "id": "color-swatch-picker#ColorSwatchPickerProps",
+      "name": "ColorSwatchPickerProps",
+      "module": "color-swatch-picker",
+      "public": [
+        { "entry": ".", "name": "ColorSwatchPickerProps" }
+      ],
+      "owner": "color-swatch-picker",
+      "extends": [
+        {
+          "type": "ColorSwatchPickerOwnProps",
+          "refs": ["color-swatch-picker#ColorSwatchPickerOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type ColorSwatchPickerProps = ColorSwatchPickerOwnProps & {\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["color-swatch-picker#ColorSwatchPickerOwnProps", "fields#MuxUIAriaAccessibleName"]
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    }
+  ]
+}

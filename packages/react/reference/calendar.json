@@ -1,0 +1,254 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "calendar",
+  "sources": { "calendar": "packages/react/src/calendar.ts", "fields": "packages/react/src/fields.ts" },
+  "exports": [
+    {
+      "name": "Calendar",
+      "entry": ".",
+      "module": "calendar",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "MuxUIDateValue | null",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "The selected date as YYYY-MM-DD, when the caller controls it. null keeps a controlled calendar empty. An empty string counts as no date, and any other string that is not a valid date throws a TypeError."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "MuxUIDateValue",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "The starting selected date as YYYY-MM-DD, when the calendar controls itself."
+            },
+            {
+              "name": "focusedValue",
+              "optional": true,
+              "type": "MuxUIDateValue",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "The focused date as YYYY-MM-DD, when the caller controls it. It is separate from the selected date, and controlling it also controls the month shown. Moving focus does not select."
+            },
+            {
+              "name": "minValue",
+              "optional": true,
+              "type": "MuxUIDateValue",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "The earliest date, inclusive, that can be focused or selected."
+            },
+            {
+              "name": "maxValue",
+              "optional": true,
+              "type": "MuxUIDateValue",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "The latest date, inclusive, that can be focused or selected."
+            },
+            {
+              "name": "unavailableDateMatcher",
+              "optional": true,
+              "type": "(date: MuxUIDateValue) => boolean",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "Returns true for a date that is unavailable, given as a YYYY-MM-DD string. An unavailable date can take focus but cannot be selected."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value?: MuxUIDateValue) => void",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "Called with the date the user selects, as YYYY-MM-DD. It is not called while the calendar is disabled or read-only."
+            },
+            {
+              "name": "onFocusChange",
+              "optional": true,
+              "type": "(value?: MuxUIDateValue) => void",
+              "refs": ["fields#MuxUIDateValue"],
+              "doc": "Called with the focused date as YYYY-MM-DD when focus moves to another date, by the arrow keys or the month buttons. It is not called while the calendar is disabled."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the calendar: no date can be focused or selected."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the calendar read-only: focus still moves between dates, but selecting a date does nothing."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the calendar required. It currently has no effect on a calendar, which submits no form value."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Forces the invalid state when true. Left false, validation follows the selected dates, so a date before minValue, after maxValue, or marked unavailable still makes the calendar invalid."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "calendar#CalendarOwnProps",
+      "name": "CalendarOwnProps",
+      "module": "calendar",
+      "text": "type CalendarOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  value?: MuxUIDateValue | null;\n  defaultValue?: MuxUIDateValue;\n  focusedValue?: MuxUIDateValue;\n  minValue?: MuxUIDateValue;\n  maxValue?: MuxUIDateValue;\n  unavailableDateMatcher?: (date: MuxUIDateValue) => boolean;\n  onChange?: (value?: MuxUIDateValue) => void;\n  onFocusChange?: (value?: MuxUIDateValue) => void;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the calendar. Without one, the calendar needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "MuxUIDateValue | null",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "The selected date as YYYY-MM-DD, when the caller controls it. null keeps a controlled calendar empty. An empty string counts as no date, and any other string that is not a valid date throws a TypeError."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "MuxUIDateValue",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "The starting selected date as YYYY-MM-DD, when the calendar controls itself."
+        },
+        {
+          "name": "focusedValue",
+          "optional": true,
+          "type": "MuxUIDateValue",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "The focused date as YYYY-MM-DD, when the caller controls it. It is separate from the selected date, and controlling it also controls the month shown. Moving focus does not select."
+        },
+        {
+          "name": "minValue",
+          "optional": true,
+          "type": "MuxUIDateValue",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "The earliest date, inclusive, that can be focused or selected."
+        },
+        {
+          "name": "maxValue",
+          "optional": true,
+          "type": "MuxUIDateValue",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "The latest date, inclusive, that can be focused or selected."
+        },
+        {
+          "name": "unavailableDateMatcher",
+          "optional": true,
+          "type": "(date: MuxUIDateValue) => boolean",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "Returns true for a date that is unavailable, given as a YYYY-MM-DD string. An unavailable date can take focus but cannot be selected."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value?: MuxUIDateValue) => void",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "Called with the date the user selects, as YYYY-MM-DD. It is not called while the calendar is disabled or read-only."
+        },
+        {
+          "name": "onFocusChange",
+          "optional": true,
+          "type": "(value?: MuxUIDateValue) => void",
+          "refs": ["fields#MuxUIDateValue"],
+          "doc": "Called with the focused date as YYYY-MM-DD when focus moves to another date, by the arrow keys or the month buttons. It is not called while the calendar is disabled."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the calendar: no date can be focused or selected."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the calendar read-only: focus still moves between dates, but selecting a date does nothing."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the calendar required. It currently has no effect on a calendar, which submits no form value."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Forces the invalid state when true. Left false, validation follows the selected dates, so a date before minValue, after maxValue, or marked unavailable still makes the calendar invalid."
+        }
+      ],
+      "refs": ["fields#MuxUIDateValue"]
+    },
+    {
+      "id": "calendar#CalendarProps",
+      "name": "CalendarProps",
+      "module": "calendar",
+      "public": [
+        { "entry": ".", "name": "CalendarProps" }
+      ],
+      "owner": "calendar",
+      "text": "type CalendarProps = Omit<CalendarOwnProps, 'label'> & {\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["calendar#CalendarOwnProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#MuxUIDateValue",
+      "name": "MuxUIDateValue",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIDateValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIDateValue = string;"
+    }
+  ]
+}

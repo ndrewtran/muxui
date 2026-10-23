@@ -1,0 +1,144 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "disclosure",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "Disclosure",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "title",
+              "type": "React.ReactNode",
+              "doc": "The content of the trigger button, which names the section."
+            },
+            {
+              "name": "expanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Disclosure is open, when the caller controls it. Inside a DisclosureGroup the group owns expansion and this is ignored."
+            },
+            {
+              "name": "defaultExpanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Disclosure starts open, when it controls itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the Disclosure: it can be neither opened nor closed."
+            },
+            {
+              "name": "id",
+              "optional": true,
+              "type": "string",
+              "doc": "Identifies the Disclosure. A DisclosureGroup's expanded ids refer to it."
+            },
+            {
+              "name": "onExpandedChange",
+              "optional": true,
+              "type": "(expanded: boolean) => void",
+              "doc": "Reports the Disclosure opening or closing."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": [
+                "title",
+                "expanded",
+                "defaultExpanded",
+                "disabled",
+                "id",
+                "onExpandedChange",
+                "children",
+                "className"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#DisclosureOwnProps",
+      "name": "DisclosureOwnProps",
+      "module": "components",
+      "text": "interface DisclosureOwnProps {\n  title: React.ReactNode;\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  disabled?: boolean;\n  id?: string;\n  onExpandedChange?: (expanded: boolean) => void;\n}",
+      "members": [
+        {
+          "name": "title",
+          "type": "React.ReactNode",
+          "doc": "The content of the trigger button, which names the section."
+        },
+        {
+          "name": "expanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Disclosure is open, when the caller controls it. Inside a DisclosureGroup the group owns expansion and this is ignored."
+        },
+        {
+          "name": "defaultExpanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Disclosure starts open, when it controls itself."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the Disclosure: it can be neither opened nor closed."
+        },
+        {
+          "name": "id",
+          "optional": true,
+          "type": "string",
+          "doc": "Identifies the Disclosure. A DisclosureGroup's expanded ids refer to it."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(expanded: boolean) => void",
+          "doc": "Reports the Disclosure opening or closing."
+        }
+      ]
+    },
+    {
+      "id": "components#DisclosureProps",
+      "name": "DisclosureProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "DisclosureProps" }
+      ],
+      "owner": "disclosure",
+      "extends": [
+        {
+          "type": "DisclosureOwnProps",
+          "refs": ["components#DisclosureOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLDivElement>, keyof DisclosureOwnProps | 'children' | 'className'>",
+          "refs": ["components#DisclosureOwnProps"]
+        }
+      ],
+      "text": "interface DisclosureProps extends DisclosureOwnProps, Omit<React.HTMLAttributes<HTMLDivElement>, keyof DisclosureOwnProps | 'children' | 'className'> {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#DisclosureOwnProps"]
+    }
+  ]
+}

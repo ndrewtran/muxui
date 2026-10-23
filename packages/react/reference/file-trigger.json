@@ -1,0 +1,129 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "file-trigger",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "FileTrigger",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "acceptedFileTypes",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The MIME types or extensions the picker offers. It sets the native accept attribute and narrows the picker without validating the choice."
+            },
+            {
+              "name": "allowsMultiple",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Lets the picker select more than one file."
+            },
+            {
+              "name": "acceptDirectory",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Lets the picker select a directory instead of files, through the native webkitdirectory attribute."
+            },
+            {
+              "name": "defaultCamera",
+              "optional": true,
+              "type": "'user' | 'environment'",
+              "values": ["user", "environment"],
+              "doc": "Picks the camera a capture uses, the front one for user or the rear one for environment, through the native capture attribute."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the trigger: the picker does not open, and onSelect is not called."
+            },
+            {
+              "name": "onSelect",
+              "optional": true,
+              "type": "(files: File[]) => void",
+              "doc": "Reports the chosen files as an array of File objects."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLInputElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#FileTriggerOwnProps",
+      "name": "FileTriggerOwnProps",
+      "module": "overlays",
+      "text": "interface FileTriggerOwnProps {\n  acceptedFileTypes?: readonly string[];\n  allowsMultiple?: boolean;\n  acceptDirectory?: boolean;\n  defaultCamera?: 'user' | 'environment';\n  disabled?: boolean;\n  onSelect?: (files: File[]) => void;\n}",
+      "members": [
+        {
+          "name": "acceptedFileTypes",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The MIME types or extensions the picker offers. It sets the native accept attribute and narrows the picker without validating the choice."
+        },
+        {
+          "name": "allowsMultiple",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Lets the picker select more than one file."
+        },
+        {
+          "name": "acceptDirectory",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Lets the picker select a directory instead of files, through the native webkitdirectory attribute."
+        },
+        {
+          "name": "defaultCamera",
+          "optional": true,
+          "type": "'user' | 'environment'",
+          "values": ["user", "environment"],
+          "doc": "Picks the camera a capture uses, the front one for user or the rear one for environment, through the native capture attribute."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the trigger: the picker does not open, and onSelect is not called."
+        },
+        {
+          "name": "onSelect",
+          "optional": true,
+          "type": "(files: File[]) => void",
+          "doc": "Reports the chosen files as an array of File objects."
+        }
+      ]
+    },
+    {
+      "id": "overlays#FileTriggerProps",
+      "name": "FileTriggerProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "FileTriggerProps" }
+      ],
+      "owner": "file-trigger",
+      "extends": [
+        {
+          "type": "FileTriggerOwnProps",
+          "refs": ["overlays#FileTriggerOwnProps"]
+        }
+      ],
+      "text": "interface FileTriggerProps extends FileTriggerOwnProps {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["overlays#FileTriggerOwnProps"]
+    }
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "tabs",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "tabs": "packages/react/src/tabs.ts"
+  },
+  "exports": [
+    {
+      "name": "Tabs",
+      "entry": ".",
+      "module": "tabs",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The tabs as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and the `panel` the tab shows."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the selected tab, when the caller controls the selection."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the tab selected at first, when Tabs controls its own selection. Without one, the first enabled tab is selected."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every tab. A tab's own `disabled` disables just that tab."
+            },
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "The direction the tabs run, which arrow keys follow."
+            },
+            {
+              "name": "keyboardActivation",
+              "optional": true,
+              "type": "'automatic' | 'manual'",
+              "values": ["automatic", "manual"],
+              "doc": "How arrow keys act. With `automatic`, an arrow key selects the tab it reaches. With `manual`, arrow keys only move focus, and Enter or Space selects the focused tab."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ControlSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["fields#ControlSize"],
+              "doc": "The control size, sm, md, or lg."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "'underline' | 'pill' | 'overflow' | 'segment'",
+              "values": ["underline", "pill", "overflow", "segment"],
+              "doc": "The visual treatment of the tab list: underline, pill, overflow, or segment."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the id of the tab the user selects. It is not called for a disabled tab or while Tabs is disabled."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "tabs#TabsOwnProps",
+      "name": "TabsOwnProps",
+      "module": "tabs",
+      "text": "type TabsOwnProps = {\n  items?: MuxUIItems;\n  value?: string;\n  defaultValue?: string;\n  disabled?: boolean;\n  orientation?: 'horizontal' | 'vertical';\n  keyboardActivation?: 'automatic' | 'manual';\n  size?: ControlSize;\n  variant?: 'underline' | 'pill' | 'overflow' | 'segment';\n  onChange?: (value: string) => void;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The tabs as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and the `panel` the tab shows."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the selected tab, when the caller controls the selection."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the tab selected at first, when Tabs controls its own selection. Without one, the first enabled tab is selected."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every tab. A tab's own `disabled` disables just that tab."
+        },
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "The direction the tabs run, which arrow keys follow."
+        },
+        {
+          "name": "keyboardActivation",
+          "optional": true,
+          "type": "'automatic' | 'manual'",
+          "values": ["automatic", "manual"],
+          "doc": "How arrow keys act. With `automatic`, an arrow key selects the tab it reaches. With `manual`, arrow keys only move focus, and Enter or Space selects the focused tab."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"],
+          "doc": "The control size, sm, md, or lg."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "'underline' | 'pill' | 'overflow' | 'segment'",
+          "values": ["underline", "pill", "overflow", "segment"],
+          "doc": "The visual treatment of the tab list: underline, pill, overflow, or segment."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the id of the tab the user selects. It is not called for a disabled tab or while Tabs is disabled."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "fields#ControlSize"]
+    },
+    {
+      "id": "tabs#TabsProps",
+      "name": "TabsProps",
+      "module": "tabs",
+      "public": [
+        { "entry": ".", "name": "TabsProps" }
+      ],
+      "owner": "tabs",
+      "extends": [
+        {
+          "type": "TabsOwnProps",
+          "refs": ["tabs#TabsOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type TabsProps = TabsOwnProps & {\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["tabs#TabsOwnProps", "fields#MuxUIAriaAccessibleName"]
+    }
+  ]
+}

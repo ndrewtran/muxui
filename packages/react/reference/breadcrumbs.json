@@ -1,0 +1,129 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "breadcrumbs",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "Breadcrumbs",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "BreadcrumbItem[]",
+              "refs": ["components#BreadcrumbItem"],
+              "doc": "The levels of the path, from the top of the hierarchy down to the current page. The last item is the current page."
+            },
+            {
+              "name": "onNavigate",
+              "optional": true,
+              "type": "(item: BreadcrumbItem) => void",
+              "refs": ["components#BreadcrumbItem"],
+              "doc": "Reports the item a person navigates to, unless it is disabled."
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "aria-label", "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLElement>",
+              "omit": ["items", "onNavigate", "children", "className", "aria-label"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#BreadcrumbItem",
+      "name": "BreadcrumbItem",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "BreadcrumbItem" }
+      ],
+      "owner": "breadcrumbs",
+      "text": "interface BreadcrumbItem {\n  id?: string;\n  label: React.ReactNode;\n  href?: string;\n  disabled?: boolean;\n}",
+      "members": [
+        {
+          "name": "id",
+          "optional": true,
+          "type": "string",
+          "doc": "Identifies the item. An item without one is identified by its position."
+        },
+        {
+          "name": "label",
+          "type": "React.ReactNode",
+          "doc": "What the level is called, such as the name of its page."
+        },
+        {
+          "name": "href",
+          "optional": true,
+          "type": "string",
+          "doc": "Where the level leads. An item without one, and the last item, render as text."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the level text that cannot be navigated to."
+        }
+      ]
+    },
+    {
+      "id": "components#BreadcrumbsOwnProps",
+      "name": "BreadcrumbsOwnProps",
+      "module": "components",
+      "text": "interface BreadcrumbsOwnProps {\n  items?: BreadcrumbItem[];\n  onNavigate?: (item: BreadcrumbItem) => void;\n}",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "BreadcrumbItem[]",
+          "refs": ["components#BreadcrumbItem"],
+          "doc": "The levels of the path, from the top of the hierarchy down to the current page. The last item is the current page."
+        },
+        {
+          "name": "onNavigate",
+          "optional": true,
+          "type": "(item: BreadcrumbItem) => void",
+          "refs": ["components#BreadcrumbItem"],
+          "doc": "Reports the item a person navigates to, unless it is disabled."
+        }
+      ],
+      "refs": ["components#BreadcrumbItem"]
+    },
+    {
+      "id": "components#BreadcrumbsProps",
+      "name": "BreadcrumbsProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "BreadcrumbsProps" }
+      ],
+      "owner": "breadcrumbs",
+      "extends": [
+        {
+          "type": "BreadcrumbsOwnProps",
+          "refs": ["components#BreadcrumbsOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLElement>, keyof BreadcrumbsOwnProps | 'children' | 'className' | 'aria-label'>",
+          "refs": ["components#BreadcrumbsOwnProps"]
+        }
+      ],
+      "text": "interface BreadcrumbsProps extends BreadcrumbsOwnProps, Omit<React.HTMLAttributes<HTMLElement>, keyof BreadcrumbsOwnProps | 'children' | 'className' | 'aria-label'> {\n  className?: string;\n  'aria-label': string;\n}",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "aria-label", "type": "string" }
+      ],
+      "refs": ["components#BreadcrumbsOwnProps"]
+    }
+  ]
+}

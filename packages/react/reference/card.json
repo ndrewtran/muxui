@@ -1,0 +1,252 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "card",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "Card",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "CardVariant",
+              "values": ["elevated", "outlined", "filled"],
+              "refs": ["supplemental#CardVariant"]
+            },
+            {
+              "name": "padding",
+              "optional": true,
+              "type": "CardPadding",
+              "values": ["sm", "md", "lg"],
+              "refs": ["supplemental#CardPadding"]
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Button",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: SupplementalActivation) => void",
+              "refs": ["supplemental#SupplementalActivation"]
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "CardVariant",
+              "values": ["elevated", "outlined", "filled"],
+              "refs": ["supplemental#CardVariant"]
+            },
+            {
+              "name": "padding",
+              "optional": true,
+              "type": "CardPadding",
+              "values": ["sm", "md", "lg"],
+              "refs": ["supplemental#CardPadding"]
+            },
+            { "name": "selected", "optional": true, "type": "boolean" },
+            { "name": "pending", "optional": true, "type": "boolean" }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        },
+        {
+          "member": "Header",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Body",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Footer",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#ButtonPartProps",
+      "name": "ButtonPartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ButtonPartProps" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
+      "refs": ["supplemental#SupplementalActivation"]
+    },
+    {
+      "id": "supplemental#CardBodyProps",
+      "name": "CardBodyProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardBodyProps" }
+      ],
+      "owner": "card",
+      "text": "type CardBodyProps = PartProps<HTMLDivElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#CardButtonProps",
+      "name": "CardButtonProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardButtonProps" }
+      ],
+      "owner": "card",
+      "extends": [
+        {
+          "type": "ButtonPartProps",
+          "refs": ["supplemental#ButtonPartProps"]
+        }
+      ],
+      "text": "type CardButtonProps = ButtonPartProps & {\n  variant?: CardVariant;\n  padding?: CardPadding;\n  selected?: boolean;\n  pending?: boolean;\n};",
+      "members": [
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "CardVariant",
+          "values": ["elevated", "outlined", "filled"],
+          "refs": ["supplemental#CardVariant"]
+        },
+        {
+          "name": "padding",
+          "optional": true,
+          "type": "CardPadding",
+          "values": ["sm", "md", "lg"],
+          "refs": ["supplemental#CardPadding"]
+        },
+        { "name": "selected", "optional": true, "type": "boolean" },
+        { "name": "pending", "optional": true, "type": "boolean" }
+      ],
+      "refs": ["supplemental#ButtonPartProps", "supplemental#CardVariant", "supplemental#CardPadding"]
+    },
+    {
+      "id": "supplemental#CardFooterProps",
+      "name": "CardFooterProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardFooterProps" }
+      ],
+      "owner": "card",
+      "text": "type CardFooterProps = PartProps<HTMLDivElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#CardHeaderProps",
+      "name": "CardHeaderProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardHeaderProps" }
+      ],
+      "owner": "card",
+      "text": "type CardHeaderProps = PartProps<HTMLDivElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#CardPadding",
+      "name": "CardPadding",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardPadding" }
+      ],
+      "owner": "card",
+      "text": "type CardPadding = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "supplemental#CardRootProps",
+      "name": "CardRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardRootProps" }
+      ],
+      "owner": "card",
+      "text": "type CardRootProps = React.HTMLAttributes<HTMLDivElement> & {\n  variant?: CardVariant;\n  padding?: CardPadding;\n};",
+      "refs": ["supplemental#CardVariant", "supplemental#CardPadding"]
+    },
+    {
+      "id": "supplemental#CardVariant",
+      "name": "CardVariant",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CardVariant" }
+      ],
+      "owner": "card",
+      "text": "type CardVariant = 'elevated' | 'outlined' | 'filled';",
+      "values": ["elevated", "outlined", "filled"]
+    },
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalActivation",
+      "name": "SupplementalActivation",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalActivation" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "pointerType", "optional": true, "type": "string" },
+        { "name": "target", "optional": true, "type": "EventTarget | null" }
+      ]
+    }
+  ]
+}

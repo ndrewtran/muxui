@@ -1,0 +1,99 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "header-nav",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "HeaderNav",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Logo",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "href", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "NavButton",
+          "form": "forwardRef",
+          "members": [
+            { "name": "current", "optional": true, "type": "boolean" }
+          ],
+          "ref": { "type": "HTMLAnchorElement" },
+          "natives": [
+            { "type": "React.AnchorHTMLAttributes<HTMLAnchorElement>" }
+          ]
+        },
+        {
+          "member": "Actions",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Secondary",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "MobileTrigger",
+          "form": "ComponentType",
+          "members": [
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": null
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#HeaderNavNavButtonProps",
+      "name": "HeaderNavNavButtonProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "HeaderNavNavButtonProps" }
+      ],
+      "owner": "header-nav",
+      "text": "type HeaderNavNavButtonProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {\n  current?: boolean;\n};"
+    },
+    {
+      "id": "supplemental#HeaderNavRootProps",
+      "name": "HeaderNavRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "HeaderNavRootProps" }
+      ],
+      "owner": "header-nav",
+      "text": "type HeaderNavRootProps = React.HTMLAttributes<HTMLElement>;"
+    }
+  ]
+}

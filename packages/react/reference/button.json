@@ -1,0 +1,232 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "button",
+  "sources": {
+    "button": "packages/react/src/button.ts",
+    "supplemental": "packages/react/src/supplemental/index.d.ts"
+  },
+  "exports": [
+    {
+      "name": "Button",
+      "entry": ".",
+      "module": "button",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Applies the native disabled attribute: the Button is neither focusable nor activatable."
+            },
+            {
+              "name": "pending",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks an action in flight: the Button shows a spinner, stays focusable, and does not activate."
+            },
+            {
+              "name": "showTextWhileLoading",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Keeps the label visible beside the spinner while pending."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "ButtonVariant",
+              "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+              "refs": ["button#ButtonVariant"],
+              "doc": "The visual recipe, chosen by the action's emphasis and consequence."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ButtonSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["button#ButtonSize"],
+              "doc": "The control size."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: ButtonActivationEvent) => void",
+              "refs": ["button#ButtonActivationEvent"],
+              "doc": "Requests the Button's one immediate action."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "style", "optional": true, "type": "React.CSSProperties" }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            {
+              "type": "React.ButtonHTMLAttributes<HTMLButtonElement>",
+              "omit": ["children", "className", "disabled", "onClick", "style"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "button#ButtonActivationEvent",
+      "name": "ButtonActivationEvent",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonActivationEvent" }
+      ],
+      "owner": "button",
+      "text": "interface ButtonActivationEvent {\n  readonly type: 'activate';\n  readonly pointerType: ButtonPointerType;\n  readonly target: HTMLButtonElement;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        {
+          "name": "pointerType",
+          "readonly": true,
+          "type": "ButtonPointerType",
+          "refs": ["button#ButtonPointerType"]
+        },
+        { "name": "target", "readonly": true, "type": "HTMLButtonElement" }
+      ],
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "button#ButtonOwnProps",
+      "name": "ButtonOwnProps",
+      "module": "button",
+      "text": "interface ButtonOwnProps {\n  disabled?: boolean;\n  pending?: boolean;\n  showTextWhileLoading?: boolean;\n  variant?: ButtonVariant;\n  size?: ButtonSize;\n  onActivate?: (event: ButtonActivationEvent) => void;\n}",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Applies the native disabled attribute: the Button is neither focusable nor activatable."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks an action in flight: the Button shows a spinner, stays focusable, and does not activate."
+        },
+        {
+          "name": "showTextWhileLoading",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps the label visible beside the spinner while pending."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "ButtonVariant",
+          "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+          "refs": ["button#ButtonVariant"],
+          "doc": "The visual recipe, chosen by the action's emphasis and consequence."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ButtonSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["button#ButtonSize"],
+          "doc": "The control size."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: ButtonActivationEvent) => void",
+          "refs": ["button#ButtonActivationEvent"],
+          "doc": "Requests the Button's one immediate action."
+        }
+      ],
+      "refs": ["button#ButtonVariant", "button#ButtonSize", "button#ButtonActivationEvent"]
+    },
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "button#ButtonProps",
+      "name": "ButtonProps",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonProps" }
+      ],
+      "owner": "button",
+      "extends": [
+        {
+          "type": "ButtonOwnProps",
+          "refs": ["button#ButtonOwnProps"]
+        },
+        {
+          "type": "Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'>"
+        }
+      ],
+      "text": "interface ButtonProps extends ButtonOwnProps, Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'> {\n  children?: React.ReactNode;\n  className?: string;\n  style?: React.CSSProperties;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "style", "optional": true, "type": "React.CSSProperties" }
+      ],
+      "refs": ["button#ButtonOwnProps"]
+    },
+    {
+      "id": "button#ButtonSize",
+      "name": "ButtonSize",
+      "module": "button",
+      "text": "type ButtonSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "button#ButtonVariant",
+      "name": "ButtonVariant",
+      "module": "button",
+      "text": "type ButtonVariant = 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';",
+      "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"]
+    },
+    {
+      "id": "supplemental#ButtonPartProps",
+      "name": "ButtonPartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ButtonPartProps" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
+      "refs": ["supplemental#SupplementalActivation"]
+    },
+    {
+      "id": "supplemental#SupplementalActivation",
+      "name": "SupplementalActivation",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalActivation" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "pointerType", "optional": true, "type": "string" },
+        { "name": "target", "optional": true, "type": "EventTarget | null" }
+      ]
+    }
+  ]
+}

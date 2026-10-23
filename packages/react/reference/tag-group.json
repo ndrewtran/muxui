@@ -1,0 +1,388 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "tag-group",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "tag-group": "packages/react/src/tag-group.ts"
+  },
+  "exports": [
+    {
+      "name": "TagGroup",
+      "entry": ".",
+      "module": "tag-group",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "(TagGroupItem | string)[]",
+              "refs": ["tag-group#TagGroupItem"],
+              "doc": "The tags as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and a `color` that overrides the group's."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "TagGroupVariant",
+              "values": ["soft", "outline", "dot", "strong"],
+              "refs": ["tag-group#TagGroupVariant"],
+              "doc": "The treatment of every tag: soft, outline, dot, or strong."
+            },
+            {
+              "name": "color",
+              "optional": true,
+              "type": "TagGroupColor",
+              "values": [
+                "neutral",
+                "brand",
+                "success",
+                "warning",
+                "error",
+                "red",
+                "orange",
+                "amber",
+                "yellow",
+                "lime",
+                "green",
+                "emerald",
+                "teal",
+                "bluegreen",
+                "cyan",
+                "sky",
+                "indigo",
+                "violet",
+                "purple",
+                "fuchsia",
+                "pink",
+                "rose"
+              ],
+              "refs": ["tag-group#TagGroupColor"],
+              "doc": "The default color of every tag; an item's own color wins."
+            },
+            {
+              "name": "selectionMode",
+              "optional": true,
+              "type": "'none' | 'single' | 'multiple'",
+              "values": ["none", "single", "multiple"],
+              "doc": "Whether tags can be selected: `single` or `multiple` makes them selectable."
+            },
+            {
+              "name": "selectedKeys",
+              "optional": true,
+              "type": "Set<string>",
+              "doc": "The selected item ids, when the caller controls the selection. Without it the group keeps the selection and drops the ids of removed items without calling onSelectionChange, so a caller controlling the selection removes those ids itself."
+            },
+            {
+              "name": "defaultSelectedKeys",
+              "optional": true,
+              "type": "Set<string>",
+              "doc": "The item ids selected at first, when the group keeps its own selection."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(keys: Set<string>) => void",
+              "doc": "Called with a new Set of the selected item ids when the selection changes; selecting everything passes the ids of the enabled items. It is not called while the group is disabled."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every tag and its remove button, and stops the selection, removal, and action callbacks. A tag's own `disabled` disables just that tag."
+            },
+            {
+              "name": "onRemove",
+              "optional": true,
+              "type": "(items: TagGroupItem[]) => void",
+              "refs": ["tag-group#TagGroupItem"],
+              "doc": "Called with the removed item records, not ids. Each tag shows a remove button only when this is supplied, and Backspace or Delete on a focused tag also removes it. A disabled tag cannot be removed, and a disabled group removes nothing."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: TagGroupItem) => void",
+              "refs": ["tag-group#TagGroupItem"],
+              "doc": "Called with the item record when the user activates a tag. It is not called for a disabled tag or while the group is disabled."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "tag-group#TagGroupColor",
+      "name": "TagGroupColor",
+      "module": "tag-group",
+      "public": [
+        { "entry": ".", "name": "TagGroupColor" }
+      ],
+      "owner": "tag-group",
+      "text": "type TagGroupColor = 'neutral' | 'brand' | 'success' | 'warning' | 'error' | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'emerald' | 'teal' | 'bluegreen' | 'cyan' | 'sky' | 'indigo' | 'violet' | 'purple' | 'fuchsia' | 'pink' | 'rose';",
+      "values": [
+        "neutral",
+        "brand",
+        "success",
+        "warning",
+        "error",
+        "red",
+        "orange",
+        "amber",
+        "yellow",
+        "lime",
+        "green",
+        "emerald",
+        "teal",
+        "bluegreen",
+        "cyan",
+        "sky",
+        "indigo",
+        "violet",
+        "purple",
+        "fuchsia",
+        "pink",
+        "rose"
+      ]
+    },
+    {
+      "id": "tag-group#TagGroupItem",
+      "name": "TagGroupItem",
+      "module": "tag-group",
+      "public": [
+        { "entry": ".", "name": "TagGroupItem" }
+      ],
+      "owner": "tag-group",
+      "extends": [
+        {
+          "type": "MuxUICollectionItem",
+          "refs": ["collection-items#MuxUICollectionItem"]
+        }
+      ],
+      "text": "type TagGroupItem = MuxUICollectionItem & {\n  color?: TagGroupColor;\n};",
+      "members": [
+        {
+          "name": "color",
+          "optional": true,
+          "type": "TagGroupColor",
+          "values": [
+            "neutral",
+            "brand",
+            "success",
+            "warning",
+            "error",
+            "red",
+            "orange",
+            "amber",
+            "yellow",
+            "lime",
+            "green",
+            "emerald",
+            "teal",
+            "bluegreen",
+            "cyan",
+            "sky",
+            "indigo",
+            "violet",
+            "purple",
+            "fuchsia",
+            "pink",
+            "rose"
+          ],
+          "refs": ["tag-group#TagGroupColor"],
+          "doc": "Overrides the group's color for this tag."
+        }
+      ],
+      "refs": ["collection-items#MuxUICollectionItem", "tag-group#TagGroupColor"]
+    },
+    {
+      "id": "tag-group#TagGroupOwnProps",
+      "name": "TagGroupOwnProps",
+      "module": "tag-group",
+      "text": "type TagGroupOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  items?: (TagGroupItem | string)[];\n  variant?: TagGroupVariant;\n  color?: TagGroupColor;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  selectedKeys?: Set<string>;\n  defaultSelectedKeys?: Set<string>;\n  onSelectionChange?: (keys: Set<string>) => void;\n  disabled?: boolean;\n  onRemove?: (items: TagGroupItem[]) => void;\n  onAction?: (item?: TagGroupItem) => void;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the group. Without one, the group needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "(TagGroupItem | string)[]",
+          "refs": ["tag-group#TagGroupItem"],
+          "doc": "The tags as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and a `color` that overrides the group's."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "TagGroupVariant",
+          "values": ["soft", "outline", "dot", "strong"],
+          "refs": ["tag-group#TagGroupVariant"],
+          "doc": "The treatment of every tag: soft, outline, dot, or strong."
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "type": "TagGroupColor",
+          "values": [
+            "neutral",
+            "brand",
+            "success",
+            "warning",
+            "error",
+            "red",
+            "orange",
+            "amber",
+            "yellow",
+            "lime",
+            "green",
+            "emerald",
+            "teal",
+            "bluegreen",
+            "cyan",
+            "sky",
+            "indigo",
+            "violet",
+            "purple",
+            "fuchsia",
+            "pink",
+            "rose"
+          ],
+          "refs": ["tag-group#TagGroupColor"],
+          "doc": "The default color of every tag; an item's own color wins."
+        },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'none' | 'single' | 'multiple'",
+          "values": ["none", "single", "multiple"],
+          "doc": "Whether tags can be selected: `single` or `multiple` makes them selectable."
+        },
+        {
+          "name": "selectedKeys",
+          "optional": true,
+          "type": "Set<string>",
+          "doc": "The selected item ids, when the caller controls the selection. Without it the group keeps the selection and drops the ids of removed items without calling onSelectionChange, so a caller controlling the selection removes those ids itself."
+        },
+        {
+          "name": "defaultSelectedKeys",
+          "optional": true,
+          "type": "Set<string>",
+          "doc": "The item ids selected at first, when the group keeps its own selection."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(keys: Set<string>) => void",
+          "doc": "Called with a new Set of the selected item ids when the selection changes; selecting everything passes the ids of the enabled items. It is not called while the group is disabled."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every tag and its remove button, and stops the selection, removal, and action callbacks. A tag's own `disabled` disables just that tag."
+        },
+        {
+          "name": "onRemove",
+          "optional": true,
+          "type": "(items: TagGroupItem[]) => void",
+          "refs": ["tag-group#TagGroupItem"],
+          "doc": "Called with the removed item records, not ids. Each tag shows a remove button only when this is supplied, and Backspace or Delete on a focused tag also removes it. A disabled tag cannot be removed, and a disabled group removes nothing."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: TagGroupItem) => void",
+          "refs": ["tag-group#TagGroupItem"],
+          "doc": "Called with the item record when the user activates a tag. It is not called for a disabled tag or while the group is disabled."
+        }
+      ],
+      "refs": ["tag-group#TagGroupItem", "tag-group#TagGroupVariant", "tag-group#TagGroupColor"]
+    },
+    {
+      "id": "tag-group#TagGroupProps",
+      "name": "TagGroupProps",
+      "module": "tag-group",
+      "public": [
+        { "entry": ".", "name": "TagGroupProps" }
+      ],
+      "owner": "tag-group",
+      "text": "type TagGroupProps = Omit<TagGroupOwnProps, 'label'> & {\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["tag-group#TagGroupOwnProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "tag-group#TagGroupVariant",
+      "name": "TagGroupVariant",
+      "module": "tag-group",
+      "public": [
+        { "entry": ".", "name": "TagGroupVariant" }
+      ],
+      "owner": "tag-group",
+      "text": "type TagGroupVariant = 'soft' | 'outline' | 'dot' | 'strong';",
+      "values": ["soft", "outline", "dot", "strong"]
+    }
+  ]
+}

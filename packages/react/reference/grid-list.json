@@ -1,0 +1,336 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "grid-list",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "grid-list": "packages/react/src/grid-list.ts"
+  },
+  "exports": [
+    {
+      "name": "GridList",
+      "entry": ".",
+      "module": "grid-list",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The rows or cards as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            },
+            {
+              "name": "selectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The selected item ids when the caller controls the selection, or `'all'`."
+            },
+            {
+              "name": "defaultSelectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The ids selected at first when the list controls its own selection, or `'all'`."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every item and stops the selection and action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+            },
+            {
+              "name": "selectionMode",
+              "optional": true,
+              "type": "'none' | 'single' | 'multiple'",
+              "values": ["none", "single", "multiple"],
+              "doc": "How many items can be selected. With `onAction` set and `single` or `multiple`, a click or Enter runs the action while nothing is selected and Space starts a selection; once an item is selected, a click changes the selection instead."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(ids: MuxUISelection) => void",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "Called with the selected item ids, or `'all'`, when the selection changes. It is not called while the list is disabled."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+            },
+            {
+              "name": "layout",
+              "optional": true,
+              "type": "'stack' | 'grid'",
+              "values": ["stack", "grid"],
+              "doc": "`stack` is a vertical list of rows. `grid` lays the items out in auto-fill columns of at least 10rem, as cards whose content wraps. Inside a grid Virtualizer a GridList must use `grid`."
+            },
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'vertical' | 'horizontal'",
+              "values": ["vertical", "horizontal"],
+              "doc": "The direction a stack layout runs. `horizontal` scrolls along the inline axis and moves between items by their rendered positions. Inside a grid Virtualizer a GridList must be `vertical`."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "style", "optional": true, "type": "React.CSSProperties" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        },
+        {
+          "member": "Item",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "id",
+              "type": "string",
+              "doc": "The stable string id the selection and action callbacks report."
+            },
+            {
+              "name": "textValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text typeahead matches and the item's name. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the item. A disabled list disables every item whatever this says."
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "style", "optional": true, "type": "React.CSSProperties" },
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "collection-items#MuxUISelection",
+      "name": "MuxUISelection",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUISelection" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUISelection = string[] | 'all';"
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "grid-list#GridListItemOwnProps",
+      "name": "GridListItemOwnProps",
+      "module": "grid-list",
+      "text": "type GridListItemOwnProps = {\n  id: string;\n  textValue?: string;\n  disabled?: boolean;\n};",
+      "members": [
+        {
+          "name": "id",
+          "type": "string",
+          "doc": "The stable string id the selection and action callbacks report."
+        },
+        {
+          "name": "textValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text typeahead matches and the item's name. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the item. A disabled list disables every item whatever this says."
+        }
+      ]
+    },
+    {
+      "id": "grid-list#GridListItemProps",
+      "name": "GridListItemProps",
+      "module": "grid-list",
+      "public": [
+        { "entry": ".", "name": "GridListItemProps" }
+      ],
+      "owner": "grid-list",
+      "extends": [
+        {
+          "type": "GridListItemOwnProps",
+          "refs": ["grid-list#GridListItemOwnProps"]
+        }
+      ],
+      "text": "type GridListItemProps = GridListItemOwnProps & {\n  className?: string;\n  style?: React.CSSProperties;\n  children?: React.ReactNode;\n};",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "style", "optional": true, "type": "React.CSSProperties" },
+        { "name": "children", "optional": true, "type": "React.ReactNode" }
+      ],
+      "refs": ["grid-list#GridListItemOwnProps"]
+    },
+    {
+      "id": "grid-list#GridListOwnProps",
+      "name": "GridListOwnProps",
+      "module": "grid-list",
+      "text": "type GridListOwnProps = {\n  items?: MuxUIItems;\n  selectedIds?: MuxUISelection;\n  defaultSelectedIds?: MuxUISelection;\n  disabled?: boolean;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  onSelectionChange?: (ids: MuxUISelection) => void;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  layout?: 'stack' | 'grid';\n  orientation?: 'vertical' | 'horizontal';\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The rows or cards as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+        },
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The selected item ids when the caller controls the selection, or `'all'`."
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The ids selected at first when the list controls its own selection, or `'all'`."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every item and stops the selection and action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+        },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'none' | 'single' | 'multiple'",
+          "values": ["none", "single", "multiple"],
+          "doc": "How many items can be selected. With `onAction` set and `single` or `multiple`, a click or Enter runs the action while nothing is selected and Space starts a selection; once an item is selected, a click changes the selection instead."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: MuxUISelection) => void",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "Called with the selected item ids, or `'all'`, when the selection changes. It is not called while the list is disabled."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+        },
+        {
+          "name": "layout",
+          "optional": true,
+          "type": "'stack' | 'grid'",
+          "values": ["stack", "grid"],
+          "doc": "`stack` is a vertical list of rows. `grid` lays the items out in auto-fill columns of at least 10rem, as cards whose content wraps. Inside a grid Virtualizer a GridList must use `grid`."
+        },
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'vertical' | 'horizontal'",
+          "values": ["vertical", "horizontal"],
+          "doc": "The direction a stack layout runs. `horizontal` scrolls along the inline axis and moves between items by their rendered positions. Inside a grid Virtualizer a GridList must be `vertical`."
+        }
+      ],
+      "refs": [
+        "collection-items#MuxUIItems",
+        "collection-items#MuxUISelection",
+        "collection-items#MuxUICollectionItem"
+      ]
+    },
+    {
+      "id": "grid-list#GridListProps",
+      "name": "GridListProps",
+      "module": "grid-list",
+      "public": [
+        { "entry": ".", "name": "GridListProps" }
+      ],
+      "owner": "grid-list",
+      "extends": [
+        {
+          "type": "GridListOwnProps",
+          "refs": ["grid-list#GridListOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type GridListProps = GridListOwnProps & {\n  children?: React.ReactNode;\n  style?: React.CSSProperties;\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "style", "optional": true, "type": "React.CSSProperties" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["grid-list#GridListOwnProps", "fields#MuxUIAriaAccessibleName"]
+    }
+  ]
+}

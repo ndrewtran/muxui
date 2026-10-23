@@ -1,0 +1,134 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "progress-circle",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "ProgressCircle",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "value", "optional": true, "type": "number | null" },
+            { "name": "minValue", "optional": true, "type": "number" },
+            { "name": "maxValue", "optional": true, "type": "number" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "label", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Track",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "SVGSVGElement" },
+          "natives": [
+            { "type": "React.SVGAttributes<SVGSVGElement>" }
+          ]
+        },
+        {
+          "member": "Label",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Value",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#ProgressCircleLabelProps",
+      "name": "ProgressCircleLabelProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ProgressCircleLabelProps" }
+      ],
+      "owner": "progress-circle",
+      "text": "type ProgressCircleLabelProps = PartProps<HTMLSpanElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#ProgressCircleProps",
+      "name": "ProgressCircleProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ProgressCircleProps" }
+      ],
+      "owner": "progress-circle",
+      "text": "type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & {\n  value?: number | null;\n  minValue?: number;\n  maxValue?: number;\n  size?: 'sm' | 'md' | 'lg';\n  label?: string;\n};"
+    },
+    {
+      "id": "supplemental#ProgressCircleRootProps",
+      "name": "ProgressCircleRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ProgressCircleRootProps" }
+      ],
+      "owner": "progress-circle",
+      "text": "type ProgressCircleRootProps = ProgressCircleProps;",
+      "refs": ["supplemental#ProgressCircleProps"]
+    },
+    {
+      "id": "supplemental#ProgressCircleTrackProps",
+      "name": "ProgressCircleTrackProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ProgressCircleTrackProps" }
+      ],
+      "owner": "progress-circle",
+      "text": "type ProgressCircleTrackProps = React.SVGAttributes<SVGSVGElement>;"
+    },
+    {
+      "id": "supplemental#ProgressCircleValueProps",
+      "name": "ProgressCircleValueProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ProgressCircleValueProps" }
+      ],
+      "owner": "progress-circle",
+      "text": "type ProgressCircleValueProps = PartProps<HTMLSpanElement>;",
+      "refs": ["supplemental#PartProps"]
+    }
+  ]
+}

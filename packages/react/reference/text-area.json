@@ -1,0 +1,174 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "text-area",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "TextArea",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "value", "optional": true, "type": "string" },
+            { "name": "defaultValue", "optional": true, "type": "string" },
+            { "name": "onChange", "optional": true, "type": "(value: string) => void" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onChange"]
+            }
+          ]
+        },
+        {
+          "member": "TextArea",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLTextAreaElement" },
+          "natives": [
+            { "type": "React.TextareaHTMLAttributes<HTMLTextAreaElement>" }
+          ]
+        },
+        {
+          "member": "Label",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLLabelElement>" }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Error",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    },
+    {
+      "id": "supplemental#TextAreaDescriptionProps",
+      "name": "TextAreaDescriptionProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextAreaDescriptionProps" }
+      ],
+      "owner": "text-area",
+      "text": "type TextAreaDescriptionProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#TextAreaErrorProps",
+      "name": "TextAreaErrorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextAreaErrorProps" }
+      ],
+      "owner": "text-area",
+      "text": "type TextAreaErrorProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#TextAreaLabelProps",
+      "name": "TextAreaLabelProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextAreaLabelProps" }
+      ],
+      "owner": "text-area",
+      "text": "type TextAreaLabelProps = PartProps<HTMLLabelElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#TextAreaProps",
+      "name": "TextAreaProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextAreaProps" }
+      ],
+      "owner": "text-area",
+      "text": "type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;"
+    },
+    {
+      "id": "supplemental#TextAreaRootProps",
+      "name": "TextAreaRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "TextAreaRootProps" }
+      ],
+      "owner": "text-area",
+      "text": "type TextAreaRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n};",
+      "refs": ["supplemental#SupplementalFieldProps"]
+    }
+  ]
+}

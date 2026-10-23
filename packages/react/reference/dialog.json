@@ -1,0 +1,260 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "dialog",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "Dialog",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text under the title, which also describes the Dialog."
+            },
+            {
+              "name": "actions",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The buttons under the content."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Dialog is open, when the caller controls it."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Dialog starts open, when it controls itself."
+            },
+            {
+              "name": "dismissable",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether Escape, an outside press, the trigger, and the built-in close button close the Dialog. When false, the Dialog renders no close button of its own, and only a button in the close slot closes it."
+            },
+            {
+              "name": "trigger",
+              "optional": true,
+              "type": "React.ReactElement",
+              "doc": "The element that opens the Dialog. Without one, only open or defaultOpen opens it."
+            },
+            {
+              "name": "backdropClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the backdrop beside Mux UI's own."
+            },
+            {
+              "name": "panelClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the dialog panel beside Mux UI's own."
+            },
+            {
+              "name": "titleClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the title beside Mux UI's own."
+            },
+            {
+              "name": "descriptionClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the description beside Mux UI's own."
+            },
+            {
+              "name": "contentClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the content beside Mux UI's own."
+            },
+            {
+              "name": "actionsClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the actions beside Mux UI's own."
+            },
+            {
+              "name": "closeClassName",
+              "optional": true,
+              "type": "string",
+              "doc": "A class added to the built-in close button beside Mux UI's own."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Reports the Dialog opening or closing. A Dialog that is not dismissable reports no close from Escape, an outside press, or the trigger."
+            },
+            { "name": "aria-describedby", "optional": true, "type": "string" },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "title", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "type": "string" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "title", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "title", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#DialogArms",
+      "name": "DialogArms",
+      "module": "overlays",
+      "text": "type DialogArms = {\n  title: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n} | ({ title?: never } & OverlayAccessibleName);",
+      "refs": ["overlays#OverlayAccessibleName"]
+    },
+    {
+      "id": "overlays#DialogOwnProps",
+      "name": "DialogOwnProps",
+      "module": "overlays",
+      "text": "interface DialogOwnProps {\n  title?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  actions?: React.ReactNode;\n  open?: boolean;\n  defaultOpen?: boolean;\n  dismissable?: boolean;\n  trigger?: React.ReactElement;\n  backdropClassName?: string;\n  panelClassName?: string;\n  titleClassName?: string;\n  descriptionClassName?: string;\n  contentClassName?: string;\n  actionsClassName?: string;\n  closeClassName?: string;\n  onOpenChange?: (open: boolean) => void;\n}",
+      "members": [
+        {
+          "name": "title",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The heading, which also names the Dialog. Without one, the Dialog needs an aria-label or aria-labelledby, and a blank title does not count."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text under the title, which also describes the Dialog."
+        },
+        {
+          "name": "actions",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The buttons under the content."
+        },
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Dialog is open, when the caller controls it."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Dialog starts open, when it controls itself."
+        },
+        {
+          "name": "dismissable",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether Escape, an outside press, the trigger, and the built-in close button close the Dialog. When false, the Dialog renders no close button of its own, and only a button in the close slot closes it."
+        },
+        {
+          "name": "trigger",
+          "optional": true,
+          "type": "React.ReactElement",
+          "doc": "The element that opens the Dialog. Without one, only open or defaultOpen opens it."
+        },
+        {
+          "name": "backdropClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the backdrop beside Mux UI's own."
+        },
+        {
+          "name": "panelClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the dialog panel beside Mux UI's own."
+        },
+        {
+          "name": "titleClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the title beside Mux UI's own."
+        },
+        {
+          "name": "descriptionClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the description beside Mux UI's own."
+        },
+        {
+          "name": "contentClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the content beside Mux UI's own."
+        },
+        {
+          "name": "actionsClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the actions beside Mux UI's own."
+        },
+        {
+          "name": "closeClassName",
+          "optional": true,
+          "type": "string",
+          "doc": "A class added to the built-in close button beside Mux UI's own."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Reports the Dialog opening or closing. A Dialog that is not dismissable reports no close from Escape, an outside press, or the trigger."
+        }
+      ]
+    },
+    {
+      "id": "overlays#DialogProps",
+      "name": "DialogProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "DialogProps" }
+      ],
+      "owner": "dialog",
+      "text": "type DialogProps = Omit<DialogOwnProps, 'title'> & {\n  'aria-describedby'?: string;\n  children?: React.ReactNode;\n  className?: string;\n} & DialogArms;",
+      "refs": ["overlays#DialogOwnProps", "overlays#DialogArms"]
+    },
+    {
+      "id": "overlays#OverlayAccessibleName",
+      "name": "OverlayAccessibleName",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "OverlayAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type OverlayAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    }
+  ]
+}
