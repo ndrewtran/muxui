@@ -325,3 +325,17 @@ test('a bundle that uses one supplemental family keeps its own module, only the 
     assert.deepEqual(stems, [module, ...allowed].sort(), name);
   }
 });
+
+// TextEditor's Root self-alias is assigned after its forwardRef, so the component is built in a pure-annotated function; without
+// it a bundler keeps the whole module's component, and the Button and IconButton modules it needs, for a consumer who imports only
+// the document helpers. The module itself still ships (its helpers are in it).
+test('tsc keeps the pure annotation on TextEditor\'s wrapper, and a bundle of its document helper drops the component', async () => {
+  const emitted = readFileSync(resolve(generated, 'text-editor.js'), 'utf8');
+  assert.match(emitted, /^export const TextEditor = \/\*#__PURE__\*\/ \(\(\) => \{$/mu);
+  const helperOnly = await bundledModuleSizes('isTextEditorDocument', 'text-editor.js');
+  const withEditor = await bundledModuleSizes('TextEditor', 'text-editor.js');
+  assert.deepEqual(helperOnly.map(([id]) => id), ['text-editor.js']);
+  assert.deepEqual(withEditor.map(([id]) => id).sort(), ['button.js', 'icon-button.js', 'text-editor.js']);
+  const size = (sizes) => sizes.find(([id]) => id === 'text-editor.js')[1];
+  assert.ok(size(helperOnly) < size(withEditor) / 2, 'the helper keeps a small part of the module');
+});

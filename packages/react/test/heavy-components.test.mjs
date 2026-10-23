@@ -156,6 +156,39 @@ test('TextEditor preserves rich marks and controlled formatting actions when mou
   }
 });
 
+// An omitted defaultValue is normalized like any other, which copies the empty document. Handing the editor the shared constant itself
+// would let a change to what normalizeTextEditorDocument(undefined) returns show up in an editor that mounts after it.
+test('TextEditor never lends its editor the shared empty document when defaultValue is omitted', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  const shared = normalizeTextEditorDocument(undefined);
+  const original = shared.content[0];
+  function Parent() {
+    React.useLayoutEffect(() => {
+      shared.content[0] = { type: 'paragraph', content: [{ type: 'text', text: 'LEAK' }] };
+    }, []);
+    return React.createElement(TextEditor, { 'aria-label': 'Draft', toolbar: false });
+  }
+  let editor;
+  let destroyed;
+  try {
+    root = createRoot(document.querySelector('#root'));
+    await act(async () => root.render(React.createElement(Parent)));
+    editor = document.querySelector('.ProseMirror').editor;
+    destroyed = new Promise((resolve) => editor.on('destroy', resolve));
+    assert.equal(document.querySelector('.ProseMirror').textContent, '');
+    assert.deepEqual(normalizeTextEditorDocument(editor.getJSON()), { type: 'doc', content: [{ type: 'paragraph' }] });
+  } finally {
+    shared.content[0] = original;
+    await act(async () => root?.unmount());
+    // Tiptap destroys the editor after the unmount; the window it reads must still exist.
+    if (editor && !editor.isDestroyed) await destroyed;
+    restore();
+    dom.window.close();
+  }
+});
+
 test('TextEditor normalizes its enabled Tiptap output into a strict portable round trip', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
