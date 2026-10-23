@@ -200,7 +200,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/input.mjs",
+      "runtimeSource": "packages/react/src/supplemental/input.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -434,7 +434,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/text-area.mjs",
+      "runtimeSource": "packages/react/src/supplemental/text-area.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

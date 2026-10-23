@@ -184,24 +184,6 @@ export declare const HeaderNav: {
   MobileTrigger: React.ComponentType<{ children?: React.ReactNode }>;
 };
 
-export type InputRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
-  value?: string;
-  defaultValue?: string;
-  onChange?: (value: string) => void;
-};
-export type InputControlProps = React.InputHTMLAttributes<HTMLInputElement>;
-export type InputProps = InputControlProps;
-export type InputLabelProps = PartProps<HTMLLabelElement>;
-export type InputDescriptionProps = PartProps<HTMLElement>;
-export type InputErrorProps = PartProps<HTMLElement>;
-export declare const Input: {
-  Root: React.ForwardRefExoticComponent<InputRootProps & React.RefAttributes<HTMLDivElement>>;
-  Input: React.ForwardRefExoticComponent<InputControlProps & React.RefAttributes<HTMLInputElement>>;
-  Label: React.ForwardRefExoticComponent<PartProps<HTMLLabelElement> & React.RefAttributes<HTMLLabelElement>>;
-  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-};
-
 export type MultiSelectItem = { id: React.Key; [key: string]: unknown };
 export type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; supportingText?: React.ReactNode; emptyStateTitle?: string; emptyStateDescription?: string; items?: Iterable<T>; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key> | 'all'; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key> | 'all') => void; showSearch?: boolean; showFooter?: boolean; onReset?: () => void; onSelectAll?: () => void; selectedCountFormatter?: (count: number) => React.ReactNode };
 export type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;
@@ -306,23 +288,6 @@ export interface TextComponent {
   <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;
 }
 export declare const Text: TextComponent;
-
-export type TextAreaRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
-  value?: string;
-  defaultValue?: string;
-  onChange?: (value: string) => void;
-};
-export type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
-export type TextAreaLabelProps = PartProps<HTMLLabelElement>;
-export type TextAreaDescriptionProps = PartProps<HTMLElement>;
-export type TextAreaErrorProps = PartProps<HTMLElement>;
-export declare const TextArea: {
-  Root: React.ForwardRefExoticComponent<TextAreaRootProps & React.RefAttributes<HTMLDivElement>>;
-  TextArea: React.ForwardRefExoticComponent<React.TextareaHTMLAttributes<HTMLTextAreaElement> & React.RefAttributes<HTMLTextAreaElement>>;
-  Label: React.ForwardRefExoticComponent<PartProps<HTMLLabelElement> & React.RefAttributes<HTMLLabelElement>>;
-  Description: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-};
 
 export declare const supplementalFamilies: readonly [
   'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text'

@@ -305,6 +305,8 @@ const minimalRenders = {
   PaymentInput: () => h(generated.PaymentInput.Root, { 'aria-label': 'Card number' }, h(generated.PaymentInput.Group, null, h(generated.PaymentInput.Input), h(generated.PaymentInput.CardIcon))),
   CheckboxField: () => h(generated.CheckboxField.Root, null, h(generated.CheckboxField.Button, null, h(generated.CheckboxField.Indicator), 'Accept')),
   SwitchField: () => h(generated.SwitchField.Root, null, h(generated.SwitchField.Button, null, h(generated.SwitchField.Thumb), 'Updates')),
+  Input: () => h(generated.Input.Root, null, h(generated.Input.Label, null, 'Name'), h(generated.Input.Input)),
+  TextArea: () => h(generated.TextArea.Root, null, h(generated.TextArea.Label, null, 'Notes'), h(generated.TextArea.TextArea)),
   // RadioField takes its size from the group around it, so its block states no defaults.
   RadioField: () => h(generated.RadioGroup, { 'aria-label': 'Plan' }, h(generated.RadioField.Root, { value: 'monthly' }, h(generated.RadioField.Button, null, h(generated.RadioField.Indicator, null, h(generated.RadioField.Dot)), 'Monthly'))),
 };
@@ -819,6 +821,8 @@ test('every default a simple supplemental family states is compared with what th
     ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
     InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
     PaymentInput: { defaultValue: '4111', size: 'lg' },
+    Input: { size: 'lg' },
+    TextArea: { size: 'lg' },
     CheckboxField: { size: 'lg' },
     SwitchField: { size: 'lg' },
     // RadioField states none: its size follows the enclosing RadioGroup.

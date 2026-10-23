@@ -184,6 +184,10 @@ const GUIDES = {
   'switch-field': {},
   // options is the RadioGroup prop the guide contrasts RadioField with.
   'radio-field': { from: { 'radio-group': ['options'] } },
+  // name, type and placeholder are the native attributes Input.Input takes; the root owns none of them.
+  input: { native: ['name', 'type', 'placeholder'] },
+  // rows, maxLength, placeholder, onKeyDown and name are the native attributes and handlers TextArea.TextArea takes; the root owns none of them.
+  'text-area': { native: ['rows', 'maxLength', 'placeholder', 'onKeyDown', 'name'] },
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.

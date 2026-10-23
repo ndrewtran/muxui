@@ -41,37 +41,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "value",
-          "defaultValue",
-          "onChange",
-          "type",
-          "placeholder",
-          "disabled",
-          "invalid",
-          "required",
-          "readOnly",
-          "size"
-        ],
-        "events": [
-          "change"
-        ],
-        "parts": [
-          "root",
-          "input",
-          "label",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "size": "md",
-          "disabled": false,
-          "invalid": false,
-          "required": false,
-          "readOnly": false
-        }
-      },
       "behavior": [
         "Root owns the field: value, defaultValue, and onChange go on Input.Root.",
         "Root also takes size, disabled, invalid, required, and readOnly.",

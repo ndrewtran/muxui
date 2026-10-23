@@ -39,37 +39,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "value",
-          "defaultValue",
-          "rows",
-          "maxLength",
-          "placeholder",
-          "disabled",
-          "invalid",
-          "required",
-          "readOnly",
-          "size"
-        ],
-        "events": [
-          "change"
-        ],
-        "parts": [
-          "root",
-          "textarea",
-          "label",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "size": "md",
-          "disabled": false,
-          "invalid": false,
-          "required": false,
-          "readOnly": false
-        }
-      },
       "behavior": [
         "Uses native textarea attributes and shared Mux field validation semantics.",
         "Root owns the field: value, defaultValue, and onChange go on TextArea.Root, and Root's onChange receives the new string, not an event.",

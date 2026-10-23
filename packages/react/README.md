@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:c0c415dbcf7e7ad7ebba99fd0dc0bfd439d1dffc7d1ed8f37ac58a5a386244cc -->
+<!-- @generated-content-sha256: sha256:b71d245bc5b0e3708cd65757c3ed122a50a3b8ac58ed4804820726b8fd82b5cd -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -140,7 +140,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
-| Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
+| Input | experimental | . | .muxui-input | value, defaultValue, disabled, invalid, required, readOnly, size |
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, allowDuplicates, maxTags, validate, label, description, errorMessage, disabled, invalid, required |
 | Lightbox | experimental | . | .muxui-lightbox | items, renderContent, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
@@ -174,7 +174,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TagGroup | experimental | . | .muxui-tag-group | label, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
-| TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |
+| TextArea | experimental | . | .muxui-text-area | value, defaultValue, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, inputProps |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
