@@ -162,6 +162,7 @@ const GUIDES = {
   tabs: { native: ['aria-label', 'aria-labelledby'] },
   'tag-group': {},
   table: {},
+  tree: {},
   // null is the value a controlled selectedId takes to mean nothing selected.
   'combo-box': { native: ['null'] },
   // onSubmit is the form's native event, @ and / are the characters that open suggestions, and placeholder and maxLength are the native textarea attributes inputProps takes.

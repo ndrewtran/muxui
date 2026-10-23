@@ -19,5 +19,5 @@ export { TagGroup } from './tag-group.ts';
 export { ToggleButtonGroup } from './toggle-button-group.ts';
 export { TokenField } from './token-field.ts';
 export { Toolbar } from './toolbar.ts';
-export { Tree } from './tree.mjs';
+export { Tree } from './tree.ts';
 export { Virtualizer } from './virtualizer.ts';

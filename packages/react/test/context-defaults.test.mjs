@@ -97,6 +97,8 @@ const audited = [
       ...expand(['tag-group'], ['selectionMode', 'disabled']),
       // Table sent selectionMode and isDisabled to React Aria as its own values, none and false when omitted, before the move, so a TableContext never supplied them.
       ...expand(['table'], ['selectionMode', 'disabled']),
+      // Tree sent selectionMode and isDisabled to React Aria as its own values, single and false when omitted, before the move, so a TreeContext never supplied them.
+      ...expand(['tree'], ['selectionMode', 'disabled']),
     ],
   },
   {

@@ -450,6 +450,8 @@ export { TagGroup } from './tag-group.js';
 export type { TagGroupColor, TagGroupItem, TagGroupProps, TagGroupVariant } from './tag-group.js';
 export { Table } from './table.js';
 export type { MuxUITableColumn, MuxUITableRow, MuxUITableSortDescriptor, TableProps } from './table.js';
+export { Tree } from './tree.js';
+export type { MuxUITreeItem, TreeProps } from './tree.js';
 export { Calendar, RangeCalendar } from './calendar.js';
 export type { CalendarProps, RangeCalendarProps } from './calendar.js';
 export { Toolbar } from './toolbar.js';
@@ -482,9 +484,6 @@ export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const collectionsTypes = `
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }
-export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; expansionTrigger?: 'chevron' | 'row'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
-export declare const Tree: React.ForwardRefExoticComponent<TreeProps & React.RefAttributes<HTMLDivElement>>;
 `;
 const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${collectionsTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";

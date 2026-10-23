@@ -11357,7 +11357,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tree/artifact.json#bindings/web.react",
-          "packages/react/src/tree.mjs#Tree",
+          "packages/react/src/tree.ts#Tree",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

@@ -9143,7 +9143,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9182,7 +9182,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9221,7 +9221,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9260,7 +9260,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9299,7 +9299,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9338,7 +9338,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:9b2425e4b21ee342ec61d310b0facdc57add7f4c7e61625c76fd8379346dbd0f -->
+<!-- @generated-content-sha256: sha256:a496d25f5327435fb9d7998e60ec91ab310a4de28e3314d0f907358d5e1f6b01 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -184,7 +184,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TokenField | experimental | . | .muxui-token-field | label, value, defaultValue, disabled, readOnly, name, placeholder |
 | Toolbar | experimental | . | .muxui-toolbar | orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
-| Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
+| Tree | experimental | . | .muxui-tree | items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | layout, items, height, itemHeight, overscan, disabled, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
 
 ## Composition and native input contracts

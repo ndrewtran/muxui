@@ -99,6 +99,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'tag-group', name: 'TagGroup', source: 'packages/react/src/tag-group.ts' },
   // Table is one component; its header, column, body, row, and cell are rendered, not exported.
   { slug: 'table', name: 'Table', source: 'packages/react/src/table.ts' },
+  // Tree is one component; its items and their nested children are rendered, not exported, and it takes no children of its own.
+  { slug: 'tree', name: 'Tree', source: 'packages/react/src/tree.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

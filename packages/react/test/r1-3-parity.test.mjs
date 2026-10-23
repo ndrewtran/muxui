@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import React, { act } from 'react';
@@ -2820,6 +2821,43 @@ test('R1.3 Table reads a sort descriptor\'s keys first and its properties only a
   assert.deepEqual(getters(() => 'a', () => 'ascending'), ['rendered', ['column', 'direction', 'column', 'column', 'direction']]);
   assert.deepEqual(getters(() => 'a', () => 'descending'), ['rendered', ['column', 'direction', 'direction', 'column', 'column', 'direction']]);
   assert.deepEqual(getters(() => 'zzz', () => 'ascending'), ['Table sortDescriptor column must be sortable: zzz', ['column', 'direction', 'column', 'column']]);
+});
+
+test('R1.3 Tree reports the first invalid input in the order it checks: name, expansionTrigger, items, expandedIds, defaultExpandedIds, selectedIds, defaultSelectedIds, className', () => {
+  const throwing = (message) => ({ map() { throw new Error(message); } });
+  reportsInOrder(Tree, { 'aria-label': 'Files', items: [{ id: 'a', label: 'A', children: [{ id: 'a1', label: 'A1' }] }] }, [
+    [{ 'aria-label': undefined }, /Tree requires label, aria-label, or aria-labelledby/u],
+    [{ expansionTrigger: 'tap' }, /Tree expansionTrigger must be one of: chevron, row/u],
+    [{ items: 5 }, /items\.map is not a function/u],
+    [{ expandedIds: throwing('expanded boom') }, /expanded boom/u],
+    [{ defaultExpandedIds: throwing('initial expansion boom') }, /initial expansion boom/u],
+    [{ selectedIds: throwing('selected boom') }, /selected boom/u],
+    [{ defaultSelectedIds: throwing('initial selection boom') }, /initial selection boom/u],
+    [{ className: Symbol('invalid') }, /Cannot convert a Symbol value to a string/u],
+  ]);
+  // The nested items are read before the sets: an item list that fails below the first level is reported first too.
+  assert.throws(() => renderToString(React.createElement(Tree, { 'aria-label': 'Files', items: [{ id: 'a', children: 5 }], selectedIds: throwing('selected boom') })), /items\.map is not a function/u);
+});
+
+// React warns once per owner about the children of an element when an array of them has no keys. Tree passes an item's content and its
+// nested items as arguments, which is why the warning never fires, so a fresh process renders a nested tree and reports what React logged.
+test('R1.3 Tree hands React no unkeyed children to warn about', () => {
+  const script = `
+    import React from 'react';
+    import { renderToString } from 'react-dom/server';
+    import { Tree } from ${JSON.stringify(new URL('../src/tree.ts', import.meta.url).href)};
+    const logged = [];
+    console.error = (...args) => logged.push(String(args[0]));
+    renderToString(React.createElement(Tree, {
+      'aria-label': 'Files',
+      defaultExpandedIds: 'all',
+      items: [{ id: 'a', label: 'A', children: [{ id: 'a1', label: 'A1', children: [{ id: 'a2', label: 'A2' }] }, 'A3'] }, 'B'],
+    }));
+    console.log(JSON.stringify(logged));
+  `;
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: resolve(import.meta.dirname, '..'), encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(JSON.parse(run.stdout), []);
 });
 
 test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {
