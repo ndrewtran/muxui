@@ -36,11 +36,12 @@ export function upstreamImports(text, label = 'declaration') {
  * The declarations a consumer sees of one family: `<name>Props`, the declaration of the component
  * itself, which names the props of its parts, and, transitively, each exported interface or type they
  * name, found in any of the `types` text. Comments are left out so that a member's description never
- * counts as the member. A name the text does not declare contributes nothing.
+ * counts as the member. A name the text does not declare contributes nothing. A type the declaration file
+ * keeps to itself (Menu's `MenuComponent`, which states the parts of the compound) is followed like an exported one.
  */
 export function familyDeclarations(types, name) {
   const declaration = (identifier, kinds) => {
-    const start = types.search(new RegExp(`^export (?:${kinds}) ${identifier}\\b`, 'mu'));
+    const start = types.search(new RegExp(`^(?:export )?(?:${kinds}) ${identifier}\\b`, 'mu'));
     const end = types.indexOf('\nexport ', start + 1);
     return start === -1 ? '' : types.slice(start, end === -1 ? undefined : end).replace(/\/\*[\s\S]*?\*\//gu, '');
   };

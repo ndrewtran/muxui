@@ -81,7 +81,9 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
  * This is the adapter's choice, for Controls and states; the Docs page lists every part separately,
  * and the merge below never stands in for that complete reference.
  */
-export const STORY_API_PARTS = Object.freeze({});
+// Menu's adapter renders its popup, list, and submenu from the root's args: the geometry and modality go to Menu.Popup, the items to
+// Menu.List, and the delay to Menu.Submenu. The trigger, item, and section are children the stories compose themselves.
+export const STORY_API_PARTS = Object.freeze({ Menu: Object.freeze(['popup', 'list', 'submenu']) });
 
 /**
  * The props, events, defaults and details the stories read: the binding's root API, with the parts
@@ -1873,7 +1875,8 @@ const CANONICAL_PART_SELECTORS = Object.freeze({
   Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
   Link: { label: ['.muxui-link'] },
   ListBox: { header: ['.muxui-list-box-section-header'] },
-  Menu: { header: ['.muxui-menu-section-header'] },
+  // Menu.Submenu renders no element of its own: its item is the one that carries data-has-submenu.
+  Menu: { header: ['.muxui-menu-section-header'], submenu: ['.muxui-menu-item[data-has-submenu]'] },
   Image: { root: ['.muxui-image'] },
   CodeBlock: { status: ['.muxui-code-block [role="status"]'] },
   PromptComposer: { status: ['.muxui-prompt-composer [role="status"]'] },
@@ -1963,12 +1966,17 @@ function anatomyArgsForBinding(record, sourceArgs) {
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
       e(MuxUI.ListBox.Item, { id: 'two' }, 'Two'));
   }
-  // Sections and a separator give the list and the open popup every Menu part.
+  // Sections, a separator, and a submenu give the list and the open popup every Menu part. The adapter has no submenu of its own to
+  // give the delay control to, so the one built here takes it, and its popup takes the geometry the adapter gives the root's popup.
   if (record.family === 'Menu') {
     args.children = [
       e(MuxUI.Menu.Section, { key: 'editing', title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save' }, 'Save')),
       e(MuxUI.Menu.Separator, { key: 'separator' }),
       e(MuxUI.Menu.Item, { key: 'delete', id: 'delete' }, 'Delete'),
+      e(MuxUI.Menu.Submenu, { key: 'share', delay: args.delay },
+        e(MuxUI.Menu.Item, { id: 'share' }, 'Share'),
+        e(MuxUI.Menu.Popup, { placement: args.placement, offset: args.offset, crossOffset: args.crossOffset, shouldFlip: args.shouldFlip, containerPadding: args.containerPadding, modal: args.modal },
+          e(MuxUI.Menu.List, { 'aria-label': 'Share' }, e(MuxUI.Menu.Item, { id: 'copy-link' }, 'Copy link')))),
     ];
   }
   if (record.family === 'CodeBlock') args.mode = 'diff';
@@ -2667,10 +2675,13 @@ export function createEventsStory(record) {
 }
 
 export function createAnatomyStory(record) {
+  const argTypes = argTypesForBinding(record.binding);
+  // Menu's Anatomy is a fixed composition (see anatomyArgsForBinding): its children take precedence over `items`, so that control is not offered.
+  if (record.family === 'Menu') argTypes.items = { ...argTypes.items, control: false };
   return {
     name: 'Anatomy / Composition',
     args: storyArgsForBinding(record.binding, 'states', record.family),
-    argTypes: argTypesForBinding(record.binding),
+    argTypes,
     render: (args) => e(AnatomyHarness, { record, args }),
   };
 }
@@ -2775,6 +2786,44 @@ export function createSelectNativeSelectionStory(record) {
     argTypes: argTypesForBinding(record.binding),
     parameters: { controls: { disable: true } },
     render: () => e(SelectNativeSelection),
+  };
+}
+
+// A menu with a submenu, alone on the page and closed. The state matrix opens its popups together, and React Aria hides
+// the others while one is open, so a nested menu is unreachable there; here a person or a test can open it, move into the
+// submenu and back, and close it, with a control after it for Tab to land on.
+function MenuNestedSpecimen() {
+  return e('div', {
+    className: 'muxui-storybook-proof',
+    role: 'group',
+    'aria-label': 'Nested submenu',
+    'data-muxui-storybook-proof': 'menu-nested',
+    style: { display: 'flex', alignItems: 'flex-start', gap: '1rem', minBlockSize: '14rem' },
+  },
+  e(MuxUI.Menu.Root, null,
+    e(MuxUI.Menu.Trigger, { id: 'menu-nested-trigger' }, 'Actions'),
+    e(MuxUI.Menu.Popup, null,
+      e(MuxUI.Menu.List, { 'aria-label': 'Actions' },
+        e(MuxUI.Menu.Item, { id: 'rename' }, 'Rename'),
+        e(MuxUI.Menu.Submenu, null,
+          e(MuxUI.Menu.Item, { id: 'share' }, 'Share'),
+          e(MuxUI.Menu.Popup, null,
+            e(MuxUI.Menu.List, { 'aria-label': 'Share' },
+              e(MuxUI.Menu.Item, { id: 'copy-link' }, 'Copy link'),
+              e(MuxUI.Menu.Item, { id: 'email' }, 'Email')))),
+        e(MuxUI.Menu.Item, { id: 'delete' }, 'Delete')))),
+  e(MuxUI.Button, { id: 'menu-nested-after' }, 'After'));
+}
+
+/** Menu's nested submenu, isolated from the state matrix, for the keyboard proof that opens it. */
+export function createMenuNestedStory(record) {
+  if (record.family !== 'Menu') throw new TypeError('Nested submenu stories require the Menu family');
+  return {
+    name: 'Nested submenu keyboard navigation',
+    args: {},
+    argTypes: argTypesForBinding(record.binding),
+    parameters: { controls: { disable: true } },
+    render: () => e(MenuNestedSpecimen),
   };
 }
 

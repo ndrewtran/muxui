@@ -8545,7 +8545,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/menu/artifact.json#bindings/web.react",
-          "packages/react/src/menu.mjs#Menu",
+          "packages/react/src/menu.ts#Menu",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

@@ -225,6 +225,8 @@ const markupFlags = {
   selected: '[aria-pressed="true"], [data-selected]',
   defaultSelected: '[aria-pressed="true"], [data-selected]',
   defaultChecked: '[checked], [data-selected]',
+  // Menu.Root marks itself open.
+  defaultOpen: '[data-open]',
 };
 const markupValues = {
   size: (doc) => doc.querySelector('[data-size]')?.getAttribute('data-size'),
@@ -252,11 +254,21 @@ const minimalRenders = {
   RangeCalendar: () => h(generated.RangeCalendar, { label: 'Range', defaultValue: { start: '2025-01-10', end: '2025-01-12' } }),
   Tabs: () => h(generated.Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }),
   ListBox: () => h(generated.ListBox, { 'aria-label': 'Options', items: ['One', 'Two'] }),
+  // Menu's block is Menu.Root's, so the menu is the triggered composition, closed.
+  Menu: () => menuRoot(),
 };
+// The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
+const rootDeclarations = { Menu: 'MenuRoot' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
   'ListBox.item': { scope: '[role="option"]', render: () => h(generated.ListBox, { 'aria-label': 'Options' }, h(generated.ListBox.Item, { id: 'one' }, 'One')) },
+  'Menu.trigger': { scope: 'button', render: () => menuRoot() },
+  'Menu.list': { scope: '[role="menu"]', render: () => h(generated.Menu.List, { 'aria-label': 'Actions', items: ['One'] }) },
+  'Menu.item': { scope: '[role="menuitem"]', render: () => h(generated.Menu, { 'aria-label': 'Actions' }, h(generated.Menu.Item, { id: 'one' }, 'One')) },
+  // A closed popup and a submenu render no markup of their own; their defaults are observed by what each sends React Aria.
+  'Menu.popup': { render: () => menuRoot() },
+  'Menu.submenu': { render: () => menuRoot() },
 };
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
 
@@ -271,6 +283,33 @@ async function withMounted(element, run) {
     env.restore();
   }
 }
+
+/** Menu.Root with a trigger and a popup, closed unless `rootProps` opens it; `popupProps` go to the popup and `items` to its list. */
+function menuRoot(rootProps = null, popupProps = null, ...items) {
+  return h(generated.Menu.Root, rootProps, h(generated.Menu.Trigger, null, 'Actions'), h(generated.Menu.Popup, popupProps, h(generated.Menu.List, { 'aria-label': 'Actions' }, ...items)));
+}
+
+/**
+ * The first props a component hands another element while `render` runs, among those `match` accepts: the value it
+ * sends React Aria, read where it is sent. A popup's geometry is invisible in markup, and jsdom does no layout, so this is
+ * how a default that reaches React Aria is observed running. Every component calls React.createElement by name.
+ */
+async function sentUpstream(render, match) {
+  const create = React.createElement;
+  const found = [];
+  React.createElement = (type, props, ...children) => {
+    if (props !== null && typeof props === 'object' && match(props)) found.push(props);
+    return create(type, props, ...children);
+  };
+  try {
+    await render();
+  } finally {
+    React.createElement = create;
+  }
+  assert.ok(found.length > 0, 'the component sent the element the observer reads');
+  return found[0];
+}
+const popupSent = (props) => sentUpstream(() => renderToString(menuRoot(null, props)), (sent) => 'isNonModal' in sent);
 
 // Defaults only behaviour shows. Each observer renders the component (optionally
 // with the prop overridden) and returns what the renderer does.
@@ -291,6 +330,32 @@ const behaviourObservers = {
         return container.querySelector('[aria-checked="true"], [aria-pressed="true"]') !== null;
       },
     ),
+  },
+  Menu: {
+    // Choosing an item either closes the menu or leaves it open.
+    shouldCloseOnSelect: (props) => {
+      const changes = [];
+      return withMounted(menuRoot({ open: true, onOpenChange: (next) => changes.push(next), ...props }, null, h(generated.Menu.Item, { id: 'one' }, 'One')), async () => {
+        await act(async () => document.querySelector('[role="menuitem"]').click());
+        return changes.includes(false);
+      });
+    },
+  },
+  // Each part's geometry reaches React Aria as the popup's own value, set or not, so it is read where it is sent.
+  'Menu.popup': {
+    offset: async (props) => (await popupSent(props)).offset,
+    crossOffset: async (props) => (await popupSent(props)).crossOffset,
+    shouldFlip: async (props) => (await popupSent(props)).shouldFlip,
+    containerPadding: async (props) => (await popupSent(props)).containerPadding,
+    // The popup is modal unless React Aria is told it is not.
+    modal: async (props) => !(await popupSent(props)).isNonModal,
+  },
+  'Menu.submenu': {
+    // A submenu opens after the pointer rests on its item for this long, which React Aria's SubmenuTrigger is given.
+    delay: async (props) => (await sentUpstream(
+      () => withMounted(menuRoot({ open: true }, null, h(generated.Menu.Submenu, props, h(generated.Menu.Item, { id: 'more' }, 'More'), h(generated.Menu.Popup, null, h(generated.Menu.List, { 'aria-label': 'More' }, h(generated.Menu.Item, { id: 'inner' }, 'Inner'))))), () => {}),
+      (sent) => 'delay' in sent && Array.isArray(sent.children),
+    )).delay,
   },
   Tabs: {
     // An arrow key either selects the next tab at once (automatic) or only moves focus (manual).
@@ -372,7 +437,7 @@ test('catalog defaults and props agree with the renderer for every generator-gua
     assert.deepEqual(defaultMismatches(markup, api.defaults), [], `${name} renders the catalog defaults`);
     assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
     assert.deepEqual(unobservedDefaults(name, api.defaults), [], `${name} defaults each have a markup or behaviour observer`);
-    assert.deepEqual(undeclaredProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
+    assert.deepEqual(undeclaredProps(types, rootDeclarations[name] ?? name, api.props), [], `${name} generated declarations list the catalog props`);
     // Each part that owns props is observed on its own, as the root is.
     for (const [part, block] of Object.entries(api.partApis ?? {})) {
       assert.deepEqual(await partProblems(types, name, part, block), [], `${name}.${part} agrees with the renderer`);
@@ -406,6 +471,27 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   } finally {
     delete behaviourObservers['ListBox.item'];
   }
+  // Menu's block is Menu.Root's, and each of its other parts is observed on its own, by the markup it renders or by what it sends
+  // React Aria, which is where a popup's geometry, a submenu's delay, and the close on select show. A catalog default the part
+  // does not run fails, and each observer follows the prop that sets its value.
+  const menu = apis.Menu;
+  const changedMenu = (part, defaults) => partProblems(types, 'Menu', part, { ...menu.partApis[part], defaults: { ...menu.partApis[part].defaults, ...defaults } });
+  for (const part of ['trigger', 'popup', 'list', 'item', 'submenu', 'section']) assert.deepEqual(await partProblems(types, 'Menu', part, menu.partApis[part]), [], `Menu.${part}`);
+  assert.deepEqual(Object.keys(menu.partApis.popup.defaults), ['offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal']);
+  assert.deepEqual(await changedMenu('popup', { offset: 5 }), ['offset: catalog 5, behaves 4']);
+  assert.deepEqual(await changedMenu('popup', { crossOffset: 1 }), ['crossOffset: catalog 1, behaves 0']);
+  assert.deepEqual(await changedMenu('popup', { shouldFlip: false }), ['shouldFlip: catalog false, behaves true']);
+  assert.deepEqual(await changedMenu('popup', { containerPadding: 13 }), ['containerPadding: catalog 13, behaves 12']);
+  assert.deepEqual(await changedMenu('popup', { modal: false }), ['modal: catalog false, behaves true']);
+  assert.deepEqual(await changedMenu('submenu', { delay: 250 }), ['delay: catalog 250, behaves 200']);
+  assert.deepEqual(await changedMenu('trigger', { disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(await changedMenu('list', { disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(await changedMenu('item', { disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(await changedMenu('item', { tone: 'quiet' }), ['tone: no observer']);
+  assert.deepEqual(await behaviourMismatches('Menu', { ...menu.defaults, shouldCloseOnSelect: false }), ['shouldCloseOnSelect: catalog false, behaves true']);
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Menu()), { ...menu.defaults, defaultOpen: true }), ['defaultOpen: catalog true, rendered false']);
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Menu()), { ...menu.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(await partProblems(types, 'Menu', 'popup', { ...menu.partApis.popup, props: [...menu.partApis.popup.props, 'missingProp'] }), ['missingProp: not declared']);
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
@@ -431,7 +517,10 @@ test('a catalog prop only an unrelated declaration names is undeclared', () => {
 });
 
 test('catalog defaults only behaviour shows are compared with what the renderer does', async () => {
-  const states = { showTextWhileLoading: [false, true], disallowEmptySelection: [false, true], keyboardActivation: ['automatic', 'manual'] };
+  const states = {
+    showTextWhileLoading: [false, true], disallowEmptySelection: [false, true], keyboardActivation: ['automatic', 'manual'],
+    shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
+  };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {
       // The observer sees both states, so a catalog default that differs from the renderer is reported.

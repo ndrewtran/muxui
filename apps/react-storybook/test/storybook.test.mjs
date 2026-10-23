@@ -12,7 +12,7 @@ import test from 'node:test';
 import { compilePureTokenGraph } from '@muxui/tokens/core';
 import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
-import { ToastProvider } from '@muxui/react';
+import { Menu, ToastProvider } from '@muxui/react';
 import { isTextEditorDocument } from '@muxui/react/text-editor';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
@@ -32,6 +32,7 @@ import {
   createBrowserProofStory,
   createControlledStory,
   createEventsStory,
+  createMenuNestedStory,
   createSelectNativeSelectionStory,
   createStory,
   createStoryMeta,
@@ -423,6 +424,10 @@ test('a family\'s callback must be declared by that family, not by an unrelated 
   // A compound's parts are part of its declaration.
   const compound = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport declare const Menu: ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport type MenuProps = {};';
   assert.match(familyDeclarations(compound, 'Menu'), declaresCallback('onOpenChange'));
+  // A compound a module declares as a type of its own (Menu's `MenuComponent`) counts the same, though the module does not export it.
+  const aliased = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport type OtherProps = { onClear?: () => void };\ntype MenuComponent = ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport declare const Menu: MenuComponent;\nexport type MenuProps = {};';
+  assert.match(familyDeclarations(aliased, 'Menu'), declaresCallback('onOpenChange'));
+  assert.doesNotMatch(familyDeclarations(aliased, 'Menu'), declaresCallback('onClear'));
 });
 
 test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {
@@ -572,6 +577,104 @@ test('native select stock mode seeds decode values and forward the original chan
     env.resolveAnimations();
     env.restore();
   }
+});
+
+test('the nested submenu story is a closed menu with a submenu and a control after it, apart from the state matrix', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const story = createMenuNestedStory(currentRecord('Menu'));
+  assert.equal(story.name, 'Nested submenu keyboard navigation');
+  assert.throws(() => createMenuNestedStory(currentRecord('Button')), /require the Menu family/u);
+  try {
+    await act(async () => root.render(story.render(story.args)));
+    // Closed: the trigger, and the control Tab lands on, and no state matrix beside them.
+    assert.deepEqual([...host.querySelectorAll('button')].map((button) => button.textContent), ['Actions', 'After']);
+    assert.equal(host.querySelector('#menu-nested-trigger').getAttribute('aria-expanded'), 'false');
+    assert.equal(host.querySelector('.muxui-storybook-state'), null, 'the specimen is not a state of the matrix');
+    assert.equal(document.querySelectorAll('[role="menu"]').length, 0);
+    await act(async () => host.querySelector('#menu-nested-trigger').click());
+    const menu = document.querySelector('[role="menu"][aria-label="Actions"]');
+    assert.ok(menu, 'the trigger opens the menu');
+    // The submenu is in the list as one item that announces a menu, named for what it opens.
+    assert.deepEqual([...menu.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent), ['Rename', 'Share', 'Delete']);
+    assert.equal(menu.querySelector('.muxui-menu-item[data-has-submenu]').textContent, 'Share');
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+// The Anatomy story composes Menu from fixed children, which take precedence over `items`, so offering that control would promise what the story ignores.
+test('the Menu Anatomy story offers no items or children control, though the other stories do', async () => {
+  const menu = currentRecord('Menu');
+  const anatomy = createAnatomyStory(menu);
+  assert.equal(anatomy.argTypes.items.control, false, 'items is listed without a control');
+  assert.equal(anatomy.argTypes.children?.control ?? false, false, 'children is not a control');
+  assert.ok(createStory(menu, 'default').argTypes.items.control, 'the Default story keeps the items control');
+  assert.ok(createStory(menu, 'states').argTypes.items.control, 'the States story keeps the items control');
+  // The reason, as rendered: items given to the story change nothing in the composition.
+  const rendered = async (values) => {
+    let labels;
+    await withRuntime(async ({ root }) => {
+      await act(async () => root.render(anatomy.render({ ...anatomy.args, ...values })));
+      await settleRuntime();
+      labels = [...new Set([...document.querySelectorAll('.muxui-menu-item')].map((item) => item.textContent))].sort();
+    });
+    return labels;
+  };
+  const fixed = await rendered({});
+  assert.deepEqual(fixed, ['Delete', 'Save', 'Share']);
+  assert.deepEqual(await rendered({ items: [{ id: 'probe', label: 'Review probe' }] }), fixed, 'the supplied item is not rendered');
+});
+
+// Menu's part-owned controls reach the elements the Anatomy story composes. The adapter has no submenu to give the delay to, so the story builds
+// one with it, and a popup inside it, and the root's popup and list take theirs from the adapter. What each element sends React Aria is read where it is sent.
+test('the Menu Anatomy story forwards the delay, popup, and close-on-select controls to its submenu, popups, and list', async () => {
+  const menu = currentRecord('Menu');
+  const story = createAnatomyStory(menu);
+  const controls = ['delay', 'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal', 'shouldCloseOnSelect'];
+  assert.deepEqual(controls.filter((control) => !(control in story.argTypes)), [], 'the controls are advertised');
+  const sentToReactAria = async (values) => {
+    const sent = { delays: [], popups: [], closes: [], placements: { root: [], submenu: [] } };
+    const create = React.createElement;
+    React.createElement = (type, props, ...children) => {
+      if (props !== null && typeof props === 'object') {
+        // The placement a Menu.Popup is given, by whether it is the submenu's (the one whose list is named Share) or the root's.
+        if (type === Menu.Popup) sent.placements[children[0].props['aria-label'] === 'Share' ? 'submenu' : 'root'].push(props.placement);
+        if ('delay' in props && Array.isArray(props.children)) sent.delays.push(props.delay);
+        if ('isNonModal' in props && 'offset' in props) {
+          const { offset, crossOffset, shouldFlip, containerPadding, isNonModal } = props;
+          sent.popups.push(JSON.stringify({ offset, crossOffset, shouldFlip, containerPadding, modal: !isNonModal }));
+        }
+        if ('shouldCloseOnSelect' in props && 'disabledKeys' in props) sent.closes.push(props.shouldCloseOnSelect);
+      }
+      return create(type, props, ...children);
+    };
+    try {
+      await withRuntime(async ({ root }) => {
+        await act(async () => root.render(story.render({ ...story.args, ...values })));
+        await settleRuntime();
+      });
+    } finally {
+      React.createElement = create;
+    }
+    const placements = { root: [...new Set(sent.placements.root)].sort(), submenu: [...new Set(sent.placements.submenu)].sort() };
+    return { delays: [...new Set(sent.delays)], popups: [...new Set(sent.popups)], closes: [...new Set(sent.closes)], placements, rendered: sent.popups.length };
+  };
+  const changed = await sentToReactAria({ delay: 987, placement: 'end-bottom', offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false, shouldCloseOnSelect: false });
+  assert.ok(changed.rendered > 0 && changed.delays.length > 0 && changed.closes.length > 0, 'each element was rendered');
+  assert.deepEqual(changed.delays, [987], 'every submenu takes the delay control');
+  assert.deepEqual(changed.popups, [JSON.stringify({ offset: 9, crossOffset: 5, shouldFlip: false, containerPadding: 31, modal: false })], 'every popup, the submenu\'s too, takes the geometry controls');
+  assert.deepEqual(changed.closes, [false], 'every list takes the close-on-select control');
+  // The placement is read on the popup elements themselves, the root's and the submenu's, which React Aria turns into its own spelling.
+  assert.deepEqual(changed.placements, { root: ['end-bottom'], submenu: ['end-bottom'] }, 'both popups take the placement control');
+  // Left alone, the controls are the components' own defaults.
+  const unset = await sentToReactAria({});
+  assert.deepEqual([unset.delays, unset.popups], [[200], [JSON.stringify({ offset: 4, crossOffset: 0, shouldFlip: true, containerPadding: 12, modal: true })]]);
+  // The nested specimen offers no controls to follow.
+  assert.equal(createMenuNestedStory(menu).parameters.controls.disable, true);
 });
 
 test('the native selection story follows a controlled value through its change event beside a default-value select', async () => {
@@ -2651,6 +2754,8 @@ test('generated stories are stock CSF modules that display only the stories that
   assert.ok(!group.includes('Events'), 'Group declares no events, so it has no Events story');
   assert.ok(!group.includes('Controlled') && !group.includes('Uncontrolled'), 'Group has no controlled pair');
   assert.deepEqual(await exportsOf('Button'), ['Anatomy', 'BrowserProof', 'Default', 'Events', 'Matrix', 'States']);
+  // A nested submenu is unreachable in the state matrix, so Menu has a story of its own for it.
+  assert.ok((await exportsOf('Menu')).includes('NestedSubmenu'));
   // SelectNative's native value and change event are outside its derived API; its own story shows them.
   assert.ok((await exportsOf('SelectNative')).includes('NativeSelection'));
   assert.ok((await exportsOf('Checkbox')).includes('Controlled'), 'a family with a controlled pair keeps the pair');

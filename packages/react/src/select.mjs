@@ -14,7 +14,7 @@ import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems } from './collection-items.ts';
-import { CollectionTrigger } from './collection-trigger.mjs';
+import { CollectionTrigger } from './collection-trigger.ts';
 
 const SelectContext = React.createContext({ disabled: false });
 

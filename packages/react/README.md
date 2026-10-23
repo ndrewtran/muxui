@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ef3a18c0bd5ad3e841d5ad5ae61106495ff2816cfa82e330d61bc7844d2eeb2a -->
+<!-- @generated-content-sha256: sha256:57b9a531d706a96f39493abd4eba9ea97f7fb3b51109722119e10500f55a372a -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -146,7 +146,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
 | ListBox | experimental | . | .muxui-list-box | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; section: title; item: id, textValue, disabled |
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
-| Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect, children, open, defaultOpen, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, delay |
+| Menu | experimental | . | .muxui-menu | open, defaultOpen, disabled, shouldCloseOnSelect; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items, disabled, shouldCloseOnSelect; item: id, textValue, disabled, shouldCloseOnSelect; submenu: delay; section: title |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
@@ -193,7 +193,7 @@ These contracts are projected from the component bindings in the canonical catal
 
 ### Menu
 
-- Existing Menu items render a named action list. Menu.Root, Trigger, Popup, List, Item, Submenu, Section, Header, and Separator compose a triggered or nested menu without upstream imports.
+- Existing Menu items render a named action list, and the standalone Menu takes the props of Menu.List. Menu.Root, Trigger, Popup, List, Item, Submenu, Section, Header, and Separator compose a triggered or nested menu without upstream imports.
 - Menu.Root supports open, defaultOpen, and onOpenChange. Root disabled state disables its trigger and all items; a child disabled=false cannot enable a disabled ancestor.
 - Arrow keys and typeahead navigate enabled items. Submenus open after the configured hover delay or the direction-aware forward arrow; the backward arrow returns to the parent item. Escape or selection closes the menu and restores trigger focus.
 - Tab or Shift+Tab closes the menu and any open submenu and moves focus on from the trigger by the browser's own tab order.
@@ -201,12 +201,12 @@ These contracts are projected from the component bindings in the canonical catal
 - A Menu.Trigger inside a Toolbar sends Tab or Shift+Tab out of the Toolbar, as Tab from the closed trigger does.
 - Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu-item[data-has-submenu] and [data-open].
 - Items require stable string IDs. Supply textValue for rich content. A per-item onAction runs before list and root onAction/onSelect. Data-backed actions preserve normalized item metadata; compound actions return identity fields id, key, and value.
-- Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Nested popup placement defaults to end-top.
+- Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Without a placement, a top-level popup opens at bottom-start.
 - For context coordinates, position a consumer-owned element at the desired point and pass its element ref as anchorRef while controlling Menu.Root open. modal=false allows outside content to remain accessible.
 - Mux selectors are .muxui-menu-root, .muxui-menu-trigger, .muxui-menu-popup, .muxui-menu-list, .muxui-menu-item, .muxui-menu-section, .muxui-menu-section-header, and .muxui-menu-separator. Item states use data-disabled, data-focused, data-focus-visible, data-has-submenu, and data-open. Root uses data-open and data-disabled.
 - Trigger refs target native buttons and preserve native handlers. Root, Popup, List, and Item refs target divs; Section and Header refs target section/header elements; Separator refs target an hr.
 
-Public parts: `root`, `trigger`, `popup`, `list`, `item`, `section`, `header`, `separator`.
+Public parts: `root`, `trigger`, `popup`, `list`, `item`, `submenu`, `section`, `header`, `separator`.
 
 ### ListBox
 

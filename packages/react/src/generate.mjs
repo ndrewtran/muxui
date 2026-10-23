@@ -418,7 +418,7 @@ const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nex
 // src/color-context.ts (Decision 0031); the index names them, so the modules' other exports
 // (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type * as React from 'react';
-import type { ButtonActivationEvent, ButtonPointerType } from './button.js';
+import type { ButtonPointerType } from './button.js';
 import type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 import type { MuxUIColorValue } from './color-context.js';
 import type { ControlSize, FieldValidationProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, NamedFieldProps } from './fields.js';
@@ -459,6 +459,8 @@ export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './colo
 export type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 export { ListBox } from './list-box.js';
 export type { ListBoxItemProps, ListBoxProps, ListBoxSectionProps } from './list-box.js';
+export { Menu } from './menu.js';
+export type { MenuItemProps, MenuListProps, MenuPopupProps, MenuProps, MenuRootProps, MenuSectionProps, MenuSubmenuProps, MenuTriggerProps } from './menu.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
@@ -471,25 +473,6 @@ export type GridListProps = CollectionProps & { children?: React.ReactNode; styl
 export type GridListItemProps = { id: string; textValue?: string; disabled?: boolean; className?: string; style?: React.CSSProperties; children?: React.ReactNode; };
 export declare const GridList: React.ForwardRefExoticComponent<GridListProps & React.RefAttributes<HTMLDivElement>> & {
   Item: React.ForwardRefExoticComponent<GridListItemProps & React.RefAttributes<HTMLDivElement>>;
-};
-export type MenuProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; disabled?: boolean; shouldCloseOnSelect?: boolean; onAction?: (item?: MuxUICollectionItem) => void; onSelect?: (item?: MuxUICollectionItem) => void; children?: React.ReactNode; className?: string; };
-export type MenuRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; disabled?: boolean; shouldCloseOnSelect?: boolean; onAction?: (item?: MuxUICollectionItem) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
-export type MenuListProps = Omit<MenuProps, 'aria-label' | 'aria-labelledby'> & { 'aria-label'?: string; 'aria-labelledby'?: string; };
-export type MenuItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'id'> & { id: string; textValue?: string; disabled?: boolean; onAction?: () => void; shouldCloseOnSelect?: boolean; };
-export type MenuSectionProps = Omit<React.HTMLAttributes<HTMLElement>, 'title'> & { title?: React.ReactNode; };
-export type MenuPopupProps = React.HTMLAttributes<HTMLDivElement> & { placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; };
-export type MenuTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { onActivate?: (event: ButtonActivationEvent) => void; };
-export type MenuSubmenuProps = { children: React.ReactNode; delay?: number; };
-export declare const Menu: React.ForwardRefExoticComponent<MenuProps & React.RefAttributes<HTMLDivElement>> & {
-  Root: React.ForwardRefExoticComponent<MenuRootProps & React.RefAttributes<HTMLDivElement>>;
-  Trigger: React.ForwardRefExoticComponent<MenuTriggerProps & React.RefAttributes<HTMLButtonElement>>;
-  Popup: React.ForwardRefExoticComponent<MenuPopupProps & React.RefAttributes<HTMLDivElement>>;
-  List: React.ForwardRefExoticComponent<MenuListProps & React.RefAttributes<HTMLDivElement>>;
-  Item: React.ForwardRefExoticComponent<MenuItemProps & React.RefAttributes<HTMLDivElement>>;
-  Submenu: (props: MenuSubmenuProps) => React.ReactElement;
-  Section: React.ForwardRefExoticComponent<MenuSectionProps & React.RefAttributes<HTMLElement>>;
-  Header: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  Separator: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
 };
 export type SelectProps = NamedFieldProps & SelectOptions;
 export type SelectOptions = { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; selectedContent?: React.ReactNode; trigger?: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>; placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; children?: React.ReactNode; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
@@ -1030,7 +1013,7 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // The collections barrel and the modules its families share. None declares a registry family, so
 // the loop above skips them; assertFlatImports below fails the build if a family imports one that
 // is not listed.
-for (const name of ['collections', 'collection-trigger', 'grid-virtualizer-context']) {
+for (const name of ['collections', 'grid-virtualizer-context']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
 }
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {

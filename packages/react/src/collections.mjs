@@ -8,7 +8,7 @@ export { ColorPicker } from './color-picker.ts';
 export { ColorSwatchPicker } from './color-swatch-picker.mjs';
 export { ListBox } from './list-box.ts';
 export { GridList } from './grid-list.mjs';
-export { Menu } from './menu.mjs';
+export { Menu } from './menu.ts';
 export { ComboBox } from './combo-box.mjs';
 export { Select } from './select.mjs';
 export { RadioGroup } from './radio-group.ts';

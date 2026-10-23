@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { browserEngines, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Menu.Trigger draws Button's keyboard focus ring from the focus tokens, in place of the
@@ -8,7 +10,9 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 // first click on a fresh page. An open Menu closes on Tab and Shift+Tab and lets focus move on
 // from its trigger, however it was opened, with a submenu open, and past a disabled fieldset,
 // a positive tabindex or a radio group; Escape still returns focus to the trigger. Runs in
-// every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+// every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs). The popup's placement and geometry fall back to the values
+// the catalog states, measured here as laid out: bottom-start at the top level, the offset, the cross offset, the container
+// padding, and the flip. The nested end-top the source aims for is a known defect, kept as a TODO below.
 
 const entry = `
 import React from 'react';
@@ -56,8 +60,11 @@ function Anchored() {
     detach ? h('button', { id: 'anchor', type: 'button', tabIndex: 0, ref: anchor }, 'Anchor') : h('span', { id: 'anchor', ref: anchor }),
     h(Menu.Root, { open, onOpenChange: setOpen }, h(Menu.Popup, { anchorRef: anchor }, list)));
 }
+// ?edge puts the trigger nearer the window's edge than the popup's container padding, and ?low near the bottom, where the popup
+// has no room below it: the two ways a popup's default geometry shows besides its offset and alignment.
+const triggerStyle = params.has('edge') ? { position: 'fixed', left: 2, top: 100 } : params.has('low') ? { position: 'fixed', left: 16, bottom: 4 } : undefined;
 const menu = h(Menu.Root, closed ? { open: false, onOpenChange: () => {} } : null,
-  h(Menu.Trigger, { id: 'menu-trigger', tabIndex: 0 }, 'Actions'),
+  h(Menu.Trigger, { id: 'menu-trigger', tabIndex: 0, style: triggerStyle }, 'Actions'),
   h(Menu.Popup, null, list));
 // ?toolbar puts the trigger between two controls of a Toolbar.
 const toolbar = h(Toolbar, { 'aria-label': 'Formatting' },
@@ -271,6 +278,110 @@ for (const engine of browserEngines()) {
             await anyMenu.waitFor({ state: 'detached', timeout: 5000 });
             await pollUntil(tab, () => document.activeElement === document.querySelector('#menu-trigger'), undefined, { message: `${engine}: Escape returns focus to the trigger after a ${how} open`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
           }
+        });
+        assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+      } finally {
+        await context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+// The behaviour text states both placement fallbacks and the derived API states the geometry defaults. A popup that is given
+// none lands where they say: the popup's edge sits the offset from its trigger (or from the submenu's item), aligned as the
+// placement says, and the container padding and the flip hold it inside the window.
+for (const engine of browserEngines()) {
+  test(`Menu.Popup falls back to the placement and geometry the catalog states in ${engine}`, { timeout: 300_000 }, async (t) => {
+    const artifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/menu/artifact.json'), 'utf8'));
+    const { partApis } = JSON.parse(await readFile(resolve(packageRoot, 'api/menu.json'), 'utf8')).api;
+    const { offset, crossOffset, containerPadding, shouldFlip } = partApis.popup.defaults;
+    assert.equal(partApis.popup.props.includes('placement') && 'placement' in partApis.popup.defaults, false, 'the placement has no single default: it depends on the submenu');
+    // The wording is checked, not just written: the top-level fallback is in the behaviour and the source's description, the
+    // measurements below hold it, and neither text claims the nested placement, which does not happen (see the TODO below).
+    const placement = artifact.bindings['web.react'].behavior.find((line) => line.startsWith('Menu.Popup accepts'));
+    assert.match(placement, /Without a placement, a top-level popup opens at bottom-start\./u);
+    assert.doesNotMatch(placement, /Menu\.Submenu opens/u);
+    const described = partApis.popup.propDetails.placement.description;
+    assert.match(described, /Without one, a top-level popup opens at `bottom-start`\./u);
+    assert.doesNotMatch(described, /Submenu/u);
+    assert.equal(shouldFlip, true);
+    const { url, close } = await startServer({
+      entries: ['src/button.ts', 'src/collections.mjs'],
+      pages: { '/menu.html': page },
+      modules: { '/menu-entry.mjs': entry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/menu.html`, '#menu-trigger');
+      const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+      try {
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        // The rectangles of an element and of the popup, once the popup has stopped moving.
+        const measure = (selectors) => tab.evaluate(async (selectors) => {
+          // A selector is an element, or a pair of an element and the ancestor of it to measure.
+          const read = () => Object.fromEntries(Object.entries(selectors).map(([name, selector]) => {
+            const [within, ancestor] = [selector].flat();
+            const element = document.querySelector(within);
+            const box = (ancestor === undefined ? element : element.closest(ancestor)).getBoundingClientRect();
+            return [name, { left: box.left, right: box.right, top: box.top, bottom: box.bottom }];
+          }));
+          let previous = JSON.stringify(read());
+          for (let frame = 0; frame < 120; frame += 1) {
+            await new Promise((done) => setTimeout(done, 50));
+            const current = JSON.stringify(read());
+            if (current === previous) return JSON.parse(current);
+            previous = current;
+          }
+          throw new Error('the popup never stopped moving');
+        }, selectors);
+        const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 1, `${engine}: ${label}: ${actual} is not within a pixel of ${expected}`);
+        const visit = async (query) => {
+          await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'networkidle' });
+          await tab.locator('#menu-trigger').waitFor({ timeout: 15_000 });
+          await tab.locator('#menu-trigger').click();
+          await tab.locator('.muxui-menu-popup').first().waitFor({ timeout: 5000 });
+        };
+
+        await t.test('a top-level popup opens at bottom-start, the offset below its trigger', async () => {
+          await visit('');
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          near(popup.top, trigger.bottom + offset, 'the popup sits the offset below the trigger');
+          near(popup.left, trigger.left + crossOffset, 'the popup starts at its trigger\'s start edge');
+        });
+
+        // Not true, on the code before this move as well: React Aria renders a submenu's popup outside MenuSubmenuContext.Provider
+        // (the Menu.Submenu element sits in the hidden tree it builds its collection in), so an implicit nested popup takes the
+        // top-level fallback, bottom-start (data-placement="bottom", under its item). Passing placement="end-top" gives the
+        // geometry below. The source aims for end-top, but no text claims it; this stays a TODO until the context reaches the popup.
+        await t.test('a popup inside a submenu opens at end-top, the offset beside its item', { todo: 'React Aria renders the submenu popup outside MenuSubmenuContext.Provider, so an implicit nested popup falls back to bottom-start' }, async () => {
+          await visit('?submenu');
+          await tab.keyboard.press('ArrowDown');
+          await tab.keyboard.press('ArrowDown');
+          await tab.keyboard.press('ArrowRight');
+          await tab.locator('[role="menu"][aria-label="More actions"]').waitFor({ timeout: 5000 });
+          const { item, popup } = await measure({ item: '.muxui-menu-item[data-has-submenu]', popup: ['[role="menu"][aria-label="More actions"]', '.muxui-menu-popup'] });
+          near(popup.left, item.right + offset, 'the submenu sits the offset beside its item, at the end');
+          // Its first row lines up with the item, so the popup starts above the item by its own padding.
+          assert.ok(Math.abs(popup.top - item.top - crossOffset) <= 4, `${engine}: the submenu starts at its item's top: ${popup.top} against ${item.top}`);
+        });
+
+        await t.test('the container padding keeps the popup off the window edge', async () => {
+          await visit('?edge');
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          assert.ok(trigger.left < containerPadding, 'the trigger is closer to the edge than the padding');
+          near(popup.left, containerPadding, 'the popup stops at the padding');
+        });
+
+        await t.test('a popup with no room below its trigger flips above it', async () => {
+          await visit('?low');
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          near(popup.bottom, trigger.top - offset, 'the popup sits the offset above the trigger');
         });
         assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
       } finally {

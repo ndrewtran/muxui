@@ -66,6 +66,33 @@ test('compound Menu action ordering is Mux-owned and disabled cannot be overridd
   } finally { await act(async () => root.unmount()); env.restore(); }
 });
 
+// A Menu.Item's own shouldCloseOnSelect is a declared prop that the item forwards as given. A boolean wins; left out or undefined, the
+// item follows its list, the list follows the root, and the root closes the menu unless it says otherwise.
+test('Menu.Item shouldCloseOnSelect overrides the list and the root, and unset it follows them', async () => {
+  const outcomes = [];
+  for (const root of [undefined, false, true]) {
+    for (const list of [undefined, false, true]) {
+      for (const item of ['omitted', undefined, false, true]) {
+        const env = createDom('<div id="root"></div>', { layoutStubs: true });
+        const changes = [];
+        const container = createRoot(document.getElementById('root'));
+        const itemProps = item === 'omitted' ? { id: 'one' } : { id: 'one', shouldCloseOnSelect: item };
+        try {
+          await act(async () => container.render(h(Menu.Root, { open: true, onOpenChange: (next) => changes.push(next), shouldCloseOnSelect: root },
+            h(Menu.Trigger, null, 'Actions'),
+            h(Menu.Popup, null, h(Menu.List, { 'aria-label': 'Actions', shouldCloseOnSelect: list }, h(Menu.Item, itemProps, 'One'))))));
+          await act(async () => document.querySelector('[role="menuitem"]').click());
+          const expected = [item, list, root].find((value) => typeof value === 'boolean') ?? true;
+          outcomes.push(expected);
+          assert.equal(changes.includes(false), expected, `root ${root}, list ${list}, item ${item === 'omitted' ? 'left out' : item}`);
+        } finally { await act(async () => container.unmount()); env.restore(); }
+      }
+    }
+  }
+  assert.equal(outcomes.length, 36);
+  assert.equal(outcomes.includes(true) && outcomes.includes(false), true, 'the matrix closes the menu and keeps it open');
+});
+
 test('Select composition names and spans remain explicit while simple usage keeps its default content', () => {
   const compound = renderToString(h(Select.Root, { defaultValue: 'one', invalid: true },
     h(Select.Label, null, 'Choice'), h(Select.Trigger, null, h(Select.Value)),

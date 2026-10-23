@@ -151,6 +151,7 @@ const GUIDES = {
   'toggle-button-group': {},
   toolbar: {},
   'list-box': {},
+  menu: {},
   toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
 };
 

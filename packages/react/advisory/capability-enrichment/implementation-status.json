@@ -6608,7 +6608,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/menu.mjs",
+          "path": "packages/react/src/menu.ts",
           "lines": null,
           "anchor": "#Menu"
         }
@@ -6647,7 +6647,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/menu.mjs",
+          "path": "packages/react/src/menu.ts",
           "lines": null,
           "anchor": "#Menu"
         }
@@ -6686,7 +6686,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/menu.mjs",
+          "path": "packages/react/src/menu.ts",
           "lines": null,
           "anchor": "#Menu"
         }
@@ -6725,7 +6725,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/menu.mjs",
+          "path": "packages/react/src/menu.ts",
           "lines": null,
           "anchor": "#Menu"
         }
@@ -6764,7 +6764,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/menu.mjs",
+          "path": "packages/react/src/menu.ts",
           "lines": null,
           "anchor": "#Menu"
         }
