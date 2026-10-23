@@ -16,7 +16,6 @@ import {
   CommandPalette,
   HeaderNav,
   Input,
-  InputTags,
   MultiSelect,
   PaymentInput,
   RadioField,
@@ -28,6 +27,7 @@ import {
 } from '../src/supplemental/index.mjs';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
+import { InputTags } from '../src/supplemental/input-tags.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';
 import { installDom } from './support/dom.mjs';

@@ -216,7 +216,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/input-tags.mjs",
+      "runtimeSource": "packages/react/src/supplemental/input-tags.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

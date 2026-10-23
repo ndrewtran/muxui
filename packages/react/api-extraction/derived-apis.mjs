@@ -108,6 +108,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'color-mode-toggle', name: 'ColorModeToggle', source: 'packages/react/src/supplemental/color-mode-toggle.ts' },
   // ProgressCircle is a compound whose root is ProgressCircle.Root; Track, Label and Value own no props.
   { slug: 'progress-circle', name: 'ProgressCircle', part: 'Root', source: 'packages/react/src/supplemental/progress-circle.ts' },
+  // InputTags is a compound of one part, Root, whose props are the family's.
+  { slug: 'input-tags', name: 'InputTags', part: 'Root', source: 'packages/react/src/supplemental/input-tags.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

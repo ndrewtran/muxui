@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:5466a364560c4bd52980bff3d2ea6afe82cefdae777d1c3431da789e9d058abc -->
+<!-- @generated-content-sha256: sha256:3dc5c729f2e0c7f5ceec1a57dddadf95aade6aff76c5a655c59fcba6cb59b1ce -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -141,7 +141,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
 | Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
-| InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
+| InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, allowDuplicates, maxTags, validate, label, description, errorMessage, disabled, invalid, required |
 | Lightbox | experimental | . | .muxui-lightbox | items, renderContent, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
 | ListBox | experimental | . | .muxui-list-box | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; section: title; item: id, textValue, disabled |
