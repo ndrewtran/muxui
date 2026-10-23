@@ -30,7 +30,7 @@ export const runtimeSourcePaths = Object.freeze([
   'packages/react/src/slider.ts',
   'packages/react/src/table.mjs',
   'packages/react/src/tabs.ts',
-  'packages/react/src/tag-group.mjs',
+  'packages/react/src/tag-group.ts',
   'packages/react/src/toggle-button-group.ts',
   'packages/react/src/token-field.ts',
   'packages/react/src/toolbar.ts',

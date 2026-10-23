@@ -348,6 +348,35 @@ test('only an application equal to an allowlist entry, arguments in order, is ad
   rejects(source, /Thing\.text -> Promise: Promise<string> is not an application/u, { hostAllowlist: [host('Promise', host('File')), 'File'] });
 });
 
+test('the shipped allowlist admits a mutable Set<string> and no other Set', () => {
+  const shipped = extract({ declarations: ownProps('  selected?: Set<string>;\n  onSelectionChange?: (keys: Set<string>) => void;\n  fixed?: ReadonlySet<string>;') });
+  assert.deepEqual(shipped.propDetails.selected.type, host('Set', keyword('string')));
+  assert.deepEqual(shipped.eventDetails.selectionChange.type.parameters, [{ name: 'keys', type: host('Set', keyword('string')), required: true }]);
+  // ReadonlySet<string> is its own entry, so a mutable Set is not read as one, and neither admits the other.
+  assert.deepEqual(shipped.propDetails.fixed.type, host('ReadonlySet', keyword('string')));
+  const setOnly = [host('Set', keyword('string'))];
+  rejects(ownProps('  bad?: ReadonlySet<string>;'), /Thing\.bad -> ReadonlySet: ReadonlySet<string> is not an application on the host allowlist/u, { hostAllowlist: setOnly });
+  rejects(ownProps('  bad?: Set<string>;'), /Thing\.bad -> Set: Set<string> is not an application on the host allowlist/u, { hostAllowlist: [host('ReadonlySet', keyword('string'))] });
+  const cases = [
+    ['  bad?: Set<number>;', /Thing\.bad -> Set: Set<number> is not an application on the host allowlist/u],
+    ['  bad?: Set<string | number>;', /Thing\.bad -> Set: Set<string \| number> is not an application on the host allowlist/u],
+    ["  bad?: Set<'a' | 'b'>;", /Thing\.bad -> Set: Set<"a" \| "b"> is not an application on the host allowlist/u],
+    ['  bad?: Set<Set<string>>;', /Thing\.bad -> Set: Set<Set<string>> is not an application on the host allowlist/u],
+    ['  bad?: Set;', /Thing\.bad -> Set: Set is outside @muxui\/react and not in the host allowlist/u],
+    ['  bad?: Map<string, string>;', /Thing\.bad -> Map: Map<string, string> is not an application on the host allowlist/u],
+    ['  bad?: WeakSet<object>;', /Thing\.bad -> WeakSet<0>: object is not in the grammar/u],
+    ['  bad?: Iterable<string>;', /Thing\.bad -> Iterable: Iterable<string> is not an application on the host allowlist/u],
+    ['  bad?: Readonly<Set<string>>;', /Thing\.bad -> Readonly: Readonly<Set<string>> is not an application on the host allowlist/u],
+  ];
+  // The shipped allowlist and the single entry refuse each of them alike.
+  for (const [members, pattern] of cases) {
+    rejects(ownProps(members), pattern);
+    rejects(ownProps(members), pattern, { hostAllowlist: setOnly });
+  }
+  // A Mux UI-owned type named Set is never the host Set.
+  rejects(ownProps('  bad?: Set<string>;', 'export interface Set<T> { readonly values: T[] }\n'), /Thing\.bad -> Set: Set is a Mux UI-owned type; it takes no type arguments/u);
+});
+
 test('a Mux UI-owned type that shadows a host name or an argument is never the host type', () => {
   // A local Promise is Mux UI-owned, so it takes no type arguments, whatever it is named.
   rejects(ownProps('  bad?: Promise<File>;', 'export interface Promise<T> { readonly value: T }\n'),
@@ -527,9 +556,9 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'tabs.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'tabs.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
-  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
+  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
   assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json', 'prompt-composer.json'], 'the files FileTrigger selects, the File a DropZone item reads, and the files a PromptComposer attach picker reports');
@@ -540,6 +569,8 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
   assert.deepEqual(reached.get('HTMLDivElement'), ['virtualizer.json'], 'the element a scroll event reports');
   assert.deepEqual(reached.get(hostEntryKey(host('React.UIEvent', host('HTMLDivElement')))), ['virtualizer.json'], 'the scroll event of the Virtualizer viewport');
+  // TagGroup's selected item ids: a mutable Set, which no other family takes.
+  assert.deepEqual(reached.get(hostEntryKey(host('Set', keyword('string')))), ['tag-group.json'], 'the selected ids of a TagGroup');
   // PromptComposer's inputProps: the textarea's attributes, as its props omit the four the composer owns.
   const textareaAttributes = host('React.TextareaHTMLAttributes', host('HTMLTextAreaElement'));
   assert.deepEqual(reached.get('HTMLTextAreaElement'), ['prompt-composer.json'], 'the element whose attributes inputProps takes');

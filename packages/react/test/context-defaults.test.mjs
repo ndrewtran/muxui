@@ -93,6 +93,8 @@ const audited = [
       ...expand(['combo-box'], ['disabled', 'readOnly', 'required']),
       // Tabs sent isDisabled and orientation to React Aria as its own values, false and horizontal when omitted, before the move, so a TabsContext never supplied them.
       ...expand(['tabs'], ['disabled', 'orientation']),
+      // TagGroup sent selectionMode and isDisabled to React Aria as its own values, none and false when omitted, before the move, so a TagGroupContext never supplied them.
+      ...expand(['tag-group'], ['selectionMode', 'disabled']),
     ],
   },
   {

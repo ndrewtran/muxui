@@ -8324,7 +8324,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8363,7 +8363,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8402,7 +8402,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8441,7 +8441,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8480,7 +8480,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }

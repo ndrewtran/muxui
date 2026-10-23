@@ -10353,7 +10353,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tag-group/artifact.json#bindings/web.react",
-          "packages/react/src/tag-group.mjs#TagGroup",
+          "packages/react/src/tag-group.ts#TagGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

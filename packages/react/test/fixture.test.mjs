@@ -239,10 +239,17 @@ const markupValues = {
   },
   // A list marks each option or row with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
   selectionMode: (doc) => {
-    const option = doc.querySelector('[role="option"], [role="row"]');
-    return option === null ? ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')] : (option.getAttribute('data-selection-mode') ?? 'none');
+    const items = [...doc.querySelectorAll('[role="option"], [role="row"]')];
+    if (items.length === 0) return ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')];
+    const marked = items.find((item) => item.hasAttribute('data-selection-mode'));
+    if (marked !== undefined) return marked.getAttribute('data-selection-mode');
+    // A tag group marks no mode on its tags: its grid is multiselectable for multiple, and for single each tag carries a selected state.
+    if (doc.querySelector('[aria-multiselectable="true"]') !== null) return 'multiple';
+    return items.some((item) => item.hasAttribute('aria-selected')) ? 'single' : 'none';
   },
   layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
+  // A tag carries its colour, which the group's default sets for a tag that names none.
+  color: (doc) => doc.querySelector('[data-color]')?.getAttribute('data-color'),
 };
 const h = React.createElement;
 const minimalRenders = {
@@ -267,6 +274,7 @@ const minimalRenders = {
   ComboBox: () => h(generated.ComboBox, { label: 'City', items: ['Melbourne'] }),
   PromptComposer: () => composer(),
   ColorSwatchPicker: () => h(generated.ColorSwatchPicker, { 'aria-label': 'Colors', items: ['#ff0000', '#00ff00'] }),
+  TagGroup: () => h(generated.TagGroup, { label: 'Tags', items: ['One', 'Two'] }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -638,6 +646,19 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, multiple: false }), ['multiple: catalog false, behaves true']);
   assert.deepEqual(unobservedDefaults('PromptComposer', composerApi.defaults), []);
   assert.deepEqual(undeclaredProps(types, 'PromptComposer', [...composerApi.props, 'missingProp']), ['missingProp']);
+  // TagGroup's variant and colour show on its tags, its disabled flag on them too, and its selection mode as the grid's multiselectable
+  // state and the tags' selected state, so a catalog value the renderer does not run fails.
+  const tagApi = apis.TagGroup;
+  assert.deepEqual(Object.keys(tagApi.defaults), ['variant', 'color', 'selectionMode', 'disabled']);
+  const tagMarkup = renderToString(minimalRenders.TagGroup());
+  for (const [key, value, rendered] of [['variant', 'outline', 'soft'], ['color', 'brand', 'neutral'], ['selectionMode', 'single', 'none'], ['selectionMode', 'multiple', 'none']]) {
+    assert.deepEqual(defaultMismatches(tagMarkup, { ...tagApi.defaults, [key]: value }), [`${key}: catalog "${value}", rendered "${rendered}"`], `${key} ${value}`);
+  }
+  assert.deepEqual(defaultMismatches(tagMarkup, { ...tagApi.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  for (const mode of ['single', 'multiple']) {
+    assert.equal(markupValues.selectionMode(new JSDOM(renderToString(h(generated.TagGroup, { label: 'Tags', items: ['One'], selectionMode: mode }))).window.document), mode, `a ${mode} group reads as ${mode}`);
+  }
+  assert.deepEqual(undeclaredProps(types, 'TagGroup', [...tagApi.props, 'missingProp']), ['missingProp']);
   // ColorSwatchPicker's flags show as data attributes on its root, which an enclosing ColorPicker can also set, so a picker that is neither disabled nor read-only renders neither.
   const swatchMarkup = renderToString(minimalRenders.ColorSwatchPicker());
   assert.deepEqual(Object.keys(apis.ColorSwatchPicker.defaults), ['disabled', 'readOnly']);

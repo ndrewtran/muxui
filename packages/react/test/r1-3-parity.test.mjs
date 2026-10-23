@@ -1308,6 +1308,29 @@ test('R1.3 TagGroup drops a removed tag from its own selection', async () => {
   }
 });
 
+// React Aria hands onRemove every selected tag the key press removes, a disabled one among them when it is selected, so the group
+// reports only the enabled tags and a disabled tag can never be removed through the selection.
+test('R1.3 TagGroup reports only the enabled tags among the removed ones', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const removed = [];
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent.startsWith(name));
+  const items = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta', disabled: true }, { id: 'c', label: 'Gamma' }];
+  try {
+    await act(async () => root.render(React.createElement(TagGroup, {
+      label: 'Tags', items, selectionMode: 'multiple', selectedKeys: new Set(['a', 'b']), onSelectionChange() {},
+      onRemove: (list) => removed.push(list.map((item) => item.id)),
+    })));
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('Alpha').focus(); });
+    await pressKey('Delete');
+    assert.deepEqual(removed, [['a']]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 // Dispatches a key to the focused element the way a browser delivers it: keydown, then keyup.
 async function pressKey(name, init = {}) {
   const target = document.activeElement;
@@ -2713,6 +2736,16 @@ test('R1.3 Tabs reports the first invalid input in the order it checks: items, n
     [{ 'aria-label': undefined }, /Tabs requires label, aria-label, or aria-labelledby/u],
     [{ size: 'xl' }, /Tabs size must be one of: sm, md, lg/u],
     [{ variant: 'rail' }, /Tabs variant must be one of: underline, pill, overflow, segment/u],
+  ]);
+});
+
+test('R1.3 TagGroup reports the first invalid input in the order it checks: items, name, variant, color, item color', () => {
+  reportsInOrder(TagGroup, { label: 'Tags', items: [{ id: 'one', label: 'One' }, 'Two'] }, [
+    [{ items: 5 }, /items\.map is not a function/u],
+    [{ label: undefined }, /TagGroup requires label, aria-label, or aria-labelledby/u],
+    [{ variant: 'filled' }, /TagGroup variant must be one of: soft, outline, dot, strong/u],
+    [{ color: 'crimson' }, /TagGroup color must be one of: neutral, brand/u],
+    [{ items: [{ id: 'one', label: 'One', color: 'crimson' }] }, /TagGroup item color must be one of: neutral, brand/u],
   ]);
 });
 

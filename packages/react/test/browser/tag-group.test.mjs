@@ -14,7 +14,7 @@ const variants = ['soft', 'outline', 'dot', 'strong'];
 const surfaces = ['background', 'raised', 'hover'];
 
 // The colours are the public TagGroupColor type, so a colour added there is covered here.
-const types = await readFile(resolve(packageRoot, 'generated/index.d.ts'), 'utf8');
+const types = await readFile(resolve(packageRoot, 'generated/tag-group.d.ts'), 'utf8');
 const colours = [...types.match(/export type TagGroupColor = ([^;]+);/u)[1].matchAll(/'(\w+)'/gu)].map(([, name]) => name);
 
 async function loadStyles() {

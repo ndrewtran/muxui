@@ -95,6 +95,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'color-swatch-picker', name: 'ColorSwatchPicker', source: 'packages/react/src/color-swatch-picker.ts' },
   // Tabs is one component; its list, tab, panels, and panel are rendered, not exported.
   { slug: 'tabs', name: 'Tabs', source: 'packages/react/src/tabs.ts' },
+  // TagGroup is one component; its label, list, tag, and remove button are rendered, not exported. Its label is owned, and the public type offers it with the accessible name's arms.
+  { slug: 'tag-group', name: 'TagGroup', source: 'packages/react/src/tag-group.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

@@ -1,0 +1,448 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/tag-group.ts",
+  "component": "muxui:component:tag-group",
+  "binding": "web.react",
+  "export": "TagGroup",
+  "api": {
+    "props": [
+      "label",
+      "items",
+      "variant",
+      "color",
+      "selectionMode",
+      "selectedKeys",
+      "defaultSelectedKeys",
+      "disabled"
+    ],
+    "events": [
+      "selectionChange",
+      "remove",
+      "action"
+    ],
+    "defaults": {
+      "variant": "soft",
+      "color": "neutral",
+      "selectionMode": "none",
+      "disabled": false
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the group. Without one, the group needs an aria-label or aria-labelledby, and an empty label does not count."
+      },
+      "items": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "TagGroupItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The tags as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and a `color` that overrides the group's."
+      },
+      "variant": {
+        "type": {
+          "kind": "reference",
+          "name": "TagGroupVariant"
+        },
+        "required": false,
+        "enum": [
+          "soft",
+          "outline",
+          "dot",
+          "strong"
+        ],
+        "description": "The treatment of every tag: soft, outline, dot, or strong."
+      },
+      "color": {
+        "type": {
+          "kind": "reference",
+          "name": "TagGroupColor"
+        },
+        "required": false,
+        "enum": [
+          "neutral",
+          "brand",
+          "success",
+          "warning",
+          "error",
+          "red",
+          "orange",
+          "amber",
+          "yellow",
+          "lime",
+          "green",
+          "emerald",
+          "teal",
+          "bluegreen",
+          "cyan",
+          "sky",
+          "indigo",
+          "violet",
+          "purple",
+          "fuchsia",
+          "pink",
+          "rose"
+        ],
+        "description": "The default color of every tag; an item's own color wins."
+      },
+      "selectionMode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "none"
+            },
+            {
+              "kind": "literal",
+              "value": "single"
+            },
+            {
+              "kind": "literal",
+              "value": "multiple"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "none",
+          "single",
+          "multiple"
+        ],
+        "description": "Whether tags can be selected: `single` or `multiple` makes them selectable."
+      },
+      "selectedKeys": {
+        "type": {
+          "kind": "host",
+          "name": "Set",
+          "typeArguments": [
+            {
+              "kind": "string"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The selected item ids, when the caller controls the selection. Without it the group keeps the selection and drops the ids of removed items without calling onSelectionChange, so a caller controlling the selection removes those ids itself."
+      },
+      "defaultSelectedKeys": {
+        "type": {
+          "kind": "host",
+          "name": "Set",
+          "typeArguments": [
+            {
+              "kind": "string"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The item ids selected at first, when the group keeps its own selection."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables every tag and its remove button, and stops the selection, removal, and action callbacks. A tag's own `disabled` disables just that tag."
+      }
+    },
+    "eventDetails": {
+      "selectionChange": {
+        "prop": "onSelectionChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "keys",
+              "type": {
+                "kind": "host",
+                "name": "Set",
+                "typeArguments": [
+                  {
+                    "kind": "string"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with a new Set of the selected item ids when the selection changes; selecting everything passes the ids of the enabled items. It is not called while the group is disabled."
+      },
+      "remove": {
+        "prop": "onRemove",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "items",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "TagGroupItem"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the removed item records, not ids. Each tag shows a remove button only when this is supplied, and Backspace or Delete on a focused tag also removes it. A disabled tag cannot be removed, and a disabled group removes nothing."
+      },
+      "action": {
+        "prop": "onAction",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "item",
+              "type": {
+                "kind": "reference",
+                "name": "TagGroupItem"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the item record when the user activates a tag. It is not called for a disabled tag or while the group is disabled."
+      }
+    },
+    "types": {
+      "TagGroupColor": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "brand"
+            },
+            {
+              "kind": "literal",
+              "value": "success"
+            },
+            {
+              "kind": "literal",
+              "value": "warning"
+            },
+            {
+              "kind": "literal",
+              "value": "error"
+            },
+            {
+              "kind": "literal",
+              "value": "red"
+            },
+            {
+              "kind": "literal",
+              "value": "orange"
+            },
+            {
+              "kind": "literal",
+              "value": "amber"
+            },
+            {
+              "kind": "literal",
+              "value": "yellow"
+            },
+            {
+              "kind": "literal",
+              "value": "lime"
+            },
+            {
+              "kind": "literal",
+              "value": "green"
+            },
+            {
+              "kind": "literal",
+              "value": "emerald"
+            },
+            {
+              "kind": "literal",
+              "value": "teal"
+            },
+            {
+              "kind": "literal",
+              "value": "bluegreen"
+            },
+            {
+              "kind": "literal",
+              "value": "cyan"
+            },
+            {
+              "kind": "literal",
+              "value": "sky"
+            },
+            {
+              "kind": "literal",
+              "value": "indigo"
+            },
+            {
+              "kind": "literal",
+              "value": "violet"
+            },
+            {
+              "kind": "literal",
+              "value": "purple"
+            },
+            {
+              "kind": "literal",
+              "value": "fuchsia"
+            },
+            {
+              "kind": "literal",
+              "value": "pink"
+            },
+            {
+              "kind": "literal",
+              "value": "rose"
+            }
+          ]
+        },
+        "description": "A TagGroup colour: neutral, the theme's brand, a status, or a fixed hue family."
+      },
+      "TagGroupItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "color",
+              "type": {
+                "kind": "reference",
+                "name": "TagGroupColor"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Overrides the group's color for this tag."
+            }
+          ],
+          "additional": "unknown"
+        }
+      },
+      "TagGroupVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "soft"
+            },
+            {
+              "kind": "literal",
+              "value": "outline"
+            },
+            {
+              "kind": "literal",
+              "value": "dot"
+            },
+            {
+              "kind": "literal",
+              "value": "strong"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
