@@ -1283,15 +1283,69 @@ function writesThrough({ checker }, sourceFile, symbol, { allowed = new Set(), d
 const isFunctionLiteral = (node) => node.kind === SyntaxKind.ArrowFunction || node.kind === SyntaxKind.FunctionExpression;
 
 /**
- * Whether an export's initializer is a call of a function literal, the shape of an
- * immediately invoked wrapper such as `(() => { ... })()`, with or without a PURE annotation.
+ * The function an export's initializer calls as a wrapper, or undefined: a call of a function literal, the shape of an
+ * immediately invoked wrapper such as `(() => { ... })()`, or of a top-level function declaration that is private to the
+ * source and called only here, such as `makeThing()`, with or without a PURE annotation.
+ *
+ * A factory declaration is the wrapper only while no other module can call it and the source calls it once, so it builds
+ * one compound. That is a syntactic approximation of "one call": it counts references, so an exported factory
+ * (`export function make`, `export { make }`, `export default make`) is refused, and so is a type-only reference such as
+ * `type Factory = typeof make`, which adds no runtime call but is not told apart from one.
+ *
+ * This is a restricted factory shape, not a proof that building the compound has no effects. The first argument of each
+ * forwardRef or memo is read; an extra evaluated argument is not (`wrappedFunction`). The author's PURE annotation is
+ * what asserts the factory is safe to drop.
  */
-function isWrapperCall(initializer) {
+function wrapperOf(project, sourceFile, chain, initializer) {
   const node = initializer === undefined ? undefined : unwrap(initializer);
-  return node?.kind === SyntaxKind.CallExpression && isFunctionLiteral(unwrap(node.expression));
+  if (node?.kind !== SyntaxKind.CallExpression) return undefined;
+  const callee = unwrap(node.expression);
+  if (isFunctionLiteral(callee)) return callee;
+  if (callee.kind !== SyntaxKind.Identifier) return undefined;
+  const symbol = project.checker.getSymbolAtLocation(callee);
+  const declarations = symbol?.declarations ?? [];
+  const declaration = declarations.length === 1 ? declarations[0].resolve(project) : undefined;
+  if (declaration?.kind !== SyntaxKind.FunctionDeclaration || declaration.parent !== sourceFile || !declaration.body) return undefined;
+  const fail = (message) => {
+    throw new ApiExtractionError(chain, `${message}; ${WRAPPER_RULE}`);
+  };
+  const name = callee.text;
+  if (node.arguments.length > 0 || declaration.parameters.length > 0) {
+    // Only a function that ends by returning a frozen compound is read as a factory; another helper is no wrapper, and is
+    // refused where its callee is read as not React's forwardRef or memo.
+    const last = declaration.body.statements.at(-1);
+    if (last?.kind !== SyntaxKind.ReturnStatement || last.expression === undefined || !isObjectFreeze(project, unwrap(last.expression))) return undefined;
+    fail(`the factory ${name} ${node.arguments.length > 0 ? 'is called with arguments' : 'takes parameters'}`);
+  }
+  const exported = `the factory ${name} is exported, so another module could call it again`;
+  if (hasModifier(declaration, SyntaxKind.ExportKeyword)) fail(exported);
+  // `export { make }` and `export default make` name the function without resolving to its symbol, so look for them wherever they stand.
+  const namesFactory = (identifier) => identifier?.kind === SyntaxKind.Identifier && identifier.text === name;
+  const findExport = (child) => {
+    const clause = child.kind === SyntaxKind.ExportDeclaration && child.moduleSpecifier === undefined ? child.exportClause : undefined;
+    if (clause?.kind === SyntaxKind.NamedExports && clause.elements.some(({ propertyName, name: exportedName }) => namesFactory(propertyName ?? exportedName))) fail(exported);
+    if (child.kind === SyntaxKind.ExportAssignment && namesFactory(unwrap(child.expression))) fail(exported);
+    child.forEachChild(findExport);
+  };
+  findExport(sourceFile);
+  // A factory is called once, here: any other reference could call it again for a second compound. The checker resolves
+  // the name of a shorthand property (`{ make }`) to the property it declares, so a shorthand is asked for the value it reads.
+  let references = 0;
+  const count = (child) => {
+    if (child.kind === SyntaxKind.Identifier) {
+      const shorthand = child.parent.kind === SyntaxKind.ShorthandPropertyAssignment && child.parent.name === child;
+      const referenced = shorthand ? project.checker.getShorthandAssignmentValueSymbol(child.parent) : project.checker.getSymbolAtLocation(child);
+      if (referenced?.id === symbol.id) references += 1;
+    }
+    child.forEachChild(count);
+  };
+  count(sourceFile);
+  // The declaration's own name and the call are two references.
+  if (references !== 2) fail(`the factory ${name} is referenced more than once, so it could build a second compound; a type-only reference such as typeof ${name} counts`);
+  return declaration;
 }
 
-const WRAPPER_RULE = 'an exported component\'s wrapper is called with no arguments, takes no parameters, and its block holds only const forwardRef or memo components, `<const>.displayName = \'<string literal>\'` statements, `<returned const>.<Part> = <component>` part assignments (each part once), and a final return of one of those consts';
+const WRAPPER_RULE = 'an exported component\'s wrapper is called with no arguments, takes no parameters, and its block holds only const forwardRef or memo components, `<const>.displayName = \'<string literal>\'` statements, `<returned const>.<Part> = <component>` part assignments (each part once), and a final return of one of those consts, or of `Object.freeze({ Part: <const>, ... })` of them as a compound; a wrapper that is a function declaration is private to the source and called once, here';
 
 /**
  * The functions a wrapped component export renders with: the callable it returns and the
@@ -1315,11 +1369,10 @@ const WRAPPER_RULE = 'an exported component\'s wrapper is called with no argumen
  * any other.
  * @returns {{ callable: object, parts: Map<string, object> }} the callable's function and each part's, by member name
  */
-function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
+function wrappedComponent(project, sourceFile, chain, binding, call, wrapper, followed) {
   const fail = (message) => {
     throw new ApiExtractionError(chain, `${message}; ${WRAPPER_RULE}`);
   };
-  const wrapper = unwrap(call.expression);
   if (call.arguments.length > 0) fail('the wrapper is called with arguments');
   if (wrapper.parameters.length > 0) fail('the wrapper takes parameters');
   if (wrapper.typeParameters?.length || wrapper.asteriskToken || hasModifier(wrapper, SyntaxKind.AsyncKeyword)) fail('the wrapper is generic, async, or a generator');
@@ -1327,6 +1380,8 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
   const consts = new Map();
   const statics = new Map();
   const verified = new Set();
+  const compoundValues = new Set();
+  let compound;
   let returned;
   const { statements } = wrapper.body;
   statements.forEach((statement, index) => {
@@ -1356,20 +1411,43 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
       verified.add(assignment);
     } else if (statement.kind === SyntaxKind.ReturnStatement && index === statements.length - 1) {
       returned = statement.expression === undefined ? undefined : unwrap(statement.expression);
+      // A compound: Object.freeze of an object literal of the wrapper's consts, each part once, with no spread or computed key.
+      if (returned !== undefined && isObjectFreeze(project, returned)) {
+        const object = unwrap(returned.arguments[0]);
+        if (object.kind !== SyntaxKind.ObjectLiteralExpression) fail('the wrapper freezes something other than an object literal of its consts');
+        compound = new Map();
+        for (const property of object.properties) {
+          const shorthand = property.kind === SyntaxKind.ShorthandPropertyAssignment;
+          const plain = shorthand || (property.kind === SyntaxKind.PropertyAssignment && (property.name.kind === SyntaxKind.Identifier || property.name.kind === SyntaxKind.StringLiteral));
+          if (!plain) fail('the frozen compound holds only Name: const parts; a spread, method, accessor, or computed key could replace a part');
+          const value = shorthand ? property.name : unwrap(property.initializer);
+          if (value.kind !== SyntaxKind.Identifier) fail(`the frozen compound's ${property.name.text} is not one of the wrapper's consts`);
+          const partName = property.name.text;
+          if (compound.has(partName)) fail(`the frozen compound assigns ${partName} twice`);
+          if (!REFERENCE_NAME.test(partName)) fail(`the frozen compound names ${partName}, which is not a part named in PascalCase`);
+          compound.set(partName, value);
+          compoundValues.add(value);
+        }
+        returned = undefined;
+      }
     } else {
       fail('the wrapper holds a statement that is not a const, a displayName or part assignment, or its final return');
     }
   });
-  if (returned?.kind !== SyntaxKind.Identifier || !consts.has(returned.text)) fail('the wrapper does not end by returning one of its consts');
+  if (compound === undefined && (returned?.kind !== SyntaxKind.Identifier || !consts.has(returned.text))) fail('the wrapper does not end by returning one of its consts');
   for (const { owner, property } of statics.values()) {
+    if (compound !== undefined) fail(`the wrapper assigns ${owner}.${property}, but a frozen compound's parts are named in its Object.freeze`);
     if (owner !== returned.text) fail(`the wrapper assigns ${owner}.${property}, but parts attach only to the returned const ${returned.text}`);
+  }
+  if (compound !== undefined) {
+    for (const [partName, value] of compound) if (!consts.has(value.text)) fail(`the frozen compound's ${partName} is ${value.text}, which is not one of the wrapper's consts`);
   }
   const components = new Map([...consts].map(([constName, declaration]) => {
     const initializer = unwrap(declaration.initializer);
     if (initializer.kind !== SyntaxKind.CallExpression) fail(`${constName} is not a forwardRef or memo call`);
     return [constName, wrappedFunction(project, sourceFile, chain, initializer, new Set(), followed)];
   }));
-  const parts = new Map([...statics.values()].map(({ property, value }) => {
+  const parts = new Map(compound !== undefined ? [...compound].map(([partName, value]) => [partName, components.get(value.text)]) : [...statics.values()].map(({ property, value }) => {
     const partChain = `${chain}.${property}`;
     if (value.kind === SyntaxKind.Identifier) {
       return [property, consts.has(value.text) ? components.get(value.text) : namedFunction(project, sourceFile, partChain, value, new Set(), followed)];
@@ -1385,9 +1463,9 @@ function wrappedComponent(project, sourceFile, chain, binding, call, followed) {
   }
   // A part assigned another of the wrapper's consts (Root = Thing, List = Thing) is that component.
   const selfParts = new Set([...statics.values()].filter(({ value }) => value.kind === SyntaxKind.Identifier && consts.has(value.text)).map(({ property }) => property));
-  const escaped = valueEscape(project, sourceFile, writeTargets, { allowed: verified, finalReturn: statements.at(-1), selfParts });
+  const escaped = valueEscape(project, sourceFile, writeTargets, { allowed: verified, finalReturn: statements.at(-1), selfParts, compoundValues });
   if (escaped) fail(`the source uses ${escaped.text} as a value, which could hand an alias of the component to code that replaces a part`);
-  return { callable: components.get(returned.text), parts };
+  return { callable: compound === undefined ? components.get(returned.text) : undefined, parts };
 }
 
 /**
@@ -1520,7 +1598,7 @@ const IDENTITY_COMPARISONS = new Set([SyntaxKind.EqualsEqualsEqualsToken, Syntax
  * `Thing.List = Thing`) is that component. Anything else fails, since it could be an alias this scan
  * does not see.
  */
-function valueEscape(project, sourceFile, bindings, { allowed = new Set(), finalReturn, selfParts = new Set() } = {}) {
+function valueEscape(project, sourceFile, bindings, { allowed = new Set(), finalReturn, selfParts = new Set(), compoundValues = new Set() } = {}) {
   const { checker } = project;
   const ids = new Set(bindings.map((binding) => checker.getSymbolAtLocation(binding)?.id).filter((id) => id !== undefined));
   const react = reactImports(project, sourceFile);
@@ -1540,6 +1618,8 @@ function valueEscape(project, sourceFile, bindings, { allowed = new Set(), final
     if (parent.kind === SyntaxKind.CallExpression && parent.arguments[0] === outer && isCreateElement(parent.expression)) return true;
     if (parent.kind === SyntaxKind.BinaryExpression && IDENTITY_COMPARISONS.has(parent.operatorToken.kind)) return true;
     if (kind === 'part') return false;
+    // A const named as a part in the wrapper's frozen compound.
+    if (compoundValues.has(node)) return true;
     if ((parent.kind === SyntaxKind.VariableDeclaration && parent.name === node) || parent.kind === SyntaxKind.ExportSpecifier) return true;
     let name = parent;
     while (name.kind === SyntaxKind.QualifiedName) name = name.parent;
@@ -1633,13 +1713,14 @@ function readSourceDefaults(project, sourceFile, { exportName, member, label }, 
     throw new ApiExtractionError(chain, `the source reaches ${spelled(reflective)} other than by calling Object or Reflect directly by name, as Object.assign(target, ...); a property-writing member reached any other way hides what it writes to`);
   }
   const initializer = exported?.node.initializer;
-  const wrapped = isWrapperCall(initializer);
+  const wrapper = wrapperOf(project, sourceFile, chain, initializer);
+  const wrapped = wrapper !== undefined;
   const followed = new Set();
   let component;
   if (wrapped) {
-    // A callable compound is its own root; its other parts are the statics assigned in the wrapper.
-    const { callable, parts } = wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer), followed);
-    if (member === undefined && parts.has('Root') && parts.get('Root') !== callable) {
+    // A callable compound is its own root; its other parts are the statics assigned in the wrapper. A frozen compound has no callable.
+    const { callable, parts } = wrappedComponent(project, sourceFile, chain, exported.name, unwrap(initializer), wrapper, followed);
+    if (callable !== undefined && member === undefined && parts.has('Root') && parts.get('Root') !== callable) {
       throw new ApiExtractionError(chain, `${exportName}.Root is not ${exportName} itself; name the root part ('Root') in the derived component list`);
     }
     if (member !== undefined && !parts.has(member)) throw new ApiExtractionError(chain, `the exported ${exportName} has no ${member} part assigned in its wrapper`);
@@ -1662,6 +1743,11 @@ function readSourceDefaults(project, sourceFile, { exportName, member, label }, 
     }
   }
   const [parameter] = component.parameters;
+  // `function (...{ size = 'md', ...args }: [Props, Ref])` destructures the arguments array, so the names it binds are not the props
+  // and a default written there is never the props' default.
+  if (parameter?.dotDotDotToken) {
+    throw new ApiExtractionError(label, 'the props parameter must not be a rest parameter: a rest pattern destructures the arguments array, so its names and defaults are not the props\'');
+  }
   if (parameter?.name.kind !== SyntaxKind.ObjectBindingPattern) {
     throw new ApiExtractionError(label, 'the props parameter must be an object pattern that destructures the Mux UI-owned props');
   }
