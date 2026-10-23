@@ -242,7 +242,8 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
     storyIds: [],
     reason: 'all pages in the affected component families',
   }]);
-  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs']);
+  // The Motion boundary test and the supplemental guards run for any supplemental module change, beside the family's own tests below.
+  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs', 'test/supplemental-modules.test.mjs', 'test/tree-shaking.test.mjs']);
   assert.ok(!result.storyRuns.some(({ families }) => families.includes('MultiSelect')));
 
   const selection = selectComponentTests(['TagSelect']);
@@ -1431,6 +1432,20 @@ test('a change to a collections module runs the collections guards even when it 
   assert.deepEqual(result.reactTestFiles, ['test/collections-modules.test.mjs', 'test/motion-package-boundary.test.mjs', 'test/public-surface-baseline.test.mjs', 'test/tree-shaking.test.mjs']);
   const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
   assert.ok(commands.includes('test/collections-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
+});
+
+test('a change to a supplemental module runs the supplemental guards even when it affects no family', async () => {
+  // Dropping the pure annotation changes no export, so no family is affected.
+  const before = 'export const MultiSelect = /*#__PURE__*/ (() => ({}))();\n';
+  const after = 'export const MultiSelect = (() => ({}))();\n';
+  const result = await plan([multiSelectPath], {
+    textSnapshots: { [multiSelectPath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [multiSelectPath]: { before, after } },
+  });
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs', 'test/public-surface-baseline.test.mjs', 'test/supplemental-modules.test.mjs', 'test/tree-shaking.test.mjs']);
+  const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
+  assert.ok(commands.includes('test/supplemental-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
 });
 
 test('a family module that moves from .mjs to .ts is planned through the barrel that re-exports it', async () => {

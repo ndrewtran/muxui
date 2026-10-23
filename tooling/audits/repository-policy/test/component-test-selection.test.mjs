@@ -55,8 +55,51 @@ test('any change to a collections module selects the collections guards, whateve
   // A module moves between .mjs and .ts without leaving the guards' selection.
   for (const name of ['collections', ...families, ...helpers]) for (const extension of ['mjs', 'ts']) assert.deepEqual(sourceGuardTests(`packages/react/src/${name}.${extension}`), guards, name);
   assert.deepEqual(sourceGuardTests('packages/react/src/color-slider.ts'), guards);
-  for (const path of ['components.ts', 'fields.ts', 'motion.mjs', 'constructor.mjs', 'supplemental/index.mjs', 'styles/collections.css']) {
+  for (const path of ['components.ts', 'fields.ts', 'motion.mjs', 'constructor.mjs', 'styles/collections.css']) {
     assert.deepEqual(sourceGuardTests(`packages/react/src/${path}`), [], path);
+  }
+});
+
+// The 18 families the supplemental barrel re-exports and the helpers they share. These names outlive the move of each
+// family to TypeScript, so the list is not read from the barrel.
+const supplementalFamilies = [
+  'alert-dialog', 'button-group', 'card', 'checkbox-field', 'color-mode-toggle', 'command-palette', 'header-nav', 'input', 'input-tags',
+  'multi-select', 'payment-input', 'progress-circle', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area',
+];
+const supplementalHelpers = ['part-utils', 'field-utils', 'field-root', 'modal-parts', 'item-renderer', 'navigation-drawer'];
+
+test('any change to a supplemental module selects the supplemental guards, whatever families it affects', async () => {
+  const guards = ['test/supplemental-modules.test.mjs', 'test/tree-shaking.test.mjs'];
+  // A change that only drops a pure annotation affects no family, so family routing cannot select them.
+  assert.deepEqual(sourceGuardTests('packages/react/src/supplemental/tag-select.mjs'), guards);
+  // The barrel, every family module, and the helpers the families share; a module moves between .mjs and .ts without leaving the guards' selection.
+  for (const name of ['index', ...supplementalFamilies, ...supplementalHelpers]) for (const extension of ['mjs', 'ts']) {
+    assert.deepEqual(sourceGuardTests(`packages/react/src/supplemental/${name}.${extension}`), guards, name);
+  }
+  // Every module the barrel re-exports is in that list.
+  const barrel = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8');
+  for (const [, name] of barrel.matchAll(/ from '\.\/([\w-]+)\.(?:mjs|js|ts)';/gu)) assert.ok(supplementalFamilies.includes(name), name);
+  // The other supplemental sources, declarations and styles select none, and neither does a collections-style name outside supplemental/.
+  for (const path of ['supplemental/icon-button.ts', 'supplemental/avatar.ts', 'supplemental/candidate-motion.mjs', 'supplemental/index.d.ts', 'supplemental/styles.css', 'supplemental/scratch-widget.mjs', 'tag-select.mjs', 'supplemental-mapping.mjs']) {
+    assert.deepEqual(sourceGuardTests(`packages/react/src/${path}`), [], path);
+  }
+});
+
+test('every supplemental family module routes to the supplemental group as the barrel did', async () => {
+  const contract = JSON.parse((await readFile(resolve(packageRoot, 'generated/r1-6-contract.json'), 'utf8'))
+    .split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
+  const modules = contract.components.filter(({ source }) => supplementalFamilies.some((slug) => source.endsWith(`/supplemental/${slug}.mjs`) || source.endsWith(`/supplemental/${slug}.ts`)));
+  assert.equal(modules.length, supplementalFamilies.length);
+  for (const record of modules) {
+    const barrel = { ...record, source: 'packages/react/src/supplemental/index.mjs' };
+    // A BrowserProof family skips the whole-group fallback, so only its explicit route can supply the group.
+    for (const behaviorProofFamilies of [[], [record.family]]) for (const includeSharedSource of [true, false]) {
+      assert.deepEqual(
+        componentTestSelection([record], availableFiles, { includeSharedSource, behaviorProofFamilies }),
+        componentTestSelection([barrel], availableFiles, { includeSharedSource, behaviorProofFamilies }),
+        `${record.family} includeSharedSource ${includeSharedSource} behaviorProofFamilies ${behaviorProofFamilies}`,
+      );
+    }
   }
 });
 
