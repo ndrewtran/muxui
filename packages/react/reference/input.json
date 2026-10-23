@@ -1,37 +1,76 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "input",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "input": "packages/react/src/supplemental/input.ts",
+    "part-utils": "packages/react/src/supplemental/part-utils.ts"
+  },
   "exports": [
     {
       "name": "Input",
       "entry": ".",
-      "module": "supplemental",
+      "module": "input",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The text, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The starting text, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the new text each time it changes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field read-only."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
-            { "name": "value", "optional": true, "type": "string" },
-            { "name": "defaultValue", "optional": true, "type": "string" },
-            { "name": "onChange", "optional": true, "type": "(value: string) => void" }
+              "values": ["sm", "md", "lg"],
+              "doc": "The field's size."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
             {
               "type": "React.HTMLAttributes<HTMLDivElement>",
-              "omit": ["onChange"]
+              "omit": ["onChange", "defaultValue"]
             }
           ]
         },
@@ -82,9 +121,9 @@
   ],
   "types": [
     {
-      "id": "supplemental#InputControlProps",
+      "id": "input#InputControlProps",
       "name": "InputControlProps",
-      "module": "supplemental",
+      "module": "input",
       "public": [
         { "entry": ".", "name": "InputControlProps" }
       ],
@@ -92,94 +131,125 @@
       "text": "type InputControlProps = React.InputHTMLAttributes<HTMLInputElement>;"
     },
     {
-      "id": "supplemental#InputDescriptionProps",
+      "id": "input#InputDescriptionProps",
       "name": "InputDescriptionProps",
-      "module": "supplemental",
+      "module": "input",
       "public": [
         { "entry": ".", "name": "InputDescriptionProps" }
       ],
       "owner": "input",
       "text": "type InputDescriptionProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#InputErrorProps",
+      "id": "input#InputErrorProps",
       "name": "InputErrorProps",
-      "module": "supplemental",
+      "module": "input",
       "public": [
         { "entry": ".", "name": "InputErrorProps" }
       ],
       "owner": "input",
       "text": "type InputErrorProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#InputLabelProps",
+      "id": "input#InputLabelProps",
       "name": "InputLabelProps",
-      "module": "supplemental",
+      "module": "input",
       "public": [
         { "entry": ".", "name": "InputLabelProps" }
       ],
       "owner": "input",
       "text": "type InputLabelProps = PartProps<HTMLLabelElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#InputProps",
+      "id": "input#InputOwnProps",
+      "name": "InputOwnProps",
+      "module": "input",
+      "text": "type InputOwnProps = {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The text, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The starting text, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the new text each time it changes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field read-only."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The field's size."
+        }
+      ]
+    },
+    {
+      "id": "input#InputProps",
       "name": "InputProps",
-      "module": "supplemental",
+      "module": "input",
       "public": [
         { "entry": ".", "name": "InputProps" }
       ],
       "owner": "input",
       "text": "type InputProps = InputControlProps;",
-      "refs": ["supplemental#InputControlProps"]
+      "refs": ["input#InputControlProps"]
     },
     {
-      "id": "supplemental#InputRootProps",
+      "id": "input#InputRootProps",
       "name": "InputRootProps",
-      "module": "supplemental",
+      "module": "input",
       "public": [
         { "entry": ".", "name": "InputRootProps" }
       ],
       "owner": "input",
-      "text": "type InputRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
+      "text": "type InputRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> & InputOwnProps;",
+      "refs": ["input#InputOwnProps"]
     },
     {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
-      "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
-        {
-          "name": "size",
-          "optional": true,
-          "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
-        }
-      ]
     }
   ]
 }

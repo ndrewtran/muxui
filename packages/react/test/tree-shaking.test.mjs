@@ -257,8 +257,8 @@ test('a bundle that uses one control family keeps its own module and only the sh
 // supplemental.mjs re-exports one module per family. Before the split every export kept the whole barrel and the 14
 // modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
 // its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The four
-// wrappers that are an immediately invoked function, the three field factories, the two modal wrappers and the two
-// field roots carry the pure annotation that lets a bundler drop what no export uses.
+// wrappers that are an immediately invoked function, the three field factories and the two modal wrappers carry the
+// pure annotation that lets a bundler drop what no export uses; the TypeScript families are checked by the bundle test below.
 test('the supplemental modules keep the pure annotation on each wrapper', () => {
   const emitted = (module) => {
     const mjs = resolve(generated, `${module}.mjs`);
@@ -274,9 +274,6 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
   }
   for (const wrapper of ['MotionModalBackdrop', 'MotionModalPopup']) {
     assert.match(emitted('modal-parts'), new RegExp(`^export const ${wrapper}ForwardRef = ${pure} React\\.forwardRef\\(${wrapper}\\);$`, 'mu'), wrapper);
-  }
-  for (const [module, root] of [['input', 'muxui-input__root'], ['text-area', 'muxui-text-area']]) {
-    assert.match(emitted(module), new RegExp(`^  Root: ${pure} fieldRoot\\(AriaTextField, '${root}'\\),$`, 'mu'), module);
   }
 });
 
@@ -295,6 +292,8 @@ const annotatedFamilies = [
   ['checkbox-field', 'CheckboxField', 5],
   ['switch-field', 'SwitchField', 5],
   ['radio-field', 'RadioField', 6],
+  ['input', 'Input', 5],
+  ['text-area', 'TextArea', 5],
 ];
 
 test('a bundle that uses nothing from a TypeScript supplemental family keeps none of its forwardRef calls, and one that uses it keeps them all', async () => {

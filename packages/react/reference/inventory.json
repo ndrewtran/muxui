@@ -561,18 +561,13 @@
         { "name": "ImageFit", "kind": "type", "owner": "image", "module": "image" },
         { "name": "ImageProps", "kind": "type", "owner": "image", "module": "image" },
         { "name": "ImageRadius", "kind": "type", "owner": "image", "module": "image" },
-        { "name": "Input", "kind": "value", "owner": "input", "module": "supplemental" },
-        { "name": "InputControlProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        {
-          "name": "InputDescriptionProps",
-          "kind": "type",
-          "owner": "input",
-          "module": "supplemental"
-        },
-        { "name": "InputErrorProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputLabelProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputRootProps", "kind": "type", "owner": "input", "module": "supplemental" },
+        { "name": "Input", "kind": "value", "owner": "input", "module": "input" },
+        { "name": "InputControlProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputDescriptionProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputErrorProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputLabelProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputRootProps", "kind": "type", "owner": "input", "module": "input" },
         { "name": "InputTags", "kind": "value", "owner": "input-tags", "module": "input-tags" },
         { "name": "InputTagsProps", "kind": "type", "owner": "input-tags", "module": "input-tags" },
         {
@@ -1230,32 +1225,27 @@
           "module": "supplemental"
         },
         { "name": "Text", "kind": "value", "owner": "text", "module": "supplemental" },
-        { "name": "TextArea", "kind": "value", "owner": "text-area", "module": "supplemental" },
+        { "name": "TextArea", "kind": "value", "owner": "text-area", "module": "text-area" },
         {
           "name": "TextAreaDescriptionProps",
           "kind": "type",
           "owner": "text-area",
-          "module": "supplemental"
+          "module": "text-area"
         },
         {
           "name": "TextAreaErrorProps",
           "kind": "type",
           "owner": "text-area",
-          "module": "supplemental"
+          "module": "text-area"
         },
         {
           "name": "TextAreaLabelProps",
           "kind": "type",
           "owner": "text-area",
-          "module": "supplemental"
+          "module": "text-area"
         },
-        { "name": "TextAreaProps", "kind": "type", "owner": "text-area", "module": "supplemental" },
-        {
-          "name": "TextAreaRootProps",
-          "kind": "type",
-          "owner": "text-area",
-          "module": "supplemental"
-        },
+        { "name": "TextAreaProps", "kind": "type", "owner": "text-area", "module": "text-area" },
+        { "name": "TextAreaRootProps", "kind": "type", "owner": "text-area", "module": "text-area" },
         { "name": "TextColor", "kind": "type", "owner": "text", "module": "supplemental" },
         { "name": "TextComponent", "kind": "type", "owner": "text", "module": "supplemental" },
         { "name": "TextElement", "kind": "type", "owner": "text", "module": "supplemental" },

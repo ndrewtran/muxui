@@ -189,8 +189,6 @@ function inferControl(name, defaults, props, family, propDetails) {
     && props.some((prop) => NUMBER_VALUE_CONTEXT_PROPS.has(prop))) {
     return { control: { type: 'number' } };
   }
-  // TextArea rows is the native line count, not table rows.
-  if (family === 'TextArea' && name === 'rows') return { control: { type: 'number' } };
   if (ARRAY_PROPS.has(name) || Array.isArray(defaults[name])) return { control: 'object' };
   if (NUMBER_PROPS.has(name)) return { control: { type: 'number' } };
   if (typeof defaults[name] === 'number') return { control: { type: 'number' } };

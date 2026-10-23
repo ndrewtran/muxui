@@ -14,21 +14,21 @@ import {
   Card,
   CommandPalette,
   HeaderNav,
-  Input,
   MultiSelect,
   Sidebar,
   TagSelect,
-  TextArea,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
 import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
+import { Input } from '../src/supplemental/input.ts';
 import { InputTags } from '../src/supplemental/input-tags.ts';
 import { PaymentInput } from '../src/supplemental/payment-input.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { RadioField } from '../src/supplemental/radio-field.ts';
 import { SwitchField } from '../src/supplemental/switch-field.ts';
+import { TextArea } from '../src/supplemental/text-area.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';
 import { installDom } from './support/dom.mjs';
 
@@ -404,10 +404,8 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   assert.deepEqual(unknown, []);
 });
 
-test('Input and TextArea roots retain native string field props in their declarations', async () => {
+test('the supplemental roots retain native string field props in their declarations', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
-  assert.match(declaration, /export type InputRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
-  assert.match(declaration, /export type TextAreaRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
   assert.match(declaration, /MultiSelectItemProps[\s\S]*?textValue\?: string/u);
   assert.match(declaration, /TagSelectItemProps[\s\S]*?textValue\?: string/u);
   assert.match(declaration, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
@@ -415,9 +413,12 @@ test('Input and TextArea roots retain native string field props in their declara
   assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
 });
 
-// The three field compounds own their root props in a type of their own, which the Root type intersects with the div's attributes.
+// The field compounds own their root props in a type of their own, which the Root type intersects with the div's attributes.
 test('the field compounds keep their native string props on the root', async () => {
   const source = (slug) => readFile(resolve(packageRoot, `src/supplemental/${slug}.ts`), 'utf8');
+  for (const [slug, name] of [['input', 'Input'], ['text-area', 'TextArea']]) {
+    assert.match(await source(slug), new RegExp(`type ${name}OwnProps = \\{[^}]*?value\\?: string;[^}]*?defaultValue\\?: string;[^}]*?onChange\\?: \\(value: string\\) => void;`, 'u'), name);
+  }
   assert.match(await source('checkbox-field'), /type CheckboxFieldOwnProps = \{[^}]*?name\?: string;[^}]*?value\?: string;/u);
   assert.match(await source('switch-field'), /type SwitchFieldOwnProps = \{[^}]*?name\?: string;[^}]*?value\?: string;/u);
   const radio = await source('radio-field');
