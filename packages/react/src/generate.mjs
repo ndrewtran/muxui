@@ -421,8 +421,7 @@ const typesBody = `import type * as React from 'react';
 import type { ButtonPointerType } from './button.js';
 import type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 import type { MuxUIColorValue } from './color-context.js';
-import type { ControlSize, FieldValidationProps, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel, NamedFieldProps } from './fields.js';
-import type { MuxUIPlacement } from './overlays.js';
+import type { ControlSize, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel } from './fields.js';
 
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
@@ -465,6 +464,10 @@ export { Menu } from './menu.js';
 export type { MenuItemProps, MenuListProps, MenuPopupProps, MenuProps, MenuRootProps, MenuSectionProps, MenuSubmenuProps, MenuTriggerProps } from './menu.js';
 export { Virtualizer } from './virtualizer.js';
 export type { VirtualizerGridProps, VirtualizerProps, VirtualizerStackProps } from './virtualizer.js';
+export { ComboBox } from './combo-box.js';
+export type { ComboBoxProps } from './combo-box.js';
+export { Select } from './select.js';
+export type { SelectItemProps, SelectOptions, SelectPopupProps, SelectProps, SelectRootProps, SelectTriggerProps } from './select.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
@@ -473,25 +476,6 @@ const collectionsTypes = `
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-export type SelectProps = NamedFieldProps & SelectOptions;
-export type SelectOptions = { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; selectedContent?: React.ReactNode; trigger?: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>; placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; children?: React.ReactNode; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
-export type SelectRootProps = SelectOptions & FieldValidationProps & (MuxUIAccessibleName | { children: React.ReactNode; label?: React.ReactNode; 'aria-label'?: string; 'aria-labelledby'?: string; });
-export type SelectTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
-export type SelectItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'id'> & { id: string; textValue?: string; disabled?: boolean; };
-export type SelectPopupProps = React.HTMLAttributes<HTMLDivElement> & { placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; };
-export declare const Select: React.ForwardRefExoticComponent<SelectProps & React.RefAttributes<HTMLDivElement>> & {
-  Root: React.ForwardRefExoticComponent<SelectRootProps & React.RefAttributes<HTMLDivElement>>;
-  Label: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
-  Trigger: React.ForwardRefExoticComponent<SelectTriggerProps & React.RefAttributes<HTMLButtonElement>>;
-  Value: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
-  Popup: React.ForwardRefExoticComponent<SelectPopupProps & React.RefAttributes<HTMLDivElement>>;
-  List: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLDivElement> & { items?: MuxUIItems; } & React.RefAttributes<HTMLDivElement>>;
-  Item: React.ForwardRefExoticComponent<SelectItemProps & React.RefAttributes<HTMLDivElement>>;
-  Description: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
-  Error: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
-};
-export type ComboBoxProps = NamedFieldProps & { /** The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. */ items?: MuxUIItems; value?: string; defaultValue?: string; /** The selected item's id. A controlled field with no selection passes null; an empty string throws. */ selectedId?: string | null; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; /** Called with the chosen item, or with no item when the selection clears. */ onSelect?: (item?: MuxUICollectionItem) => void; };
-export declare const ComboBox: React.ForwardRefExoticComponent<ComboBoxProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
 export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }
 export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };

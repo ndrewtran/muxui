@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:f3429fc07b7d92bace1e588caf8c226e57aa650f3dc13b00191d93d46be0eb93 -->
+<!-- @generated-content-sha256: sha256:1f0b35d90d1f9985eabe53df9c608be7d28f2b2545864ef6d1ae194f30c823cf -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -123,7 +123,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
-| ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
+| ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
 | DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
@@ -156,13 +156,13 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | PreviewTrigger | experimental | . | .muxui-preview-trigger | trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding |
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
-| PromptComposer | experimental | . | .muxui-prompt-composer | inputLabel, value, defaultValue, inputProps, inputRef, pending, disabled, error, sources, commands, attachments, accept, multiple, models, selectedModel, defaultSelectedModel |
+| PromptComposer | experimental | . | .muxui-prompt-composer | inputLabel, value, defaultValue, inputProps, pending, disabled, error, sources, commands, attachments, accept, multiple, models, selectedModel, defaultSelectedModel |
 | RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, value |
 | RadioGroup | experimental | . | .muxui-radio-group | label, errorMessage, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, keyboardStep, keyboardLargeStep, precision, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, inputProps |
-| Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal |
+| Select | experimental | . | .muxui-select | label, description, errorMessage, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, modal; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items; option: id, textValue, disabled |
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, disabled, required, invalid, size |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | collapsed, defaultCollapsed, onCollapsedChange, shortcut, hideBorder, density, label, href, current, external, items, expanded, defaultExpanded, onExpandedChange, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss, onAction |

@@ -85,6 +85,12 @@ const audited = [
       ...expand(['grid-list.item'], ['disabled']),
       // Virtualizer sent isDisabled to React Aria as its own value, false when omitted, before the move, so a ListBoxContext never supplied it.
       ...expand(['virtualizer'], ['disabled']),
+      // Select sent React Aria isDisabled, isRequired, and defaultOpen as its own values (false when omitted), and its popup geometry and modal setting to its popup
+      // through the overlay geometry helper, before the move, so no React Aria context supplied them. Select.Trigger and Select.Item sent isDisabled as a boolean: their own flag, else the Select's.
+      ...expand(['select'], ['disabled', 'required', 'defaultOpen', 'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal']),
+      ...expand(['select.trigger', 'select.option'], ['disabled']),
+      // ComboBox sent isDisabled, isReadOnly, and isRequired to React Aria as its own values (false when omitted) before the move, so no React Aria context supplied them.
+      ...expand(['combo-box'], ['disabled', 'readOnly', 'required']),
     ],
   },
   {
@@ -111,6 +117,10 @@ const audited = [
       // Menu.List turns its disabled into disabledKeys and data attributes and never sends React Aria isDisabled.
       ...expand(['menu'], ['defaultOpen', 'disabled']),
       ...expand(['menu.list'], ['disabled']),
+      // Select enforces readOnly itself, with a data attribute and a guard on the selection, and sends React Aria no isReadOnly.
+      ...expand(['select'], ['readOnly']),
+      // PromptComposer renders a native form, textarea, and buttons, and gives its model Select explicit flags, so no React Aria context reaches its own disabled, pending, defaultValue, or multiple.
+      ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
     ],
   },
   {
@@ -124,6 +134,8 @@ const audited = [
       ...expand(['color-field', 'radio-group'], ['invalid']),
       // The calendars send isInvalid the same way, so a CalendarContext or RangeCalendarContext can still make them invalid.
       ...expand(['calendar', 'range-calendar'], ['invalid']),
+      // Select and ComboBox send isInvalid the same way, so a React Aria context can still make them invalid.
+      ...expand(['select', 'combo-box'], ['invalid']),
     ],
   },
 ];

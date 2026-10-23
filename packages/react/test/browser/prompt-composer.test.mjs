@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `
-import React from 'react'; import { createRoot } from 'react-dom/client'; import { flushSync } from 'react-dom'; import { PromptComposer } from '/src/supplemental/prompt-composer.mjs';
+import React from 'react'; import { createRoot } from 'react-dom/client'; import { flushSync } from 'react-dom'; import { PromptComposer } from '/src/supplemental/prompt-composer.ts';
 const root=createRoot(document.querySelector('#root')); window.events=[];
 window.mount=(props={})=>flushSync(()=>root.render(React.createElement(PromptComposer,{defaultValue:'Initial',inputLabel:'Draft',inputProps:{name:'message',required:true,minLength:3,maxLength:30,placeholder:'Write a message…',onChange:e=>window.events.push(['input',e.currentTarget.tagName])},onChange:e=>window.events.push(['change',e.currentTarget.tagName]),onSubmit:e=>window.events.push(['submit',e.currentTarget.tagName]),onReset:e=>window.events.push(['reset',e.currentTarget.tagName]),onSend:value=>window.events.push(['send',value]),onValueChange:value=>window.events.push(['value',value]),sources:[{id:'a',label:'Notes',insertText:'@notes ',description:'Workspace notes'},{id:'b',label:'Research',insertText:'@research '}],commands:[{id:'s',label:'Summarize',insertText:'Summarize: '}],onSuggestionSelect:(item,kind)=>window.events.push(['suggestion',item.id,kind]),models:[{id:'a',label:'Standard'},{id:'b',label:'Detailed'}],defaultSelectedModel:'a',onModelChange:id=>window.events.push(['model',id]),onFilesSelected:files=>window.events.push(['files',files.map(f=>f.name)]),attachments:[{id:'file',label:'notes.txt'}],onRemoveAttachment:id=>window.events.push(['remove',id]),...props}))); window.mount();
 `;
@@ -20,7 +20,7 @@ const modelValue = (page) => page.locator('.muxui-prompt-composer-model .muxui-s
 const fixture = pageShell({ attributes: 'data-muxui-color-scheme="light"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css">', bodyAttributes:'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"',body:'<main style="max-width:560px;margin:auto;padding-top:280px"><div id="root"></div></main>',entry:'/prompt-entry.mjs' });
 
 test('PromptComposer native validation/reset, multiline/IME, caret menus, file/model actions and pending work by keyboard', { timeout: 120_000 }, async () => {
-  const server=await startServer({entries:['src/supplemental/prompt-composer.mjs'],pages:{'/prompt.html':fixture},modules:{'/prompt-entry.mjs':entry}}); const browser=await launchBrowser(); const page=await browser.newPage({viewport:{width:800,height:700}});
+  const server=await startServer({entries:['src/supplemental/prompt-composer.ts'],pages:{'/prompt.html':fixture},modules:{'/prompt-entry.mjs':entry}}); const browser=await launchBrowser(); const page=await browser.newPage({viewport:{width:800,height:700}});
   try {
     const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(server.url+'/prompt.html');const input=page.getByRole('textbox',{name:'Draft'});await input.waitFor();
     await input.fill('Hi');await page.keyboard.press('Enter');assert.equal((await page.evaluate(()=>window.events)).filter(e=>e[0]==='send').length,0);assert.equal(await input.evaluate(n=>n.validity.tooShort),true);
@@ -47,7 +47,7 @@ test('PromptComposer native validation/reset, multiline/IME, caret menus, file/m
 });
 
 test('PromptComposer invalidates external draft ranges, follows native external forms and resizes without editing', { timeout: 120_000 }, async () => {
-  const server=await startServer({entries:['src/supplemental/prompt-composer.mjs'],pages:{'/prompt.html':fixture},modules:{'/prompt-entry.mjs':entry}}); const browser=await launchBrowser(); const page=await browser.newPage({viewport:{width:800,height:700}});
+  const server=await startServer({entries:['src/supplemental/prompt-composer.ts'],pages:{'/prompt.html':fixture},modules:{'/prompt-entry.mjs':entry}}); const browser=await launchBrowser(); const page=await browser.newPage({viewport:{width:800,height:700}});
   try {
     const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(server.url+'/prompt.html');const input=page.getByRole('textbox',{name:'Draft'});await input.waitFor();
     await page.evaluate(()=>window.mount({value:'@no'}));await input.click();await page.keyboard.press('End');await page.getByRole('listbox',{name:'Sources'}).waitFor();
@@ -73,7 +73,7 @@ test('PromptComposer invalidates external draft ranges, follows native external 
 });
 
 test('PromptComposer model Select preserves keyboard focus, caller state, reset and open-state gating without sending', { timeout: 120_000 }, async () => {
-  const server = await startServer({ entries: ['src/supplemental/prompt-composer.mjs'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
+  const server = await startServer({ entries: ['src/supplemental/prompt-composer.ts'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
   const browser = await launchBrowser(); const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
   try {
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
@@ -189,7 +189,7 @@ test('PromptComposer model Select preserves keyboard focus, caller state, reset 
 });
 
 test('PromptComposer keeps the whole suggestion menu, padding, border and gap included, inside the viewport', { timeout: 120_000 }, async () => {
-  const server = await startServer({ entries: ['src/supplemental/prompt-composer.mjs'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
+  const server = await startServer({ entries: ['src/supplemental/prompt-composer.ts'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
   const browser = await launchBrowser(); const page = await browser.newPage({ viewport: { width: 800, height: 300 } });
   try {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -246,7 +246,7 @@ function visibilityOf(selector) {
 }
 
 test('PromptComposer keeps the error alert at full opacity and contrast while disabled, in light and dark', { timeout: 120_000 }, async () => {
-  const server = await startServer({ entries: ['src/supplemental/prompt-composer.mjs'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
+  const server = await startServer({ entries: ['src/supplemental/prompt-composer.ts'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
   const browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
   try {

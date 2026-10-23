@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
+import { DERIVED_API_COMPONENTS, deriveApis, extractionComponent, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
 import { ApiExtractionError, HOST_ALLOWLIST, extractApis, hostEntryKey } from '../api-extraction/extract.mjs';
 
 // Synthetic fixtures for the closed grammar (Decision 0031 item 3). They sit under the
@@ -22,7 +22,7 @@ export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.R
 
 // `outside` holds files beside the package under test, such as a stand-in node_modules/@types/react: when given, the
 // declarations and the sources sit in a package/ directory of their own, so those files are not Mux UI-owned.
-function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, files = {}, outside = {}, part, callable, parts }) {
+function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, files = {}, outside = {}, part, callable, also, parts }) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const base = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
   const root = Object.keys(outside).length > 0 ? join(base, 'package') : base;
@@ -39,6 +39,7 @@ function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist,
       name: 'Thing',
       ...(part === undefined ? {} : { part }),
       ...(callable === undefined ? {} : { callable }),
+      ...(also === undefined ? {} : { also }),
       ...(parts === undefined ? {} : { parts }),
       declarations: join(root, 'thing.d.ts'),
       ...(source === undefined ? {} : { source: join(root, sourceName) }),
@@ -391,6 +392,8 @@ const OWNED_INPUT_PROPS = ['children', 'dangerouslySetInnerHTML', 'slot', 'type'
 const INPUT_ATTRIBUTES = host('React.InputHTMLAttributes', host('HTMLInputElement'));
 const omitted = (names) => host('Omit', INPUT_ATTRIBUTES, { kind: 'union', members: names.map((value) => ({ kind: 'literal', value })) });
 const OMITTED_INPUT_ATTRIBUTES = omitted(OWNED_INPUT_PROPS);
+const OWNED_TEXTAREA_PROPS = ['value', 'defaultValue', 'children', 'dangerouslySetInnerHTML'];
+const OMITTED_TEXTAREA_ATTRIBUTES = host('Omit', host('React.TextareaHTMLAttributes', host('HTMLTextAreaElement')), { kind: 'union', members: OWNED_TEXTAREA_PROPS.map((value) => ({ kind: 'literal', value })) });
 
 // React's bivariant event handler aliases (Decision 0031, tranche 8c): a member typed React.UIEventHandler<HTMLDivElement> keeps the
 // alias in the public type, so a handler declared with a narrower event stays assignable, and the catalog reads it as the function it
@@ -523,13 +526,13 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   }
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
-  assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
-  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
+  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
-  assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json'], 'the files FileTrigger selects, and the File a DropZone item reads');
+  assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json', 'prompt-composer.json'], 'the files FileTrigger selects, the File a DropZone item reads, and the files a PromptComposer attach picker reports');
   // The input attributes TextField's and SearchField's inputProps take, as FieldInputProps omits them: the element, its attributes, and the Omit of those.
   assert.deepEqual(reached.get('HTMLInputElement'), ['search-field.json', 'text-field.json'], 'the element whose attributes inputProps takes');
   assert.deepEqual(reached.get(hostEntryKey(INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the attributes of the inner input');
@@ -537,6 +540,17 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
   assert.deepEqual(reached.get('HTMLDivElement'), ['virtualizer.json'], 'the element a scroll event reports');
   assert.deepEqual(reached.get(hostEntryKey(host('React.UIEvent', host('HTMLDivElement')))), ['virtualizer.json'], 'the scroll event of the Virtualizer viewport');
+  // PromptComposer's inputProps: the textarea's attributes, as its props omit the four the composer owns.
+  const textareaAttributes = host('React.TextareaHTMLAttributes', host('HTMLTextAreaElement'));
+  assert.deepEqual(reached.get('HTMLTextAreaElement'), ['prompt-composer.json'], 'the element whose attributes inputProps takes');
+  assert.deepEqual(reached.get(hostEntryKey(textareaAttributes)), ['prompt-composer.json'], 'the attributes of the textarea');
+  assert.deepEqual(reached.get(hostEntryKey(OMITTED_TEXTAREA_ATTRIBUTES)), ['prompt-composer.json'], 'the textarea\'s attributes less the four the composer owns');
+  // Select's trigger: a button element with the attributes and ref a button takes, each application listed.
+  const buttonAttributes = host('React.ButtonHTMLAttributes', host('HTMLButtonElement'));
+  const buttonProps = host('React.DetailedHTMLProps', buttonAttributes, host('HTMLButtonElement'));
+  assert.deepEqual(reached.get(hostEntryKey(buttonAttributes)), ['select.json'], 'the native attributes of the trigger');
+  assert.deepEqual(reached.get(hostEntryKey(buttonProps)), ['select.json'], 'the attributes and ref of the trigger');
+  assert.deepEqual(reached.get(hostEntryKey(host('React.ReactElement', buttonProps, { kind: 'literal', value: 'button' }))), ['select.json'], 'the trigger element');
   // DropZone's drop items: a file item reads a File or its text, a text item lists its formats, a directory its entries.
   const dropItems = [
     [host('Promise', host('File')), 'a file item\'s read'],
@@ -559,9 +573,55 @@ test('inputProps admits the exact Omit of the input\'s attributes and nothing ne
     ['a narrower omission', omitInputAttributes(['children']), /Thing\.bad -> Omit: Omit<React\.InputHTMLAttributes<HTMLInputElement>, "children"> is not an application on the host allowlist/u],
     ['one member missing', omitInputAttributes(OWNED_INPUT_PROPS.slice(0, -1)), /Thing\.bad -> Omit: Omit<.*"aria-disabled"> is not an application on the host allowlist/u],
     ['the same members reversed', omitInputAttributes([...OWNED_INPUT_PROPS].reverse()), /Thing\.bad -> Omit: Omit<.*"children"> is not an application on the host allowlist/u],
-    ['another element', omitInputAttributes(OWNED_INPUT_PROPS, 'HTMLTextAreaElement'), /Thing\.bad -> Omit<0> -> React\.InputHTMLAttributes<0> -> HTMLTextAreaElement: HTMLTextAreaElement is outside @muxui\/react and not in the host allowlist/u],
+    ['another element', omitInputAttributes(OWNED_INPUT_PROPS, 'HTMLSelectElement'), /Thing\.bad -> Omit<0> -> React\.InputHTMLAttributes<0> -> HTMLSelectElement: HTMLSelectElement is outside @muxui\/react and not in the host allowlist/u],
+    ['the textarea\'s element', omitInputAttributes(OWNED_INPUT_PROPS, 'HTMLTextAreaElement'), /Thing\.bad -> Omit<0> -> React\.InputHTMLAttributes: React\.InputHTMLAttributes<HTMLTextAreaElement> is not an application on the host allowlist/u],
     ['a Pick', 'Pick<React.InputHTMLAttributes<HTMLInputElement>, \'placeholder\'>', /Thing\.bad -> Pick: Pick<React\.InputHTMLAttributes<HTMLInputElement>, "placeholder"> is not an application on the host allowlist/u],
     ['a Partial of the Omit', `Partial<${omitInputAttributes(OWNED_INPUT_PROPS)}>`, /Thing\.bad -> Partial: Partial<Omit<.*>> is not an application on the host allowlist/u],
+  ];
+  for (const [reason, type, pattern] of near) {
+    assert.throws(() => extract({ declarations: ownProps(`  bad?: ${type};`) }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, pattern, reason);
+      return true;
+    }, reason);
+  }
+});
+
+test('a trigger prop admits the exact button element Select takes and nothing near it', () => {
+  const buttonElement = "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>";
+  const exact = extract({ declarations: ownProps(`  trigger?: ${buttonElement};`) });
+  const attributes = host('React.ButtonHTMLAttributes', host('HTMLButtonElement'));
+  assert.deepEqual(exact.propDetails.trigger.type, host('React.ReactElement', host('React.DetailedHTMLProps', attributes, host('HTMLButtonElement')), { kind: 'literal', value: 'button' }));
+  // The intersection main spelled is outside the grammar, and another tag, element, or wrapper is another type.
+  const near = [
+    ['the intersection of attributes and ref', "React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>", /Thing\.bad -> React\.ReactElement<0>: an intersection type is not in the grammar/u],
+    ['no tag', 'React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>>', /Thing\.bad -> React\.ReactElement: React\.ReactElement<React\.DetailedHTMLProps<React\.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>> is not an application on the host allowlist/u],
+    ['another tag', "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'a'>", /Thing\.bad -> React\.ReactElement: React\.ReactElement<.*"a"> is not an application on the host allowlist/u],
+    ['another element', "React.ReactElement<React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLAnchorElement>, 'button'>", /Thing\.bad -> React\.ReactElement<0> -> React\.DetailedHTMLProps: React\.DetailedHTMLProps<React\.ButtonHTMLAttributes<HTMLButtonElement>, HTMLAnchorElement> is not an application on the host allowlist/u],
+    ['other attributes', "React.ReactElement<React.DetailedHTMLProps<React.HTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>", /Thing\.bad -> React\.ReactElement<0> -> React\.DetailedHTMLProps<0> -> React\.HTMLAttributes: React\.HTMLAttributes<HTMLButtonElement> is not an application on the host allowlist/u],
+    ['the attributes alone', 'React.DetailedHTMLProps<React.HTMLAttributes<HTMLButtonElement>, HTMLButtonElement>', /Thing\.bad -> React\.DetailedHTMLProps<0> -> React\.HTMLAttributes: React\.HTMLAttributes<HTMLButtonElement> is not an application on the host allowlist/u],
+  ];
+  for (const [reason, type, pattern] of near) {
+    assert.throws(() => extract({ declarations: ownProps(`  bad?: ${type};`) }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, pattern, reason);
+      return true;
+    }, reason);
+  }
+});
+
+test('inputProps admits the exact Omit of the textarea\'s attributes PromptComposer declares and nothing near it', () => {
+  const omitTextarea = (names, element = 'HTMLTextAreaElement') => `Omit<React.TextareaHTMLAttributes<${element}>, ${names.map((name) => `'${name}'`).join(' | ')}>`;
+  const exact = extract({ declarations: ownProps(`  inputProps?: ${omitTextarea(OWNED_TEXTAREA_PROPS)};\n  attributes?: React.TextareaHTMLAttributes<HTMLTextAreaElement>;`) });
+  assert.deepEqual(exact.propDetails.inputProps.type, OMITTED_TEXTAREA_ATTRIBUTES);
+  assert.deepEqual(exact.propDetails.attributes.type, host('React.TextareaHTMLAttributes', host('HTMLTextAreaElement')));
+  const near = [
+    ['a narrower omission', omitTextarea(['value']), /Thing\.bad -> Omit: Omit<React\.TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> is not an application on the host allowlist/u],
+    ['one member missing', omitTextarea(OWNED_TEXTAREA_PROPS.slice(0, -1)), /Thing\.bad -> Omit: Omit<.*"children"> is not an application on the host allowlist/u],
+    ['one member more', omitTextarea([...OWNED_TEXTAREA_PROPS, 'rows']), /Thing\.bad -> Omit: Omit<.*"rows"> is not an application on the host allowlist/u],
+    ['the same members reversed', omitTextarea([...OWNED_TEXTAREA_PROPS].reverse()), /Thing\.bad -> Omit: Omit<.*"value"> is not an application on the host allowlist/u],
+    ['another element', omitTextarea(OWNED_TEXTAREA_PROPS, 'HTMLInputElement'), /Thing\.bad -> Omit<0> -> React\.TextareaHTMLAttributes: React\.TextareaHTMLAttributes<HTMLInputElement> is not an application on the host allowlist/u],
+    ['the input\'s omission', omitInputAttributes(OWNED_TEXTAREA_PROPS), /Thing\.bad -> Omit: Omit<React\.InputHTMLAttributes<HTMLInputElement>, "value" \| "defaultValue" \| "children" \| "dangerouslySetInnerHTML"> is not an application on the host allowlist/u],
   ];
   for (const [reason, type, pattern] of near) {
     assert.throws(() => extract({ declarations: ownProps(`  bad?: ${type};`) }), (error) => {
@@ -1258,6 +1318,84 @@ export const Thing = (() => {
     /Thing \(callable\)\.disabled: the exported Thing \(callable\)'s props redeclare disabled as required boolean; ThingListOwnProps declares optional boolean/u, 'a callable that changes a prop');
 });
 
+// Select's root is its callable, and Select.Root is another member of the export that takes the same props: its `label`
+// is any node, so that `children` can name the field, while the callable's label is a node that renders something.
+const alsoName = "{ label: Exclude<React.ReactNode, null | undefined | boolean>; 'aria-label'?: never } | { label?: never; 'aria-label': string }";
+const alsoChildrenArm = "{ children: React.ReactNode; label?: React.ReactNode; 'aria-label'?: string }";
+const alsoDeclarations = (rootProps = `Omit<ThingOwnProps, 'label'> & (${alsoName} | ${alsoChildrenArm})`) => `${header}export type ThingOwnProps = {
+  label?: Exclude<React.ReactNode, null | undefined | boolean>;
+  size?: 'sm' | 'md';
+  children?: React.ReactNode;
+};
+export type ThingProps = Omit<ThingOwnProps, 'label'> & (${alsoName});
+export type ThingRootProps = ${rootProps};
+export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> & {
+  Root: React.ForwardRefExoticComponent<ThingRootProps & React.RefAttributes<HTMLDivElement>>;
+};
+`;
+
+test('also checks the root\'s props against another member of the export, and only widen lets a prop differ there', () => {
+  const widen = [{ member: 'Root', widen: ['label'] }];
+  const fails = (declarations, pattern, label, options = { also: widen }) => assert.throws(() => extract({ declarations, ...options }),
+    (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
+  // Select.Root takes the same members; `label` is a supertype there. The check adds no data to the block.
+  const api = extract({ declarations: alsoDeclarations(), also: widen });
+  assert.deepEqual(api, extract({ declarations: alsoDeclarations() }), 'the check adds no data');
+  assert.deepEqual(api.props, ['label', 'size', 'children']);
+  // Without widen, the Root's wider label is a redeclaration, so widen is what admits it.
+  fails(alsoDeclarations(), /Thing\.label: the exported Thing\.Root's props redeclare label as optional .*; ThingOwnProps declares optional /u, 'label is not listed to widen', { also: [{ member: 'Root' }] });
+  // A Root that differs in any other way is deliberately incompatible and fails directly.
+  fails(alsoDeclarations(`Omit<ThingOwnProps, 'label' | 'size'> & (${alsoName} | ${alsoChildrenArm})`), /Thing\.size: the exported Thing\.Root's props do not include size/u, 'a Root without a member');
+  fails(alsoDeclarations(`Omit<ThingOwnProps, 'label' | 'size'> & { size?: 'sm' } & (${alsoName} | ${alsoChildrenArm})`), /Thing\.size: the exported Thing\.Root's props redeclare size as optional "sm" \| undefined; ThingOwnProps declares optional "md" \| "sm" \| undefined/u, 'a Root that redeclares a member');
+  fails(alsoDeclarations(`Omit<ThingOwnProps, 'label' | 'size'> & { size: 'sm' | 'md' } & (${alsoName} | ${alsoChildrenArm})`), /Thing\.size: the exported Thing\.Root's props redeclare size as required /u, 'a Root that makes a member required');
+  // The widened member keeps its presence and optionality.
+  fails(alsoDeclarations(`Omit<ThingOwnProps, 'label'> & { label: React.ReactNode; children?: React.ReactNode }`), /Thing\.label: the exported Thing\.Root's props change the optionality of label as required /u, 'a Root whose label is required');
+  fails(alsoDeclarations(`Omit<ThingOwnProps, 'label'> & (${alsoName} | { children: React.ReactNode; 'aria-label'?: string })`), /Thing\.label: the exported Thing\.Root's props do not include label/u, 'a Root arm without label');
+  // Widening is checked on the arms: the children arm cannot narrow label, though the union of the arms still takes everything.
+  const narrowed = alsoDeclarations(`Omit<ThingOwnProps, 'label'> & (${alsoName} | { children: React.ReactNode; label?: string; 'aria-label'?: string })`);
+  fails(narrowed, /Thing\.label: no arm of the exported Thing\.Root's props takes label as ThingOwnProps declares it, optional .*; label may widen there, never narrow/u, 'a children arm that narrows label');
+  fails(alsoDeclarations(`Omit<ThingOwnProps, 'label'> & (${alsoName} | { children: React.ReactNode; label?: React.ReactElement; 'aria-label'?: string })`), /no arm of the exported Thing\.Root's props takes label/u, 'a children arm whose label is another type');
+  // widen is a stated difference, not a switch: it must name a declared prop, and a prop that does not differ must not be listed.
+  fails(alsoDeclarations(), /Thing\.Root: widen names nope, which ThingOwnProps does not declare/u, 'a widen that names no prop', { also: [{ member: 'Root', widen: ['nope'] }] });
+  fails(alsoDeclarations(), /Thing\.size: size is listed to widen on Thing\.Root, whose props declare it as optional .*, the type ThingOwnProps declares; remove it from widen/u, 'a widen that is not needed', { also: [{ member: 'Root', widen: ['label', 'size'] }] });
+  fails(alsoDeclarations('ThingProps'), /Thing\.label: no arm of the exported Thing\.Root's props takes label as ThingOwnProps declares it, optional .*\(if Thing\.Root declares it as ThingOwnProps does, remove it from widen\)/u, 'a Root that does not widen');
+  // The mapping is checked as well: a member the export lacks, the root part itself, a repeat, and a name that is not a member.
+  fails(alsoDeclarations(), /Thing\.Rot: the exported Thing has no Rot part/u, 'a missing member', { also: [{ member: 'Rot' }] });
+  fails(alsoDeclarations(), /Thing\.Root: Root is named twice in also/u, 'a member named twice', { also: [{ member: 'Root' }, { member: 'Root' }] });
+  fails(alsoDeclarations(), /Thing\.Root: Root is the root part, whose props are read in also/u, 'the root part', { also: [{ member: 'Root' }], part: 'Root' });
+  fails(alsoDeclarations(), /Thing: also names an export member, such as Root; not root/u, 'a name that is not a member', { also: [{ member: 'root' }] });
+  fails(alsoDeclarations(), /Thing\.Root: widen lists each prop once, by name/u, 'a widen listing a prop twice', { also: [{ member: 'Root', widen: ['label', 'label'] }] });
+  // A defaults read still reads the root's source alone.
+  const source = "import { forwardRef } from 'react';\nexport const Thing = forwardRef(function Thing({ label, size = 'md', children }: Record<string, unknown>) { return [label, size, children]; });\n";
+  assert.deepEqual(extract({ declarations: alsoDeclarations(), source, also: widen }).defaults, { size: 'md' });
+});
+
+test('also reaches the extraction through deriveApis, and the packed declarations through the same mapping', async () => {
+  mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
+  const root = mkdtempSync(join(packageRoot, 'build', 'derived-also-'));
+  try {
+    const declarationRoot = join(root, 'ts');
+    const repositoryRoot = join(root, 'repository');
+    mkdirSync(declarationRoot);
+    mkdirSync(join(repositoryRoot, 'packages/react/src'), { recursive: true });
+    writeFileSync(join(repositoryRoot, 'packages/react/src/thing.ts'), "import { forwardRef } from 'react';\nexport const Thing = forwardRef(function Thing({ label, size = 'md', children }: Record<string, unknown>) { return [label, size, children]; });\n");
+    const derive = (rootProps, widen = ['label']) => {
+      writeFileSync(join(declarationRoot, 'thing.d.ts'), alsoDeclarations(rootProps));
+      return deriveApis({ packageRoot: join(root, 'package'), repositoryRoot, declarationRoot, components: [{ slug: 'thing', name: 'Thing', source: 'packages/react/src/thing.ts', also: [{ member: 'Root', widen }] }] });
+    };
+    assert.deepEqual((await derive()).get('thing').api.defaults, { size: 'md' });
+    // An incompatible Select.Root fails the derivation: `also` is not silently dropped on the way to the extractor.
+    await assert.rejects(derive(`Omit<ThingOwnProps, 'label' | 'size'> & (${alsoName} | ${alsoChildrenArm})`), /Thing\.size: the exported Thing\.Root's props do not include size/u);
+    await assert.rejects(derive(undefined, []), /Thing\.label: the exported Thing\.Root's props redeclare label/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  // Every field an entry sets reaches the extractor, whichever caller maps it (the committed outputs and the packed declarations).
+  const entry = { slug: 'thing', name: 'Thing', part: 'Root', callable: 'list', also: [{ member: 'Root', widen: ['label'] }], parts: { item: 'Item' }, source: 'packages/react/src/thing.ts' };
+  assert.deepEqual(extractionComponent(entry, { declarations: 'd.ts' }), { name: 'Thing', part: 'Root', callable: 'list', also: entry.also, parts: entry.parts, declarations: 'd.ts' });
+  assert.deepEqual(DERIVED_API_COMPONENTS.map(({ slug, name, source: _source, ...rest }) => Object.keys(rest).filter((key) => !['part', 'callable', 'also', 'parts'].includes(key))), DERIVED_API_COMPONENTS.map(() => []), 'an entry sets no field the extractor is not given');
+});
+
 test('a part assigned in a wrapper is assigned once, to the returned const, as a component', () => {
   const read = (statics, options = {}) => extract({
     declarations: callableDeclarations,
@@ -1448,6 +1586,68 @@ test('the component and its parts are values only where they are rendered', () =
   }
   for (const statement of ['export type ThingRootType = typeof Thing.Root;', 'createElement(Thing.Root, {});']) {
     assert.equal(extract({ declarations: compoundDeclarations, part: 'Root', source: compound(statement) }).defaults.size, 'md', statement);
+  }
+});
+
+// Select finds the label a child names it by with `child.type === Select.Label`. A strict comparison yields a boolean and hands the
+// part to nothing, so it is a value the rule admits; a loose one can coerce its operand, and every other place a part goes stays refused.
+test('a part is also a value as an operand of === or !==, and no other use is admitted with it', () => {
+  const item = `Thing.Root = Thing;\n  Thing.Item = forwardRef(${callableItem});`;
+  const list = `${item}\n  Thing.List = Thing;`;
+  const prelude = [
+    "import * as React from 'react';",
+    'declare const type: unknown;',
+    'declare function use(...values: unknown[]): void;',
+    'function rewrite(value: unknown) { (value as { render: unknown }).render = replacement; }',
+    '',
+  ].join('\n');
+  const read = (after, { statics = list } = {}) => extract({ declarations: callableDeclarations, source: callableSource({ before: prelude, statics, after }), parts: { item: 'Item' } });
+  const value = /Thing: the source uses Thing as a value, which could hand an alias of the component to code that replaces a part; /u;
+  const compared = [
+    ['a part against ===', 'export const isItem = type === Thing.Item;'],
+    ['a part against !==', 'export const notItem = type !== Thing.Item;'],
+    ['a part on the left', 'export const leftItem = Thing.Item === type;'],
+    ['a part through parentheses and an assertion', 'export const wrapped = ((Thing.Item as unknown)) === type;'],
+    ['the component itself', 'export const isThing = type === Thing;'],
+    ['a part of the alias', 'export const isListItem = type === Thing.List.Item;'],
+    ['the alias', 'export const isList = type === Thing.List;'],
+    ['two parts', 'export const same = Thing.Item === Thing.List;'],
+    ['a comparison that selects between literals', "export const which = type === Thing.Item ? 'item' : 'other';"],
+    ['a comparison passed on', 'use(type === Thing.Item);'],
+    ['a comparison in a function outside the wrapper', 'export function matches(child: { type: unknown }): boolean { return child.type === Thing.Item || child.type === Thing.List; }'],
+    ['a recursive search, as Select\'s', 'export function find(children: unknown[]): boolean { return children.some((child) => React.isValidElement(child) && (child.type === Thing.Item ? true : find([]))); }'],
+  ];
+  for (const [label, after] of compared) assert.deepEqual(read(`${after}\n`).partApis.item.defaults, { tone: 'quiet' }, label);
+  // Everything else still fails: the part handed to a call, kept, or returned by an expression that is not a strict comparison.
+  const refused = [
+    ['the part passed to a function', 'rewrite(Thing.Item);'],
+    ['the alias passed to a function', 'rewrite(Thing.List);'],
+    ['the component passed to a function', 'rewrite(Thing);'],
+    ['a loose ==', 'export const loose = type == Thing.Item;'],
+    ['a loose !=', 'export const looseNot = type != Thing.Item;'],
+    ['the part after a strict comparison in a conditional', 'rewrite(type === Thing.Item ? Thing.Item : null);'],
+    ['the part beside a comparison in an array', 'rewrite([type === Thing.Item, Thing.Item]);'],
+    ['the part returned by ||', 'rewrite(type || Thing.Item);'],
+    ['the part returned by &&', 'rewrite(type && Thing.Item);'],
+    ['the part returned by ??', 'rewrite(type ?? Thing.Item);'],
+    ['the part returned by a comparison that continues with ||', 'rewrite(type === Thing.Item || Thing.Item);'],
+    ['the part concatenated', "use(Thing.Item + '');"],
+    ['the part as a switch case', 'switch (type) { case Thing.Item: use(1); }'],
+    ['the part as a comparison with instanceof', 'use(type instanceof (Thing.Item as never));'],
+    ['the part of a relational comparison', 'use(type < (Thing.Item as never));'],
+    ['the part held after a comparison', 'const held = Thing.Item;\nuse(type === held);'],
+  ];
+  assert.deepEqual(accepted(refused.map(([label, after]) => [label, () => read(`${after}\n`), value])), []);
+  // A write is still a write: comparing a part does not make assigning one harmless.
+  assert.throws(() => read('use(type === Thing.Item);\nThing.Item = replacement as never;\n'), /Thing: the source writes to Thing beyond the wrapper's displayName and part assignments; /u);
+  // A frozen compound is held to the same rule.
+  const compound = (statement) => `import { forwardRef } from 'react';\ndeclare const type: unknown;\ndeclare function use(...values: unknown[]): void;\nconst ThingRoot = forwardRef(${callableRender});\nexport const Thing = Object.freeze({ Root: ThingRoot });\n${statement}\n`;
+  const frozen = /Thing\.Root: the source uses the compound Thing as a value, which could hand an alias of it to code that replaces a part/u;
+  for (const statement of ['export const isRoot = type === Thing.Root;', 'export const notThing = type !== Thing;']) {
+    assert.equal(extract({ declarations: compoundDeclarations, part: 'Root', source: compound(statement) }).defaults.size, 'md', statement);
+  }
+  for (const statement of ['export const loose = type == Thing.Root;', 'use(Thing.Root);', 'use(type || Thing.Root);']) {
+    assert.throws(() => extract({ declarations: compoundDeclarations, part: 'Root', source: compound(statement) }), frozen, statement);
   }
 });
 

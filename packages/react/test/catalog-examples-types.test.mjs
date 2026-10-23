@@ -6,7 +6,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
-import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
+import { DERIVED_API_COMPONENTS, extractionComponent } from '../api-extraction/derived-apis.mjs';
 import { extractApis } from '../api-extraction/extract.mjs';
 import { flatModuleName } from '../src/flat-modules.mjs';
 import { STRICT_CONSUMER_COMPILER_OPTIONS, augmentationReach, consumerTsc, indexSignatureCompatible, lostAugmentationReach, tscDiagnostics, typeScript7Tsc } from './support/declaration-surface.mjs';
@@ -171,6 +171,35 @@ export const handled = <LightboxTrigger itemKey="one" onActivate={onRecord}>Open
       assert.deepEqual(tscDiagnostics({ tsc: compiler, config: exactTsconfig, directory: consumer }), [], `a Lightbox trigger rejects an undefined className or style, or an onActivate handler on Record<string, unknown>, under exactOptionalPropertyTypes (${label})`);
     }
 
+    // A consumer's `declare module 'react' { interface FormHTMLAttributes<T> { pending?: true } }` still constrains
+    // PromptComposer's props where the composer owns the same name, as it did before the move: only the names the
+    // composer replaces (children, dangerouslySetInnerHTML, and defaultValue, whose type it narrows) leave the form's
+    // attributes, so every other owned name keeps its intersection with the form's member and takes the consumer's type.
+    const hostDirectory = join(consumer, 'host-augmentation');
+    await mkdir(hostDirectory, { recursive: true });
+    await writeFile(join(hostDirectory, 'prompt-composer.tsx'), `import { PromptComposer } from '@muxui/react';
+import type { PromptComposerProps } from '@muxui/react';
+
+declare module 'react' {
+  interface FormHTMLAttributes<T> {
+    pending?: true;
+  }
+}
+
+declare const props: PromptComposerProps;
+export const pending: true | undefined = props.pending;
+export const accepted = <PromptComposer pending />;
+// @ts-expect-error The augmentation takes pending as true only, so false is outside the composer's props.
+export const rejected = <PromptComposer pending={false} />;
+`);
+    for (const exactOptionalPropertyTypes of [false, true]) {
+      const hostTsconfig = join(consumer, `tsconfig.host-augmentation-${exactOptionalPropertyTypes}.json`);
+      await writeFile(hostTsconfig, `${JSON.stringify({ extends: './tsconfig.json', compilerOptions: { exactOptionalPropertyTypes }, include: ['host-augmentation/*.tsx'] }, null, 2)}\n`);
+      for (const [label, compiler] of [['TypeScript 6', tsc], ['TypeScript 7', typeScript7Tsc()]]) {
+        assert.deepEqual(tscDiagnostics({ tsc: compiler, config: hostTsconfig, directory: consumer }), [], `a consumer's augmentation of React's FormHTMLAttributes still constrains PromptComposer's pending (${label}, exactOptionalPropertyTypes ${exactOptionalPropertyTypes})`);
+      }
+    }
+
     // A props type a consumer could pass where `T extends Record<string, unknown>` is required before
     // the moves still can, with and without exactOptionalPropertyTypes. An interface fails there, and
     // so does an intersection with one; the record was taken under TypeScript 6, which this runs.
@@ -207,13 +236,9 @@ export const handled = <LightboxTrigger itemKey="one" onActivate={onRecord}>Open
     const packedGenerated = join(packageScope, 'react', 'generated');
     const packedApis = extractApis({
       declarationRoot: packedGenerated,
-      components: DERIVED_API_COMPONENTS.map(({ name, part, callable, parts, source }) => ({
-        name,
-        part,
-        callable,
-        parts,
+      components: DERIVED_API_COMPONENTS.map((component) => extractionComponent(component, {
         // generated/ is flat: a subpath module's index.ts ships under its directory's name.
-        declarations: join(packedGenerated, flatModuleName(source).replace(/\.js$/u, '.d.ts')),
+        declarations: join(packedGenerated, flatModuleName(component.source).replace(/\.js$/u, '.d.ts')),
       })),
     });
     // The typed fields of the root and, recursively, of each part (with the member that renders it).

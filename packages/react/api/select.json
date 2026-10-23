@@ -1,0 +1,785 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/select.ts",
+  "component": "muxui:component:select",
+  "binding": "web.react",
+  "export": "Select",
+  "api": {
+    "props": [
+      "label",
+      "description",
+      "errorMessage",
+      "items",
+      "value",
+      "defaultValue",
+      "open",
+      "defaultOpen",
+      "disabled",
+      "size",
+      "readOnly",
+      "required",
+      "invalid",
+      "name",
+      "placeholder",
+      "children",
+      "selectedContent",
+      "trigger",
+      "placement",
+      "offset",
+      "crossOffset",
+      "shouldFlip",
+      "containerPadding",
+      "modal"
+    ],
+    "events": [
+      "change",
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "disabled": false,
+      "size": "md",
+      "readOnly": false,
+      "required": false,
+      "invalid": false,
+      "placeholder": "Select an option",
+      "placement": "bottom-start",
+      "offset": 8,
+      "crossOffset": 0,
+      "shouldFlip": true,
+      "containerPadding": 12,
+      "modal": true
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "Exclude",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "null"
+                },
+                {
+                  "kind": "undefined"
+                },
+                {
+                  "kind": "boolean"
+                }
+              ]
+            }
+          ]
+        },
+        "required": false,
+        "description": "The visible label, which also names the field. Without one, name the Select with an aria-label, an aria-labelledby, or a nonempty Select.Label among its children; an empty label does not count."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field, which also describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed validation. It never makes the field invalid by itself."
+      },
+      "items": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIItems"
+        },
+        "required": false,
+        "description": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the selected item, when the caller controls it. A named Select submits this id, not the item's `value`."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the item selected at first, when the Select controls itself."
+      },
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the popup is open, when the caller controls it. A disabled Select is closed whatever this says."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the popup starts open, when the Select controls itself. A disabled Select starts closed."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the trigger and every option. A Select.Trigger or Select.Item's own `disabled={false}` cannot re-enable them under a disabled Select."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size. The popup and its options take it too."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Makes the Select read-only: it keeps its value, and `onChange` is not called when an option is chosen."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The form field name. A named Select submits the selected item's id, not the item's `value`."
+      },
+      "placeholder": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text the default trigger shows while nothing is selected."
+      },
+      "children": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Composes the field from Select parts in place of the default trigger, popup, and list; the simple `items`, `selectedContent`, and `trigger` are then not rendered. The `label`, `description`, and `errorMessage` still render."
+      },
+      "selectedContent": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Content the default trigger shows in place of the selected item's text."
+      },
+      "trigger": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactElement",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.DetailedHTMLProps",
+              "typeArguments": [
+                {
+                  "kind": "host",
+                  "name": "React.ButtonHTMLAttributes",
+                  "typeArguments": [
+                    {
+                      "kind": "host",
+                      "name": "HTMLButtonElement"
+                    }
+                  ]
+                },
+                {
+                  "kind": "host",
+                  "name": "HTMLButtonElement"
+                }
+              ]
+            },
+            {
+              "kind": "literal",
+              "value": "button"
+            }
+          ]
+        },
+        "required": false,
+        "description": "A native button element that replaces the default trigger, keeping its ref, attributes, and handlers. A Select that is disabled disables it. Any other element throws a TypeError."
+      },
+      "placement": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIPlacement"
+        },
+        "required": false,
+        "enum": [
+          "top",
+          "bottom",
+          "start",
+          "end",
+          "top-start",
+          "top-end",
+          "bottom-start",
+          "bottom-end",
+          "start-top",
+          "start-bottom",
+          "end-top",
+          "end-bottom"
+        ],
+        "description": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. A Select.Popup's own placement wins over this."
+      },
+      "offset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. A Select.Popup's own offset wins over this."
+      },
+      "crossOffset": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The shift in pixels along the side the popup is placed against. Must be finite. A Select.Popup's own crossOffset wins over this."
+      },
+      "shouldFlip": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the popup moves to the opposite side when the placed side has no room. A Select.Popup's own shouldFlip wins over this."
+      },
+      "containerPadding": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. A Select.Popup's own containerPadding wins over this."
+      },
+      "modal": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. A Select.Popup's own modal wins over this."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the id of the chosen item, or with no value when the selection clears. It is not called while the Select is disabled or read-only."
+      },
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the next open state when the popup opens or closes. It is not called for a request to open a disabled Select."
+      }
+    },
+    "types": {
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      },
+      "MuxUIItems": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        }
+      },
+      "MuxUIPlacement": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "top"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "start"
+            },
+            {
+              "kind": "literal",
+              "value": "end"
+            },
+            {
+              "kind": "literal",
+              "value": "top-start"
+            },
+            {
+              "kind": "literal",
+              "value": "top-end"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-start"
+            },
+            {
+              "kind": "literal",
+              "value": "bottom-end"
+            },
+            {
+              "kind": "literal",
+              "value": "start-top"
+            },
+            {
+              "kind": "literal",
+              "value": "start-bottom"
+            },
+            {
+              "kind": "literal",
+              "value": "end-top"
+            },
+            {
+              "kind": "literal",
+              "value": "end-bottom"
+            }
+          ]
+        },
+        "description": "How a floating overlay is placed beside its trigger."
+      }
+    },
+    "partApis": {
+      "trigger": {
+        "member": "Trigger",
+        "props": [
+          "disabled"
+        ],
+        "events": [],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "boolean"
+                },
+                {
+                  "kind": "undefined"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Disables the trigger: it can be neither focused nor activated. A disabled Select disables it whatever this says."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "popup": {
+        "member": "Popup",
+        "props": [
+          "placement",
+          "offset",
+          "crossOffset",
+          "shouldFlip",
+          "containerPadding",
+          "modal"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "placement": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUIPlacement"
+            },
+            "required": false,
+            "enum": [
+              "top",
+              "bottom",
+              "start",
+              "end",
+              "top-start",
+              "top-end",
+              "bottom-start",
+              "bottom-end",
+              "start-top",
+              "start-bottom",
+              "end-top",
+              "end-bottom"
+            ],
+            "description": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, the Select's placement applies."
+          },
+          "offset": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. Without one, the Select's offset applies."
+          },
+          "crossOffset": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "The shift in pixels along the side the popup is placed against. Must be finite. Without one, the Select's crossOffset applies."
+          },
+          "shouldFlip": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the popup moves to the opposite side when the placed side has no room. Without one, the Select's shouldFlip applies."
+          },
+          "containerPadding": {
+            "type": {
+              "kind": "number"
+            },
+            "required": false,
+            "description": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative. Without one, the Select's containerPadding applies."
+          },
+          "modal": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible. Without one, the Select's modal applies."
+          }
+        },
+        "eventDetails": {},
+        "types": {
+          "MuxUIPlacement": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "top"
+                },
+                {
+                  "kind": "literal",
+                  "value": "bottom"
+                },
+                {
+                  "kind": "literal",
+                  "value": "start"
+                },
+                {
+                  "kind": "literal",
+                  "value": "end"
+                },
+                {
+                  "kind": "literal",
+                  "value": "top-start"
+                },
+                {
+                  "kind": "literal",
+                  "value": "top-end"
+                },
+                {
+                  "kind": "literal",
+                  "value": "bottom-start"
+                },
+                {
+                  "kind": "literal",
+                  "value": "bottom-end"
+                },
+                {
+                  "kind": "literal",
+                  "value": "start-top"
+                },
+                {
+                  "kind": "literal",
+                  "value": "start-bottom"
+                },
+                {
+                  "kind": "literal",
+                  "value": "end-top"
+                },
+                {
+                  "kind": "literal",
+                  "value": "end-bottom"
+                }
+              ]
+            },
+            "description": "How a floating overlay is placed beside its trigger."
+          }
+        }
+      },
+      "list": {
+        "member": "List",
+        "props": [
+          "items"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "items": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUIItems"
+            },
+            "required": false,
+            "description": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+          }
+        },
+        "eventDetails": {},
+        "types": {
+          "MuxUICollectionItem": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "host",
+                    "name": "React.ReactNode"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false,
+                  "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+                },
+                {
+                  "name": "textValue",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "disabled",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ],
+              "additional": "unknown"
+            },
+            "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+          },
+          "MuxUIItems": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUICollectionItem"
+                  },
+                  {
+                    "kind": "string"
+                  }
+                ]
+              },
+              "readonly": false
+            }
+          }
+        }
+      },
+      "option": {
+        "member": "Item",
+        "props": [
+          "id",
+          "textValue",
+          "disabled"
+        ],
+        "events": [],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "id": {
+            "type": {
+              "kind": "string"
+            },
+            "required": true,
+            "description": "The stable string id the selection reports. A named Select submits it."
+          },
+          "textValue": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+          },
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Disables the item. A disabled Select disables every item whatever this says."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

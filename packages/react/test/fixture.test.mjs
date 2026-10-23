@@ -232,7 +232,11 @@ const markupValues = {
   size: (doc) => doc.querySelector('[data-size]')?.getAttribute('data-size'),
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
-  defaultValue: (doc) => doc.querySelector('input')?.getAttribute('value'),
+  // A text field shows its starting text as its input's value; a composer, in its textarea.
+  defaultValue: (doc) => {
+    const input = doc.querySelector('input');
+    return input === null ? doc.querySelector('textarea')?.textContent : input.getAttribute('value');
+  },
   // A list marks each option or row with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
   selectionMode: (doc) => {
     const option = doc.querySelector('[role="option"], [role="row"]');
@@ -258,6 +262,10 @@ const minimalRenders = {
   Menu: () => menuRoot(),
   GridList: () => h(generated.GridList, { 'aria-label': 'Cards', items: ['One', 'Two'] }),
   Virtualizer: () => h(generated.Virtualizer, { 'aria-label': 'Results', items: ['One', 'Two'] }),
+  // Select's block is the callable's, which is also Select.Root's.
+  Select: () => selectField(),
+  ComboBox: () => h(generated.ComboBox, { label: 'City', items: ['Melbourne'] }),
+  PromptComposer: () => composer(),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -272,6 +280,11 @@ const partRenders = {
   'Menu.popup': { render: () => menuRoot() },
   'Menu.submenu': { render: () => menuRoot() },
   'GridList.item': { scope: '[role="row"]', render: () => h(generated.GridList, { 'aria-label': 'Cards' }, h(generated.GridList.Item, { id: 'one' }, 'One')) },
+  'Select.trigger': { scope: 'button', render: () => selectRoot() },
+  // The popup and its options render in a portal once open, so a mounted observer reads the option, and the popup's geometry is what it sends React Aria.
+  'Select.popup': { render: () => selectRoot() },
+  'Select.list': { render: () => selectRoot() },
+  'Select.option': { render: () => selectRoot() },
 };
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
 const stackVirtualizer = (props) => h(generated.Virtualizer, { 'aria-label': 'Results', items: ['One', 'Two'], ...props });
@@ -291,6 +304,21 @@ async function withMounted(element, run) {
 /** Menu.Root with a trigger and a popup, closed unless `rootProps` opens it; `popupProps` go to the popup and `items` to its list. */
 function menuRoot(rootProps = null, popupProps = null, ...items) {
   return h(generated.Menu.Root, rootProps, h(generated.Menu.Trigger, null, 'Actions'), h(generated.Menu.Popup, popupProps, h(generated.Menu.List, { 'aria-label': 'Actions' }, ...items)));
+}
+
+/** The simple Select with a label and two items, closed unless `props` open it. */
+function selectField(props = null) {
+  return h(generated.Select, { label: 'Fruit', items: ['One', 'Two'], ...props });
+}
+
+/** A PromptComposer, with `props` over none. */
+function composer(props = null) {
+  return h(generated.PromptComposer, props);
+}
+
+/** Select.Root composed from its parts: a trigger, and a popup with `popupProps` holding a list, closed unless `rootProps` opens it. */
+function selectRoot(rootProps = null, popupProps = null, ...items) {
+  return h(generated.Select.Root, { label: 'Fruit', ...rootProps }, h(generated.Select.Trigger, null, h(generated.Select.Value, null)), h(generated.Select.Popup, popupProps, h(generated.Select.List, null, ...items)));
 }
 
 /**
@@ -314,6 +342,9 @@ async function sentUpstream(render, match) {
   return found[0];
 }
 const popupSent = (props) => sentUpstream(() => renderToString(menuRoot(null, props)), (sent) => 'isNonModal' in sent);
+// A Select's popup takes the geometry its root sets, and its own where it sets one, so the root's value is read where the popup sends it.
+const selectPopupSent = (rootProps) => sentUpstream(() => renderToString(selectRoot(rootProps)), (sent) => 'isNonModal' in sent);
+const selectPlaceholder = (props) => new JSDOM(renderToString(selectField(props))).window.document.querySelector('.muxui-select-value')?.textContent;
 
 // Defaults only behaviour shows. Each observer renders the component (optionally
 // with the prop overridden) and returns what the renderer does.
@@ -371,6 +402,29 @@ const behaviourObservers = {
       (container) => container.querySelectorAll('[role="option"]').length - 6),
     // A disabled Virtualizer disables its rows. The server markup mounts none, so a mounted row carries the flag.
     disabled: (props) => withMeasuredViewport(stackVirtualizer(props), (container) => container.querySelector('[role="option"]')?.getAttribute('aria-disabled') === 'true'),
+  },
+  // The text the default trigger shows with nothing selected, and the geometry the popup falls back to, which reaches React Aria only through the popup.
+  Select: {
+    placeholder: (props) => selectPlaceholder(props),
+    placement: async (props) => (await selectPopupSent(props)).placement.replace(' ', '-'),
+    offset: async (props) => (await selectPopupSent(props)).offset,
+    crossOffset: async (props) => (await selectPopupSent(props)).crossOffset,
+    shouldFlip: async (props) => (await selectPopupSent(props)).shouldFlip,
+    containerPadding: async (props) => (await selectPopupSent(props)).containerPadding,
+    // The popup is modal unless React Aria is told it is not.
+    modal: async (props) => !(await selectPopupSent(props)).isNonModal,
+  },
+  // An option's disabled flag shows on the option, which renders in the open popup's portal, so it is read from a mounted Select.
+  'Select.option': {
+    disabled: (props) => withMounted(selectRoot({ defaultOpen: true }, null, h(generated.Select.Item, { id: 'one', ...props }, 'One')), () => {
+      const option = document.querySelector('[role="option"]');
+      return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
+    }),
+  },
+  // The textarea's accessible name, when inputProps gives none, and whether the attach picker admits several files, which the hidden file input shows.
+  PromptComposer: {
+    inputLabel: (props) => new JSDOM(renderToString(composer(props))).window.document.querySelector('textarea').getAttribute('aria-label'),
+    multiple: (props) => new JSDOM(renderToString(composer({ onFilesSelected: () => {}, ...props }))).window.document.querySelector('input[type="file"]').hasAttribute('multiple'),
   },
   Tabs: {
     // An arrow key either selects the next tab at once (automatic) or only moves focus (manual).
@@ -534,6 +588,55 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Menu()), { ...menu.defaults, defaultOpen: true }), ['defaultOpen: catalog true, rendered false']);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Menu()), { ...menu.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
   assert.deepEqual(await partProblems(types, 'Menu', 'popup', { ...menu.partApis.popup, props: [...menu.partApis.popup.props, 'missingProp'] }), ['missingProp: not declared']);
+  // Select's block is the callable's, which is Select.Root's too. Its placeholder shows in the default trigger, its geometry and modal
+  // setting reach React Aria only through the popup, and the trigger and option flags show on their own elements. A catalog value the
+  // renderer does not run fails, whichever of the root and its parts states it.
+  const select = apis.Select;
+  const changedSelect = (part, defaults) => partProblems(types, 'Select', part, { ...select.partApis[part], defaults: { ...select.partApis[part].defaults, ...defaults } });
+  assert.deepEqual(Object.keys(select.partApis), ['trigger', 'popup', 'list', 'option']);
+  for (const part of Object.keys(select.partApis)) assert.deepEqual(await partProblems(types, 'Select', part, select.partApis[part]), [], `Select.${part}`);
+  assert.deepEqual(Object.keys(select.defaults), ['defaultOpen', 'disabled', 'size', 'readOnly', 'required', 'invalid', 'placeholder', 'placement', 'offset', 'crossOffset', 'shouldFlip', 'containerPadding', 'modal']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, placeholder: 'Pick one' }), ['placeholder: catalog "Pick one", behaves "Select an option"']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, placement: 'end-top' }), ['placement: catalog "end-top", behaves "bottom-start"']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, offset: 9 }), ['offset: catalog 9, behaves 8']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, crossOffset: 1 }), ['crossOffset: catalog 1, behaves 0']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, shouldFlip: false }), ['shouldFlip: catalog false, behaves true']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, containerPadding: 13 }), ['containerPadding: catalog 13, behaves 12']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, modal: false }), ['modal: catalog false, behaves true']);
+  for (const [key, value, rendered] of [['defaultOpen', true, false], ['disabled', true, false], ['readOnly', true, false], ['required', true, false], ['invalid', true, false]]) {
+    assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Select()), { ...select.defaults, [key]: value }), [`${key}: catalog ${value}, rendered ${rendered}`], key);
+  }
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Select()), { ...select.defaults, size: 'lg' }), ['size: catalog "lg", rendered "md"']);
+  assert.deepEqual(await changedSelect('trigger', { disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(await changedSelect('option', { disabled: true }), ['disabled: catalog true, rendered false', 'disabled: catalog true, behaves false']);
+  // The popup and the list follow the root's geometry and items, so neither can state a default of its own: it would have no observer.
+  assert.deepEqual([select.partApis.popup.defaults, select.partApis.list.defaults], [{}, {}]);
+  assert.deepEqual(await changedSelect('popup', { offset: 5 }), ['offset: no observer']);
+  assert.deepEqual(await partProblems(types, 'Select', 'popup', { ...select.partApis.popup, props: [...select.partApis.popup.props, 'missingProp'] }), ['missingProp: not declared']);
+  // ComboBox has no part of its own, and every default it states shows in the markup: its flags on the input and group, its size on the root.
+  const combo = apis.ComboBox;
+  assert.deepEqual(Object.keys(combo.defaults), ['disabled', 'size', 'readOnly', 'required', 'invalid']);
+  assert.equal(combo.partApis, undefined);
+  for (const key of ['disabled', 'readOnly', 'required', 'invalid']) {
+    assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ComboBox()), { ...combo.defaults, [key]: true }), [`${key}: catalog true, rendered false`], key);
+  }
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ComboBox()), { ...combo.defaults, size: 'sm' }), ['size: catalog "sm", rendered "md"']);
+  assert.deepEqual(undeclaredProps(types, 'ComboBox', [...combo.props, 'missingProp']), ['missingProp']);
+  // PromptComposer is one form with no part of its own. Its flags show on the form and textarea, its starting text in the textarea, its
+  // textarea name in the label the textarea carries, and the attach picker's multiple on the hidden file input, so each catalog value is
+  // compared with what the composer renders.
+  const composerApi = apis.PromptComposer;
+  assert.deepEqual(Object.keys(composerApi.defaults), ['inputLabel', 'defaultValue', 'pending', 'disabled', 'multiple']);
+  assert.equal(composerApi.partApis, undefined);
+  assert.equal(markupValues.defaultValue(new JSDOM(renderToString(composer({ defaultValue: 'Draft' }))).window.document), 'Draft', 'the starting text shows in the textarea');
+  assert.deepEqual(defaultMismatches(renderToString(composer()), { ...composerApi.defaults, defaultValue: 'Draft' }), ['defaultValue: catalog "Draft", rendered ""']);
+  for (const key of ['pending', 'disabled']) {
+    assert.deepEqual(defaultMismatches(renderToString(composer()), { ...composerApi.defaults, [key]: true }), [`${key}: catalog true, rendered false`], key);
+  }
+  assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, inputLabel: 'Prompt' }), ['inputLabel: catalog "Prompt", behaves "Message"']);
+  assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, multiple: false }), ['multiple: catalog false, behaves true']);
+  assert.deepEqual(unobservedDefaults('PromptComposer', composerApi.defaults), []);
+  assert.deepEqual(undeclaredProps(types, 'PromptComposer', [...composerApi.props, 'missingProp']), ['missingProp']);
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
@@ -578,7 +681,9 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
   const states = {
     showTextWhileLoading: [false, true], disallowEmptySelection: [false, true], keyboardActivation: ['automatic', 'manual'],
     shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
-    height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3], disabled: [false, true],
+    height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
+    placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
+    inputLabel: ['Message', 'Prompt'], multiple: [true, false],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {
@@ -589,6 +694,36 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
         assert.equal((await behaviourMismatches(name, { [key]: value })).length, value === rendered ? 0 : 1, `${name}.${key}=${value} is compared with the rendered ${rendered}`);
       }
     }
+  }
+});
+
+// The popup's own fallback is no catalog default: a Select's popup reads its modal setting from the root's context, so the observers above,
+// which always supply a root, never reach it. Outside a Select there is no context, and a popup is modal unless it says otherwise.
+test('a Select.Popup with no Select around it is modal unless it says otherwise', async () => {
+  const isNonModal = async (props) => (await sentUpstream(() => renderToString(h(generated.Select.Popup, props, h(generated.Select.List, { items: ['One'] }))), (sent) => 'isNonModal' in sent)).isNonModal;
+  assert.equal(await isNonModal(null), false);
+  assert.equal(await isNonModal({ modal: true }), false);
+  assert.equal(await isNonModal({ modal: false }), true);
+  // Inside a Select that says it is not modal, the popup follows the root, so the fallback is for the missing context only.
+  assert.equal((await selectPopupSent({ modal: false })).isNonModal, true);
+});
+
+// An option's disabled flag is its own or, when it sets none, its Select's; a Select that turns disabled disables its options with it.
+// The popup closes then, so the flag is read where the option sends it to React Aria, not from the markup.
+test('a Select.Item takes its Select\'s disabled state and follows it across a rerender', async () => {
+  const tree = (rootProps, itemProps) => selectRoot(rootProps, null, h(generated.Select.Item, { id: 'one', ...itemProps }, 'One'));
+  const env = createDom('<div id="root"></div>', { layoutStubs: true });
+  const root = createRoot(document.querySelector('#root'));
+  const sentDisabled = async (element) => (await sentUpstream(() => act(async () => root.render(element)), (sent) => sent.id === 'one' && 'isDisabled' in sent)).isDisabled;
+  try {
+    assert.equal(await sentDisabled(tree(null, { disabled: false })), false);
+    assert.equal(await sentDisabled(tree({ disabled: true }, { disabled: false })), true);
+    assert.equal(await sentDisabled(tree(null, { disabled: false })), false);
+    // The option's own flag disables it in an enabled Select.
+    assert.equal(await sentDisabled(tree(null, { disabled: true })), true);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
   }
 });
 
