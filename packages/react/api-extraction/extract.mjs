@@ -73,7 +73,8 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * ReactElement<DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>,
  * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
  * PromptComposer's inputProps declares, Set<string> for the selected item ids of TagGroup, and
- * Record<string, React.ReactNode> for the cell values of a Table row.
+ * Record<string, React.ReactNode> for the cell values of a Table row, and AbortSignal with Promise<unknown>
+ * for the signal and the result of TextEditor's selection request.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -114,6 +115,9 @@ export const HOST_ALLOWLIST = Object.freeze([
   hostApplication('Set', { kind: 'string' }),
   // Table's row values: the cell content of a row, by column id. A string-keyed Record keeps keyof string, which an index signature widens to string | number.
   hostApplication('Record', { kind: 'string' }, { kind: 'host', name: 'React.ReactNode' }),
+  // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns, whose result the editor ignores. Promise<unknown> is read only as a callback's return.
+  'AbortSignal',
+  hostApplication('Promise', { kind: 'unknown' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.

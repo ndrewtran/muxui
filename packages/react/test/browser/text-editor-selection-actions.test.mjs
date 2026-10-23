@@ -20,7 +20,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { TextEditor } from '/src/text-editor/index.mjs';
+import { TextEditor } from '/src/text-editor/index.ts';
 
 const h = React.createElement;
 const { hold = false, spacer = 0, tail = 0, scope = '' } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
@@ -188,7 +188,7 @@ function measureColors({ checks }) {
 for (const engine of browserEngines()) {
   test(`TextEditor selection actions in ${engine}`, { timeout: 600_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/text-editor/index.mjs'],
+      entries: ['src/text-editor/index.ts'],
       pages: { '/selection-actions.html': page },
       modules: { '/selection-actions-entry.mjs': entry },
     });

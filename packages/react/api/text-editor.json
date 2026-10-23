@@ -1,0 +1,1467 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/text-editor/index.ts",
+  "component": "muxui:component:text-editor",
+  "binding": "web.react",
+  "export": "TextEditor",
+  "api": {
+    "props": [
+      "value",
+      "defaultValue",
+      "label",
+      "description",
+      "errorMessage",
+      "disabled",
+      "readOnly",
+      "required",
+      "invalid",
+      "placeholder",
+      "limit",
+      "toolbar",
+      "floating",
+      "bubbleMenu",
+      "selectionActions",
+      "selectionInstruction"
+    ],
+    "events": [
+      "change",
+      "linkRequest",
+      "imageRequest",
+      "colorRequest",
+      "generate",
+      "selectionRequest"
+    ],
+    "defaults": {
+      "disabled": false,
+      "readOnly": false,
+      "required": false,
+      "invalid": false,
+      "placeholder": "",
+      "toolbar": "simple",
+      "floating": false,
+      "bubbleMenu": false,
+      "selectionInstruction": true
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "reference",
+          "name": "TextEditorDocument"
+        },
+        "required": false,
+        "description": "The document, when the application controls it. The editor normalizes it, and an edit reports through `onChange`."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "TextEditorDocument"
+        },
+        "required": false,
+        "description": "The first document, when the editor manages its own. It is normalized: a value that is not a document, or has nothing left after normalizing, becomes one empty paragraph."
+      },
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The visible label, which names the editable content."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Help text below the content, which describes it."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The error text below the content. Setting it also marks the content invalid and names the text as its error message."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the editor and its toolbar."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Keeps the content readable but not editable."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the content required."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the content invalid."
+      },
+      "placeholder": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text shown while the document is empty."
+      },
+      "limit": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The most characters of plain text the document may hold; a fraction is rounded down, and a negative, infinite, or omitted limit means no limit. An edit past it is refused and not reported."
+      },
+      "toolbar": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": false
+            },
+            {
+              "kind": "literal",
+              "value": "simple"
+            },
+            {
+              "kind": "literal",
+              "value": "advanced"
+            },
+            {
+              "kind": "literal",
+              "value": "floating"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          false,
+          "simple",
+          "advanced",
+          "floating"
+        ],
+        "description": "`simple` or `advanced` shows that toolbar, `floating` shows the simple one as a floating bar, and `false` shows none."
+      },
+      "floating": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Floats the toolbar over the content."
+      },
+      "bubbleMenu": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows a formatting menu while text is selected."
+      },
+      "selectionActions": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "TextEditorSelectionAction"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "Actions in the selection bar. Enabled with `onSelectionRequest`."
+      },
+      "selectionInstruction": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the \"Describe edits\" field in the selection bar. Defaults to true."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "TextEditorDocument"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the normalized document after an edit the editor accepts. It does not run at mount, when `disabled` or `readOnly` changes, or when `value` changes from outside."
+      },
+      "linkRequest": {
+        "prop": "onLinkRequest",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "actions",
+              "type": {
+                "kind": "reference",
+                "name": "TextEditorActionCallbacks"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called instead of the link prompt, with the actions that apply the address."
+      },
+      "imageRequest": {
+        "prop": "onImageRequest",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "actions",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "insertImage",
+                    "type": {
+                      "kind": "function",
+                      "parameters": [
+                        {
+                          "name": "src",
+                          "type": {
+                            "kind": "string"
+                          },
+                          "required": true
+                        },
+                        {
+                          "name": "alt",
+                          "type": {
+                            "kind": "string"
+                          },
+                          "required": false
+                        }
+                      ],
+                      "returns": {
+                        "kind": "boolean"
+                      }
+                    },
+                    "required": true,
+                    "readonly": false,
+                    "method": true
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called instead of the image prompt, with the action that inserts the image."
+      },
+      "colorRequest": {
+        "prop": "onColorRequest",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "actions",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "setColor",
+                    "type": {
+                      "kind": "function",
+                      "parameters": [
+                        {
+                          "name": "value",
+                          "type": {
+                            "kind": "string"
+                          },
+                          "required": true
+                        }
+                      ],
+                      "returns": {
+                        "kind": "boolean"
+                      }
+                    },
+                    "required": true,
+                    "readonly": false,
+                    "method": true
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called instead of applying a picked color, with the action that applies it."
+      },
+      "generate": {
+        "prop": "onGenerate",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called by the Generate with AI action. Returning `false` reports that nothing happened."
+      },
+      "selectionRequest": {
+        "prop": "onSelectionRequest",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "request",
+              "type": {
+                "kind": "reference",
+                "name": "TextEditorSelectionRequest"
+              },
+              "required": true
+            },
+            {
+              "name": "actions",
+              "type": {
+                "kind": "reference",
+                "name": "TextEditorSelectionActions"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "void"
+              },
+              {
+                "kind": "host",
+                "name": "Promise",
+                "typeArguments": [
+                  {
+                    "kind": "unknown"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "required": false,
+        "description": "Called when an action or instruction is sent. A returned promise shows the pending state; a rejection shows\na failure message with Try again and Dismiss."
+      }
+    },
+    "types": {
+      "TextEditorActionCallbacks": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "setLink",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "href",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "boolean"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "method": true
+            },
+            {
+              "name": "unsetLink",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "boolean"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "method": true
+            }
+          ]
+        }
+      },
+      "TextEditorAlignment": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "left"
+            },
+            {
+              "kind": "literal",
+              "value": "center"
+            },
+            {
+              "kind": "literal",
+              "value": "right"
+            },
+            {
+              "kind": "literal",
+              "value": "justify"
+            }
+          ]
+        }
+      },
+      "TextEditorBlockNode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "TextEditorParagraphNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorHeadingNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorListNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorBlockquoteNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorCodeBlockNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorImageNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorHorizontalRuleNode"
+            }
+          ]
+        }
+      },
+      "TextEditorBlockquoteNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "blockquote"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "tuple",
+                "elements": [
+                  {
+                    "kind": "reference",
+                    "name": "TextEditorBlockNode"
+                  }
+                ],
+                "rest": {
+                  "kind": "reference",
+                  "name": "TextEditorBlockNode"
+                }
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorBulletListNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "bulletList"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "tuple",
+                "elements": [
+                  {
+                    "kind": "reference",
+                    "name": "TextEditorListItemNode"
+                  }
+                ],
+                "rest": {
+                  "kind": "reference",
+                  "name": "TextEditorListItemNode"
+                }
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorCodeBlockNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "codeBlock"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "attrs",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "language",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": false,
+                    "readonly": false
+                  }
+                ]
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "TextEditorPlainTextNode"
+                },
+                "readonly": false
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorDocument": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "doc"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "tuple",
+                "elements": [
+                  {
+                    "kind": "reference",
+                    "name": "TextEditorBlockNode"
+                  }
+                ],
+                "rest": {
+                  "kind": "reference",
+                  "name": "TextEditorBlockNode"
+                }
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorFontFamily": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "Inter"
+            },
+            {
+              "kind": "literal",
+              "value": "Comic Sans MS, Comic Sans"
+            },
+            {
+              "kind": "literal",
+              "value": "serif"
+            },
+            {
+              "kind": "literal",
+              "value": "monospace"
+            },
+            {
+              "kind": "literal",
+              "value": "cursive"
+            }
+          ]
+        }
+      },
+      "TextEditorFontSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "12px"
+            },
+            {
+              "kind": "literal",
+              "value": "14px"
+            },
+            {
+              "kind": "literal",
+              "value": "16px"
+            },
+            {
+              "kind": "literal",
+              "value": "18px"
+            },
+            {
+              "kind": "literal",
+              "value": "20px"
+            },
+            {
+              "kind": "literal",
+              "value": "24px"
+            },
+            {
+              "kind": "literal",
+              "value": "28px"
+            },
+            {
+              "kind": "literal",
+              "value": "32px"
+            }
+          ]
+        }
+      },
+      "TextEditorHardBreakNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "hardBreak"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorHeadingNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "heading"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "attrs",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "level",
+                    "type": {
+                      "kind": "union",
+                      "members": [
+                        {
+                          "kind": "literal",
+                          "value": 1
+                        },
+                        {
+                          "kind": "literal",
+                          "value": 2
+                        },
+                        {
+                          "kind": "literal",
+                          "value": 3
+                        },
+                        {
+                          "kind": "literal",
+                          "value": 4
+                        },
+                        {
+                          "kind": "literal",
+                          "value": 5
+                        },
+                        {
+                          "kind": "literal",
+                          "value": 6
+                        }
+                      ]
+                    },
+                    "required": true,
+                    "readonly": false
+                  },
+                  {
+                    "name": "textAlign",
+                    "type": {
+                      "kind": "reference",
+                      "name": "TextEditorAlignment"
+                    },
+                    "required": false,
+                    "readonly": false
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "TextEditorInlineNode"
+                },
+                "readonly": false
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorHorizontalRuleNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "horizontalRule"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorImageNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "image"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "attrs",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "src",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": true,
+                    "readonly": false
+                  },
+                  {
+                    "name": "alt",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": false,
+                    "readonly": false
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorInlineNode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "TextEditorTextNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorHardBreakNode"
+            }
+          ]
+        }
+      },
+      "TextEditorListItemNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "listItem"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "tuple",
+                "elements": [
+                  {
+                    "kind": "reference",
+                    "name": "TextEditorParagraphNode"
+                  }
+                ],
+                "rest": {
+                  "kind": "reference",
+                  "name": "TextEditorBlockNode"
+                }
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorListNode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "TextEditorBulletListNode"
+            },
+            {
+              "kind": "reference",
+              "name": "TextEditorOrderedListNode"
+            }
+          ]
+        }
+      },
+      "TextEditorMark": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "literal",
+                        "value": "bold"
+                      },
+                      {
+                        "kind": "literal",
+                        "value": "italic"
+                      },
+                      {
+                        "kind": "literal",
+                        "value": "underline"
+                      },
+                      {
+                        "kind": "literal",
+                        "value": "strike"
+                      },
+                      {
+                        "kind": "literal",
+                        "value": "code"
+                      }
+                    ]
+                  },
+                  "required": true,
+                  "readonly": false
+                }
+              ]
+            },
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "link"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "attrs",
+                  "type": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": "href",
+                        "type": {
+                          "kind": "string"
+                        },
+                        "required": true,
+                        "readonly": false
+                      }
+                    ]
+                  },
+                  "required": true,
+                  "readonly": false
+                }
+              ]
+            },
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "textStyle"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "attrs",
+                  "type": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": "color",
+                        "type": {
+                          "kind": "string"
+                        },
+                        "required": false,
+                        "readonly": false
+                      },
+                      {
+                        "name": "fontFamily",
+                        "type": {
+                          "kind": "reference",
+                          "name": "TextEditorFontFamily"
+                        },
+                        "required": false,
+                        "readonly": false
+                      },
+                      {
+                        "name": "fontSize",
+                        "type": {
+                          "kind": "reference",
+                          "name": "TextEditorFontSize"
+                        },
+                        "required": false,
+                        "readonly": false
+                      }
+                    ]
+                  },
+                  "required": true,
+                  "readonly": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "TextEditorOrderedListNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "orderedList"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "attrs",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "start",
+                    "type": {
+                      "kind": "number"
+                    },
+                    "required": false,
+                    "readonly": false
+                  },
+                  {
+                    "name": "type",
+                    "type": {
+                      "kind": "reference",
+                      "name": "TextEditorOrderedListType"
+                    },
+                    "required": false,
+                    "readonly": false
+                  }
+                ]
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "tuple",
+                "elements": [
+                  {
+                    "kind": "reference",
+                    "name": "TextEditorListItemNode"
+                  }
+                ],
+                "rest": {
+                  "kind": "reference",
+                  "name": "TextEditorListItemNode"
+                }
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorOrderedListType": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "1"
+            },
+            {
+              "kind": "literal",
+              "value": "a"
+            },
+            {
+              "kind": "literal",
+              "value": "A"
+            },
+            {
+              "kind": "literal",
+              "value": "i"
+            },
+            {
+              "kind": "literal",
+              "value": "I"
+            }
+          ]
+        }
+      },
+      "TextEditorParagraphNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "paragraph"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "attrs",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "textAlign",
+                    "type": {
+                      "kind": "reference",
+                      "name": "TextEditorAlignment"
+                    },
+                    "required": false,
+                    "readonly": false
+                  }
+                ]
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "TextEditorInlineNode"
+                },
+                "readonly": false
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorPlainTextNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "text"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "text",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      },
+      "TextEditorSelectionAction": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "icon",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "pendingLabel",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Text shown while the request runs. Defaults to \"Editing…\"."
+            },
+            {
+              "name": "overflow",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Shown only after \"More actions\" expands the bar."
+            }
+          ]
+        },
+        "description": "An action in the bar under a text selection. The caller supplies any icon."
+      },
+      "TextEditorSelectionActions": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "selection",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "text",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": true,
+                    "readonly": true
+                  },
+                  {
+                    "name": "document",
+                    "type": {
+                      "kind": "reference",
+                      "name": "TextEditorDocument"
+                    },
+                    "required": true,
+                    "readonly": true
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true,
+              "description": "The selected text and content when the request started."
+            },
+            {
+              "name": "signal",
+              "type": {
+                "kind": "host",
+                "name": "AbortSignal"
+              },
+              "required": true,
+              "readonly": true,
+              "description": "Aborts on Escape or Cancel, an edit or formatting change of the selected range, a new request, `close()`, and unmount."
+            },
+            {
+              "name": "replace",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "content",
+                    "type": {
+                      "kind": "union",
+                      "members": [
+                        {
+                          "kind": "string"
+                        },
+                        {
+                          "kind": "reference",
+                          "name": "TextEditorDocument"
+                        }
+                      ]
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "boolean"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "method": true,
+              "description": "Replaces the selection and starts the Keep, Discard, and Try again review.\nA string is plain text that takes the formatting at the start of the selection and turns line breaks into\nhard breaks; a document keeps its own formatting. Only the first successful edit of a request applies.\nReturns false when the request is stale or aborted, the editor is disabled or read-only, `limit` would be\nexceeded, or the content is invalid."
+            },
+            {
+              "name": "insertAfter",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "content",
+                    "type": {
+                      "kind": "union",
+                      "members": [
+                        {
+                          "kind": "string"
+                        },
+                        {
+                          "kind": "reference",
+                          "name": "TextEditorDocument"
+                        }
+                      ]
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "boolean"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "method": true,
+              "description": "Like `replace`, but leaves the selection in place. A string is inserted right after the selection with the\nformatting at the start of the selection; a document is inserted as blocks after the block that holds the end\nof the selection."
+            },
+            {
+              "name": "close",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "void"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "method": true,
+              "description": "Ends the request and hides the bar until the selection changes, keeping any applied edit."
+            }
+          ]
+        },
+        "description": "The controller for one selection request. Edits apply to the selected range\nas it was when the request started, and every method returns without effect\nonce the request is stale."
+      },
+      "TextEditorSelectionRequest": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "action"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": true,
+                  "readonly": false
+                }
+              ]
+            },
+            {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "instruction"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "text",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": true,
+                  "readonly": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "TextEditorTextNode": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "literal",
+                "value": "text"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "text",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "marks",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "reference",
+                  "name": "TextEditorMark"
+                },
+                "readonly": false
+              },
+              "required": false,
+              "readonly": false
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -101,6 +101,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'table', name: 'Table', source: 'packages/react/src/table.ts' },
   // Tree is one component; its items and their nested children are rendered, not exported, and it takes no children of its own.
   { slug: 'tree', name: 'Tree', source: 'packages/react/src/tree.ts' },
+  // TextEditor's handle, commands and document types are declared by its module; only its props and events are derived here.
+  { slug: 'text-editor', name: 'TextEditor', source: 'packages/react/src/text-editor/index.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

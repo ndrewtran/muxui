@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { closeHistory, undoDepth } from '@tiptap/pm/history';
 import { JSDOM } from 'jsdom';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.ts';
-import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
+import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.ts';
 import { Resizable, ResizableHandle, ResizablePanel } from '../src/supplemental/resizable.ts';
 import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxTrigger } from '../src/supplemental/lightbox.ts';
 import { installDom } from './support/dom.mjs';

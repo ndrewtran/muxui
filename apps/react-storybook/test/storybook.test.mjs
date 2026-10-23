@@ -13,7 +13,7 @@ import { compilePureTokenGraph } from '@muxui/tokens/core';
 import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
 import { Menu, ToastProvider } from '@muxui/react';
-import { isTextEditorDocument } from '@muxui/react/text-editor';
+import { TextEditor, isTextEditorDocument } from '@muxui/react/text-editor';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
@@ -821,6 +821,42 @@ test('MultiSelect and TextEditor controlled harnesses accept their public callba
     assert.deepEqual(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).value, documentValue);
     assert.match(host.querySelector('.ProseMirror').textContent, /Updated/u);
   } finally {
+    await act(async () => root.unmount());
+    if (editor && !editor.isDestroyed) await editorDestroyed;
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+// The Events and Browser proof stories wrap every event callback to log it. The component gets back what its own callback returned:
+// TextEditor shows the pending and failure states of a selection request from the promise the handler returns.
+test('the Events story hands a supplied callback\'s result back to the component', async () => {
+  const story = createEventsStory(currentRecord('TextEditor'));
+  const result = Promise.resolve('sent');
+  const received = [];
+  let wrapped;
+  let editor;
+  let editorDestroyed;
+  const create = React.createElement;
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  React.createElement = (type, props, ...children) => {
+    if (type === TextEditor && props !== null) wrapped = props.onSelectionRequest;
+    return create(type, props, ...children);
+  };
+  try {
+    await act(async () => root.render(React.cloneElement(story.render({ ...story.args, onSelectionRequest: (...payload) => { received.push(payload); return result; } }), { key: 'events' })));
+    editor = host.querySelector('.ProseMirror').editor;
+    editorDestroyed = new Promise((resolve) => editor.on('destroy', resolve));
+    assert.equal(typeof wrapped, 'function');
+    let returned;
+    await act(async () => { returned = wrapped({ type: 'instruction', text: 'Shorten' }, null); });
+    assert.equal(returned, result, 'the very promise the caller returned');
+    assert.equal(received.length, 1);
+    assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /selectionRequest:/u, 'the call is still logged');
+  } finally {
+    React.createElement = create;
     await act(async () => root.unmount());
     if (editor && !editor.isDestroyed) await editorDestroyed;
     env.resolveAnimations();

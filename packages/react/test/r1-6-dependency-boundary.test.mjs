@@ -117,7 +117,7 @@ test('supplemental dependencies and isolated exports stay within the accepted bo
   const manifest = await readJson('packages/react/package.json');
   assert.equal(manifest.private, true);
   assert.ok(manifest.files.includes('licenses'));
-  assert.equal(manifest.exports['./text-editor'].default, './generated/text-editor.mjs');
+  assert.equal(manifest.exports['./text-editor'].default, './generated/text-editor.js');
   assert.equal(manifest.exports['./markdown'].default, './generated/markdown.js');
   const rootRuntime = await read('packages/react/generated/index.mjs');
   const rootTypes = await read('packages/react/generated/index.d.ts');

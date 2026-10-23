@@ -43,7 +43,7 @@
     "./testing": "./generated/testing.mjs",
     "./text-editor": {
       "types": "./generated/text-editor.d.ts",
-      "default": "./generated/text-editor.mjs"
+      "default": "./generated/text-editor.js"
     },
     "./markdown": {
       "types": "./generated/markdown.d.ts",

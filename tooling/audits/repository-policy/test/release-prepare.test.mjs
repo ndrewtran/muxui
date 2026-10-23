@@ -258,7 +258,7 @@ test('the current React declarations and guidance pass the public-surface leak s
   const read = (name) => readFileSync(join(generatedRoot, name), 'utf8');
   assertNoPublicSurfaceLeaks({
     declarations: generatedFiles.filter((name) => name.endsWith('.d.ts')).map((name) => ({ file: name, text: read(name) })),
-    entries: ['index.mjs', 'compatibility.mjs', 'themes.mjs', 'testing.mjs', 'text-editor.mjs', 'markdown.js'].map((name) => ({ file: name, text: read(name) })),
+    entries: ['index.mjs', 'compatibility.mjs', 'themes.mjs', 'testing.mjs', 'text-editor.js', 'markdown.js'].map((name) => ({ file: name, text: read(name) })),
     texts: [{ file: 'README.md', text: readFileSync(join(packageRoot, 'README.md'), 'utf8') }, { file: 'index.mjs', text: read('index.mjs') }],
     json: [
       { file: 'release.json', value: parseGeneratedJson(read('release.json')), allowedJsonPaths: ['$.packageDependencies'] },

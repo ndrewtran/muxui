@@ -590,7 +590,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
@@ -626,6 +626,9 @@ test('the shipped allowlist holds exactly the host types the committed derived A
     [host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }), 'a directory item\'s entries'],
   ];
   for (const [entry, reason] of dropItems) assert.deepEqual(reached.get(hostEntryKey(entry)), ['drop-zone.json'], reason);
+  // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns.
+  assert.deepEqual(reached.get('AbortSignal'), ['text-editor.json'], 'the signal of a selection request');
+  assert.deepEqual(reached.get(hostEntryKey(host('Promise', { kind: 'unknown' }))), ['text-editor.json'], 'the result of a selection request handler');
 });
 
 const omitInputAttributes = (names, element = 'HTMLInputElement') => `Omit<React.InputHTMLAttributes<${element}>, ${names.map((name) => `'${name}'`).join(' | ')}>`;
@@ -1262,7 +1265,10 @@ export type ThingDoc = { type: 'doc' };
 
 test('Promise<unknown> is read only where a function returns it, as the default library\'s Promise and an exact allowlist entry', () => {
   const promiseUnknown = host('Promise', keyword('unknown'));
-  const allowlist = [...HOST_ALLOWLIST, promiseUnknown];
+  // The shipped allowlist holds the entry (TextEditor's selection request); the controls below that need it absent start from the rest.
+  const allowlist = HOST_ALLOWLIST;
+  const withoutPromiseUnknown = HOST_ALLOWLIST.filter((entry) => hostEntryKey(entry) !== hostEntryKey(promiseUnknown));
+  assert.equal(withoutPromiseUnknown.length, HOST_ALLOWLIST.length - 1, 'the shipped allowlist holds Promise<unknown> once');
   const api = extract({
     declarations: ownProps(`  onRequest?: (text: string) => void | Promise<unknown>;
   onLater?: () => Promise<unknown>;
@@ -1326,7 +1332,7 @@ test('Promise<unknown> is read only where a function returns it, as the default 
   // Promise<void> is another application, kept as the entry spells it: it never reads as unknown, and unknown never reads as void.
   const promiseVoid = host('Promise', keyword('void'));
   rejects(ownProps('  onLater?: () => Promise<void>;'), /Thing\.onLater=> -> Promise: Promise<void> is not an application on the host allowlist/u, { hostAllowlist: allowlist });
-  rejects(ownProps('  onLater?: () => Promise<unknown>;'), /Promise<unknown> is not an application on the host allowlist/u, { hostAllowlist: [...HOST_ALLOWLIST, promiseVoid] });
+  rejects(ownProps('  onLater?: () => Promise<unknown>;'), /Promise<unknown> is not an application on the host allowlist/u, { hostAllowlist: [...withoutPromiseUnknown, promiseVoid] });
   const both = extract({ declarations: ownProps('  onDone?: () => Promise<void>;\n  onLater?: () => Promise<unknown>;'), hostAllowlist: [...allowlist, promiseVoid] });
   assert.deepEqual(both.eventDetails.done.type.returns, promiseVoid);
   assert.deepEqual(both.eventDetails.later.type.returns, promiseUnknown);

@@ -163,6 +163,8 @@ const GUIDES = {
   'tag-group': {},
   table: {},
   tree: {},
+  // **bold** is the Markdown a paste is measured after; the two helpers are exports of the module whose declarations the derived API does not read.
+  'text-editor': { native: ['**bold**', 'isTextEditorDocument', 'normalizeTextEditorDocument'] },
   // null is the value a controlled selectedId takes to mean nothing selected.
   'combo-box': { native: ['null'] },
   // onSubmit is the form's native event, @ and / are the characters that open suggestions, and placeholder and maxLength are the native textarea attributes inputProps takes.

@@ -991,12 +991,6 @@ for (const name of ['part-utils', 'field-utils', 'field-root', 'modal-parts', 'i
 for (const record of currentMappedRecords.filter((candidate) => !candidate.subpath && !isTypeScriptFamily(candidate) && candidate.source !== 'packages/react/src/supplemental/index.mjs')) {
   outputs.set(flatModuleName(record.source), shippedModule(record.source, record.sourceText));
 }
-for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {
-  outputs.set(`${source.slug}.mjs`, shippedModule(source.source, source.sourceText));
-  const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');
-  const typesSource = await readFile(resolve(repositoryRoot, typesPath), 'utf8').catch(() => null);
-  if (typesSource) outputs.set(`${source.slug}.d.ts`, shippedModule(typesPath, typesSource));
-}
 for (const source of typeScriptSources) {
   const emitted = typeScriptBuild?.emitted.get(source);
   const name = flatModuleName(source);
