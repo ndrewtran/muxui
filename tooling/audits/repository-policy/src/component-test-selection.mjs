@@ -35,6 +35,12 @@ const SOURCE_ROUTES = Object.freeze({
   'token-field': ['test/r1-3-parity.test.mjs'],
   toolbar: ['test/r1-3-parity.test.mjs'],
   tree: ['test/r1-3-parity.test.mjs'],
+  // The supplemental family modules. A family's source names the module that declares it, not the barrel.
+  text: ['test/supplemental.test.mjs'],
+  'button-group': ['test/supplemental.test.mjs'],
+  'color-mode-toggle': ['test/supplemental.test.mjs'],
+  'progress-circle': ['test/supplemental.test.mjs'],
+  card: ['test/supplemental.test.mjs'],
   overlays: ['test/r1-4-overlays.test.mjs'],
   markdown: ['test/heavy-components.test.mjs'],
   'text-editor': ['test/heavy-components.test.mjs'],

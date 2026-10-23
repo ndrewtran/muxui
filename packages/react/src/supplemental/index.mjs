@@ -26,20 +26,16 @@ import {
   MenuTrigger as AriaMenuTrigger,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
-  ProgressBar as AriaProgressBar,
   RadioField as AriaRadioField,
   RadioButton as AriaRadioButton,
   RadioGroupStateContext as AriaRadioGroupStateContext,
   SearchField as AriaSearchField,
-  Switch as AriaSwitch,
   SwitchField as AriaSwitchField,
   SwitchButton as AriaSwitchButton,
   Tag as AriaTag,
   TagGroup as AriaTagGroup,
   TagList as AriaTagList,
   Text as AriaText,
-  TextContext as AriaTextContext,
-  DEFAULT_SLOT as ARIA_DEFAULT_SLOT,
   TextArea as AriaTextArea,
   TextField as AriaTextField,
   useFilter,
@@ -58,7 +54,7 @@ import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.ts';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
-import { Button as MuxUIButton, usePendingSubmitProps } from '../button.ts';
+import { Button as MuxUIButton } from '../button.ts';
 import { IconButton } from './icon-button.ts';
 import { h, useIsomorphicLayoutEffect, cx, dataState, nativePart, pressHandler } from './part-utils.mjs';
 import { fieldText, mappedFieldProps } from './field-utils.mjs';
@@ -71,65 +67,6 @@ function normalizeKeys(value) {
   if (value === 'all') return 'all';
   return value instanceof Set ? value : new Set(value ?? []);
 }
-
-const TEXT_VARIANTS = new Set(['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono']);
-const TEXT_SIZES = Object.freeze({
-  display: new Set(['sm', 'md', 'lg']),
-  heading: new Set(['sm', 'md', 'lg']),
-  title: new Set(['sm', 'md', 'lg']),
-  label: new Set(['xs', 'sm', 'md', 'lg']),
-  body: new Set(['xs', 'sm', 'md', 'lg']),
-  expressive: new Set(['xs', 'sm', 'md', 'lg']),
-  mono: new Set(['xs', 'sm', 'md', 'lg']),
-});
-const TEXT_COLORS = new Set(['default', 'muted']);
-const TEXT_ELEMENTS = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label']);
-
-// An unslotted Text joins a context's default slot (ListBoxItem and MenuItem
-// map it to the item label). Contexts with only named slots, such as field
-// labels and descriptions, would throw, so it opts out of those instead.
-function resolveTextSlot(context, slot) {
-  if (slot !== undefined) return slot;
-  return context?.slots && !(ARIA_DEFAULT_SLOT in context.slots) ? null : undefined;
-}
-
-function normalizeTextOption(value, allowed, option) {
-  if (!allowed.has(value)) throw new TypeError(`Text ${option} must be one of: ${[...allowed].join(', ')}.`);
-  return value;
-}
-
-/** Apply a canonical Mux typography role while keeping the native host and RAC slot contract. */
-export const Text = React.forwardRef(function Text({
-  variant = 'body',
-  size = 'md',
-  color = 'default',
-  as = 'span',
-  truncate = false,
-  className,
-  elementType: _elementType,
-  ...props
-}, ref) {
-  const resolvedVariant = normalizeTextOption(variant, TEXT_VARIANTS, 'variant');
-  const resolvedSize = normalizeTextOption(size, TEXT_SIZES[resolvedVariant], 'size');
-  const resolvedColor = normalizeTextOption(color, TEXT_COLORS, 'color');
-  const resolvedElement = normalizeTextOption(as, TEXT_ELEMENTS, 'as');
-  const textContext = React.useContext(AriaTextContext);
-  return h(AriaText, {
-    ...props,
-    ref,
-    slot: resolveTextSlot(textContext, props.slot),
-    elementType: resolvedElement,
-    className: cx(
-      'muxui-text',
-      `muxui-text--${resolvedVariant}-${resolvedSize}`,
-      resolvedColor !== 'default' && `muxui-text--${resolvedColor}`,
-      truncate && 'muxui-text--truncate',
-      className,
-    ),
-  });
-});
-
-Text.displayName = 'Text';
 
 const CheckboxFieldIndicatorContext = React.createContext(null);
 
@@ -205,62 +142,6 @@ const AlertDialog = /*#__PURE__*/ (() => ({
       : h(MuxUIButton, buttonProps, children);
   }),
 }))();
-
-/* ButtonGroup */
-export const ButtonGroup = React.forwardRef(function ButtonGroup({
-  children,
-  orientation = 'horizontal',
-  attached = false,
-  disabled = false,
-  role = 'group',
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  className,
-  ...props
-}, ref) {
-  const resolvedRole = role === 'presentation' || (ariaLabel || ariaLabelledby) ? role : 'presentation';
-  return h(AriaGroup, {
-    ...props,
-    ref,
-    role: resolvedRole,
-    'aria-label': resolvedRole === 'presentation' ? undefined : ariaLabel,
-    'aria-labelledby': resolvedRole === 'presentation' ? undefined : ariaLabelledby,
-    isDisabled: disabled,
-    'data-orientation': orientation === 'vertical' ? 'vertical' : 'horizontal',
-    'data-attached': dataState(attached),
-    className: cx('muxui-button-group', `muxui-button-group--${orientation === 'vertical' ? 'vertical' : 'horizontal'}`, attached && 'muxui-button-group--attached', className),
-  }, typeof children === 'function' ? null : children);
-});
-
-/* Card */
-function cardProps({ variant = 'outlined', padding = 'md', className, ...props }) {
-  const safeVariant = ['elevated', 'outlined', 'filled'].includes(variant) ? variant : 'outlined';
-  const safePadding = ['sm', 'md', 'lg'].includes(padding) ? padding : 'md';
-  return { ...props, className: cx('muxui-card', `muxui-card--${safeVariant}`, `muxui-card--${safePadding}`, className) };
-}
-
-const Card = {
-  Root: React.forwardRef(function CardRoot({ variant, padding, ...props }, ref) {
-    return h('div', { ...cardProps({ ...props, variant, padding }), ref });
-  }),
-  Button: React.forwardRef(function CardButton({ variant, padding, selected, disabled = false, pending = false, onActivate, ...props }, ref) {
-    const pendingSubmitProps = usePendingSubmitProps(pending, props.type);
-    return h(AriaButton, {
-      ...cardProps({ ...props, variant, padding, className: cx('muxui-card--button', props.className) }),
-      ref,
-      isDisabled: disabled,
-      isPending: pending,
-      'aria-pressed': selected,
-      'data-selected': dataState(selected),
-      'data-pending': dataState(pending),
-      onPress: pressHandler(onActivate),
-      render: (domProps) => h('button', { ...domProps, ...pendingSubmitProps }),
-    });
-  }),
-  Header: React.forwardRef(function CardHeader(props, ref) { return nativePart('div', 'muxui-card__header', props, ref); }),
-  Body: React.forwardRef(function CardBody(props, ref) { return nativePart('div', 'muxui-card__body', props, ref); }),
-  Footer: React.forwardRef(function CardFooter(props, ref) { return nativePart('div', 'muxui-card__footer', props, ref); }),
-};
 
 /* Field compounds */
 function makeCheckboxField() {
@@ -367,44 +248,6 @@ export const CheckboxField = /*#__PURE__*/ makeCheckboxField();
 export const RadioField = /*#__PURE__*/ makeRadioField();
 export const SwitchField = /*#__PURE__*/ makeSwitchField();
 
-/* Color mode */
-export const ColorModeToggle = React.forwardRef(function ColorModeToggle({
-  mode,
-  defaultMode,
-  storageKey = 'muxui-color-mode',
-  disabled = false,
-  onModeChange,
-  className,
-  children,
-  ...props
-}, ref) {
-  // Keep the first render deterministic so an SSR light default hydrates
-  // cleanly before browser-only storage or OS preference restoration runs.
-  const [internalMode, setInternalMode] = React.useState(defaultMode ?? 'light');
-  React.useEffect(() => {
-    let nextMode = defaultMode;
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-      if (saved === 'light' || saved === 'dark') nextMode = saved;
-    } catch {
-      // Storage can be disabled by privacy settings; OS/default mode still works.
-    }
-    nextMode ??= window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    setInternalMode((previous) => previous === nextMode ? previous : nextMode);
-  }, [defaultMode, storageKey]);
-  const currentMode = mode ?? internalMode;
-  React.useEffect(() => {
-    if (typeof document !== 'undefined') document.documentElement.setAttribute('data-muxui-color-scheme', currentMode);
-    try { window.localStorage.setItem(storageKey, currentMode); } catch { /* best effort */ }
-  }, [currentMode, storageKey]);
-  const update = (selected) => {
-    const next = selected ? 'dark' : 'light';
-    if (mode === undefined) setInternalMode(next);
-    onModeChange?.(next);
-  };
-  return h(AriaSwitch, { ...props, ref, 'aria-label': props['aria-label'] ?? 'Toggle dark mode', isSelected: currentMode === 'dark', isDisabled: disabled, onChange: update, className: cx('muxui-color-mode-toggle', className), 'data-mode': currentMode }, children);
-});
-
 function associatedFieldText(slot, className, props, ref, register) {
   const association = React.useContext(InputAssociationContext);
   const nodeRef = React.useRef(null);
@@ -452,27 +295,6 @@ const TextArea = {
   Label: React.forwardRef(function TextAreaLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-text-area__label', props.className) }); }),
   Description: React.forwardRef(function TextAreaDescription(props, ref) { return fieldText('description', 'muxui-text-area__description', props, ref); }),
   Error: React.forwardRef(function TextAreaError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-text-area__error', props.className) }); }),
-};
-
-/* ProgressCircle */
-const circleSizes = Object.freeze({ sm: [32, 3], md: [48, 4], lg: [64, 5] });
-const ProgressCircleContext = React.createContext({ percentage: null, size: 'md' });
-const ProgressCircle = {
-  Root: React.forwardRef(function ProgressCircleRoot({ value = null, minValue = 0, maxValue = 100, size = 'md', className, children, label, ...props }, ref) {
-    const normalizedValue = value == null || !Number.isFinite(value) ? null : value;
-    const percentage = normalizedValue == null ? null : Math.max(0, Math.min(100, ((normalizedValue - minValue) / (maxValue - minValue || 1)) * 100));
-    const hasExplicitName = props['aria-label'] != null || props['aria-labelledby'] != null;
-    const nameFallback = !hasExplicitName && label != null ? { 'aria-label': label } : {};
-    return h(ProgressCircleContext.Provider, { value: { percentage, size } }, h(AriaProgressBar, { ...props, ...nameFallback, ref, value: normalizedValue == null ? undefined : normalizedValue, isIndeterminate: normalizedValue == null, minValue, maxValue, label, 'data-indeterminate': percentage == null ? '' : undefined, 'data-complete': percentage === 100 ? '' : undefined, className: cx('muxui-progress-circle', size !== 'md' && `muxui-progress-circle--${size}`, className) }, children));
-  }),
-  Track: React.forwardRef(function ProgressCircleTrack({ className, ...props }, ref) {
-    const { percentage, size } = React.useContext(ProgressCircleContext);
-    const [dimension, stroke] = circleSizes[size] ?? circleSizes.md;
-    const radius = (dimension - stroke) / 2;
-    return h('svg', { ...props, ref, className: cx('muxui-progress-circle__track', className), viewBox: `0 0 ${dimension} ${dimension}`, fill: 'none', 'aria-hidden': true }, h('circle', { className: 'muxui-progress-circle__rail', cx: dimension / 2, cy: dimension / 2, r: radius, strokeWidth: stroke }), h('circle', { className: 'muxui-progress-circle__indicator', cx: dimension / 2, cy: dimension / 2, r: radius, strokeWidth: stroke, strokeLinecap: 'round', pathLength: 100, strokeDasharray: 100, strokeDashoffset: percentage == null ? undefined : 100 - percentage, 'data-indeterminate': percentage == null ? '' : undefined }));
-  }),
-  Label: React.forwardRef(function ProgressCircleLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-progress-circle__label', props.className) }); }),
-  Value: React.forwardRef(function ProgressCircleValue({ children, ...props }, ref) { const { percentage } = React.useContext(ProgressCircleContext); return nativePart('span', 'muxui-progress-circle__value', props, ref, children ?? (percentage == null ? null : `${Math.round(percentage)}%`)); }),
 };
 
 /* InputTags */
@@ -1324,7 +1146,13 @@ const Sidebar = {
   FeatureCard: React.forwardRef(function SidebarFeatureCard({ title, description, dismissLabel, onDismiss, ...props }, ref) { return nativePart('div', 'muxui-sidebar__feature-card', props, ref, h(React.Fragment, null, title && h('div', { className: 'muxui-sidebar__feature-card-title' }, title), description && h('div', { className: 'muxui-sidebar__feature-card-description' }, description), props.children, onDismiss && h('button', { type: 'button', className: 'muxui-sidebar__feature-card-dismiss', onClick: onDismiss }, dismissLabel ?? 'Dismiss'))); }),
 };
 
-export { AlertDialog, Card, Input, TextArea, ProgressCircle, CommandPalette, HeaderNav, Sidebar };
+export { ButtonGroup } from './button-group.mjs';
+export { Card } from './card.mjs';
+export { ColorModeToggle } from './color-mode-toggle.mjs';
+export { ProgressCircle } from './progress-circle.mjs';
+export { Text } from './text.mjs';
+
+export { AlertDialog, Input, TextArea, CommandPalette, HeaderNav, Sidebar };
 
 export const supplementalFamilies = Object.freeze([
   'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text',
