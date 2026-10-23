@@ -7778,7 +7778,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7817,7 +7817,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7856,7 +7856,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7895,7 +7895,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7934,7 +7934,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7973,7 +7973,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -8012,7 +8012,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -8051,7 +8051,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }

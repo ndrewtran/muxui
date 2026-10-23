@@ -13,7 +13,7 @@ export { ComboBox } from './combo-box.ts';
 export { Select } from './select.ts';
 export { RadioGroup } from './radio-group.ts';
 export { Slider } from './slider.ts';
-export { Table } from './table.mjs';
+export { Table } from './table.ts';
 export { Tabs } from './tabs.ts';
 export { TagGroup } from './tag-group.ts';
 export { ToggleButtonGroup } from './toggle-button-group.ts';

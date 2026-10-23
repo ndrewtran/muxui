@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:120eaf0435ac5791485844692945684cd3728170cfd9f59f6137a46a2b791333 -->
+<!-- @generated-content-sha256: sha256:9b2425e4b21ee342ec61d310b0facdc57add7f4c7e61625c76fd8379346dbd0f -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -169,7 +169,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
-| Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
+| Table | experimental | . | .muxui-table | columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
 | Tabs | experimental | . | .muxui-tabs | items, value, defaultValue, disabled, orientation, keyboardActivation, size, variant |
 | TagGroup | experimental | . | .muxui-tag-group | label, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |

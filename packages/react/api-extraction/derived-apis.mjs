@@ -97,6 +97,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'tabs', name: 'Tabs', source: 'packages/react/src/tabs.ts' },
   // TagGroup is one component; its label, list, tag, and remove button are rendered, not exported. Its label is owned, and the public type offers it with the accessible name's arms.
   { slug: 'tag-group', name: 'TagGroup', source: 'packages/react/src/tag-group.ts' },
+  // Table is one component; its header, column, body, row, and cell are rendered, not exported.
+  { slug: 'table', name: 'Table', source: 'packages/react/src/table.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

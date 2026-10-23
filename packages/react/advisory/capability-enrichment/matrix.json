@@ -9849,7 +9849,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/table/artifact.json#bindings/web.react",
-          "packages/react/src/table.mjs#Table",
+          "packages/react/src/table.ts#Table",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

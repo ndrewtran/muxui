@@ -2712,7 +2712,7 @@ function reportsInOrder(Component, base, steps) {
   assert.equal(failure(base), 'rendered');
   steps.forEach(([patch, message], index) => {
     const together = Object.assign({}, base, ...steps.slice(index).reverse().map(([later]) => later));
-    assert.match(failure(together), message, `step ${index}: ${JSON.stringify(patch)}`);
+    assert.match(failure(together), message, `step ${index}: ${Object.keys(patch).join(', ')}`);
     // The step on its own is the same failure, so nothing else stands in for it.
     assert.match(failure({ ...base, ...patch }), message, `step ${index} alone`);
   });
@@ -2747,6 +2747,79 @@ test('R1.3 TagGroup reports the first invalid input in the order it checks: item
     [{ color: 'crimson' }, /TagGroup color must be one of: neutral, brand/u],
     [{ items: [{ id: 'one', label: 'One', color: 'crimson' }] }, /TagGroup item color must be one of: neutral, brand/u],
   ]);
+});
+
+test('R1.3 Table reports the first invalid input in the order it checks: rows, columns, sortDescriptor, name, selection, className', () => {
+  const failing = (message) => ({ get id() { throw new Error(message); } });
+  reportsInOrder(Table, { 'aria-label': 'People', columns: [{ id: 'a', label: 'A', sortable: true }], rows: [{ id: '1', a: 'x' }] }, [
+    // The rows and the columns each throw their own error from a getter, so the order they are read in shows.
+    [{ rows: [failing('rows boom')] }, /rows boom/u],
+    [{ columns: [failing('columns boom')] }, /columns boom/u],
+    [{ sortDescriptor: { column: 'zzz', direction: 'ascending' } }, /Table sortDescriptor column must be sortable: zzz/u],
+    [{ 'aria-label': undefined }, /Table requires label, aria-label, or aria-labelledby/u],
+    [{ selectedIds: { map() { throw new Error('selected boom'); } } }, /selected boom/u],
+    [{ defaultSelectedIds: { map() { throw new Error('default boom'); } } }, /default boom/u],
+    [{ className: Symbol('invalid') }, /Cannot convert a Symbol value to a string/u],
+  ]);
+});
+
+// A sort descriptor is read as the checks reach it: its keys first, then its column, then its direction, and the checks that
+// fail first stop the reads. These are the reads a recording proxy and recording getters see, which the move must not change.
+test('R1.3 Table reads a sort descriptor\'s keys first and its properties only as the checks reach them', () => {
+  const columns = [{ id: 'a', label: 'A', sortable: true }];
+  const render = (sortDescriptor) => {
+    try {
+      renderToString(React.createElement(Table, { 'aria-label': 'People', columns, rows: [{ id: '1', a: 'x' }], sortDescriptor }));
+      return 'rendered';
+    } catch (error) {
+      return error.message;
+    }
+  };
+  const recorded = (descriptor) => {
+    const log = [];
+    const proxy = new Proxy(descriptor, {
+      get(target, key, receiver) { log.push(`get ${String(key)}`); return Reflect.get(target, key, receiver); },
+      ownKeys(target) { log.push('ownKeys'); return Reflect.ownKeys(target); },
+      getOwnPropertyDescriptor(target, key) { log.push(`descriptor ${String(key)}`); return Reflect.getOwnPropertyDescriptor(target, key); },
+    });
+    return [render(proxy), log];
+  };
+  const invalid = /Table sortDescriptor must be \{column: string; direction: ascending\|descending\}/u;
+  const keysThenColumnDirection = ['ownKeys', 'descriptor column', 'descriptor direction'];
+  const checks = {
+    valid: [{ column: 'a', direction: 'ascending' }, 'rendered', [...keysThenColumnDirection, 'get column', 'get direction', 'get column', 'get column', 'get direction']],
+    'valid descending': [{ column: 'a', direction: 'descending' }, 'rendered', [...keysThenColumnDirection, 'get column', 'get direction', 'get direction', 'get column', 'get column', 'get direction']],
+    // A wrong number of keys stops before any property is read.
+    'three keys': [{ column: 'a', direction: 'ascending', extra: 1 }, invalid, [...keysThenColumnDirection, 'descriptor extra']],
+    'one key': [{ column: 'a' }, invalid, ['ownKeys', 'descriptor column']],
+    'a column that is not text stops before the direction': [{ column: 5, direction: 'ascending' }, invalid, [...keysThenColumnDirection, 'get column']],
+    'a direction that is neither': [{ column: 'a', direction: 'up' }, invalid, [...keysThenColumnDirection, 'get column', 'get direction', 'get direction']],
+    'a column that is not sortable': [{ column: 'zzz', direction: 'ascending' }, /Table sortDescriptor column must be sortable: zzz/u, [...keysThenColumnDirection, 'get column', 'get direction', 'get column', 'get column']],
+    'an array': [[], invalid, []],
+  };
+  for (const [label, [descriptor, message, reads]] of Object.entries(checks)) {
+    const [outcome, log] = recorded(descriptor);
+    if (message === 'rendered') assert.equal(outcome, 'rendered', label);
+    else assert.match(outcome, message, label);
+    assert.deepEqual(log, reads, label);
+  }
+  // Getters stop where they throw: a column that throws is reached before the direction, a direction after the column, and neither
+  // is reached when the keys already fail.
+  const getters = (column, direction, extra = {}) => {
+    const log = [];
+    const descriptor = Object.defineProperties({ ...extra }, {
+      column: { enumerable: true, get() { log.push('column'); return column(); } },
+      direction: { enumerable: true, get() { log.push('direction'); return direction(); } },
+    });
+    return [render(descriptor), log];
+  };
+  const throws = (message) => () => { throw new Error(message); };
+  assert.deepEqual(getters(throws('column getter'), () => 'ascending'), ['column getter', ['column']]);
+  assert.deepEqual(getters(() => 'a', throws('direction getter')), ['direction getter', ['column', 'direction']]);
+  assert.deepEqual(getters(throws('column getter'), () => 'ascending', { extra: 1 }).map((result) => (typeof result === 'string' ? result.replace(/\{.*$/u, '') : result)), ['Table sortDescriptor must be ', []]);
+  assert.deepEqual(getters(() => 'a', () => 'ascending'), ['rendered', ['column', 'direction', 'column', 'column', 'direction']]);
+  assert.deepEqual(getters(() => 'a', () => 'descending'), ['rendered', ['column', 'direction', 'direction', 'column', 'column', 'direction']]);
+  assert.deepEqual(getters(() => 'zzz', () => 'ascending'), ['Table sortDescriptor column must be sortable: zzz', ['column', 'direction', 'column', 'column']]);
 });
 
 test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {

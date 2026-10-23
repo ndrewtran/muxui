@@ -275,6 +275,7 @@ const minimalRenders = {
   PromptComposer: () => composer(),
   ColorSwatchPicker: () => h(generated.ColorSwatchPicker, { 'aria-label': 'Colors', items: ['#ff0000', '#00ff00'] }),
   TagGroup: () => h(generated.TagGroup, { label: 'Tags', items: ['One', 'Two'] }),
+  Table: () => h(generated.Table, { 'aria-label': 'People', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'ada', name: 'Ada' }] }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -646,6 +647,16 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, multiple: false }), ['multiple: catalog false, behaves true']);
   assert.deepEqual(unobservedDefaults('PromptComposer', composerApi.defaults), []);
   assert.deepEqual(undeclaredProps(types, 'PromptComposer', [...composerApi.props, 'missingProp']), ['missingProp']);
+  // Table's selection mode shows on its rows once it is not none, and its disabled flag on the table, so a catalog value the renderer does not run fails.
+  const tableApi = apis.Table;
+  assert.deepEqual(Object.keys(tableApi.defaults), ['disabled', 'selectionMode']);
+  const tableMarkup = renderToString(minimalRenders.Table());
+  for (const mode of ['single', 'multiple']) {
+    assert.deepEqual(defaultMismatches(tableMarkup, { ...tableApi.defaults, selectionMode: mode }), [`selectionMode: catalog "${mode}", rendered "none"`], mode);
+    assert.equal(markupValues.selectionMode(new JSDOM(renderToString(h(generated.Table, { 'aria-label': 'People', columns: ['Name'], rows: [{ id: 'ada', Name: 'Ada' }], selectionMode: mode }))).window.document), mode, `a ${mode} table reads as ${mode}`);
+  }
+  assert.deepEqual(defaultMismatches(tableMarkup, { ...tableApi.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(undeclaredProps(types, 'Table', [...tableApi.props, 'missingProp']), ['missingProp']);
   // TagGroup's variant and colour show on its tags, its disabled flag on them too, and its selection mode as the grid's multiselectable
   // state and the tags' selected state, so a catalog value the renderer does not run fails.
   const tagApi = apis.TagGroup;

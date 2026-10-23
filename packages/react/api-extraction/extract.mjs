@@ -72,7 +72,8 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * element Select's trigger takes, written
  * ReactElement<DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>,
  * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
- * PromptComposer's inputProps declares, and Set<string> for the selected item ids of TagGroup.
+ * PromptComposer's inputProps declares, Set<string> for the selected item ids of TagGroup, and
+ * Record<string, React.ReactNode> for the cell values of a Table row.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -111,6 +112,8 @@ export const HOST_ALLOWLIST = Object.freeze([
   }),
   // TagGroup's selected item ids: a mutable Set, as the group takes and hands them (ReadonlySet<string> is another type).
   hostApplication('Set', { kind: 'string' }),
+  // Table's row values: the cell content of a row, by column id. A string-keyed Record keeps keyof string, which an index signature widens to string | number.
+  hostApplication('Record', { kind: 'string' }, { kind: 'host', name: 'React.ReactNode' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.

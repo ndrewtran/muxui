@@ -95,6 +95,8 @@ const audited = [
       ...expand(['tabs'], ['disabled', 'orientation']),
       // TagGroup sent selectionMode and isDisabled to React Aria as its own values, none and false when omitted, before the move, so a TagGroupContext never supplied them.
       ...expand(['tag-group'], ['selectionMode', 'disabled']),
+      // Table sent selectionMode and isDisabled to React Aria as its own values, none and false when omitted, before the move, so a TableContext never supplied them.
+      ...expand(['table'], ['selectionMode', 'disabled']),
     ],
   },
   {

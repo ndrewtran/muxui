@@ -161,6 +161,7 @@ const GUIDES = {
   // aria-label and aria-labelledby are the native attributes that name the tabs, which the public type offers beside the derived props.
   tabs: { native: ['aria-label', 'aria-labelledby'] },
   'tag-group': {},
+  table: {},
   // null is the value a controlled selectedId takes to mean nothing selected.
   'combo-box': { native: ['null'] },
   // onSubmit is the form's native event, @ and / are the characters that open suggestions, and placeholder and maxLength are the native textarea attributes inputProps takes.

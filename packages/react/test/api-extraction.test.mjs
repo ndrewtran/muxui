@@ -377,6 +377,40 @@ test('the shipped allowlist admits a mutable Set<string> and no other Set', () =
   rejects(ownProps('  bad?: Set<string>;', 'export interface Set<T> { readonly values: T[] }\n'), /Thing\.bad -> Set: Set is a Mux UI-owned type; it takes no type arguments/u);
 });
 
+test('the shipped allowlist admits Record<string, React.ReactNode> and no other Record', () => {
+  const values = host('Record', keyword('string'), host('React.ReactNode'));
+  const shipped = extract({ declarations: ownProps('  values?: Record<string, React.ReactNode>;') });
+  assert.deepEqual(shipped.propDetails.values.type, values);
+  // As the member of an item, the way a Table row holds its values.
+  const row = extract({ declarations: ownProps('  row?: ThingRow;', 'export interface ThingRow { id?: string; values?: Record<string, React.ReactNode> }\n') });
+  assert.deepEqual(row.types.ThingRow.type.members.at(-1).type, values);
+  // An index signature of the same shape is another type: a sole signature reads as a record of its own, and its keyof is wider.
+  assert.deepEqual(extract({ declarations: ownProps('  values?: { [columnId: string]: React.ReactNode };') }).propDetails.values.type, { kind: 'record', value: host('React.ReactNode'), readonly: false });
+  const recordOnly = [host('Record', keyword('string'), host('React.ReactNode')), 'React.ReactNode'];
+  const cases = [
+    ['  bad?: Record<number, React.ReactNode>;', /Thing\.bad -> Record: Record<number, React\.ReactNode> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, string>;', /Thing\.bad -> Record: Record<string, string> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, React.ReactNode | undefined>;', /Thing\.bad -> Record: Record<string, React\.ReactNode \| undefined> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, React.ReactElement>;', /Thing\.bad -> Record<1> -> React\.ReactElement: React\.ReactElement is outside @muxui\/react and not in the host allowlist|Thing\.bad -> Record: Record<string, React\.ReactElement> is not an application on the host allowlist/u],
+    ["  bad?: Record<'a' | 'b', React.ReactNode>;", /Thing\.bad -> Record: Record<"a" \| "b", React\.ReactNode> is not an application on the host allowlist/u],
+    ['  bad?: Record;', /Thing\.bad -> Record: Record is outside @muxui\/react and not in the host allowlist/u],
+    ['  bad?: Readonly<Record<string, React.ReactNode>>;', /Thing\.bad -> Readonly: Readonly<Record<string, React\.ReactNode>> is not an application on the host allowlist/u],
+    ['  bad?: Partial<Record<string, React.ReactNode>>;', /Thing\.bad -> Partial: Partial<Record<string, React\.ReactNode>> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, React.ReactNode>[];', null],
+  ];
+  for (const [members, pattern] of cases) {
+    if (pattern === null) continue;
+    rejects(ownProps(members), pattern);
+    rejects(ownProps(members), pattern, { hostAllowlist: recordOnly });
+  }
+  // An array of the admitted application is the application inside an array, which the grammar reads.
+  assert.deepEqual(extract({ declarations: ownProps('  bad?: Record<string, React.ReactNode>[];') }).propDetails.bad.type, { kind: 'array', element: values, readonly: false });
+  // A Mux UI-owned type named Record is never the host Record.
+  rejects(ownProps('  bad?: Record<string, React.ReactNode>;', 'export interface Record<K, V> { readonly key: K; readonly value: V }\n'), /Thing\.bad -> Record: Record is a Mux UI-owned type; it takes no type arguments/u);
+  // The same name used bare is that Mux UI-owned type, not the host one.
+  assert.deepEqual(extract({ declarations: ownProps('  bad?: Record;', 'export interface Record { readonly id: string }\n') }).propDetails.bad.type, { kind: 'reference', name: 'Record' });
+});
+
 test('a Mux UI-owned type that shadows a host name or an argument is never the host type', () => {
   // A local Promise is Mux UI-owned, so it takes no type arguments, whatever it is named.
   rejects(ownProps('  bad?: Promise<File>;', 'export interface Promise<T> { readonly value: T }\n'),
@@ -556,7 +590,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'tabs.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
@@ -569,6 +603,8 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
   assert.deepEqual(reached.get('HTMLDivElement'), ['virtualizer.json'], 'the element a scroll event reports');
   assert.deepEqual(reached.get(hostEntryKey(host('React.UIEvent', host('HTMLDivElement')))), ['virtualizer.json'], 'the scroll event of the Virtualizer viewport');
+  // A Table row's values: the cell content by column id, which no other family takes.
+  assert.deepEqual(reached.get(hostEntryKey(host('Record', keyword('string'), host('React.ReactNode')))), ['table.json'], 'the cell values of a Table row');
   // TagGroup's selected item ids: a mutable Set, which no other family takes.
   assert.deepEqual(reached.get(hostEntryKey(host('Set', keyword('string')))), ['tag-group.json'], 'the selected ids of a TagGroup');
   // PromptComposer's inputProps: the textarea's attributes, as its props omit the four the composer owns.
