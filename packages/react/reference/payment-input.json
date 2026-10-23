@@ -1,37 +1,76 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "payment-input",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "payment-input": "packages/react/src/supplemental/payment-input.ts"
+  },
   "exports": [
     {
       "name": "PaymentInput",
       "entry": ".",
-      "module": "supplemental",
+      "module": "payment-input",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The card number, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The starting card number, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the formatted card number each time it changes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field read-only."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
-            { "name": "value", "optional": true, "type": "string" },
-            { "name": "defaultValue", "optional": true, "type": "string" },
-            { "name": "onChange", "optional": true, "type": "(value: string) => void" }
+              "values": ["sm", "md", "lg"],
+              "doc": "The field's size."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
             {
               "type": "React.HTMLAttributes<HTMLDivElement>",
-              "omit": ["onChange"]
+              "omit": ["onChange", "defaultValue"]
             }
           ]
         },
@@ -97,7 +136,8 @@
               "name": "cardType",
               "optional": true,
               "type": "'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown'",
-              "values": ["visa", "mastercard", "amex", "discover", "unknown"]
+              "values": ["visa", "mastercard", "amex", "discover", "unknown"],
+              "doc": "The card type the icon records as its `data-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
             }
           ],
           "ref": { "type": "HTMLSpanElement" },
@@ -113,137 +153,172 @@
   ],
   "types": [
     {
-      "id": "supplemental#InputControlProps",
-      "name": "InputControlProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "InputControlProps" }
-      ],
-      "owner": "input",
-      "text": "type InputControlProps = React.InputHTMLAttributes<HTMLInputElement>;"
-    },
-    {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     },
     {
-      "id": "supplemental#PaymentInputCardIconProps",
+      "id": "payment-input#PaymentInputCardIconOwnProps",
+      "name": "PaymentInputCardIconOwnProps",
+      "module": "payment-input",
+      "text": "type PaymentInputCardIconOwnProps = {\n  cardType?: 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';\n};",
+      "members": [
+        {
+          "name": "cardType",
+          "optional": true,
+          "type": "'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown'",
+          "values": ["visa", "mastercard", "amex", "discover", "unknown"],
+          "doc": "The card type the icon records as its `data-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
+        }
+      ]
+    },
+    {
+      "id": "payment-input#PaymentInputCardIconProps",
       "name": "PaymentInputCardIconProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputCardIconProps" }
       ],
       "owner": "payment-input",
-      "text": "type PaymentInputCardIconProps = Omit<PartProps<HTMLSpanElement>, 'aria-label' | 'children'> & {\n  cardType?: 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';\n};",
-      "refs": ["supplemental#PartProps"]
+      "text": "type PaymentInputCardIconProps = Omit<PartProps<HTMLSpanElement>, 'aria-label' | 'children'> & PaymentInputCardIconOwnProps;",
+      "refs": ["part-utils#PartProps", "payment-input#PaymentInputCardIconOwnProps"]
     },
     {
-      "id": "supplemental#PaymentInputDescriptionProps",
+      "id": "payment-input#PaymentInputDescriptionProps",
       "name": "PaymentInputDescriptionProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputDescriptionProps" }
       ],
       "owner": "payment-input",
       "text": "type PaymentInputDescriptionProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#PaymentInputErrorProps",
+      "id": "payment-input#PaymentInputErrorProps",
       "name": "PaymentInputErrorProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputErrorProps" }
       ],
       "owner": "payment-input",
       "text": "type PaymentInputErrorProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#PaymentInputGroupProps",
+      "id": "payment-input#PaymentInputGroupProps",
       "name": "PaymentInputGroupProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputGroupProps" }
       ],
       "owner": "payment-input",
       "text": "type PaymentInputGroupProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#PaymentInputInputProps",
+      "id": "payment-input#PaymentInputInputProps",
       "name": "PaymentInputInputProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputInputProps" }
       ],
       "owner": "payment-input",
-      "text": "type PaymentInputInputProps = InputControlProps;",
-      "refs": ["supplemental#InputControlProps"]
+      "text": "type PaymentInputInputProps = React.InputHTMLAttributes<HTMLInputElement>;"
     },
     {
-      "id": "supplemental#PaymentInputLabelProps",
+      "id": "payment-input#PaymentInputLabelProps",
       "name": "PaymentInputLabelProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputLabelProps" }
       ],
       "owner": "payment-input",
       "text": "type PaymentInputLabelProps = PartProps<HTMLLabelElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#PaymentInputProps",
+      "id": "payment-input#PaymentInputOwnProps",
+      "name": "PaymentInputOwnProps",
+      "module": "payment-input",
+      "text": "type PaymentInputOwnProps = {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The card number, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The starting card number, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the formatted card number each time it changes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field read-only."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The field's size."
+        }
+      ]
+    },
+    {
+      "id": "payment-input#PaymentInputProps",
       "name": "PaymentInputProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputProps" }
       ],
       "owner": "payment-input",
-      "text": "type PaymentInputProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
+      "text": "type PaymentInputProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> & PaymentInputOwnProps;",
+      "refs": ["payment-input#PaymentInputOwnProps"]
     },
     {
-      "id": "supplemental#PaymentInputRootProps",
+      "id": "payment-input#PaymentInputRootProps",
       "name": "PaymentInputRootProps",
-      "module": "supplemental",
+      "module": "payment-input",
       "public": [
         { "entry": ".", "name": "PaymentInputRootProps" }
       ],
       "owner": "payment-input",
       "text": "type PaymentInputRootProps = PaymentInputProps;",
-      "refs": ["supplemental#PaymentInputProps"]
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
-      "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
-        {
-          "name": "size",
-          "optional": true,
-          "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
-        }
-      ]
+      "refs": ["payment-input#PaymentInputProps"]
     }
   ]
 }

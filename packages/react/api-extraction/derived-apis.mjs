@@ -110,6 +110,12 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'progress-circle', name: 'ProgressCircle', part: 'Root', source: 'packages/react/src/supplemental/progress-circle.ts' },
   // InputTags is a compound of one part, Root, whose props are the family's.
   { slug: 'input-tags', name: 'InputTags', part: 'Root', source: 'packages/react/src/supplemental/input-tags.ts' },
+  // PaymentInput's root is PaymentInput.Root; CardIcon owns cardType, and the other parts own no props.
+  { slug: 'payment-input', name: 'PaymentInput', part: 'Root', parts: { 'card-icon': 'CardIcon' }, source: 'packages/react/src/supplemental/payment-input.ts' },
+  // The field compounds' root is Root, and each Button owns disabled; their other parts own no props.
+  { slug: 'checkbox-field', name: 'CheckboxField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/checkbox-field.ts' },
+  { slug: 'radio-field', name: 'RadioField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/radio-field.ts' },
+  { slug: 'switch-field', name: 'SwitchField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/switch-field.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

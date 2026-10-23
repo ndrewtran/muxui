@@ -8,7 +8,7 @@ const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Checkbox } from '/src/components.ts';
   import { RadioGroup } from '/src/collections.mjs';
-  import { RadioField } from '/src/supplemental/index.mjs';
+  import { RadioField } from '/src/supplemental/radio-field.ts';
   import { Autocomplete, CheckboxGroup, DateField, Form, NumberField, SearchField, Switch, TextField, TimeField } from '/src/fields.ts';
   import { ColorField } from '/src/collections.mjs';
   import '/generated/styles.css';
@@ -87,7 +87,7 @@ const entry = `import React from 'react';
 async function withPage(run) {
   const html = pageShell({ body: '<div id="root"></div>', entry: '/form-fields-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.ts', 'src/fields.ts', 'src/collections.mjs', 'src/supplemental/index.mjs'],
+    entries: ['src/components.ts', 'src/fields.ts', 'src/collections.mjs', 'src/supplemental/radio-field.ts'],
     pages: { '/form-fields.html': html },
     modules: { '/form-fields-entry.mjs': entry },
   });

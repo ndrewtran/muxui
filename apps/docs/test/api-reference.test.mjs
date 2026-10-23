@@ -182,13 +182,15 @@ test('a default shows only where it applies: executed for a derived family, auth
 });
 
 test('an authored family gives a catalog fact to the root that declares it, else to the only part that does, and borrows none across parts', () => {
-	const api = page('switch-field');
-	const [root, button] = ['SwitchField.Root', 'SwitchField.Button'].map((heading) => partNamed(api, heading));
-	// disabled is declared by both Root and Button, and the catalog's false belongs to the root.
-	assert.deepEqual(rowNamed(root, 'disabled').default, { text: 'false', authored: true });
-	assert.equal('default' in rowNamed(button, 'disabled'), false);
-	assert.equal(rowNamed(root, 'onChange').event, 'change');
-	assert.equal(rowNamed(button, 'disabled').event, undefined);
+	const api = page('card');
+	const [root, button] = ['Card.Root', 'Card.Button'].map((heading) => partNamed(api, heading));
+	// variant is declared by both Root and Button, and the catalog's default belongs to the root.
+	assert.deepEqual(rowNamed(root, 'variant').default, { text: "'outlined'", authored: true });
+	assert.equal('default' in rowNamed(button, 'variant'), false);
+	// disabled is declared by Button alone, so it takes the catalog's false, and so does the event the catalog names for it.
+	assert.deepEqual(rowNamed(button, 'disabled').default, { text: 'false', authored: true });
+	assert.equal(rowNamed(button, 'onActivate').event, 'activate');
+	assert.equal(rowNamed(root, 'variant').event, undefined);
 	// A derived family's part has the defaults of its own partApis entry.
 	const select = page('select');
 	assert.ok(rowsOf(partNamed(select, 'Select.Root')).some((row) => row.default !== undefined && !row.default.authored));

@@ -177,6 +177,13 @@ const GUIDES = {
   // null and 0 are the values the guide states for an indeterminate and an empty circle.
   'progress-circle': { native: ['null', '0'] },
   'input-tags': {},
+  // The card numbers are the guide's sample input and their formatted output; aria-hidden, data-card-type and autoComplete are the DOM attributes the guide names.
+  'payment-input': { native: ['378282246310005', '3782 822463 10005', '4111111111111111', '4111 1111 1111 1111', '9999999999999999', '9999 9999 9999 9999', 'aria-hidden', 'data-card-type', 'autoComplete="cc-number"'] },
+  // attempted and accepted are the guide's own example state.
+  'checkbox-field': { native: ['attempted', 'attempted && !accepted'] },
+  'switch-field': {},
+  // options is the RadioGroup prop the guide contrasts RadioField with.
+  'radio-field': { from: { 'radio-group': ['options'] } },
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.

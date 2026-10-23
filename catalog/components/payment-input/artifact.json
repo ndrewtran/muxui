@@ -45,38 +45,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "value",
-          "defaultValue",
-          "disabled",
-          "size",
-          "invalid",
-          "required",
-          "readOnly",
-          "onChange"
-        ],
-        "events": [
-          "change"
-        ],
-        "parts": [
-          "root",
-          "group",
-          "input",
-          "label",
-          "description",
-          "error",
-          "card-icon"
-        ],
-        "defaults": {
-          "defaultValue": "",
-          "disabled": false,
-          "size": "md",
-          "invalid": false,
-          "required": false,
-          "readOnly": false
-        }
-      },
       "behavior": [
         "Non-digit characters are stripped as the user types.",
         "Numbers starting with 34 or 37 are Amex and group as 4, 6, and 5; every other number groups as 4, 4, 4, and 4.",

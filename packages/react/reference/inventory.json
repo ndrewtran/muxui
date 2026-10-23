@@ -100,37 +100,37 @@
           "name": "CheckboxField",
           "kind": "value",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldButtonProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldDescriptionProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldErrorProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldIndicatorProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldRootProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         { "name": "CheckboxGroup", "kind": "value", "owner": "checkbox-group", "module": "fields" },
         {
@@ -866,55 +866,55 @@
           "name": "PaymentInput",
           "kind": "value",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputCardIconProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputDescriptionProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputErrorProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputGroupProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputInputProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputLabelProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputRootProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         { "name": "Popover", "kind": "value", "owner": "popover", "module": "overlays" },
         { "name": "PopoverProps", "kind": "type", "owner": "popover", "module": "overlays" },
@@ -1003,42 +1003,42 @@
           "owner": "prompt-composer",
           "module": "prompt-composer"
         },
-        { "name": "RadioField", "kind": "value", "owner": "radio-field", "module": "supplemental" },
+        { "name": "RadioField", "kind": "value", "owner": "radio-field", "module": "radio-field" },
         {
           "name": "RadioFieldButtonProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldDescriptionProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldDotProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldErrorProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldIndicatorProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldRootProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         { "name": "RadioGroup", "kind": "value", "owner": "radio-group", "module": "radio-group" },
         {
@@ -1161,37 +1161,37 @@
           "name": "SwitchField",
           "kind": "value",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldButtonProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldDescriptionProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldErrorProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldRootProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldThumbProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         { "name": "SwitchProps", "kind": "type", "owner": "switch", "module": "fields" },
         { "name": "Table", "kind": "value", "owner": "table", "module": "table" },

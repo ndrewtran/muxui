@@ -1,0 +1,162 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/checkbox-field.ts",
+  "component": "muxui:component:checkbox-field",
+  "binding": "web.react",
+  "export": "CheckboxField",
+  "api": {
+    "props": [
+      "checked",
+      "defaultChecked",
+      "indeterminate",
+      "name",
+      "value",
+      "disabled",
+      "invalid",
+      "required",
+      "readOnly",
+      "size"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "size": "md"
+    },
+    "propDetails": {
+      "checked": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the checkbox is checked, when the caller controls it."
+      },
+      "defaultChecked": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the checkbox starts checked, when the field controls itself."
+      },
+      "indeterminate": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the mixed state in place of checked or unchecked."
+      },
+      "name": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The name the checkbox submits under in a form."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The value the checkbox submits while it is checked."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field disabled."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field read-only."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The field's size."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "checked",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new checked state."
+      }
+    },
+    "types": {},
+    "partApis": {
+      "button": {
+        "member": "Button",
+        "props": [
+          "disabled"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the checkbox disabled, whatever its field says."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

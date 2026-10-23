@@ -257,10 +257,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 70 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 74 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 70, parts: 83, props: 610, events: 100, types: 136, references: 136 });
+  assert.deepEqual(result.counts, { families: 74, parts: 91, props: 645, events: 103, types: 136, references: 136 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -292,18 +292,17 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['alert-dialog', 'card', 'checkbox-field', 'command-palette', 'header-nav', 'input', 'multi-select', 'payment-input', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area'];
+const AUTHORED = ['alert-dialog', 'card', 'command-palette', 'header-nav', 'input', 'multi-select', 'sidebar', 'tag-select', 'text', 'text-area'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 14 families whose web.react API is still authored list prop names only. Each name is owned by the one part
-// that declares it; these 33 are not, and the table says why and where they are carried instead. The table is
+// The 10 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// that declares it; these 30 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
   'alert-dialog.disabled': { parts: ['Trigger', 'Close'] },
   'alert-dialog.onActivate': { parts: ['Trigger', 'Close'] },
   'card.variant': { parts: ['Root', 'Button'] },
   'card.padding': { parts: ['Root', 'Button'] },
-  'checkbox-field.disabled': { parts: ['Root', 'Button'] },
   'command-palette.closeOnSelect': { parts: ['Root', 'Item'] },
   'command-palette.disabled': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
   'command-palette.onActivate': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
@@ -322,12 +321,10 @@ const AUTHORED_OWNERS = {
   'input.type': { native: 'Input' },
   'input.placeholder': { native: 'Input' },
   'multi-select.disabled': { parts: ['Root', 'Item'] },
-  'radio-field.disabled': { parts: ['Root', 'Button'] },
   'sidebar.label': { parts: ['Section', 'NavButton'] },
   'sidebar.current': { parts: ['NavItem', 'NavButton'] },
   'sidebar.items': { parts: ['NavItem', 'AccountMenu'] },
   'sidebar.icon': { parts: ['NavItem', 'NavButton'] },
-  'switch-field.disabled': { parts: ['Root', 'Button'] },
   'tag-select.disabled': { parts: ['Root', 'Item'] },
   'text-area.rows': { native: 'TextArea' },
   'text-area.maxLength': { native: 'TextArea' },
@@ -336,10 +333,10 @@ const AUTHORED_OWNERS = {
 // The catalog lists these channels but not their `on` handler among the props; the handler is declared on the root.
 const UNLISTED_EVENTS = new Set(['text-area.change']);
 
-test('every prop of the 14 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 10 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 14, props: 155, unique: 122, listed: 33, events: 21 });
+  assert.deepEqual(result.counts, { families: 10, props: 121, unique: 91, listed: 30, events: 18 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });

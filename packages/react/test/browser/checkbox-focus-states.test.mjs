@@ -72,7 +72,7 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
   const entry = `import React from 'react';
     import { createRoot } from 'react-dom/client';
     import { Checkbox } from '/src/components.ts';
-    import { CheckboxField } from '/src/supplemental/index.mjs';
+    import { CheckboxField } from '/src/supplemental/checkbox-field.ts';
     import '/generated/styles.css';
     const h = React.createElement;
     function App() {
@@ -98,7 +98,7 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
     main { display: grid; gap: 12px; }
   </style>`, body: '<div id="root"></div>', entry: '/checkbox-focus-states-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.ts', 'src/supplemental/index.mjs'],
+    entries: ['src/components.ts', 'src/supplemental/checkbox-field.ts'],
     pages: { '/checkbox-focus.html': html },
     modules: { '/checkbox-focus-states-entry.mjs': entry },
   });
@@ -290,7 +290,9 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     import { Checkbox } from '/src/components.ts';
     import { RadioGroup } from '/src/collections.mjs';
     import { Switch } from '/src/fields.ts';
-    import { CheckboxField, RadioField, SwitchField } from '/src/supplemental/index.mjs';
+    import { CheckboxField } from '/src/supplemental/checkbox-field.ts';
+    import { RadioField } from '/src/supplemental/radio-field.ts';
+    import { SwitchField } from '/src/supplemental/switch-field.ts';
     import '/generated/styles.css';
     const h = React.createElement;
     const field = (testId, props) => h(CheckboxField.Root, { 'data-testid': testId, invalid: true, ...props },
@@ -321,7 +323,7 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     main { display: grid; gap: 12px; justify-items: start; }
   </style>`, body: '<div id="root"></div>', entry: '/checkbox-invalid-states-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.ts', 'src/collections.mjs', 'src/fields.ts', 'src/supplemental/index.mjs'],
+    entries: ['src/components.ts', 'src/collections.mjs', 'src/fields.ts', 'src/supplemental/checkbox-field.ts', 'src/supplemental/radio-field.ts', 'src/supplemental/switch-field.ts'],
     pages: { '/checkbox-invalid.html': html },
     modules: { '/checkbox-invalid-states-entry.mjs': entry },
   });
