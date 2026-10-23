@@ -612,17 +612,20 @@ function declarationReader({ project, declarationRoot, allowed }) {
   }
 
   /**
-   * `Promise<unknown>` written as the Promise of the default library: the symbol must be declared in the default library alone,
-   * so a local, imported, merged, augmented, or shadowing `Promise` is no host type. The result must be an allowlist entry, like
-   * any application.
+   * `Promise<unknown>` written as the Promise of the default library: every declaration of the symbol (the interfaces and the
+   * var, and any merged one) must be in the default library, so a local, imported, merged, augmented, or shadowing `Promise` is
+   * no host type. `hostName` is not the test: it also admits a symbol that @types/react augments, which is right for the host
+   * types React extends but would let an augmentation there add members this reading drops. The result must be an allowlist
+   * entry, like any application.
    */
   function promiseUnknownOf(node, chain) {
     const hop = `${chain} -> Promise`;
     const found = checker.getSymbolAtLocation(node.typeName);
     if (!found) throw new ApiExtractionError(hop, 'Promise does not resolve');
     const symbol = found.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
-    if (hostName(symbol) !== 'Promise') {
-      throw new ApiExtractionError(hop, 'this Promise is not the default library\'s: Promise<unknown> is read only for the global Promise, never a local, imported, merged, or augmented one');
+    const libraryOnly = symbol.declarations.length > 0 && symbol.declarations.every(({ path }) => isDefaultLibrary(program, path));
+    if (symbol.name !== 'Promise' || !libraryOnly) {
+      throw new ApiExtractionError(hop, 'this Promise is not the default library\'s: Promise<unknown> is read only for the global Promise, never a local, imported, merged, or augmented one (every declaration of it must be in the default library)');
     }
     const application = { kind: 'host', name: 'Promise', typeArguments: [{ kind: 'unknown' }] };
     if (allowed.applications.has(hostEntryKey(application))) return application;

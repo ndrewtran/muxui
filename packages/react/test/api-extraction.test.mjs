@@ -1313,6 +1313,9 @@ test('Promise<unknown> is read only where a function returns it, as the default 
     // The symbol is the default library's alone: nothing local, imported, merged, or augmented is it.
     ['a local Promise', '  onBad?: () => Promise<unknown>;', 'export interface Promise<T> { readonly value: T }\n', /Thing\.onBad=> -> Promise: this Promise is not the default library's/u],
     ['an augmented Promise', '  onBad?: () => Promise<unknown>;', 'declare global { interface Promise<T> { extra?: string } }\n', /Thing\.onBad=> -> Promise: this Promise is not the default library's/u],
+    ['an augmented Promise whose member is required', '  onBad?: () => Promise<unknown>;', 'declare global { interface Promise<T> { extra: string } }\n', /Thing\.onBad=> -> Promise: this Promise is not the default library's/u],
+    ['a Promise augmented from a local declaration file', '  onBad?: () => Promise<unknown>;', "import './augment.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'augment.d.ts': 'export {};\ndeclare global { interface Promise<T> { extra: string } }\n' } }],
+    ['a Promise whose var is redeclared from a local declaration file', '  onBad?: () => Promise<unknown>;', "import './augment.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'augment.d.ts': 'export {};\ndeclare global { var Promise: PromiseConstructor }\n' } }],
     ['an imported Promise', '  onBad?: () => Promise<unknown>;', "import type { Promise } from './other.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'other.d.ts': 'export interface Promise<T> { readonly value: T }\n' } }],
     ['a renamed import of a local Promise', '  onBad?: () => Promise<unknown>;', "import type { Later as Promise } from './other.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'other.d.ts': 'export interface Later<T> { readonly value: T }\n' } }],
   ];
@@ -1325,6 +1328,27 @@ test('Promise<unknown> is read only where a function returns it, as the default 
   }
   // The same fixture reads when the Promise is the library's: the rejections above are about the symbol and the place.
   extract({ declarations: ownProps('  onGood?: () => Promise<unknown>;', 'declare global { interface Other { extra?: string } }\n'), hostAllowlist: allowlist });
+
+  // React's types may augment library types, and the host reader admits that for the types React extends. For Promise<unknown> it would
+  // serialize the host and drop a member the augmentation requires, so every declaration of Promise must be the default library's:
+  // the @types/react stand-in below augments it and is refused, and the same stand-in without the augmentation reads.
+  const reactStandIn = (body) => ({
+    'node_modules/@types/react/package.json': JSON.stringify({ name: '@types/react', version: '0.0.0', types: 'index.d.ts' }),
+    'node_modules/@types/react/index.d.ts': `export {};\n${body}\n`,
+  });
+  const standInRun = "import type {} from 'react';\nexport interface ThingOwnProps { onRun?: () => Promise<unknown>; }\nexport interface ThingProps extends ThingOwnProps {}\nexport declare const Thing: (props: ThingProps) => null;\n";
+  assert.deepEqual(extract({ declarations: standInRun, outside: reactStandIn('export interface Marker {}'), hostAllowlist: allowlist }).eventDetails.run.type.returns, promiseUnknown);
+  for (const [label, body] of [
+    ['an interface member', 'declare global { interface Promise<T> { extra: string } }'],
+    ['an optional member', 'declare global { interface Promise<T> { extra?: string } }'],
+    ['a redeclared var', 'declare global { var Promise: PromiseConstructor }'],
+  ]) {
+    assert.throws(() => extract({ declarations: standInRun, outside: reactStandIn(body), hostAllowlist: allowlist }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, `${label}: ${error.stack}`);
+      assert.match(error.message, /Thing\.onRun=> -> Promise: this Promise is not the default library's/u, label);
+      return true;
+    }, label);
+  }
 
   // The application is an allowlist entry like any other: without it Promise<unknown> is refused, and it admits nothing broader.
   rejects(ownProps('  onLater?: () => Promise<unknown>;'), /Thing\.onLater=> -> Promise: Promise<unknown> is not an application on the host allowlist/u, { hostAllowlist: ['React.ReactNode'] });
