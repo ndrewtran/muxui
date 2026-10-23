@@ -8090,7 +8090,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8129,7 +8129,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8168,7 +8168,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8207,7 +8207,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8246,7 +8246,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8285,7 +8285,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }

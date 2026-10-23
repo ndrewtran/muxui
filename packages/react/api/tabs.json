@@ -1,0 +1,267 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/tabs.ts",
+  "component": "muxui:component:tabs",
+  "binding": "web.react",
+  "export": "Tabs",
+  "api": {
+    "props": [
+      "items",
+      "value",
+      "defaultValue",
+      "disabled",
+      "orientation",
+      "keyboardActivation",
+      "size",
+      "variant"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "disabled": false,
+      "orientation": "horizontal",
+      "keyboardActivation": "automatic",
+      "size": "md",
+      "variant": "underline"
+    },
+    "propDetails": {
+      "items": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUIItems"
+        },
+        "required": false,
+        "description": "The tabs as data: strings, or items with an `id`, a `label`, a `textValue`, `disabled`, and the `panel` the tab shows."
+      },
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the selected tab, when the caller controls the selection."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The id of the tab selected at first, when Tabs controls its own selection. Without one, the first enabled tab is selected."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables every tab. A tab's own `disabled` disables just that tab."
+      },
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            },
+            {
+              "kind": "literal",
+              "value": "vertical"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "horizontal",
+          "vertical"
+        ],
+        "description": "The direction the tabs run, which arrow keys follow."
+      },
+      "keyboardActivation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "automatic"
+            },
+            {
+              "kind": "literal",
+              "value": "manual"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "automatic",
+          "manual"
+        ],
+        "description": "How arrow keys act. With `automatic`, an arrow key selects the tab it reaches. With `manual`, arrow keys only move focus, and Enter or Space selects the focused tab."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "ControlSize"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size, sm, md, or lg."
+      },
+      "variant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "underline"
+            },
+            {
+              "kind": "literal",
+              "value": "pill"
+            },
+            {
+              "kind": "literal",
+              "value": "overflow"
+            },
+            {
+              "kind": "literal",
+              "value": "segment"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "underline",
+          "pill",
+          "overflow",
+          "segment"
+        ],
+        "description": "The visual treatment of the tab list: underline, pill, overflow, or segment."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the id of the tab the user selects. It is not called for a disabled tab or while Tabs is disabled."
+      }
+    },
+    "types": {
+      "ControlSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "description": "The shared control sizes."
+      },
+      "MuxUICollectionItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+      },
+      "MuxUIItems": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "union",
+            "members": [
+              {
+                "kind": "reference",
+                "name": "MuxUICollectionItem"
+              },
+              {
+                "kind": "string"
+              }
+            ]
+          },
+          "readonly": false
+        }
+      }
+    }
+  }
+}

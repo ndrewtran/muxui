@@ -91,6 +91,8 @@ const audited = [
       ...expand(['select.trigger', 'select.option'], ['disabled']),
       // ComboBox sent isDisabled, isReadOnly, and isRequired to React Aria as its own values (false when omitted) before the move, so no React Aria context supplied them.
       ...expand(['combo-box'], ['disabled', 'readOnly', 'required']),
+      // Tabs sent isDisabled and orientation to React Aria as its own values, false and horizontal when omitted, before the move, so a TabsContext never supplied them.
+      ...expand(['tabs'], ['disabled', 'orientation']),
     ],
   },
   {

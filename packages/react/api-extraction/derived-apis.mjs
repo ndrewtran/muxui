@@ -93,6 +93,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'select', name: 'Select', also: [{ member: 'Root', widen: ['label'] }], source: 'packages/react/src/select.ts', parts: { trigger: 'Trigger', popup: 'Popup', list: 'List', option: 'Item' } },
   // ColorSwatchPicker is one component with no part that owns props: its swatches are rendered, not exported.
   { slug: 'color-swatch-picker', name: 'ColorSwatchPicker', source: 'packages/react/src/color-swatch-picker.ts' },
+  // Tabs is one component; its list, tab, panels, and panel are rendered, not exported.
+  { slug: 'tabs', name: 'Tabs', source: 'packages/react/src/tabs.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

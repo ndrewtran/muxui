@@ -444,6 +444,8 @@ export { ColorField } from './color-field.js';
 export type { ColorFieldProps } from './color-field.js';
 export { ColorSwatchPicker } from './color-swatch-picker.js';
 export type { ColorSwatchPickerProps } from './color-swatch-picker.js';
+export { Tabs } from './tabs.js';
+export type { TabsProps } from './tabs.js';
 export { Calendar, RangeCalendar } from './calendar.js';
 export type { CalendarProps, RangeCalendarProps } from './calendar.js';
 export { Toolbar } from './toolbar.js';
@@ -481,8 +483,6 @@ export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<str
 export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };
 export type TableProps = MuxUIAriaLabel & { columns?: MuxUITableColumn[]; rows?: MuxUITableRow[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; sortDescriptor?: MuxUITableSortDescriptor; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onRowAction?: (row?: MuxUITableRow) => void; onSortChange?: (next: MuxUITableSortDescriptor) => void; className?: string; };
 export declare const Table: React.ForwardRefExoticComponent<TableProps & React.RefAttributes<HTMLTableElement>>;
-export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: string; defaultValue?: string; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; keyboardActivation?: 'automatic' | 'manual'; size?: ControlSize; variant?: 'underline' | 'pill' | 'overflow' | 'segment'; onChange?: (value: string) => void; className?: string; };
-export declare const Tabs: React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<HTMLDivElement>>;
 /** A TagGroup colour: neutral, the theme's brand, a status, or a fixed hue family. */
 export type TagGroupColor = 'neutral' | 'brand' | 'success' | 'warning' | 'error' | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'emerald' | 'teal' | 'bluegreen' | 'cyan' | 'sky' | 'indigo' | 'violet' | 'purple' | 'fuchsia' | 'pink' | 'rose';
 export type TagGroupVariant = 'soft' | 'outline' | 'dot' | 'strong';

@@ -14,7 +14,7 @@ export { Select } from './select.ts';
 export { RadioGroup } from './radio-group.ts';
 export { Slider } from './slider.ts';
 export { Table } from './table.mjs';
-export { Tabs } from './tabs.mjs';
+export { Tabs } from './tabs.ts';
 export { TagGroup } from './tag-group.mjs';
 export { ToggleButtonGroup } from './toggle-button-group.ts';
 export { TokenField } from './token-field.ts';

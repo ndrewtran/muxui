@@ -2707,6 +2707,15 @@ test('R1.3 ColorSwatchPicker reports the first invalid input in the order it che
   ]);
 });
 
+test('R1.3 Tabs reports the first invalid input in the order it checks: items, name, size, variant', () => {
+  reportsInOrder(Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }, [
+    [{ items: 5 }, /items\.map is not a function/u],
+    [{ 'aria-label': undefined }, /Tabs requires label, aria-label, or aria-labelledby/u],
+    [{ size: 'xl' }, /Tabs size must be one of: sm, md, lg/u],
+    [{ variant: 'rail' }, /Tabs variant must be one of: underline, pill, overflow, segment/u],
+  ]);
+});
+
 test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {
   const h = React.createElement;
   const grid = (props) => renderToString(h(Virtualizer, { layout: 'grid' }, h(GridList, { 'aria-label': 'Posters', ...props }, h(GridList.Item, { id: 'a' }, 'Alpha'))));
