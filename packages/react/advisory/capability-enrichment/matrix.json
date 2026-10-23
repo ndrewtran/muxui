@@ -7288,7 +7288,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/color-swatch-picker/artifact.json#bindings/web.react",
-          "packages/react/src/color-swatch-picker.mjs#ColorSwatchPicker",
+          "packages/react/src/color-swatch-picker.ts#ColorSwatchPicker",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -9849,7 +9849,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/table/artifact.json#bindings/web.react",
-          "packages/react/src/table.mjs#Table",
+          "packages/react/src/table.ts#Table",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -10100,7 +10100,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tabs/artifact.json#bindings/web.react",
-          "packages/react/src/tabs.mjs#Tabs",
+          "packages/react/src/tabs.ts#Tabs",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -10353,7 +10353,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tag-group/artifact.json#bindings/web.react",
-          "packages/react/src/tag-group.mjs#TagGroup",
+          "packages/react/src/tag-group.ts#TagGroup",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],
@@ -11357,7 +11357,7 @@
       "evidenceRefs": {
         "mux": [
           "catalog/components/tree/artifact.json#bindings/web.react",
-          "packages/react/src/tree.mjs#Tree",
+          "packages/react/src/tree.ts#Tree",
           "packages/react/test/r1-3-parity.test.mjs",
           "packages/react/test/types.test.tsx"
         ],

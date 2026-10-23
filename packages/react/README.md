@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:7df7ee57686b90160035fbfdf5c8b8a25742fb9a3a70118ca491ed20ca3b8279 -->
+<!-- @generated-content-sha256: sha256:a496d25f5327435fb9d7998e60ec91ab310a4de28e3314d0f907358d5e1f6b01 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -121,7 +121,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
-| ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
+| ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
@@ -169,9 +169,9 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
-| Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
-| Tabs | experimental | . | .muxui-tabs | aria-label, aria-labelledby, items, value, defaultValue, keyboardActivation, disabled, size, orientation, variant |
-| TagGroup | experimental | . | .muxui-tag-group | label, aria-label, aria-labelledby, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
+| Table | experimental | . | .muxui-table | columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
+| Tabs | experimental | . | .muxui-tabs | items, value, defaultValue, disabled, orientation, keyboardActivation, size, variant |
+| TagGroup | experimental | . | .muxui-tag-group | label, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |
@@ -184,7 +184,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TokenField | experimental | . | .muxui-token-field | label, value, defaultValue, disabled, readOnly, name, placeholder |
 | Toolbar | experimental | . | .muxui-toolbar | orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
-| Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
+| Tree | experimental | . | .muxui-tree | items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | layout, items, height, itemHeight, overscan, disabled, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
 
 ## Composition and native input contracts

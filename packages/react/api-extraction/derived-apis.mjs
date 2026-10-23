@@ -91,6 +91,16 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   // Select is its own root; Select.Root takes the same props with `label` as any node, so the derivation checks both. Its anatomy calls Select.Item the option.
   // Label, Value, Description, and Error own no props.
   { slug: 'select', name: 'Select', also: [{ member: 'Root', widen: ['label'] }], source: 'packages/react/src/select.ts', parts: { trigger: 'Trigger', popup: 'Popup', list: 'List', option: 'Item' } },
+  // ColorSwatchPicker is one component with no part that owns props: its swatches are rendered, not exported.
+  { slug: 'color-swatch-picker', name: 'ColorSwatchPicker', source: 'packages/react/src/color-swatch-picker.ts' },
+  // Tabs is one component; its list, tab, panels, and panel are rendered, not exported.
+  { slug: 'tabs', name: 'Tabs', source: 'packages/react/src/tabs.ts' },
+  // TagGroup is one component; its label, list, tag, and remove button are rendered, not exported. Its label is owned, and the public type offers it with the accessible name's arms.
+  { slug: 'tag-group', name: 'TagGroup', source: 'packages/react/src/tag-group.ts' },
+  // Table is one component; its header, column, body, row, and cell are rendered, not exported.
+  { slug: 'table', name: 'Table', source: 'packages/react/src/table.ts' },
+  // Tree is one component; its items and their nested children are rendered, not exported, and it takes no children of its own.
+  { slug: 'tree', name: 'Tree', source: 'packages/react/src/tree.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

@@ -348,6 +348,69 @@ test('only an application equal to an allowlist entry, arguments in order, is ad
   rejects(source, /Thing\.text -> Promise: Promise<string> is not an application/u, { hostAllowlist: [host('Promise', host('File')), 'File'] });
 });
 
+test('the shipped allowlist admits a mutable Set<string> and no other Set', () => {
+  const shipped = extract({ declarations: ownProps('  selected?: Set<string>;\n  onSelectionChange?: (keys: Set<string>) => void;\n  fixed?: ReadonlySet<string>;') });
+  assert.deepEqual(shipped.propDetails.selected.type, host('Set', keyword('string')));
+  assert.deepEqual(shipped.eventDetails.selectionChange.type.parameters, [{ name: 'keys', type: host('Set', keyword('string')), required: true }]);
+  // ReadonlySet<string> is its own entry, so a mutable Set is not read as one, and neither admits the other.
+  assert.deepEqual(shipped.propDetails.fixed.type, host('ReadonlySet', keyword('string')));
+  const setOnly = [host('Set', keyword('string'))];
+  rejects(ownProps('  bad?: ReadonlySet<string>;'), /Thing\.bad -> ReadonlySet: ReadonlySet<string> is not an application on the host allowlist/u, { hostAllowlist: setOnly });
+  rejects(ownProps('  bad?: Set<string>;'), /Thing\.bad -> Set: Set<string> is not an application on the host allowlist/u, { hostAllowlist: [host('ReadonlySet', keyword('string'))] });
+  const cases = [
+    ['  bad?: Set<number>;', /Thing\.bad -> Set: Set<number> is not an application on the host allowlist/u],
+    ['  bad?: Set<string | number>;', /Thing\.bad -> Set: Set<string \| number> is not an application on the host allowlist/u],
+    ["  bad?: Set<'a' | 'b'>;", /Thing\.bad -> Set: Set<"a" \| "b"> is not an application on the host allowlist/u],
+    ['  bad?: Set<Set<string>>;', /Thing\.bad -> Set: Set<Set<string>> is not an application on the host allowlist/u],
+    ['  bad?: Set;', /Thing\.bad -> Set: Set is outside @muxui\/react and not in the host allowlist/u],
+    ['  bad?: Map<string, string>;', /Thing\.bad -> Map: Map<string, string> is not an application on the host allowlist/u],
+    ['  bad?: WeakSet<object>;', /Thing\.bad -> WeakSet<0>: object is not in the grammar/u],
+    ['  bad?: Iterable<string>;', /Thing\.bad -> Iterable: Iterable<string> is not an application on the host allowlist/u],
+    ['  bad?: Readonly<Set<string>>;', /Thing\.bad -> Readonly: Readonly<Set<string>> is not an application on the host allowlist/u],
+  ];
+  // The shipped allowlist and the single entry refuse each of them alike.
+  for (const [members, pattern] of cases) {
+    rejects(ownProps(members), pattern);
+    rejects(ownProps(members), pattern, { hostAllowlist: setOnly });
+  }
+  // A Mux UI-owned type named Set is never the host Set.
+  rejects(ownProps('  bad?: Set<string>;', 'export interface Set<T> { readonly values: T[] }\n'), /Thing\.bad -> Set: Set is a Mux UI-owned type; it takes no type arguments/u);
+});
+
+test('the shipped allowlist admits Record<string, React.ReactNode> and no other Record', () => {
+  const values = host('Record', keyword('string'), host('React.ReactNode'));
+  const shipped = extract({ declarations: ownProps('  values?: Record<string, React.ReactNode>;') });
+  assert.deepEqual(shipped.propDetails.values.type, values);
+  // As the member of an item, the way a Table row holds its values.
+  const row = extract({ declarations: ownProps('  row?: ThingRow;', 'export interface ThingRow { id?: string; values?: Record<string, React.ReactNode> }\n') });
+  assert.deepEqual(row.types.ThingRow.type.members.at(-1).type, values);
+  // An index signature of the same shape is another type: a sole signature reads as a record of its own, and its keyof is wider.
+  assert.deepEqual(extract({ declarations: ownProps('  values?: { [columnId: string]: React.ReactNode };') }).propDetails.values.type, { kind: 'record', value: host('React.ReactNode'), readonly: false });
+  const recordOnly = [host('Record', keyword('string'), host('React.ReactNode')), 'React.ReactNode'];
+  const cases = [
+    ['  bad?: Record<number, React.ReactNode>;', /Thing\.bad -> Record: Record<number, React\.ReactNode> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, string>;', /Thing\.bad -> Record: Record<string, string> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, React.ReactNode | undefined>;', /Thing\.bad -> Record: Record<string, React\.ReactNode \| undefined> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, React.ReactElement>;', /Thing\.bad -> Record<1> -> React\.ReactElement: React\.ReactElement is outside @muxui\/react and not in the host allowlist|Thing\.bad -> Record: Record<string, React\.ReactElement> is not an application on the host allowlist/u],
+    ["  bad?: Record<'a' | 'b', React.ReactNode>;", /Thing\.bad -> Record: Record<"a" \| "b", React\.ReactNode> is not an application on the host allowlist/u],
+    ['  bad?: Record;', /Thing\.bad -> Record: Record is outside @muxui\/react and not in the host allowlist/u],
+    ['  bad?: Readonly<Record<string, React.ReactNode>>;', /Thing\.bad -> Readonly: Readonly<Record<string, React\.ReactNode>> is not an application on the host allowlist/u],
+    ['  bad?: Partial<Record<string, React.ReactNode>>;', /Thing\.bad -> Partial: Partial<Record<string, React\.ReactNode>> is not an application on the host allowlist/u],
+    ['  bad?: Record<string, React.ReactNode>[];', null],
+  ];
+  for (const [members, pattern] of cases) {
+    if (pattern === null) continue;
+    rejects(ownProps(members), pattern);
+    rejects(ownProps(members), pattern, { hostAllowlist: recordOnly });
+  }
+  // An array of the admitted application is the application inside an array, which the grammar reads.
+  assert.deepEqual(extract({ declarations: ownProps('  bad?: Record<string, React.ReactNode>[];') }).propDetails.bad.type, { kind: 'array', element: values, readonly: false });
+  // A Mux UI-owned type named Record is never the host Record.
+  rejects(ownProps('  bad?: Record<string, React.ReactNode>;', 'export interface Record<K, V> { readonly key: K; readonly value: V }\n'), /Thing\.bad -> Record: Record is a Mux UI-owned type; it takes no type arguments/u);
+  // The same name used bare is that Mux UI-owned type, not the host one.
+  assert.deepEqual(extract({ declarations: ownProps('  bad?: Record;', 'export interface Record { readonly id: string }\n') }).propDetails.bad.type, { kind: 'reference', name: 'Record' });
+});
+
 test('a Mux UI-owned type that shadows a host name or an argument is never the host type', () => {
   // A local Promise is Mux UI-owned, so it takes no type arguments, whatever it is named.
   rejects(ownProps('  bad?: Promise<File>;', 'export interface Promise<T> { readonly value: T }\n'),
@@ -527,9 +590,9 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
-  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
+  assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
   assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json', 'prompt-composer.json'], 'the files FileTrigger selects, the File a DropZone item reads, and the files a PromptComposer attach picker reports');
@@ -540,6 +603,10 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
   assert.deepEqual(reached.get('HTMLDivElement'), ['virtualizer.json'], 'the element a scroll event reports');
   assert.deepEqual(reached.get(hostEntryKey(host('React.UIEvent', host('HTMLDivElement')))), ['virtualizer.json'], 'the scroll event of the Virtualizer viewport');
+  // A Table row's values: the cell content by column id, which no other family takes.
+  assert.deepEqual(reached.get(hostEntryKey(host('Record', keyword('string'), host('React.ReactNode')))), ['table.json'], 'the cell values of a Table row');
+  // TagGroup's selected item ids: a mutable Set, which no other family takes.
+  assert.deepEqual(reached.get(hostEntryKey(host('Set', keyword('string')))), ['tag-group.json'], 'the selected ids of a TagGroup');
   // PromptComposer's inputProps: the textarea's attributes, as its props omit the four the composer owns.
   const textareaAttributes = host('React.TextareaHTMLAttributes', host('HTMLTextAreaElement'));
   assert.deepEqual(reached.get('HTMLTextAreaElement'), ['prompt-composer.json'], 'the element whose attributes inputProps takes');
@@ -900,6 +967,127 @@ test('beside named properties, exactly one mutable [key: string]: unknown marks 
   rejects(ownProps('  bad?: unknown;'), /Thing\.bad: unknown is not in the grammar/u);
   rejects(ownProps('  bad?: unknown[];'), /Thing\.bad\[\]: unknown is not in the grammar/u);
   rejects(ownProps('  bad?: string | unknown;'), /Thing\.bad: unknown is not in the grammar/u);
+});
+
+// The members an item type lists, read as one object type: what an interface with a base, or an intersection alias, must equal.
+const itemMembers = [
+  { name: 'id', type: { kind: 'string' }, required: false, readonly: false, description: 'The stable id.' },
+  { name: 'label', type: { kind: 'host', name: 'React.ReactNode' }, required: false, readonly: false },
+  { name: 'color', type: { kind: 'string' }, required: false, readonly: false },
+];
+const openItem = 'export interface Item {\n  /** The stable id. */\n  id?: string;\n  label?: React.ReactNode;\n  [key: string]: unknown;\n}\n';
+
+test('an interface reads its one Mux UI-owned base, and an alias its whole-body intersection, as one object type with the base first', () => {
+  const flat = extract({ declarations: ownProps('  item?: Row;', openItem.replace('Item', 'Row').replace('  [key', '  color?: string;\n  [key')) }).types.Row;
+  const flatType = { kind: 'object', members: itemMembers, additional: 'unknown' };
+  assert.deepEqual(flat.type, flatType);
+  const forms = {
+    'one base': `${openItem}export interface Row extends Item { color?: string }\n`,
+    // The chain's members run from its root down, and a base at any depth may carry the marker.
+    'several levels': `${openItem}export interface Mid extends Item { }\nexport interface Row extends Mid { color?: string }\n`,
+    'an interface and a literal': `${openItem}export type Row = Item & { color?: string };\n`,
+    'a literal and an interface': `export type Row = { color?: string } & Item;\n${openItem}`,
+    'two interfaces and a literal': `${openItem}export interface Tint { color?: string }\nexport type Row = Item & Tint & { };\n`,
+    'an interface with a base, as an operand': `${openItem}export interface Mid extends Item { }\nexport type Row = Mid & { color?: string };\n`,
+  };
+  for (const [form, extra] of Object.entries(forms)) {
+    const api = extract({ declarations: ownProps('  item?: Row;', extra) });
+    const { type } = api.types.Row;
+    // The members are the flat ones, in base-first order and with the marker; the description of a base member is kept.
+    assert.deepEqual(type.members.map(({ name }) => name).sort(), ['color', 'id', 'label'], form);
+    assert.equal(type.additional, 'unknown', form);
+    assert.equal(type.members.find(({ name }) => name === 'id').description, 'The stable id.', form);
+    if (form === 'one base' || form === 'an interface and a literal') assert.deepEqual(type, flatType, form);
+    // The base is flattened into the child's record; it is no type of its own in the block.
+    assert.deepEqual(Object.keys(api.types), ['Row'], form);
+  }
+  // A base that is also a prop's type of its own stays one, with the child as another.
+  const both = extract({ declarations: ownProps('  base?: Item;\n  row?: Row;', `${openItem}export interface Row extends Item { color?: string }\n`) });
+  assert.deepEqual(Object.keys(both.types), ['Item', 'Row']);
+  // A recursive member of the child (a tree item's children) still refers to the child by name.
+  const tree = extract({ declarations: ownProps('  items?: Node[];', `${openItem}export interface Node extends Item { children?: Node[] }\n`) });
+  assert.deepEqual(tree.types.Node.type.members.at(-1), { name: 'children', type: { kind: 'array', element: { kind: 'reference', name: 'Node' }, readonly: false }, required: false, readonly: false });
+  // A base reached through an import, and through an import alias, from another file.
+  const other = "import type * as React from 'react';\nexport interface Source { id?: string; [key: string]: unknown }\n";
+  const imported = extract({
+    declarations: ownProps('  item?: Row;', "import type { Source as Renamed } from './other.js';\nexport interface Row extends Renamed { color?: string }\n"),
+    files: { 'other.d.ts': other },
+  });
+  assert.deepEqual(imported.types.Row.type.members.map(({ name }) => name), ['id', 'color']);
+  assert.equal(imported.types.Row.type.additional, 'unknown');
+  const throughIntersection = extract({
+    declarations: ownProps('  item?: Row;', "import type { Source as Renamed } from './other.js';\nexport type Row = Renamed & { color?: string };\n"),
+    files: { 'other.d.ts': other },
+  });
+  assert.deepEqual(throughIntersection.types.Row, imported.types.Row);
+  // An interface with no base is read as it was: no marker is added.
+  assert.equal(Object.hasOwn(extract({ declarations: ownProps('  item?: Plain;', 'export interface Plain { id?: string }\n') }).types.Plain.type, 'additional'), false);
+});
+
+test('the heritage and intersection rule refuses everything but one non-generic Mux UI-owned base and a whole-body intersection of owned types', () => {
+  const generic = 'export interface Box<T> { value?: T }\n';
+  const library = "import type { HTMLAttributes } from 'react';\n";
+  const cases = [
+    // An interface has at most one base, whichever clause form lists them.
+    ['two bases', `${openItem}export interface Tint { color?: string }\nexport interface Row extends Item, Tint { }\n`, /Thing\.item -> Row: Row extends 2 types; an interface has at most one base/u],
+    ['a base with type arguments', `${generic}export interface Row extends Box<string> { }\n`, /Thing\.item -> Row -> Box: Box is written with type arguments; a base takes none/u],
+    ['a generic base, even without arguments', `${generic}export interface Row extends Box { }\n`, /Thing\.item -> Row -> Box: Box is generic; a base is not/u],
+    ['an alias base', 'export type Shape = { id?: string };\nexport interface Row extends Shape { }\n', /Thing\.item -> Row -> Shape: Shape is not an interface; a base is a Mux UI-owned interface, not an alias, class, or enum/u],
+    ['a qualified base', "export interface Row extends React.HTMLAttributes<HTMLElement> { }\n", /Thing\.item -> Row -> React\.HTMLAttributes: React\.HTMLAttributes is not a plain identifier; a base is one naming a Mux UI-owned interface/u],
+    ['a qualified base from a Mux UI-owned namespace', 'export declare namespace Ns { interface Item { id?: string } }\nexport interface Row extends Ns.Item { }\n', /Thing\.item -> Row -> Ns\.Item: Ns\.Item is not a plain identifier/u],
+    ['a host base by name, with arguments', `${library}export interface Row extends HTMLAttributes<HTMLElement> { }\n`, /Thing\.item -> Row -> HTMLAttributes: HTMLAttributes is written with type arguments/u],
+    ['a host base by name, bare', "import type { Component } from 'react';\nexport interface Row extends Component { }\n", /Thing\.item -> Row -> Component: Component is outside @muxui\/react, or also declared there; a base is a Mux UI-owned interface/u],
+    ['a library base', 'export interface Row extends Event { }\n', /Thing\.item -> Row -> Event: Event is outside @muxui\/react, or also declared there; a base is a Mux UI-owned interface/u],
+    ['a library base with a Mux UI-owned declaration merged in', 'declare global { interface Event { extra?: string } }\nexport interface Row extends Event { }\n', /Thing\.item -> Row -> Event: Event is outside @muxui\/react, or also declared there/u],
+    ['a base declared twice', `${openItem}export interface Item { color?: string }\nexport interface Row extends Item { }\n`, /Thing\.item -> Row -> Item: Item has 2 declarations; a Mux UI-owned type has one/u],
+    ['an unresolved base', 'export interface Row extends Missing { }\n', /Thing\.item -> Row -> Missing: Missing does not resolve/u],
+    // A redeclaration could narrow a base member, which the grammar cannot express.
+    ['a redeclared member', `${openItem}export interface Row extends Item { id?: 'a' | 'b' }\n`, /Thing\.item -> Row\.id: id is declared twice among the joined members/u],
+    ['a redeclared member two levels up', `${openItem}export interface Mid extends Item { }\nexport interface Row extends Mid { label?: string }\n`, /Thing\.item -> Row\.label: label is declared twice/u],
+    ['a second index signature', `${openItem}export interface Row extends Item { [key: string]: unknown }\n`, /Thing\.item -> Row: an index signature is in the grammar only as the one member of its object type, or as the one mutable/u],
+    ['a base with a readonly signature beside members', "export interface Item { id?: string; readonly [key: string]: unknown }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row: .*beside named properties it must be mutable/u],
+    ['a base with another signature value', "export interface Item { id?: string; [key: string]: string | undefined }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row: .*its value is written as the keyword unknown/u],
+    ['a method in the base', "export interface Item { id?: string; call(): void }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row\.call: only property signatures are in the grammar/u],
+    // The chain is walked by resolved symbol, so no spelling or distance escapes the cycle check.
+    ['a base cycle of one', 'export interface Row extends Row { id?: string }\n', /Thing\.item -> Row -> Row: Row extends itself through its bases/u],
+    ['a base cycle of two', 'export interface Row extends Other { id?: string }\nexport interface Other extends Row { color?: string }\n', /Thing\.item -> Row -> Other -> Row: Row extends itself through its bases/u],
+    ['a base cycle of three', 'export interface Row extends A { id?: string }\nexport interface A extends B { }\nexport interface B extends A { }\n', /extends itself through its bases/u],
+    // An intersection is read only as the whole body of a named alias, of type literals and owned interfaces.
+    ['an intersection with a host type', `${openItem}export type Row = Item & React.HTMLAttributes<HTMLElement>;\n`, /Thing\.item -> Row -> React\.HTMLAttributes: React\.HTMLAttributes is not a plain identifier; an intersection operand is one/u],
+    ['an intersection with a library type', `${openItem}export type Row = Item & Event;\n`, /Thing\.item -> Row -> Event: Event is outside @muxui\/react, or also declared there; an intersection operand is a Mux UI-owned interface/u],
+    ['an intersection with a union', `${openItem}export type Row = Item & ({ color?: string } | { size?: string });\n`, /Thing\.item -> Row: a parenthesized type is not an operand of an intersection/u],
+    ['a union that holds an intersection', `${openItem}export type Row = Item & { color?: string } | number;\n`, /Thing\.item -> Row: an intersection type is not in the grammar/u],
+    ['an intersection with an alias of an object', `${openItem}export type Shape = { color?: string };\nexport type Row = Item & Shape;\n`, /Thing\.item -> Row -> Shape: Shape is not an interface; an intersection operand is a Mux UI-owned interface, not an alias, class, or enum/u],
+    ['an intersection with an applied generic', `${openItem}${generic}export type Row = Item & Box<string>;\n`, /Thing\.item -> Row -> Box: Box is written with type arguments; an intersection operand takes none/u],
+    ['an intersection with a generic interface', `${openItem}${generic}export type Row = Item & Box;\n`, /Thing\.item -> Row -> Box: Box is generic; an intersection operand is not/u],
+    ['an intersection with an inline intersection', `${openItem}export type Row = Item & ({ color?: string } & { size?: string });\n`, /Thing\.item -> Row: a parenthesized type is not an operand of an intersection/u],
+    ['an intersection with a primitive', `${openItem}export type Row = Item & string;\n`, /Thing\.item -> Row: string is not an operand of an intersection; an operand is a type literal or a Mux UI-owned interface/u],
+    ['an intersection with an interface that has a host base', `export interface Mid extends Event { }\nexport type Row = Mid & { color?: string };\n`, /Thing\.item -> Row -> Mid -> Event: Event is outside @muxui\/react/u],
+    ['an intersection member named twice', `${openItem}export type Row = Item & { id?: string };\n`, /Thing\.item -> Row\.id: id is declared twice among the joined members/u],
+    ['an intersection of two interfaces that share a base', `${openItem}export interface A extends Item { }\nexport interface B extends Item { }\nexport type Row = A & B;\n`, /Thing\.item -> Row\.id: id is declared twice/u],
+    ['an intersection with two index signatures', `${openItem}export type Row = Item & { [key: string]: unknown };\n`, /Thing\.item -> Row: an index signature is in the grammar only as the one member of its object type, or as the one mutable/u],
+    ['an intersection with an operand cycle', 'export interface A extends B { }\nexport interface B extends A { }\nexport type Row = A & { color?: string };\n', /extends itself through its bases/u],
+    ['a generic alias intersection', `${openItem}export type Row<T> = Item & { value?: T };\n`, /Thing\.item -> Row: Row is generic/u],
+  ];
+  for (const [label, extra, pattern] of cases) {
+    assert.throws(() => extract({ declarations: ownProps('  item?: Row;', extra) }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, `${label}: ${error.stack}`);
+      assert.match(error.message, pattern, label);
+      return true;
+    }, label);
+  }
+  // A cycle through another file is found by symbol too.
+  assert.throws(() => extract({
+    declarations: ownProps('  item?: Row;', "import type { Other } from './other.js';\nexport interface Row extends Other { id?: string }\n"),
+    files: { 'other.d.ts': "import type { Row } from './thing.js';\nexport interface Other extends Row { color?: string }\n" },
+  }), /extends itself through its bases/u);
+  // An intersection anywhere but the whole body of an alias is still not in the grammar: a member, an argument, an element, a union arm.
+  const inline = ['  bad?: Item & Tint;', '  bad?: (Item & Tint)[];', '  bad?: Item & Tint | string;', '  onBad?: (value: Item & Tint) => void;'];
+  for (const members of inline) rejects(ownProps(members, `${openItem}export interface Tint { color?: string }\n`), /Thing\.(?:bad|onBad)(?:\[\]|\(value\))?: an intersection type is not in the grammar/u);
+  // An alias of an intersection is not an alias base, and OwnProps may extend nothing.
+  rejects(ownProps('  size?: string;').replace('export interface ThingOwnProps {', `${openItem}export interface ThingOwnProps extends Item {`), /Thing: ThingOwnProps extends another type/u);
+  rejects(ownProps('  size?: string;').replace('export interface ThingOwnProps {', `${openItem}export type Mixed = Item & { size?: string };\nexport interface ThingOwnProps extends Mixed {`), /Thing: ThingOwnProps extends another type/u);
+  rejects(`${header}${openItem}export type ThingOwnProps = Item & { size?: string };\nexport interface ThingProps extends ThingOwnProps { }\nexport declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLButtonElement>>;\n`, /Thing: ThingOwnProps must be an object type/u);
 });
 
 test('never is in the grammar only as an optional member\'s type, a member that must be absent', () => {

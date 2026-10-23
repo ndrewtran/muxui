@@ -6,7 +6,10 @@
  * one differently. Types come from the emitted declarations through the pinned
  * TypeScript 7 compiler API and a closed grammar; defaults come from the executable
  * source. Anything the grammar does not admit fails extraction with the component, the
- * prop, and the reference chain that reached it. The rules that keep a source from rewriting
+ * prop, and the reference chain that reached it. A Mux UI-owned interface may extend one Mux UI-owned,
+ * non-generic interface, and a named alias may be the intersection of type literals and such interfaces; each is
+ * read as one object type with the base's members first (`interfaceMembers`, `intersectionMembers`), so the
+ * published declarations keep the inheritance a consumer's module augmentation reaches. The rules that keep a source from rewriting
  * a component after its defaults are read (the write, value, self-import and reflective-API
  * scans below) give an early, named error; the executed-default observers in
  * packages/react/test/fixture.test.mjs render the components of the built package entry, so
@@ -69,7 +72,8 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * element Select's trigger takes, written
  * ReactElement<DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>, 'button'>,
  * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
- * PromptComposer's inputProps declares.
+ * PromptComposer's inputProps declares, Set<string> for the selected item ids of TagGroup, and
+ * Record<string, React.ReactNode> for the cell values of a Table row.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -106,6 +110,10 @@ export const HOST_ALLOWLIST = Object.freeze([
     kind: 'union',
     members: ['value', 'defaultValue', 'children', 'dangerouslySetInnerHTML'].map((value) => ({ kind: 'literal', value })),
   }),
+  // TagGroup's selected item ids: a mutable Set, as the group takes and hands them (ReadonlySet<string> is another type).
+  hostApplication('Set', { kind: 'string' }),
+  // Table's row values: the cell content of a row, by column id. A string-keyed Record keeps keyof string, which an index signature widens to string | number.
+  hostApplication('Record', { kind: 'string' }, { kind: 'host', name: 'React.ReactNode' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.
@@ -381,11 +389,13 @@ function declarationReader({ project, declarationRoot, allowed }) {
     let type;
     if (declaration.kind === SyntaxKind.InterfaceDeclaration) {
       if (declaration.typeParameters?.length) throw new ApiExtractionError(chain, `${name} is generic`);
-      if (declaration.heritageClauses?.length) throw new ApiExtractionError(chain, `${name} extends another type; list its members instead`);
-      type = objectOf(declaration.members, chain);
+      type = objectOf(interfaceMembers(declaration, symbol, chain), chain);
     } else if (declaration.kind === SyntaxKind.TypeAliasDeclaration) {
       if (declaration.typeParameters?.length) throw new ApiExtractionError(chain, `${name} is generic`);
-      type = typeOf(declaration.type, chain);
+      // An alias whose whole body is an intersection is read as one object type; an intersection anywhere else is not in the grammar.
+      type = declaration.type.kind === SyntaxKind.IntersectionType
+        ? objectOf(intersectionMembers(declaration.type, chain), chain)
+        : typeOf(declaration.type, chain);
     } else if (declaration.kind === SyntaxKind.EnumDeclaration) {
       throw new ApiExtractionError(chain, `${name} is an enum; use a union of literals`);
     } else {
@@ -397,6 +407,92 @@ function declarationReader({ project, declarationRoot, allowed }) {
   }
 
   const entityName = (node) => (node.kind === SyntaxKind.QualifiedName ? `${entityName(node.left)}.${node.right.text}` : node.text);
+
+  // The written name of a base or operand: an identifier, a qualified name, or the property access a heritage clause parses a qualified name to.
+  const baseName = (node) => {
+    if (node.kind === SyntaxKind.QualifiedName) return entityName(node);
+    return node.kind === SyntaxKind.PropertyAccessExpression ? `${baseName(node.expression)}.${node.name.text}` : node.text ?? '<expression>';
+  };
+
+  /**
+   * The interface a base or an intersection operand names, as the symbol and its one declaration. It is Mux UI-owned:
+   * every declaration is under the declaration root, so a host or library type such as React.HTMLAttributes or Event,
+   * and a global augmentation, never qualify, whatever the name. It is a plain identifier (a qualified name is not
+   * followed), written without type arguments, declared once, an interface (not an alias, which could hide a union or
+   * a generic), and not generic. A symbol is found through its import alias, so a base declared in another file works.
+   * `role` is what the node is in the diagnostic: 'base' or 'intersection operand'.
+   */
+  function ownedInterface(nameNode, typeArguments, chain, role) {
+    const written = baseName(nameNode);
+    const a = role === 'base' ? 'a base' : 'an intersection operand';
+    const hop = `${chain} -> ${written}`;
+    if (nameNode.kind !== SyntaxKind.Identifier) {
+      throw new ApiExtractionError(hop, `${written} is not a plain identifier; ${a} is one naming a Mux UI-owned interface, and a qualified name is not followed`);
+    }
+    if (typeArguments?.length) throw new ApiExtractionError(hop, `${written} is written with type arguments; ${a} takes none`);
+    const found = checker.getSymbolAtLocation(nameNode);
+    if (!found) throw new ApiExtractionError(hop, `${written} does not resolve`);
+    const symbol = found.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
+    const paths = symbol.declarations.map(({ path }) => path);
+    if (paths.length === 0 || !paths.every((path) => isUnder(path, declarationRoot))) {
+      throw new ApiExtractionError(hop, `${written} is outside @muxui/react, or also declared there; ${a} is a Mux UI-owned interface`);
+    }
+    if (symbol.declarations.length !== 1) throw new ApiExtractionError(hop, `${symbol.name} has ${symbol.declarations.length} declarations; a Mux UI-owned type has one`);
+    const declaration = symbol.declarations[0].resolve(project);
+    if (declaration.kind !== SyntaxKind.InterfaceDeclaration) {
+      throw new ApiExtractionError(hop, `${symbol.name} is not an interface; ${a} is a Mux UI-owned interface, not an alias, class, or enum`);
+    }
+    if (declaration.typeParameters?.length) throw new ApiExtractionError(hop, `${symbol.name} is generic; ${a} is not`);
+    return { declaration, symbol, hop };
+  }
+
+  /**
+   * The members of an interface, its base's first. An interface has at most one base, and the base is read the same way
+   * up the chain, so the members are the chain's from the root down. A chain that reaches an interface it already passed
+   * through (`visiting`, by resolved symbol) is a cycle and fails.
+   */
+  function interfaceMembers(declaration, symbol, chain, visiting = new Set()) {
+    if (visiting.has(symbol.id)) throw new ApiExtractionError(chain, `${symbol.name} extends itself through its bases`);
+    const bases = (declaration.heritageClauses ?? []).flatMap((clause) => clause.types);
+    if (bases.length > 1) throw new ApiExtractionError(chain, `${symbol.name} extends ${bases.length} types; an interface has at most one base`);
+    if (bases.length === 0) return declaration.members;
+    const [base] = bases;
+    const owned = ownedInterface(base.expression, base.typeArguments, chain, 'base');
+    visiting.add(symbol.id);
+    const inherited = interfaceMembers(owned.declaration, owned.symbol, owned.hop, visiting);
+    visiting.delete(symbol.id);
+    return joinedMembers([inherited, declaration.members], chain);
+  }
+
+  const OPERAND_KINDS = new Map([[SyntaxKind.UnionType, 'a union type'], [SyntaxKind.ParenthesizedType, 'a parenthesized type'], [SyntaxKind.IntersectionType, 'an inline intersection']]);
+
+  /** The members of an intersection that is the whole body of an alias, operand by operand: type literals and Mux UI-owned interfaces. */
+  function intersectionMembers(node, chain) {
+    return joinedMembers(node.types.map((operand) => {
+      if (operand.kind === SyntaxKind.TypeLiteral) return operand.members;
+      if (operand.kind !== SyntaxKind.TypeReference) {
+        throw new ApiExtractionError(chain, `${KEYWORDS.get(operand.kind) ?? OPERAND_KINDS.get(operand.kind) ?? REJECTED.get(operand.kind) ?? SyntaxKind[operand.kind]} is not an operand of an intersection; an operand is a type literal or a Mux UI-owned interface`);
+      }
+      const owned = ownedInterface(operand.typeName, operand.typeArguments, chain, 'intersection operand');
+      return interfaceMembers(owned.declaration, owned.symbol, owned.hop);
+    }), chain);
+  }
+
+  /**
+   * The members of the lists joined in order, base first. A property named twice is refused, because a redeclaration could
+   * narrow what the base declares and the grammar cannot express that; so is a second index signature (`indexedOf`). The
+   * result is read as one object type, so the marker and its exclusions apply to the whole.
+   */
+  function joinedMembers(lists, chain) {
+    const members = lists.flat();
+    const seen = new Set();
+    for (const member of members) {
+      if (member.kind !== SyntaxKind.PropertySignature || (member.name.kind !== SyntaxKind.Identifier && member.name.kind !== SyntaxKind.StringLiteral)) continue;
+      if (seen.has(member.name.text)) throw new ApiExtractionError(`${chain}.${member.name.text}`, `${member.name.text} is declared twice among the joined members of a base and its interface, or of an intersection; a redeclaration could narrow it`);
+      seen.add(member.name.text);
+    }
+    return members;
+  }
 
   function referenceOf(node, chain) {
     const written = entityName(node.typeName);

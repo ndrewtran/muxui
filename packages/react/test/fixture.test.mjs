@@ -239,10 +239,17 @@ const markupValues = {
   },
   // A list marks each option or row with the mode it selects by, and none when it selects nothing; a toggle group is a radiogroup or a toolbar.
   selectionMode: (doc) => {
-    const option = doc.querySelector('[role="option"], [role="row"]');
-    return option === null ? ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')] : (option.getAttribute('data-selection-mode') ?? 'none');
+    const items = [...doc.querySelectorAll('[role="option"], [role="row"]')];
+    if (items.length === 0) return ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')];
+    const marked = items.find((item) => item.hasAttribute('data-selection-mode'));
+    if (marked !== undefined) return marked.getAttribute('data-selection-mode');
+    // A tag group marks no mode on its tags: its grid is multiselectable for multiple, and for single each tag carries a selected state.
+    if (doc.querySelector('[aria-multiselectable="true"]') !== null) return 'multiple';
+    return items.some((item) => item.hasAttribute('aria-selected')) ? 'single' : 'none';
   },
   layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
+  // A tag carries its colour, which the group's default sets for a tag that names none.
+  color: (doc) => doc.querySelector('[data-color]')?.getAttribute('data-color'),
 };
 const h = React.createElement;
 const minimalRenders = {
@@ -266,6 +273,10 @@ const minimalRenders = {
   Select: () => selectField(),
   ComboBox: () => h(generated.ComboBox, { label: 'City', items: ['Melbourne'] }),
   PromptComposer: () => composer(),
+  ColorSwatchPicker: () => h(generated.ColorSwatchPicker, { 'aria-label': 'Colors', items: ['#ff0000', '#00ff00'] }),
+  TagGroup: () => h(generated.TagGroup, { label: 'Tags', items: ['One', 'Two'] }),
+  Table: () => h(generated.Table, { 'aria-label': 'People', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'ada', name: 'Ada' }] }),
+  Tree: () => treeOf(),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 const rootDeclarations = { Menu: 'MenuRoot' };
@@ -286,6 +297,8 @@ const partRenders = {
   'Select.list': { render: () => selectRoot() },
   'Select.option': { render: () => selectRoot() },
 };
+const treeItems = [{ id: 'parent', label: 'Parent', children: [{ id: 'child', label: 'Child' }] }];
+const treeOf = (props) => h(generated.Tree, { 'aria-label': 'Files', items: treeItems, ...props });
 const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
 const stackVirtualizer = (props) => h(generated.Virtualizer, { 'aria-label': 'Results', items: ['One', 'Two'], ...props });
 
@@ -425,6 +438,13 @@ const behaviourObservers = {
   PromptComposer: {
     inputLabel: (props) => new JSDOM(renderToString(composer(props))).window.document.querySelector('textarea').getAttribute('aria-label'),
     multiple: (props) => new JSDOM(renderToString(composer({ onFilesSelected: () => {}, ...props }))).window.document.querySelector('input[type="file"]').hasAttribute('multiple'),
+  },
+  Tree: {
+    // A press on a parent row either expands it (row) or leaves expansion to the chevron (chevron).
+    expansionTrigger: (props) => withMounted(treeOf(props), async (container) => {
+      await act(async () => container.querySelector('[role="row"]').click());
+      return container.querySelector('[role="row"]').getAttribute('aria-expanded') === 'true' ? 'row' : 'chevron';
+    }),
   },
   Tabs: {
     // An arrow key either selects the next tab at once (automatic) or only moves focus (manual).
@@ -637,6 +657,46 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(await behaviourMismatches('PromptComposer', { ...composerApi.defaults, multiple: false }), ['multiple: catalog false, behaves true']);
   assert.deepEqual(unobservedDefaults('PromptComposer', composerApi.defaults), []);
   assert.deepEqual(undeclaredProps(types, 'PromptComposer', [...composerApi.props, 'missingProp']), ['missingProp']);
+  // Tree's selection mode shows on its rows and its disabled flag on them; its expansion trigger shows in what a press on a parent row does.
+  const treeApi = apis.Tree;
+  assert.deepEqual(Object.keys(treeApi.defaults), ['disabled', 'selectionMode', 'expansionTrigger']);
+  const treeMarkup = renderToString(minimalRenders.Tree());
+  for (const mode of ['none', 'multiple']) {
+    assert.deepEqual(defaultMismatches(treeMarkup, { ...treeApi.defaults, selectionMode: mode }), [`selectionMode: catalog "${mode}", rendered "single"`], mode);
+  }
+  assert.deepEqual(defaultMismatches(treeMarkup, { ...treeApi.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(await behaviourMismatches('Tree', { ...treeApi.defaults, expansionTrigger: 'chevron' }), ['expansionTrigger: catalog "chevron", behaves "row"']);
+  assert.deepEqual(undeclaredProps(types, 'Tree', [...treeApi.props, 'missingProp']), ['missingProp']);
+  // Table's selection mode shows on its rows once it is not none, and its disabled flag on the table, so a catalog value the renderer does not run fails.
+  const tableApi = apis.Table;
+  assert.deepEqual(Object.keys(tableApi.defaults), ['disabled', 'selectionMode']);
+  const tableMarkup = renderToString(minimalRenders.Table());
+  for (const mode of ['single', 'multiple']) {
+    assert.deepEqual(defaultMismatches(tableMarkup, { ...tableApi.defaults, selectionMode: mode }), [`selectionMode: catalog "${mode}", rendered "none"`], mode);
+    assert.equal(markupValues.selectionMode(new JSDOM(renderToString(h(generated.Table, { 'aria-label': 'People', columns: ['Name'], rows: [{ id: 'ada', Name: 'Ada' }], selectionMode: mode }))).window.document), mode, `a ${mode} table reads as ${mode}`);
+  }
+  assert.deepEqual(defaultMismatches(tableMarkup, { ...tableApi.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(undeclaredProps(types, 'Table', [...tableApi.props, 'missingProp']), ['missingProp']);
+  // TagGroup's variant and colour show on its tags, its disabled flag on them too, and its selection mode as the grid's multiselectable
+  // state and the tags' selected state, so a catalog value the renderer does not run fails.
+  const tagApi = apis.TagGroup;
+  assert.deepEqual(Object.keys(tagApi.defaults), ['variant', 'color', 'selectionMode', 'disabled']);
+  const tagMarkup = renderToString(minimalRenders.TagGroup());
+  for (const [key, value, rendered] of [['variant', 'outline', 'soft'], ['color', 'brand', 'neutral'], ['selectionMode', 'single', 'none'], ['selectionMode', 'multiple', 'none']]) {
+    assert.deepEqual(defaultMismatches(tagMarkup, { ...tagApi.defaults, [key]: value }), [`${key}: catalog "${value}", rendered "${rendered}"`], `${key} ${value}`);
+  }
+  assert.deepEqual(defaultMismatches(tagMarkup, { ...tagApi.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  for (const mode of ['single', 'multiple']) {
+    assert.equal(markupValues.selectionMode(new JSDOM(renderToString(h(generated.TagGroup, { label: 'Tags', items: ['One'], selectionMode: mode }))).window.document), mode, `a ${mode} group reads as ${mode}`);
+  }
+  assert.deepEqual(undeclaredProps(types, 'TagGroup', [...tagApi.props, 'missingProp']), ['missingProp']);
+  // ColorSwatchPicker's flags show as data attributes on its root, which an enclosing ColorPicker can also set, so a picker that is neither disabled nor read-only renders neither.
+  const swatchMarkup = renderToString(minimalRenders.ColorSwatchPicker());
+  assert.deepEqual(Object.keys(apis.ColorSwatchPicker.defaults), ['disabled', 'readOnly']);
+  for (const key of ['disabled', 'readOnly']) {
+    assert.deepEqual(defaultMismatches(swatchMarkup, { ...apis.ColorSwatchPicker.defaults, [key]: true }), [`${key}: catalog true, rendered false`], key);
+  }
+  assert.deepEqual(undeclaredProps(types, 'ColorSwatchPicker', [...apis.ColorSwatchPicker.props, 'missingProp']), ['missingProp']);
   // The list's root defaults are observed too: a different layout, orientation, or selection mode fails.
   const listMarkup = renderToString(minimalRenders.ListBox());
   assert.deepEqual(defaultMismatches(listMarkup, { ...apis.ListBox.defaults, layout: 'grid' }), ['layout: catalog "grid", rendered "stack"']);
@@ -683,7 +743,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
-    inputLabel: ['Message', 'Prompt'], multiple: [true, false],
+    inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {

@@ -1,0 +1,383 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/table.ts",
+  "component": "muxui:component:table",
+  "binding": "web.react",
+  "export": "Table",
+  "api": {
+    "props": [
+      "columns",
+      "rows",
+      "selectedIds",
+      "defaultSelectedIds",
+      "sortDescriptor",
+      "disabled",
+      "selectionMode"
+    ],
+    "events": [
+      "selectionChange",
+      "rowAction",
+      "sortChange"
+    ],
+    "defaults": {
+      "disabled": false,
+      "selectionMode": "none"
+    },
+    "propDetails": {
+      "columns": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "MuxUITableColumn"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The columns as data: strings, or items with an `id`, a `label`, a `textValue`, `isRowHeader`, and `sortable`."
+      },
+      "rows": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "MuxUITableRow"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The rows as data: items with an `id` and either a `values` entry or a field of the row for each column id. Selection follows each row's id when the rows reorder, so give every row an id that stays with its data."
+      },
+      "selectedIds": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUISelection"
+        },
+        "required": false,
+        "description": "The selected row ids when the caller controls the selection, or `'all'`."
+      },
+      "defaultSelectedIds": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUISelection"
+        },
+        "required": false,
+        "description": "The row ids selected at first when the table controls its own selection, or `'all'`."
+      },
+      "sortDescriptor": {
+        "type": {
+          "kind": "reference",
+          "name": "MuxUITableSortDescriptor"
+        },
+        "required": false,
+        "description": "The sorted column and its direction. A sort shows only when the application passes it back. `column` must be the id of a column with `sortable: true`, or Table throws a TypeError."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-disabled`."
+      },
+      "selectionMode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "none"
+            },
+            {
+              "kind": "literal",
+              "value": "single"
+            },
+            {
+              "kind": "literal",
+              "value": "multiple"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "none",
+          "single",
+          "multiple"
+        ],
+        "description": "How many rows can be selected."
+      }
+    },
+    "eventDetails": {
+      "selectionChange": {
+        "prop": "onSelectionChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "ids",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUISelection"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the selected row ids, or `'all'`, when the selection changes. It is not called while the table is disabled."
+      },
+      "rowAction": {
+        "prop": "onRowAction",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "row",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUITableRow"
+              },
+              "required": false
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the row record when the user activates a row. With selection on, a click or Enter runs it while nothing is selected and Space starts a selection; once a row is selected, a click changes the selection instead. It is not called for a disabled row or while the table is disabled."
+      },
+      "sortChange": {
+        "prop": "onSortChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "next",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUITableSortDescriptor"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the column and the next direction when the user activates a sortable header, which toggles between ascending and descending. Table never sorts rows: the application sorts them and passes `sortDescriptor` back. It is not called while the table is disabled."
+      }
+    },
+    "types": {
+      "MuxUISelection": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "array",
+              "element": {
+                "kind": "string"
+              },
+              "readonly": false
+            },
+            {
+              "kind": "literal",
+              "value": "all"
+            }
+          ]
+        }
+      },
+      "MuxUITableColumn": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "isRowHeader",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Marks the column whose cells name their row."
+            },
+            {
+              "name": "sortable",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Gives the column a sortable header: activating it reports the next sort through `onSortChange`."
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "A column: its `id` names the row field or `values` entry its cells show."
+      },
+      "MuxUITableRow": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "key",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "host",
+                "name": "React.ReactNode"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+            },
+            {
+              "name": "textValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": false,
+              "readonly": false
+            },
+            {
+              "name": "values",
+              "type": {
+                "kind": "host",
+                "name": "Record",
+                "typeArguments": [
+                  {
+                    "kind": "string"
+                  },
+                  {
+                    "kind": "host",
+                    "name": "React.ReactNode"
+                  }
+                ]
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Cell content by column id."
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "A row: each cell shows the row's `values` entry for its column's id, or else the row's own field of that name."
+      },
+      "MuxUITableSortDescriptor": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "column",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "direction",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "literal",
+                    "value": "ascending"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "descending"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -443,6 +443,15 @@ test('Checkbox and Radio focus rings stay on indicators with shared keyline geom
   }
 });
 
+test('RadioGroup has a visible selected indicator, and collection focus has forced-colors and high-contrast treatment', async () => {
+  const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
+  assert.match(styles, /\.muxui-radio-indicator\b/u, 'RadioGroup needs a Mux UI-owned visible indicator');
+  assert.match(styles, /\.muxui-radio\[data-selected\] \.muxui-radio-indicator/u, 'RadioGroup needs selected indicator styling');
+  assert.match(styles, /\.muxui-radio\[data-focus-visible\]/u, 'RadioGroup needs a focus-visible affordance');
+  assert.match(styles, /@media \(forced-colors: active\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-color: Highlight/u, 'collection focus needs forced-colors treatment');
+  assert.match(styles, /@media \(prefers-contrast: more\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-width: 3px/u, 'collection focus needs high-contrast treatment');
+});
+
 test('Checkbox and Radio generated CSS suppresses native input outlines', async () => {
   const [components, collections, generated] = await Promise.all([
     readFile(new URL('../src/styles/components.css', import.meta.url), 'utf8'),

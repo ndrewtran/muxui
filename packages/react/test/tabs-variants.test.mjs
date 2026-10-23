@@ -38,13 +38,15 @@ test('Tabs exposes a finite variant contract and preserves underline by default'
 });
 
 test('Tabs canonical artifact and generated type document the visual variants', async () => {
-  const [artifact, generatedTypes] = await Promise.all([
+  const [artifact, derived, generatedTypes] = await Promise.all([
     readFile(resolve(import.meta.dirname, '../../../catalog/components/tabs/artifact.json'), 'utf8'),
-    readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8'),
+    readFile(resolve(import.meta.dirname, '../api/tabs.json'), 'utf8'),
+    readFile(resolve(import.meta.dirname, '../generated/tabs.d.ts'), 'utf8'),
   ]);
   const binding = JSON.parse(artifact).bindings['web.react'];
-  assert.ok(binding.api.props.includes('variant'));
-  assert.equal(binding.api.defaults.variant, 'underline');
+  const { api } = JSON.parse(derived);
+  assert.ok(api.props.includes('variant'));
+  assert.equal(api.defaults.variant, 'underline');
   assert.match(binding.behavior.join(' '), /underline, pill, overflow, and segment/u);
   assert.match(generatedTypes, /variant\?: 'underline' \| 'pill' \| 'overflow' \| 'segment'/u);
 });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import React, { act } from 'react';
@@ -15,159 +15,53 @@ import {
 } from '../src/collections.mjs';
 import { ToggleButton } from '../src/components.ts';
 import { readRuntimeSources, runtimeSourceFor } from '../src/runtime-sources.mjs';
-import { familyDeclarations, generatedDeclarations, joinedDeclarations } from './support/declarations.mjs';
 import { createDom } from './support/dom.mjs';
 
-const slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
-const events = new Map([
-  ['change', 'onChange'], ['focusChange', 'onFocusChange'], ['selectionChange', 'onSelectionChange'],
-  ['action', 'onAction'], ['select', 'onSelect'], ['rowAction', 'onRowAction'], ['remove', 'onRemove'],
-  ['expandedChange', 'onExpandedChange'], ['openChange', 'onOpenChange'], ['sortChange', 'onSortChange'],
-  ['changeEnd', 'onChangeEnd'], ['scroll', 'onScroll'],
-]);
+const REPOSITORY_ROOT = resolve(import.meta.dirname, '../../..');
 
-function componentName(slug) {
-  return slug.split('-').map((part) => part[0].toUpperCase() + part.slice(1)).join('');
-}
-
-function propPattern(prop) {
-  if (prop.startsWith('aria-')) return new RegExp(`['"]${prop}['"]`, 'u');
-  return new RegExp(`\\b${prop}\\b`, 'u');
-}
-
-// A family with a committed packages/react/api/<slug>.json has its props, events, and defaults derived from its
-// TypeScript source (Decision 0031), and extraction checks them against the declarations and the code the component
-// executes. Only what extraction cannot see stays here: the props a family must not take, in its declarations
-// and in what its source forwards. The check retires with this test when the last family is derived.
-const derivedSlugs = new Set(readdirSync(resolve(import.meta.dirname, '../api')).map((file) => file.replace(/\.json$/u, '')));
-
-// Props a family must leave out of its public type and must not forward.
+// Props a derived family must not read or forward. The public-surface check and the compiler hold the declarations,
+// but a private render type can read a key the public type leaves out and forward it while the export keeps its
+// declared type, which compiles and extracts, so what the source names is read too.
 const REJECTED_PROPS = {
   RadioGroup: ['description'],
   TagGroup: ['description', 'errorMessage', 'readOnly', 'required', 'invalid'],
   TokenField: ['description', 'errorMessage', 'required', 'invalid'],
 };
 
-// Props a family must leave out of its public type; its source may name them.
-const UNDECLARED_PROPS = {
-  Calendar: ['description', 'errorMessage'],
-  RangeCalendar: ['description', 'errorMessage'],
-  Tree: ['children'],
-  Virtualizer: ['renderItem'],
-};
-
-// A property signature of a declaration, in any quoting: `prop?:`, `'prop':`. A description that mentions the name is not one.
-const memberPattern = (prop) => new RegExp(`(?<![\\w-])['"]?${prop}['"]?\\??\\s*:`, 'u');
 const withoutComments = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
 
-/**
- * The rejected props a derived family still takes or forwards. `declarations` is what its public type declares
- * (comments left out) and `runtime` the source it executes; a rejected prop counts when a declaration has it as
- * a member, and, separately, when the source names it. An undeclared prop counts only as a member.
- */
-function rejectedPropFindings({ declarations, runtime, rejected = [], undeclared = [] }) {
-  return [
-    ...rejected.flatMap((prop) => [
-      ...(memberPattern(prop).test(declarations) ? [`declares ${prop}`] : []),
-      ...(propPattern(prop).test(withoutComments(runtime)) ? [`forwards ${prop}`] : []),
-    ]),
-    ...undeclared.filter((prop) => memberPattern(prop).test(declarations)).map((prop) => `declares ${prop}`),
-  ];
+/** The source a family's export runs, from `export const <name>` to the next export: the component, not the types above it. */
+function componentSurface(source, name) {
+  const start = source.indexOf(`export const ${name}`);
+  assert.notEqual(start, -1, `${name} runtime export is missing`);
+  const next = source.indexOf('\nexport const ', start + 1);
+  return source.slice(start, next === -1 ? undefined : next);
 }
 
-test('R1.3 artifact declarations have a generated MuxUI type and runtime surface', async () => {
-  const repositoryRoot = resolve(import.meta.dirname, '../../..');
-  const [indexTypes, sources, styles] = await Promise.all([
-    readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8'),
-    readRuntimeSources(repositoryRoot),
-    readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8'),
-  ]);
-  // The field types a collection inherits are declared by fields.ts, ahead of the index that names them.
-  const allTypes = joinedDeclarations();
-  const types = `${generatedDeclarations()['fields.d.ts']}\n${indexTypes}`;
-  assert.match(styles, /\.muxui-radio-indicator\b/u, 'RadioGroup needs a Mux UI-owned visible indicator');
-  assert.match(styles, /\.muxui-radio\[data-selected\] \.muxui-radio-indicator/u, 'RadioGroup needs selected indicator styling');
-  assert.match(styles, /\.muxui-radio\[data-focus-visible\]/u, 'RadioGroup needs a focus-visible affordance');
-  assert.match(styles, /@media \(forced-colors: active\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-color: Highlight/u, 'collection focus needs forced-colors treatment');
-  assert.match(styles, /@media \(prefers-contrast: more\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-width: 3px/u, 'collection focus needs high-contrast treatment');
-  for (const slug of slugs) {
-    const name = componentName(slug);
-    // The module that declares the family: collections.mjs is only a barrel over the family modules.
+/** The rejected props the component source names outside comments, which a description that mentions one does not count. */
+const forwardedRejectedProps = (surface, rejected) => rejected.filter((prop) => new RegExp(`\\b${prop}\\b`, 'u').test(withoutComments(surface)));
+
+test('R1.3 RadioGroup, TagGroup, and TokenField do not read the props they reject', async () => {
+  const sources = await readRuntimeSources(REPOSITORY_ROOT);
+  for (const [name, rejected] of Object.entries(REJECTED_PROPS)) {
     const owner = runtimeSourceFor(sources, name);
     assert.ok(owner, `${name} has no runtime source`);
-    const runtime = sources[owner];
-    const runtimeStart = runtime.indexOf(`export const ${name}`);
-    assert.notEqual(runtimeStart, -1, `${name} runtime export is missing`);
-    const runtimeNext = runtime.indexOf('\nexport const ', runtimeStart + 1);
-    const runtimeSurface = runtime.slice(runtimeStart, runtimeNext === -1 ? undefined : runtimeNext);
-    if (derivedSlugs.has(slug)) {
-      assert.deepEqual(rejectedPropFindings({ declarations: familyDeclarations(allTypes, name), runtime: runtimeSurface, rejected: REJECTED_PROPS[name], undeclared: UNDECLARED_PROPS[name] }), [], `${name} rejected props`);
-      continue;
-    }
-    const artifact = JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8'));
-    const api = artifact.bindings['web.react'].api;
-    const typeStart = types.search(new RegExp(`export (?:interface|type) ${name}Props\\b`, 'u'));
-    assert.notEqual(typeStart, -1, `${name}Props is missing from generated public types`);
-    const typeEnd = types.indexOf('export declare const', typeStart);
-    let typeSurface = types.slice(typeStart, typeEnd === -1 ? undefined : typeEnd);
-    for (const inherited of ['CollectionProps', 'NamedFieldProps', 'FieldValidationProps', 'MuxUIAccessibleName', 'MuxUIAriaAccessibleName', 'MuxUIAriaLabel']) {
-      if (typeSurface.includes(inherited)) {
-        const inheritedStart = types.indexOf(inherited, typeStart === -1 ? 0 : 0);
-        const inheritedEnd = types.indexOf('\nexport ', inheritedStart + inherited.length);
-        if (inheritedStart !== -1) typeSurface += types.slice(inheritedStart, inheritedEnd === -1 ? undefined : inheritedEnd);
-      }
-    }
-    const sharedCollectionSurface = ['grid-list', 'list-box'].includes(slug) ? runtime.slice(runtime.indexOf('function collectionProps'), runtimeStart) : '';
-    if (name === 'Tree') assert.doesNotMatch(typeSurface, /\bchildren\??\s*:/u, 'Tree must not expose children customization');
-    if (name === 'Virtualizer') assert.doesNotMatch(typeSurface, /\brenderItem\??\s*:/u, 'Virtualizer must not expose renderItem customization');
-    const rejectedProps = REJECTED_PROPS[name];
-    if (rejectedProps) {
-      for (const prop of rejectedProps) {
-        assert.doesNotMatch(typeSurface, propPattern(prop), `${name} must not expose unsupported ${prop}`);
-        assert.doesNotMatch(`${runtimeSurface}\n${sharedCollectionSurface}`, propPattern(prop), `${name} must not forward unsupported ${prop}`);
-      }
-    }
-    for (const prop of api.props) {
-      assert.match(typeSurface, propPattern(prop), `${name}.${prop} is missing from generated type surface`);
-      assert.match(`${runtimeSurface}\n${sharedCollectionSurface}`, propPattern(prop), `${name}.${prop} is missing from runtime surface`);
-    }
-    for (const event of api.events) {
-      const callback = events.get(event);
-      assert.ok(callback, `${name}.${event} needs a MuxUI callback mapping`);
-      assert.match(typeSurface, propPattern(callback), `${name}.${callback} is missing from generated type surface`);
-      assert.match(`${runtimeSurface}\n${sharedCollectionSurface}`, propPattern(callback), `${name}.${callback} is missing from runtime surface`);
-    }
+    assert.deepEqual(forwardedRejectedProps(componentSurface(sources[owner], name), rejected), [], `${name} reads rejected props`);
   }
-});
-
-// A derived family keeps its rejected-prop checks through two readings that do not share a failure: its
-// declarations by member, which a description naming the prop cannot fool, and its source by name.
-test('the rejected-prop check of a derived family reads members and source, not descriptions', () => {
-  const declarations = [
-    'export type GroupOwnProps = {',
-    '  /** Supporting text is not part of this family: description is left out on purpose. */',
-    '  label?: string;',
-    '};',
-    "export type GroupProps = Omit<GroupOwnProps, 'label'> & { className?: string };",
+  // A private render type that is wider than the public type reads a rejected key, and the export keeps its public type.
+  const widened = [
+    'type RenderProps = GroupProps & { description?: string };',
+    'export const Group: ForwardRefExoticComponent<GroupProps & RefAttributes<HTMLDivElement>> = React.forwardRef<HTMLDivElement, RenderProps>(',
+    '  function Group({ label, description }, ref) {',
+    "    return React.createElement('div', { ref, 'data-description': description }, label);",
+    '  },',
+    ');',
   ].join('\n');
-  const clean = { declarations: familyDeclarations(`${declarations}\nexport declare const Group: ForwardRefExoticComponent<GroupProps>;`, 'Group'), runtime: 'function Group({ label, className }, ref) { return label; }', rejected: ['description', 'errorMessage'] };
-  assert.deepEqual(rejectedPropFindings(clean), []);
-  // The description alone would fool a search of the declaration text.
-  assert.match(declarations, propPattern('description'));
-  // A member counts, however it is quoted or made optional.
-  assert.deepEqual(rejectedPropFindings({ ...clean, declarations: `${clean.declarations}\nexport type Extra = { description?: ReactNode; 'errorMessage': string };` }), ['declares description', 'declares errorMessage']);
-  // A declaration that only names the prop, as an Omit does, is not a member.
-  assert.deepEqual(rejectedPropFindings({ ...clean, declarations: `${clean.declarations}\nexport type Narrowed = Omit<Base, 'description' | 'errorMessage'>;` }), []);
-  // Source that forwards the prop counts even when the declaration does not name it, and its comments do not.
-  assert.deepEqual(rejectedPropFindings({ ...clean, runtime: 'function Group({ description }, ref) { return description; }' }), ['forwards description']);
-  assert.deepEqual(rejectedPropFindings({ ...clean, runtime: '// no description here\nfunction Group({ label }) { return label; }' }), []);
-  // A prop the type must leave out is a finding as a member alone, and its source may name it.
-  const undeclared = { ...clean, rejected: [], undeclared: ['description'] };
-  assert.deepEqual(rejectedPropFindings(undeclared), []);
-  assert.deepEqual(rejectedPropFindings({ ...undeclared, runtime: 'function Group({ description }) {}' }), []);
-  assert.deepEqual(rejectedPropFindings({ ...undeclared, declarations: `${clean.declarations}\nexport type Extra = { description?: string };` }), ['declares description']);
-  // The families whose props are checked are named, so the check runs once they derive.
-  assert.deepEqual([...Object.keys(REJECTED_PROPS), ...Object.keys(UNDECLARED_PROPS)].sort(), ['Calendar', 'RadioGroup', 'RangeCalendar', 'TagGroup', 'TokenField', 'Tree', 'Virtualizer']);
+  assert.deepEqual(forwardedRejectedProps(componentSurface(widened, 'Group'), ['description', 'errorMessage']), ['description']);
+  // The same component without the key, and a comment that only mentions it, are clean.
+  const clean = widened.replace('RenderProps = GroupProps & { description?: string }', 'RenderProps = GroupProps').replace('{ label, description }', '{ label }').replace(", 'data-description': description", '');
+  assert.deepEqual(forwardedRejectedProps(componentSurface(`// no description here\n${clean}`, 'Group'), ['description', 'errorMessage']), []);
+  assert.deepEqual(forwardedRejectedProps(componentSurface(widened.replace('  function Group', '  // description is left out on purpose\n  function Group').replace('{ label, description }', '{ label }').replace(", 'data-description': description", ''), 'Group'), ['description']), []);
 });
 
 // jsdom has no layout. `measuredItemHeight` makes every element scroll that tall,
@@ -1409,6 +1303,29 @@ test('R1.3 TagGroup drops a removed tag from its own selection', async () => {
     // Emptied again, presses go back to the action.
     await act(async () => tag('Two').click());
     assert.deepEqual(log.at(-1), ['action', 'Two']);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+// React Aria hands onRemove every selected tag the key press removes, a disabled one among them when it is selected, so the group
+// reports only the enabled tags and a disabled tag can never be removed through the selection.
+test('R1.3 TagGroup reports only the enabled tags among the removed ones', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const removed = [];
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent.startsWith(name));
+  const items = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta', disabled: true }, { id: 'c', label: 'Gamma' }];
+  try {
+    await act(async () => root.render(React.createElement(TagGroup, {
+      label: 'Tags', items, selectionMode: 'multiple', selectedKeys: new Set(['a', 'b']), onSelectionChange() {},
+      onRemove: (list) => removed.push(list.map((item) => item.id)),
+    })));
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })); tag('Alpha').focus(); });
+    await pressKey('Delete');
+    assert.deepEqual(removed, [['a']]);
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -2777,6 +2694,170 @@ test('R1.3 Virtualizer reports the first invalid input in the order it checks, i
     [{ layout: 'grid' }, /Virtualizer grid layout requires a single GridList element as its child/u],
     [{ layout: 'grid', ref: React.createRef() }, /renders no element of its own, so it takes no ref/u],
   ], (props, index) => failure(props, ...(index < 8 ? [] : [poster])));
+});
+
+/**
+ * Asserts the order a component checks its inputs in. `steps` lists them in that order, each a patch that makes one input
+ * invalid and the message it is reported with; `base` makes every input valid. Step n is rendered invalid together with every
+ * later step, so its message appears only while nothing before it is wrong, and rendering `base` alone is clean.
+ */
+function reportsInOrder(Component, base, steps) {
+  const failure = (props) => {
+    try {
+      renderToString(React.createElement(Component, props));
+      return 'rendered';
+    } catch (error) {
+      return error.message;
+    }
+  };
+  assert.equal(failure(base), 'rendered');
+  steps.forEach(([patch, message], index) => {
+    const together = Object.assign({}, base, ...steps.slice(index).reverse().map(([later]) => later));
+    assert.match(failure(together), message, `step ${index}: ${Object.keys(patch).join(', ')}`);
+    // The step on its own is the same failure, so nothing else stands in for it.
+    assert.match(failure({ ...base, ...patch }), message, `step ${index} alone`);
+  });
+}
+
+test('R1.3 ColorSwatchPicker reports the first invalid input in the order it checks: items, name, value, defaultValue', () => {
+  reportsInOrder(ColorSwatchPicker, { 'aria-label': 'Colors', items: ['#ff0000', '#00ff00'] }, [
+    [{ items: 5 }, /items\.map is not a function/u],
+    // An item that is not a color fails ahead of a later duplicate, in item order.
+    [{ items: ['nope'] }, /ColorSwatchPicker values must be valid CSS color strings/u],
+    [{ items: ['#ff0000', '#f00'] }, /ColorSwatchPicker items must have distinct colors: /u],
+    [{ 'aria-label': undefined }, /ColorSwatchPicker requires label, aria-label, or aria-labelledby/u],
+    [{ value: 5 }, /ColorSwatchPicker values must be Mux UI color strings/u],
+    [{ defaultValue: 'nope' }, /ColorSwatchPicker values must be valid CSS color strings/u],
+  ]);
+});
+
+test('R1.3 Tabs reports the first invalid input in the order it checks: items, name, size, variant', () => {
+  reportsInOrder(Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }, [
+    [{ items: 5 }, /items\.map is not a function/u],
+    [{ 'aria-label': undefined }, /Tabs requires label, aria-label, or aria-labelledby/u],
+    [{ size: 'xl' }, /Tabs size must be one of: sm, md, lg/u],
+    [{ variant: 'rail' }, /Tabs variant must be one of: underline, pill, overflow, segment/u],
+  ]);
+});
+
+test('R1.3 TagGroup reports the first invalid input in the order it checks: items, name, variant, color, item color', () => {
+  reportsInOrder(TagGroup, { label: 'Tags', items: [{ id: 'one', label: 'One' }, 'Two'] }, [
+    [{ items: 5 }, /items\.map is not a function/u],
+    [{ label: undefined }, /TagGroup requires label, aria-label, or aria-labelledby/u],
+    [{ variant: 'filled' }, /TagGroup variant must be one of: soft, outline, dot, strong/u],
+    [{ color: 'crimson' }, /TagGroup color must be one of: neutral, brand/u],
+    [{ items: [{ id: 'one', label: 'One', color: 'crimson' }] }, /TagGroup item color must be one of: neutral, brand/u],
+  ]);
+});
+
+test('R1.3 Table reports the first invalid input in the order it checks: rows, columns, sortDescriptor, name, selection, className', () => {
+  const failing = (message) => ({ get id() { throw new Error(message); } });
+  reportsInOrder(Table, { 'aria-label': 'People', columns: [{ id: 'a', label: 'A', sortable: true }], rows: [{ id: '1', a: 'x' }] }, [
+    // The rows and the columns each throw their own error from a getter, so the order they are read in shows.
+    [{ rows: [failing('rows boom')] }, /rows boom/u],
+    [{ columns: [failing('columns boom')] }, /columns boom/u],
+    [{ sortDescriptor: { column: 'zzz', direction: 'ascending' } }, /Table sortDescriptor column must be sortable: zzz/u],
+    [{ 'aria-label': undefined }, /Table requires label, aria-label, or aria-labelledby/u],
+    [{ selectedIds: { map() { throw new Error('selected boom'); } } }, /selected boom/u],
+    [{ defaultSelectedIds: { map() { throw new Error('default boom'); } } }, /default boom/u],
+    [{ className: Symbol('invalid') }, /Cannot convert a Symbol value to a string/u],
+  ]);
+});
+
+// A sort descriptor is read as the checks reach it: its keys first, then its column, then its direction, and the checks that
+// fail first stop the reads. These are the reads a recording proxy and recording getters see, which the move must not change.
+test('R1.3 Table reads a sort descriptor\'s keys first and its properties only as the checks reach them', () => {
+  const columns = [{ id: 'a', label: 'A', sortable: true }];
+  const render = (sortDescriptor) => {
+    try {
+      renderToString(React.createElement(Table, { 'aria-label': 'People', columns, rows: [{ id: '1', a: 'x' }], sortDescriptor }));
+      return 'rendered';
+    } catch (error) {
+      return error.message;
+    }
+  };
+  const recorded = (descriptor) => {
+    const log = [];
+    const proxy = new Proxy(descriptor, {
+      get(target, key, receiver) { log.push(`get ${String(key)}`); return Reflect.get(target, key, receiver); },
+      ownKeys(target) { log.push('ownKeys'); return Reflect.ownKeys(target); },
+      getOwnPropertyDescriptor(target, key) { log.push(`descriptor ${String(key)}`); return Reflect.getOwnPropertyDescriptor(target, key); },
+    });
+    return [render(proxy), log];
+  };
+  const invalid = /Table sortDescriptor must be \{column: string; direction: ascending\|descending\}/u;
+  const keysThenColumnDirection = ['ownKeys', 'descriptor column', 'descriptor direction'];
+  const checks = {
+    valid: [{ column: 'a', direction: 'ascending' }, 'rendered', [...keysThenColumnDirection, 'get column', 'get direction', 'get column', 'get column', 'get direction']],
+    'valid descending': [{ column: 'a', direction: 'descending' }, 'rendered', [...keysThenColumnDirection, 'get column', 'get direction', 'get direction', 'get column', 'get column', 'get direction']],
+    // A wrong number of keys stops before any property is read.
+    'three keys': [{ column: 'a', direction: 'ascending', extra: 1 }, invalid, [...keysThenColumnDirection, 'descriptor extra']],
+    'one key': [{ column: 'a' }, invalid, ['ownKeys', 'descriptor column']],
+    'a column that is not text stops before the direction': [{ column: 5, direction: 'ascending' }, invalid, [...keysThenColumnDirection, 'get column']],
+    'a direction that is neither': [{ column: 'a', direction: 'up' }, invalid, [...keysThenColumnDirection, 'get column', 'get direction', 'get direction']],
+    'a column that is not sortable': [{ column: 'zzz', direction: 'ascending' }, /Table sortDescriptor column must be sortable: zzz/u, [...keysThenColumnDirection, 'get column', 'get direction', 'get column', 'get column']],
+    'an array': [[], invalid, []],
+  };
+  for (const [label, [descriptor, message, reads]] of Object.entries(checks)) {
+    const [outcome, log] = recorded(descriptor);
+    if (message === 'rendered') assert.equal(outcome, 'rendered', label);
+    else assert.match(outcome, message, label);
+    assert.deepEqual(log, reads, label);
+  }
+  // Getters stop where they throw: a column that throws is reached before the direction, a direction after the column, and neither
+  // is reached when the keys already fail.
+  const getters = (column, direction, extra = {}) => {
+    const log = [];
+    const descriptor = Object.defineProperties({ ...extra }, {
+      column: { enumerable: true, get() { log.push('column'); return column(); } },
+      direction: { enumerable: true, get() { log.push('direction'); return direction(); } },
+    });
+    return [render(descriptor), log];
+  };
+  const throws = (message) => () => { throw new Error(message); };
+  assert.deepEqual(getters(throws('column getter'), () => 'ascending'), ['column getter', ['column']]);
+  assert.deepEqual(getters(() => 'a', throws('direction getter')), ['direction getter', ['column', 'direction']]);
+  assert.deepEqual(getters(throws('column getter'), () => 'ascending', { extra: 1 }).map((result) => (typeof result === 'string' ? result.replace(/\{.*$/u, '') : result)), ['Table sortDescriptor must be ', []]);
+  assert.deepEqual(getters(() => 'a', () => 'ascending'), ['rendered', ['column', 'direction', 'column', 'column', 'direction']]);
+  assert.deepEqual(getters(() => 'a', () => 'descending'), ['rendered', ['column', 'direction', 'direction', 'column', 'column', 'direction']]);
+  assert.deepEqual(getters(() => 'zzz', () => 'ascending'), ['Table sortDescriptor column must be sortable: zzz', ['column', 'direction', 'column', 'column']]);
+});
+
+test('R1.3 Tree reports the first invalid input in the order it checks: name, expansionTrigger, items, expandedIds, defaultExpandedIds, selectedIds, defaultSelectedIds, className', () => {
+  const throwing = (message) => ({ map() { throw new Error(message); } });
+  reportsInOrder(Tree, { 'aria-label': 'Files', items: [{ id: 'a', label: 'A', children: [{ id: 'a1', label: 'A1' }] }] }, [
+    [{ 'aria-label': undefined }, /Tree requires label, aria-label, or aria-labelledby/u],
+    [{ expansionTrigger: 'tap' }, /Tree expansionTrigger must be one of: chevron, row/u],
+    [{ items: 5 }, /items\.map is not a function/u],
+    [{ expandedIds: throwing('expanded boom') }, /expanded boom/u],
+    [{ defaultExpandedIds: throwing('initial expansion boom') }, /initial expansion boom/u],
+    [{ selectedIds: throwing('selected boom') }, /selected boom/u],
+    [{ defaultSelectedIds: throwing('initial selection boom') }, /initial selection boom/u],
+    [{ className: Symbol('invalid') }, /Cannot convert a Symbol value to a string/u],
+  ]);
+  // The nested items are read before the sets: an item list that fails below the first level is reported first too.
+  assert.throws(() => renderToString(React.createElement(Tree, { 'aria-label': 'Files', items: [{ id: 'a', children: 5 }], selectedIds: throwing('selected boom') })), /items\.map is not a function/u);
+});
+
+// React warns once per owner about the children of an element when an array of them has no keys. Tree passes an item's content and its
+// nested items as arguments, which is why the warning never fires, so a fresh process renders a nested tree and reports what React logged.
+test('R1.3 Tree hands React no unkeyed children to warn about', () => {
+  const script = `
+    import React from 'react';
+    import { renderToString } from 'react-dom/server';
+    import { Tree } from ${JSON.stringify(new URL('../src/tree.ts', import.meta.url).href)};
+    const logged = [];
+    console.error = (...args) => logged.push(String(args[0]));
+    renderToString(React.createElement(Tree, {
+      'aria-label': 'Files',
+      defaultExpandedIds: 'all',
+      items: [{ id: 'a', label: 'A', children: [{ id: 'a1', label: 'A1', children: [{ id: 'a2', label: 'A2' }] }, 'A3'] }, 'B'],
+    }));
+    console.log(JSON.stringify(logged));
+  `;
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: resolve(import.meta.dirname, '..'), encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.deepEqual(JSON.parse(run.stdout), []);
 });
 
 test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {

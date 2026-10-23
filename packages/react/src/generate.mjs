@@ -442,6 +442,16 @@ export { ColorArea } from './color-area.js';
 export type { ColorAreaProps } from './color-area.js';
 export { ColorField } from './color-field.js';
 export type { ColorFieldProps } from './color-field.js';
+export { ColorSwatchPicker } from './color-swatch-picker.js';
+export type { ColorSwatchPickerProps } from './color-swatch-picker.js';
+export { Tabs } from './tabs.js';
+export type { TabsProps } from './tabs.js';
+export { TagGroup } from './tag-group.js';
+export type { TagGroupColor, TagGroupItem, TagGroupProps, TagGroupVariant } from './tag-group.js';
+export { Table } from './table.js';
+export type { MuxUITableColumn, MuxUITableRow, MuxUITableSortDescriptor, TableProps } from './table.js';
+export { Tree } from './tree.js';
+export type { MuxUITreeItem, TreeProps } from './tree.js';
 export { Calendar, RangeCalendar } from './calendar.js';
 export type { CalendarProps, RangeCalendarProps } from './calendar.js';
 export { Toolbar } from './toolbar.js';
@@ -473,25 +483,7 @@ export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropIt
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
 const collectionsTypes = `
-export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
-export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
-export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }
-export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };
-export type TableProps = MuxUIAriaLabel & { columns?: MuxUITableColumn[]; rows?: MuxUITableRow[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; sortDescriptor?: MuxUITableSortDescriptor; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onRowAction?: (row?: MuxUITableRow) => void; onSortChange?: (next: MuxUITableSortDescriptor) => void; className?: string; };
-export declare const Table: React.ForwardRefExoticComponent<TableProps & React.RefAttributes<HTMLTableElement>>;
-export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: string; defaultValue?: string; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; keyboardActivation?: 'automatic' | 'manual'; size?: ControlSize; variant?: 'underline' | 'pill' | 'overflow' | 'segment'; onChange?: (value: string) => void; className?: string; };
-export declare const Tabs: React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<HTMLDivElement>>;
-/** A TagGroup colour: neutral, the theme's brand, a status, or a fixed hue family. */
-export type TagGroupColor = 'neutral' | 'brand' | 'success' | 'warning' | 'error' | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'emerald' | 'teal' | 'bluegreen' | 'cyan' | 'sky' | 'indigo' | 'violet' | 'purple' | 'fuchsia' | 'pink' | 'rose';
-export type TagGroupVariant = 'soft' | 'outline' | 'dot' | 'strong';
-export type TagGroupItem = MuxUICollectionItem & { /** Overrides the group's color for this tag. */ color?: TagGroupColor; };
-export type TagGroupProps = MuxUIAccessibleName & { items?: Array<TagGroupItem | string>; variant?: TagGroupVariant; /** The default color of every tag; an item's own color wins. */ color?: TagGroupColor; selectionMode?: 'none' | 'single' | 'multiple'; /** The selected item ids. */ selectedKeys?: Set<string>; defaultSelectedKeys?: Set<string>; onSelectionChange?: (keys: Set<string>) => void; disabled?: boolean; onRemove?: (items: TagGroupItem[]) => void; onAction?: (item?: TagGroupItem) => void; className?: string; };
-export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & React.RefAttributes<HTMLDivElement>>;
-export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }
-export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; expansionTrigger?: 'chevron' | 'row'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
-export declare const Tree: React.ForwardRefExoticComponent<TreeProps & React.RefAttributes<HTMLDivElement>>;
 `;
 const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${collectionsTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";

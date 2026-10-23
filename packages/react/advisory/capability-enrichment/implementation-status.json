@@ -5399,7 +5399,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5438,7 +5438,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5477,7 +5477,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5516,7 +5516,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5555,7 +5555,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -5594,7 +5594,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/color-swatch-picker.mjs",
+          "path": "packages/react/src/color-swatch-picker.ts",
           "lines": null,
           "anchor": "#ColorSwatchPicker"
         }
@@ -7778,7 +7778,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7817,7 +7817,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7856,7 +7856,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7895,7 +7895,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7934,7 +7934,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -7973,7 +7973,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -8012,7 +8012,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -8051,7 +8051,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/table.mjs",
+          "path": "packages/react/src/table.ts",
           "lines": null,
           "anchor": "#Table"
         }
@@ -8090,7 +8090,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8129,7 +8129,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8168,7 +8168,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8207,7 +8207,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8246,7 +8246,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8285,7 +8285,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tabs.mjs",
+          "path": "packages/react/src/tabs.ts",
           "lines": null,
           "anchor": "#Tabs"
         }
@@ -8324,7 +8324,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8363,7 +8363,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8402,7 +8402,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8441,7 +8441,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -8480,7 +8480,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tag-group.mjs",
+          "path": "packages/react/src/tag-group.ts",
           "lines": null,
           "anchor": "#TagGroup"
         }
@@ -9143,7 +9143,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9182,7 +9182,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9221,7 +9221,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9260,7 +9260,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9299,7 +9299,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
@@ -9338,7 +9338,7 @@
       },
       "runtime": [
         {
-          "path": "packages/react/src/tree.mjs",
+          "path": "packages/react/src/tree.ts",
           "lines": null,
           "anchor": "#Tree"
         }
