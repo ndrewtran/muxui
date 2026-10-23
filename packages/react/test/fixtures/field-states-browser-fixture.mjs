@@ -17,12 +17,12 @@ import {
 } from '../../src/collections.mjs';
 import {
   Input,
-  InputTags,
   MultiSelect,
   PaymentInput,
   TagSelect,
   TextArea,
 } from '../../src/supplemental/index.mjs';
+import { InputTags } from '../../src/supplemental/input-tags.ts';
 import { SelectNative } from '../../src/supplemental/select-native.ts';
 
 const h = React.createElement;

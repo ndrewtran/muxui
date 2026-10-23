@@ -257,10 +257,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 69 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 70 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 69, parts: 82, props: 596, events: 97, types: 136, references: 136 });
+  assert.deepEqual(result.counts, { families: 70, parts: 83, props: 610, events: 100, types: 136, references: 136 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -292,10 +292,10 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['alert-dialog', 'card', 'checkbox-field', 'command-palette', 'header-nav', 'input', 'input-tags', 'multi-select', 'payment-input', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area'];
+const AUTHORED = ['alert-dialog', 'card', 'checkbox-field', 'command-palette', 'header-nav', 'input', 'multi-select', 'payment-input', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 15 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// The 14 families whose web.react API is still authored list prop names only. Each name is owned by the one part
 // that declares it; these 33 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
@@ -336,10 +336,10 @@ const AUTHORED_OWNERS = {
 // The catalog lists these channels but not their `on` handler among the props; the handler is declared on the root.
 const UNLISTED_EVENTS = new Set(['text-area.change']);
 
-test('every prop of the 15 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 14 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 15, props: 172, unique: 139, listed: 33, events: 24 });
+  assert.deepEqual(result.counts, { families: 14, props: 155, unique: 122, listed: 33, events: 21 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });

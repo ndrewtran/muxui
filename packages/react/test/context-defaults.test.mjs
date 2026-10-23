@@ -105,6 +105,8 @@ const audited = [
       ...expand(['color-mode-toggle'], ['disabled']),
       // ProgressCircle sent value (undefined for null), minValue and maxValue to React Aria's ProgressBar as its own values before the move.
       ...expand(['progress-circle'], ['value', 'minValue', 'maxValue']),
+      // InputTags sent isDisabled and isInvalid to React Aria's Group as its own values, false when omitted, before the move.
+      ...expand(['input-tags'], ['disabled', 'invalid']),
     ],
   },
   {
@@ -135,6 +137,8 @@ const audited = [
       ...expand(['select'], ['readOnly']),
       // ButtonGroup keeps its orientation for CSS, a data attribute and a class, and gives React Aria none.
       ...expand(['button-group'], ['orientation']),
+      // InputTags seeds its own state from defaultValue, and sends required to React Aria only as aria-required, never as isRequired.
+      ...expand(['input-tags'], ['defaultValue', 'required']),
       // PromptComposer renders a native form, textarea, and buttons, and gives its model Select explicit flags, so no React Aria context reaches its own disabled, pending, defaultValue, or multiple.
       ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
       // TextEditor renders its own contenteditable and buttons and sends React Aria no isDisabled, isReadOnly, isRequired, or isInvalid, so no React Aria context reaches its flags.

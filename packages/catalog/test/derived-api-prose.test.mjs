@@ -176,6 +176,7 @@ const GUIDES = {
   'button-group': { native: ['aria-label', 'aria-labelledby'], from: { button: ['neutral'] } },
   // null and 0 are the values the guide states for an indeterminate and an empty circle.
   'progress-circle': { native: ['null', '0'] },
+  'input-tags': {},
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.

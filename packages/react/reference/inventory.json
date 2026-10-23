@@ -573,18 +573,13 @@
         { "name": "InputLabelProps", "kind": "type", "owner": "input", "module": "supplemental" },
         { "name": "InputProps", "kind": "type", "owner": "input", "module": "supplemental" },
         { "name": "InputRootProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputTags", "kind": "value", "owner": "input-tags", "module": "supplemental" },
-        {
-          "name": "InputTagsProps",
-          "kind": "type",
-          "owner": "input-tags",
-          "module": "supplemental"
-        },
+        { "name": "InputTags", "kind": "value", "owner": "input-tags", "module": "input-tags" },
+        { "name": "InputTagsProps", "kind": "type", "owner": "input-tags", "module": "input-tags" },
         {
           "name": "InputTagsRootProps",
           "kind": "type",
           "owner": "input-tags",
-          "module": "supplemental"
+          "module": "input-tags"
         },
         { "name": "Lightbox", "kind": "value", "owner": "lightbox", "module": "lightbox" },
         { "name": "LightboxBackdrop", "kind": "value", "owner": "lightbox", "module": "lightbox" },

@@ -30,7 +30,6 @@ import {
   CommandPalette,
   HeaderNav,
   Input,
-  InputTags,
   MultiSelect,
   PaymentInput,
   RadioField,
@@ -39,6 +38,7 @@ import {
   TagSelect,
 } from '../../src/supplemental/index.mjs';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
+import { InputTags } from '../../src/supplemental/input-tags.ts';
 
 const h = React.createElement;
 

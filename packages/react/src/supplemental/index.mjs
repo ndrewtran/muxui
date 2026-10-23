@@ -4,7 +4,6 @@ export { CheckboxField } from './checkbox-field.mjs';
 export { CommandPalette, useCommandPalette } from './command-palette.mjs';
 export { HeaderNav } from './header-nav.mjs';
 export { Input } from './input.mjs';
-export { InputTags } from './input-tags.mjs';
 export { MultiSelect } from './multi-select.mjs';
 export { PaymentInput } from './payment-input.mjs';
 export { RadioField } from './radio-field.mjs';

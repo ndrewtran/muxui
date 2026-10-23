@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
@@ -249,8 +250,11 @@ const markupValues = {
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
+  // InputTags lists its tags as rows, so its starting tags are the labels in them.
+  tagPlacement: (doc) => (doc.querySelector('.muxui-input-tags--below') === null ? 'inline' : 'below'),
   // A text field shows its starting text as its input's value; a composer, in its textarea.
   defaultValue: (doc) => {
+    if (doc.querySelector('.muxui-input-tags') !== null) return [...doc.querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent);
     const input = doc.querySelector('input');
     return input === null ? doc.querySelector('textarea')?.textContent : input.getAttribute('value');
   },
@@ -297,9 +301,10 @@ const minimalRenders = {
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
+  InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
-const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot' };
+const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
@@ -404,6 +409,20 @@ const behaviourObservers = {
     storageKey: (props) => withMounted(h(generated.ColorModeToggle, { mode: 'dark', 'aria-label': 'Theme', ...props }), () => {
       const saved = [...Array(window.localStorage.length).keys()].map((index) => window.localStorage.key(index));
       return saved.find((key) => window.localStorage.getItem(key) === 'dark');
+    }),
+  },
+  InputTags: {
+    // Adding a tag the field already holds either adds a second row or does nothing. React DOM was imported before the DOM exists, so it
+    // reads a changed value through its keydown path: the value is set, a keydown makes React read it, and Enter adds the tag.
+    allowDuplicates: (props) => withMounted(h(generated.InputTags.Root, { 'aria-label': 'Tags', defaultValue: ['a'], ...props }), async (container) => {
+      const input = container.querySelector('input');
+      await act(async () => {
+        input.focus();
+        Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'a');
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      });
+      await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+      return container.querySelectorAll('[role="row"]').length > 1;
     }),
   },
   Menu: {
@@ -525,7 +544,8 @@ function defaultMismatches(markup, defaults, scope) {
   const mismatches = [];
   for (const [key, expected] of Object.entries(defaults)) {
     const observed = key in markupFlags ? present(markupFlags[key]) : markupValues[key]?.(container);
-    if ((key in markupFlags || key in markupValues) && observed !== expected) mismatches.push(`${key}: catalog ${JSON.stringify(expected)}, rendered ${JSON.stringify(observed)}`);
+    // A default may be an array (InputTags' starting tags), which no identity comparison can match.
+    if ((key in markupFlags || key in markupValues) && !isDeepStrictEqual(observed, expected)) mismatches.push(`${key}: catalog ${JSON.stringify(expected)}, rendered ${JSON.stringify(observed)}`);
   }
   return mismatches;
 }
@@ -770,7 +790,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
-    inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'],
+    inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {
@@ -792,6 +812,7 @@ test('every default a simple supplemental family states is compared with what th
     ButtonGroup: { orientation: 'vertical', attached: true, disabled: true, role: 'region' },
     ColorModeToggle: { disabled: true, storageKey: 'theme' },
     ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
+    InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
   };
   for (const [name, values] of Object.entries(different)) {
     const api = await catalogApi(kebab(name));
@@ -801,7 +822,7 @@ test('every default a simple supplemental family states is compared with what th
       const defaults = { ...api.defaults, [key]: value };
       const mismatches = key in (behaviourObservers[name] ?? {}) ? await behaviourMismatches(name, defaults) : defaultMismatches(markup, defaults);
       assert.equal(mismatches.length, 1, `${name}.${key}: ${mismatches.join('; ')}`);
-      assert.match(mismatches[0], new RegExp(`^${key}: catalog ${JSON.stringify(value)}, `, 'u'), `${name}.${key} is the default that fails`);
+      assert.ok(mismatches[0].startsWith(`${key}: catalog ${JSON.stringify(value)}, `), `${name}.${key} is the default that fails: ${mismatches[0]}`);
     }
   }
 });

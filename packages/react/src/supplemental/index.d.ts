@@ -197,24 +197,6 @@ export declare const HeaderNav: {
   MobileTrigger: React.ComponentType<{ children?: React.ReactNode }>;
 };
 
-export type InputTagsProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
-  tagPlacement?: 'inline' | 'below';
-  placeholder?: string;
-  value?: string[];
-  defaultValue?: string[];
-  onChange?: (tags: string[]) => void;
-  onTagAdded?: (tag: string) => void;
-  onTagRemoved?: (tag: string) => void;
-  allowDuplicates?: boolean;
-  maxTags?: number;
-  validate?: (value: string) => boolean;
-  label?: React.ReactNode;
-  description?: React.ReactNode;
-  errorMessage?: React.ReactNode;
-};
-export type InputTagsRootProps = InputTagsProps;
-export declare const InputTags: { Root: React.ForwardRefExoticComponent<InputTagsProps & React.RefAttributes<HTMLDivElement>> };
-
 export type InputRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
   value?: string;
   defaultValue?: string;

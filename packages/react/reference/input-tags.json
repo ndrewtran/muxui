@@ -1,52 +1,129 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "input-tags",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": { "input-tags": "packages/react/src/supplemental/input-tags.ts" },
   "exports": [
     {
       "name": "InputTags",
       "entry": ".",
-      "module": "supplemental",
+      "module": "input-tags",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
-            {
-              "name": "size",
-              "optional": true,
-              "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
             {
               "name": "tagPlacement",
               "optional": true,
               "type": "'inline' | 'below'",
-              "values": ["inline", "below"]
+              "values": ["inline", "below"],
+              "doc": "Where the tags sit: inline with the input, or below it."
             },
-            { "name": "placeholder", "optional": true, "type": "string" },
-            { "name": "value", "optional": true, "type": "string[]" },
-            { "name": "defaultValue", "optional": true, "type": "string[]" },
-            { "name": "onChange", "optional": true, "type": "(tags: string[]) => void" },
-            { "name": "onTagAdded", "optional": true, "type": "(tag: string) => void" },
-            { "name": "onTagRemoved", "optional": true, "type": "(tag: string) => void" },
-            { "name": "allowDuplicates", "optional": true, "type": "boolean" },
-            { "name": "maxTags", "optional": true, "type": "number" },
-            { "name": "validate", "optional": true, "type": "(value: string) => boolean" },
-            { "name": "label", "optional": true, "type": "React.ReactNode" },
-            { "name": "description", "optional": true, "type": "React.ReactNode" },
-            { "name": "errorMessage", "optional": true, "type": "React.ReactNode" }
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The field's size."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "The hint shown in the input while it is empty, and beside the tags when they sit below."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string[]",
+              "doc": "The tags, when the caller controls them."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string[]",
+              "doc": "The starting tags, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(tags: string[]) => void",
+              "doc": "Called with all of the tags each time one is added or removed."
+            },
+            {
+              "name": "onTagAdded",
+              "optional": true,
+              "type": "(tag: string) => void",
+              "doc": "Called with the tag that was just added."
+            },
+            {
+              "name": "onTagRemoved",
+              "optional": true,
+              "type": "(tag: string) => void",
+              "doc": "Called with the tag that was just removed."
+            },
+            {
+              "name": "allowDuplicates",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Lets the same tag be added more than once."
+            },
+            {
+              "name": "maxTags",
+              "optional": true,
+              "type": "number",
+              "doc": "The most tags the field holds; adding another does nothing."
+            },
+            {
+              "name": "validate",
+              "optional": true,
+              "type": "(value: string) => boolean",
+              "doc": "Decides whether a typed tag may be added."
+            },
+            {
+              "name": "label",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The visible label, which also names the input."
+            },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text shown with the field."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The message shown, in place of the description, while the field is invalid."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            { "name": "readOnly", "optional": true, "type": "boolean" }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
             {
               "type": "React.HTMLAttributes<HTMLDivElement>",
-              "omit": ["onChange"]
+              "omit": ["onChange", "defaultValue"]
             }
           ]
         }
@@ -55,48 +132,138 @@
   ],
   "types": [
     {
-      "id": "supplemental#InputTagsProps",
+      "id": "input-tags#InputTagsOwnProps",
+      "name": "InputTagsOwnProps",
+      "module": "input-tags",
+      "text": "type InputTagsOwnProps = {\n  tagPlacement?: 'inline' | 'below';\n  size?: 'sm' | 'md' | 'lg';\n  placeholder?: string;\n  value?: string[];\n  defaultValue?: string[];\n  onChange?: (tags: string[]) => void;\n  onTagAdded?: (tag: string) => void;\n  onTagRemoved?: (tag: string) => void;\n  allowDuplicates?: boolean;\n  maxTags?: number;\n  validate?: (value: string) => boolean;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n};",
+      "members": [
+        {
+          "name": "tagPlacement",
+          "optional": true,
+          "type": "'inline' | 'below'",
+          "values": ["inline", "below"],
+          "doc": "Where the tags sit: inline with the input, or below it."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The field's size."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "The hint shown in the input while it is empty, and beside the tags when they sit below."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string[]",
+          "doc": "The tags, when the caller controls them."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string[]",
+          "doc": "The starting tags, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(tags: string[]) => void",
+          "doc": "Called with all of the tags each time one is added or removed."
+        },
+        {
+          "name": "onTagAdded",
+          "optional": true,
+          "type": "(tag: string) => void",
+          "doc": "Called with the tag that was just added."
+        },
+        {
+          "name": "onTagRemoved",
+          "optional": true,
+          "type": "(tag: string) => void",
+          "doc": "Called with the tag that was just removed."
+        },
+        {
+          "name": "allowDuplicates",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Lets the same tag be added more than once."
+        },
+        {
+          "name": "maxTags",
+          "optional": true,
+          "type": "number",
+          "doc": "The most tags the field holds; adding another does nothing."
+        },
+        {
+          "name": "validate",
+          "optional": true,
+          "type": "(value: string) => boolean",
+          "doc": "Decides whether a typed tag may be added."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The visible label, which also names the input."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown with the field."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message shown, in place of the description, while the field is invalid."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        }
+      ]
+    },
+    {
+      "id": "input-tags#InputTagsProps",
       "name": "InputTagsProps",
-      "module": "supplemental",
+      "module": "input-tags",
       "public": [
         { "entry": ".", "name": "InputTagsProps" }
       ],
       "owner": "input-tags",
-      "text": "type InputTagsProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  tagPlacement?: 'inline' | 'below';\n  placeholder?: string;\n  value?: string[];\n  defaultValue?: string[];\n  onChange?: (tags: string[]) => void;\n  onTagAdded?: (tag: string) => void;\n  onTagRemoved?: (tag: string) => void;\n  allowDuplicates?: boolean;\n  maxTags?: number;\n  validate?: (value: string) => boolean;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
+      "text": "type InputTagsProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> & InputTagsOwnProps & {\n  readOnly?: boolean;\n};",
+      "refs": ["input-tags#InputTagsOwnProps"]
     },
     {
-      "id": "supplemental#InputTagsRootProps",
+      "id": "input-tags#InputTagsRootProps",
       "name": "InputTagsRootProps",
-      "module": "supplemental",
+      "module": "input-tags",
       "public": [
         { "entry": ".", "name": "InputTagsRootProps" }
       ],
       "owner": "input-tags",
       "text": "type InputTagsRootProps = InputTagsProps;",
-      "refs": ["supplemental#InputTagsProps"]
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
-      "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
-        {
-          "name": "size",
-          "optional": true,
-          "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
-        }
-      ]
+      "refs": ["input-tags#InputTagsProps"]
     }
   ]
 }
