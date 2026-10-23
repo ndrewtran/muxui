@@ -24,6 +24,22 @@
       "new": "string | number",
       "reason": "Readonly<Record<string, string | string[]>> became { readonly [key: string]: string | string[] }, with the same keyof widening.",
       "tranche": "Decision 0031 tranche 5, 9bc13bc5"
+    },
+    {
+      "subject": ".:props:PromptComposer",
+      "assertion": "readonly:defaultValue",
+      "old": "number | \"length\"",
+      "new": "never",
+      "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Both are assignable to each other and accept the same values; only the readonly keys of the property type's apparent members (a branded string's length and index) differ.",
+      "tranche": "Decision 0031 tranche 8b"
+    },
+    {
+      "subject": ".:type:PromptComposerProps",
+      "assertion": "readonly:defaultValue",
+      "old": "number | \"length\"",
+      "new": "never",
+      "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Both are assignable to each other and accept the same values; only the readonly keys of the property type's apparent members (a branded string's length and index) differ.",
+      "tranche": "Decision 0031 tranche 8b"
     }
   ]
 }
