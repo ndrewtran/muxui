@@ -84,8 +84,9 @@ const tokenGroupThreshold = 8;
  */
 
 /**
- * A forwarded ref: the element type, or `never` for a part that takes none.
- * @typedef {{ type: string, refs?: readonly string[] } | { never: true } | null} DeclarationRef
+ * A forwarded ref: the element type, or `never` for a part that takes none (`required` when the declaration
+ * writes `ref: never` rather than `ref?: never`), or null when the part declares no ref.
+ * @typedef {{ type: string, refs?: readonly string[] } | { never: true, required?: true } | null} DeclarationRef
  */
 
 /**
@@ -141,13 +142,27 @@ const tokenGroupThreshold = 8;
  */
 
 /**
- * One owner's file of the declaration reference: its exports and every Mux UI type they reach.
+ * A Mux UI value a type reaches through `typeof`, printed as its declaration.
+ * @typedef {object} DeclarationValue
+ * @property {string} id
+ * @property {string} name
+ * @property {string} module
+ * @property {'const' | 'function'} kind
+ * @property {readonly { entry: string, name: string }[]} [public] Where a consumer can import it; absent for an internal value.
+ * @property {string} text The printed declaration.
+ * @property {string} [doc]
+ * @property {readonly string[]} [refs]
+ */
+
+/**
+ * One owner's file of the declaration reference: its exports and every Mux UI type and value they reach.
  * @typedef {object} DeclarationFile
  * @property {string} schema
  * @property {string} owner A family slug, `shared` or `package-level`.
  * @property {Readonly<Record<string, string>>} sources The source each declaration module was generated from.
  * @property {readonly DeclarationExport[]} exports
  * @property {readonly DeclarationType[]} types
+ * @property {readonly DeclarationValue[]} [values] Absent when no export reaches a value.
  */
 
 /**
@@ -172,6 +187,7 @@ const tokenGroupThreshold = 8;
  * @property {string} source The reference file that holds it.
  * @property {DeclarationExport} export
  * @property {readonly DeclarationType[]} types Every Mux UI type the export reaches, printed in full.
+ * @property {readonly DeclarationValue[]} [values] Every Mux UI value those types name through `typeof`, when there are any.
  * @property {Readonly<Record<string, string>>} sources
  */
 
@@ -270,6 +286,7 @@ export function componentDeclarations({ artifact, packageFacts, declarations }) 
     source: `${referenceDirectory}/${declarations.inventory.owners[item.owner]}`,
     export: record,
     types: file.types,
+    ...(file.values !== undefined && { values: file.values }),
     sources: file.sources,
   });
 }

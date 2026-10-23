@@ -85,7 +85,13 @@ export function valuesOf(type, types, stack = []) {
 
 const memberKey = (member) => member.name;
 
-const UTILITIES = new Set(['Omit', 'Pick', 'Partial', 'Required', 'Readonly', 'Exclude', 'Extract', 'Record', 'NonNullable']);
+/**
+ * The host types a props type may pass through as native attributes: React's attribute surfaces, whose keys
+ * the reader does not read. Any other host application (`ReturnType<...>`, `Parameters<...>`, a library
+ * type) could hide a member the component declares, so it is refused rather than shown as an envelope.
+ */
+const NATIVE_SURFACE = /^React\.(?:\w*HTMLAttributes|SVGAttributes|DOMAttributes|AriaAttributes|ComponentPropsWithoutRef)$/u;
+const isNativeSurface = (type) => type.kind === 'host' && type.origin === 'react' && NATIVE_SURFACE.test(type.name);
 
 /** Whether two declarations of one member say the same thing (comments aside). */
 function sameMember(left, right) {
@@ -105,11 +111,16 @@ const emptyArm = () => ({ members: new Map(), natives: [] });
 
 function armOf(members, chain) {
   const arm = emptyArm();
+  const seen = new Set();
   for (const member of members) {
     if (member.member === 'call') throw unsupported(chain, 'a call signature in a props type');
     if (member.member === 'index') throw unsupported(chain, 'an index signature in a props type');
+    // One body cannot declare a name twice except as overloaded methods, which a map of members would collapse.
+    if (seen.has(member.name)) throw new ReferenceReadError('OVERLOAD', chain, `${member.name} is declared more than once in one props type; the reader keeps one signature per member`);
+    seen.add(member.name);
     if (member.name === 'ref' && member.member === 'property' && member.type.kind === 'keyword' && member.type.name === 'never') {
-      arm.ref = { never: true };
+      // `ref?: never` and `ref: never` differ, so the requiredness stays.
+      arm.ref = { never: true, ...(!member.optional && { required: true }) };
       continue;
     }
     arm.members.set(memberKey(member), member);
@@ -157,7 +168,7 @@ const nativeKey = (native) => `${printType(native.type)}\0${native.omit.join('\0
 function armKey(arm) {
   return JSON.stringify([
     [...arm.members.values()].map((member) => [member.member, member.name, member.optional, member.readonly ?? false, memberTypeText(member)]),
-    arm.natives.map(nativeKey), arm.ref ? (arm.ref.never ? 'never' : printType(arm.ref.type)) : null,
+    arm.natives.map(nativeKey), arm.ref ? (arm.ref.never ? (arm.ref.required ? 'never!' : 'never') : printType(arm.ref.type)) : null,
   ]);
 }
 
@@ -252,6 +263,7 @@ export function createExpander(types) {
         const result = dedupe(arms.map((arm) => {
           const next = cloneArm(arm);
           for (const name of omit) next.members.delete(name);
+          if (omit.includes('ref')) delete next.ref;
           next.natives = next.natives.map((native) => ({ ...native, omit: [...native.omit, ...omit.filter((name) => !native.omit.includes(name))] }));
           return next;
         }));
@@ -265,13 +277,14 @@ export function createExpander(types) {
       case 'Pick': {
         if (type.typeArguments?.length !== 2) throw unsupported(chain, 'Pick without exactly two type arguments');
         // A host type's members are not read, so Pick of one passes through as the exact application.
-        if (first.kind === 'host' && !UTILITIES.has(first.name)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
+        if (isNativeSurface(first)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
         const arms = expand(first, stack, chain);
         if (arms.some((arm) => arm.natives.length > 0)) throw unsupported(chain, 'Pick of a type that passes host attributes through');
         const keep = keysOf(second, (target) => expand(target, stack, chain), types, chain);
         const result = dedupe(arms.map((arm) => {
           const next = cloneArm(arm);
           next.members = new Map([...arm.members].filter(([name]) => keep.includes(name)));
+          if (!keep.includes('ref')) delete next.ref;
           return next;
         }));
         if (result.length > 1 && arms.length > 1) throw unsupported(chain, `Pick over ${arms.length} alternatives that still differ after picking ${keep.join(', ')}`);
@@ -285,8 +298,9 @@ export function createExpander(types) {
       case 'React.PropsWithoutRef': case 'React.PropsWithRef': case 'React.ComponentProps':
         throw unsupported(chain, `${type.name} is a utility type the reader does not evaluate in a props type`);
       default:
-        // Any other host type is a surface the component passes through; its keys are not read.
-        return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
+        // A React attribute surface the component passes through; its keys are not read.
+        if (isNativeSurface(type)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
+        throw unsupported(chain, `${printType(type)} is a host type the reader does not evaluate in a props type; only React's attribute surfaces pass through`);
     }
   }
 

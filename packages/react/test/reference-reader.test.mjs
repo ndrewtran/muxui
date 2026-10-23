@@ -2,7 +2,7 @@
 // name, and that TypeScript 7 (the production host) and TypeScript 6 (a test-only host) read the same bytes.
 // The synthetic declarations in support/reference-inputs.mjs hold every construct the reader admits.
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -217,6 +217,115 @@ export type Opaque<T> = Base & T;
   assert.deepEqual(byName.Mixed.members.map(({ name, values }) => [name, values]), [['color', ['a', 'b']]]);
   assert.equal('extends' in byName.Opaque, false, 'an intersection with a type parameter is text only');
   assert.equal(byName.Opaque.members, undefined);
+});
+
+const modelOf = (text) => {
+  const declarations = single(text);
+  return readReference({ declarations, manifest: fixtureManifest, families: [], exceptions: ownedByFixture(read(declarations)), untypedEntries: {} }).files.get('shared.json');
+};
+const REACT = "import type * as React from 'react';\nimport type { ReactElement } from 'react';\n";
+const partOf = (file, name) => file.exports.find((item) => item.name === name).parts[0];
+
+test('a forwarded ref keeps whether it is required, and Omit and Pick take it away like any other key', () => {
+  const file = modelOf(`${REACT}
+type Optional = { a?: string; ref?: never };
+type Required = { a?: string; ref: never };
+export declare function Loose(props: Optional): ReactElement | null;
+export declare function Strict(props: Required): ReactElement | null;
+type Forwarded = { a: string } & React.RefAttributes<HTMLDivElement>;
+export declare function Kept(props: Forwarded): ReactElement | null;
+export declare function Omitted(props: Omit<Forwarded, 'ref'>): ReactElement | null;
+export declare function Picked(props: Pick<Forwarded, 'a'>): ReactElement | null;
+export declare function PickedWithRef(props: Pick<Forwarded, 'a' | 'ref'>): ReactElement | null;
+`);
+  assert.deepEqual(partOf(file, 'Loose').ref, { never: true });
+  assert.deepEqual(partOf(file, 'Strict').ref, { never: true, required: true });
+  assert.deepEqual(partOf(file, 'Kept').ref, { type: 'HTMLDivElement' });
+  assert.equal(partOf(file, 'Omitted').ref, null, 'Omit<..., "ref"> leaves no ref');
+  assert.equal(partOf(file, 'Picked').ref, null, 'a Pick that leaves ref out leaves no ref');
+  assert.deepEqual(partOf(file, 'PickedWithRef').ref, { type: 'HTMLDivElement' });
+  assert.deepEqual(partOf(file, 'Omitted').members.map(({ name }) => name), ['a']);
+});
+
+test('props that overload a method are refused as OVERLOAD instead of keeping one signature', () => {
+  assert.throws(() => modelOf(`${REACT}
+export interface Props { onPick(value: string): void; onPick(value: number): void }
+export declare function Picker(props: Props): ReactElement | null;
+`), (error) => error instanceof ReferenceReadError && error.code === 'MUXUI_REACT_REFERENCE_OVERLOAD' && /onPick is declared more than once/u.test(error.message));
+  // A method the interface redeclares over a base's is an override, not an overload.
+  const file = modelOf(`${REACT}
+interface Base { onPick(value: string): void }
+export interface Derived extends Base { onPick(value: 'a'): void }
+export declare function Picker(props: Derived): ReactElement | null;
+`);
+  assert.equal(partOf(file, 'Picker').members[0].type, "(value: 'a'): void");
+});
+
+test('a value a type reaches through typeof is printed with it, with its provenance', () => {
+  const file = modelOf(`
+declare const Internal: { readonly tag: 'ok' };
+declare function makeProps(label: string): { label: string };
+export type X = typeof Internal;
+export type Y = ReturnType<typeof makeProps>;
+export {};
+`);
+  const byName = Object.fromEntries(file.values.map((value) => [value.name, value]));
+  assert.deepEqual(Object.keys(byName), ['Internal', 'makeProps']);
+  assert.equal(byName.Internal.text, "declare const Internal: {\n  readonly tag: 'ok';\n};");
+  assert.equal(byName.Internal.kind, 'const');
+  assert.equal('public' in byName.Internal, false, 'an internal value says so');
+  assert.equal(byName.makeProps.text, 'declare function makeProps(label: string): { label: string };');
+  assert.deepEqual(file.sources, { index: 'packages/react/src/fixture/index.ts' });
+  assert.deepEqual(file.types.find(({ name }) => name === 'X').refs, ['index#Internal']);
+  // A value no type reaches is not listed, so existing files do not change.
+  assert.equal('values' in modelOf('export type Z = string;\nexport {};'), false);
+});
+
+test('a host application the reader does not evaluate is refused instead of shown as an attribute envelope', () => {
+  const refused = (props) => assert.throws(() => modelOf(`${REACT}declare function makeProps(label: string): { label: string };\nexport declare const Widget: React.FC<${props}>;\n`),
+    (error) => error instanceof ReferenceReadError && error.code === 'MUXUI_REACT_REFERENCE_UNSUPPORTED' && /host type the reader does not evaluate/u.test(error.message), props);
+  refused('ReturnType<typeof makeProps>');
+  refused('Awaited<ReturnType<typeof makeProps>>');
+  refused('Pick<ReturnType<typeof makeProps>, "label">');
+  refused('Intl.NumberFormatOptions');
+  // React's attribute surfaces are the terminal case: they pass through, named exactly.
+  const surfaces = modelOf(`${REACT}export declare const Widget: React.FC<React.HTMLAttributes<HTMLDivElement> & Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & { label: string }>;\n`);
+  assert.deepEqual(partOf(surfaces, 'Widget').natives.map(({ type }) => type), ['React.HTMLAttributes<HTMLDivElement>', "Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'>"]);
+});
+
+test('every printed type compiles again, under TypeScript 7 and 6: optional unnamed tuple elements are parenthesized', () => {
+  const declarations = single(`
+type A = { a: 1 };
+type B = { b: 2 };
+export type Union = [(string | number)?];
+export type Fn = [(() => void)?, ...(string | number)[]];
+export type Both = [(A & B)?];
+export type Keys = [(keyof A)?];
+export type Frozen = readonly [(readonly string[])?];
+export type Plain = [string[]?, A?];
+export type Named = [first?: string | number, ...rest: (A | B)[]];
+export {};
+`);
+  const graph = read(declarations);
+  const text = printed(graph);
+  assert.equal(text.Union, 'type Union = [(string | number)?];');
+  assert.equal(text.Fn, 'type Fn = [(() => void)?, ...(string | number)[]];');
+  assert.equal(text.Both, 'type Both = [(A & B)?];');
+  assert.equal(text.Plain, 'type Plain = [string[]?, A?];');
+  assert.equal(text.Named, 'type Named = [first?: string | number, ...rest: (A | B)[]];');
+  const source = `${Object.values(text).join('\n')}\n`;
+  const directory = mkdtempSync(join(tmpdir(), 'muxui-roundtrip-'));
+  try {
+    writeFileSync(join(directory, 'printed.d.ts'), source);
+    for (const host of [typescript7Host, typescript6Host]) {
+      assert.deepEqual(host.open({ directory, files: [join(directory, 'printed.d.ts')] }, (session) => session.diagnostics()), [], `${host.name} compiles what the printer wrote`);
+    }
+    // The bug this holds off: an unparenthesized union element is not valid TypeScript.
+    writeFileSync(join(directory, 'broken.d.ts'), 'type Broken = [string | number?];\n');
+    assert.notDeepEqual(typescript7Host.open({ directory, files: [join(directory, 'broken.d.ts')] }, (session) => session.diagnostics()), []);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 // ---- what the reader refuses, by name -------------------------------------------------------------

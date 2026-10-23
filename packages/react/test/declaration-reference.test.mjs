@@ -55,6 +55,7 @@ const CHANGES = [
   ['a literal value is removed', replaced('button.d.ts', " | 'inverse'", ''), 'button.json'],
   ['a member type changes', replaced('virtualizer.d.ts', 'height?: number;', 'height?: string;'), 'virtualizer.json'],
   ['a ref type changes', replaced('virtualizer.d.ts', '(VirtualizerStackProps & RefAttributes<HTMLDivElement>)', '(VirtualizerStackProps & RefAttributes<HTMLElement>)'), 'virtualizer.json'],
+  ['a ref that cannot be passed becomes one that must not be omitted', replaced('virtualizer.d.ts', '    ref?: never;', '    ref: never;'), 'virtualizer.json'],
   ['a comment changes', replaced('resizable.d.ts', 'How many percent an arrow key moves a handle.', 'How many percent an arrow key moves a panel.'), 'resizable.json'],
   ['an alternative is removed', (all) => ({ ...all, 'code-block.d.ts': all['code-block.d.ts'].replace(/ \| \{\n {4}mode: 'diff';[^}]*\}/u, '') }), 'code-block.json'],
 ];

@@ -70,7 +70,7 @@ export function printType(type) {
     case 'union': return type.members.map((member) => wrap(member, 3, printType(member))).join(' | ');
     case 'intersection': return type.members.map((member) => wrap(member, 3, printType(member))).join(' & ');
     case 'array': return `${wrap(type.element, 3, printType(type.element))}[]`;
-    case 'tuple': return `[${type.elements.map((element) => `${element.rest ? '...' : ''}${element.name ? `${element.name}${element.optional ? '?' : ''}: ` : ''}${printType(element.type)}${element.optional && !element.name ? '?' : ''}`).join(', ')}]`;
+    case 'tuple': return `[${type.elements.map((element) => `${element.rest ? '...' : ''}${element.name ? `${element.name}${element.optional ? '?' : ''}: ` : ''}${element.optional && !element.name ? wrap(element.type, 4, printType(element.type)) : printType(element.type)}${element.optional && !element.name ? '?' : ''}`).join(', ')}]`;
     case 'readonly': return `readonly ${wrap(type.type, 3, printType(type.type))}`;
     case 'keyof': return `keyof ${wrap(type.type, 3, printType(type.type))}`;
     case 'indexed': return `${wrap(type.object, 4, printType(type.object))}[${printType(type.index)}]`;
@@ -113,6 +113,12 @@ export function printDeclaration(declaration) {
     return `interface ${declaration.name}${parameters}${bases} ${printBody(declaration.members, 0)}`;
   }
   return `type ${declaration.name}${parameters} = ${printBlock(declaration.type, 0)};`;
+}
+
+/** A value a type reaches through `typeof`, as its declaration: `declare const Name: Type;` or `declare function name(...): Type;`. */
+export function printValueDeclaration(declaration) {
+  if (declaration.kind === 'function') return `declare function ${declaration.name}${printCallSignature(declaration)};`;
+  return `declare const ${declaration.name}: ${printBlock(declaration.type, 0)};`;
 }
 
 /** Every package type a tree names, as ids in order of first appearance. */

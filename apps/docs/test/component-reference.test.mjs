@@ -238,6 +238,23 @@ test('the shared reference carries the declarations only when asked, and nothing
   assert.deepEqual(JSON.parse(JSON.stringify(added)), added, 'plain JSON, so Storybook can embed it as it embeds the rest');
 });
 
+test('a component\'s share passes on the values its types name and a ref that is required never', () => {
+  const root = mkdtempSync(resolve(tmpdir(), 'muxui-declaration-values-'));
+  try {
+    mkdirSync(resolve(root, 'packages/react/reference'), { recursive: true });
+    const value = { id: 'card#makeProps', name: 'makeProps', module: 'card', kind: 'function', text: 'declare function makeProps(label: string): { label: string };' };
+    const part = { member: null, form: 'FC', members: [], ref: { never: true, required: true } };
+    writeFileSync(resolve(root, 'packages/react/reference/inventory.json'), JSON.stringify({ schema: INVENTORY_SCHEMA, package: '@muxui/react', entries: [{ key: '.', exports: [{ name: 'Card', kind: 'value', owner: 'card', module: 'card' }] }], owners: { card: 'card.json' } }));
+    writeFileSync(resolve(root, 'packages/react/reference/card.json'), JSON.stringify({ schema: REFERENCE_SCHEMA, owner: 'card', sources: {}, exports: [{ name: 'Card', entry: '.', module: 'card', kind: 'component', parts: [part] }], types: [], values: [value] }));
+    const found = componentDeclarations({ artifact: { id: 'muxui:component:card' }, packageFacts: packageFacts(), declarations: readDeclarationReference(root) });
+    assert.deepEqual(found.values, [value]);
+    assert.deepEqual(found.export.parts[0].ref, { never: true, required: true });
+    assert.equal('values' in declared('muxui:component:button'), false, 'a component whose types reach no value has none');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('the declaration reference is refused when it is not what the inventory promises', () => {
   const root = mkdtempSync(resolve(tmpdir(), 'muxui-declaration-reference-'));
   try {

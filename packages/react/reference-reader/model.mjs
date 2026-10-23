@@ -14,7 +14,7 @@ import { ReferenceReadError } from './errors.mjs';
 import { createComponentReader, modelMember } from './components.mjs';
 import { valuesOf } from './expand.mjs';
 import { assignOwners } from './ownership.mjs';
-import { printCallSignature, printDeclaration, printType, referencedIds } from './printer.mjs';
+import { printCallSignature, printDeclaration, printType, printValueDeclaration, referencedIds } from './printer.mjs';
 
 export const REFERENCE_SCHEMA = 'muxui-declaration-reference-v1';
 export const INVENTORY_SCHEMA = 'muxui-declaration-inventory-v1';
@@ -96,8 +96,9 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
   const keyOrder = Object.keys(manifest.exports);
   const entries = [...graph.entries].sort((left, right) => keyOrder.indexOf(left.key) - keyOrder.indexOf(right.key));
 
-  // Public names of each type id, in entry and name order, and the exports each owner holds.
+  // Public names of each type id and each value id, in entry and name order, and the exports each owner holds.
   const publicNames = new Map();
+  const valueNames = new Map();
   const holdings = new Map();
   const holdingOf = (owner) => {
     if (!holdings.has(owner)) holdings.set(owner, { exports: [], types: new Set(), modules: new Set() });
@@ -113,6 +114,7 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
         holding.modules.add(types.get(item.type).module);
       }
       if (item.value) {
+        valueNames.set(item.value, [...(valueNames.get(item.value) ?? []), { entry: entry.key, name: item.name }]);
         const declaration = values.get(item.value);
         const parts = reader.componentParts(declaration);
         const base = { name: item.name, entry: entry.key, module: declaration.module, ...(item.alias && { alias: item.alias }) };
@@ -164,21 +166,51 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
     };
   }
 
+  // A value a type reaches through `typeof`, printed as its declaration, so the type that names it is not left dangling.
+  function modelValue(declaration) {
+    const refs = [...referencedIds(declaration.kind === 'function' ? [declaration.typeParameters, declaration.parameters, declaration.returnType] : declaration.type)].filter((id) => id !== declaration.id);
+    const publics = valueNames.get(declaration.id) ?? [];
+    return {
+      id: declaration.id,
+      name: declaration.name,
+      module: declaration.module,
+      kind: declaration.kind,
+      ...(publics.length > 0 && { public: publics }),
+      text: printValueDeclaration(declaration),
+      ...(declaration.doc && { doc: declaration.doc }),
+      ...(refs.length > 0 && { refs }),
+    };
+  }
+
   const files = new Map();
   for (const [owner, holding] of [...holdings].sort(([left], [right]) => (left < right ? -1 : 1))) {
     holding.exports.sort((left, right) => keyOrder.indexOf(left.entry) - keyOrder.indexOf(right.entry) || byName(left, right));
-    // The closure of Mux UI types the owner's exports and public types reach.
-    const queue = [...holding.types, ...[...collectRefs(holding.exports)].filter((id) => types.has(id))];
+    // The closure of Mux UI types and values the owner's exports and public types reach.
+    const queue = [...holding.types, ...[...collectRefs(holding.exports)].filter((id) => types.has(id) || values.has(id))];
     const reached = new Map();
+    const reachedValues = new Map();
+    const visited = new Set();
+    // An id can name a type and a value at once (`interface X` beside `declare const X`), and `typeof X` means the value.
     while (queue.length > 0) {
       const id = queue.shift();
-      if (reached.has(id) || !types.has(id)) continue;
-      const entry = modelType(types.get(id));
-      reached.set(id, entry);
-      for (const next of entry.refs ?? []) if (types.has(next)) queue.push(next);
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const entries = [];
+      if (types.has(id)) {
+        const entry = modelType(types.get(id));
+        reached.set(id, entry);
+        entries.push(entry);
+      }
+      if (values.has(id)) {
+        const entry = modelValue(values.get(id));
+        reachedValues.set(id, entry);
+        entries.push(entry);
+      }
+      for (const entry of entries) for (const next of entry.refs ?? []) if (types.has(next) || values.has(next)) queue.push(next);
     }
     const typeEntries = [...reached.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
-    const modules = new Set([...holding.modules, ...typeEntries.map(({ module }) => module)]);
+    const valueEntries = [...reachedValues.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
+    const modules = new Set([...holding.modules, ...typeEntries.map(({ module }) => module), ...valueEntries.map(({ module }) => module)]);
     const provenance = Object.fromEntries([...modules].sort().map((module) => {
       const source = sources.get(module);
       if (source === undefined) throw new ReferenceReadError('INVENTORY', module, 'the declaration file has no @generated-from source');
@@ -190,6 +222,7 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
       sources: provenance,
       exports: holding.exports,
       types: typeEntries,
+      ...(valueEntries.length > 0 && { values: valueEntries }),
     });
   }
 

@@ -63,7 +63,7 @@ const modelNative = (native) => {
 
 const modelRef = (ref) => {
   if (ref === undefined) return null;
-  if (ref.never) return { never: true };
+  if (ref.never) return { never: true, ...(ref.required && { required: true }) };
   const refs = refList(ref.type);
   return { type: printType(ref.type), ...(refs.length > 0 && { refs }) };
 };
