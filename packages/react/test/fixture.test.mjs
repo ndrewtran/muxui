@@ -708,6 +708,25 @@ test('a Select.Popup with no Select around it is modal unless it says otherwise'
   assert.equal((await selectPopupSent({ modal: false })).isNonModal, true);
 });
 
+// An option's disabled flag is its own or, when it sets none, its Select's; a Select that turns disabled disables its options with it.
+// The popup closes then, so the flag is read where the option sends it to React Aria, not from the markup.
+test('a Select.Item takes its Select\'s disabled state and follows it across a rerender', async () => {
+  const tree = (rootProps, itemProps) => selectRoot(rootProps, null, h(generated.Select.Item, { id: 'one', ...itemProps }, 'One'));
+  const env = createDom('<div id="root"></div>', { layoutStubs: true });
+  const root = createRoot(document.querySelector('#root'));
+  const sentDisabled = async (element) => (await sentUpstream(() => act(async () => root.render(element)), (sent) => sent.id === 'one' && 'isDisabled' in sent)).isDisabled;
+  try {
+    assert.equal(await sentDisabled(tree(null, { disabled: false })), false);
+    assert.equal(await sentDisabled(tree({ disabled: true }, { disabled: false })), true);
+    assert.equal(await sentDisabled(tree(null, { disabled: false })), false);
+    // The option's own flag disables it in an enabled Select.
+    assert.equal(await sentDisabled(tree(null, { disabled: true })), true);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('MuxUI styles bind states and public theme hooks', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
 
