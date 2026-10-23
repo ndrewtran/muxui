@@ -397,6 +397,10 @@ const MODEL_MUTANTS = [
   ['a listed undefined is forgotten (the Menu.Trigger disabled)', (map) => { delete partOf(map, 'menu.json', 'Menu', 'Trigger').members.find(({ name }) => name === 'disabled').explicitUndefined; }],
   ['an undefined is invented', (map) => { partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'className').explicitUndefined = true; }],
   ['a ref is called required that is optional', (map) => { partOf(map, 'virtualizer.json', 'Virtualizer').alternatives[1].ref = { never: true, required: true }; }],
+  // TextEditor holds the constructs the extractor learned last: a non-empty tuple, nested methods, a Promise of unknown.
+  ['a tuple loses its required first element (the TextEditor document)', (map) => { const type = map.get('text-editor.json').types.find(({ name }) => name === 'TextEditorDocument'); type.text = type.text.replace('[TextEditorBlockNode, ...TextEditorBlockNode[]]', 'TextEditorBlockNode[]'); }],
+  ['a Promise of unknown is narrowed (the TextEditor selection request)', (map) => { const member = partOf(map, 'text-editor.json', 'TextEditor').members.find(({ name }) => name === 'onSelectionRequest'); member.type = member.type.replace('Promise<unknown>', 'Promise<string>'); }],
+  ['a nested method loses an optional parameter (the TextEditor image request)', (map) => { const member = partOf(map, 'text-editor.json', 'TextEditor').members.find(({ name }) => name === 'onImageRequest'); member.type = member.type.replace('insertImage(src: string, alt?: string): boolean', 'insertImage(src: string): boolean'); }],
   // A finite domain whose values were lost: the declaration still lists them, so the model is incomplete.
   ['a finite domain loses its values (the CodeBlock diff mode)', (map) => { delete partOf(map, 'code-block.json', 'CodeBlock').alternatives[1].members.find(({ name }) => name === 'mode').values; }],
   // These two read alike and differ only in what can be written, which only exactOptionalPropertyTypes tells apart.
@@ -404,7 +408,7 @@ const MODEL_MUTANTS = [
   ['an optional member is said to list undefined (the Button className)', (map) => { const member = partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'className'); member.type = 'string | undefined'; member.explicitUndefined = true; }, { exactOnly: true }],
 ];
 
-const MUTANT_SAMPLE = sampleOf('resizable', 'virtualizer', 'button', 'text', 'list-box', 'input', 'code-block', 'menu');
+const MUTANT_SAMPLE = sampleOf('resizable', 'virtualizer', 'button', 'text', 'list-box', 'input', 'code-block', 'menu', 'text-editor');
 const unchangedModelFails = new Map();
 const probesFail = (mapOfFiles, exact) => runProbe({
   probe: buildProbe({ files: mapOfFiles, entries: typedEntries, include: MUTANT_SAMPLE, witnesses: false }),

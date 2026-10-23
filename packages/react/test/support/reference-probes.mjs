@@ -20,6 +20,10 @@
 // be a finite domain of literals the declaration lists. The default and constraint of each type parameter are
 // read from the declaration by the compiler in reference-defaults.mjs, not supplied by an instantiation.
 //
+// Assignability lets two callback types differ (a method's parameters are bivariant, and a function that takes fewer
+// parameters is assignable to one that takes more), so a callback, or an object with methods, is also compared by
+// identity: TextEditor's `insertImage(src: string, alt?: string)` loses its `alt` and still passes assignability.
+//
 // A second kind of probe is authored by hand and never reads the model: a JSX element and whether the
 // compiler accepts it, for the components whose constraints are hardest (Dialog, IconButton, Resizable, Text,
 // Virtualizer, CodeBlock, and generic items). They are the facts the model has to agree with.
@@ -47,6 +51,9 @@ export const PROBE_HEADER = [
   // Whether a type is a finite domain of string or number literals (bar `undefined`): every constituent is one literal, not `string`, `number` or a pattern.
   "type IsLiteral<U> = U extends string | number ? ({} extends Record<U, 1> ? false : true) : false;",
   "type IsFinite<X> = [Exclude<X, undefined>] extends [never] ? false : ([IsLiteral<Exclude<X, undefined>>] extends [true] ? true : false);",
+  // Mutual assignability cannot tell two function types apart where parameters are bivariant (a method) or fewer parameters
+  // are accepted, so a callback's type is also compared by identity (the "s:" claims), which it can.
+  'type Same<X, Y> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false;',
   'type Mutable<T> = { -readonly [Q in keyof T]: T[Q] };',
   'type IsReadonly<A, K extends keyof A> = (<X>() => X extends Pick<A, K> ? 1 : 2) extends (<X>() => X extends Mutable<Pick<A, K>> ? 1 : 2) ? false : true;',
   // How an arm declares a name: optional or required, `never` or live, and readonly; a name it does not declare is absent.
@@ -57,7 +64,11 @@ export const PROBE_HEADER = [
   // The part of an arm a claim speaks about: "m:name" its declaration, "t:name" its type, "w:name" whether it takes `undefined`,
   // "v:name" its finite values, "f:name" whether its type is a finite domain, "ref" its ref.
   "type ShapeOf<A, Ks extends string> = { [K in Ks]: K extends `m:${infer N}` ? Sig<A, N> : K extends `t:${infer N}` ? Ty<Raw<A, N>> : K extends `w:${infer N}` ? Writes<A, N> : K extends `v:${infer N}` ? ValuesOf<A, N> : K extends `f:${infer N}` ? IsFinite<Raw<A, N>> : K extends 'ref' ? RefOf<A> : never };",
-  'type Fits<A, E> = Mut<ShapeOf<A, keyof E & string>, E>;',
+  // An arm fits a claim when every claim but the identity ones agrees by assignability and each identity claim is identical.
+  // A name the native envelope also declares is the intersection of its two types, which the model's own member is not
+  // (MultiSelect's `onReset` is the part's callback and the DOM's), so its identity claim is left to assignability ("n" lists those names).
+  "type Natives<E> = 'n' extends keyof E ? E['n' & keyof E] : never;",
+  "type Fits<A, E> = Mut<ShapeOf<A, Exclude<keyof E & string, `s:${string}` | 'n'>>, Omit<E, `s:${string}` | 'n'>> extends true ? ([{ [K in keyof E & `s:${string}`]: K extends `s:${infer N}` ? (N extends Natives<E> ? true : Same<Raw<A, N>, E[K]>) : never }[keyof E & `s:${string}`]] extends [true] ? true : false) : false;",
   // The keys of each arm, not only the keys every arm shares.
   'type ArmKeys<P> = P extends unknown ? keyof P : never;',
   'type MissingFrom<P, Ks> = P extends unknown ? Exclude<Ks, keyof P> : never;',
@@ -279,11 +290,14 @@ function partProbes({ file, entry, part, index, namespaces, space }) {
       const printed = instantiate(members.find((entryOf) => entryOf.member === member).alias, args);
       fields.push(`${quote(`t:${name}`)}: Ty<Adjust<${printed}, ${member.optional ? 'true' : 'false'}>>`);
       fields.push(`${quote(`w:${name}`)}: WriteOf<${printed}, ${member.optional ? 'true' : 'false'}>`);
+      // A callback, or an object with methods, is compared by identity as well: assignability lets its parameters differ.
+      if (/=>|\w\??\(/u.test(member.type)) fields.push(`${quote(`s:${name}`)}: Adjust<${printed}, ${member.optional ? 'true' : 'false'}>`);
       if (member.values && !closed) fields.push(`${quote(`v:${name}`)}: ${member.values.map(literal).join(' | ')}`);
       // A member the model gives no values is not a finite domain of literals: a literal union that carries none is a gap in the model.
       else if (!member.method && !namesMoreThanLiterals(member, file)) fields.push(`${quote(`f:${name}`)}: false`);
     }
     // A typed ref is RefAttributes' `ref?: Ref<T> | undefined`, which the model does not spell, so only a ref that takes nothing is claimed to write.
+    if (armNatives?.length > 0 || natives.length > 0) fields.push(`"n": ${nativeAliases.map((alias) => `keyof ${instantiate(alias, args)}`).join(' | ') || 'never'}`);
     if (ref?.never) fields.push(`"m:ref": ${quote(ref.required ? 'required/never' : 'optional/never')}`, `"w:ref": WriteOf<never, ${ref.required ? 'false' : 'true'}>`);
     else if (ref?.type) fields.push('"m:ref": "optional/live"');
     fields.push(`"ref": ${ref === null || ref === undefined ? '"none"' : (ref.never ? '[never]' : `[${instantiate(refAlias, args)}]`)}`);
