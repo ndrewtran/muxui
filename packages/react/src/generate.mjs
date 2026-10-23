@@ -459,8 +459,12 @@ export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './colo
 export type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 export { ListBox } from './list-box.js';
 export type { ListBoxItemProps, ListBoxProps, ListBoxSectionProps } from './list-box.js';
+export { GridList } from './grid-list.js';
+export type { GridListItemProps, GridListProps } from './grid-list.js';
 export { Menu } from './menu.js';
 export type { MenuItemProps, MenuListProps, MenuPopupProps, MenuProps, MenuRootProps, MenuSectionProps, MenuSubmenuProps, MenuTriggerProps } from './menu.js';
+export { Virtualizer } from './virtualizer.js';
+export type { VirtualizerGridProps, VirtualizerProps, VirtualizerStackProps } from './virtualizer.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
@@ -469,11 +473,6 @@ const collectionsTypes = `
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-export type GridListProps = CollectionProps & { children?: React.ReactNode; style?: React.CSSProperties; layout?: 'stack' | 'grid'; orientation?: 'vertical' | 'horizontal'; };
-export type GridListItemProps = { id: string; textValue?: string; disabled?: boolean; className?: string; style?: React.CSSProperties; children?: React.ReactNode; };
-export declare const GridList: React.ForwardRefExoticComponent<GridListProps & React.RefAttributes<HTMLDivElement>> & {
-  Item: React.ForwardRefExoticComponent<GridListItemProps & React.RefAttributes<HTMLDivElement>>;
-};
 export type SelectProps = NamedFieldProps & SelectOptions;
 export type SelectOptions = { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; selectedContent?: React.ReactNode; trigger?: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>; placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; children?: React.ReactNode; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
 export type SelectRootProps = SelectOptions & FieldValidationProps & (MuxUIAccessibleName | { children: React.ReactNode; label?: React.ReactNode; 'aria-label'?: string; 'aria-labelledby'?: string; });
@@ -509,27 +508,6 @@ export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & R
 export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }
 export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; expansionTrigger?: 'chevron' | 'row'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
 export declare const Tree: React.ForwardRefExoticComponent<TreeProps & React.RefAttributes<HTMLDivElement>>;
-export type VirtualizerProps = VirtualizerStackProps | VirtualizerGridProps;
-/** The default fixed-row list: a bounded, named scroll viewport that renders its own items. */
-export type VirtualizerStackProps = MuxUIAriaLabel & { layout?: 'stack'; items?: MuxUIItems; height?: number; itemHeight?: number; overscan?: number; disabled?: boolean; onScroll?: React.UIEventHandler<HTMLDivElement>; className?: string; style?: React.CSSProperties; children?: never; minItemWidth?: never; maxItemWidth?: never; estimatedItemHeight?: never; maxColumns?: never; };
-/** Lays out a GridList with layout="grid" in measured rows. It renders no element of its own: the GridList is the scroll region, so name, size, spacing, and scroll handling belong on the GridList. */
-export type VirtualizerGridProps = {
-  layout: 'grid';
-  /** A GridList with layout="grid". */
-  children: React.ReactElement;
-  /** Minimum item width in px. Default 200. */
-  minItemWidth?: number;
-  /** Maximum item width in px. Default unbounded, so items stretch to fill their columns. */
-  maxItemWidth?: number;
-  /** Estimated height in px of rows that have not mounted yet. Default 200. Mounted rows take their measured content height. */
-  estimatedItemHeight?: number;
-  /** Cap on the number of columns. Default unbounded. */
-  maxColumns?: number;
-  /** Extra rows mounted above and below the viewport. Default 2. */
-  overscan?: number;
-  'aria-label'?: never; 'aria-labelledby'?: never; items?: never; height?: never; itemHeight?: never; disabled?: never; onScroll?: never; className?: never; style?: never;
-};
-export declare const Virtualizer: React.ForwardRefExoticComponent<(VirtualizerStackProps & React.RefAttributes<HTMLDivElement>) | (VirtualizerGridProps & { ref?: never })>;
 `;
 const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${collectionsTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
@@ -1013,7 +991,7 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // The collections barrel and the modules its families share. None declares a registry family, so
 // the loop above skips them; assertFlatImports below fails the build if a family imports one that
 // is not listed.
-for (const name of ['collections', 'grid-virtualizer-context']) {
+for (const name of ['collections']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
 }
 for (const source of [...currentSubpathRecords, ...currentEagerRecords].filter((record) => !isTypeScriptFamily(record))) {

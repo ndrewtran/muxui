@@ -111,7 +111,7 @@ test('the collections family modules keep the pure annotation on each wrapper', 
   const wrappers = {
     'calendar.js': ['Calendar', 'RangeCalendar'],
     'combo-box.mjs': ['ComboBox'],
-    'grid-list.mjs': ['GridList'],
+    'grid-list.js': ['GridList'],
     'list-box.js': ['ListBox'],
     'menu.js': ['Menu'],
     'radio-group.js': ['RadioGroup'],
