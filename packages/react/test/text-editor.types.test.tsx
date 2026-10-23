@@ -1,6 +1,8 @@
 import {
   TextEditor,
+  type TextEditorActionCallbacks,
   type TextEditorDocument,
+  type TextEditorProps,
   type TextEditorSelectionAction,
   type TextEditorSelectionActions,
   type TextEditorSelectionRequest,
@@ -49,3 +51,20 @@ const mutate = <TextEditor aria-label="Draft" onSelectionRequest={(request, acti
 // @ts-expect-error selectionActions holds action objects, not strings.
 const stringActions = <TextEditor aria-label="Draft" selectionActions={['Improve']} />;
 void [missingLabel, unknownRequest, nodeContent, mutate, stringActions];
+
+// The callbacks' members are methods, so a consumer's narrower function is assignable to each; a function property would refuse all of these.
+type ImageActions = Parameters<NonNullable<TextEditorProps['onImageRequest']>>[0];
+type ColorActions = Parameters<NonNullable<TextEditorProps['onColorRequest']>>[0];
+const narrowReplace: Pick<TextEditorSelectionActions, 'replace' | 'insertAfter'> = { replace: (content: string) => true, insertAfter: (content: string) => true };
+const narrowImage: ImageActions = { insertImage: (src: 'https://example.com/a.png') => true };
+const narrowColor: ColorActions = { setColor: (value: '#000000') => true };
+const narrowLink: TextEditorActionCallbacks = { setLink: (href: 'https://example.com') => true, unsetLink: () => true };
+void [narrowReplace, narrowImage, narrowColor, narrowLink];
+
+// A document holds at least one block, and a list item a paragraph before its other blocks.
+const oneBlock: TextEditorDocument = { type: 'doc', content: [{ type: 'paragraph' }] };
+// @ts-expect-error A document holds at least one block.
+const emptyDocument: TextEditorDocument = { type: 'doc', content: [] };
+// @ts-expect-error A list item holds a paragraph first.
+const emptyItem: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [] }] }] };
+void [oneBlock, emptyDocument, emptyItem];

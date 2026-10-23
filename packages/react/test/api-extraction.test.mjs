@@ -177,8 +177,8 @@ test('every construct outside the grammar fails with the component, prop, and re
     ['  bad?: typeof value;', 'export declare const value: string;\n', /Thing\.bad: a typeof type is not in the grammar/u],
     ['  bad?: Mode;', 'export declare enum Mode { A = 0, B = 1 }\n', /Thing\.bad -> Mode: Mode is an enum/u],
     ['  bad?: { id: string } & { name: string };', '', /Thing\.bad: an intersection type is not in the grammar/u],
-    ['  bad?: [string, number];', '', /Thing\.bad: a tuple type is not in the grammar/u],
-    ['  bad?: { read(): string };', '', /Thing\.bad\.read: only property signatures are in the grammar/u],
+    ['  bad?: readonly [string, number];', '', /Thing\.bad: a type operator other than readonly T\[\] is not in the grammar/u],
+    ['  bad?: { read?(): string };', '', /Thing\.bad\.read: an optional method is not in the grammar/u],
     ['  bad?: keyof ThingEvent;', event, /Thing\.bad: a type operator other than readonly T\[\] is not in the grammar/u],
     ['  bad?: React.CSSProperties;', '', /Thing\.bad -> React\.CSSProperties: React\.CSSProperties is outside @muxui\/react and not in the host allowlist/u],
     // A dependency reached through a Mux UI-owned type is rejected too, naming the whole chain.
@@ -590,7 +590,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
@@ -626,6 +626,9 @@ test('the shipped allowlist holds exactly the host types the committed derived A
     [host('AsyncIterable', { kind: 'reference', name: 'MuxUIDropItem' }), 'a directory item\'s entries'],
   ];
   for (const [entry, reason] of dropItems) assert.deepEqual(reached.get(hostEntryKey(entry)), ['drop-zone.json'], reason);
+  // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns.
+  assert.deepEqual(reached.get('AbortSignal'), ['text-editor.json'], 'the signal of a selection request');
+  assert.deepEqual(reached.get(hostEntryKey(host('Promise', { kind: 'unknown' }))), ['text-editor.json'], 'the result of a selection request handler');
 });
 
 const omitInputAttributes = (names, element = 'HTMLInputElement') => `Omit<React.InputHTMLAttributes<${element}>, ${names.map((name) => `'${name}'`).join(' | ')}>`;
@@ -920,7 +923,7 @@ test('a record is an object type whose one member is a string index signature', 
   ];
   for (const [members, extra, pattern] of cases) rejects(ownProps(members, extra), pattern);
   // OwnProps itself takes only named props.
-  rejects(ownProps('  size?: string;\n  [key: string]: string | undefined;'), /Thing\.<member>: only property signatures are in the grammar/u);
+  rejects(ownProps('  size?: string;\n  [key: string]: string | undefined;'), /Thing\.<member>: only property signatures, and required methods of a nested object type, are in the grammar/u);
 });
 
 test('beside named properties, exactly one mutable [key: string]: unknown marks an open item', () => {
@@ -956,7 +959,8 @@ test('beside named properties, exactly one mutable [key: string]: unknown marks 
     // unknown is not in the grammar on a named member, in a callback, or as the value of a sole signature.
     ['a named member of unknown', 'export interface Bad { id?: string; extra?: unknown; [key: string]: unknown }\n', /Thing\.bad -> Bad\.extra: unknown is not in the grammar/u],
     ['a callback parameter of unknown', 'export interface Bad { id?: string; [key: string]: unknown; onX?: (value: unknown) => void }\n', /Thing\.bad -> Bad\.onX\(value\): unknown is not in the grammar/u],
-    ['a method beside the marker', 'export interface Bad { id?: string; call(): void; [key: string]: unknown }\n', /Thing\.bad -> Bad\.call: only property signatures are in the grammar/u],
+    ['a method beside the marker', 'export interface Bad { id?: string; call(): void; [key: string]: unknown }\n', /Thing\.bad -> Bad\.call: a method is in the grammar only as a member of a nested object type or interface that has no base/u],
+    ['a method beside the marker, in a type literal', 'export type Bad = { id?: string; call(): void; [key: string]: unknown };\n', /Thing\.bad -> Bad\.call: a method is in the grammar only as a member of a nested object type or interface that has no base/u],
     ['a sole signature of unknown', 'export interface Bad { [key: string]: unknown }\n', /Thing\.bad -> Bad\[string\]: unknown is not in the grammar/u],
     ['a sole readonly signature of unknown', 'export interface Bad { readonly [key: string]: unknown }\n', /Thing\.bad -> Bad\[string\]: unknown is not in the grammar/u],
   ];
@@ -1047,7 +1051,7 @@ test('the heritage and intersection rule refuses everything but one non-generic 
     ['a second index signature', `${openItem}export interface Row extends Item { [key: string]: unknown }\n`, /Thing\.item -> Row: an index signature is in the grammar only as the one member of its object type, or as the one mutable/u],
     ['a base with a readonly signature beside members', "export interface Item { id?: string; readonly [key: string]: unknown }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row: .*beside named properties it must be mutable/u],
     ['a base with another signature value', "export interface Item { id?: string; [key: string]: string | undefined }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row: .*its value is written as the keyword unknown/u],
-    ['a method in the base', "export interface Item { id?: string; call(): void }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row\.call: only property signatures are in the grammar/u],
+    ['a method in the base', "export interface Item { id?: string; call(): void }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row\.call: a method is in the grammar only as a member of a nested object type or interface that has no base/u],
     // The chain is walked by resolved symbol, so no spelling or distance escapes the cycle check.
     ['a base cycle of one', 'export interface Row extends Row { id?: string }\n', /Thing\.item -> Row -> Row: Row extends itself through its bases/u],
     ['a base cycle of two', 'export interface Row extends Other { id?: string }\nexport interface Other extends Row { color?: string }\n', /Thing\.item -> Row -> Other -> Row: Row extends itself through its bases/u],
@@ -1109,6 +1113,260 @@ test('never is in the grammar only as an optional member\'s type, a member that 
     ['  bad?: { [key: string]: never };', /Thing\.bad\[string\]: never is not in the grammar/u],
   ];
   for (const [members, pattern] of cases) rejects(ownProps(members), pattern);
+});
+
+const toolsTuple = `export type ThingParagraph = { type: 'paragraph' };
+export type ThingQuote = { type: 'quote'; content: [ThingBlock, ...ThingBlock[]] };
+export type ThingBlock = ThingParagraph | ThingQuote;
+`;
+
+test('a tuple is a non-empty prefix of required elements and at most one terminal rest array', () => {
+  const api = extract({
+    declarations: ownProps(`  pair?: [string, number];
+  head?: [string, ...(number | null)[]];
+  quote?: ThingQuote;
+  onPick?: (value: [ThingBlock, ...ThingBlock[]]) => void;`, toolsTuple),
+  });
+  assert.deepEqual(api.propDetails.pair.type, { kind: 'tuple', elements: [keyword('string'), keyword('number')] });
+  assert.deepEqual(api.propDetails.head.type, { kind: 'tuple', elements: [keyword('string')], rest: { kind: 'union', members: [keyword('number'), keyword('null')] } });
+  // A recursive tuple refers to its own type by name, as any recursive type does.
+  const ref = { kind: 'reference', name: 'ThingBlock' };
+  const content = api.types.ThingQuote.type.members.find(({ name }) => name === 'content');
+  assert.deepEqual(content.type, { kind: 'tuple', elements: [ref], rest: ref });
+  assert.deepEqual(api.eventDetails.pick.type.parameters[0].type, { kind: 'tuple', elements: [ref], rest: ref });
+  assert.deepEqual(Object.keys(api.types), ['ThingBlock', 'ThingParagraph', 'ThingQuote']);
+  // A tuple is no list of options: its literals are not an enum.
+  assert.equal(extract({ declarations: ownProps("  pair?: ['a', 'b'];") }).propDetails.pair.enum, undefined);
+
+  const cases = [
+    ['  bad?: [];', '', /Thing\.bad: an empty tuple is not in the grammar/u],
+    ['  bad?: [...string[]];', '', /Thing\.bad: a tuple needs a required first element before its rest/u],
+    ['  bad?: [string?];', '', /Thing\.bad: an optional tuple element is not in the grammar/u],
+    ['  bad?: [string, number?];', '', /Thing\.bad: an optional tuple element is not in the grammar/u],
+    ['  bad?: [a: string, b: number];', '', /Thing\.bad: a named tuple element is not in the grammar/u],
+    ['  bad?: [first: string, ...rest: string[]];', '', /Thing\.bad: a named tuple element is not in the grammar/u],
+    ['  bad?: [string, ...string[], number];', '', /Thing\.bad: a rest element before the last is not in the grammar/u],
+    ['  bad?: [...string[], string];', '', /Thing\.bad: a rest element before the last is not in the grammar/u],
+    ['  bad?: [string, ...string[], ...number[]];', '', /Thing\.bad: a rest element before the last is not in the grammar/u],
+    // A spread of anything but an array is a generic spread.
+    ['  bad?: [string, ...Tail];', 'export type Tail = string[];\n', /Thing\.bad: a rest element that is not an array \(a generic spread\) is not in the grammar/u],
+    ['  bad?: [string, ...readonly string[]];', '', /Thing\.bad: a rest element that is not an array/u],
+    ['  bad?: readonly [string, ...string[]];', '', /Thing\.bad: a type operator other than readonly T\[\] is not in the grammar/u],
+    // Every element is read by the grammar, with the chain naming its place.
+    ['  bad?: [never, ...string[]];', '', /Thing\.bad\[0\]: never is not in the grammar/u],
+    ['  bad?: [string, ...never[]];', '', /Thing\.bad\[\.\.\.\]: never is not in the grammar/u],
+    ['  bad?: [unknown];', '', /Thing\.bad\[0\]: unknown is not in the grammar/u],
+    ['  bad?: [string, ...unknown[]];', '', /Thing\.bad\[\.\.\.\]: unknown is not in the grammar/u],
+    ['  bad?: [any];', '', /Thing\.bad\[0\]: any is not in the grammar/u],
+    ['  onBad?: () => [Promise<unknown>];', '', /Thing\.onBad=>\[0\] -> Promise<0>: unknown is not in the grammar/u],
+  ];
+  for (const [members, extra, pattern] of cases) rejects(ownProps(members, extra), pattern);
+});
+
+test('a required method of a nested object type reads as its function with method: true, and in no other position', () => {
+  const declared = `/** The link controls. */
+export type ThingLinks = {
+  /** Sets the link. */
+  setLink(href: string): boolean;
+  unsetLink(): boolean;
+};
+export interface ThingActions {
+  readonly label: string;
+  replace(content: string | ThingDoc): boolean;
+  close(): void;
+  onDone?: () => void;
+}
+export type ThingDoc = { type: 'doc' };
+`;
+  const api = extract({
+    declarations: ownProps(`  links?: ThingLinks;
+  actions?: ThingActions;
+  onImage?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;`, declared),
+  });
+  const method = (name, parameters, returns, extra = {}) => ({ name, type: { kind: 'function', parameters, returns }, required: true, readonly: false, method: true, ...extra });
+  assert.deepEqual(api.types.ThingLinks, {
+    type: {
+      kind: 'object',
+      members: [
+        method('setLink', [{ name: 'href', type: keyword('string'), required: true }], keyword('boolean'), { description: 'Sets the link.' }),
+        method('unsetLink', [], keyword('boolean')),
+      ],
+    },
+    description: 'The link controls.',
+  });
+  assert.deepEqual(api.types.ThingActions.type.members, [
+    { name: 'label', type: keyword('string'), required: true, readonly: true },
+    method('replace', [{ name: 'content', type: { kind: 'union', members: [keyword('string'), { kind: 'reference', name: 'ThingDoc' }] }, required: true }], keyword('boolean')),
+    method('close', [], keyword('void')),
+    // A function-typed property stays a property, beside methods.
+    { name: 'onDone', type: { kind: 'function', parameters: [], returns: keyword('void') }, required: false, readonly: false },
+  ]);
+  // An inline object type in a callback's parameter holds its methods the same way, with a parameter optional where the source says so.
+  assert.deepEqual(api.eventDetails.image.type.parameters[0].type, {
+    kind: 'object',
+    members: [method('insertImage', [{ name: 'src', type: keyword('string'), required: true }, { name: 'alt', type: keyword('string'), required: false }], keyword('boolean'))],
+  });
+  // A function property beside the D1 marker is still a property.
+  const open = extract({ declarations: ownProps('  item?: Open;', 'export interface Open { id?: string; onX?: () => void; readonly run: () => void; [key: string]: unknown }\n') });
+  assert.deepEqual(open.types.Open.type.members.slice(1), [
+    { name: 'onX', type: { kind: 'function', parameters: [], returns: keyword('void') }, required: false, readonly: false },
+    { name: 'run', type: { kind: 'function', parameters: [], returns: keyword('void') }, required: true, readonly: true },
+  ]);
+  assert.equal(open.types.Open.type.additional, 'unknown');
+
+  const base = 'export interface Base { read(): void }\n';
+  const here = (type) => `export type Bad = ${type};\n`;
+  const nested = /Thing\.bad -> Bad\.read: a method is in the grammar only as a member of a nested object type or interface that has no base, is no operand of an intersection, and has no index signature/u;
+  const cases = [
+    // The method itself.
+    ['optional', here('{ read?(): void }'), /Thing\.bad -> Bad\.read: an optional method is not in the grammar; a method is required/u],
+    ['generic', here('{ read<T>(value: T): void }'), /Thing\.bad -> Bad\.read: a generic function is not in the grammar/u],
+    ['overloaded', here('{ read(value: string): void; read(value: number): void }'), /Thing\.bad -> Bad\.read: read is declared twice in its object type/u],
+    ['a method and a property', here('{ read(): void; read: string }'), /Thing\.bad -> Bad\.read: read is declared twice in its object type/u],
+    ['a property and a method', here('{ read: string; read(): void }'), /Thing\.bad -> Bad\.read: read is declared twice in its object type/u],
+    ['a quoted name', here("{ 'read'(): void }"), /Thing\.bad -> Bad\.read: a method needs a plain identifier name/u],
+    ['a computed name', `export declare const key: unique symbol;\n${here('{ [key](): void }')}`, /Thing\.bad -> Bad\.<member>: a method needs a plain identifier name/u],
+    ['a readonly modifier', here('{ readonly read(): void }'), /Thing\.bad -> Bad\.read: a method cannot be readonly/u],
+    ['no declared return type', here('{ read(value: string) }'), /Thing\.bad -> Bad\.read: a method needs a declared return type/u],
+    ['a this parameter', here('{ read(this: Bad): void }'), /Thing\.bad -> Bad\.read\(this\): a this parameter is not in the grammar/u],
+    ['a rest parameter', here('{ read(...values: string[]): void }'), /Thing\.bad -> Bad\.read: a rest parameter is not in the grammar/u],
+    ['a parameter without a type', here('{ read(value): void }'), /Thing\.bad -> Bad\.read: each callback parameter needs a name and a type/u],
+    ['an accessor', here('{ get read(): string }'), /Thing\.bad -> Bad\.read: only property signatures, and required methods of a nested object type, are in the grammar/u],
+    ['a call signature', here('{ (value: string): void }'), /Thing\.bad -> Bad\.<member>: only property signatures, and required methods/u],
+    ['a construct signature', here('{ new (): Bad }'), /Thing\.bad -> Bad\.<member>: only property signatures, and required methods/u],
+    // Where it is held: a method of a declaration the object type is not read from alone is refused, whichever way it got there.
+    ['beside the marker, in an interface', 'export interface Bad { id?: string; read(): void; [key: string]: unknown }\n', nested],
+    ['beside the marker, in a type literal', here('{ id?: string; read(): void; [key: string]: unknown }'), nested],
+    ['in an interface base', `${base}export interface Bad extends Base { label?: string }\n`, nested],
+    ['in an interface that has a base', 'export interface Base { id?: string }\nexport interface Bad extends Base { read(): void }\n', nested],
+    ['in a base two levels up', `${base}export interface Mid extends Base { }\nexport interface Bad extends Mid { label?: string }\n`, nested],
+    ['in an imported base', "import type { Base } from './other.js';\nexport interface Bad extends Base { label?: string }\n", nested, { files: { 'other.d.ts': base } }],
+    ['in an intersection interface operand', `${base}${here('Base & { label?: string }')}`, nested],
+    ['in an intersection type-literal operand', here('{ read(): void } & { label?: string }'), nested],
+    ['in an interface operand that has a base', `${base}export interface Mid extends Base { }\n${here('Mid & { label?: string }')}`, nested],
+    // A name that a base and its interface both use, as a property and a method, is refused whichever is first.
+    ['a base property redeclared as a method', 'export interface Base { read: string }\nexport interface Bad extends Base { read(): void }\n', /Thing\.bad -> Bad\.read: read is declared twice among the joined members/u],
+    ['a base method redeclared as a property', `${base}export interface Bad extends Base { read: string }\n`, /Thing\.bad -> Bad\.read: read is declared twice among the joined members/u],
+    ['an intersection operand method and property', `${base}${here('Base & { read: string }')}`, /Thing\.bad -> Bad\.read: read is declared twice among the joined members/u],
+  ];
+  for (const [label, extra, pattern, options] of cases) {
+    assert.throws(() => extract({ declarations: ownProps('  bad?: Bad;', extra), ...options }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, `${label}: ${error.stack}`);
+      assert.match(error.message, pattern, label);
+      return true;
+    }, label);
+  }
+  // A method at the top level of the props type, as a prop or as an event, is no member of a nested object type.
+  rejects(ownProps('  read(): void;'), /Thing\.read: a method is in the grammar only as a member of a nested object type/u);
+  rejects(ownProps('  onRead?(value: string): void;'), /Thing\.onRead: a method is in the grammar only as a member of a nested object type/u);
+  // A method is no member of an array element, a union arm, or a record: each is an object type read like any other, so a literal there holds it.
+  assert.equal(extract({ declarations: ownProps('  list?: { read(): void }[];\n  either?: { read(): void } | string;') }).propDetails.list.type.element.members[0].method, true);
+});
+
+test('Promise<unknown> is read only where a function returns it, as the default library\'s Promise and an exact allowlist entry', () => {
+  const promiseUnknown = host('Promise', keyword('unknown'));
+  // The shipped allowlist holds the entry (TextEditor's selection request); the controls below that need it absent start from the rest.
+  const allowlist = HOST_ALLOWLIST;
+  const withoutPromiseUnknown = HOST_ALLOWLIST.filter((entry) => hostEntryKey(entry) !== hostEntryKey(promiseUnknown));
+  assert.equal(withoutPromiseUnknown.length, HOST_ALLOWLIST.length - 1, 'the shipped allowlist holds Promise<unknown> once');
+  const api = extract({
+    declarations: ownProps(`  onRequest?: (text: string) => void | Promise<unknown>;
+  onLater?: () => Promise<unknown>;
+  onWrapped?: () => (void | (Promise<unknown>)) | string;
+  onHandler?: (run: () => Promise<unknown>) => void;
+  actions?: { run(): Promise<unknown>; check: () => void | Promise<unknown> };`),
+    hostAllowlist: allowlist,
+  });
+  assert.deepEqual(api.eventDetails.request.type.returns, { kind: 'union', members: [keyword('void'), promiseUnknown] });
+  assert.deepEqual(api.eventDetails.later.type.returns, promiseUnknown);
+  // Parentheses are dropped; a union nested in a union stays nested, as in the source.
+  assert.deepEqual(api.eventDetails.wrapped.type.returns, { kind: 'union', members: [{ kind: 'union', members: [keyword('void'), promiseUnknown] }, keyword('string')] });
+  // A function in a parameter restarts the context: its own return may be the promise.
+  assert.deepEqual(api.eventDetails.handler.type.parameters[0].type.returns, promiseUnknown);
+  assert.deepEqual(api.propDetails.actions.type.members.map(({ type }) => type.returns), [promiseUnknown, { kind: 'union', members: [keyword('void'), promiseUnknown] }]);
+
+  const rejectedHere = [
+    // unknown is read nowhere but as that one argument.
+    ['as a prop type', '  bad?: Promise<unknown>;', '', /Thing\.bad -> Promise<0>: unknown is not in the grammar/u],
+    ['as a parameter type', '  onBad?: (value: Promise<unknown>) => void;', '', /Thing\.onBad\(value\) -> Promise<0>: unknown is not in the grammar/u],
+    ['as a parameter, beside a returned one', '  onBad?: (value: Promise<unknown>) => Promise<unknown>;', '', /Thing\.onBad\(value\) -> Promise<0>: unknown is not in the grammar/u],
+    ['bare, as a return', '  onBad?: () => unknown;', '', /Thing\.onBad=>: unknown is not in the grammar/u],
+    ['bare, in a return union', '  onBad?: () => void | unknown;', '', /Thing\.onBad=>: unknown is not in the grammar/u],
+    ['as the argument of another host', '  onBad?: () => Promise<Promise<unknown>>;', '', /Thing\.onBad=> -> Promise<0> -> Promise<0>: unknown is not in the grammar/u],
+    ['aliased', '  onBad?: () => Promise<Anything>;', 'export type Anything = unknown;\n', /Thing\.onBad=> -> Promise<0> -> Anything: unknown is not in the grammar/u],
+    ['spelled in a union', '  onBad?: () => Promise<unknown | void>;', '', /Thing\.onBad=> -> Promise<0>: unknown is not in the grammar/u],
+    ['spelled in a union, bare', '  onBad?: () => Promise<void | unknown>;', '', /Thing\.onBad=> -> Promise<0>: unknown is not in the grammar/u],
+    ['as a parenthesized argument', '  onBad?: () => Promise<(unknown)>;', '', /Thing\.onBad=> -> Promise<0>: unknown is not in the grammar/u],
+    ['hidden in an alias of the promise', '  onBad?: () => Pending;', 'export type Pending = Promise<unknown>;\n', /Thing\.onBad=> -> Pending -> Promise<0>: unknown is not in the grammar/u],
+    ['hidden in an alias of the union', '  onBad?: () => Outcome;', 'export type Outcome = void | Promise<unknown>;\n', /Thing\.onBad=> -> Outcome -> Promise<0>: unknown is not in the grammar/u],
+    ['in an array return', '  onBad?: () => Promise<unknown>[];', '', /Thing\.onBad=>\[\] -> Promise<0>: unknown is not in the grammar/u],
+    ['in a tuple return', '  onBad?: () => [Promise<unknown>, string];', '', /Thing\.onBad=>\[0\] -> Promise<0>: unknown is not in the grammar/u],
+    ['in a tuple rest return', '  onBad?: () => [string, ...Promise<unknown>[]];', '', /Thing\.onBad=>\[\.\.\.\] -> Promise<0>: unknown is not in the grammar/u],
+    ['in an object return', '  onBad?: () => { done: Promise<unknown> };', '', /Thing\.onBad=>\.done -> Promise<0>: unknown is not in the grammar/u],
+    ['in a record return', '  onBad?: () => { [key: string]: Promise<unknown> };', '', /Thing\.onBad=>\[string\] -> Promise<0>: unknown is not in the grammar/u],
+    ['as the property of an object type', '  bad?: { done: Promise<unknown> };', '', /Thing\.bad\.done -> Promise<0>: unknown is not in the grammar/u],
+    // The argument is exactly the keyword, and the host exactly Promise.
+    ['Promise<any>', '  onBad?: () => Promise<any>;', '', /Thing\.onBad=> -> Promise<0>: any is not in the grammar/u],
+    ['PromiseLike<unknown>', '  onBad?: () => PromiseLike<unknown>;', '', /Thing\.onBad=> -> PromiseLike<0>: unknown is not in the grammar/u],
+    ['a qualified Promise', '  onBad?: () => globalThis.Promise<unknown>;', '', /Thing\.onBad=> -> globalThis\.Promise<0>: unknown is not in the grammar/u],
+    ['Promise with two arguments', '  onBad?: () => Promise<unknown, string>;', '', /Thing\.onBad=> -> Promise<0>: unknown is not in the grammar/u],
+    // The symbol is the default library's alone: nothing local, imported, merged, or augmented is it.
+    ['a local Promise', '  onBad?: () => Promise<unknown>;', 'export interface Promise<T> { readonly value: T }\n', /Thing\.onBad=> -> Promise: this Promise is not the default library's/u],
+    ['an augmented Promise', '  onBad?: () => Promise<unknown>;', 'declare global { interface Promise<T> { extra?: string } }\n', /Thing\.onBad=> -> Promise: this Promise is not the default library's/u],
+    ['an augmented Promise whose member is required', '  onBad?: () => Promise<unknown>;', 'declare global { interface Promise<T> { extra: string } }\n', /Thing\.onBad=> -> Promise: this Promise is not the default library's/u],
+    ['a Promise augmented from a local declaration file', '  onBad?: () => Promise<unknown>;', "import './augment.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'augment.d.ts': 'export {};\ndeclare global { interface Promise<T> { extra: string } }\n' } }],
+    ['a Promise whose var is redeclared from a local declaration file', '  onBad?: () => Promise<unknown>;', "import './augment.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'augment.d.ts': 'export {};\ndeclare global { var Promise: PromiseConstructor }\n' } }],
+    ['an imported Promise', '  onBad?: () => Promise<unknown>;', "import type { Promise } from './other.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'other.d.ts': 'export interface Promise<T> { readonly value: T }\n' } }],
+    ['a renamed import of a local Promise', '  onBad?: () => Promise<unknown>;', "import type { Later as Promise } from './other.js';\n", /Thing\.onBad=> -> Promise: this Promise is not the default library's/u, { files: { 'other.d.ts': 'export interface Later<T> { readonly value: T }\n' } }],
+  ];
+  for (const [label, members, extra, pattern, options] of rejectedHere) {
+    assert.throws(() => extract({ declarations: ownProps(members, extra), hostAllowlist: allowlist, ...options }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, `${label}: ${error.stack}`);
+      assert.match(error.message, pattern, label);
+      return true;
+    }, label);
+  }
+  // The same fixture reads when the Promise is the library's: the rejections above are about the symbol and the place.
+  extract({ declarations: ownProps('  onGood?: () => Promise<unknown>;', 'declare global { interface Other { extra?: string } }\n'), hostAllowlist: allowlist });
+
+  // React's types may augment library types, and the host reader admits that for the types React extends. For Promise<unknown> it would
+  // serialize the host and drop a member the augmentation requires, so every declaration of Promise must be the default library's:
+  // the @types/react stand-in below augments it and is refused, and the same stand-in without the augmentation reads.
+  const reactStandIn = (body) => ({
+    'node_modules/@types/react/package.json': JSON.stringify({ name: '@types/react', version: '0.0.0', types: 'index.d.ts' }),
+    'node_modules/@types/react/index.d.ts': `export {};\n${body}\n`,
+  });
+  const standInRun = "import type {} from 'react';\nexport interface ThingOwnProps { onRun?: () => Promise<unknown>; }\nexport interface ThingProps extends ThingOwnProps {}\nexport declare const Thing: (props: ThingProps) => null;\n";
+  assert.deepEqual(extract({ declarations: standInRun, outside: reactStandIn('export interface Marker {}'), hostAllowlist: allowlist }).eventDetails.run.type.returns, promiseUnknown);
+  for (const [label, body] of [
+    ['an interface member', 'declare global { interface Promise<T> { extra: string } }'],
+    ['an optional member', 'declare global { interface Promise<T> { extra?: string } }'],
+    ['a redeclared var', 'declare global { var Promise: PromiseConstructor }'],
+  ]) {
+    assert.throws(() => extract({ declarations: standInRun, outside: reactStandIn(body), hostAllowlist: allowlist }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, `${label}: ${error.stack}`);
+      assert.match(error.message, /Thing\.onRun=> -> Promise: this Promise is not the default library's/u, label);
+      return true;
+    }, label);
+  }
+
+  // The application is an allowlist entry like any other: without it Promise<unknown> is refused, and it admits nothing broader.
+  rejects(ownProps('  onLater?: () => Promise<unknown>;'), /Thing\.onLater=> -> Promise: Promise<unknown> is not an application on the host allowlist/u, { hostAllowlist: ['React.ReactNode'] });
+  rejects(ownProps('  onLater?: () => Promise<number>;'), /Thing\.onLater=> -> Promise: Promise<number> is not an application on the host allowlist/u, { hostAllowlist: allowlist });
+  // Promise<void> is another application, kept as the entry spells it: it never reads as unknown, and unknown never reads as void.
+  const promiseVoid = host('Promise', keyword('void'));
+  rejects(ownProps('  onLater?: () => Promise<void>;'), /Thing\.onLater=> -> Promise: Promise<void> is not an application on the host allowlist/u, { hostAllowlist: allowlist });
+  rejects(ownProps('  onLater?: () => Promise<unknown>;'), /Promise<unknown> is not an application on the host allowlist/u, { hostAllowlist: [...withoutPromiseUnknown, promiseVoid] });
+  const both = extract({ declarations: ownProps('  onDone?: () => Promise<void>;\n  onLater?: () => Promise<unknown>;'), hostAllowlist: [...allowlist, promiseVoid] });
+  assert.deepEqual(both.eventDetails.done.type.returns, promiseVoid);
+  assert.deepEqual(both.eventDetails.later.type.returns, promiseUnknown);
+  // A void argument is no unknown for the schema either, and the allowlist keeps unknown to that one entry.
+  for (const [entry, pattern] of [
+    [host('Set', keyword('unknown')), /has a "unknown" type argument/u],
+    [host('Promise', keyword('unknown'), keyword('string')), /has a "unknown" type argument/u],
+    [host('Promise', { kind: 'union', members: [keyword('string'), keyword('unknown')] }), /has a "unknown" type argument/u],
+    [host('Promise', { kind: 'unknown', extra: 1 }), /holds a unknown type that is not written as exactly kind/u],
+  ]) rejects(ownProps('  label?: string;'), pattern, { hostAllowlist: [entry] });
 });
 
 test('a compound export derives the API of its named root part', () => {

@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { closeHistory, undoDepth } from '@tiptap/pm/history';
 import { JSDOM } from 'jsdom';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.ts';
-import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
+import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.ts';
 import { Resizable, ResizableHandle, ResizablePanel } from '../src/supplemental/resizable.ts';
 import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxTrigger } from '../src/supplemental/lightbox.ts';
 import { installDom } from './support/dom.mjs';
@@ -151,6 +151,39 @@ test('TextEditor preserves rich marks and controlled formatting actions when mou
     assert.ok(document.querySelector('[aria-label="Text color"]'));
   } finally {
     await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+// An omitted defaultValue is normalized like any other, which copies the empty document. Handing the editor the shared constant itself
+// would let a change to what normalizeTextEditorDocument(undefined) returns show up in an editor that mounts after it.
+test('TextEditor never lends its editor the shared empty document when defaultValue is omitted', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  const shared = normalizeTextEditorDocument(undefined);
+  const original = shared.content[0];
+  function Parent() {
+    React.useLayoutEffect(() => {
+      shared.content[0] = { type: 'paragraph', content: [{ type: 'text', text: 'LEAK' }] };
+    }, []);
+    return React.createElement(TextEditor, { 'aria-label': 'Draft', toolbar: false });
+  }
+  let editor;
+  let destroyed;
+  try {
+    root = createRoot(document.querySelector('#root'));
+    await act(async () => root.render(React.createElement(Parent)));
+    editor = document.querySelector('.ProseMirror').editor;
+    destroyed = new Promise((resolve) => editor.on('destroy', resolve));
+    assert.equal(document.querySelector('.ProseMirror').textContent, '');
+    assert.deepEqual(normalizeTextEditorDocument(editor.getJSON()), { type: 'doc', content: [{ type: 'paragraph' }] });
+  } finally {
+    shared.content[0] = original;
+    await act(async () => root?.unmount());
+    // Tiptap destroys the editor after the unmount; the window it reads must still exist.
+    if (editor && !editor.isDestroyed) await destroyed;
     restore();
     dom.window.close();
   }

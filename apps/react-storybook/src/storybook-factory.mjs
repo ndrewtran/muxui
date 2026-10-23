@@ -2,7 +2,7 @@ import React from 'react';
 import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.js';
-import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
+import { TextEditor } from '../../../packages/react/generated/text-editor.js';
 import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
 import selectNativeApi from '../../../packages/react/api/select-native.json' with { type: 'json' };
 
@@ -1763,8 +1763,10 @@ function EventHarness({ record, args, heading = 'Live event log', children }) {
   for (const { channel, prop } of eventBindingsForBinding(record.binding)) {
     const supplied = args[prop];
     eventArgs[prop] = (...payload) => {
-      supplied?.(...payload);
+      // The supplied callback's result goes back to the component: TextEditor's selection request shows its pending and failure states from the promise it returns.
+      const result = supplied?.(...payload);
       setMessages((previous) => [...previous, eventMessage(channel, payload)].slice(-12));
+      return result;
     };
   }
   const channels = eventBindingsForBinding(record.binding).map(({ channel }) => channel);

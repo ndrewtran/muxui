@@ -41,7 +41,7 @@ import {
   TagSelect,
   Tree,
 } from '../generated/index.mjs';
-import { TextEditor } from '../generated/text-editor.mjs';
+import { TextEditor } from '../generated/text-editor.js';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 

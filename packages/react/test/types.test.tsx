@@ -62,7 +62,7 @@ import {
   reactCompatibility,
   useToast,
 } from '@muxui/react';
-import type { TextEditorDocument } from '../src/text-editor/index.d.ts';
+import type { TextEditorDocument } from '@muxui/react/text-editor';
 
 const schema: Readonly<Record<string, unknown>> = reactCompatibility;
 void schema;

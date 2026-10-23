@@ -55,8 +55,6 @@ const SOURCE_ROUTES = Object.freeze({
   'header-nav': ['test/supplemental.test.mjs'],
   sidebar: ['test/supplemental.test.mjs'],
   overlays: ['test/r1-4-overlays.test.mjs'],
-  markdown: ['test/heavy-components.test.mjs'],
-  'text-editor': ['test/heavy-components.test.mjs'],
 });
 
 // Guards on how the collections modules fit together and bundle. A change that only drops a pure

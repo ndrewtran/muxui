@@ -451,7 +451,7 @@
         "module": "./text-editor",
         "isolation": "subpath-only"
       },
-      "runtimeSource": "packages/react/src/text-editor/index.mjs",
+      "runtimeSource": "packages/react/src/text-editor/index.ts",
       "styleSource": "packages/react/src/text-editor/text-editor.css"
     }
   ]
