@@ -1,0 +1,373 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "autocomplete",
+  "sources": { "fields": "packages/react/src/fields.ts" },
+  "exports": [
+    {
+      "name": "Autocomplete",
+      "entry": ".",
+      "module": "fields",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text shown with the field, which also describes it."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The submitted value, when the caller controls it. The input shows a matching item's label."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The starting value, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the new value each time the text changes or a suggestion is chosen. A chosen suggestion reports its value, not its label."
+            },
+            {
+              "name": "onSelect",
+              "optional": true,
+              "type": "(item?: AutocompleteSelectionItem) => void",
+              "refs": ["fields#AutocompleteSelectionItem"],
+              "doc": "Called when a suggestion is chosen, with the chosen item."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the field: it can be neither focused nor changed."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size. The suggestion list takes it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the field read-only: its text stays visible and focusable but cannot be changed, and no suggestion can be chosen."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required, so a form with native validation does not submit while it is empty."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named field submits the chosen suggestion's value, or the typed text when nothing was chosen."
+            },
+            {
+              "name": "items",
+              "optional": true,
+              "type": "(AutocompleteItem | string)[]",
+              "refs": ["fields#AutocompleteItem"],
+              "doc": "The suggestions, as strings or records. A string is shown and submitted as its text. Typing filters them by their text."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "An example value shown while the field is empty. It does not name the field."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#AutocompleteItem",
+      "name": "AutocompleteItem",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "AutocompleteItem" }
+      ],
+      "owner": "autocomplete",
+      "text": "interface AutocompleteItem {\n  id?: string;\n  label?: React.ReactNode;\n  value?: string;\n  disabled?: boolean;\n}",
+      "members": [
+        {
+          "name": "id",
+          "optional": true,
+          "type": "string",
+          "doc": "Identifies the suggestion. Without one, a record takes its value, or else its position, as one."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "What the list and the input show. Without one, a record shows its value, or else its id."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "What the form and onChange receive when the suggestion is chosen. Without one, a record submits its id, or, with no id either, its label's text."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Skips the suggestion in selection."
+        }
+      ]
+    },
+    {
+      "id": "fields#AutocompleteOwnProps",
+      "name": "AutocompleteOwnProps",
+      "module": "fields",
+      "text": "type AutocompleteOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n  onSelect?: (item?: AutocompleteSelectionItem) => void;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  items?: (AutocompleteItem | string)[];\n  placeholder?: string;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown with the field, which also describes it."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The submitted value, when the caller controls it. The input shows a matching item's label."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The starting value, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the new value each time the text changes or a suggestion is chosen. A chosen suggestion reports its value, not its label."
+        },
+        {
+          "name": "onSelect",
+          "optional": true,
+          "type": "(item?: AutocompleteSelectionItem) => void",
+          "refs": ["fields#AutocompleteSelectionItem"],
+          "doc": "Called when a suggestion is chosen, with the chosen item."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the field: it can be neither focused nor changed."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size. The suggestion list takes it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the field read-only: its text stays visible and focusable but cannot be changed, and no suggestion can be chosen."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required, so a form with native validation does not submit while it is empty."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named field submits the chosen suggestion's value, or the typed text when nothing was chosen."
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "(AutocompleteItem | string)[]",
+          "refs": ["fields#AutocompleteItem"],
+          "doc": "The suggestions, as strings or records. A string is shown and submitted as its text. Typing filters them by their text."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "An example value shown while the field is empty. It does not name the field."
+        }
+      ],
+      "refs": ["fields#AutocompleteSelectionItem", "fields#AutocompleteItem"]
+    },
+    {
+      "id": "fields#AutocompleteProps",
+      "name": "AutocompleteProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "AutocompleteProps" }
+      ],
+      "owner": "autocomplete",
+      "text": "type AutocompleteProps = Omit<AutocompleteOwnProps, 'label'> & NamedFieldProps;",
+      "refs": ["fields#AutocompleteOwnProps", "fields#NamedFieldProps"]
+    },
+    {
+      "id": "fields#AutocompleteSelectionItem",
+      "name": "AutocompleteSelectionItem",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "AutocompleteSelectionItem" }
+      ],
+      "owner": "autocomplete",
+      "text": "interface AutocompleteSelectionItem {\n  id: string;\n  label: React.ReactNode;\n  value: string;\n}",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "React.ReactNode" },
+        { "name": "value", "type": "string" }
+      ]
+    },
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#FieldValidationProps",
+      "name": "FieldValidationProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldValidationProps" }
+      ],
+      "owner": "shared",
+      "text": "interface FieldValidationProps {\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  size?: ControlSize;\n  className?: string;\n}",
+      "members": [
+        { "name": "description", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["fields#ControlSize"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#NamedFieldProps",
+      "name": "NamedFieldProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "NamedFieldProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "FieldValidationProps",
+          "refs": ["fields#FieldValidationProps"]
+        },
+        {
+          "type": "MuxUIAccessibleName",
+          "refs": ["fields#MuxUIAccessibleName"]
+        }
+      ],
+      "text": "type NamedFieldProps = FieldValidationProps & MuxUIAccessibleName;",
+      "refs": ["fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
+    }
+  ]
+}

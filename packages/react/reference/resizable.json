@@ -1,0 +1,282 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "resizable",
+  "sources": { "resizable": "packages/react/src/supplemental/resizable.ts" },
+  "exports": [
+    {
+      "name": "Resizable",
+      "entry": ".",
+      "module": "resizable",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            {
+              "name": "onSizesChange",
+              "optional": true,
+              "type": "(sizes: ResizableSizes, meta: ResizableChange) => void",
+              "refs": ["resizable#ResizableSizes", "resizable#ResizableChange"],
+              "doc": "Reports every change to the sizes, with the handle that made it and whether a pointer or the keyboard did."
+            },
+            {
+              "name": "onSizesCommit",
+              "optional": true,
+              "type": "(sizes: ResizableSizes, meta: ResizableChange) => void",
+              "refs": ["resizable#ResizableSizes", "resizable#ResizableChange"],
+              "doc": "Reports sizes worth saving: when a pointer gesture that changed the sizes ends normally, and after each keyboard change."
+            },
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "Whether the panels sit side by side or stacked."
+            },
+            {
+              "name": "keyboardStep",
+              "optional": true,
+              "type": "number",
+              "doc": "How many percent an arrow key moves a handle. A finite number greater than 0."
+            },
+            {
+              "name": "keyboardLargeStep",
+              "optional": true,
+              "type": "number",
+              "doc": "How many percent Shift with an arrow key, Page Up, or Page Down moves a handle. A finite number greater than 0."
+            },
+            {
+              "name": "precision",
+              "optional": true,
+              "type": "number",
+              "doc": "How many decimal places sizes keep, from 0 to 10."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes every handle unavailable."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the sizes and ignores resizing."
+            }
+          ],
+          "ref": null,
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": [
+                "sizes",
+                "defaultSizes",
+                "onSizesChange",
+                "onSizesCommit",
+                "orientation",
+                "keyboardStep",
+                "keyboardLargeStep",
+                "precision",
+                "disabled",
+                "readOnly"
+              ]
+            }
+          ],
+          "alternatives": [
+            {
+              "members": [
+                {
+                  "name": "sizes",
+                  "type": "ResizableSizes",
+                  "refs": ["resizable#ResizableSizes"]
+                },
+                { "name": "defaultSizes", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "sizes", "optional": true, "never": true, "type": "never" },
+                {
+                  "name": "defaultSizes",
+                  "optional": true,
+                  "type": "ResizableSizes",
+                  "refs": ["resizable#ResizableSizes"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ResizableHandle",
+      "entry": ".",
+      "module": "resizable",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            { "name": "id", "type": "string" },
+            { "name": "before", "type": "string" },
+            { "name": "after", "type": "string" },
+            { "name": "disabled", "optional": true, "type": "boolean" }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ResizablePanel",
+      "entry": ".",
+      "module": "resizable",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            { "name": "id", "type": "string" },
+            { "name": "minSize", "optional": true, "type": "number" },
+            { "name": "maxSize", "optional": true, "type": "number" }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "resizable#ResizableBaseProps",
+      "name": "ResizableBaseProps",
+      "module": "resizable",
+      "public": [
+        { "entry": ".", "name": "ResizableBaseProps" }
+      ],
+      "owner": "resizable",
+      "text": "type ResizableBaseProps = Omit<ResizableOwnProps, 'sizes' | 'defaultSizes'> & Omit<React.HTMLAttributes<HTMLDivElement>, keyof ResizableOwnProps>;",
+      "refs": ["resizable#ResizableOwnProps"]
+    },
+    {
+      "id": "resizable#ResizableChange",
+      "name": "ResizableChange",
+      "module": "resizable",
+      "public": [
+        { "entry": ".", "name": "ResizableChange" }
+      ],
+      "owner": "resizable",
+      "text": "type ResizableChange = {\n  handleId: string;\n  source: 'pointer' | 'keyboard';\n};",
+      "members": [
+        { "name": "handleId", "type": "string" },
+        {
+          "name": "source",
+          "type": "'pointer' | 'keyboard'",
+          "values": ["pointer", "keyboard"]
+        }
+      ]
+    },
+    {
+      "id": "resizable#ResizableOwnProps",
+      "name": "ResizableOwnProps",
+      "module": "resizable",
+      "text": "interface ResizableOwnProps {\n  sizes?: ResizableSizes;\n  defaultSizes?: ResizableSizes;\n  onSizesChange?: (sizes: ResizableSizes, meta: ResizableChange) => void;\n  onSizesCommit?: (sizes: ResizableSizes, meta: ResizableChange) => void;\n  orientation?: 'horizontal' | 'vertical';\n  keyboardStep?: number;\n  keyboardLargeStep?: number;\n  precision?: number;\n  disabled?: boolean;\n  readOnly?: boolean;\n}",
+      "members": [
+        {
+          "name": "sizes",
+          "optional": true,
+          "type": "ResizableSizes",
+          "refs": ["resizable#ResizableSizes"],
+          "doc": "The panel sizes, when the caller controls them. Give sizes or defaultSizes, not both. A controlled value has a finite size for every panel id and no other keys, each within its panel's bounds, adding up to 100."
+        },
+        {
+          "name": "defaultSizes",
+          "optional": true,
+          "type": "ResizableSizes",
+          "refs": ["resizable#ResizableSizes"],
+          "doc": "The panel sizes at first, when Resizable controls them. Give sizes or defaultSizes, not both. Sizes that are missing, or that do not add up to 100, are adjusted to a valid layout."
+        },
+        {
+          "name": "onSizesChange",
+          "optional": true,
+          "type": "(sizes: ResizableSizes, meta: ResizableChange) => void",
+          "refs": ["resizable#ResizableSizes", "resizable#ResizableChange"],
+          "doc": "Reports every change to the sizes, with the handle that made it and whether a pointer or the keyboard did."
+        },
+        {
+          "name": "onSizesCommit",
+          "optional": true,
+          "type": "(sizes: ResizableSizes, meta: ResizableChange) => void",
+          "refs": ["resizable#ResizableSizes", "resizable#ResizableChange"],
+          "doc": "Reports sizes worth saving: when a pointer gesture that changed the sizes ends normally, and after each keyboard change."
+        },
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "Whether the panels sit side by side or stacked."
+        },
+        {
+          "name": "keyboardStep",
+          "optional": true,
+          "type": "number",
+          "doc": "How many percent an arrow key moves a handle. A finite number greater than 0."
+        },
+        {
+          "name": "keyboardLargeStep",
+          "optional": true,
+          "type": "number",
+          "doc": "How many percent Shift with an arrow key, Page Up, or Page Down moves a handle. A finite number greater than 0."
+        },
+        {
+          "name": "precision",
+          "optional": true,
+          "type": "number",
+          "doc": "How many decimal places sizes keep, from 0 to 10."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes every handle unavailable."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the sizes and ignores resizing."
+        }
+      ],
+      "refs": ["resizable#ResizableSizes", "resizable#ResizableChange"]
+    },
+    {
+      "id": "resizable#ResizableProps",
+      "name": "ResizableProps",
+      "module": "resizable",
+      "public": [
+        { "entry": ".", "name": "ResizableProps" }
+      ],
+      "owner": "resizable",
+      "text": "type ResizableProps = ResizableBaseProps & ({ sizes: ResizableSizes; defaultSizes?: never } | { sizes?: never; defaultSizes?: ResizableSizes });",
+      "refs": ["resizable#ResizableBaseProps", "resizable#ResizableSizes"]
+    },
+    {
+      "id": "resizable#ResizableSizes",
+      "name": "ResizableSizes",
+      "module": "resizable",
+      "public": [
+        { "entry": ".", "name": "ResizableSizes" }
+      ],
+      "owner": "resizable",
+      "text": "type ResizableSizes = {\n  readonly [panelId: string]: number;\n};"
+    }
+  ]
+}

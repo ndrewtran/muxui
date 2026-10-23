@@ -1,0 +1,222 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "alert-dialog",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "AlertDialog",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "open", "optional": true, "type": "boolean" },
+            { "name": "defaultOpen", "optional": true, "type": "boolean" },
+            { "name": "onOpenChange", "optional": true, "type": "(open: boolean) => void" },
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": { "type": "HTMLElement" }
+        },
+        {
+          "member": "Backdrop",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Popup",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Content",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Title",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLHeadingElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLHeadingElement>" }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLParagraphElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLParagraphElement>" }
+          ]
+        },
+        {
+          "member": "Trigger",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: SupplementalActivation) => void",
+              "refs": ["supplemental#SupplementalActivation"]
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        },
+        {
+          "member": "Actions",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Close",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: SupplementalActivation) => void",
+              "refs": ["supplemental#SupplementalActivation"]
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#AlertDialogActionsProps",
+      "name": "AlertDialogActionsProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "AlertDialogActionsProps" }
+      ],
+      "owner": "alert-dialog",
+      "text": "type AlertDialogActionsProps = PartProps<HTMLDivElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#AlertDialogCloseProps",
+      "name": "AlertDialogCloseProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "AlertDialogCloseProps" }
+      ],
+      "owner": "alert-dialog",
+      "text": "type AlertDialogCloseProps = ButtonPartProps;",
+      "refs": ["supplemental#ButtonPartProps"]
+    },
+    {
+      "id": "supplemental#AlertDialogRootProps",
+      "name": "AlertDialogRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "AlertDialogRootProps" }
+      ],
+      "owner": "alert-dialog",
+      "text": "type AlertDialogRootProps = {\n  open?: boolean;\n  defaultOpen?: boolean;\n  onOpenChange?: (open: boolean) => void;\n  children?: React.ReactNode;\n};",
+      "members": [
+        { "name": "open", "optional": true, "type": "boolean" },
+        { "name": "defaultOpen", "optional": true, "type": "boolean" },
+        { "name": "onOpenChange", "optional": true, "type": "(open: boolean) => void" },
+        { "name": "children", "optional": true, "type": "React.ReactNode" }
+      ]
+    },
+    {
+      "id": "supplemental#AlertDialogTriggerProps",
+      "name": "AlertDialogTriggerProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "AlertDialogTriggerProps" }
+      ],
+      "owner": "alert-dialog",
+      "text": "type AlertDialogTriggerProps = ButtonPartProps;",
+      "refs": ["supplemental#ButtonPartProps"]
+    },
+    {
+      "id": "supplemental#ButtonPartProps",
+      "name": "ButtonPartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "ButtonPartProps" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
+      "refs": ["supplemental#SupplementalActivation"]
+    },
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalActivation",
+      "name": "SupplementalActivation",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalActivation" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "pointerType", "optional": true, "type": "string" },
+        { "name": "target", "optional": true, "type": "EventTarget | null" }
+      ]
+    }
+  ]
+}

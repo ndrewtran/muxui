@@ -1,0 +1,384 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "combo-box",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "combo-box": "packages/react/src/combo-box.ts",
+    "fields": "packages/react/src/fields.ts"
+  },
+  "exports": [
+    {
+      "name": "ComboBox",
+      "entry": ".",
+      "module": "combo-box",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text shown with the field, which also describes it."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed validation. It never makes the field invalid by itself."
+            },
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. Pass every option rather than a pre-filtered list."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The text in the input, when the caller controls it. When the selected id is also controlled, choosing an option does not update the text: the application sets it, usually to the option's label."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text in the input at first, when the field controls itself."
+            },
+            {
+              "name": "selectedId",
+              "optional": true,
+              "type": "string | null",
+              "doc": "The id of the selected item, when the caller controls the selection. A controlled field with no selection passes null; an empty string is not an id and throws. A controlled selectedId stays until the application changes it."
+            },
+            {
+              "name": "defaultSelectedId",
+              "optional": true,
+              "type": "string",
+              "doc": "The id of the item selected at first, when the field controls its selection. An empty string is not an id and throws."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the field: it can be neither focused nor changed."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size. The option list takes it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the field read-only: its text stays visible and focusable but cannot be changed, and no option can be chosen."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required, so a form with native validation does not submit while it is empty."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named field submits the selected item's id, not the item's `value`, or an empty value when nothing is selected."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "An example value shown while the field is empty. It does not name the field."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the text each time it changes, including when choosing an option sets it to the option's label."
+            },
+            {
+              "name": "onSelect",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called with the chosen item, or with no item when the selection clears. Emptying the input clears the selection."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "combo-box#ComboBoxOwnProps",
+      "name": "ComboBoxOwnProps",
+      "module": "combo-box",
+      "text": "type ComboBoxOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  items?: MuxUIItems;\n  value?: string;\n  defaultValue?: string;\n  selectedId?: string | null;\n  defaultSelectedId?: string;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  placeholder?: string;\n  onChange?: (value: string) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown with the field, which also describes it."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed validation. It never makes the field invalid by itself."
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. Pass every option rather than a pre-filtered list."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The text in the input, when the caller controls it. When the selected id is also controlled, choosing an option does not update the text: the application sets it, usually to the option's label."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text in the input at first, when the field controls itself."
+        },
+        {
+          "name": "selectedId",
+          "optional": true,
+          "type": "string | null",
+          "doc": "The id of the selected item, when the caller controls the selection. A controlled field with no selection passes null; an empty string is not an id and throws. A controlled selectedId stays until the application changes it."
+        },
+        {
+          "name": "defaultSelectedId",
+          "optional": true,
+          "type": "string",
+          "doc": "The id of the item selected at first, when the field controls its selection. An empty string is not an id and throws."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the field: it can be neither focused nor changed."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size. The option list takes it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the field read-only: its text stays visible and focusable but cannot be changed, and no option can be chosen."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required, so a form with native validation does not submit while it is empty."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed validation can still make the field invalid."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named field submits the selected item's id, not the item's `value`, or an empty value when nothing is selected."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "An example value shown while the field is empty. It does not name the field."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the text each time it changes, including when choosing an option sets it to the option's label."
+        },
+        {
+          "name": "onSelect",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called with the chosen item, or with no item when the selection clears. Emptying the input clears the selection."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "combo-box#ComboBoxProps",
+      "name": "ComboBoxProps",
+      "module": "combo-box",
+      "public": [
+        { "entry": ".", "name": "ComboBoxProps" }
+      ],
+      "owner": "combo-box",
+      "text": "type ComboBoxProps = Omit<ComboBoxOwnProps, 'label'> & NamedFieldProps;",
+      "refs": ["combo-box#ComboBoxOwnProps", "fields#NamedFieldProps"]
+    },
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#FieldValidationProps",
+      "name": "FieldValidationProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldValidationProps" }
+      ],
+      "owner": "shared",
+      "text": "interface FieldValidationProps {\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  size?: ControlSize;\n  className?: string;\n}",
+      "members": [
+        { "name": "description", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["fields#ControlSize"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#NamedFieldProps",
+      "name": "NamedFieldProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "NamedFieldProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "FieldValidationProps",
+          "refs": ["fields#FieldValidationProps"]
+        },
+        {
+          "type": "MuxUIAccessibleName",
+          "refs": ["fields#MuxUIAccessibleName"]
+        }
+      ],
+      "text": "type NamedFieldProps = FieldValidationProps & MuxUIAccessibleName;",
+      "refs": ["fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
+    }
+  ]
+}

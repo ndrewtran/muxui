@@ -1,0 +1,262 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "tooltip",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "Tooltip",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "content",
+              "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+              "doc": "What the tooltip says. It is required, and a blank string does not count."
+            },
+            {
+              "name": "trigger",
+              "type": "React.ReactElement",
+              "doc": "The focusable element the tooltip describes."
+            },
+            {
+              "name": "delay",
+              "optional": true,
+              "type": "number",
+              "doc": "How long a hover waits before the tooltip opens, in milliseconds. Keyboard focus opens it at once."
+            },
+            {
+              "name": "closeDelay",
+              "optional": true,
+              "type": "number",
+              "doc": "How long the tooltip stays open after the pointer leaves, in milliseconds."
+            },
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the tooltip opens against its trigger or anchorRef. start and end follow the locale direction."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the tooltip and its trigger, along the placement's side."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the tooltip is placed against."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the tooltip moves to the opposite side when the placed side has no room."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the tooltip and the edge of the viewport. Must not be negative."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the tooltip is open, when the caller controls it."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the tooltip starts open, when it controls itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the tooltip: it does not open, and an open one closes. The trigger stays operable."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Reports the tooltip opening or closing."
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#MuxUIPlacement",
+      "name": "MuxUIPlacement",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIPlacement" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'start-top' | 'start-bottom' | 'end-top' | 'end-bottom';",
+      "values": [
+        "top",
+        "bottom",
+        "start",
+        "end",
+        "top-start",
+        "top-end",
+        "bottom-start",
+        "bottom-end",
+        "start-top",
+        "start-bottom",
+        "end-top",
+        "end-bottom"
+      ]
+    },
+    {
+      "id": "overlays#TooltipOwnProps",
+      "name": "TooltipOwnProps",
+      "module": "overlays",
+      "text": "type TooltipOwnProps = {\n  content: Exclude<React.ReactNode, null | undefined | boolean>;\n  trigger: React.ReactElement;\n  delay?: number;\n  closeDelay?: number;\n  placement?: MuxUIPlacement;\n  offset?: number;\n  crossOffset?: number;\n  shouldFlip?: boolean;\n  containerPadding?: number;\n  open?: boolean;\n  defaultOpen?: boolean;\n  disabled?: boolean;\n  onOpenChange?: (open: boolean) => void;\n};",
+      "members": [
+        {
+          "name": "content",
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "What the tooltip says. It is required, and a blank string does not count."
+        },
+        {
+          "name": "trigger",
+          "type": "React.ReactElement",
+          "doc": "The focusable element the tooltip describes."
+        },
+        {
+          "name": "delay",
+          "optional": true,
+          "type": "number",
+          "doc": "How long a hover waits before the tooltip opens, in milliseconds. Keyboard focus opens it at once."
+        },
+        {
+          "name": "closeDelay",
+          "optional": true,
+          "type": "number",
+          "doc": "How long the tooltip stays open after the pointer leaves, in milliseconds."
+        },
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "MuxUIPlacement",
+          "values": [
+            "top",
+            "bottom",
+            "start",
+            "end",
+            "top-start",
+            "top-end",
+            "bottom-start",
+            "bottom-end",
+            "start-top",
+            "start-bottom",
+            "end-top",
+            "end-bottom"
+          ],
+          "refs": ["overlays#MuxUIPlacement"],
+          "doc": "Where the tooltip opens against its trigger or anchorRef. start and end follow the locale direction."
+        },
+        {
+          "name": "offset",
+          "optional": true,
+          "type": "number",
+          "doc": "The distance in pixels between the tooltip and its trigger, along the placement's side."
+        },
+        {
+          "name": "crossOffset",
+          "optional": true,
+          "type": "number",
+          "doc": "The shift in pixels along the side the tooltip is placed against."
+        },
+        {
+          "name": "shouldFlip",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the tooltip moves to the opposite side when the placed side has no room."
+        },
+        {
+          "name": "containerPadding",
+          "optional": true,
+          "type": "number",
+          "doc": "The least distance in pixels between the tooltip and the edge of the viewport. Must not be negative."
+        },
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the tooltip is open, when the caller controls it."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the tooltip starts open, when it controls itself."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the tooltip: it does not open, and an open one closes. The trigger stays operable."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Reports the tooltip opening or closing."
+        }
+      ],
+      "refs": ["overlays#MuxUIPlacement"]
+    },
+    {
+      "id": "overlays#TooltipProps",
+      "name": "TooltipProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "TooltipProps" }
+      ],
+      "owner": "tooltip",
+      "extends": [
+        {
+          "type": "TooltipOwnProps",
+          "refs": ["overlays#TooltipOwnProps"]
+        }
+      ],
+      "text": "type TooltipProps = TooltipOwnProps & {\n  className?: string;\n  anchorRef?: React.RefObject<Element | null>;\n};",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+      ],
+      "refs": ["overlays#TooltipOwnProps"]
+    }
+  ]
+}

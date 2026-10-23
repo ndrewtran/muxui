@@ -1,0 +1,195 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "radio-field",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "RadioField",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "value", "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onChange"]
+            }
+          ]
+        },
+        {
+          "member": "Button",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            { "type": "React.LabelHTMLAttributes<HTMLLabelElement>" }
+          ]
+        },
+        {
+          "member": "Indicator",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Dot",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Error",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#RadioFieldButtonProps",
+      "name": "RadioFieldButtonProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "RadioFieldButtonProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  disabled?: boolean;\n};"
+    },
+    {
+      "id": "supplemental#RadioFieldDescriptionProps",
+      "name": "RadioFieldDescriptionProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "RadioFieldDescriptionProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldDescriptionProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#RadioFieldDotProps",
+      "name": "RadioFieldDotProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "RadioFieldDotProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldDotProps = PartProps<HTMLSpanElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#RadioFieldErrorProps",
+      "name": "RadioFieldErrorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "RadioFieldErrorProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldErrorProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#RadioFieldIndicatorProps",
+      "name": "RadioFieldIndicatorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "RadioFieldIndicatorProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldIndicatorProps = PartProps<HTMLSpanElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#RadioFieldRootProps",
+      "name": "RadioFieldRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "RadioFieldRootProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size' | 'readOnly'> & {\n  size?: 'sm' | 'md' | 'lg';\n  value: string;\n};",
+      "refs": ["supplemental#SupplementalFieldProps"]
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    }
+  ]
+}

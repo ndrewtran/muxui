@@ -1,0 +1,188 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "toggle-button-group",
+  "sources": {
+    "fields": "packages/react/src/fields.ts",
+    "toggle-button-group": "packages/react/src/toggle-button-group.ts"
+  },
+  "exports": [
+    {
+      "name": "ToggleButtonGroup",
+      "entry": ".",
+      "module": "toggle-button-group",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "selectedIds",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The ids of the selected ToggleButtons, when the caller controls the selection. A single-selection group holds at most one; the all value is not accepted."
+            },
+            {
+              "name": "defaultSelectedIds",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The ids of the ToggleButtons that start selected, when the group controls itself. A single-selection group holds at most one; the all value is not accepted."
+            },
+            {
+              "name": "selectionMode",
+              "optional": true,
+              "type": "'single' | 'multiple'",
+              "values": ["single", "multiple"],
+              "doc": "Whether the group selects one ToggleButton or several. Any other value throws a TypeError."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the group and every ToggleButton in it."
+            },
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "The direction the buttons are laid out and the arrow keys move focus along."
+            },
+            {
+              "name": "disallowEmptySelection",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Keeps the selection from being cleared: the selected button stays selected when pressed again."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size. The ToggleButtons take it from the group."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(ids: readonly string[]) => void",
+              "doc": "Called with the ids of the selected ToggleButtons each time the selection changes. A disabled group does not call it."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "toggle-button-group#ToggleButtonGroupOwnProps",
+      "name": "ToggleButtonGroupOwnProps",
+      "module": "toggle-button-group",
+      "text": "type ToggleButtonGroupOwnProps = {\n  selectedIds?: readonly string[];\n  defaultSelectedIds?: readonly string[];\n  selectionMode?: 'single' | 'multiple';\n  disabled?: boolean;\n  orientation?: 'horizontal' | 'vertical';\n  disallowEmptySelection?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  onSelectionChange?: (ids: readonly string[]) => void;\n};",
+      "members": [
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The ids of the selected ToggleButtons, when the caller controls the selection. A single-selection group holds at most one; the all value is not accepted."
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The ids of the ToggleButtons that start selected, when the group controls itself. A single-selection group holds at most one; the all value is not accepted."
+        },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'single' | 'multiple'",
+          "values": ["single", "multiple"],
+          "doc": "Whether the group selects one ToggleButton or several. Any other value throws a TypeError."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the group and every ToggleButton in it."
+        },
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "The direction the buttons are laid out and the arrow keys move focus along."
+        },
+        {
+          "name": "disallowEmptySelection",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps the selection from being cleared: the selected button stays selected when pressed again."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size. The ToggleButtons take it from the group."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: readonly string[]) => void",
+          "doc": "Called with the ids of the selected ToggleButtons each time the selection changes. A disabled group does not call it."
+        }
+      ]
+    },
+    {
+      "id": "toggle-button-group#ToggleButtonGroupProps",
+      "name": "ToggleButtonGroupProps",
+      "module": "toggle-button-group",
+      "public": [
+        { "entry": ".", "name": "ToggleButtonGroupProps" }
+      ],
+      "owner": "toggle-button-group",
+      "extends": [
+        {
+          "type": "ToggleButtonGroupOwnProps",
+          "refs": ["toggle-button-group#ToggleButtonGroupOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type ToggleButtonGroupProps = ToggleButtonGroupOwnProps & {\n  children?: React.ReactNode;\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["toggle-button-group#ToggleButtonGroupOwnProps", "fields#MuxUIAriaAccessibleName"]
+    }
+  ]
+}

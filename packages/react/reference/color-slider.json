@@ -1,0 +1,236 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-slider",
+  "sources": {
+    "color-context": "packages/react/src/color-context.ts",
+    "color-slider": "packages/react/src/color-slider.ts",
+    "fields": "packages/react/src/fields.ts"
+  },
+  "exports": [
+    {
+      "name": "ColorSlider",
+      "entry": ".",
+      "module": "color-slider",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The slider's color, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The starting color, when the slider controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: MuxUIColorValue) => void",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "Called with the new color as a CSS string each time the channel changes. It is in the slider's color space when colorSpace is set, and otherwise in the space of the value, the enclosing ColorPicker, or defaultValue. A disabled or read-only slider does not call it."
+            },
+            {
+              "name": "channel",
+              "optional": true,
+              "type": "MuxUIColorChannel",
+              "values": ["red", "green", "blue", "hue", "saturation", "lightness", "brightness", "alpha"],
+              "refs": ["color-context#MuxUIColorChannel"],
+              "doc": "The channel the slider adjusts. It must belong to colorSpace or, without colorSpace, to the space of the enclosing ColorPicker's color, otherwise of value or defaultValue; any other pair throws a TypeError."
+            },
+            {
+              "name": "colorSpace",
+              "optional": true,
+              "type": "MuxUIColorSpace",
+              "values": ["rgb", "hsl", "hsb"],
+              "refs": ["color-context#MuxUIColorSpace"],
+              "doc": "The color space the slider reads and reports in. Without it the slider uses the enclosing ColorPicker's space, otherwise the space of the value."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the slider: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the slider read-only: it stays focusable but its channel cannot be changed. A read-only enclosing ColorPicker does the same."
+            },
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "The direction of the track."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "color-context#MuxUIColorChannel",
+      "name": "MuxUIColorChannel",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorChannel" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorChannel = 'red' | 'green' | 'blue' | 'hue' | 'saturation' | 'lightness' | 'brightness' | 'alpha';",
+      "values": ["red", "green", "blue", "hue", "saturation", "lightness", "brightness", "alpha"]
+    },
+    {
+      "id": "color-context#MuxUIColorSpace",
+      "name": "MuxUIColorSpace",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorSpace" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';",
+      "values": ["rgb", "hsl", "hsb"]
+    },
+    {
+      "id": "color-context#MuxUIColorValue",
+      "name": "MuxUIColorValue",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorValue = string;"
+    },
+    {
+      "id": "color-slider#ColorSliderOwnProps",
+      "name": "ColorSliderOwnProps",
+      "module": "color-slider",
+      "text": "type ColorSliderOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  value?: MuxUIColorValue;\n  defaultValue?: MuxUIColorValue;\n  onChange?: (value: MuxUIColorValue) => void;\n  channel?: MuxUIColorChannel;\n  colorSpace?: MuxUIColorSpace;\n  disabled?: boolean;\n  readOnly?: boolean;\n  orientation?: 'horizontal' | 'vertical';\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the slider. Without one, the slider needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The slider's color, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The starting color, when the slider controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: MuxUIColorValue) => void",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "Called with the new color as a CSS string each time the channel changes. It is in the slider's color space when colorSpace is set, and otherwise in the space of the value, the enclosing ColorPicker, or defaultValue. A disabled or read-only slider does not call it."
+        },
+        {
+          "name": "channel",
+          "optional": true,
+          "type": "MuxUIColorChannel",
+          "values": ["red", "green", "blue", "hue", "saturation", "lightness", "brightness", "alpha"],
+          "refs": ["color-context#MuxUIColorChannel"],
+          "doc": "The channel the slider adjusts. It must belong to colorSpace or, without colorSpace, to the space of the enclosing ColorPicker's color, otherwise of value or defaultValue; any other pair throws a TypeError."
+        },
+        {
+          "name": "colorSpace",
+          "optional": true,
+          "type": "MuxUIColorSpace",
+          "values": ["rgb", "hsl", "hsb"],
+          "refs": ["color-context#MuxUIColorSpace"],
+          "doc": "The color space the slider reads and reports in. Without it the slider uses the enclosing ColorPicker's space, otherwise the space of the value."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the slider: it can be neither focused nor changed. A disabled enclosing ColorPicker disables it too."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the slider read-only: it stays focusable but its channel cannot be changed. A read-only enclosing ColorPicker does the same."
+        },
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "The direction of the track."
+        }
+      ],
+      "refs": [
+        "color-context#MuxUIColorValue",
+        "color-context#MuxUIColorChannel",
+        "color-context#MuxUIColorSpace"
+      ]
+    },
+    {
+      "id": "color-slider#ColorSliderProps",
+      "name": "ColorSliderProps",
+      "module": "color-slider",
+      "public": [
+        { "entry": ".", "name": "ColorSliderProps" }
+      ],
+      "owner": "color-slider",
+      "text": "type ColorSliderProps = Omit<ColorSliderOwnProps, 'label'> & {\n  className?: string;\n} & MuxUIAccessibleName;",
+      "refs": ["color-slider#ColorSliderOwnProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    }
+  ]
+}

@@ -6,10 +6,17 @@ import { resolve } from 'node:path';
  *
  * Applications show a component's usage, behavior, accessibility, anatomy,
  * token requirements, imports and sources through this module, never from
- * hand-written per-family text. It carries no prop types or event signatures;
- * Decision 0031 derives those from the React TypeScript source later. A compound
- * whose parts own Mux UI props lists each one beside the root's (`parts`), so an
- * application that shows the root's props and events shows the parts' too.
+ * hand-written per-family text. A compound whose parts own Mux UI props lists
+ * each one beside the root's (`parts`), so an application that shows the root's
+ * props and events shows the parts' too.
+ *
+ * The prop types, refs and exact callback signatures come from the declarations the
+ * package ships (Decision 0031), read into the committed declaration reference,
+ * `packages/react/reference/`. `readDeclarationReference` loads it and
+ * `componentDeclarations` selects one component's share; `componentReference`
+ * carries that share as `declarations` only when its caller passes the reference in.
+ * The data is exposed as the reader wrote it: printed type text, referenced ids, and the
+ * alternatives of a props type. An application renders it and never re-reads a type string.
  */
 
 const manifestPath = 'packages/react/package.json';
@@ -17,6 +24,9 @@ const descriptorPath = 'packages/react/generated/descriptor.json';
 const contractPath = 'packages/react/generated/r1-6-contract.json';
 const contractSchema = 'muxui-react-r1-6-contract-v1';
 const stylesheetSubpath = './styles.css';
+const referenceDirectory = 'packages/react/reference';
+const referenceSchema = 'muxui-declaration-reference-v1';
+const inventorySchema = 'muxui-declaration-inventory-v1';
 /** More token requirements than this are grouped by their first two path segments. */
 const tokenGroupThreshold = 8;
 
@@ -56,6 +66,129 @@ const tokenGroupThreshold = 8;
  * @property {readonly string[]} states
  * @property {{ nameRequired: boolean, obligations: readonly string[] }} accessibility
  * @property {Readonly<Record<string, ReactBindingRecord>>} bindings
+ */
+
+/**
+ * One declared member of a props type or a named type, as the declaration wrote it.
+ * @typedef {object} DeclarationMember
+ * @property {string} name
+ * @property {true} [optional] Declared with `?`.
+ * @property {true} [readonly]
+ * @property {true} [method] Declared as a method signature; `type` is then its call signature.
+ * @property {true} [never] Declared `never`, which is not the same as not declared.
+ * @property {true} [explicitUndefined] Declared `?: T | undefined`.
+ * @property {string} type The printed type.
+ * @property {readonly (string | number | boolean | null)[]} [values] The finite values of a literal union.
+ * @property {readonly string[]} [refs] The ids of the Mux UI types `type` names.
+ * @property {string} [doc] The declaration's own comment; absent when the declaration has none.
+ */
+
+/**
+ * A forwarded ref: the element type, or `never` for a part that takes none (`required` when the declaration
+ * writes `ref: never` rather than `ref?: never`), or null when the part declares no ref.
+ * @typedef {{ type: string, refs?: readonly string[] } | { never: true, required?: true } | null} DeclarationRef
+ */
+
+/**
+ * A host surface a part extends, such as `React.HTMLAttributes<HTMLDivElement>`, less what it omits.
+ * @typedef {object} DeclarationNative
+ * @property {string} type
+ * @property {readonly string[]} [omit]
+ * @property {readonly string[]} [refs]
+ */
+
+/**
+ * One alternative of a props type: only what differs from the part's shared members.
+ * @typedef {object} DeclarationAlternative
+ * @property {readonly DeclarationMember[]} members Members this alternative declares; one it does not list is not declared in it.
+ * @property {DeclarationRef} [ref]
+ * @property {readonly DeclarationNative[]} [natives]
+ */
+
+/**
+ * @typedef {object} DeclarationPart
+ * @property {string | null} member The export member that is the part, or null for the export itself.
+ * @property {string} [form] How it is declared: forwardRef, function, FC, ComponentType or call.
+ * @property {readonly { name: string, constraint?: string, default?: string, refs?: readonly string[] }[]} [typeParameters]
+ * @property {readonly DeclarationMember[]} [members] Members every alternative shares.
+ * @property {readonly DeclarationAlternative[]} [alternatives]
+ * @property {DeclarationRef} [ref]
+ * @property {readonly DeclarationNative[]} [natives]
+ * @property {string} [sameAs] The member this part is the same as.
+ */
+
+/**
+ * An export of the package: a component with its parts, a function, or a value.
+ * @typedef {object} DeclarationExport
+ * @property {string} name
+ * @property {string} entry The export-map key, such as `.` or `./text-editor`.
+ * @property {string} module
+ * @property {'component' | 'function' | 'value'} kind
+ * @property {readonly DeclarationPart[]} [parts]
+ */
+
+/**
+ * A Mux UI type, printed as its declaration, with the types it names listed by id.
+ * @typedef {object} DeclarationType
+ * @property {string} id
+ * @property {string} name
+ * @property {string} module
+ * @property {readonly { entry: string, name: string }[]} [public] Where a consumer can import it; absent for an internal type.
+ * @property {string} text The printed declaration.
+ * @property {readonly { type: string, refs?: readonly string[] }[]} [extends] The bases an interface (or `Base & { ... }`) extends.
+ * @property {readonly DeclarationMember[]} [members]
+ * @property {readonly (string | number | boolean | null)[]} [values]
+ * @property {readonly string[]} [refs]
+ */
+
+/**
+ * A Mux UI value a type reaches through `typeof`, printed as its declaration.
+ * @typedef {object} DeclarationValue
+ * @property {string} id `module#Name:value`, so a value never shares an id with a type of the same name.
+ * @property {string} name
+ * @property {string} module
+ * @property {'const' | 'function'} kind
+ * @property {readonly { entry: string, name: string }[]} [public] Where a consumer can import it; absent for an internal value.
+ * @property {string} text The printed declaration.
+ * @property {string} [doc]
+ * @property {readonly string[]} [refs]
+ */
+
+/**
+ * One owner's file of the declaration reference: its exports and every Mux UI type and value they reach.
+ * @typedef {object} DeclarationFile
+ * @property {string} schema
+ * @property {string} owner A family slug, `shared` or `package-level`.
+ * @property {Readonly<Record<string, string>>} sources The source each declaration module was generated from.
+ * @property {readonly DeclarationExport[]} exports
+ * @property {readonly DeclarationType[]} types
+ * @property {readonly DeclarationValue[]} [values] Absent when no export reaches a value.
+ */
+
+/**
+ * @typedef {object} DeclarationInventory
+ * @property {string} schema
+ * @property {string} package
+ * @property {readonly ({ key: string, untyped: true, reason: string } | { key: string, exports: readonly { name: string, kind: string, owner: string, module: string, alias?: string, reason?: string }[] })[]} entries Every entry of the package's export map.
+ * @property {Readonly<Record<string, string>>} owners The file of each owner.
+ */
+
+/**
+ * The committed declaration reference, whole.
+ * @typedef {object} DeclarationReference
+ * @property {DeclarationInventory} inventory
+ * @property {ReadonlyMap<string, DeclarationFile>} files By owner.
+ */
+
+/**
+ * A component's share of the declaration reference.
+ * @typedef {object} ComponentDeclarations
+ * @property {string} owner
+ * @property {string} source The reference file that holds it.
+ * @property {DeclarationExport} export
+ * @property {readonly DeclarationType[]} types Every Mux UI type the export reaches, printed in full.
+ * @property {readonly DeclarationValue[]} [values] Every Mux UI value those types name through `typeof`, when there are any.
+ * @property {Readonly<Record<string, string>>} sources
  */
 
 /**
@@ -105,6 +238,60 @@ export function readReactPackageFacts(repositoryRoot) {
 }
 
 /**
+ * Read the committed declaration reference: the inventory of every export-map entry and each owner's file.
+ * Fails when a file is not the schema the inventory promises or belongs to another owner.
+ * @param {string} repositoryRoot
+ * @returns {DeclarationReference}
+ */
+export function readDeclarationReference(repositoryRoot) {
+  /** @param {string} path */
+  const readJson = (path) => JSON.parse(readFileSync(resolve(repositoryRoot, path), 'utf8'));
+  /** @type {DeclarationInventory} */
+  const inventory = readJson(`${referenceDirectory}/inventory.json`);
+  if (inventory.schema !== inventorySchema) throw new Error(`${referenceDirectory}/inventory.json is not ${inventorySchema}.`);
+  return Object.freeze({
+    inventory,
+    files: new Map(Object.entries(inventory.owners).map(([owner, name]) => {
+      const path = `${referenceDirectory}/${name}`;
+      /** @type {DeclarationFile} */
+      const file = readJson(path);
+      if (file.schema !== referenceSchema) throw new Error(`${path} is not ${referenceSchema}.`);
+      if (file.owner !== owner) throw new Error(`${path} is for ${file.owner}, not ${owner}.`);
+      return [owner, file];
+    })),
+  });
+}
+
+/**
+ * The declarations of one component: its export with every part, alternative, ref and member, and the
+ * types it reaches. The component is found by the export and entry point the renderer descriptor binds it to.
+ * @param {{ artifact: { id: string }, packageFacts: ReactPackageFacts, declarations: DeclarationReference }} input
+ * @returns {ComponentDeclarations}
+ */
+export function componentDeclarations({ artifact, packageFacts, declarations }) {
+  const ref = `${artifact.id}#web.react`;
+  const exported = packageFacts.bindings.get(ref);
+  if (exported === undefined) throw new Error(`The renderer descriptor has no export for ${ref}.`);
+  const entryKey = exported.specifier === packageFacts.packageName ? '.' : `.${exported.specifier.slice(packageFacts.packageName.length)}`;
+  const entry = declarations.inventory.entries.find(({ key }) => key === entryKey);
+  const item = entry !== undefined && 'exports' in entry ? entry.exports.find(({ name }) => name === exported.export) : undefined;
+  if (item === undefined) throw new Error(`The declaration reference has no export ${exported.export} from ${entryKey}.`);
+  const file = declarations.files.get(item.owner);
+  const record = file?.exports.find(({ name, entry: key }) => name === exported.export && key === entryKey);
+  if (file === undefined || record === undefined || record.kind !== 'component') {
+    throw new Error(`The declaration reference does not hold ${exported.export} from ${entryKey} as a component.`);
+  }
+  return Object.freeze({
+    owner: item.owner,
+    source: `${referenceDirectory}/${declarations.inventory.owners[item.owner]}`,
+    export: record,
+    types: file.types,
+    ...(file.values !== undefined && { values: file.values }),
+    sources: file.sources,
+  });
+}
+
+/**
  * The id of a component's own usage guide. Guides are related by this declared
  * id, never by display name. A usage guide whose id names no component, such as
  * `muxui:guide:control-sizing-usage`, is shared guidance and belongs to no family.
@@ -148,9 +335,11 @@ function partReferences(exportName, partApis, anatomy) {
 }
 
 /**
- * @param {{ artifact: ComponentRecord, examples: readonly { source: { content: string } }[], packageFacts: ReactPackageFacts }} input
+ * @param {{ artifact: ComponentRecord, examples: readonly { source: { content: string } }[], packageFacts: ReactPackageFacts, declarations?: DeclarationReference }} input
+ * `declarations` is opt-in: pass it to receive the component's declarations (`componentDeclarations`) as `declarations`;
+ * without it the result is what it was before the declaration reference existed.
  */
-export function componentReference({ artifact, examples, packageFacts }) {
+export function componentReference({ artifact, examples, packageFacts, declarations }) {
   const binding = artifact.bindings['web.react'];
   const ref = `${artifact.id}#web.react`;
   const exported = packageFacts.bindings.get(ref);
@@ -188,6 +377,7 @@ export function componentReference({ artifact, examples, packageFacts }) {
       tokenSource: binding.tokenRecipe.source,
       tokenGroups: groupTokens(binding.tokenRecipe.requirements),
     }),
+    ...(declarations !== undefined && { declarations: componentDeclarations({ artifact, packageFacts, declarations }) }),
     sources: [
       { label: 'Component record', paths: [artifact.source.record] },
       { label: 'Examples', paths: examples.map(({ source }) => source.content) },

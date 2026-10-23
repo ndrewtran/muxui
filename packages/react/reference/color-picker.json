@@ -1,0 +1,135 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-picker",
+  "sources": {
+    "color-context": "packages/react/src/color-context.ts",
+    "color-picker": "packages/react/src/color-picker.ts"
+  },
+  "exports": [
+    {
+      "name": "ColorPicker",
+      "entry": ".",
+      "module": "color-picker",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The picker's color, when the caller controls it. The picker keeps its color in this value's color space."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "MuxUIColorValue",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "The starting color, when the picker controls itself. It also sets the color space the picker keeps its color in."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: MuxUIColorValue) => void",
+              "refs": ["color-context#MuxUIColorValue"],
+              "doc": "Called with the new color as a CSS string each time a color control inside changes it, in the color space of the value, or of defaultValue when uncontrolled, and in rgba() form with neither. A disabled or read-only picker does not call it."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every Mux UI color control inside the picker, at any depth. A child cannot turn it off, and native elements inside are not affected."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes every Mux UI color control inside the picker read-only, at any depth. A child cannot turn it off, and native elements inside are not affected."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "color-context#MuxUIColorValue",
+      "name": "MuxUIColorValue",
+      "module": "color-context",
+      "public": [
+        { "entry": ".", "name": "MuxUIColorValue" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIColorValue = string;"
+    },
+    {
+      "id": "color-picker#ColorPickerOwnProps",
+      "name": "ColorPickerOwnProps",
+      "module": "color-picker",
+      "text": "type ColorPickerOwnProps = {\n  value?: MuxUIColorValue;\n  defaultValue?: MuxUIColorValue;\n  onChange?: (value: MuxUIColorValue) => void;\n  disabled?: boolean;\n  readOnly?: boolean;\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The picker's color, when the caller controls it. The picker keeps its color in this value's color space."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "MuxUIColorValue",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "The starting color, when the picker controls itself. It also sets the color space the picker keeps its color in."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: MuxUIColorValue) => void",
+          "refs": ["color-context#MuxUIColorValue"],
+          "doc": "Called with the new color as a CSS string each time a color control inside changes it, in the color space of the value, or of defaultValue when uncontrolled, and in rgba() form with neither. A disabled or read-only picker does not call it."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every Mux UI color control inside the picker, at any depth. A child cannot turn it off, and native elements inside are not affected."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes every Mux UI color control inside the picker read-only, at any depth. A child cannot turn it off, and native elements inside are not affected."
+        }
+      ],
+      "refs": ["color-context#MuxUIColorValue"]
+    },
+    {
+      "id": "color-picker#ColorPickerProps",
+      "name": "ColorPickerProps",
+      "module": "color-picker",
+      "public": [
+        { "entry": ".", "name": "ColorPickerProps" }
+      ],
+      "owner": "color-picker",
+      "extends": [
+        {
+          "type": "ColorPickerOwnProps",
+          "refs": ["color-picker#ColorPickerOwnProps"]
+        }
+      ],
+      "text": "type ColorPickerProps = ColorPickerOwnProps & {\n  children?: React.ReactNode;\n  className?: string;\n};",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["color-picker#ColorPickerOwnProps"]
+    }
+  ]
+}

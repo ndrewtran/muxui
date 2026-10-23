@@ -1,0 +1,77 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "separator",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "Separator",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "Whether the line runs horizontally or vertically."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLElement>",
+              "omit": ["orientation", "children", "className"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#SeparatorOwnProps",
+      "name": "SeparatorOwnProps",
+      "module": "components",
+      "text": "interface SeparatorOwnProps {\n  orientation?: 'horizontal' | 'vertical';\n}",
+      "members": [
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "Whether the line runs horizontally or vertically."
+        }
+      ]
+    },
+    {
+      "id": "components#SeparatorProps",
+      "name": "SeparatorProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "SeparatorProps" }
+      ],
+      "owner": "separator",
+      "extends": [
+        {
+          "type": "SeparatorOwnProps",
+          "refs": ["components#SeparatorOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLElement>, keyof SeparatorOwnProps | 'children' | 'className'>",
+          "refs": ["components#SeparatorOwnProps"]
+        }
+      ],
+      "text": "interface SeparatorProps extends SeparatorOwnProps, Omit<React.HTMLAttributes<HTMLElement>, keyof SeparatorOwnProps | 'children' | 'className'> {\n  className?: string;\n}",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#SeparatorOwnProps"]
+    }
+  ]
+}

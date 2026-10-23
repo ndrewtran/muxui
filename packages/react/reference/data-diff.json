@@ -1,0 +1,270 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "data-diff",
+  "sources": { "data-diff": "packages/react/src/supplemental/data-diff.ts" },
+  "exports": [
+    {
+      "name": "DataDiff",
+      "entry": ".",
+      "module": "data-diff",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "label",
+              "type": "string",
+              "doc": "Visible heading and accessible table name. Native title remains a tooltip."
+            },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "string",
+              "doc": "What Apply will do, shown under the heading."
+            },
+            {
+              "name": "columns",
+              "type": "readonly DataDiffColumn[]",
+              "refs": ["data-diff#DataDiffColumn"],
+              "doc": "The columns, each with a unique, nonblank id and label."
+            },
+            {
+              "name": "rows",
+              "type": "readonly DataDiffRow[]",
+              "refs": ["data-diff#DataDiffRow"],
+              "doc": "Records contain exactly the declared column IDs, with explicit scalar values."
+            },
+            {
+              "name": "selectedIds",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The selected row ids, when the caller controls the selection."
+            },
+            {
+              "name": "defaultSelectedIds",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The ids selected at first, when DataDiff controls the selection. Without them every enabled proposed change starts selected; unchanged rows are never selectable."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(ids: readonly string[]) => void",
+              "doc": "Reports the selected row ids, in row order, after each selection change."
+            },
+            {
+              "name": "onApply",
+              "optional": true,
+              "type": "(ids: readonly string[]) => void",
+              "doc": "Called only by explicit Apply activation, with selected IDs in row order."
+            },
+            {
+              "name": "pending",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks an apply in flight: selection and Apply are unavailable."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes selection and Apply unavailable."
+            },
+            {
+              "name": "applyLabel",
+              "optional": true,
+              "type": "string",
+              "doc": "Replaces the whole Apply button label, which otherwise counts the selected changes."
+            },
+            {
+              "name": "emptyMessage",
+              "optional": true,
+              "type": "string",
+              "doc": "The text shown when there are no rows."
+            },
+            { "name": "children", "optional": true, "never": true, "type": "never" },
+            { "name": "dangerouslySetInnerHTML", "optional": true, "never": true, "type": "never" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": [
+                "label",
+                "description",
+                "columns",
+                "rows",
+                "selectedIds",
+                "defaultSelectedIds",
+                "onSelectionChange",
+                "onApply",
+                "pending",
+                "disabled",
+                "applyLabel",
+                "emptyMessage",
+                "children",
+                "dangerouslySetInnerHTML"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "data-diff#DataDiffColumn",
+      "name": "DataDiffColumn",
+      "module": "data-diff",
+      "public": [
+        { "entry": ".", "name": "DataDiffColumn" }
+      ],
+      "owner": "data-diff",
+      "text": "type DataDiffColumn = {\n  readonly id: string;\n  readonly label: string;\n};",
+      "members": [
+        { "name": "id", "readonly": true, "type": "string" },
+        { "name": "label", "readonly": true, "type": "string" }
+      ]
+    },
+    {
+      "id": "data-diff#DataDiffOwnProps",
+      "name": "DataDiffOwnProps",
+      "module": "data-diff",
+      "text": "type DataDiffOwnProps = {\n  label: string;\n  description?: string;\n  columns: readonly DataDiffColumn[];\n  rows: readonly DataDiffRow[];\n  selectedIds?: readonly string[];\n  defaultSelectedIds?: readonly string[];\n  onSelectionChange?: (ids: readonly string[]) => void;\n  onApply?: (ids: readonly string[]) => void;\n  pending?: boolean;\n  disabled?: boolean;\n  applyLabel?: string;\n  emptyMessage?: string;\n};",
+      "members": [
+        {
+          "name": "label",
+          "type": "string",
+          "doc": "Visible heading and accessible table name. Native title remains a tooltip."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "string",
+          "doc": "What Apply will do, shown under the heading."
+        },
+        {
+          "name": "columns",
+          "type": "readonly DataDiffColumn[]",
+          "refs": ["data-diff#DataDiffColumn"],
+          "doc": "The columns, each with a unique, nonblank id and label."
+        },
+        {
+          "name": "rows",
+          "type": "readonly DataDiffRow[]",
+          "refs": ["data-diff#DataDiffRow"],
+          "doc": "Records contain exactly the declared column IDs, with explicit scalar values."
+        },
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The selected row ids, when the caller controls the selection."
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The ids selected at first, when DataDiff controls the selection. Without them every enabled proposed change starts selected; unchanged rows are never selectable."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: readonly string[]) => void",
+          "doc": "Reports the selected row ids, in row order, after each selection change."
+        },
+        {
+          "name": "onApply",
+          "optional": true,
+          "type": "(ids: readonly string[]) => void",
+          "doc": "Called only by explicit Apply activation, with selected IDs in row order."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks an apply in flight: selection and Apply are unavailable."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes selection and Apply unavailable."
+        },
+        {
+          "name": "applyLabel",
+          "optional": true,
+          "type": "string",
+          "doc": "Replaces the whole Apply button label, which otherwise counts the selected changes."
+        },
+        {
+          "name": "emptyMessage",
+          "optional": true,
+          "type": "string",
+          "doc": "The text shown when there are no rows."
+        }
+      ],
+      "refs": ["data-diff#DataDiffColumn", "data-diff#DataDiffRow"]
+    },
+    {
+      "id": "data-diff#DataDiffProps",
+      "name": "DataDiffProps",
+      "module": "data-diff",
+      "public": [
+        { "entry": ".", "name": "DataDiffProps" }
+      ],
+      "owner": "data-diff",
+      "text": "type DataDiffProps = DataDiffOwnProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof DataDiffOwnProps | 'children' | 'dangerouslySetInnerHTML'> & {\n  children?: never;\n  dangerouslySetInnerHTML?: never;\n};",
+      "refs": ["data-diff#DataDiffOwnProps"]
+    },
+    {
+      "id": "data-diff#DataDiffRow",
+      "name": "DataDiffRow",
+      "module": "data-diff",
+      "public": [
+        { "entry": ".", "name": "DataDiffRow" }
+      ],
+      "owner": "data-diff",
+      "text": "type DataDiffRow = {\n  readonly id: string;\n  readonly label: string;\n  readonly disabled?: boolean;\n  readonly kind: 'unchanged' | 'added' | 'removed';\n  readonly values: DataDiffValues;\n  readonly before?: never;\n  readonly after?: never;\n} | {\n  readonly id: string;\n  readonly label: string;\n  readonly disabled?: boolean;\n  readonly kind: 'updated';\n  readonly before: DataDiffValues;\n  readonly after: DataDiffValues;\n  readonly values?: never;\n};",
+      "refs": ["data-diff#DataDiffValues"]
+    },
+    {
+      "id": "data-diff#DataDiffRowIdentity",
+      "name": "DataDiffRowIdentity",
+      "module": "data-diff",
+      "public": [
+        { "entry": ".", "name": "DataDiffRowIdentity" }
+      ],
+      "owner": "data-diff",
+      "text": "type DataDiffRowIdentity = {\n  readonly id: string;\n  readonly label: string;\n  readonly disabled?: boolean;\n};",
+      "members": [
+        { "name": "id", "readonly": true, "type": "string" },
+        { "name": "label", "readonly": true, "type": "string" },
+        { "name": "disabled", "optional": true, "readonly": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "data-diff#DataDiffValue",
+      "name": "DataDiffValue",
+      "module": "data-diff",
+      "public": [
+        { "entry": ".", "name": "DataDiffValue" }
+      ],
+      "owner": "data-diff",
+      "text": "type DataDiffValue = string | number | boolean | null;"
+    },
+    {
+      "id": "data-diff#DataDiffValues",
+      "name": "DataDiffValues",
+      "module": "data-diff",
+      "public": [
+        { "entry": ".", "name": "DataDiffValues" }
+      ],
+      "owner": "data-diff",
+      "text": "type DataDiffValues = {\n  readonly [columnId: string]: DataDiffValue;\n};",
+      "refs": ["data-diff#DataDiffValue"]
+    }
+  ]
+}

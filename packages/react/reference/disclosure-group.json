@@ -1,0 +1,133 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "disclosure-group",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "DisclosureGroup",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "expandedIds",
+              "optional": true,
+              "type": "string[]",
+              "doc": "The ids of the open Disclosures, when the caller controls them."
+            },
+            {
+              "name": "defaultExpandedIds",
+              "optional": true,
+              "type": "string[]",
+              "doc": "The ids of the Disclosures that start open, when the group controls itself."
+            },
+            {
+              "name": "multiple",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Lets several Disclosures stay open at once. Turn it off to keep at most one open."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every Disclosure in the group."
+            },
+            {
+              "name": "onExpandedChange",
+              "optional": true,
+              "type": "(expandedIds: string[]) => void",
+              "doc": "Reports the ids of the open Disclosures, as an array of strings."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": [
+                "expandedIds",
+                "defaultExpandedIds",
+                "multiple",
+                "disabled",
+                "onExpandedChange",
+                "children",
+                "className"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#DisclosureGroupOwnProps",
+      "name": "DisclosureGroupOwnProps",
+      "module": "components",
+      "text": "interface DisclosureGroupOwnProps {\n  expandedIds?: string[];\n  defaultExpandedIds?: string[];\n  multiple?: boolean;\n  disabled?: boolean;\n  onExpandedChange?: (expandedIds: string[]) => void;\n}",
+      "members": [
+        {
+          "name": "expandedIds",
+          "optional": true,
+          "type": "string[]",
+          "doc": "The ids of the open Disclosures, when the caller controls them."
+        },
+        {
+          "name": "defaultExpandedIds",
+          "optional": true,
+          "type": "string[]",
+          "doc": "The ids of the Disclosures that start open, when the group controls itself."
+        },
+        {
+          "name": "multiple",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Lets several Disclosures stay open at once. Turn it off to keep at most one open."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every Disclosure in the group."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(expandedIds: string[]) => void",
+          "doc": "Reports the ids of the open Disclosures, as an array of strings."
+        }
+      ]
+    },
+    {
+      "id": "components#DisclosureGroupProps",
+      "name": "DisclosureGroupProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "DisclosureGroupProps" }
+      ],
+      "owner": "disclosure-group",
+      "extends": [
+        {
+          "type": "DisclosureGroupOwnProps",
+          "refs": ["components#DisclosureGroupOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLDivElement>, keyof DisclosureGroupOwnProps | 'children' | 'className'>",
+          "refs": ["components#DisclosureGroupOwnProps"]
+        }
+      ],
+      "text": "interface DisclosureGroupProps extends DisclosureGroupOwnProps, Omit<React.HTMLAttributes<HTMLDivElement>, keyof DisclosureGroupOwnProps | 'children' | 'className'> {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#DisclosureGroupOwnProps"]
+    }
+  ]
+}

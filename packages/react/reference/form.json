@@ -1,0 +1,123 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "form",
+  "sources": { "fields": "packages/react/src/fields.ts" },
+  "exports": [
+    {
+      "name": "Form",
+      "entry": ".",
+      "module": "fields",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "validationBehavior",
+              "optional": true,
+              "type": "'aria' | 'native'",
+              "values": ["aria", "native"],
+              "doc": "When fields show built-in validation errors. With native, the browser checks each field's rules, such as required and type, when the form is submitted, and a failing field stops the submit. With aria, those rules show no error and stop no submit, so the application decides when a field is invalid."
+            },
+            {
+              "name": "validationErrors",
+              "optional": true,
+              "type": "MuxUIValidationErrors",
+              "refs": ["fields#MuxUIValidationErrors"],
+              "doc": "Errors from the application or a server, keyed by field name, each one message or an array of messages. A field shows its errors at once, and editing it or resetting the form dismisses them until a new object arrives."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "onSubmit",
+              "optional": true,
+              "type": "React.FormEventHandler<HTMLFormElement>"
+            },
+            {
+              "name": "onReset",
+              "optional": true,
+              "type": "React.FormEventHandler<HTMLFormElement>"
+            }
+          ],
+          "ref": { "type": "HTMLFormElement" },
+          "natives": [
+            {
+              "type": "React.FormHTMLAttributes<HTMLFormElement>",
+              "omit": [
+                "validationBehavior",
+                "validationErrors",
+                "children",
+                "className",
+                "onSubmit",
+                "onReset"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#FormOwnProps",
+      "name": "FormOwnProps",
+      "module": "fields",
+      "text": "interface FormOwnProps {\n  validationBehavior?: 'aria' | 'native';\n  validationErrors?: MuxUIValidationErrors;\n}",
+      "members": [
+        {
+          "name": "validationBehavior",
+          "optional": true,
+          "type": "'aria' | 'native'",
+          "values": ["aria", "native"],
+          "doc": "When fields show built-in validation errors. With native, the browser checks each field's rules, such as required and type, when the form is submitted, and a failing field stops the submit. With aria, those rules show no error and stop no submit, so the application decides when a field is invalid."
+        },
+        {
+          "name": "validationErrors",
+          "optional": true,
+          "type": "MuxUIValidationErrors",
+          "refs": ["fields#MuxUIValidationErrors"],
+          "doc": "Errors from the application or a server, keyed by field name, each one message or an array of messages. A field shows its errors at once, and editing it or resetting the form dismisses them until a new object arrives."
+        }
+      ],
+      "refs": ["fields#MuxUIValidationErrors"]
+    },
+    {
+      "id": "fields#FormProps",
+      "name": "FormProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FormProps" }
+      ],
+      "owner": "form",
+      "extends": [
+        {
+          "type": "FormOwnProps",
+          "refs": ["fields#FormOwnProps"]
+        },
+        {
+          "type": "Omit<React.FormHTMLAttributes<HTMLFormElement>, keyof FormOwnProps | 'children' | 'className' | 'onSubmit' | 'onReset'>",
+          "refs": ["fields#FormOwnProps"]
+        }
+      ],
+      "text": "interface FormProps extends FormOwnProps, Omit<React.FormHTMLAttributes<HTMLFormElement>, keyof FormOwnProps | 'children' | 'className' | 'onSubmit' | 'onReset'> {\n  children?: React.ReactNode;\n  className?: string;\n  onSubmit?: React.FormEventHandler<HTMLFormElement>;\n  onReset?: React.FormEventHandler<HTMLFormElement>;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "onSubmit", "optional": true, "type": "React.FormEventHandler<HTMLFormElement>" },
+        { "name": "onReset", "optional": true, "type": "React.FormEventHandler<HTMLFormElement>" }
+      ],
+      "refs": ["fields#FormOwnProps"]
+    },
+    {
+      "id": "fields#MuxUIValidationErrors",
+      "name": "MuxUIValidationErrors",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIValidationErrors" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIValidationErrors = {\n  readonly [key: string]: string | string[];\n};"
+    }
+  ]
+}

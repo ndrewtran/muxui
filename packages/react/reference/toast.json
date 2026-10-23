@@ -1,0 +1,211 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "toast",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "Toast",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "FC",
+          "members": [
+            {
+              "name": "message",
+              "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+              "doc": "What the notification says, in one short sentence. It is required, and a blank string does not count."
+            },
+            {
+              "name": "title",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Says what the message is about. Without one, the notification shows Notification."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "'neutral' | 'success' | 'warning' | 'danger'",
+              "values": ["neutral", "success", "warning", "danger"],
+              "doc": "How the notification looks, by what happened. It does not change how long the notification stays."
+            },
+            {
+              "name": "duration",
+              "optional": true,
+              "type": "number",
+              "doc": "How long the notification stays, in milliseconds. 0 keeps it until it is dismissed or removed. Must be finite, not negative, and at most 2147483647. Changing it replaces the notification with a new one."
+            },
+            {
+              "name": "onDismiss",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Reports the notification being dismissed, by a person or a timeout, at most once. An unmount does not call it."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": null
+        }
+      ]
+    },
+    {
+      "name": "ToastProvider",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "FC",
+          "members": [
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "maxVisible", "optional": true, "type": "number" },
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "'top-start' | 'top-end' | 'bottom-start' | 'bottom-end'",
+              "values": ["top-start", "top-end", "bottom-start", "bottom-end"]
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": null
+        }
+      ]
+    },
+    {
+      "name": "useToast",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "function",
+      "signature": "useToast(): ToastManager",
+      "parameters": [],
+      "returns": {
+        "type": "ToastManager",
+        "refs": ["overlays#ToastManager"]
+      }
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#ToastManager",
+      "name": "ToastManager",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "ToastManager" }
+      ],
+      "owner": "toast",
+      "text": "interface ToastManager {\n  add: (message: Exclude<React.ReactNode, null | undefined | boolean>, options?: ToastOptions) => string;\n  remove: (key: string) => void;\n}",
+      "members": [
+        {
+          "name": "add",
+          "type": "(message: Exclude<React.ReactNode, null | undefined | boolean>, options?: ToastOptions) => string",
+          "refs": ["overlays#ToastOptions"]
+        },
+        { "name": "remove", "type": "(key: string) => void" }
+      ],
+      "refs": ["overlays#ToastOptions"]
+    },
+    {
+      "id": "overlays#ToastOptions",
+      "name": "ToastOptions",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "ToastOptions" }
+      ],
+      "owner": "toast",
+      "text": "interface ToastOptions {\n  title?: React.ReactNode;\n  variant?: 'neutral' | 'success' | 'warning' | 'danger';\n  duration?: number;\n  onDismiss?: () => void;\n  className?: string;\n}",
+      "members": [
+        { "name": "title", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "'neutral' | 'success' | 'warning' | 'danger'",
+          "values": ["neutral", "success", "warning", "danger"]
+        },
+        { "name": "duration", "optional": true, "type": "number" },
+        { "name": "onDismiss", "optional": true, "type": "() => void" },
+        { "name": "className", "optional": true, "type": "string" }
+      ]
+    },
+    {
+      "id": "overlays#ToastOwnProps",
+      "name": "ToastOwnProps",
+      "module": "overlays",
+      "text": "interface ToastOwnProps {\n  message: Exclude<React.ReactNode, null | undefined | boolean>;\n  title?: React.ReactNode;\n  variant?: 'neutral' | 'success' | 'warning' | 'danger';\n  duration?: number;\n  onDismiss?: () => void;\n}",
+      "members": [
+        {
+          "name": "message",
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "What the notification says, in one short sentence. It is required, and a blank string does not count."
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Says what the message is about. Without one, the notification shows Notification."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "'neutral' | 'success' | 'warning' | 'danger'",
+          "values": ["neutral", "success", "warning", "danger"],
+          "doc": "How the notification looks, by what happened. It does not change how long the notification stays."
+        },
+        {
+          "name": "duration",
+          "optional": true,
+          "type": "number",
+          "doc": "How long the notification stays, in milliseconds. 0 keeps it until it is dismissed or removed. Must be finite, not negative, and at most 2147483647. Changing it replaces the notification with a new one."
+        },
+        {
+          "name": "onDismiss",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Reports the notification being dismissed, by a person or a timeout, at most once. An unmount does not call it."
+        }
+      ]
+    },
+    {
+      "id": "overlays#ToastProps",
+      "name": "ToastProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "ToastProps" }
+      ],
+      "owner": "toast",
+      "extends": [
+        {
+          "type": "ToastOwnProps",
+          "refs": ["overlays#ToastOwnProps"]
+        }
+      ],
+      "text": "interface ToastProps extends ToastOwnProps {\n  className?: string;\n}",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["overlays#ToastOwnProps"]
+    },
+    {
+      "id": "overlays#ToastProviderProps",
+      "name": "ToastProviderProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "ToastProviderProps" }
+      ],
+      "owner": "toast",
+      "text": "interface ToastProviderProps {\n  children?: React.ReactNode;\n  maxVisible?: number;\n  placement?: 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "maxVisible", "optional": true, "type": "number" },
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "'top-start' | 'top-end' | 'bottom-start' | 'bottom-end'",
+          "values": ["top-start", "top-end", "bottom-start", "bottom-end"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ]
+    }
+  ]
+}

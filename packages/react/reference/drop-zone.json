@@ -1,0 +1,248 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "drop-zone",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "DropZone",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the DropZone: it accepts no drop and reports no activation."
+            },
+            {
+              "name": "onDrop",
+              "optional": true,
+              "type": "(event: MuxUIDropEvent) => void",
+              "refs": ["overlays#MuxUIDropEvent"],
+              "doc": "Reports the items a drop, a paste, or a keyboard selection supplies. The items are file, directory, and text items rather than a File array, and they are read asynchronously."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: MuxUIDropActivateEvent) => void",
+              "refs": ["overlays#MuxUIDropActivateEvent"],
+              "doc": "Reports an activation of the DropZone's own hidden button. A click on a control inside it, such as a FileTrigger, reports none."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "aria-label", "optional": true, "type": "string" },
+            { "name": "aria-labelledby", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#DropZoneOwnProps",
+      "name": "DropZoneOwnProps",
+      "module": "overlays",
+      "text": "interface DropZoneOwnProps {\n  disabled?: boolean;\n  onDrop?: (event: MuxUIDropEvent) => void;\n  onActivate?: (event: MuxUIDropActivateEvent) => void;\n}",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the DropZone: it accepts no drop and reports no activation."
+        },
+        {
+          "name": "onDrop",
+          "optional": true,
+          "type": "(event: MuxUIDropEvent) => void",
+          "refs": ["overlays#MuxUIDropEvent"],
+          "doc": "Reports the items a drop, a paste, or a keyboard selection supplies. The items are file, directory, and text items rather than a File array, and they are read asynchronously."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: MuxUIDropActivateEvent) => void",
+          "refs": ["overlays#MuxUIDropActivateEvent"],
+          "doc": "Reports an activation of the DropZone's own hidden button. A click on a control inside it, such as a FileTrigger, reports none."
+        }
+      ],
+      "refs": ["overlays#MuxUIDropEvent", "overlays#MuxUIDropActivateEvent"]
+    },
+    {
+      "id": "overlays#DropZoneProps",
+      "name": "DropZoneProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "DropZoneProps" }
+      ],
+      "owner": "drop-zone",
+      "extends": [
+        {
+          "type": "DropZoneOwnProps",
+          "refs": ["overlays#DropZoneOwnProps"]
+        }
+      ],
+      "text": "interface DropZoneProps extends DropZoneOwnProps {\n  children?: React.ReactNode;\n  className?: string;\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "aria-label", "optional": true, "type": "string" },
+        { "name": "aria-labelledby", "optional": true, "type": "string" }
+      ],
+      "refs": ["overlays#DropZoneOwnProps"]
+    },
+    {
+      "id": "overlays#MuxUIDirectoryDropItem",
+      "name": "MuxUIDirectoryDropItem",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIDirectoryDropItem" }
+      ],
+      "owner": "drop-zone",
+      "text": "interface MuxUIDirectoryDropItem {\n  readonly kind: 'directory';\n  readonly name: string;\n  readonly getEntries: () => AsyncIterable<MuxUIDropItem>;\n}",
+      "members": [
+        {
+          "name": "kind",
+          "readonly": true,
+          "type": "'directory'",
+          "values": ["directory"]
+        },
+        { "name": "name", "readonly": true, "type": "string" },
+        {
+          "name": "getEntries",
+          "readonly": true,
+          "type": "() => AsyncIterable<MuxUIDropItem>",
+          "refs": ["overlays#MuxUIDropItem"]
+        }
+      ],
+      "refs": ["overlays#MuxUIDropItem"]
+    },
+    {
+      "id": "overlays#MuxUIDropActivateEvent",
+      "name": "MuxUIDropActivateEvent",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIDropActivateEvent" }
+      ],
+      "owner": "drop-zone",
+      "text": "interface MuxUIDropActivateEvent {\n  readonly type: 'activate';\n  readonly x: number;\n  readonly y: number;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "x", "readonly": true, "type": "number" },
+        { "name": "y", "readonly": true, "type": "number" }
+      ]
+    },
+    {
+      "id": "overlays#MuxUIDropEvent",
+      "name": "MuxUIDropEvent",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIDropEvent" }
+      ],
+      "owner": "drop-zone",
+      "text": "interface MuxUIDropEvent {\n  readonly type: 'drop';\n  readonly x: number;\n  readonly y: number;\n  readonly dropOperation: MuxUIDropOperation;\n  readonly items: MuxUIDropItem[];\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'drop'",
+          "values": ["drop"]
+        },
+        { "name": "x", "readonly": true, "type": "number" },
+        { "name": "y", "readonly": true, "type": "number" },
+        {
+          "name": "dropOperation",
+          "readonly": true,
+          "type": "MuxUIDropOperation",
+          "values": ["copy", "link", "move", "cancel"],
+          "refs": ["overlays#MuxUIDropOperation"]
+        },
+        {
+          "name": "items",
+          "readonly": true,
+          "type": "MuxUIDropItem[]",
+          "refs": ["overlays#MuxUIDropItem"]
+        }
+      ],
+      "refs": ["overlays#MuxUIDropOperation", "overlays#MuxUIDropItem"]
+    },
+    {
+      "id": "overlays#MuxUIDropItem",
+      "name": "MuxUIDropItem",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIDropItem" }
+      ],
+      "owner": "drop-zone",
+      "text": "type MuxUIDropItem = MuxUIFileDropItem | MuxUIDirectoryDropItem | MuxUITextDropItem;",
+      "refs": [
+        "overlays#MuxUIFileDropItem",
+        "overlays#MuxUIDirectoryDropItem",
+        "overlays#MuxUITextDropItem"
+      ]
+    },
+    {
+      "id": "overlays#MuxUIDropOperation",
+      "name": "MuxUIDropOperation",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIDropOperation" }
+      ],
+      "owner": "drop-zone",
+      "text": "type MuxUIDropOperation = 'copy' | 'link' | 'move' | 'cancel';",
+      "values": ["copy", "link", "move", "cancel"]
+    },
+    {
+      "id": "overlays#MuxUIFileDropItem",
+      "name": "MuxUIFileDropItem",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIFileDropItem" }
+      ],
+      "owner": "drop-zone",
+      "text": "interface MuxUIFileDropItem {\n  readonly kind: 'file';\n  readonly type: string;\n  readonly name: string;\n  readonly getFile: () => Promise<File>;\n  readonly getText: () => Promise<string>;\n}",
+      "members": [
+        {
+          "name": "kind",
+          "readonly": true,
+          "type": "'file'",
+          "values": ["file"]
+        },
+        { "name": "type", "readonly": true, "type": "string" },
+        { "name": "name", "readonly": true, "type": "string" },
+        { "name": "getFile", "readonly": true, "type": "() => Promise<File>" },
+        { "name": "getText", "readonly": true, "type": "() => Promise<string>" }
+      ]
+    },
+    {
+      "id": "overlays#MuxUITextDropItem",
+      "name": "MuxUITextDropItem",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUITextDropItem" }
+      ],
+      "owner": "drop-zone",
+      "text": "interface MuxUITextDropItem {\n  readonly kind: 'text';\n  readonly types: ReadonlySet<string>;\n  readonly getText: (type: string) => Promise<string>;\n}",
+      "members": [
+        {
+          "name": "kind",
+          "readonly": true,
+          "type": "'text'",
+          "values": ["text"]
+        },
+        { "name": "types", "readonly": true, "type": "ReadonlySet<string>" },
+        { "name": "getText", "readonly": true, "type": "(type: string) => Promise<string>" }
+      ]
+    }
+  ]
+}

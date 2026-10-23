@@ -1,0 +1,270 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "popover",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "Popover",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "trigger",
+              "type": "React.ReactElement",
+              "doc": "The focusable element that opens the Popover. Pressing it toggles the Popover."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Popover is open, when the caller controls it."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Popover starts open, when it controls itself."
+            },
+            {
+              "name": "dismissable",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether Escape, an outside press, and the trigger close the Popover. When false, only a button in the close slot closes it, in modal and non-modal mode alike."
+            },
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the Popover opens against its trigger or anchorRef. start and end follow the locale direction."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the Popover and its trigger, along the placement's side."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the Popover is placed against."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Popover moves to the opposite side when the placed side has no room."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the Popover and the edge of the viewport. Must not be negative."
+            },
+            {
+              "name": "modal",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Popover contains focus until it closes. When false, it is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Reports the Popover opening or closing."
+            },
+            { "name": "children", "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#MuxUIPlacement",
+      "name": "MuxUIPlacement",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIPlacement" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'start-top' | 'start-bottom' | 'end-top' | 'end-bottom';",
+      "values": [
+        "top",
+        "bottom",
+        "start",
+        "end",
+        "top-start",
+        "top-end",
+        "bottom-start",
+        "bottom-end",
+        "start-top",
+        "start-bottom",
+        "end-top",
+        "end-bottom"
+      ]
+    },
+    {
+      "id": "overlays#OverlayAccessibleName",
+      "name": "OverlayAccessibleName",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "OverlayAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type OverlayAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "overlays#PopoverOwnProps",
+      "name": "PopoverOwnProps",
+      "module": "overlays",
+      "text": "type PopoverOwnProps = {\n  trigger: React.ReactElement;\n  open?: boolean;\n  defaultOpen?: boolean;\n  dismissable?: boolean;\n  placement?: MuxUIPlacement;\n  offset?: number;\n  crossOffset?: number;\n  shouldFlip?: boolean;\n  containerPadding?: number;\n  modal?: boolean;\n  onOpenChange?: (open: boolean) => void;\n};",
+      "members": [
+        {
+          "name": "trigger",
+          "type": "React.ReactElement",
+          "doc": "The focusable element that opens the Popover. Pressing it toggles the Popover."
+        },
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Popover is open, when the caller controls it."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Popover starts open, when it controls itself."
+        },
+        {
+          "name": "dismissable",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether Escape, an outside press, and the trigger close the Popover. When false, only a button in the close slot closes it, in modal and non-modal mode alike."
+        },
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "MuxUIPlacement",
+          "values": [
+            "top",
+            "bottom",
+            "start",
+            "end",
+            "top-start",
+            "top-end",
+            "bottom-start",
+            "bottom-end",
+            "start-top",
+            "start-bottom",
+            "end-top",
+            "end-bottom"
+          ],
+          "refs": ["overlays#MuxUIPlacement"],
+          "doc": "Where the Popover opens against its trigger or anchorRef. start and end follow the locale direction."
+        },
+        {
+          "name": "offset",
+          "optional": true,
+          "type": "number",
+          "doc": "The distance in pixels between the Popover and its trigger, along the placement's side."
+        },
+        {
+          "name": "crossOffset",
+          "optional": true,
+          "type": "number",
+          "doc": "The shift in pixels along the side the Popover is placed against."
+        },
+        {
+          "name": "shouldFlip",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Popover moves to the opposite side when the placed side has no room."
+        },
+        {
+          "name": "containerPadding",
+          "optional": true,
+          "type": "number",
+          "doc": "The least distance in pixels between the Popover and the edge of the viewport. Must not be negative."
+        },
+        {
+          "name": "modal",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Popover contains focus until it closes. When false, it is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Reports the Popover opening or closing."
+        }
+      ],
+      "refs": ["overlays#MuxUIPlacement"]
+    },
+    {
+      "id": "overlays#PopoverProps",
+      "name": "PopoverProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "PopoverProps" }
+      ],
+      "owner": "popover",
+      "extends": [
+        {
+          "type": "PopoverOwnProps",
+          "refs": ["overlays#PopoverOwnProps"]
+        },
+        {
+          "type": "OverlayAccessibleName",
+          "refs": ["overlays#OverlayAccessibleName"]
+        }
+      ],
+      "text": "type PopoverProps = PopoverOwnProps & {\n  children: React.ReactNode;\n  className?: string;\n  anchorRef?: React.RefObject<Element | null>;\n} & OverlayAccessibleName;",
+      "members": [
+        { "name": "children", "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+      ],
+      "refs": ["overlays#PopoverOwnProps", "overlays#OverlayAccessibleName"]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "toolbar",
+  "sources": { "fields": "packages/react/src/fields.ts", "toolbar": "packages/react/src/toolbar.ts" },
+  "exports": [
+    {
+      "name": "Toolbar",
+      "entry": ".",
+      "module": "toolbar",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "orientation",
+              "optional": true,
+              "type": "'horizontal' | 'vertical'",
+              "values": ["horizontal", "vertical"],
+              "doc": "The direction the controls are laid out and the arrow keys move focus along. Vertical stacks them in a column."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "toolbar#ToolbarOwnProps",
+      "name": "ToolbarOwnProps",
+      "module": "toolbar",
+      "text": "type ToolbarOwnProps = {\n  orientation?: 'horizontal' | 'vertical';\n};",
+      "members": [
+        {
+          "name": "orientation",
+          "optional": true,
+          "type": "'horizontal' | 'vertical'",
+          "values": ["horizontal", "vertical"],
+          "doc": "The direction the controls are laid out and the arrow keys move focus along. Vertical stacks them in a column."
+        }
+      ]
+    },
+    {
+      "id": "toolbar#ToolbarProps",
+      "name": "ToolbarProps",
+      "module": "toolbar",
+      "public": [
+        { "entry": ".", "name": "ToolbarProps" }
+      ],
+      "owner": "toolbar",
+      "extends": [
+        {
+          "type": "ToolbarOwnProps",
+          "refs": ["toolbar#ToolbarOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type ToolbarProps = ToolbarOwnProps & {\n  children?: React.ReactNode;\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["toolbar#ToolbarOwnProps", "fields#MuxUIAriaAccessibleName"]
+    }
+  ]
+}

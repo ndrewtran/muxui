@@ -1,0 +1,742 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "sidebar",
+  "sources": {
+    "button": "packages/react/src/button.ts",
+    "collection-items": "packages/react/src/collection-items.ts",
+    "icon-button": "packages/react/src/supplemental/icon-button.ts",
+    "menu": "packages/react/src/menu.ts",
+    "supplemental": "packages/react/src/supplemental/index.d.ts"
+  },
+  "exports": [
+    {
+      "name": "Sidebar",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Provider",
+          "form": "ComponentType",
+          "members": [
+            {
+              "name": "collapsed",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Folded state; supply it with `onCollapsedChange` to control the rail."
+            },
+            { "name": "defaultCollapsed", "optional": true, "type": "boolean" },
+            {
+              "name": "onCollapsedChange",
+              "optional": true,
+              "type": "(collapsed: boolean) => void"
+            },
+            {
+              "name": "shortcut",
+              "optional": true,
+              "type": "string",
+              "doc": "A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": null
+        },
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "hideBorder", "optional": true, "type": "boolean" },
+            {
+              "name": "density",
+              "optional": true,
+              "type": "'default' | 'compact'",
+              "values": ["default", "compact"],
+              "doc": "`compact` tightens nav rows, gaps, section labels, and nesting; text sizes and focus rings are unchanged."
+            }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Toggle",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Applies the native disabled attribute: the IconButton is neither focusable nor activatable."
+            },
+            {
+              "name": "pending",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks an action in flight: a static indicator replaces the icon, and the IconButton stays focusable and named but does not activate."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "ButtonVariant",
+              "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+              "refs": ["button#ButtonVariant"],
+              "doc": "Button's visual recipe, chosen by where the icon sits and what it does."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ButtonSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["button#ButtonSize"],
+              "doc": "The square control size."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: ButtonActivationEvent) => void",
+              "refs": ["button#ButtonActivationEvent"],
+              "doc": "Requests the IconButton's one immediate action."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "style", "optional": true, "type": "React.CSSProperties" },
+            { "name": "aria-label", "optional": true, "type": "string" },
+            { "name": "aria-labelledby", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            {
+              "type": "React.ButtonHTMLAttributes<HTMLButtonElement>",
+              "omit": [
+                "children",
+                "className",
+                "disabled",
+                "onClick",
+                "style",
+                "pending",
+                "variant",
+                "size",
+                "onActivate",
+                "aria-label",
+                "aria-labelledby",
+                "showTextWhileLoading"
+              ]
+            }
+          ]
+        },
+        {
+          "member": "Header",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Search",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "placeholder", "optional": true, "type": "string" },
+            { "name": "value", "optional": true, "type": "string" },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "React.ChangeEventHandler<HTMLInputElement>"
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Divider",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLHRElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLHRElement>" }
+          ]
+        },
+        {
+          "member": "NavList",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLUListElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLUListElement>" }
+          ]
+        },
+        {
+          "member": "Section",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "label", "type": "React.ReactNode" }
+          ],
+          "ref": { "type": "HTMLLIElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLLIElement>" }
+          ]
+        },
+        {
+          "member": "NavItem",
+          "form": "ComponentType",
+          "members": [
+            { "name": "expanded", "optional": true, "type": "boolean" },
+            { "name": "defaultExpanded", "optional": true, "type": "boolean" },
+            { "name": "onExpandedChange", "optional": true, "type": "(expanded: boolean) => void" },
+            { "name": "href", "optional": true, "type": "string" },
+            {
+              "name": "icon",
+              "optional": true,
+              "type": "React.ComponentType<{ className?: string }>"
+            },
+            { "name": "badge", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "current",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the item's page with `aria-current=\"page\"`; on a group without `href` it only styles the header."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "items",
+              "optional": true,
+              "type": "SidebarNavEntry[]",
+              "refs": ["supplemental#SidebarNavEntry"]
+            },
+            { "name": "external", "optional": true, "type": "boolean" }
+          ],
+          "ref": null
+        },
+        {
+          "member": "NavButton",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "icon",
+              "optional": true,
+              "type": "React.ComponentType<{ className?: string }>"
+            },
+            { "name": "label", "optional": true, "type": "string" },
+            { "name": "current", "optional": true, "type": "boolean" }
+          ],
+          "ref": { "type": "HTMLAnchorElement" },
+          "natives": [
+            { "type": "React.AnchorHTMLAttributes<HTMLAnchorElement>" }
+          ]
+        },
+        {
+          "member": "AccountCard",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "name", "type": "string" },
+            { "name": "email", "type": "string" },
+            { "name": "avatarSrc", "optional": true, "type": "string" },
+            { "name": "avatarAlt", "optional": true, "type": "string" },
+            {
+              "name": "status",
+              "optional": true,
+              "type": "'online' | 'offline'",
+              "values": ["online", "offline"]
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "AccountMenu",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        },
+        {
+          "member": "MobileTrigger",
+          "form": "ComponentType",
+          "members": [
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "logo", "optional": true, "type": "React.ReactNode" }
+          ],
+          "ref": null
+        },
+        {
+          "member": "FeatureCard",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "title", "optional": true, "type": "string" },
+            { "name": "description", "optional": true, "type": "string" },
+            { "name": "dismissLabel", "optional": true, "type": "string" },
+            { "name": "onDismiss", "optional": true, "type": "() => void" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "button#ButtonActivationEvent",
+      "name": "ButtonActivationEvent",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonActivationEvent" }
+      ],
+      "owner": "button",
+      "text": "interface ButtonActivationEvent {\n  readonly type: 'activate';\n  readonly pointerType: ButtonPointerType;\n  readonly target: HTMLButtonElement;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        {
+          "name": "pointerType",
+          "readonly": true,
+          "type": "ButtonPointerType",
+          "refs": ["button#ButtonPointerType"]
+        },
+        { "name": "target", "readonly": true, "type": "HTMLButtonElement" }
+      ],
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "button#ButtonOwnProps",
+      "name": "ButtonOwnProps",
+      "module": "button",
+      "text": "interface ButtonOwnProps {\n  disabled?: boolean;\n  pending?: boolean;\n  showTextWhileLoading?: boolean;\n  variant?: ButtonVariant;\n  size?: ButtonSize;\n  onActivate?: (event: ButtonActivationEvent) => void;\n}",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Applies the native disabled attribute: the Button is neither focusable nor activatable."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks an action in flight: the Button shows a spinner, stays focusable, and does not activate."
+        },
+        {
+          "name": "showTextWhileLoading",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps the label visible beside the spinner while pending."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "ButtonVariant",
+          "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+          "refs": ["button#ButtonVariant"],
+          "doc": "The visual recipe, chosen by the action's emphasis and consequence."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ButtonSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["button#ButtonSize"],
+          "doc": "The control size."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: ButtonActivationEvent) => void",
+          "refs": ["button#ButtonActivationEvent"],
+          "doc": "Requests the Button's one immediate action."
+        }
+      ],
+      "refs": ["button#ButtonVariant", "button#ButtonSize", "button#ButtonActivationEvent"]
+    },
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "button#ButtonProps",
+      "name": "ButtonProps",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonProps" }
+      ],
+      "owner": "button",
+      "extends": [
+        {
+          "type": "ButtonOwnProps",
+          "refs": ["button#ButtonOwnProps"]
+        },
+        {
+          "type": "Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'>"
+        }
+      ],
+      "text": "interface ButtonProps extends ButtonOwnProps, Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'> {\n  children?: React.ReactNode;\n  className?: string;\n  style?: React.CSSProperties;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "style", "optional": true, "type": "React.CSSProperties" }
+      ],
+      "refs": ["button#ButtonOwnProps"]
+    },
+    {
+      "id": "button#ButtonSize",
+      "name": "ButtonSize",
+      "module": "button",
+      "text": "type ButtonSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "button#ButtonVariant",
+      "name": "ButtonVariant",
+      "module": "button",
+      "text": "type ButtonVariant = 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';",
+      "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"]
+    },
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "icon-button#IconButtonName",
+      "name": "IconButtonName",
+      "module": "icon-button",
+      "text": "type IconButtonName = {\n  'aria-label': string;\n  'aria-labelledby'?: string;\n} | {\n  'aria-label'?: string;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "icon-button#IconButtonOwnProps",
+      "name": "IconButtonOwnProps",
+      "module": "icon-button",
+      "text": "type IconButtonOwnProps = {\n  disabled?: boolean;\n  pending?: boolean;\n  variant?: ButtonVariant;\n  size?: ButtonSize;\n  onActivate?: (event: ButtonActivationEvent) => void;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Applies the native disabled attribute: the IconButton is neither focusable nor activatable."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks an action in flight: a static indicator replaces the icon, and the IconButton stays focusable and named but does not activate."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "ButtonVariant",
+          "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+          "refs": ["button#ButtonVariant"],
+          "doc": "Button's visual recipe, chosen by where the icon sits and what it does."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ButtonSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["button#ButtonSize"],
+          "doc": "The square control size."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: ButtonActivationEvent) => void",
+          "refs": ["button#ButtonActivationEvent"],
+          "doc": "Requests the IconButton's one immediate action."
+        }
+      ],
+      "refs": ["button#ButtonVariant", "button#ButtonSize", "button#ButtonActivationEvent"]
+    },
+    {
+      "id": "icon-button#IconButtonProps",
+      "name": "IconButtonProps",
+      "module": "icon-button",
+      "public": [
+        { "entry": ".", "name": "IconButtonProps" }
+      ],
+      "owner": "icon-button",
+      "text": "type IconButtonProps = IconButtonOwnProps & Omit<ButtonProps, keyof IconButtonOwnProps | 'aria-label' | 'aria-labelledby' | 'showTextWhileLoading'> & IconButtonName;",
+      "refs": ["icon-button#IconButtonOwnProps", "button#ButtonProps", "icon-button#IconButtonName"]
+    },
+    {
+      "id": "menu#MenuListOwnProps",
+      "name": "MenuListOwnProps",
+      "module": "menu",
+      "text": "type MenuListOwnProps = {\n  items?: MuxUIItems;\n  disabled?: boolean;\n  shouldCloseOnSelect?: boolean;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every item and stops the action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+        },
+        {
+          "name": "shouldCloseOnSelect",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether choosing an item closes the menu, in place of the root's setting. A Menu.Item can still set its own."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+        },
+        {
+          "name": "onSelect",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called with the same item as `onAction`, right after it."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "menu#MenuListProps",
+      "name": "MenuListProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuListProps" }
+      ],
+      "owner": "menu",
+      "extends": [
+        {
+          "type": "MenuListOwnProps",
+          "refs": ["menu#MenuListOwnProps"]
+        }
+      ],
+      "text": "type MenuListProps = MenuListOwnProps & {\n  children?: React.ReactNode;\n  className?: string;\n} & {\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n};",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "aria-label", "optional": true, "type": "string" },
+        { "name": "aria-labelledby", "optional": true, "type": "string" }
+      ],
+      "refs": ["menu#MenuListOwnProps"]
+    },
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SidebarAccountMenuProps",
+      "name": "SidebarAccountMenuProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarAccountMenuProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarAccountMenuProps = Pick<MenuListProps, 'items' | 'children' | 'onAction' | 'className'>;",
+      "refs": ["menu#MenuListProps"]
+    },
+    {
+      "id": "supplemental#SidebarExpandedProps",
+      "name": "SidebarExpandedProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarExpandedProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarExpandedProps = {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n};",
+      "members": [
+        { "name": "expanded", "optional": true, "type": "boolean" },
+        { "name": "defaultExpanded", "optional": true, "type": "boolean" },
+        { "name": "onExpandedChange", "optional": true, "type": "(expanded: boolean) => void" }
+      ]
+    },
+    {
+      "id": "supplemental#SidebarNavEntry",
+      "name": "SidebarNavEntry",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarNavEntry" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarNavEntry = SidebarExpandedProps & {\n  id?: string;\n  label: React.ReactNode;\n  current?: boolean;\n} & ({ href: string; items?: SidebarNavEntry[] } | { href?: string; items: SidebarNavEntry[] });",
+      "refs": ["supplemental#SidebarExpandedProps"]
+    },
+    {
+      "id": "supplemental#SidebarNavItemProps",
+      "name": "SidebarNavItemProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarNavItemProps" }
+      ],
+      "owner": "sidebar",
+      "extends": [
+        {
+          "type": "SidebarExpandedProps",
+          "refs": ["supplemental#SidebarExpandedProps"]
+        }
+      ],
+      "text": "type SidebarNavItemProps = SidebarExpandedProps & {\n  href?: string;\n  icon?: React.ComponentType<{ className?: string }>;\n  badge?: React.ReactNode;\n  current?: boolean;\n  children?: React.ReactNode;\n  items?: SidebarNavEntry[];\n  external?: boolean;\n};",
+      "members": [
+        { "name": "href", "optional": true, "type": "string" },
+        { "name": "icon", "optional": true, "type": "React.ComponentType<{ className?: string }>" },
+        { "name": "badge", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "current",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the item's page with `aria-current=\"page\"`; on a group without `href` it only styles the header."
+        },
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "SidebarNavEntry[]",
+          "refs": ["supplemental#SidebarNavEntry"]
+        },
+        { "name": "external", "optional": true, "type": "boolean" }
+      ],
+      "refs": ["supplemental#SidebarExpandedProps", "supplemental#SidebarNavEntry"]
+    },
+    {
+      "id": "supplemental#SidebarProps",
+      "name": "SidebarProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarProps = React.HTMLAttributes<HTMLElement> & {\n  hideBorder?: boolean;\n  density?: 'default' | 'compact';\n};"
+    },
+    {
+      "id": "supplemental#SidebarProviderProps",
+      "name": "SidebarProviderProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarProviderProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarProviderProps = {\n  collapsed?: boolean;\n  defaultCollapsed?: boolean;\n  onCollapsedChange?: (collapsed: boolean) => void;\n  shortcut?: string;\n  children?: React.ReactNode;\n};",
+      "members": [
+        {
+          "name": "collapsed",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Folded state; supply it with `onCollapsedChange` to control the rail."
+        },
+        { "name": "defaultCollapsed", "optional": true, "type": "boolean" },
+        { "name": "onCollapsedChange", "optional": true, "type": "(collapsed: boolean) => void" },
+        {
+          "name": "shortcut",
+          "optional": true,
+          "type": "string",
+          "doc": "A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor."
+        },
+        { "name": "children", "optional": true, "type": "React.ReactNode" }
+      ]
+    },
+    {
+      "id": "supplemental#SidebarSectionProps",
+      "name": "SidebarSectionProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarSectionProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarSectionProps = PartProps<HTMLLIElement> & {\n  label: React.ReactNode;\n};",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#SidebarToggleProps",
+      "name": "SidebarToggleProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SidebarToggleProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarToggleProps = Omit<IconButtonProps, 'aria-label' | 'aria-labelledby'> & {\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n};",
+      "refs": ["icon-button#IconButtonProps"]
+    }
+  ]
+}

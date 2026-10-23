@@ -1,0 +1,200 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "checkbox",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "Checkbox",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "checked",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Checkbox is checked, when the caller controls it."
+            },
+            {
+              "name": "defaultChecked",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Checkbox starts checked, when it controls itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the Checkbox: it can be neither focused nor changed."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size. Without one, a Checkbox in a CheckboxGroup takes the group's size, and any other takes md."
+            },
+            {
+              "name": "indeterminate",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the mixed state. It is separate from checked, and toggling the Checkbox does not clear it."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The name a checked Checkbox submits its value under."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the Checkbox required. Left unset, a Checkbox in a CheckboxGroup takes the group's required state."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The value a checked Checkbox submits."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the Checkbox invalid. It shows no error text."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(checked: boolean) => void",
+              "doc": "Reports the new checked state."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            {
+              "type": "React.LabelHTMLAttributes<HTMLLabelElement>",
+              "omit": [
+                "checked",
+                "defaultChecked",
+                "disabled",
+                "size",
+                "indeterminate",
+                "name",
+                "required",
+                "value",
+                "invalid",
+                "onChange",
+                "children",
+                "className"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#CheckboxOwnProps",
+      "name": "CheckboxOwnProps",
+      "module": "components",
+      "text": "interface CheckboxOwnProps {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  indeterminate?: boolean;\n  name?: string;\n  required?: boolean;\n  value?: string;\n  invalid?: boolean;\n  onChange?: (checked: boolean) => void;\n}",
+      "members": [
+        {
+          "name": "checked",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Checkbox is checked, when the caller controls it."
+        },
+        {
+          "name": "defaultChecked",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Checkbox starts checked, when it controls itself."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the Checkbox: it can be neither focused nor changed."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size. Without one, a Checkbox in a CheckboxGroup takes the group's size, and any other takes md."
+        },
+        {
+          "name": "indeterminate",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the mixed state. It is separate from checked, and toggling the Checkbox does not clear it."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The name a checked Checkbox submits its value under."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the Checkbox required. Left unset, a Checkbox in a CheckboxGroup takes the group's required state."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The value a checked Checkbox submits."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the Checkbox invalid. It shows no error text."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(checked: boolean) => void",
+          "doc": "Reports the new checked state."
+        }
+      ]
+    },
+    {
+      "id": "components#CheckboxProps",
+      "name": "CheckboxProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "CheckboxProps" }
+      ],
+      "owner": "checkbox",
+      "extends": [
+        {
+          "type": "CheckboxOwnProps",
+          "refs": ["components#CheckboxOwnProps"]
+        },
+        {
+          "type": "Omit<React.LabelHTMLAttributes<HTMLLabelElement>, keyof CheckboxOwnProps | 'children' | 'className'>",
+          "refs": ["components#CheckboxOwnProps"]
+        }
+      ],
+      "text": "interface CheckboxProps extends CheckboxOwnProps, Omit<React.LabelHTMLAttributes<HTMLLabelElement>, keyof CheckboxOwnProps | 'children' | 'className'> {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#CheckboxOwnProps"]
+    }
+  ]
+}

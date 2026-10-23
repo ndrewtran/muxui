@@ -1,0 +1,647 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "lightbox",
+  "sources": {
+    "button": "packages/react/src/button.ts",
+    "lightbox": "packages/react/src/supplemental/lightbox.ts"
+  },
+  "exports": [
+    {
+      "name": "Lightbox",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            {
+              "name": "items",
+              "type": "readonly LightboxItem[]",
+              "refs": ["lightbox#LightboxItem"],
+              "doc": "The collection the Lightbox views, each item with a key that is a string or a finite number, and an optional label. If any key is invalid or repeated, the whole collection is empty, and an empty collection never opens."
+            },
+            {
+              "name": "renderContent",
+              "optional": true,
+              "type": "LightboxRenderContent",
+              "refs": ["lightbox#LightboxRenderContent"],
+              "doc": "Renders the selected item's content, from the item and a context with its key, index, and count. LightboxContent's own render function takes precedence."
+            },
+            {
+              "name": "selectedKey",
+              "optional": true,
+              "type": "LightboxKey | null",
+              "refs": ["lightbox#LightboxKey"],
+              "doc": "The key of the selected item, when the caller controls the selection. A null selectedKey means nothing is selected."
+            },
+            {
+              "name": "defaultSelectedKey",
+              "optional": true,
+              "type": "LightboxKey | null",
+              "refs": ["lightbox#LightboxKey"],
+              "doc": "The key of the item selected at first, when the Lightbox controls the selection. Without it, or when no item has the key, the first item."
+            },
+            {
+              "name": "onSelectedChange",
+              "optional": true,
+              "type": "(key: LightboxKey | null, item?: LightboxItem | null) => void",
+              "refs": ["lightbox#LightboxKey", "lightbox#LightboxItem"],
+              "doc": "Reports the selection changing, with the key and its item, or null for both when nothing is selected."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Lightbox is open, when the caller controls it."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Lightbox starts open, when it controls itself."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Reports the Lightbox opening or closing."
+            },
+            {
+              "name": "loop",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether Previous and Next wrap around at the first and last item."
+            },
+            {
+              "name": "swipeNavigation",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether swiping moves between items."
+            }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxBackdrop",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            { "name": "dismissable", "optional": true, "type": "boolean" }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxCaption",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLParagraphElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLParagraphElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxClose",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: LightboxControlActivation) => void",
+              "refs": ["lightbox#LightboxControlActivation"]
+            }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxContent",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            {
+              "name": "renderContent",
+              "optional": true,
+              "type": "(context: LightboxContentRenderContext) => React.ReactNode",
+              "refs": ["lightbox#LightboxContentRenderContext"]
+            }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxNext",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: LightboxControlActivation) => void",
+              "refs": ["lightbox#LightboxControlActivation"]
+            }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxPopup",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [],
+          "ref": null,
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxPrevious",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "function",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: LightboxControlActivation) => void",
+              "refs": ["lightbox#LightboxControlActivation"]
+            }
+          ],
+          "ref": null,
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LightboxTrigger",
+      "entry": ".",
+      "module": "lightbox",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Applies the native disabled attribute: the Button is neither focusable nor activatable."
+            },
+            {
+              "name": "pending",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks an action in flight: the Button shows a spinner, stays focusable, and does not activate."
+            },
+            {
+              "name": "showTextWhileLoading",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Keeps the label visible beside the spinner while pending."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "ButtonVariant",
+              "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+              "refs": ["button#ButtonVariant"],
+              "doc": "The visual recipe, chosen by the action's emphasis and consequence."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ButtonSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["button#ButtonSize"],
+              "doc": "The control size."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "itemKey",
+              "type": "LightboxKey",
+              "refs": ["lightbox#LightboxKey"]
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: LightboxControlActivation) => void",
+              "refs": ["lightbox#LightboxControlActivation"]
+            }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            {
+              "type": "React.ButtonHTMLAttributes<HTMLButtonElement>",
+              "omit": ["children", "className", "disabled", "onClick", "style", "onActivate"]
+            },
+            { "type": "Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'style'>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "button#ButtonActivationEvent",
+      "name": "ButtonActivationEvent",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonActivationEvent" }
+      ],
+      "owner": "button",
+      "text": "interface ButtonActivationEvent {\n  readonly type: 'activate';\n  readonly pointerType: ButtonPointerType;\n  readonly target: HTMLButtonElement;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        {
+          "name": "pointerType",
+          "readonly": true,
+          "type": "ButtonPointerType",
+          "refs": ["button#ButtonPointerType"]
+        },
+        { "name": "target", "readonly": true, "type": "HTMLButtonElement" }
+      ],
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "button#ButtonOwnProps",
+      "name": "ButtonOwnProps",
+      "module": "button",
+      "text": "interface ButtonOwnProps {\n  disabled?: boolean;\n  pending?: boolean;\n  showTextWhileLoading?: boolean;\n  variant?: ButtonVariant;\n  size?: ButtonSize;\n  onActivate?: (event: ButtonActivationEvent) => void;\n}",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Applies the native disabled attribute: the Button is neither focusable nor activatable."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks an action in flight: the Button shows a spinner, stays focusable, and does not activate."
+        },
+        {
+          "name": "showTextWhileLoading",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps the label visible beside the spinner while pending."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "ButtonVariant",
+          "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"],
+          "refs": ["button#ButtonVariant"],
+          "doc": "The visual recipe, chosen by the action's emphasis and consequence."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ButtonSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["button#ButtonSize"],
+          "doc": "The control size."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: ButtonActivationEvent) => void",
+          "refs": ["button#ButtonActivationEvent"],
+          "doc": "Requests the Button's one immediate action."
+        }
+      ],
+      "refs": ["button#ButtonVariant", "button#ButtonSize", "button#ButtonActivationEvent"]
+    },
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "button#ButtonProps",
+      "name": "ButtonProps",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonProps" }
+      ],
+      "owner": "button",
+      "extends": [
+        {
+          "type": "ButtonOwnProps",
+          "refs": ["button#ButtonOwnProps"]
+        },
+        {
+          "type": "Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'>"
+        }
+      ],
+      "text": "interface ButtonProps extends ButtonOwnProps, Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'disabled' | 'onClick' | 'style'> {\n  children?: React.ReactNode;\n  className?: string;\n  style?: React.CSSProperties;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "style", "optional": true, "type": "React.CSSProperties" }
+      ],
+      "refs": ["button#ButtonOwnProps"]
+    },
+    {
+      "id": "button#ButtonSize",
+      "name": "ButtonSize",
+      "module": "button",
+      "text": "type ButtonSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "button#ButtonVariant",
+      "name": "ButtonVariant",
+      "module": "button",
+      "text": "type ButtonVariant = 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';",
+      "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"]
+    },
+    {
+      "id": "lightbox#LightboxContentRenderContext",
+      "name": "LightboxContentRenderContext",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxContentRenderContext" }
+      ],
+      "owner": "lightbox",
+      "extends": [
+        {
+          "type": "LightboxRenderContext",
+          "refs": ["lightbox#LightboxRenderContext"]
+        }
+      ],
+      "text": "type LightboxContentRenderContext = LightboxRenderContext & {\n  item: LightboxItem;\n};",
+      "members": [
+        {
+          "name": "item",
+          "type": "LightboxItem",
+          "refs": ["lightbox#LightboxItem"]
+        }
+      ],
+      "refs": ["lightbox#LightboxRenderContext", "lightbox#LightboxItem"]
+    },
+    {
+      "id": "lightbox#LightboxControlActivation",
+      "name": "LightboxControlActivation",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxControlActivation" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxControlActivation = { [K in keyof ButtonActivationEvent]: ButtonActivationEvent[K] };",
+      "refs": ["button#ButtonActivationEvent"]
+    },
+    {
+      "id": "lightbox#LightboxControlProps",
+      "name": "LightboxControlProps",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxControlProps" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxControlProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: LightboxControlActivation) => void;\n};",
+      "refs": ["lightbox#LightboxControlActivation"]
+    },
+    {
+      "id": "lightbox#LightboxItem",
+      "name": "LightboxItem",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxItem" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxItem = {\n  key: LightboxKey;\n  label?: string;\n};",
+      "members": [
+        {
+          "name": "key",
+          "type": "LightboxKey",
+          "refs": ["lightbox#LightboxKey"]
+        },
+        { "name": "label", "optional": true, "type": "string" }
+      ],
+      "refs": ["lightbox#LightboxKey"]
+    },
+    {
+      "id": "lightbox#LightboxKey",
+      "name": "LightboxKey",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxKey" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxKey = string | number;"
+    },
+    {
+      "id": "lightbox#LightboxOwnProps",
+      "name": "LightboxOwnProps",
+      "module": "lightbox",
+      "text": "interface LightboxOwnProps {\n  items: readonly LightboxItem[];\n  renderContent?: LightboxRenderContent;\n  selectedKey?: LightboxKey | null;\n  defaultSelectedKey?: LightboxKey | null;\n  onSelectedChange?: (key: LightboxKey | null, item?: LightboxItem | null) => void;\n  open?: boolean;\n  defaultOpen?: boolean;\n  onOpenChange?: (open: boolean) => void;\n  loop?: boolean;\n  swipeNavigation?: boolean;\n}",
+      "members": [
+        {
+          "name": "items",
+          "type": "readonly LightboxItem[]",
+          "refs": ["lightbox#LightboxItem"],
+          "doc": "The collection the Lightbox views, each item with a key that is a string or a finite number, and an optional label. If any key is invalid or repeated, the whole collection is empty, and an empty collection never opens."
+        },
+        {
+          "name": "renderContent",
+          "optional": true,
+          "type": "LightboxRenderContent",
+          "refs": ["lightbox#LightboxRenderContent"],
+          "doc": "Renders the selected item's content, from the item and a context with its key, index, and count. LightboxContent's own render function takes precedence."
+        },
+        {
+          "name": "selectedKey",
+          "optional": true,
+          "type": "LightboxKey | null",
+          "refs": ["lightbox#LightboxKey"],
+          "doc": "The key of the selected item, when the caller controls the selection. A null selectedKey means nothing is selected."
+        },
+        {
+          "name": "defaultSelectedKey",
+          "optional": true,
+          "type": "LightboxKey | null",
+          "refs": ["lightbox#LightboxKey"],
+          "doc": "The key of the item selected at first, when the Lightbox controls the selection. Without it, or when no item has the key, the first item."
+        },
+        {
+          "name": "onSelectedChange",
+          "optional": true,
+          "type": "(key: LightboxKey | null, item?: LightboxItem | null) => void",
+          "refs": ["lightbox#LightboxKey", "lightbox#LightboxItem"],
+          "doc": "Reports the selection changing, with the key and its item, or null for both when nothing is selected."
+        },
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Lightbox is open, when the caller controls it."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Lightbox starts open, when it controls itself."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Reports the Lightbox opening or closing."
+        },
+        {
+          "name": "loop",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether Previous and Next wrap around at the first and last item."
+        },
+        {
+          "name": "swipeNavigation",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether swiping moves between items."
+        }
+      ],
+      "refs": ["lightbox#LightboxItem", "lightbox#LightboxRenderContent", "lightbox#LightboxKey"]
+    },
+    {
+      "id": "lightbox#LightboxProps",
+      "name": "LightboxProps",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxProps" }
+      ],
+      "owner": "lightbox",
+      "extends": [
+        {
+          "type": "LightboxOwnProps",
+          "refs": ["lightbox#LightboxOwnProps"]
+        },
+        { "type": "React.HTMLAttributes<HTMLDivElement>" }
+      ],
+      "text": "interface LightboxProps extends LightboxOwnProps, React.HTMLAttributes<HTMLDivElement> {}",
+      "refs": ["lightbox#LightboxOwnProps"]
+    },
+    {
+      "id": "lightbox#LightboxRenderContent",
+      "name": "LightboxRenderContent",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxRenderContent" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxRenderContent = (item: LightboxItem, context: LightboxRenderContext) => React.ReactNode;",
+      "refs": ["lightbox#LightboxItem", "lightbox#LightboxRenderContext"]
+    },
+    {
+      "id": "lightbox#LightboxRenderContext",
+      "name": "LightboxRenderContext",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxRenderContext" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxRenderContext = {\n  key: LightboxKey;\n  index: number;\n  count: number;\n};",
+      "members": [
+        {
+          "name": "key",
+          "type": "LightboxKey",
+          "refs": ["lightbox#LightboxKey"]
+        },
+        { "name": "index", "type": "number" },
+        { "name": "count", "type": "number" }
+      ],
+      "refs": ["lightbox#LightboxKey"]
+    },
+    {
+      "id": "lightbox#LightboxTriggerProps",
+      "name": "LightboxTriggerProps",
+      "module": "lightbox",
+      "public": [
+        { "entry": ".", "name": "LightboxTriggerProps" }
+      ],
+      "owner": "lightbox",
+      "text": "type LightboxTriggerProps = Omit<ButtonProps, 'className' | 'style' | 'onActivate'> & Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'style'> & {\n  itemKey: LightboxKey;\n  onActivate?: (event: LightboxControlActivation) => void;\n};",
+      "refs": ["button#ButtonProps", "lightbox#LightboxKey", "lightbox#LightboxControlActivation"]
+    }
+  ]
+}

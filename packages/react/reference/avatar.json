@@ -1,0 +1,124 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "avatar",
+  "sources": { "avatar": "packages/react/src/supplemental/avatar.ts" },
+  "exports": [
+    {
+      "name": "Avatar",
+      "entry": ".",
+      "module": "avatar",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "size",
+              "optional": true,
+              "type": "AvatarSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["avatar#AvatarSize"],
+              "doc": "The avatar size."
+            },
+            {
+              "name": "children",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Avatar.Image and Avatar.Fallback, directly or inside fragments."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Image",
+          "form": "forwardRef",
+          "members": [
+            { "name": "alt", "type": "string" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLImageElement" },
+          "natives": [
+            {
+              "type": "React.ImgHTMLAttributes<HTMLImageElement>",
+              "omit": ["alt", "className"]
+            }
+          ]
+        },
+        {
+          "member": "Fallback",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "avatar#AvatarFallbackProps",
+      "name": "AvatarFallbackProps",
+      "module": "avatar",
+      "public": [
+        { "entry": ".", "name": "AvatarFallbackProps" }
+      ],
+      "owner": "avatar",
+      "text": "type AvatarFallbackProps = React.HTMLAttributes<HTMLSpanElement>;"
+    },
+    {
+      "id": "avatar#AvatarImageProps",
+      "name": "AvatarImageProps",
+      "module": "avatar",
+      "public": [
+        { "entry": ".", "name": "AvatarImageProps" }
+      ],
+      "owner": "avatar",
+      "text": "type AvatarImageProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'alt' | 'className'> & {\n  alt: string;\n  className?: string;\n};"
+    },
+    {
+      "id": "avatar#AvatarOwnProps",
+      "name": "AvatarOwnProps",
+      "module": "avatar",
+      "text": "interface AvatarOwnProps {\n  size?: AvatarSize;\n}",
+      "members": [
+        {
+          "name": "size",
+          "optional": true,
+          "type": "AvatarSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["avatar#AvatarSize"],
+          "doc": "The avatar size."
+        }
+      ],
+      "refs": ["avatar#AvatarSize"]
+    },
+    {
+      "id": "avatar#AvatarRootProps",
+      "name": "AvatarRootProps",
+      "module": "avatar",
+      "public": [
+        { "entry": ".", "name": "AvatarRootProps" }
+      ],
+      "owner": "avatar",
+      "text": "type AvatarRootProps = AvatarOwnProps & React.HTMLAttributes<HTMLSpanElement> & {\n  children?: React.ReactNode;\n};",
+      "refs": ["avatar#AvatarOwnProps"]
+    },
+    {
+      "id": "avatar#AvatarSize",
+      "name": "AvatarSize",
+      "module": "avatar",
+      "public": [
+        { "entry": ".", "name": "AvatarSize" }
+      ],
+      "owner": "avatar",
+      "text": "type AvatarSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "select-native",
+  "sources": { "select-native": "packages/react/src/supplemental/select-native.ts" },
+  "exports": [
+    {
+      "name": "SelectNative",
+      "entry": ".",
+      "module": "select-native",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "label",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The visible label, associated with the select."
+            },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Help text, associated with the select."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Error text, associated with the select. A nonempty message makes the select invalid."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Applies the native disabled attribute."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Applies the native required attribute."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the select invalid."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "SelectNativeVisualSize | number",
+              "refs": ["select-native#SelectNativeVisualSize"],
+              "doc": "String values select Mux control targets; positive numbers pass to native select size."
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSelectElement" },
+          "natives": [
+            {
+              "type": "React.SelectHTMLAttributes<HTMLSelectElement>",
+              "omit": [
+                "label",
+                "description",
+                "errorMessage",
+                "disabled",
+                "required",
+                "invalid",
+                "size",
+                "className"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "select-native#SelectNativeOwnProps",
+      "name": "SelectNativeOwnProps",
+      "module": "select-native",
+      "text": "type SelectNativeOwnProps = {\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  size?: SelectNativeVisualSize | number;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The visible label, associated with the select."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Help text, associated with the select."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Error text, associated with the select. A nonempty message makes the select invalid."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Applies the native disabled attribute."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Applies the native required attribute."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the select invalid."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "SelectNativeVisualSize | number",
+          "refs": ["select-native#SelectNativeVisualSize"],
+          "doc": "String values select Mux control targets; positive numbers pass to native select size."
+        }
+      ],
+      "refs": ["select-native#SelectNativeVisualSize"]
+    },
+    {
+      "id": "select-native#SelectNativeProps",
+      "name": "SelectNativeProps",
+      "module": "select-native",
+      "public": [
+        { "entry": ".", "name": "SelectNativeProps" }
+      ],
+      "owner": "select-native",
+      "text": "type SelectNativeProps = SelectNativeOwnProps & Omit<React.SelectHTMLAttributes<HTMLSelectElement>, keyof SelectNativeOwnProps | 'className'> & {\n  className?: string;\n};",
+      "refs": ["select-native#SelectNativeOwnProps"]
+    },
+    {
+      "id": "select-native#SelectNativeVisualSize",
+      "name": "SelectNativeVisualSize",
+      "module": "select-native",
+      "public": [
+        { "entry": ".", "name": "SelectNativeVisualSize" }
+      ],
+      "owner": "select-native",
+      "text": "type SelectNativeVisualSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    }
+  ]
+}

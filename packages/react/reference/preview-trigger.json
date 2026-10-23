@@ -1,0 +1,280 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "preview-trigger",
+  "sources": { "overlays": "packages/react/src/overlays.ts" },
+  "exports": [
+    {
+      "name": "PreviewTrigger",
+      "entry": ".",
+      "module": "overlays",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "trigger",
+              "type": "React.ReactElement",
+              "doc": "The focusable element that opens the preview. Disabling the preview leaves it operable."
+            },
+            {
+              "name": "delay",
+              "optional": true,
+              "type": "number",
+              "doc": "How long a hover waits before the preview opens, in milliseconds."
+            },
+            {
+              "name": "closeDelay",
+              "optional": true,
+              "type": "number",
+              "doc": "How long the preview stays open after the pointer leaves, in milliseconds."
+            },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the preview is open, when the caller controls it."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the preview starts open, when it controls itself."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the preview: it does not open, and an open one closes. The trigger stays operable."
+            },
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the preview opens against its trigger. start and end follow the locale direction."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the preview and its trigger, along the placement's side."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the preview is placed against."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the preview moves to the opposite side when the placed side has no room."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the preview and the edge of the viewport. Must not be negative."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Reports the preview opening or closing."
+            },
+            { "name": "children", "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "overlays#MuxUIPlacement",
+      "name": "MuxUIPlacement",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIPlacement" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'start-top' | 'start-bottom' | 'end-top' | 'end-bottom';",
+      "values": [
+        "top",
+        "bottom",
+        "start",
+        "end",
+        "top-start",
+        "top-end",
+        "bottom-start",
+        "bottom-end",
+        "start-top",
+        "start-bottom",
+        "end-top",
+        "end-bottom"
+      ]
+    },
+    {
+      "id": "overlays#OverlayAccessibleName",
+      "name": "OverlayAccessibleName",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "OverlayAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type OverlayAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "overlays#PreviewTriggerOwnProps",
+      "name": "PreviewTriggerOwnProps",
+      "module": "overlays",
+      "text": "type PreviewTriggerOwnProps = {\n  trigger: React.ReactElement;\n  delay?: number;\n  closeDelay?: number;\n  open?: boolean;\n  defaultOpen?: boolean;\n  disabled?: boolean;\n  placement?: MuxUIPlacement;\n  offset?: number;\n  crossOffset?: number;\n  shouldFlip?: boolean;\n  containerPadding?: number;\n  onOpenChange?: (open: boolean) => void;\n};",
+      "members": [
+        {
+          "name": "trigger",
+          "type": "React.ReactElement",
+          "doc": "The focusable element that opens the preview. Disabling the preview leaves it operable."
+        },
+        {
+          "name": "delay",
+          "optional": true,
+          "type": "number",
+          "doc": "How long a hover waits before the preview opens, in milliseconds."
+        },
+        {
+          "name": "closeDelay",
+          "optional": true,
+          "type": "number",
+          "doc": "How long the preview stays open after the pointer leaves, in milliseconds."
+        },
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the preview is open, when the caller controls it."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the preview starts open, when it controls itself."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the preview: it does not open, and an open one closes. The trigger stays operable."
+        },
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "MuxUIPlacement",
+          "values": [
+            "top",
+            "bottom",
+            "start",
+            "end",
+            "top-start",
+            "top-end",
+            "bottom-start",
+            "bottom-end",
+            "start-top",
+            "start-bottom",
+            "end-top",
+            "end-bottom"
+          ],
+          "refs": ["overlays#MuxUIPlacement"],
+          "doc": "Where the preview opens against its trigger. start and end follow the locale direction."
+        },
+        {
+          "name": "offset",
+          "optional": true,
+          "type": "number",
+          "doc": "The distance in pixels between the preview and its trigger, along the placement's side."
+        },
+        {
+          "name": "crossOffset",
+          "optional": true,
+          "type": "number",
+          "doc": "The shift in pixels along the side the preview is placed against."
+        },
+        {
+          "name": "shouldFlip",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the preview moves to the opposite side when the placed side has no room."
+        },
+        {
+          "name": "containerPadding",
+          "optional": true,
+          "type": "number",
+          "doc": "The least distance in pixels between the preview and the edge of the viewport. Must not be negative."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Reports the preview opening or closing."
+        }
+      ],
+      "refs": ["overlays#MuxUIPlacement"]
+    },
+    {
+      "id": "overlays#PreviewTriggerProps",
+      "name": "PreviewTriggerProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "PreviewTriggerProps" }
+      ],
+      "owner": "preview-trigger",
+      "extends": [
+        {
+          "type": "PreviewTriggerOwnProps",
+          "refs": ["overlays#PreviewTriggerOwnProps"]
+        },
+        {
+          "type": "OverlayAccessibleName",
+          "refs": ["overlays#OverlayAccessibleName"]
+        }
+      ],
+      "text": "type PreviewTriggerProps = PreviewTriggerOwnProps & {\n  children: React.ReactNode;\n  className?: string;\n} & OverlayAccessibleName;",
+      "members": [
+        { "name": "children", "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["overlays#PreviewTriggerOwnProps", "overlays#OverlayAccessibleName"]
+    }
+  ]
+}

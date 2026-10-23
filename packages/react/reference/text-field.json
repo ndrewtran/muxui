@@ -1,0 +1,371 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "text-field",
+  "sources": { "fields": "packages/react/src/fields.ts" },
+  "exports": [
+    {
+      "name": "TextField",
+      "entry": ".",
+      "module": "fields",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text shown with the field, which also describes it."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The text, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The starting text, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the new text each time it changes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the field: it can be neither focused nor changed."
+            },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "ControlSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["fields#ControlSize"],
+              "doc": "The control size."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the field read-only: its text stays visible and focusable but cannot be changed."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required, so a form with native validation does not submit while it is empty."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The form field name. A named field submits its text with the form."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "An example value shown while the field is empty. It does not name the field."
+            },
+            {
+              "name": "type",
+              "optional": true,
+              "type": "'text' | 'email' | 'password' | 'url' | 'tel'",
+              "values": ["text", "email", "password", "url", "tel"],
+              "doc": "The kind of text the input takes, which sets the keyboard and the browser's checks."
+            },
+            {
+              "name": "inputProps",
+              "optional": true,
+              "type": "FieldInputProps",
+              "refs": ["fields#FieldInputProps"],
+              "doc": "Native props for the inner input, such as keyboard, paste, focus, and selection handlers, and a className that merges with Mux UI's. The field owns its value, name, type, accessible name, validation, disabled, readOnly, and required, so inputProps cannot replace them."
+            },
+            { "name": "id", "optional": true, "type": "string" },
+            { "name": "inputRef", "optional": true, "type": "React.Ref<HTMLInputElement>" },
+            {
+              "name": "autoComplete",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['autoComplete']"
+            },
+            {
+              "name": "autoFocus",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['autoFocus']"
+            },
+            {
+              "name": "inputMode",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['inputMode']"
+            },
+            {
+              "name": "maxLength",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['maxLength']"
+            },
+            {
+              "name": "minLength",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['minLength']"
+            },
+            {
+              "name": "pattern",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['pattern']"
+            },
+            {
+              "name": "spellCheck",
+              "optional": true,
+              "type": "React.InputHTMLAttributes<HTMLInputElement>['spellCheck']"
+            },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "label", "type": "Exclude<React.ReactNode, null | undefined | boolean>" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "fields#ControlSize",
+      "name": "ControlSize",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "ControlSize" }
+      ],
+      "owner": "shared",
+      "text": "type ControlSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "fields#FieldInputProps",
+      "name": "FieldInputProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldInputProps" }
+      ],
+      "owner": "shared",
+      "text": "type FieldInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'children' | 'dangerouslySetInnerHTML' | 'slot' | 'type' | 'id' | 'name' | 'value' | 'defaultValue' | 'checked' | 'defaultChecked' | 'disabled' | 'readOnly' | 'required' | 'onChange' | 'onInput' | 'aria-label' | 'aria-labelledby' | 'aria-describedby' | 'aria-errormessage' | 'aria-invalid' | 'aria-required' | 'aria-disabled' | 'aria-readonly'>;"
+    },
+    {
+      "id": "fields#FieldValidationProps",
+      "name": "FieldValidationProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "FieldValidationProps" }
+      ],
+      "owner": "shared",
+      "text": "interface FieldValidationProps {\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  size?: ControlSize;\n  className?: string;\n}",
+      "members": [
+        { "name": "description", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself."
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["fields#ControlSize"]
+    },
+    {
+      "id": "fields#MuxUIAccessibleName",
+      "name": "MuxUIAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAccessibleName = {\n  label: Exclude<React.ReactNode, null | undefined | boolean>;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  label?: never;\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "fields#NamedFieldProps",
+      "name": "NamedFieldProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "NamedFieldProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "FieldValidationProps",
+          "refs": ["fields#FieldValidationProps"]
+        },
+        {
+          "type": "MuxUIAccessibleName",
+          "refs": ["fields#MuxUIAccessibleName"]
+        }
+      ],
+      "text": "type NamedFieldProps = FieldValidationProps & MuxUIAccessibleName;",
+      "refs": ["fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
+    },
+    {
+      "id": "fields#TextFieldOwnProps",
+      "name": "TextFieldOwnProps",
+      "module": "fields",
+      "text": "type TextFieldOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n  disabled?: boolean;\n  size?: ControlSize;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  placeholder?: string;\n  type?: 'text' | 'email' | 'password' | 'url' | 'tel';\n  inputProps?: FieldInputProps;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible label, which also names the field. Without one, the field needs an aria-label or aria-labelledby, and an empty label does not count."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown with the field, which also describes it."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message the field shows, in place of the built-in one, only while it is invalid, through the invalid prop or failed native, custom, or server validation. It never makes the field invalid by itself."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The text, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The starting text, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the new text each time it changes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the field: it can be neither focused nor changed."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "ControlSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["fields#ControlSize"],
+          "doc": "The control size."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the field read-only: its text stays visible and focusable but cannot be changed."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required, so a form with native validation does not submit while it is empty."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid and shows its error message. Left false, validation decides, so failed native, custom, or server validation can still make the field invalid."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The form field name. A named field submits its text with the form."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "An example value shown while the field is empty. It does not name the field."
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "type": "'text' | 'email' | 'password' | 'url' | 'tel'",
+          "values": ["text", "email", "password", "url", "tel"],
+          "doc": "The kind of text the input takes, which sets the keyboard and the browser's checks."
+        },
+        {
+          "name": "inputProps",
+          "optional": true,
+          "type": "FieldInputProps",
+          "refs": ["fields#FieldInputProps"],
+          "doc": "Native props for the inner input, such as keyboard, paste, focus, and selection handlers, and a className that merges with Mux UI's. The field owns its value, name, type, accessible name, validation, disabled, readOnly, and required, so inputProps cannot replace them."
+        }
+      ],
+      "refs": ["fields#ControlSize", "fields#FieldInputProps"]
+    },
+    {
+      "id": "fields#TextFieldProps",
+      "name": "TextFieldProps",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "TextFieldProps" }
+      ],
+      "owner": "text-field",
+      "text": "type TextFieldProps = Omit<TextFieldOwnProps, 'label'> & {\n  id?: string;\n  inputRef?: React.Ref<HTMLInputElement>;\n  autoComplete?: React.InputHTMLAttributes<HTMLInputElement>['autoComplete'];\n  autoFocus?: React.InputHTMLAttributes<HTMLInputElement>['autoFocus'];\n  inputMode?: React.InputHTMLAttributes<HTMLInputElement>['inputMode'];\n  maxLength?: React.InputHTMLAttributes<HTMLInputElement>['maxLength'];\n  minLength?: React.InputHTMLAttributes<HTMLInputElement>['minLength'];\n  pattern?: React.InputHTMLAttributes<HTMLInputElement>['pattern'];\n  spellCheck?: React.InputHTMLAttributes<HTMLInputElement>['spellCheck'];\n} & NamedFieldProps;",
+      "refs": ["fields#TextFieldOwnProps", "fields#NamedFieldProps"]
+    }
+  ]
+}

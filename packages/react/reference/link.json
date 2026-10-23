@@ -1,0 +1,186 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "link",
+  "sources": { "button": "packages/react/src/button.ts", "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "Link",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "href",
+              "optional": true,
+              "type": "string",
+              "doc": "Where the Link leads. A Link without a non-empty href is disabled."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the Link. Left unset, a Link inside a disabled GridList item is disabled too."
+            },
+            {
+              "name": "current",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the Link as the current page."
+            },
+            {
+              "name": "target",
+              "optional": true,
+              "type": "string",
+              "doc": "Where to open the destination, as the native target attribute."
+            },
+            {
+              "name": "rel",
+              "optional": true,
+              "type": "string",
+              "doc": "How the destination relates to this page, as the native rel attribute."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: LinkActivationEvent) => void",
+              "refs": ["components#LinkActivationEvent"],
+              "doc": "Reports an activation of the Link, in addition to following its href."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLElement>",
+              "omit": [
+                "href",
+                "disabled",
+                "current",
+                "target",
+                "rel",
+                "onActivate",
+                "children",
+                "className",
+                "onClick"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "components#LinkActivationEvent",
+      "name": "LinkActivationEvent",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "LinkActivationEvent" }
+      ],
+      "owner": "link",
+      "text": "interface LinkActivationEvent {\n  readonly type: 'activate';\n  readonly pointerType: ButtonPointerType;\n  readonly target: HTMLAnchorElement;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        {
+          "name": "pointerType",
+          "readonly": true,
+          "type": "ButtonPointerType",
+          "refs": ["button#ButtonPointerType"]
+        },
+        { "name": "target", "readonly": true, "type": "HTMLAnchorElement" }
+      ],
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "components#LinkOwnProps",
+      "name": "LinkOwnProps",
+      "module": "components",
+      "text": "interface LinkOwnProps {\n  href?: string;\n  disabled?: boolean;\n  current?: boolean;\n  target?: string;\n  rel?: string;\n  onActivate?: (event: LinkActivationEvent) => void;\n}",
+      "members": [
+        {
+          "name": "href",
+          "optional": true,
+          "type": "string",
+          "doc": "Where the Link leads. A Link without a non-empty href is disabled."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the Link. Left unset, a Link inside a disabled GridList item is disabled too."
+        },
+        {
+          "name": "current",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the Link as the current page."
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "type": "string",
+          "doc": "Where to open the destination, as the native target attribute."
+        },
+        {
+          "name": "rel",
+          "optional": true,
+          "type": "string",
+          "doc": "How the destination relates to this page, as the native rel attribute."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: LinkActivationEvent) => void",
+          "refs": ["components#LinkActivationEvent"],
+          "doc": "Reports an activation of the Link, in addition to following its href."
+        }
+      ],
+      "refs": ["components#LinkActivationEvent"]
+    },
+    {
+      "id": "components#LinkProps",
+      "name": "LinkProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "LinkProps" }
+      ],
+      "owner": "link",
+      "extends": [
+        {
+          "type": "LinkOwnProps",
+          "refs": ["components#LinkOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className' | 'onClick'>",
+          "refs": ["components#LinkOwnProps"]
+        }
+      ],
+      "text": "interface LinkProps extends LinkOwnProps, Omit<React.HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className' | 'onClick'> {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#LinkOwnProps"]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "progress-bar",
+  "sources": { "components": "packages/react/src/components.ts" },
+  "exports": [
+    {
+      "name": "ProgressBar",
+      "entry": ".",
+      "module": "components",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "number",
+              "doc": "How far the task has got, within the range. Omitted, the bar is indeterminate and shows the text Loading."
+            },
+            {
+              "name": "minValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The bottom of the range."
+            },
+            {
+              "name": "maxValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The top of the range."
+            },
+            { "name": "label", "type": "React.ReactNode", "doc": "The visible name of the task." },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["value", "minValue", "maxValue", "label", "children", "className"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "components#ProgressBarOwnProps",
+      "name": "ProgressBarOwnProps",
+      "module": "components",
+      "text": "interface ProgressBarOwnProps {\n  value?: number;\n  minValue?: number;\n  maxValue?: number;\n  label: React.ReactNode;\n}",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "number",
+          "doc": "How far the task has got, within the range. Omitted, the bar is indeterminate and shows the text Loading."
+        },
+        {
+          "name": "minValue",
+          "optional": true,
+          "type": "number",
+          "doc": "The bottom of the range."
+        },
+        { "name": "maxValue", "optional": true, "type": "number", "doc": "The top of the range." },
+        { "name": "label", "type": "React.ReactNode", "doc": "The visible name of the task." }
+      ]
+    },
+    {
+      "id": "components#ProgressBarProps",
+      "name": "ProgressBarProps",
+      "module": "components",
+      "public": [
+        { "entry": ".", "name": "ProgressBarProps" }
+      ],
+      "owner": "progress-bar",
+      "extends": [
+        {
+          "type": "ProgressBarOwnProps",
+          "refs": ["components#ProgressBarOwnProps"]
+        },
+        {
+          "type": "Omit<React.HTMLAttributes<HTMLDivElement>, keyof ProgressBarOwnProps | 'children' | 'className'>",
+          "refs": ["components#ProgressBarOwnProps"]
+        }
+      ],
+      "text": "interface ProgressBarProps extends ProgressBarOwnProps, Omit<React.HTMLAttributes<HTMLDivElement>, keyof ProgressBarOwnProps | 'children' | 'className'> {\n  className?: string;\n}",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["components#ProgressBarOwnProps"]
+    }
+  ]
+}

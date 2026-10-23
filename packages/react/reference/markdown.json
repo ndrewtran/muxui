@@ -1,0 +1,120 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "markdown",
+  "sources": { "markdown": "packages/react/src/markdown/index.ts" },
+  "exports": [
+    {
+      "name": "MARKDOWN_DEPTH_LIMIT",
+      "entry": "./markdown",
+      "module": "markdown",
+      "kind": "value",
+      "doc": "Deepest accepted nesting of block and inline structure.",
+      "type": "number"
+    },
+    {
+      "name": "MARKDOWN_LINE_LENGTH_LIMIT",
+      "entry": "./markdown",
+      "module": "markdown",
+      "kind": "value",
+      "doc": "Longest accepted single line, in UTF-16 code units.",
+      "type": "number"
+    },
+    {
+      "name": "MARKDOWN_LINE_LIMIT",
+      "entry": "./markdown",
+      "module": "markdown",
+      "kind": "value",
+      "doc": "Most lines accepted in a source. A trailing newline starts a final blank line.",
+      "type": "number"
+    },
+    {
+      "name": "MARKDOWN_NODE_LIMIT",
+      "entry": "./markdown",
+      "module": "markdown",
+      "kind": "value",
+      "doc": "Most parsed nodes accepted.",
+      "type": "number"
+    },
+    {
+      "name": "MARKDOWN_SOURCE_LIMIT",
+      "entry": "./markdown",
+      "module": "markdown",
+      "kind": "value",
+      "doc": "Longest accepted source, in UTF-16 code units.",
+      "type": "number"
+    },
+    {
+      "name": "Markdown",
+      "entry": "./markdown",
+      "module": "markdown",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "source",
+              "type": "string",
+              "doc": "The Markdown to render. Raw HTML is dropped, and a source over one of the exported limits is replaced by invalidFallback."
+            },
+            {
+              "name": "baseUrl",
+              "optional": true,
+              "type": "string",
+              "doc": "The absolute HTTP(S) URL, with no username or password, that relative links and images resolve against. Without it, relative links and images are not allowed."
+            },
+            {
+              "name": "invalidFallback",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "What replaces the whole content when baseUrl is invalid or the source fails a limit."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "markdown#MarkdownOwnProps",
+      "name": "MarkdownOwnProps",
+      "module": "markdown",
+      "text": "type MarkdownOwnProps = {\n  source: string;\n  baseUrl?: string;\n  invalidFallback?: React.ReactNode;\n};",
+      "members": [
+        {
+          "name": "source",
+          "type": "string",
+          "doc": "The Markdown to render. Raw HTML is dropped, and a source over one of the exported limits is replaced by invalidFallback."
+        },
+        {
+          "name": "baseUrl",
+          "optional": true,
+          "type": "string",
+          "doc": "The absolute HTTP(S) URL, with no username or password, that relative links and images resolve against. Without it, relative links and images are not allowed."
+        },
+        {
+          "name": "invalidFallback",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "What replaces the whole content when baseUrl is invalid or the source fails a limit."
+        }
+      ]
+    },
+    {
+      "id": "markdown#MarkdownProps",
+      "name": "MarkdownProps",
+      "module": "markdown",
+      "public": [
+        { "entry": "./markdown", "name": "MarkdownProps" }
+      ],
+      "owner": "markdown",
+      "text": "type MarkdownProps = React.HTMLAttributes<HTMLDivElement> & MarkdownOwnProps;",
+      "refs": ["markdown#MarkdownOwnProps"]
+    }
+  ]
+}

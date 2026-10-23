@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -51,6 +51,7 @@ import {
   reuseRecord,
 } from '../src/ci-reuse.mjs';
 import { componentTestSelection, isBrowserTestFile, testNamePattern } from '../src/component-test-selection.mjs';
+import { verifyGenerationState } from '../src/generation-proof.mjs';
 import { loadPolicy } from '../src/policy.mjs';
 import { dependencyClosure, familyRecordsFromContract } from '../src/scoped-verification.mjs';
 import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
@@ -1539,6 +1540,196 @@ test('a derived API routes like its family\'s component record', async () => {
   assert.ok(derived.reasons.includes(`${path} is the derived API of Tree; validate it like the canonical component record`));
   assert.equal(needsStorybookGeneration([path], {}), true);
   await assert.rejects(plan(['packages/react/api/missing.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: packages\/react\/api\/missing\.json/u);
+});
+
+test('a model-only change to the declaration reference plans the docs and Storybook generation and checks', async () => {
+  const family = await plan(['packages/react/reference/tree.json']);
+  const record = await plan(['catalog/components/tree/artifact.json']);
+  for (const field of ['reactFamilies', 'storyFamilies', 'catalog', 'docs', 'storyTooling', 'storyUnitTests', 'packageChecks']) {
+    assert.deepEqual(family[field], record[field], field);
+  }
+  assert.ok(family.reasons.includes('packages/react/reference/tree.json is the declaration reference of Tree; validate it like the canonical component record'));
+  assert.equal(needsStorybookGeneration(['packages/react/reference/tree.json'], {}), true);
+  assert.ok(family.reactTestFiles.includes('test/declaration-reference.test.mjs'));
+  assert.ok(existsSync(resolve(repositoryRoot, 'packages/react', 'test/declaration-reference.test.mjs')));
+
+  // The files no family owns reach every component page.
+  for (const name of ['inventory', 'package-level', 'shared']) {
+    const path = `packages/react/reference/${name}.json`;
+    const shared = await plan([path]);
+    assert.equal(shared.docs, true, path);
+    assert.equal(shared.storyTooling, true, path);
+    assert.deepEqual(shared.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree'], path);
+    assert.ok(shared.reactTestFiles.includes('test/declaration-reference.test.mjs'), path);
+    assert.equal(needsStorybookGeneration([path], {}), true, path);
+  }
+  await assert.rejects(plan(['packages/react/reference/missing.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: packages\/react\/reference\/missing\.json/u);
+
+  // The plan runs the docs check and Storybook generation, not only the React package.
+  const commands = executionCommands(family, { packages }).map(({ args }) => args.join(' '));
+  assert.ok(commands.includes('--filter @muxui/docs run check'), commands.join('\n'));
+  assert.ok(commands.some((command) => command.includes('@muxui/react-storybook')), commands.join('\n'));
+});
+
+// A stale committed reference file is rewritten by the generation every group runs first, so no check after it can
+// see the staleness. Only the clean-checkout proof, which generates in a clone of HEAD and fails when generation
+// changes a committed file, can. These tests run the planned react group through the executor, with a runner that
+// stands in for pnpm: generation is the real writer of reference/ (in a child process, since the executor is
+// synchronous), the proof is the real git status of a clean clone fed to the real verifyGenerationState, and every
+// other command passes, as it would on the repaired tree.
+const referenceSource = resolve(repositoryRoot, 'packages/react/reference');
+const referenceWriter = resolve(repositoryRoot, 'packages/react/reference-reader/sync.mjs');
+// Git run for a temporary repository must not inherit the GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE of whatever started the
+// tests (a hook, or `git rebase --exec`): they would point `git init` and `git config` at the real repository.
+const temporaryRepositoryEnvironment = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')));
+const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: temporaryRepositoryEnvironment });
+
+function generateReference(root) {
+  // The fresh files are the ones committed at HEAD, which the React freshness test holds equal to a fresh read.
+  execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import { readFileSync, readdirSync } from 'node:fs';
+    import { join } from 'node:path';
+    import { syncFiles } from ${JSON.stringify(referenceWriter)};
+    const expected = new Map(readdirSync(${JSON.stringify(referenceSource)}).map((name) => [name, readFileSync(join(${JSON.stringify(referenceSource)}, name), 'utf8')]));
+    await syncFiles({ directory: join(process.argv[1], 'packages/react/reference'), expected, checking: false });
+  `, root]);
+}
+
+/** A repository whose HEAD holds the reference after `stale` has changed it. */
+function referenceRepository(stale) {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-scoped-freshness-'));
+  git(root, 'init', '-q');
+  git(root, 'config', 'user.email', 'test@example.invalid');
+  git(root, 'config', 'user.name', 'test');
+  cpSync(referenceSource, join(root, 'packages/react/reference'), { recursive: true });
+  stale(join(root, 'packages/react/reference'));
+  git(root, 'add', '-A');
+  git(root, 'commit', '-q', '-m', 'committed reference');
+  return root;
+}
+
+/** Runs the plan's react group through the executor and returns the exit statuses it reported. */
+function runScopedGroup(result, root, { proof = true } = {}) {
+  const group = executionGroups(result, { packages, environment: {}, pageIndex }).find(({ id }) => id === 'react');
+  const commands = group.commands.filter((command) => proof || command.args.join(' ') !== 'generate:check');
+  const ran = [];
+  const exits = [];
+  executeCommands(commands, {
+    commandRunner: (command) => {
+      const line = [command.command, ...command.args].join(' ');
+      ran.push(line);
+      if (command.prerequisite) { generateReference(root); return 0; }
+      if (line === 'pnpm generate:check') {
+        const clean = mkdtempSync(join(tmpdir(), 'muxui-scoped-freshness-clean-'));
+        try {
+          git(clean, 'clone', '-q', root, '.');
+          generateReference(clean);
+          verifyGenerationState({ firstBeforeFiles: new Map(), firstFiles: new Map(), secondBeforeFiles: new Map(), secondFiles: new Map(), firstStatus: git(clean, 'status', '--porcelain'), secondStatus: '' });
+          return 0;
+        } catch (error) {
+          if (!/GENERATION_WORKTREE_DIRTY/u.test(error.message)) throw error;
+          return 1;
+        } finally {
+          rmSync(clean, { recursive: true, force: true });
+        }
+      }
+      return 0;
+    },
+    log: () => {},
+    logError: () => {},
+    exit: (status) => exits.push(status),
+  });
+  return { ran, exits };
+}
+
+const referencePath = 'packages/react/reference/tree.json';
+// Reordering two theme presets reorders the generated MuxUIStandardThemeId union, and so changes package-level.json.
+const swapPresets = (text) => text.replaceAll('standard-harbour', '\0').replaceAll('standard-lagoon', 'standard-harbour').replaceAll('\0', 'standard-lagoon');
+const STALE_REFERENCES = [
+  ['a hand-edited file', (directory) => writeFileSync(join(directory, 'tree.json'), `${readFileSync(join(directory, 'tree.json'), 'utf8')} `)],
+  ['a deleted file', (directory) => unlinkSync(join(directory, 'tree.json'))],
+  ['an extra file', (directory) => writeFileSync(join(directory, 'removed-family.json'), '{}\n')],
+  ['two reordered theme presets', (directory) => writeFileSync(join(directory, 'package-level.json'), swapPresets(readFileSync(join(directory, 'package-level.json'), 'utf8')))],
+];
+// What the change names: the reference itself, the React source whose declarations the reference describes, or the
+// theme presets that are generated into themes.d.ts.
+const SCOPED_CHANGES = [
+  ['a reference file', () => plan([referencePath])],
+  ['React source', () => plan([collectionsPath], treeRuntimeChange)],
+  ['the theme presets', () => plan(['catalog/tokens/default-theme.json'])],
+  ['the token compiler', () => plan(['packages/tokens/src/index.mjs'])],
+];
+
+test('the scoped route generates, then proves a clean checkout generates the committed reference', async () => {
+  for (const [change, planned] of SCOPED_CHANGES) {
+    const group = executionGroups(await planned(), { packages, environment: {}, pageIndex }).find(({ id }) => id === 'react');
+    const lines = group.commands.map((command) => [command.command, ...command.args].join(' '));
+    assert.equal(group.commands[0].prerequisite, true, change);
+    assert.ok(lines.indexOf('pnpm generate:check') > 0, `${change} plans the clean-checkout proof after generation`);
+  }
+  // A change to the catalog record alone does not touch the declarations or the reference, so it plans no such proof.
+  const record = executionGroups(await plan(['catalog/components/tree/artifact.json']), { packages, environment: {}, pageIndex });
+  const rootProof = (command) => command.command === 'pnpm' && command.args.join(' ') === 'generate:check';
+  assert.ok(!record.some(({ commands }) => commands.some(rootProof)));
+});
+
+for (const [stale, makeStale] of STALE_REFERENCES) {
+  for (const [change, planned] of SCOPED_CHANGES) {
+    test(`the scoped route fails ${stale} when the change is ${change}`, async () => {
+      const root = referenceRepository(makeStale);
+      try {
+        const result = await planned();
+        assert.deepEqual(runScopedGroup(result, root).exits.length, 1, 'the proof fails the group');
+        // Without the proof, generation repairs the file and every other command passes: the gap this closes.
+        assert.deepEqual(runScopedGroup(result, root, { proof: false }).exits, []);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+  }
+}
+
+// Everything generation reads to write a shipped declaration, or to say which family owns it. A change to any of
+// them can change the reference while the repaired working tree still passes every check, so each plans the proof.
+const reactManifest = (devDependencies) => JSON.stringify({ name: '@muxui/react', exports: {}, devDependencies });
+const DECLARATION_INPUTS = [
+  ['the theme presets', () => plan(['catalog/tokens/default-theme.json'])],
+  ['the token compiler', () => plan(['packages/tokens/src/index.mjs'])],
+  ['a module that becomes declarations', () => plan([collectionsPath], treeRuntimeChange)],
+  ['the declarations beside a JavaScript module', () => plan(['packages/react/src/list-box.d.ts'])],
+  ['the supplemental declarations', () => plan(['packages/react/src/supplemental/index.d.ts'])],
+  ['the declaration build configuration', () => plan(['packages/react/tsconfig.build.json'])],
+  ['the generator', () => plan(['packages/react/src/generate.mjs'], { moduleSources: { 'packages/react/src/generate.mjs': { before: 'export {};', after: 'export {}; // changed' } } })],
+  ['the family closure', () => plan(['catalog/react-r1-5/closure.json'])],
+  ['the supplemental mapping', () => plan(['catalog/react-r1-6/supplemental-mapping.json'])],
+  ['the reader', () => plan(['packages/react/reference-reader/expand.mjs'])],
+  ['the compilers the package pins', () => plan(['packages/react/package.json'], { reactPackageBefore: reactManifest({ typescript: '6.0.0' }), reactPackageAfter: reactManifest({ typescript: '6.0.1' }) })],
+];
+for (const [input, planned] of DECLARATION_INPUTS) {
+  test(`the scoped route proves a clean checkout generates the committed reference when ${input} changes`, async () => {
+    const groups = executionGroups(await planned(), { packages, environment: {}, pageIndex });
+    const proof = groups.flatMap(({ id, commands }) => commands.map((command) => [id, command]))
+      .filter(([, command]) => command.command === 'pnpm' && command.args.join(' ') === 'generate:check');
+    assert.equal(proof.length, 1, `${input} plans the root generate:check once`);
+    assert.equal(proof[0][0], 'react');
+  });
+}
+
+test('the scoped route passes a reference that is current', async () => {
+  const root = referenceRepository(() => {});
+  try {
+    for (const [, planned] of SCOPED_CHANGES) {
+      const { ran, exits } = runScopedGroup(await planned(), root);
+      assert.ok(ran.includes('pnpm generate:check'));
+      assert.deepEqual(exits, []);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a reference file no component owns is refused when the plan is made', async () => {
+  await assert.rejects(plan(['packages/react/reference/removed-family.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: packages\/react\/reference\/removed-family\.json/u);
 });
 
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {

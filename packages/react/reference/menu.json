@@ -1,0 +1,829 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "menu",
+  "sources": {
+    "button": "packages/react/src/button.ts",
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "menu": "packages/react/src/menu.ts",
+    "overlays": "packages/react/src/overlays.ts"
+  },
+  "exports": [
+    {
+      "name": "Menu",
+      "entry": ".",
+      "module": "menu",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every item and stops the action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+            },
+            {
+              "name": "shouldCloseOnSelect",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether choosing an item closes the menu, in place of the root's setting. A Menu.Item can still set its own."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+            },
+            {
+              "name": "onSelect",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called with the same item as `onAction`, right after it."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "alternatives": [
+            {
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "members": [
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "type": "string" }
+              ]
+            }
+          ]
+        },
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the menu is open, when the caller controls it. A disabled menu is closed whatever this says."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the menu starts open, when it controls itself."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Called with the next open state when the menu opens or closes. It is not called for a request to open a disabled menu."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the trigger and every item. A child's own `disabled={false}` cannot re-enable them under a disabled root."
+            },
+            {
+              "name": "shouldCloseOnSelect",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether choosing an item closes the menu. A Menu.List or Menu.Item can set its own, which wins over this."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called when the user activates an item in any list of the menu, after the item's own `onAction` and the list's callbacks. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the menu is disabled."
+            },
+            {
+              "name": "onSelect",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called with the same item as `onAction`, right after it."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onSelect"]
+            }
+          ]
+        },
+        {
+          "member": "Trigger",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "disabled",
+              "optional": true,
+              "explicitUndefined": true,
+              "type": "boolean | undefined",
+              "doc": "Disables the trigger: it can be neither focused nor activated. A disabled menu disables it whatever this says."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: ButtonActivationEvent) => void",
+              "refs": ["button#ButtonActivationEvent"],
+              "doc": "Called when the user activates the trigger, before the menu opens or closes. It is not called while the trigger is disabled."
+            }
+          ],
+          "ref": { "type": "HTMLButtonElement" },
+          "natives": [
+            { "type": "React.ButtonHTMLAttributes<HTMLButtonElement>" }
+          ]
+        },
+        {
+          "member": "Popup",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "placement",
+              "optional": true,
+              "type": "MuxUIPlacement",
+              "values": [
+                "top",
+                "bottom",
+                "start",
+                "end",
+                "top-start",
+                "top-end",
+                "bottom-start",
+                "bottom-end",
+                "start-top",
+                "start-bottom",
+                "end-top",
+                "end-bottom"
+              ],
+              "refs": ["overlays#MuxUIPlacement"],
+              "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`, and a popup inside a Menu.Submenu opens beside its item at `end-top`."
+            },
+            {
+              "name": "offset",
+              "optional": true,
+              "type": "number",
+              "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite."
+            },
+            {
+              "name": "crossOffset",
+              "optional": true,
+              "type": "number",
+              "doc": "The shift in pixels along the side the popup is placed against. Must be finite."
+            },
+            {
+              "name": "shouldFlip",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup moves to the opposite side when the placed side has no room."
+            },
+            {
+              "name": "containerPadding",
+              "optional": true,
+              "type": "number",
+              "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative."
+            },
+            {
+              "name": "modal",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible."
+            },
+            { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "List",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "items",
+              "optional": true,
+              "type": "MuxUIItems",
+              "refs": ["collection-items#MuxUIItems"],
+              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables every item and stops the action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+            },
+            {
+              "name": "shouldCloseOnSelect",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether choosing an item closes the menu, in place of the root's setting. A Menu.Item can still set its own."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+            },
+            {
+              "name": "onSelect",
+              "optional": true,
+              "type": "(item?: MuxUICollectionItem) => void",
+              "refs": ["collection-items#MuxUICollectionItem"],
+              "doc": "Called with the same item as `onAction`, right after it."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "aria-label", "optional": true, "type": "string" },
+            { "name": "aria-labelledby", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        },
+        {
+          "member": "Item",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "id",
+              "type": "string",
+              "doc": "The stable string id the action callbacks report."
+            },
+            {
+              "name": "textValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the item. A disabled list or menu disables every item whatever this says."
+            },
+            {
+              "name": "onAction",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called when the user activates the item, before the list's and the root's callbacks. It is not called while the item is disabled."
+            },
+            {
+              "name": "shouldCloseOnSelect",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether choosing this item closes the menu, in place of the list's and the root's setting. Left unset, the item follows them."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["id"]
+            }
+          ]
+        },
+        {
+          "member": "Submenu",
+          "form": "function",
+          "members": [
+            {
+              "name": "delay",
+              "optional": true,
+              "type": "number",
+              "doc": "How long in milliseconds the pointer rests on the submenu's item before the submenu opens. Must be finite and not negative."
+            },
+            { "name": "children", "type": "React.ReactNode" }
+          ],
+          "ref": null
+        },
+        {
+          "member": "Section",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "title",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The visible heading of the section, rendered in a Menu.Header. Without one, name the section with `aria-label`."
+            }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLElement>",
+              "omit": ["title"]
+            }
+          ]
+        },
+        {
+          "member": "Header",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Separator",
+          "form": "forwardRef",
+          "members": [],
+          "ref": { "type": "HTMLHRElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLHRElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "button#ButtonActivationEvent",
+      "name": "ButtonActivationEvent",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonActivationEvent" }
+      ],
+      "owner": "button",
+      "text": "interface ButtonActivationEvent {\n  readonly type: 'activate';\n  readonly pointerType: ButtonPointerType;\n  readonly target: HTMLButtonElement;\n}",
+      "members": [
+        {
+          "name": "type",
+          "readonly": true,
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        {
+          "name": "pointerType",
+          "readonly": true,
+          "type": "ButtonPointerType",
+          "refs": ["button#ButtonPointerType"]
+        },
+        { "name": "target", "readonly": true, "type": "HTMLButtonElement" }
+      ],
+      "refs": ["button#ButtonPointerType"]
+    },
+    {
+      "id": "button#ButtonPointerType",
+      "name": "ButtonPointerType",
+      "module": "button",
+      "public": [
+        { "entry": ".", "name": "ButtonPointerType" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
+    },
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "fields#MuxUIAriaAccessibleName",
+      "name": "MuxUIAriaAccessibleName",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaAccessibleName" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
+    },
+    {
+      "id": "menu#MenuItemOwnProps",
+      "name": "MenuItemOwnProps",
+      "module": "menu",
+      "text": "type MenuItemOwnProps = {\n  id: string;\n  textValue?: string;\n  disabled?: boolean;\n  onAction?: () => void;\n  shouldCloseOnSelect?: boolean;\n};",
+      "members": [
+        {
+          "name": "id",
+          "type": "string",
+          "doc": "The stable string id the action callbacks report."
+        },
+        {
+          "name": "textValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text typeahead matches. Without one it is the text of the item's children, which is unambiguous only for plain text, so give rich children a `textValue`."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the item. A disabled list or menu disables every item whatever this says."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Called when the user activates the item, before the list's and the root's callbacks. It is not called while the item is disabled."
+        },
+        {
+          "name": "shouldCloseOnSelect",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether choosing this item closes the menu, in place of the list's and the root's setting. Left unset, the item follows them."
+        }
+      ]
+    },
+    {
+      "id": "menu#MenuItemProps",
+      "name": "MenuItemProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuItemProps" }
+      ],
+      "owner": "menu",
+      "text": "type MenuItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'id'> & MenuItemOwnProps;",
+      "refs": ["menu#MenuItemOwnProps"]
+    },
+    {
+      "id": "menu#MenuListOwnProps",
+      "name": "MenuListOwnProps",
+      "module": "menu",
+      "text": "type MenuListOwnProps = {\n  items?: MuxUIItems;\n  disabled?: boolean;\n  shouldCloseOnSelect?: boolean;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every item and stops the action callbacks. An item's own `disabled={false}` cannot re-enable it under a disabled list."
+        },
+        {
+          "name": "shouldCloseOnSelect",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether choosing an item closes the menu, in place of the root's setting. A Menu.Item can still set its own."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+        },
+        {
+          "name": "onSelect",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called with the same item as `onAction`, right after it."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "menu#MenuListProps",
+      "name": "MenuListProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuListProps" }
+      ],
+      "owner": "menu",
+      "extends": [
+        {
+          "type": "MenuListOwnProps",
+          "refs": ["menu#MenuListOwnProps"]
+        }
+      ],
+      "text": "type MenuListProps = MenuListOwnProps & {\n  children?: React.ReactNode;\n  className?: string;\n} & {\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n};",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "aria-label", "optional": true, "type": "string" },
+        { "name": "aria-labelledby", "optional": true, "type": "string" }
+      ],
+      "refs": ["menu#MenuListOwnProps"]
+    },
+    {
+      "id": "menu#MenuOwnProps",
+      "name": "MenuOwnProps",
+      "module": "menu",
+      "text": "type MenuOwnProps = {\n  open?: boolean;\n  defaultOpen?: boolean;\n  onOpenChange?: (open: boolean) => void;\n  disabled?: boolean;\n  shouldCloseOnSelect?: boolean;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
+      "members": [
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the menu is open, when the caller controls it. A disabled menu is closed whatever this says."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the menu starts open, when it controls itself."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Called with the next open state when the menu opens or closes. It is not called for a request to open a disabled menu."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the trigger and every item. A child's own `disabled={false}` cannot re-enable them under a disabled root."
+        },
+        {
+          "name": "shouldCloseOnSelect",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether choosing an item closes the menu. A Menu.List or Menu.Item can set its own, which wins over this."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called when the user activates an item in any list of the menu, after the item's own `onAction` and the list's callbacks. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the menu is disabled."
+        },
+        {
+          "name": "onSelect",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called with the same item as `onAction`, right after it."
+        }
+      ],
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "menu#MenuPopupOwnProps",
+      "name": "MenuPopupOwnProps",
+      "module": "menu",
+      "text": "type MenuPopupOwnProps = {\n  placement?: MuxUIPlacement;\n  offset?: number;\n  crossOffset?: number;\n  shouldFlip?: boolean;\n  containerPadding?: number;\n  modal?: boolean;\n};",
+      "members": [
+        {
+          "name": "placement",
+          "optional": true,
+          "type": "MuxUIPlacement",
+          "values": [
+            "top",
+            "bottom",
+            "start",
+            "end",
+            "top-start",
+            "top-end",
+            "bottom-start",
+            "bottom-end",
+            "start-top",
+            "start-bottom",
+            "end-top",
+            "end-bottom"
+          ],
+          "refs": ["overlays#MuxUIPlacement"],
+          "doc": "Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`, and a popup inside a Menu.Submenu opens beside its item at `end-top`."
+        },
+        {
+          "name": "offset",
+          "optional": true,
+          "type": "number",
+          "doc": "The distance in pixels between the popup and its trigger, along the placement's side. Must be finite."
+        },
+        {
+          "name": "crossOffset",
+          "optional": true,
+          "type": "number",
+          "doc": "The shift in pixels along the side the popup is placed against. Must be finite."
+        },
+        {
+          "name": "shouldFlip",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the popup moves to the opposite side when the placed side has no room."
+        },
+        {
+          "name": "containerPadding",
+          "optional": true,
+          "type": "number",
+          "doc": "The least distance in pixels between the popup and the edge of the viewport. Must be finite and not negative."
+        },
+        {
+          "name": "modal",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the rest of the page is made inaccessible while the popup is open. When false, outside content stays accessible."
+        }
+      ],
+      "refs": ["overlays#MuxUIPlacement"]
+    },
+    {
+      "id": "menu#MenuPopupProps",
+      "name": "MenuPopupProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuPopupProps" }
+      ],
+      "owner": "menu",
+      "text": "type MenuPopupProps = React.HTMLAttributes<HTMLDivElement> & MenuPopupOwnProps & {\n  anchorRef?: React.RefObject<Element | null>;\n};",
+      "refs": ["menu#MenuPopupOwnProps"]
+    },
+    {
+      "id": "menu#MenuProps",
+      "name": "MenuProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuProps" }
+      ],
+      "owner": "menu",
+      "extends": [
+        {
+          "type": "MenuListOwnProps",
+          "refs": ["menu#MenuListOwnProps"]
+        },
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type MenuProps = MenuListOwnProps & {\n  children?: React.ReactNode;\n  className?: string;\n} & MuxUIAriaAccessibleName;",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": ["menu#MenuListOwnProps", "fields#MuxUIAriaAccessibleName"]
+    },
+    {
+      "id": "menu#MenuRootProps",
+      "name": "MenuRootProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuRootProps" }
+      ],
+      "owner": "menu",
+      "text": "type MenuRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> & MenuOwnProps;",
+      "refs": ["menu#MenuOwnProps"]
+    },
+    {
+      "id": "menu#MenuSectionOwnProps",
+      "name": "MenuSectionOwnProps",
+      "module": "menu",
+      "text": "type MenuSectionOwnProps = {\n  title?: React.ReactNode;\n};",
+      "members": [
+        {
+          "name": "title",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The visible heading of the section, rendered in a Menu.Header. Without one, name the section with `aria-label`."
+        }
+      ]
+    },
+    {
+      "id": "menu#MenuSectionProps",
+      "name": "MenuSectionProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuSectionProps" }
+      ],
+      "owner": "menu",
+      "text": "type MenuSectionProps = Omit<React.HTMLAttributes<HTMLElement>, 'title'> & MenuSectionOwnProps;",
+      "refs": ["menu#MenuSectionOwnProps"]
+    },
+    {
+      "id": "menu#MenuSubmenuOwnProps",
+      "name": "MenuSubmenuOwnProps",
+      "module": "menu",
+      "text": "type MenuSubmenuOwnProps = {\n  delay?: number;\n};",
+      "members": [
+        {
+          "name": "delay",
+          "optional": true,
+          "type": "number",
+          "doc": "How long in milliseconds the pointer rests on the submenu's item before the submenu opens. Must be finite and not negative."
+        }
+      ]
+    },
+    {
+      "id": "menu#MenuSubmenuProps",
+      "name": "MenuSubmenuProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuSubmenuProps" }
+      ],
+      "owner": "menu",
+      "extends": [
+        {
+          "type": "MenuSubmenuOwnProps",
+          "refs": ["menu#MenuSubmenuOwnProps"]
+        }
+      ],
+      "text": "type MenuSubmenuProps = MenuSubmenuOwnProps & {\n  children: React.ReactNode;\n};",
+      "members": [
+        { "name": "children", "type": "React.ReactNode" }
+      ],
+      "refs": ["menu#MenuSubmenuOwnProps"]
+    },
+    {
+      "id": "menu#MenuTriggerOwnProps",
+      "name": "MenuTriggerOwnProps",
+      "module": "menu",
+      "text": "type MenuTriggerOwnProps = {\n  disabled?: boolean | undefined;\n  onActivate?: (event: ButtonActivationEvent) => void;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "explicitUndefined": true,
+          "type": "boolean | undefined",
+          "doc": "Disables the trigger: it can be neither focused nor activated. A disabled menu disables it whatever this says."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: ButtonActivationEvent) => void",
+          "refs": ["button#ButtonActivationEvent"],
+          "doc": "Called when the user activates the trigger, before the menu opens or closes. It is not called while the trigger is disabled."
+        }
+      ],
+      "refs": ["button#ButtonActivationEvent"]
+    },
+    {
+      "id": "menu#MenuTriggerProps",
+      "name": "MenuTriggerProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuTriggerProps" }
+      ],
+      "owner": "menu",
+      "text": "type MenuTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & MenuTriggerOwnProps;",
+      "refs": ["menu#MenuTriggerOwnProps"]
+    },
+    {
+      "id": "overlays#MuxUIPlacement",
+      "name": "MuxUIPlacement",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "MuxUIPlacement" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end' | 'start-top' | 'start-bottom' | 'end-top' | 'end-bottom';",
+      "values": [
+        "top",
+        "bottom",
+        "start",
+        "end",
+        "top-start",
+        "top-end",
+        "bottom-start",
+        "bottom-end",
+        "start-top",
+        "start-bottom",
+        "end-top",
+        "end-bottom"
+      ]
+    }
+  ]
+}

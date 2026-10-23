@@ -1,0 +1,195 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "package-level",
+  "sources": {
+    "index": "packages/react/src/generate.mjs",
+    "supplemental": "packages/react/src/supplemental/index.d.ts",
+    "themes": "packages/react/src/generate.mjs"
+  },
+  "exports": [
+    {
+      "name": "reactCompatibility",
+      "entry": ".",
+      "module": "index",
+      "kind": "value",
+      "type": "Readonly<Record<string, unknown>>"
+    },
+    {
+      "name": "supplementalFamilies",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "value",
+      "type": "readonly ['AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text']"
+    },
+    {
+      "name": "MUXUI_DEFAULT_THEME_PRESET_ID",
+      "entry": "./themes",
+      "module": "themes",
+      "kind": "value",
+      "type": "MuxUIThemeId",
+      "refs": ["themes#MuxUIThemeId"]
+    },
+    {
+      "name": "MUXUI_THEME_PRESETS",
+      "entry": "./themes",
+      "module": "themes",
+      "kind": "value",
+      "type": "readonly MuxUIThemePreset[]",
+      "refs": ["themes#MuxUIThemePreset"]
+    },
+    {
+      "name": "MUXUI_THEME_PRESETS_BY_ID",
+      "entry": "./themes",
+      "module": "themes",
+      "kind": "value",
+      "type": "Readonly<Record<MuxUIThemeId, MuxUIThemePreset>>",
+      "refs": ["themes#MuxUIThemeId", "themes#MuxUIThemePreset"]
+    }
+  ],
+  "types": [
+    {
+      "id": "themes#MuxUIMonochromeThemeId",
+      "name": "MuxUIMonochromeThemeId",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIMonochromeThemeId" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIMonochromeThemeId = 'monochrome-antique' | 'monochrome-forest' | 'monochrome-mauve' | 'monochrome-mountain-meadow' | 'monochrome-rosewater' | 'monochrome-teal' | 'monochrome-terracotta';",
+      "values": [
+        "monochrome-antique",
+        "monochrome-forest",
+        "monochrome-mauve",
+        "monochrome-mountain-meadow",
+        "monochrome-rosewater",
+        "monochrome-teal",
+        "monochrome-terracotta"
+      ]
+    },
+    {
+      "id": "themes#MuxUIStandardThemeId",
+      "name": "MuxUIStandardThemeId",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIStandardThemeId" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIStandardThemeId = 'standard-harbour' | 'standard-lagoon' | 'standard-blueprint' | 'standard-violet-dusk' | 'standard-wildflower' | 'standard-terracotta' | 'standard-amber-grove' | 'standard-fern';",
+      "values": [
+        "standard-harbour",
+        "standard-lagoon",
+        "standard-blueprint",
+        "standard-violet-dusk",
+        "standard-wildflower",
+        "standard-terracotta",
+        "standard-amber-grove",
+        "standard-fern"
+      ]
+    },
+    {
+      "id": "themes#MuxUIThemeCollection",
+      "name": "MuxUIThemeCollection",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIThemeCollection" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIThemeCollection = 'standard' | 'monochrome';",
+      "values": ["standard", "monochrome"]
+    },
+    {
+      "id": "themes#MuxUIThemeId",
+      "name": "MuxUIThemeId",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIThemeId" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIThemeId = MuxUIStandardThemeId | MuxUIMonochromeThemeId;",
+      "values": [
+        "standard-harbour",
+        "standard-lagoon",
+        "standard-blueprint",
+        "standard-violet-dusk",
+        "standard-wildflower",
+        "standard-terracotta",
+        "standard-amber-grove",
+        "standard-fern",
+        "monochrome-antique",
+        "monochrome-forest",
+        "monochrome-mauve",
+        "monochrome-mountain-meadow",
+        "monochrome-rosewater",
+        "monochrome-teal",
+        "monochrome-terracotta"
+      ],
+      "refs": ["themes#MuxUIStandardThemeId", "themes#MuxUIMonochromeThemeId"]
+    },
+    {
+      "id": "themes#MuxUIThemePreset",
+      "name": "MuxUIThemePreset",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIThemePreset" }
+      ],
+      "owner": "package-level",
+      "text": "interface MuxUIThemePreset {\n  readonly id: MuxUIThemeId;\n  readonly presetId: string;\n  readonly name: string;\n  readonly description: string;\n  readonly collection: MuxUIThemeCollection;\n  readonly swatch: MuxUIThemeSwatch;\n}",
+      "members": [
+        {
+          "name": "id",
+          "readonly": true,
+          "type": "MuxUIThemeId",
+          "values": [
+            "standard-harbour",
+            "standard-lagoon",
+            "standard-blueprint",
+            "standard-violet-dusk",
+            "standard-wildflower",
+            "standard-terracotta",
+            "standard-amber-grove",
+            "standard-fern",
+            "monochrome-antique",
+            "monochrome-forest",
+            "monochrome-mauve",
+            "monochrome-mountain-meadow",
+            "monochrome-rosewater",
+            "monochrome-teal",
+            "monochrome-terracotta"
+          ],
+          "refs": ["themes#MuxUIThemeId"]
+        },
+        { "name": "presetId", "readonly": true, "type": "string" },
+        { "name": "name", "readonly": true, "type": "string" },
+        { "name": "description", "readonly": true, "type": "string" },
+        {
+          "name": "collection",
+          "readonly": true,
+          "type": "MuxUIThemeCollection",
+          "values": ["standard", "monochrome"],
+          "refs": ["themes#MuxUIThemeCollection"]
+        },
+        {
+          "name": "swatch",
+          "readonly": true,
+          "type": "MuxUIThemeSwatch",
+          "refs": ["themes#MuxUIThemeSwatch"]
+        }
+      ],
+      "refs": ["themes#MuxUIThemeId", "themes#MuxUIThemeCollection", "themes#MuxUIThemeSwatch"]
+    },
+    {
+      "id": "themes#MuxUIThemeSwatch",
+      "name": "MuxUIThemeSwatch",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIThemeSwatch" }
+      ],
+      "owner": "package-level",
+      "text": "interface MuxUIThemeSwatch {\n  readonly primary: string;\n  readonly secondary: string;\n}",
+      "members": [
+        { "name": "primary", "readonly": true, "type": "string" },
+        { "name": "secondary", "readonly": true, "type": "string" }
+      ]
+    }
+  ]
+}

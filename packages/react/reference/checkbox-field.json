@@ -1,0 +1,179 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "checkbox-field",
+  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "exports": [
+    {
+      "name": "CheckboxField",
+      "entry": ".",
+      "module": "supplemental",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "invalid", "optional": true, "type": "boolean" },
+            { "name": "required", "optional": true, "type": "boolean" },
+            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "size",
+              "optional": true,
+              "type": "'sm' | 'md' | 'lg'",
+              "values": ["sm", "md", "lg"]
+            },
+            { "name": "checked", "optional": true, "type": "boolean" },
+            { "name": "defaultChecked", "optional": true, "type": "boolean" },
+            { "name": "indeterminate", "optional": true, "type": "boolean" },
+            { "name": "name", "optional": true, "type": "string" },
+            { "name": "value", "optional": true, "type": "string" },
+            { "name": "onChange", "optional": true, "type": "(checked: boolean) => void" }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["onChange"]
+            }
+          ]
+        },
+        {
+          "member": "Button",
+          "form": "forwardRef",
+          "members": [
+            { "name": "disabled", "optional": true, "type": "boolean" }
+          ],
+          "ref": { "type": "HTMLLabelElement" },
+          "natives": [
+            { "type": "React.LabelHTMLAttributes<HTMLLabelElement>" }
+          ]
+        },
+        {
+          "member": "Indicator",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
+          "member": "Description",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        },
+        {
+          "member": "Error",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLElement>" }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "supplemental#CheckboxFieldButtonProps",
+      "name": "CheckboxFieldButtonProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CheckboxFieldButtonProps" }
+      ],
+      "owner": "checkbox-field",
+      "text": "type CheckboxFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  disabled?: boolean;\n};"
+    },
+    {
+      "id": "supplemental#CheckboxFieldDescriptionProps",
+      "name": "CheckboxFieldDescriptionProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CheckboxFieldDescriptionProps" }
+      ],
+      "owner": "checkbox-field",
+      "text": "type CheckboxFieldDescriptionProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#CheckboxFieldErrorProps",
+      "name": "CheckboxFieldErrorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CheckboxFieldErrorProps" }
+      ],
+      "owner": "checkbox-field",
+      "text": "type CheckboxFieldErrorProps = PartProps<HTMLElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#CheckboxFieldIndicatorProps",
+      "name": "CheckboxFieldIndicatorProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CheckboxFieldIndicatorProps" }
+      ],
+      "owner": "checkbox-field",
+      "text": "type CheckboxFieldIndicatorProps = PartProps<HTMLSpanElement>;",
+      "refs": ["supplemental#PartProps"]
+    },
+    {
+      "id": "supplemental#CheckboxFieldRootProps",
+      "name": "CheckboxFieldRootProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "CheckboxFieldRootProps" }
+      ],
+      "owner": "checkbox-field",
+      "text": "type CheckboxFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  indeterminate?: boolean;\n  name?: string;\n  value?: string;\n  onChange?: (checked: boolean) => void;\n};",
+      "refs": ["supplemental#SupplementalFieldProps"]
+    },
+    {
+      "id": "supplemental#PartProps",
+      "name": "PartProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "supplemental#SupplementalFieldProps",
+      "name": "SupplementalFieldProps",
+      "module": "supplemental",
+      "public": [
+        { "entry": ".", "name": "SupplementalFieldProps" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        { "name": "invalid", "optional": true, "type": "boolean" },
+        { "name": "required", "optional": true, "type": "boolean" },
+        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"]
+        }
+      ]
+    }
+  ]
+}

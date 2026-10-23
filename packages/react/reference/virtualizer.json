@@ -1,0 +1,292 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "virtualizer",
+  "sources": {
+    "collection-items": "packages/react/src/collection-items.ts",
+    "fields": "packages/react/src/fields.ts",
+    "virtualizer": "packages/react/src/virtualizer.ts"
+  },
+  "exports": [
+    {
+      "name": "Virtualizer",
+      "entry": ".",
+      "module": "virtualizer",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "overscan",
+              "optional": true,
+              "type": "number",
+              "doc": "The rows mounted above and below the visible window, an integer of 0 or more. For a grid they are whole grid rows."
+            }
+          ],
+          "alternatives": [
+            {
+              "ref": { "type": "HTMLDivElement" },
+              "members": [
+                { "name": "aria-label", "type": "string" },
+                {
+                  "name": "items",
+                  "optional": true,
+                  "type": "MuxUIItems",
+                  "refs": ["collection-items#MuxUIItems"],
+                  "doc": "The rows of a stack layout, as strings or items with an `id`, a `label`, a `textValue`, and `disabled`. Stack layout only: a grid takes its items on its GridList."
+                },
+                {
+                  "name": "height",
+                  "optional": true,
+                  "type": "number",
+                  "doc": "The stack viewport's block size in px, a finite number greater than 0. Stack layout only."
+                },
+                {
+                  "name": "itemHeight",
+                  "optional": true,
+                  "type": "number",
+                  "doc": "The fixed height of each stack row in px, a finite number greater than 0. Rows are not measured, so content taller than this overflows into the next row. Stack layout only."
+                },
+                {
+                  "name": "disabled",
+                  "optional": true,
+                  "type": "boolean",
+                  "doc": "Disables every stack row and stops `onScroll`. Stack layout only: a grid disables its GridList instead."
+                },
+                {
+                  "name": "onScroll",
+                  "optional": true,
+                  "type": "React.UIEventHandler<HTMLDivElement>",
+                  "doc": "Called when the stack viewport scrolls. It is not called while the Virtualizer is disabled. Stack layout only."
+                },
+                {
+                  "name": "layout",
+                  "optional": true,
+                  "type": "'stack'",
+                  "values": ["stack"]
+                },
+                { "name": "className", "optional": true, "type": "string" },
+                { "name": "style", "optional": true, "type": "React.CSSProperties" },
+                { "name": "children", "optional": true, "never": true, "type": "never" },
+                { "name": "minItemWidth", "optional": true, "never": true, "type": "never" },
+                { "name": "maxItemWidth", "optional": true, "never": true, "type": "never" },
+                { "name": "estimatedItemHeight", "optional": true, "never": true, "type": "never" },
+                { "name": "maxColumns", "optional": true, "never": true, "type": "never" }
+              ]
+            },
+            {
+              "ref": { "never": true },
+              "members": [
+                {
+                  "name": "minItemWidth",
+                  "optional": true,
+                  "type": "number",
+                  "doc": "Minimum item width in px for a grid, a finite number greater than 0. Default 200."
+                },
+                {
+                  "name": "maxItemWidth",
+                  "optional": true,
+                  "type": "number",
+                  "doc": "Maximum item width in px for a grid, Infinity or a finite number no smaller than `minItemWidth`. Default unbounded, so items stretch to fill their columns."
+                },
+                {
+                  "name": "estimatedItemHeight",
+                  "optional": true,
+                  "type": "number",
+                  "doc": "Estimated height in px of the grid rows that have not mounted yet, a finite number greater than 0. Default 200. Mounted rows take their measured content height."
+                },
+                {
+                  "name": "maxColumns",
+                  "optional": true,
+                  "type": "number",
+                  "doc": "Cap on the number of grid columns, Infinity or an integer greater than 0. Default unbounded. A narrow container shows fewer."
+                },
+                {
+                  "name": "layout",
+                  "type": "'grid'",
+                  "values": ["grid"]
+                },
+                { "name": "children", "type": "React.ReactElement" },
+                { "name": "aria-label", "optional": true, "never": true, "type": "never" },
+                { "name": "aria-labelledby", "optional": true, "never": true, "type": "never" },
+                { "name": "items", "optional": true, "never": true, "type": "never" },
+                { "name": "height", "optional": true, "never": true, "type": "never" },
+                { "name": "itemHeight", "optional": true, "never": true, "type": "never" },
+                { "name": "disabled", "optional": true, "never": true, "type": "never" },
+                { "name": "onScroll", "optional": true, "never": true, "type": "never" },
+                { "name": "className", "optional": true, "never": true, "type": "never" },
+                { "name": "style", "optional": true, "never": true, "type": "never" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "collection-items#MuxUICollectionItem",
+      "name": "MuxUICollectionItem",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUICollectionItem" }
+      ],
+      "owner": "shared",
+      "text": "interface MuxUICollectionItem {\n  id?: string;\n  key?: string;\n  label?: React.ReactNode;\n  value?: string;\n  textValue?: string;\n  disabled?: boolean;\n  [key: string]: unknown;\n}",
+      "members": [
+        { "name": "id", "optional": true, "type": "string" },
+        { "name": "key", "optional": true, "type": "string" },
+        { "name": "label", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+        },
+        { "name": "textValue", "optional": true, "type": "string" },
+        { "name": "disabled", "optional": true, "type": "boolean" }
+      ]
+    },
+    {
+      "id": "collection-items#MuxUIItems",
+      "name": "MuxUIItems",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUIItems" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIItems = (MuxUICollectionItem | string)[];",
+      "refs": ["collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "fields#MuxUIAriaLabel",
+      "name": "MuxUIAriaLabel",
+      "module": "fields",
+      "public": [
+        { "entry": ".", "name": "MuxUIAriaLabel" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUIAriaLabel = {\n  'aria-label': string;\n};",
+      "members": [
+        { "name": "aria-label", "type": "string" }
+      ]
+    },
+    {
+      "id": "virtualizer#VirtualizerGridProps",
+      "name": "VirtualizerGridProps",
+      "module": "virtualizer",
+      "public": [
+        { "entry": ".", "name": "VirtualizerGridProps" }
+      ],
+      "owner": "virtualizer",
+      "text": "type VirtualizerGridProps = Pick<VirtualizerOwnProps, 'minItemWidth' | 'maxItemWidth' | 'estimatedItemHeight' | 'maxColumns' | 'overscan'> & {\n  layout: 'grid';\n  children: React.ReactElement;\n  'aria-label'?: never;\n  'aria-labelledby'?: never;\n  items?: never;\n  height?: never;\n  itemHeight?: never;\n  disabled?: never;\n  onScroll?: never;\n  className?: never;\n  style?: never;\n};",
+      "refs": ["virtualizer#VirtualizerOwnProps"]
+    },
+    {
+      "id": "virtualizer#VirtualizerOwnProps",
+      "name": "VirtualizerOwnProps",
+      "module": "virtualizer",
+      "text": "type VirtualizerOwnProps = {\n  layout?: 'stack' | 'grid';\n  items?: MuxUIItems;\n  height?: number;\n  itemHeight?: number;\n  overscan?: number;\n  disabled?: boolean;\n  onScroll?: React.UIEventHandler<HTMLDivElement>;\n  children?: React.ReactElement;\n  minItemWidth?: number;\n  maxItemWidth?: number;\n  estimatedItemHeight?: number;\n  maxColumns?: number;\n};",
+      "members": [
+        {
+          "name": "layout",
+          "optional": true,
+          "type": "'stack' | 'grid'",
+          "values": ["stack", "grid"],
+          "doc": "`stack`, the default, is a fixed-row list that renders its own items. `grid` wraps one GridList that has layout=\"grid\" and the vertical orientation, and lays it out in measured rows."
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The rows of a stack layout, as strings or items with an `id`, a `label`, a `textValue`, and `disabled`. Stack layout only: a grid takes its items on its GridList."
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "type": "number",
+          "doc": "The stack viewport's block size in px, a finite number greater than 0. Stack layout only."
+        },
+        {
+          "name": "itemHeight",
+          "optional": true,
+          "type": "number",
+          "doc": "The fixed height of each stack row in px, a finite number greater than 0. Rows are not measured, so content taller than this overflows into the next row. Stack layout only."
+        },
+        {
+          "name": "overscan",
+          "optional": true,
+          "type": "number",
+          "doc": "The rows mounted above and below the visible window, an integer of 0 or more. For a grid they are whole grid rows."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables every stack row and stops `onScroll`. Stack layout only: a grid disables its GridList instead."
+        },
+        {
+          "name": "onScroll",
+          "optional": true,
+          "type": "React.UIEventHandler<HTMLDivElement>",
+          "doc": "Called when the stack viewport scrolls. It is not called while the Virtualizer is disabled. Stack layout only."
+        },
+        {
+          "name": "children",
+          "optional": true,
+          "type": "React.ReactElement",
+          "doc": "The GridList a grid layout lays out, which must have layout=\"grid\". Required for a grid; a stack renders its own items and takes no children."
+        },
+        {
+          "name": "minItemWidth",
+          "optional": true,
+          "type": "number",
+          "doc": "Minimum item width in px for a grid, a finite number greater than 0. Default 200."
+        },
+        {
+          "name": "maxItemWidth",
+          "optional": true,
+          "type": "number",
+          "doc": "Maximum item width in px for a grid, Infinity or a finite number no smaller than `minItemWidth`. Default unbounded, so items stretch to fill their columns."
+        },
+        {
+          "name": "estimatedItemHeight",
+          "optional": true,
+          "type": "number",
+          "doc": "Estimated height in px of the grid rows that have not mounted yet, a finite number greater than 0. Default 200. Mounted rows take their measured content height."
+        },
+        {
+          "name": "maxColumns",
+          "optional": true,
+          "type": "number",
+          "doc": "Cap on the number of grid columns, Infinity or an integer greater than 0. Default unbounded. A narrow container shows fewer."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems"]
+    },
+    {
+      "id": "virtualizer#VirtualizerProps",
+      "name": "VirtualizerProps",
+      "module": "virtualizer",
+      "public": [
+        { "entry": ".", "name": "VirtualizerProps" }
+      ],
+      "owner": "virtualizer",
+      "text": "type VirtualizerProps = VirtualizerStackProps | VirtualizerGridProps;",
+      "refs": ["virtualizer#VirtualizerStackProps", "virtualizer#VirtualizerGridProps"]
+    },
+    {
+      "id": "virtualizer#VirtualizerStackProps",
+      "name": "VirtualizerStackProps",
+      "module": "virtualizer",
+      "public": [
+        { "entry": ".", "name": "VirtualizerStackProps" }
+      ],
+      "owner": "virtualizer",
+      "text": "type VirtualizerStackProps = MuxUIAriaLabel & Pick<VirtualizerOwnProps, 'items' | 'height' | 'itemHeight' | 'overscan' | 'disabled' | 'onScroll'> & {\n  layout?: 'stack';\n  className?: string;\n  style?: React.CSSProperties;\n  children?: never;\n  minItemWidth?: never;\n  maxItemWidth?: never;\n  estimatedItemHeight?: never;\n  maxColumns?: never;\n};",
+      "refs": ["fields#MuxUIAriaLabel", "virtualizer#VirtualizerOwnProps"]
+    }
+  ]
+}
