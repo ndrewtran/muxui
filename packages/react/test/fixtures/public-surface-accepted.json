@@ -30,7 +30,7 @@
       "assertion": "readonly:defaultValue",
       "old": "number | \"length\"",
       "new": "never",
-      "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Both are assignable to each other and accept the same values; only the readonly keys of the property type's apparent members (a branded string's length and index) differ.",
+      "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Assignment, reading, and JSX accept the same values, and each type is assignable to the other. The old branch string & readonly string[] has no real values, so the difference shows only where the type is reflected: the readonly keys of its apparent members (number | \"length\" before, never now), and conditional types over it, where Extract<NonNullable<PromptComposerProps['defaultValue']>, readonly string[]> was string & readonly string[] and is now never. Keeping the branch would mean loosening the extractor's identity check on owned props.",
       "tranche": "Decision 0031 tranche 8b"
     },
     {
@@ -38,7 +38,7 @@
       "assertion": "readonly:defaultValue",
       "old": "number | \"length\"",
       "new": "never",
-      "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Both are assignable to each other and accept the same values; only the readonly keys of the property type's apparent members (a branded string's length and index) differ.",
+      "reason": "PromptComposerProps no longer intersects the form's own defaultValue (string | number | readonly string[]) with the composer's string: the old type was string | (string & readonly string[]), the new one is string. Assignment, reading, and JSX accept the same values, and each type is assignable to the other. The old branch string & readonly string[] has no real values, so the difference shows only where the type is reflected: the readonly keys of its apparent members (number | \"length\" before, never now), and conditional types over it, where Extract<NonNullable<PromptComposerProps['defaultValue']>, readonly string[]> was string & readonly string[] and is now never. Keeping the branch would mean loosening the extractor's identity check on owned props.",
       "tranche": "Decision 0031 tranche 8b"
     }
   ]
