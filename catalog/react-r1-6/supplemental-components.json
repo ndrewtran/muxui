@@ -200,7 +200,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/input.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -216,7 +216,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/input-tags.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -289,7 +289,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/payment-input.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -434,7 +434,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "runtimeSource": "packages/react/src/supplemental/text-area.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

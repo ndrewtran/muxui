@@ -6,7 +6,6 @@ import {
   ComboBox as AriaComboBox,
   Dialog as AriaDialog,
   DialogTrigger as AriaDialogTrigger,
-  FieldError as AriaFieldError,
   FieldInputContext as AriaFieldInputContext,
   Focusable as AriaFocusable,
   Group as AriaGroup,
@@ -14,7 +13,6 @@ import {
   Heading as AriaHeading,
   Input as AriaInput,
   InputContext as AriaInputContext,
-  Label as AriaLabel,
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
   ListBoxSection as AriaListBoxSection,
@@ -23,12 +21,7 @@ import {
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
   SearchField as AriaSearchField,
-  Tag as AriaTag,
-  TagGroup as AriaTagGroup,
-  TagList as AriaTagList,
   Text as AriaText,
-  TextArea as AriaTextArea,
-  TextField as AriaTextField,
   useFilter,
   useLocale,
 } from 'react-aria-components';
@@ -39,7 +32,6 @@ import MenuIcon from 'lucide-react/dist/esm/icons/menu.mjs';
 import ChevronsUpDownIcon from 'lucide-react/dist/esm/icons/chevrons-up-down.mjs';
 import PanelLeftIcon from 'lucide-react/dist/esm/icons/panel-left.mjs';
 import ExternalLinkIcon from 'lucide-react/dist/esm/icons/external-link.mjs';
-import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.ts';
@@ -48,8 +40,6 @@ import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { Button as MuxUIButton } from '../button.ts';
 import { IconButton } from './icon-button.ts';
 import { h, useIsomorphicLayoutEffect, cx, dataState, nativePart, pressHandler } from './part-utils.mjs';
-import { fieldText, mappedFieldProps } from './field-utils.mjs';
-import { InputAssociationContext, fieldRoot } from './field-root.mjs';
 import { MotionModalBackdropForwardRef, MotionModalPopupForwardRef } from './modal-parts.mjs';
 import { defaultItemLabel, useItemRenderer } from './item-renderer.mjs';
 import { sidebarUnreachable, sidebarFocusFirst, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.mjs';
@@ -131,188 +121,6 @@ const AlertDialog = /*#__PURE__*/ (() => ({
       : h(MuxUIButton, buttonProps, children);
   }),
 }))();
-
-function associatedFieldText(slot, className, props, ref, register) {
-  const association = React.useContext(InputAssociationContext);
-  const nodeRef = React.useRef(null);
-  const setRef = React.useCallback((node) => {
-    nodeRef.current = node;
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-    register?.(node?.id);
-  }, [ref, register]);
-  React.useLayoutEffect(() => {
-    register?.(nodeRef.current?.id);
-  }, [props.id, register]);
-  React.useEffect(() => {
-    return () => register?.(undefined);
-  }, [register]);
-  return fieldText(slot, className, props, setRef);
-}
-
-const Input = {
-  Root: /*#__PURE__*/ fieldRoot(AriaTextField, 'muxui-input__root'),
-  Input: React.forwardRef(function InputInput({ disabled, className, 'aria-describedby': ariaDescribedby, ...props }, ref) {
-    const association = React.useContext(InputAssociationContext);
-    const visualSize = association?.size ?? 'md';
-    const describedby = [ariaDescribedby, association?.descriptionId, association?.errorId]
-      .filter(Boolean)
-      .join(' ') || undefined;
-    const inputProps = { ...props, ref, disabled, className: cx('muxui-input', visualSize !== 'md' && `muxui-input--${visualSize}`, className) };
-    if (describedby !== undefined) inputProps['aria-describedby'] = describedby;
-    return h(AriaInput, inputProps);
-  }),
-  Label: React.forwardRef(function InputLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-input__label', props.className) }); }),
-  Description: React.forwardRef(function InputDescription(props, ref) {
-    const association = React.useContext(InputAssociationContext);
-    return associatedFieldText('description', 'muxui-input__description', props, ref, association?.setDescriptionId);
-  }),
-  Error: React.forwardRef(function InputError(props, ref) {
-    const association = React.useContext(InputAssociationContext);
-    return associatedFieldText('errorMessage', 'muxui-input__error', props, ref, association?.setErrorId);
-  }),
-};
-
-const TextArea = {
-  Root: /*#__PURE__*/ fieldRoot(AriaTextField, 'muxui-text-area'),
-  TextArea: React.forwardRef(function TextAreaInput({ disabled, className, ...props }, ref) { return h(AriaTextArea, { ...props, ref, disabled, className: cx('muxui-text-area__textarea', className) }); }),
-  Label: React.forwardRef(function TextAreaLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-text-area__label', props.className) }); }),
-  Description: React.forwardRef(function TextAreaDescription(props, ref) { return fieldText('description', 'muxui-text-area__description', props, ref); }),
-  Error: React.forwardRef(function TextAreaError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-text-area__error', props.className) }); }),
-};
-
-/* InputTags */
-export const InputTags = {
-  Root: React.forwardRef(function InputTagsRoot({
-    tagPlacement = 'inline', size = 'md', placeholder, disabled = false, invalid = false, required = false,
-    value, defaultValue = [], onChange, onTagAdded, onTagRemoved, allowDuplicates = false, maxTags, validate,
-    label, description, errorMessage, className,
-    'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-describedby': ariaDescribedby,
-    'aria-invalid': ariaInvalid, 'aria-required': ariaRequired, ...props
-  }, ref) {
-    const controlled = value !== undefined;
-    const instanceId = React.useId().replace(/[^A-Za-z0-9_-]/gu, '') || 'input-tags';
-    const idCounter = React.useRef(0);
-    const nextId = React.useCallback(() => `tag-${idCounter.current += 1}`, []);
-    const [internalEntries, setInternalEntries] = React.useState(() => defaultValue.map((labelText) => ({ id: nextId(), label: labelText })));
-    const controlledEntries = React.useRef([]);
-    const previousValue = React.useRef(undefined);
-    const entries = React.useMemo(() => {
-      if (!controlled) return internalEntries;
-      if (previousValue.current === value) return controlledEntries.current;
-      const oldEntries = controlledEntries.current;
-      const used = new Set();
-      const nextEntries = (value ?? []).map((labelText) => {
-        const oldIndex = oldEntries.findIndex((entry, index) => entry.label === labelText && !used.has(index));
-        if (oldIndex >= 0) {
-          used.add(oldIndex);
-          return oldEntries[oldIndex];
-        }
-        return { id: nextId(), label: labelText };
-      });
-      previousValue.current = value;
-      controlledEntries.current = nextEntries;
-      return nextEntries;
-    }, [controlled, internalEntries, nextId, value]);
-    const tags = entries.map((entry) => entry.label);
-    const [inputValue, setInputValue] = React.useState('');
-    const inputRef = React.useRef(null);
-    const tagListRef = React.useRef(null);
-    const updateEntries = React.useCallback((nextEntries, added, removed) => {
-      if (!controlled) setInternalEntries(nextEntries);
-      onChange?.(nextEntries.map((entry) => entry.label));
-      if (added) onTagAdded?.(added);
-      if (removed) onTagRemoved?.(removed);
-    }, [controlled, onChange, onTagAdded, onTagRemoved]);
-    const add = React.useCallback(() => {
-      const nextTag = inputValue.trim();
-      if (!nextTag || (!allowDuplicates && tags.includes(nextTag)) || (maxTags !== undefined && tags.length >= maxTags) || (validate && !validate(nextTag))) return false;
-      updateEntries([...entries, { id: nextId(), label: nextTag }], nextTag);
-      setInputValue('');
-      return true;
-    }, [allowDuplicates, entries, inputValue, maxTags, nextId, tags, updateEntries, validate]);
-    const removeById = React.useCallback((id) => {
-      const entry = entries.find((candidate) => candidate.id === String(id));
-      if (!entry) return;
-      updateEntries(entries.filter((candidate) => candidate.id !== entry.id), undefined, entry.label);
-    }, [entries, updateEntries]);
-    const handleTagRemove = React.useCallback((keys) => {
-      [...keys].forEach((key) => removeById(key));
-      if (entries.length <= keys.size) setTimeout(() => inputRef.current?.focus(), 0);
-    }, [entries.length, removeById]);
-    const handleTagListKeyDown = (event) => {
-      if (event.key !== 'ArrowRight') return;
-      const tagsInDom = tagListRef.current?.querySelectorAll('[role="row"]');
-      const lastTag = tagsInDom?.[tagsInDom.length - 1];
-      if (lastTag && (document.activeElement === lastTag || lastTag.contains(document.activeElement))) inputRef.current?.focus();
-    };
-    const tagsNode = entries.length > 0 && h('div', { ref: tagListRef, onKeyDown: handleTagListKeyDown, className: 'muxui-input-tags__tag-wrapper' }, h(AriaTagGroup, { 'aria-label': typeof label === 'string' ? label : 'Tags', onRemove: handleTagRemove, className: 'muxui-input-tags__tag-group' }, h(AriaTagList, { items: entries, className: 'muxui-input-tags__tag-list' }, (entry) => h(AriaTag, { id: entry.id, isDisabled: disabled, className: 'muxui-input-tags__tag' }, entry.label))));
-    const labelId = label ? `muxui-input-tags-label-${instanceId}` : undefined;
-    const inputId = `muxui-input-tags-input-${instanceId}`;
-    const descriptionId = `muxui-input-tags-description-${instanceId}`;
-    const errorId = `muxui-input-tags-error-${instanceId}`;
-    const supportingText = invalid && errorMessage
-      ? { id: errorId, className: 'muxui-input-tags__error', children: errorMessage }
-      : description
-        ? { id: descriptionId, className: 'muxui-input-tags__description', children: description }
-        : undefined;
-    const describedby = [ariaDescribedby, supportingText?.id].filter(Boolean).join(' ') || undefined;
-    const inputAriaProps = ariaLabel !== undefined
-      ? { 'aria-label': ariaLabel }
-      : ariaLabelledby !== undefined
-        ? { 'aria-labelledby': ariaLabelledby }
-        : labelId
-          ? { 'aria-labelledby': labelId }
-          : {};
-    const handleInputKeyDown = (event) => {
-      const input = event.currentTarget;
-      const atStart = input.selectionStart === 0 && input.selectionEnd === 0;
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        add();
-      } else if ((event.key === 'Backspace' || event.key === 'ArrowLeft') && atStart && !inputValue && entries.length > 0) {
-        const tagsInDom = tagListRef.current?.querySelectorAll('[role="row"]');
-        tagsInDom?.[tagsInDom.length - 1]?.focus();
-      }
-    };
-    return h('div', { ...props, ref, className: cx('muxui-input-tags', size !== 'md' && `muxui-input-tags--${size}`, tagPlacement === 'below' && 'muxui-input-tags--below', className), 'data-size': size, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('label', { id: labelId, htmlFor: inputId, className: 'muxui-input-tags__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), h(AriaGroup, { isDisabled: disabled, isInvalid: invalid, 'aria-labelledby': labelId, 'aria-required': required || undefined, className: 'muxui-input-tags__group' }, tagPlacement === 'inline' && tagsNode, h(AriaInput, { ...inputAriaProps, id: inputId, ref: inputRef, value: inputValue, placeholder: entries.length === 0 || tagPlacement === 'below' ? placeholder : undefined, onChange: (event) => setInputValue(event.target.value), onKeyDown: handleInputKeyDown, className: 'muxui-input-tags__input', disabled, 'aria-describedby': describedby, 'aria-invalid': ariaInvalid ?? (invalid || undefined), 'aria-required': ariaRequired ?? (required || undefined) })), tagPlacement === 'below' && tagsNode ? h('div', { className: 'muxui-input-tags__tags' }, tagsNode) : null, supportingText ? h('span', { id: supportingText.id, className: supportingText.className }, supportingText.children) : null);
-  }),
-};
-
-/* PaymentInput */
-function cardType(digits) {
-  if (/^4/u.test(digits)) return 'visa';
-  if (/^5[1-5]/u.test(digits)) return 'mastercard';
-  const fourDigitPrefix = Number(digits.slice(0, 4));
-  if (fourDigitPrefix >= 2221 && fourDigitPrefix <= 2720) return 'mastercard';
-  if (/^3[47]/u.test(digits)) return 'amex';
-  if (/^(6011|65|64[4-9])/u.test(digits)) return 'discover';
-  return 'unknown';
-}
-
-function formatCard(digits, type) {
-  const groups = type === 'amex' ? [4, 6, 5] : [4, 4, 4, 4];
-  let offset = 0;
-  return groups.map((length) => { const part = digits.slice(offset, offset + length); offset += length; return part; }).filter(Boolean).join(' ');
-}
-
-const PaymentInputContext = React.createContext('unknown');
-
-export const PaymentInput = {
-  Root: React.forwardRef(function PaymentInputRoot({ value, defaultValue = '', onChange, disabled, invalid, required, readOnly, size = 'md', className, children, ...props }, ref) {
-    const resolvedSize = normalizeChoiceControlSize(size, 'PaymentInput');
-    const [digits, setDigits] = React.useState(String(defaultValue).replace(/\D/gu, ''));
-    const controlledDigits = value === undefined ? digits : String(value).replace(/\D/gu, '');
-    const setValue = (next) => { if (value === undefined) setDigits(next); onChange?.(formatCard(next, cardType(next))); };
-    return h(PaymentInputContext.Provider, { value: cardType(controlledDigits) }, h(AriaTextField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...props }), ref, value: formatCard(controlledDigits, cardType(controlledDigits)), onChange: (next) => setValue(String(next).replace(/\D/gu, '')), 'data-size': resolvedSize, className: cx('muxui-payment-input', resolvedSize !== 'md' && `muxui-payment-input--${resolvedSize}`, className) }, children));
-  }),
-  Group: React.forwardRef(function PaymentInputGroup(props, ref) { return nativePart('div', 'muxui-payment-input__group', props, ref); }),
-  Input: React.forwardRef(function PaymentInputInput({ disabled, className, ...props }, ref) { return h(AriaInput, { ...props, ref, disabled, inputMode: 'numeric', className: cx('muxui-payment-input__input', className) }); }),
-  Label: React.forwardRef(function PaymentInputLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-payment-input__label', props.className) }); }),
-  Description: React.forwardRef(function PaymentInputDescription(props, ref) { return fieldText('description', 'muxui-payment-input__description', props, ref); }),
-  Error: React.forwardRef(function PaymentInputError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-payment-input__error', props.className) }); }),
-  CardIcon: React.forwardRef(function PaymentInputCardIcon({ cardType: suppliedType, className, 'aria-label': _ariaLabel, ...props }, ref) { const contextType = React.useContext(PaymentInputContext); const type = suppliedType ?? contextType; return h('span', { ...props, ref, className: cx('muxui-payment-input__card-icon', className), 'data-card-type': type, 'aria-hidden': true }, h(CreditCardIcon, { size: 16, 'aria-hidden': true, focusable: 'false' })); }),
-};
 
 // MultiSelect has no label prop, so plain text content doubles as search text.
 const multiSelectTextValue = (item, rendered) => (
@@ -1034,12 +842,16 @@ export { ButtonGroup } from './button-group.mjs';
 export { Card } from './card.mjs';
 export { CheckboxField } from './checkbox-field.mjs';
 export { ColorModeToggle } from './color-mode-toggle.mjs';
+export { Input } from './input.mjs';
+export { InputTags } from './input-tags.mjs';
+export { PaymentInput } from './payment-input.mjs';
 export { ProgressCircle } from './progress-circle.mjs';
 export { RadioField } from './radio-field.mjs';
 export { SwitchField } from './switch-field.mjs';
 export { Text } from './text.mjs';
+export { TextArea } from './text-area.mjs';
 
-export { AlertDialog, Input, TextArea, CommandPalette, HeaderNav, Sidebar };
+export { AlertDialog, CommandPalette, HeaderNav, Sidebar };
 
 export const supplementalFamilies = Object.freeze([
   'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text',
