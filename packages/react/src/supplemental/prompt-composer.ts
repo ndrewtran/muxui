@@ -70,7 +70,10 @@ type PromptComposerOwnProps = {
   onDictation?: () => void;
 };
 
-export type PromptComposerProps = Omit<FormHTMLAttributes<HTMLFormElement>, 'children' | 'dangerouslySetInnerHTML' | keyof PromptComposerOwnProps> & PromptComposerOwnProps & { inputRef?: Ref<HTMLTextAreaElement> };
+// Only the names the composer replaces leave the form's attributes: children and dangerouslySetInnerHTML, which it discards, and
+// defaultValue, the one owned name the form also declares, whose string the composer narrows. Every other owned name stays
+// intersected with the form's member of that name, so a consumer's augmentation of React's FormHTMLAttributes still constrains it.
+export type PromptComposerProps = Omit<FormHTMLAttributes<HTMLFormElement>, 'children' | 'dangerouslySetInnerHTML' | 'defaultValue'> & PromptComposerOwnProps & { inputRef?: Ref<HTMLTextAreaElement> };
 
 // Props the form does not publish. The component destructures them so a value an untyped caller passes never reaches the form.
 type DiscardedPromptComposerProps = { children?: unknown; dangerouslySetInnerHTML?: unknown };
