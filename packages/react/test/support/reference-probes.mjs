@@ -14,6 +14,12 @@
 // each parameter varied alone, so a type that is right only for the default fails. The model must also agree with
 // itself: a member's printed type, its `values`, its `never` and its `explicitUndefined` say one thing.
 //
+// What a member reads as and what can be written to it are two facts: under exactOptionalPropertyTypes
+// `?: never`, `?: undefined` and `?: string` against `?: string | undefined` read alike and write differently, so
+// each member also claims whether it takes an explicit `undefined`. A member the model gives no `values` must not
+// be a finite domain of literals the declaration lists. The default and constraint of each type parameter are
+// read from the declaration by the compiler in reference-defaults.mjs, not supplied by an instantiation.
+//
 // A second kind of probe is authored by hand and never reads the model: a JSX element and whether the
 // compiler accepts it, for the components whose constraints are hardest (Dialog, IconButton, Resizable, Text,
 // Virtualizer, CodeBlock, and generic items). They are the facts the model has to agree with.
@@ -32,6 +38,15 @@ export const PROBE_HEADER = [
   'type Ty<X> = 0 extends 1 & X ? { readonly any: true } : X;',
   // An optional member reads with `undefined` added, whether or not exactOptionalPropertyTypes is on.
   'type Adjust<M, Optional extends boolean> = Optional extends true ? M | undefined : M;',
+  // What can be written to a member is a second fact: under exactOptionalPropertyTypes an optional member takes an explicit
+  // `undefined` only if its type lists it, and `?: never` takes none, though all of them read the same.
+  'type Takes<X> = [undefined] extends [X] ? true : false;',
+  'type Loose = [{ a?: 1 | undefined }] extends [{ a?: 1 }] ? true : false;',
+  "type Writes<A, K extends PropertyKey> = K extends keyof A ? ({} extends Pick<A, K> ? ([{ [Q in K]?: undefined }] extends [Pick<A, K>] ? true : false) : ([{ [Q in K]: undefined }] extends [Pick<A, K>] ? true : false)) : never;",
+  'type WriteOf<M, Optional extends boolean> = Optional extends true ? (Loose extends true ? true : Takes<M>) : Takes<M>;',
+  // Whether a type is a finite domain of string or number literals (bar `undefined`): every constituent is one literal, not `string`, `number` or a pattern.
+  "type IsLiteral<U> = U extends string | number ? ({} extends Record<U, 1> ? false : true) : false;",
+  "type IsFinite<X> = [Exclude<X, undefined>] extends [never] ? false : ([IsLiteral<Exclude<X, undefined>>] extends [true] ? true : false);",
   'type Mutable<T> = { -readonly [Q in keyof T]: T[Q] };',
   'type IsReadonly<A, K extends keyof A> = (<X>() => X extends Pick<A, K> ? 1 : 2) extends (<X>() => X extends Mutable<Pick<A, K>> ? 1 : 2) ? false : true;',
   // How an arm declares a name: optional or required, `never` or live, and readonly; a name it does not declare is absent.
@@ -39,8 +54,9 @@ export const PROBE_HEADER = [
   "type RefOf<A> = 'ref' extends keyof A ? [Exclude<A['ref'], undefined>] : 'none';",
   'type Raw<A, K extends PropertyKey> = K extends keyof A ? A[K] : never;',
   'type ValuesOf<A, K extends PropertyKey> = K extends keyof A ? Exclude<A[K], undefined> : never;',
-  // The part of an arm a claim speaks about: "m:name" its declaration, "t:name" its type, "v:name" its finite values, "ref" its ref.
-  "type ShapeOf<A, Ks extends string> = { [K in Ks]: K extends `m:${infer N}` ? Sig<A, N> : K extends `t:${infer N}` ? Ty<Raw<A, N>> : K extends `v:${infer N}` ? ValuesOf<A, N> : K extends 'ref' ? RefOf<A> : never };",
+  // The part of an arm a claim speaks about: "m:name" its declaration, "t:name" its type, "w:name" whether it takes `undefined`,
+  // "v:name" its finite values, "f:name" whether its type is a finite domain, "ref" its ref.
+  "type ShapeOf<A, Ks extends string> = { [K in Ks]: K extends `m:${infer N}` ? Sig<A, N> : K extends `t:${infer N}` ? Ty<Raw<A, N>> : K extends `w:${infer N}` ? Writes<A, N> : K extends `v:${infer N}` ? ValuesOf<A, N> : K extends `f:${infer N}` ? IsFinite<Raw<A, N>> : K extends 'ref' ? RefOf<A> : never };",
   'type Fits<A, E> = Mut<ShapeOf<A, keyof E & string>, E>;',
   // The keys of each arm, not only the keys every arm shares.
   'type ArmKeys<P> = P extends unknown ? keyof P : never;',
@@ -146,11 +162,21 @@ function topLevelArms(text) {
   return arms;
 }
 
+/**
+ * Whether a printed type names anything but literals, primitives and the package types its `refs` list: a host
+ * type (`React.HTMLAttributes<...>['inputMode']`) or a type parameter, whose domain the reader is not asked to read.
+ */
+function namesMoreThanLiterals(member, file) {
+  const known = new Set(['undefined', 'null', 'true', 'false', 'string', 'number', 'boolean', 'bigint', 'never', ...(member.refs ?? []).map((id) => file.types.find((type) => type.id === id)?.name)]);
+  const words = member.type.replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/gu, '').match(/[A-Za-z_$][\w$.]*/gu) ?? [];
+  return words.some((word) => !known.has(word));
+}
+
 /** The import specifier of an export-map entry. */
-const specifierOf = (key) => (key === '.' ? '@muxui/react' : `@muxui/react${key.slice(1)}`);
+export const specifierOf = (key) => (key === '.' ? '@muxui/react' : `@muxui/react${key.slice(1)}`);
 
 /** `text` with each package type it names (by id, in `refs`) written through its public import, as module-level code must. */
-function qualified(text, refs = [], file, namespaces) {
+export function qualified(text, refs = [], file, namespaces) {
   let result = text;
   for (const id of refs) {
     const type = file.types.find((candidate) => candidate.id === id);
@@ -250,10 +276,15 @@ function partProbes({ file, entry, part, index, namespaces, space }) {
       const signature = member === undefined ? 'absent' : `${member.optional ? 'optional' : 'required'}/${closed ? 'never' : 'live'}${member.readonly ? '/readonly' : ''}`;
       fields.push(`${quote(`m:${name}`)}: ${quote(signature)}`);
       if (member === undefined) continue;
-      fields.push(`${quote(`t:${name}`)}: Ty<Adjust<${instantiate(members.find((entryOf) => entryOf.member === member).alias, args)}, ${member.optional ? 'true' : 'false'}>>`);
+      const printed = instantiate(members.find((entryOf) => entryOf.member === member).alias, args);
+      fields.push(`${quote(`t:${name}`)}: Ty<Adjust<${printed}, ${member.optional ? 'true' : 'false'}>>`);
+      fields.push(`${quote(`w:${name}`)}: WriteOf<${printed}, ${member.optional ? 'true' : 'false'}>`);
       if (member.values && !closed) fields.push(`${quote(`v:${name}`)}: ${member.values.map(literal).join(' | ')}`);
+      // A member the model gives no values is not a finite domain of literals: a literal union that carries none is a gap in the model.
+      else if (!member.method && !namesMoreThanLiterals(member, file)) fields.push(`${quote(`f:${name}`)}: false`);
     }
-    if (ref?.never) fields.push(`"m:ref": ${quote(ref.required ? 'required/never' : 'optional/never')}`);
+    // A typed ref is RefAttributes' `ref?: Ref<T> | undefined`, which the model does not spell, so only a ref that takes nothing is claimed to write.
+    if (ref?.never) fields.push(`"m:ref": ${quote(ref.required ? 'required/never' : 'optional/never')}`, `"w:ref": WriteOf<never, ${ref.required ? 'false' : 'true'}>`);
     else if (ref?.type) fields.push('"m:ref": "optional/live"');
     fields.push(`"ref": ${ref === null || ref === undefined ? '"none"' : (ref.never ? '[never]' : `[${instantiate(refAlias, args)}]`)}`);
     return `{ ${fields.join('; ')} }`;

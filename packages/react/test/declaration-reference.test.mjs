@@ -22,6 +22,7 @@ import { consumerTsc, typeScript7Tsc } from './support/declaration-surface.mjs';
 import { typescript6Host } from './support/reference-host-typescript6.mjs';
 import { realInputs } from './support/reference-inputs.mjs';
 import { crossCheckAuthored, crossCheckDerived, loadReference, referenceDirectory, repositoryRoot } from './support/reference-catalog.mjs';
+import { checkTypeParameters } from './support/reference-defaults.mjs';
 import { PROBE_HEADER, WITNESSES, buildProbe, runProbe } from './support/reference-probes.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -396,18 +397,55 @@ const MODEL_MUTANTS = [
   ['a listed undefined is forgotten (the Menu.Trigger disabled)', (map) => { delete partOf(map, 'menu.json', 'Menu', 'Trigger').members.find(({ name }) => name === 'disabled').explicitUndefined; }],
   ['an undefined is invented', (map) => { partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'className').explicitUndefined = true; }],
   ['a ref is called required that is optional', (map) => { partOf(map, 'virtualizer.json', 'Virtualizer').alternatives[1].ref = { never: true, required: true }; }],
+  // A finite domain whose values were lost: the declaration still lists them, so the model is incomplete.
+  ['a finite domain loses its values (the CodeBlock diff mode)', (map) => { delete partOf(map, 'code-block.json', 'CodeBlock').alternatives[1].members.find(({ name }) => name === 'mode').values; }],
+  // These two read alike and differ only in what can be written, which only exactOptionalPropertyTypes tells apart.
+  ['a member that takes nothing is said to take undefined (the Virtualizer grid height)', (map) => { const member = partOf(map, 'virtualizer.json', 'Virtualizer').alternatives[1].members.find(({ name }) => name === 'height'); delete member.never; member.type = 'undefined'; }, { exactOnly: true }],
+  ['an optional member is said to list undefined (the Button className)', (map) => { const member = partOf(map, 'button.json', 'Button').members.find(({ name }) => name === 'className'); member.type = 'string | undefined'; member.explicitUndefined = true; }, { exactOnly: true }],
 ];
 
-for (const [change, mutate] of MODEL_MUTANTS) {
+const MUTANT_SAMPLE = sampleOf('resizable', 'virtualizer', 'button', 'text', 'list-box', 'input', 'code-block', 'menu');
+const unchangedModelFails = new Map();
+const probesFail = (mapOfFiles, exact) => runProbe({
+  probe: buildProbe({ files: mapOfFiles, entries: typedEntries, include: MUTANT_SAMPLE, witnesses: false }),
+  tsc: typeScript7Tsc(), exactOptionalPropertyTypes: exact, declarations, manifest,
+});
+
+for (const [change, mutate, { exactOnly = false } = {}] of MODEL_MUTANTS) {
   test(`the probes can fail: ${change}`, () => {
+    // exactOptionalPropertyTypes is the mode that tells these apart, so a change that reads alike is run in it.
+    for (const exact of exactOnly ? [true] : [false]) {
+      if (!unchangedModelFails.has(exact)) unchangedModelFails.set(exact, probesFail(files, exact));
+      assert.deepEqual(unchangedModelFails.get(exact), [], 'the unchanged model passes the same probes');
+      const mutated = clone(files);
+      mutate(mutated);
+      assert.ok(probesFail(mutated, exact).length > 0, `the compiler rejects the changed model${exact ? ' under exactOptionalPropertyTypes' : ''}`);
+      // The two modes differ only for these: without exactOptionalPropertyTypes the changed model reads the same.
+      if (exactOnly) assert.deepEqual(probesFail(mutated, false), [], 'it passes without exactOptionalPropertyTypes, which cannot tell it apart');
+    }
+  });
+}
+
+// The probes instantiate a generic part at the model's own default, so a default that is valid but wrong passes
+// them. The compiler is asked what the declaration says instead, and nothing from the model is passed as an argument.
+test('the default and constraint of every type parameter are the declaration\'s own, as the compiler reads them', () => {
+  const { checked, failures } = checkTypeParameters({ files, entries: typedEntries, declarations, manifest });
+  assert.deepEqual(failures, []);
+  assert.equal(checked, 12, 'six generic parts, each with a default and a constraint to compare');
+});
+
+for (const [change, mutate, expected] of [
+  ['a default that is valid but wrong (the Text element)', (map) => { partOf(map, 'text.json', 'Text').typeParameters[0].default = "'p'"; }, /Text: T has the default "span" in the declaration, and the model says "p"/u],
+  ['a default that is lost (MultiSelect.Root)', (map) => { delete partOf(map, 'multi-select.json', 'MultiSelect', 'Root').typeParameters[0].default; }, /MultiSelect\.Root: T has the default MultiSelectItem in the declaration, and the model says none/u],
+  ['a constraint that is invented (a CommandPalette part)', (map) => { partOf(map, 'command-palette.json', 'CommandPalette', 'ListBox').typeParameters[0].constraint = 'string'; }, /CommandPalette\.ListBox: T has no constraint in the declaration, and the model says string/u],
+  ['a constraint that is narrowed (the Text elements)', (map) => { partOf(map, 'text.json', 'Text').typeParameters[0].constraint = "'p' | 'span'"; delete partOf(map, 'text.json', 'Text').typeParameters[0].refs; }, /Text: T has the constraint TextElement in the declaration/u],
+]) {
+  test(`the type parameter check can fail: ${change}`, () => {
     const mutated = clone(files);
     mutate(mutated);
-    const include = sampleOf('resizable', 'virtualizer', 'button', 'text', 'list-box', 'input', 'code-block', 'menu');
-    const control = buildProbe({ files, entries: typedEntries, include, witnesses: false });
-    assert.deepEqual(runProbe({ probe: control, tsc: typeScript7Tsc(), exactOptionalPropertyTypes: false, declarations, manifest }), [], 'the unchanged model passes the same probes');
-    const probe = buildProbe({ files: mutated, entries: typedEntries, include, witnesses: false });
-    const failures = runProbe({ probe, tsc: typeScript7Tsc(), exactOptionalPropertyTypes: false, declarations, manifest });
-    assert.ok(failures.length > 0, 'the compiler rejects the changed model');
+    const { failures } = checkTypeParameters({ files: mutated, entries: typedEntries, declarations, manifest });
+    assert.equal(failures.length, 1, failures.join('\n'));
+    assert.match(failures[0], expected);
   });
 }
 
