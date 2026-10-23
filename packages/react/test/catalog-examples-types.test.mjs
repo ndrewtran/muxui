@@ -200,6 +200,37 @@ export const rejected = <PromptComposer pending={false} />;
       }
     }
 
+    // TextEditor's selection and request callbacks declare their members as methods, which compare their parameters
+    // bivariantly where a function property does not (strictFunctionTypes). A consumer's narrower function is assigned
+    // to each: `replace` of a string, the inline `insertImage` of one literal URL, and the inline `setColor` of one
+    // literal colour. Declaring any of the three as a property fails all of these, in every configuration. A document
+    // holds at least one block, so an empty one is an error, whichever way it is spelled.
+    const editorDirectory = join(consumer, 'text-editor-methods');
+    await mkdir(editorDirectory, { recursive: true });
+    await writeFile(join(editorDirectory, 'methods.tsx'), `import type { TextEditorActionCallbacks, TextEditorDocument, TextEditorProps, TextEditorSelectionActions } from '@muxui/react/text-editor';
+
+type ImageActions = Parameters<NonNullable<TextEditorProps['onImageRequest']>>[0];
+type ColorActions = Parameters<NonNullable<TextEditorProps['onColorRequest']>>[0];
+
+export const replace: Pick<TextEditorSelectionActions, 'replace' | 'insertAfter'> = { replace: (content: string) => true, insertAfter: (content: string) => true };
+export const insertImage: ImageActions = { insertImage: (src: 'https://example.com/a.png') => true };
+export const setColor: ColorActions = { setColor: (value: '#000000') => true };
+export const link: TextEditorActionCallbacks = { setLink: (href: 'https://example.com') => true, unsetLink: () => true };
+
+// @ts-expect-error A document holds at least one block.
+export const empty: TextEditorDocument = { type: 'doc', content: [] };
+// @ts-expect-error A list item holds a paragraph before any other block.
+export const item: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [] }] }] };
+export const paragraph: TextEditorDocument = { type: 'doc', content: [{ type: 'paragraph' }] };
+`);
+    for (const exactOptionalPropertyTypes of [false, true]) {
+      const editorTsconfig = join(consumer, `tsconfig.text-editor-methods-${exactOptionalPropertyTypes}.json`);
+      await writeFile(editorTsconfig, `${JSON.stringify({ extends: './tsconfig.json', compilerOptions: { exactOptionalPropertyTypes }, include: ['text-editor-methods/*.tsx'] }, null, 2)}\n`);
+      for (const [label, compiler] of [['TypeScript 6', tsc], ['TypeScript 7', typeScript7Tsc()]]) {
+        assert.deepEqual(tscDiagnostics({ tsc: compiler, config: editorTsconfig, directory: consumer }), [], `TextEditor's callback members keep method syntax and its documents their non-empty tuples (${label}, exactOptionalPropertyTypes ${exactOptionalPropertyTypes})`);
+      }
+    }
+
     // A props type a consumer could pass where `T extends Record<string, unknown>` is required before
     // the moves still can, with and without exactOptionalPropertyTypes. An interface fails there, and
     // so does an intersection with one; the record was taken under TypeScript 6, which this runs.

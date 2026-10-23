@@ -144,7 +144,6 @@ const REJECTED = new Map([
   [SyntaxKind.TemplateLiteralType, 'a template literal type'],
   [SyntaxKind.TypeQuery, 'a typeof type'],
   [SyntaxKind.IntersectionType, 'an intersection type'],
-  [SyntaxKind.TupleType, 'a tuple type'],
   [SyntaxKind.ImportType, 'an import type'],
   [SyntaxKind.ConstructorType, 'a constructor type'],
   [SyntaxKind.ThisType, 'this'],
@@ -226,7 +225,14 @@ function assertArguments(application, entry) {
   if (!Array.isArray(application.typeArguments) || application.typeArguments.length === 0) {
     throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} has no type arguments; write the bare name as a string`);
   }
-  for (const argument of application.typeArguments) assertSerializedType(argument, entry);
+  for (const argument of application.typeArguments) {
+    // unknown is an argument of one application only: the sole argument of a Promise, which `promiseUnknownOf` reads in a return.
+    if (argument?.kind === 'unknown' && application.name === 'Promise' && application.typeArguments.length === 1) {
+      if (Object.keys(argument).join() !== 'kind') throw new ApiExtractionError('host allowlist', `${JSON.stringify(entry)} holds a unknown type that is not written as exactly kind`);
+    } else {
+      assertSerializedType(argument, entry);
+    }
+  }
 }
 
 /**
@@ -293,6 +299,7 @@ function showType(type) {
     case 'reference': return type.name;
     case 'union': return type.members.map(showType).join(' | ');
     case 'host': return type.typeArguments === undefined ? type.name : `${type.name}<${type.typeArguments.map(showType).join(', ')}>`;
+    case 'tuple': return `[${[...type.elements.map(showType), ...(type.rest === undefined ? [] : [`...${showType(type.rest)}[]`])].join(', ')}]`;
     default: return type.kind;
   }
 }
@@ -389,7 +396,8 @@ function declarationReader({ project, declarationRoot, allowed }) {
     let type;
     if (declaration.kind === SyntaxKind.InterfaceDeclaration) {
       if (declaration.typeParameters?.length) throw new ApiExtractionError(chain, `${name} is generic`);
-      type = objectOf(interfaceMembers(declaration, symbol, chain), chain);
+      // Only an interface with no base reads its own methods: the members of a chain are the bases' too.
+      type = objectOf(interfaceMembers(declaration, symbol, chain), chain, declaration.heritageClauses?.length ? undefined : declaration);
     } else if (declaration.kind === SyntaxKind.TypeAliasDeclaration) {
       if (declaration.typeParameters?.length) throw new ApiExtractionError(chain, `${name} is generic`);
       // An alias whose whole body is an intersection is read as one object type; an intersection anywhere else is not in the grammar.
@@ -478,18 +486,24 @@ function declarationReader({ project, declarationRoot, allowed }) {
     }), chain);
   }
 
+  // A property or method signature's name, when it is an identifier or a string literal.
+  const namedMemberOf = (member) => ((member.kind === SyntaxKind.PropertySignature || member.kind === SyntaxKind.MethodSignature)
+    && (member.name.kind === SyntaxKind.Identifier || member.name.kind === SyntaxKind.StringLiteral) ? member.name.text : undefined);
+
   /**
-   * The members of the lists joined in order, base first. A property named twice is refused, because a redeclaration could
-   * narrow what the base declares and the grammar cannot express that; so is a second index signature (`indexedOf`). The
-   * result is read as one object type, so the marker and its exclusions apply to the whole.
+   * The members of the lists joined in order, base first. A name used twice is refused, whether a property or a method
+   * declares it, because a redeclaration could narrow what the base declares and the grammar cannot express that; so is a
+   * second index signature (`indexedOf`). The result is read as one object type, so the marker and its exclusions apply
+   * to the whole. It carries no methods: `objectOf` reads it without an owner, so a method in any list fails there.
    */
   function joinedMembers(lists, chain) {
     const members = lists.flat();
     const seen = new Set();
     for (const member of members) {
-      if (member.kind !== SyntaxKind.PropertySignature || (member.name.kind !== SyntaxKind.Identifier && member.name.kind !== SyntaxKind.StringLiteral)) continue;
-      if (seen.has(member.name.text)) throw new ApiExtractionError(`${chain}.${member.name.text}`, `${member.name.text} is declared twice among the joined members of a base and its interface, or of an intersection; a redeclaration could narrow it`);
-      seen.add(member.name.text);
+      const name = namedMemberOf(member);
+      if (name === undefined) continue;
+      if (seen.has(name)) throw new ApiExtractionError(`${chain}.${name}`, `${name} is declared twice among the joined members of a base and its interface, or of an intersection; a redeclaration could narrow it`);
+      seen.add(name);
     }
     return members;
   }
@@ -573,7 +587,42 @@ function declarationReader({ project, declarationRoot, allowed }) {
       if (name === 'this') throw new ApiExtractionError(`${chain}(this)`, 'a this parameter is not in the grammar');
       return { name, type: typeOf(parameter.type, `${chain}(${name})`), required: !parameter.questionToken };
     });
-    return { kind: 'function', parameters, returns: typeOf(node.type, `${chain}=>`) };
+    return { kind: 'function', parameters, returns: returnOf(node.type, `${chain}=>`) };
+  }
+
+  /**
+   * A function's return type. It is read as any type is, except that a return, or a direct member of a return union, may be
+   * `Promise<unknown>`: a callback that may hand back a promise whose value the caller never reads. That is the only place the
+   * keyword unknown is read as a type, and `promiseUnknownOf` decides the rest. Anything inside the return that is not a union
+   * or a parenthesis (an array, a tuple, a member, another host's argument) is read by `typeOf`, which rejects unknown.
+   * T10b's synthetic erasure of an unconstrained binder (D3) is another source of `{ kind: 'unknown' }` and needs its own rule here.
+   */
+  function returnOf(node, chain) {
+    if (node.kind === SyntaxKind.ParenthesizedType) return returnOf(node.type, chain);
+    if (node.kind === SyntaxKind.UnionType) return { kind: 'union', members: node.types.map((member) => returnOf(member, chain)) };
+    if (node.kind === SyntaxKind.TypeReference && node.typeName.kind === SyntaxKind.Identifier && node.typeName.text === 'Promise'
+      && node.typeArguments?.length === 1 && node.typeArguments[0].kind === SyntaxKind.UnknownKeyword) {
+      return promiseUnknownOf(node, chain);
+    }
+    return typeOf(node, chain);
+  }
+
+  /**
+   * `Promise<unknown>` written as the Promise of the default library: the symbol must be declared in the default library alone,
+   * so a local, imported, merged, augmented, or shadowing `Promise` is no host type. The result must be an allowlist entry, like
+   * any application.
+   */
+  function promiseUnknownOf(node, chain) {
+    const hop = `${chain} -> Promise`;
+    const found = checker.getSymbolAtLocation(node.typeName);
+    if (!found) throw new ApiExtractionError(hop, 'Promise does not resolve');
+    const symbol = found.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
+    if (hostName(symbol) !== 'Promise') {
+      throw new ApiExtractionError(hop, 'this Promise is not the default library\'s: Promise<unknown> is read only for the global Promise, never a local, imported, merged, or augmented one');
+    }
+    const application = { kind: 'host', name: 'Promise', typeArguments: [{ kind: 'unknown' }] };
+    if (allowed.applications.has(hostEntryKey(application))) return application;
+    throw new ApiExtractionError(hop, 'Promise<unknown> is not an application on the host allowlist');
   }
 
   /**
@@ -605,12 +654,45 @@ function declarationReader({ project, declarationRoot, allowed }) {
     return { kind: 'object', members: members.filter((member) => member !== signature).map((member) => memberOf(member, `${chain}.`)), additional: 'unknown' };
   }
 
-  const objectOf = (members, chain) => indexedOf(members, chain)
-    ?? { kind: 'object', members: members.map((member) => memberOf(member, `${chain}.`)) };
+  /**
+   * An object type from its members. `owner` is the one declaration they come from, a type literal or an interface with no base
+   * (never a joined chain or an intersection, whose members come from several declarations), and only a method that
+   * declaration itself holds is read. Without an owner, and beside a `[key: string]: unknown` marker, a method is refused.
+   */
+  function objectOf(members, chain, owner) {
+    const indexed = indexedOf(members, chain);
+    if (indexed !== null) return indexed;
+    const seen = new Set();
+    for (const member of members) {
+      const name = namedMemberOf(member);
+      if (name === undefined) continue;
+      if (seen.has(name)) throw new ApiExtractionError(`${chain}.${name}`, `${name} is declared twice in its object type; a method and a property, or two methods (an overload), share a name`);
+      seen.add(name);
+    }
+    return { kind: 'object', members: members.map((member) => memberOf(member, `${chain}.`, owner)) };
+  }
 
-  function memberOf(member, prefix) {
+  /**
+   * A required, non-generic method with a plain name and one signature, held by `owner` itself. It is read as its function type
+   * with `method: true`, so the declaration keeps method syntax (and with it the bivariance a function property lacks).
+   */
+  function methodOf(member, prefix, owner) {
+    const name = member.name.kind === SyntaxKind.Identifier ? member.name.text : undefined;
+    const chain = `${prefix}${member.name.text ?? '<member>'}`;
+    if (owner === undefined || member.parent !== owner) {
+      throw new ApiExtractionError(chain, 'a method is in the grammar only as a member of a nested object type or interface that has no base, is no operand of an intersection, and has no index signature');
+    }
+    if (name === undefined) throw new ApiExtractionError(chain, 'a method needs a plain identifier name; a quoted or computed name is not in the grammar');
+    if (member.postfixToken?.kind === SyntaxKind.QuestionToken) throw new ApiExtractionError(chain, 'an optional method is not in the grammar; a method is required');
+    if (hasModifier(member, SyntaxKind.ReadonlyKeyword)) throw new ApiExtractionError(chain, 'a method cannot be readonly');
+    if (!member.type) throw new ApiExtractionError(chain, 'a method needs a declared return type');
+    return { name, type: functionOf(member, chain), required: true, readonly: false, method: true, ...description(member) };
+  }
+
+  function memberOf(member, prefix, owner) {
+    if (member.kind === SyntaxKind.MethodSignature) return methodOf(member, prefix, owner);
     if (member.kind !== SyntaxKind.PropertySignature) {
-      throw new ApiExtractionError(`${prefix}${member.name?.text ?? '<member>'}`, 'only property signatures are in the grammar');
+      throw new ApiExtractionError(`${prefix}${member.name?.text ?? '<member>'}`, 'only property signatures, and required methods of a nested object type, are in the grammar');
     }
     const name = propertyName(member.name, `${prefix}<member>`);
     if (!member.type) throw new ApiExtractionError(`${prefix}${name}`, 'a member needs a declared type');
@@ -629,6 +711,34 @@ function declarationReader({ project, declarationRoot, allowed }) {
     };
   }
 
+  /**
+   * A tuple is a non-empty prefix of required elements and at most one terminal rest array: `[A, B]` or `[A, ...A[]]`. An
+   * optional or named element, an empty tuple, a rest anywhere but last, and a rest that is not an array (a generic spread) fail.
+   */
+  function tupleOf(node, chain) {
+    const rule = 'a tuple is a non-empty prefix of required elements and at most one terminal rest array';
+    const rest = node.elements.at(-1)?.kind === SyntaxKind.RestType ? node.elements.at(-1) : undefined;
+    const prefix = rest === undefined ? node.elements : node.elements.slice(0, -1);
+    if (node.elements.length === 0) throw new ApiExtractionError(chain, `an empty tuple is not in the grammar; ${rule}`);
+    if (prefix.length === 0) throw new ApiExtractionError(chain, `a tuple needs a required first element before its rest; ${rule}`);
+    const refusals = new Map([
+      [SyntaxKind.OptionalType, 'an optional tuple element'],
+      [SyntaxKind.NamedTupleMember, 'a named tuple element'],
+      [SyntaxKind.RestType, 'a rest element before the last'],
+    ]);
+    for (const element of prefix) {
+      if (refusals.has(element.kind)) throw new ApiExtractionError(chain, `${refusals.get(element.kind)} is not in the grammar; ${rule}`);
+    }
+    if (rest !== undefined && rest.type.kind !== SyntaxKind.ArrayType) {
+      throw new ApiExtractionError(chain, `a rest element that is not an array (a generic spread) is not in the grammar; ${rule}`);
+    }
+    return {
+      kind: 'tuple',
+      elements: prefix.map((element, index) => typeOf(element, `${chain}[${index}]`)),
+      ...(rest === undefined ? {} : { rest: typeOf(rest.type.elementType, `${chain}[...]`) }),
+    };
+  }
+
   function typeOf(node, chain) {
     if (KEYWORDS.has(node.kind)) return { kind: KEYWORDS.get(node.kind) };
     switch (node.kind) {
@@ -643,7 +753,8 @@ function declarationReader({ project, declarationRoot, allowed }) {
         }
         throw new ApiExtractionError(chain, 'a type operator other than readonly T[] is not in the grammar');
       case SyntaxKind.FunctionType: return functionOf(node, chain);
-      case SyntaxKind.TypeLiteral: return objectOf(node.members, chain);
+      case SyntaxKind.TypeLiteral: return objectOf(node.members, chain, node);
+      case SyntaxKind.TupleType: return tupleOf(node, chain);
       case SyntaxKind.TypeReference: return referenceOf(node, chain);
       default:
         throw new ApiExtractionError(chain, `${REJECTED.get(node.kind) ?? SyntaxKind[node.kind]} is not in the grammar`);

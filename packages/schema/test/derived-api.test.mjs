@@ -243,10 +243,173 @@ test('an object type may carry additional "unknown", and nothing else carries or
     mutate(invalid.api.types.Item.type);
     rejects(() => validateDerivedApi(invalid), /api\/types\/Item\/type/u);
   }
-  // unknown is no type of its own anywhere in the grammar.
+  // The marker is no type: unknown as a member's type is refused by its place, as everywhere but a returned Promise.
   const keyword = structuredClone(document);
   keyword.api.types.Item.type.members[0].type = { kind: 'unknown' };
-  rejects(() => validateDerivedApi(keyword), /api\/types\/Item\/type must match exactly one schema/u);
+  rejects(() => validateDerivedApi(keyword), /api\/types\/Item\/type\/members\/0\/type unknown is only the sole argument of a Promise that a function returns/u);
+});
+
+/** The document with one more prop, `rows`, of the given type, and the named types it reaches. */
+function withRows(type, types = {}) {
+  const document = derived();
+  document.api.props.push('rows');
+  document.api.propDetails.rows = { type: structuredClone(type), required: false };
+  Object.assign(document.api.types, structuredClone(types));
+  return document;
+}
+
+/** The same prop in the `label` part of a compound, so a rule is checked at the part's own path. */
+function withPartRows(type, types = {}) {
+  const document = compound();
+  const block = document.api.partApis.label;
+  block.props.push('rows');
+  block.propDetails.rows = { type: structuredClone(type), required: false };
+  Object.assign(block.types, structuredClone(types));
+  return document;
+}
+
+const string = { kind: 'string' };
+const block = { kind: 'reference', name: 'Block' };
+const blockTypes = () => ({ Block: { type: { kind: 'object', members: [{ name: 'content', type: { kind: 'tuple', elements: [{ kind: 'reference', name: 'Block' }], rest: { kind: 'reference', name: 'Block' } }, required: false, readonly: false }] } } });
+
+test('a tuple is a non-empty prefix and an optional rest, and the names and never in it are checked like any type', () => {
+  for (const make of [withRows, withPartRows]) {
+    const at = make === withRows ? 'api' : 'api/partApis/label';
+    validateDerivedApi(make({ kind: 'tuple', elements: [string, { kind: 'number' }] }));
+    validateDerivedApi(make({ kind: 'tuple', elements: [string], rest: { kind: 'union', members: [{ kind: 'number' }, { kind: 'null' }] } }));
+    // A recursive tuple reaches its own name through its elements and its rest.
+    validateDerivedApi(make(block, blockTypes()));
+    for (const [path, tuple] of [
+      ['elements/0', { kind: 'tuple', elements: [block] }],
+      ['rest', { kind: 'tuple', elements: [string], rest: block }],
+      ['elements/1', { kind: 'tuple', elements: [string, block] }],
+    ]) {
+      rejects(() => validateDerivedApi(make(tuple)), /Block is referenced but not defined/u, `${at} ${path}`);
+      // Reached only through a tuple, so the name is defined and used.
+      validateDerivedApi(make(tuple, { Block: { type: string } }));
+    }
+    const unreached = make(string, { Block: { type: string } });
+    rejects(() => validateDerivedApi(unreached), /Block is defined but no prop or event reaches it/u);
+    // The shape: kind, a non-empty elements array of types, an optional rest type, and nothing more.
+    for (const mutate of [
+      (type) => { type.elements = []; },
+      (type) => { delete type.elements; },
+      (type) => { type.elements = string; },
+      (type) => { type.elements = [{ kind: 'symbol' }]; },
+      (type) => { type.rest = [string]; },
+      (type) => { type.rest = { kind: 'symbol' }; },
+      (type) => { type.optional = true; },
+    ]) {
+      const invalid = make({ kind: 'tuple', elements: [string], rest: string });
+      mutate(invalid.api.propDetails?.rows?.type ?? invalid.api.partApis.label.propDetails.rows.type);
+      rejects(() => validateDerivedApi(invalid), new RegExp(`${at}/propDetails/rows/type`, 'u'));
+    }
+    // never stays out of a tuple, as everywhere but an optional object member.
+    rejects(() => validateDerivedApi(make({ kind: 'tuple', elements: [{ kind: 'never' }] })), new RegExp(`${at}/propDetails/rows/type/elements/0 never is only`, 'u'));
+    rejects(() => validateDerivedApi(make({ kind: 'tuple', elements: [string, { kind: 'never' }], rest: string })), new RegExp(`${at}/propDetails/rows/type/elements/1 never is only`, 'u'));
+    rejects(() => validateDerivedApi(make({ kind: 'tuple', elements: [string], rest: { kind: 'never' } })), new RegExp(`${at}/propDetails/rows/type/rest never is only`, 'u'));
+  }
+});
+
+test('unknown is only the sole argument of a Promise that a function returns, directly or in its return union', () => {
+  const promised = { kind: 'host', name: 'Promise', typeArguments: [{ kind: 'unknown' }] };
+  const fn = (returns, parameters = []) => ({ kind: 'function', parameters, returns });
+  const parameter = (type) => ({ name: 'value', type, required: true });
+  const handler = (type) => ({ kind: 'object', members: [{ name: 'done', type, required: true, readonly: false }] });
+  for (const make of [withRows, withPartRows]) {
+    const at = make === withRows ? 'api' : 'api/partApis/label';
+    const rows = (type) => make(type);
+    // Direct, in a union with void, in a nested union, in a function that is a parameter, and in a function that is a member.
+    validateDerivedApi(rows(fn(promised)));
+    validateDerivedApi(rows(fn({ kind: 'union', members: [{ kind: 'void' }, promised] })));
+    validateDerivedApi(rows(fn({ kind: 'union', members: [{ kind: 'union', members: [{ kind: 'void' }, promised] }, string] })));
+    validateDerivedApi(rows(fn({ kind: 'void' }, [parameter(fn(promised))])));
+    validateDerivedApi(rows(handler(fn(promised))));
+    validateDerivedApi(rows(fn(promised, [parameter(fn(promised))])));
+
+    const misplaced = [
+      ['bare, as a prop type', { kind: 'unknown' }, 'type'],
+      ['bare, as a return', fn({ kind: 'unknown' }), 'type/returns'],
+      ['bare, in a return union', fn({ kind: 'union', members: [{ kind: 'void' }, { kind: 'unknown' }] }), 'type/returns/members/1'],
+      ['the promise as a prop type', promised, 'type/typeArguments/0'],
+      ['the promise as a parameter', fn({ kind: 'void' }, [parameter(promised)]), 'type/parameters/0/type/typeArguments/0'],
+      ['the promise as a parameter, beside a returned one', fn(promised, [parameter(promised)]), 'type/parameters/0/type/typeArguments/0'],
+      ['the promise in an array return', fn({ kind: 'array', element: promised, readonly: false }), 'type/returns/element/typeArguments/0'],
+      ['the promise in a tuple return', fn({ kind: 'tuple', elements: [promised] }), 'type/returns/elements/0/typeArguments/0'],
+      ['the promise in a tuple rest', fn({ kind: 'tuple', elements: [string], rest: promised }), 'type/returns/rest/typeArguments/0'],
+      ['the promise in a record return', fn({ kind: 'record', value: promised, readonly: false }), 'type/returns/value/typeArguments/0'],
+      ['the promise as a member of an object return', fn(handler(promised)), 'type/returns/members/0/type/typeArguments/0'],
+      ['the promise as a member of an object', handler(promised), 'type/members/0/type/typeArguments/0'],
+      ['unknown in the argument union', fn({ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'union', members: [{ kind: 'unknown' }, { kind: 'void' }] }] }), 'type/returns/typeArguments/0/members/0'],
+      ['another host with unknown', fn({ kind: 'host', name: 'Set', typeArguments: [{ kind: 'unknown' }] }), 'type/returns/typeArguments/0'],
+      ['a nested promise', fn({ kind: 'host', name: 'Promise', typeArguments: [promised] }), 'type/returns/typeArguments/0/typeArguments/0'],
+      ['a promise of two arguments', fn({ kind: 'host', name: 'Promise', typeArguments: [{ kind: 'unknown' }, string] }), 'type/returns/typeArguments/0'],
+      ['a prefixed Promise', fn({ kind: 'host', name: 'React.Promise', typeArguments: [{ kind: 'unknown' }] }), 'type/returns/typeArguments/0'],
+    ];
+    for (const [label, type, path] of misplaced) {
+      rejects(() => validateDerivedApi(rows(type)), new RegExp(`${at}/propDetails/rows/${path} unknown is only the sole argument of a Promise that a function returns`, 'u'), label);
+    }
+    // The same place in a named type and in an event: a named type holds a function, and an event is one.
+    const named = make({ kind: 'reference', name: 'Later' }, { Later: { type: fn(promised) } });
+    validateDerivedApi(named);
+    const badNamed = make({ kind: 'reference', name: 'Later' }, { Later: { type: handler(promised) } });
+    rejects(() => validateDerivedApi(badNamed), new RegExp(`${at}/types/Later/type/members/0/type/typeArguments/0 unknown is only`, 'u'));
+  }
+  const event = derived();
+  event.api.eventDetails.activate.type.returns = promised;
+  validateDerivedApi(event);
+  event.api.eventDetails.activate.type.parameters.push({ name: 'later', type: promised, required: true });
+  rejects(() => validateDerivedApi(event), /api\/eventDetails\/activate\/type\/parameters\/1\/type\/typeArguments\/0 unknown is only/u);
+});
+
+test('a method is a required, writable, function-valued member of an object with no marker', () => {
+  const run = (overrides = {}) => ({
+    name: 'run', type: { kind: 'function', parameters: [], returns: { kind: 'boolean' } }, required: true, readonly: false, method: true, description: 'Runs it.', ...overrides,
+  });
+  const object = (...members) => ({ kind: 'object', members });
+  const prop = { name: 'label', type: string, required: false, readonly: true };
+  for (const make of [withRows, withPartRows]) {
+    const at = make === withRows ? 'api' : 'api/partApis/label';
+    validateDerivedApi(make(object(run(), prop)));
+    // In a callback's parameter, in a named type, and beside the function property it differs from.
+    validateDerivedApi(make({ kind: 'function', parameters: [{ name: 'actions', type: object(run()), required: true }], returns: { kind: 'void' } }));
+    validateDerivedApi(make({ kind: 'reference', name: 'Actions' }, { Actions: { type: object(run(), prop) } }));
+
+    // The grammar reports a bad type where the type starts, as it does for every shape it refuses.
+    const invalid = [
+      ['optional', run({ required: false })],
+      ['readonly', run({ readonly: true })],
+      ['string-valued', run({ type: string })],
+      ['optional and string-valued', run({ required: false, type: string })],
+      ['readonly and string-valued', run({ readonly: true, type: string })],
+      ['a union of functions', run({ type: { kind: 'union', members: [run().type, run().type] } })],
+      ['a reference', run({ type: { kind: 'reference', name: 'Fn' } })],
+      ['false', run({ method: false })],
+      ['a string', run({ method: 'true' })],
+    ];
+    for (const [label, member] of invalid) {
+      const document = make(object(member));
+      Object.assign(document.api.types, { Fn: { type: run().type } });
+      rejects(() => validateDerivedApi(document), new RegExp(`${at}/propDetails/rows/type must match exactly one schema`, 'u'), label);
+    }
+    // A method beside the D1 marker is refused whatever else holds, and a property beside it is not.
+    validateDerivedApi(make({ ...object(prop), additional: 'unknown' }));
+    rejects(() => validateDerivedApi(make({ ...object(run(), prop), additional: 'unknown' })), new RegExp(`${at}/propDetails/rows/type must match exactly one schema`, 'u'));
+    rejects(() => validateDerivedApi(make({ ...object(prop, run()), additional: 'unknown' })), new RegExp(`${at}/propDetails/rows/type must match exactly one schema`, 'u'));
+    // The flag is a member's: no prop, event, or named type carries it, and a record or array has no members for it.
+    const flagged = make(string);
+    (flagged.api.partApis?.label ?? flagged.api).propDetails.rows.method = true;
+    rejects(() => validateDerivedApi(flagged), new RegExp(`${at}/propDetails/rows/method is an unknown field`, 'u'));
+    const flaggedType = make(string);
+    (flaggedType.api.partApis?.label ?? flaggedType.api).propDetails.rows.type.method = true;
+    rejects(() => validateDerivedApi(flaggedType), new RegExp(`${at}/propDetails/rows/type must match exactly one schema`, 'u'));
+  }
+  // An event's type is a function; its parameters' object types hold methods like any other.
+  const event = derived();
+  event.api.eventDetails.activate.type.parameters.push({ name: 'actions', type: object(run()), required: true });
+  validateDerivedApi(event);
+  event.api.eventDetails.activate.method = true;
+  rejects(() => validateDerivedApi(event), /api\/eventDetails\/activate\/method is an unknown field/u);
 });
 
 /** A document whose compound has a root block and two parts, as ListBox does with its section and item. */

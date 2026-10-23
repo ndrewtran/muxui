@@ -98,11 +98,13 @@
         { "$ref": "#/$defs/literalType" },
         { "$ref": "#/$defs/unionType" },
         { "$ref": "#/$defs/arrayType" },
+        { "$ref": "#/$defs/tupleType" },
         { "$ref": "#/$defs/functionType" },
         { "$ref": "#/$defs/objectType" },
         { "$ref": "#/$defs/recordType" },
         { "$ref": "#/$defs/referenceType" },
-        { "$ref": "#/$defs/hostType" }
+        { "$ref": "#/$defs/hostType" },
+        { "$ref": "#/$defs/unknownType" }
       ]
     },
     "keywordType": {
@@ -140,6 +142,17 @@
         "readonly": { "type": "boolean" }
       }
     },
+    "tupleType": {
+      "description": "A tuple: a non-empty prefix of required elements, then at most one terminal rest array. rest is the element type of that array, so [A, ...B[]] is elements [A] and rest B.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "elements"],
+      "properties": {
+        "kind": { "const": "tuple" },
+        "elements": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/type" } },
+        "rest": { "$ref": "#/$defs/type" }
+      }
+    },
     "functionType": {
       "type": "object",
       "additionalProperties": false,
@@ -169,25 +182,50 @@
       "properties": {
         "kind": { "const": "object" },
         "additional": {
-          "description": "Present on an open item: besides its members, the object takes other string-keyed fields of unknown type (a mutable [key: string]: unknown beside named properties). It is the only place unknown is in the grammar.",
+          "description": "Present on an open item: besides its members, the object takes other string-keyed fields of unknown type (a mutable [key: string]: unknown beside named properties). It marks the object; it is no type, and its members are properties only.",
           "const": "unknown"
         },
         "members": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["name", "type", "required", "readonly"],
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "type": { "$ref": "#/$defs/type" },
-              "required": { "type": "boolean" },
-              "readonly": { "type": "boolean" },
-              "description": { "$ref": "#/$defs/description" }
-            }
+          "items": { "$ref": "#/$defs/objectMember" }
+        }
+      },
+      "anyOf": [
+        { "description": "An ordinary object.", "not": { "required": ["additional"] } },
+        {
+          "description": "An open item carries no method: a method beside the index signature is not in the grammar.",
+          "required": ["additional", "members"],
+          "properties": { "members": { "items": { "not": { "required": ["method"] } } } }
+        }
+      ]
+    },
+    "objectMember": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "required", "readonly"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "$ref": "#/$defs/type" },
+        "required": { "type": "boolean" },
+        "readonly": { "type": "boolean" },
+        "method": {
+          "description": "Present on a method signature, whose type is the function it declares: the declaration keeps method syntax, which a function property does not (a method's parameters are bivariant). Only a nested member can be one; a prop, an event, and a named type are never methods.",
+          "const": true
+        },
+        "description": { "$ref": "#/$defs/description" }
+      },
+      "anyOf": [
+        { "description": "A property.", "not": { "required": ["method"] } },
+        {
+          "description": "A method: required, not readonly, and function-valued.",
+          "required": ["method"],
+          "properties": {
+            "required": { "const": true },
+            "readonly": { "const": false },
+            "type": { "$ref": "#/$defs/functionType" }
           }
         }
-      }
+      ]
     },
     "recordType": {
       "description": "An object type whose one member is a string index signature: caller-chosen string keys, each holding value.",
@@ -208,6 +246,13 @@
         "kind": { "const": "reference" },
         "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" }
       }
+    },
+    "unknownType": {
+      "description": "unknown, in one place only: the sole type argument of a Promise host that a function returns, directly or as a member of its return union (a callback that may return a promise whose value is never read). derived-api.mjs checks the place, which this grammar cannot state.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": { "kind": { "const": "unknown" } }
     },
     "hostType": {
       "description": "An exact host type, or an exact application of a host generic with its type arguments in order.",

@@ -797,6 +797,93 @@ test('Decision 0031: any change inside a host type\'s typeArguments is incompati
   assert.equal(named.effect, 'compatible', summary(named).join(', '));
 });
 
+test('Decision 0031: any change inside a tuple is incompatible, at the root, in a named type, and in a part', async (t) => {
+  const { authored, revisionContext, document, part, diff: partDiff } = await partFixture();
+  const string = { kind: 'string' };
+  const block = { kind: 'reference', name: 'Block' };
+  // data?: [string, ...(string | number | boolean)[]]; fixed?: [string, number]; quote?: Quote, whose content is [Block, ...Block[]]; pair?: Pair = [string, ...string[]].
+  const tuples = () => ({
+    props: ['data', 'fixed', 'quote', 'pair'],
+    propDetails: {
+      data: { type: { kind: 'tuple', elements: [string], rest: { kind: 'union', members: [string, { kind: 'number' }, { kind: 'boolean' }] } }, required: false, description: 'The data.' },
+      fixed: { type: { kind: 'tuple', elements: [string, { kind: 'number' }] }, required: false },
+      quote: { type: { kind: 'reference', name: 'Quote' }, required: false },
+      pair: { type: { kind: 'reference', name: 'Pair' }, required: false },
+    },
+    types: {
+      Block: { type: string },
+      Quote: { type: { kind: 'object', members: [{ name: 'content', type: { kind: 'tuple', elements: [block], rest: block }, required: true, readonly: false }] } },
+      Pair: { type: { kind: 'tuple', elements: [string], rest: string } },
+    },
+  });
+  const root = document();
+  Object.assign(root.api, tuples());
+  const inPart = document({ label: part((label) => Object.assign(label, tuples())) });
+  const ofRoot = (api) => api;
+  const ofPart = (api) => api.partApis.label;
+  const classify = (before, edit) => {
+    const after = structuredClone(before);
+    edit(after.api);
+    return semanticDiff({
+      before: authored,
+      after: authored,
+      revisionContext: { ...revisionContext, before: { derivedApis: { 'web.react': before } }, after: { derivedApis: { 'web.react': after } } },
+    });
+  };
+  const paths = (result) => result.changes.map(({ path, operation }) => `${operation} ${path.replace('$/bindings/web.react/api/', '')}`);
+
+  for (const [where, base, at, prefix] of [['the root', root, ofRoot, ''], ['a part', inPart, ofPart, 'partApis/label/']]) {
+    await t.test(where, () => {
+      const incompatible = [
+        // The case that read as compatible: a required element appended to the prefix rejects the one-element values.
+        ['adding a required element to the prefix', (api) => at(api).propDetails.data.type.elements.push({ kind: 'number' }), [`add ${prefix}propDetails/data/type/elements/1`]],
+        ['inserting an element before the rest', (api) => at(api).propDetails.data.type.elements.unshift({ kind: 'number' }), [`add ${prefix}propDetails/data/type/elements/0`]],
+        ['removing an element', (api) => at(api).propDetails.fixed.type.elements.pop(), [`remove ${prefix}propDetails/fixed/type/elements/1`]],
+        ['reordering the elements', (api) => at(api).propDetails.fixed.type.elements.reverse(), [`add ${prefix}propDetails/fixed/type/elements/0`, `remove ${prefix}propDetails/fixed/type/elements/1`]],
+        ['retyping an element', (api) => { at(api).propDetails.fixed.type.elements[1] = string; }, [`add ${prefix}propDetails/fixed/type/elements/1`, `remove ${prefix}propDetails/fixed/type/elements/1`]],
+        ['widening an element', (api) => { at(api).propDetails.fixed.type.elements[0] = { kind: 'union', members: [string, { kind: 'number' }] }; }, [`add ${prefix}propDetails/fixed/type/elements/0`, `remove ${prefix}propDetails/fixed/type/elements/0`]],
+        ['dropping the rest', (api) => { delete at(api).propDetails.data.type.rest; }, [`remove ${prefix}propDetails/data/type/rest`]],
+        ['giving a fixed tuple a rest', (api) => { at(api).propDetails.fixed.type.rest = string; }, [`add ${prefix}propDetails/fixed/type/rest`]],
+        ['retyping the rest', (api) => { at(api).propDetails.data.type.rest = { kind: 'number' }; }, [`replace ${prefix}propDetails/data/type/rest/kind`]],
+        // A union gains a member compatibly elsewhere; the rest of a tuple is not a list of options.
+        ['widening the rest', (api) => at(api).propDetails.data.type.rest.members.push({ kind: 'null' }), [`add ${prefix}propDetails/data/type/rest/members/3`]],
+        ['narrowing the rest', (api) => at(api).propDetails.data.type.rest.members.pop(), [`remove ${prefix}propDetails/data/type/rest/members/2`]],
+        // A tuple that is a named type's whole body.
+        ['adding an element to a named tuple', (api) => at(api).types.Pair.type.elements.push({ kind: 'number' }), [`add ${prefix}types/Pair/type/elements/1`]],
+        ['dropping the rest of a named tuple', (api) => { delete at(api).types.Pair.type.rest; }, [`remove ${prefix}types/Pair/type/rest`]],
+        // A tuple inside a named type's member: the diff replaces the member as a whole.
+        ['adding an element inside a named type\'s member', (api) => at(api).types.Quote.type.members[0].type.elements.push(block), [`add ${prefix}types/Quote/type/members/0`, `remove ${prefix}types/Quote/type/members/0`]],
+        ['dropping the rest inside a named type\'s member', (api) => { delete at(api).types.Quote.type.members[0].type.rest; }, [`add ${prefix}types/Quote/type/members/0`, `remove ${prefix}types/Quote/type/members/0`]],
+      ];
+      for (const [name, edit, changes] of incompatible) {
+        const result = classify(base, edit);
+        assert.ok(paths(result).length > 0, name);
+        for (const change of changes) assert.ok(paths(result).includes(change), `${name}: ${paths(result).join(', ')}`);
+        assert.ok(result.changes.filter(({ path }) => /\/(?:elements|rest)(?:\/|$)/u.test(path)).every(({ effect }) => effect === 'incompatible'), `${name}: ${result.changes.map(({ path, effect }) => `${path} ${effect}`).join(', ')}`);
+        assert.deepEqual([result.effect, result.versionEffect], ['incompatible', 'major'], name);
+      }
+      // Only a change inside a tuple is so classified: a union outside one keeps the generic rules, and so does a description.
+      const widened = classify(base, (api) => {
+        at(api).props.push('mode');
+        at(api).propDetails.mode = { type: { kind: 'union', members: [{ kind: 'literal', value: 'a' }, { kind: 'literal', value: 'b' }] }, required: false };
+      });
+      assert.equal(widened.effect, 'compatible');
+      const withMode = structuredClone(base);
+      at(withMode.api).props.push('mode');
+      at(withMode.api).propDetails.mode = { type: { kind: 'union', members: [{ kind: 'literal', value: 'a' }, { kind: 'literal', value: 'b' }] }, required: false };
+      assert.equal(classify(withMode, (api) => at(api).propDetails.mode.type.members.push({ kind: 'literal', value: 'c' })).effect, 'compatible', 'a union gains a member compatibly');
+      const described = classify(base, (api) => { at(api).propDetails.data.description = 'The rows.'; });
+      assert.deepEqual([described.effect, described.versionEffect], ['editorial', 'patch']);
+      // A new prop whose type is a tuple is a compatible addition, like any optional prop.
+      const added = classify(base, (api) => {
+        at(api).props.push('more');
+        at(api).propDetails.more = { type: { kind: 'tuple', elements: [string], rest: string }, required: false };
+      });
+      assert.equal(added.effect, 'compatible', paths(added).join(', '));
+    });
+  }
+});
+
 test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
   const { context } = await setup();
   // Text is generic over its element, which the closed grammar cannot derive, so it keeps an authored api.

@@ -824,6 +824,23 @@ const PART_DEFAULTS = /^\$\/bindings\/[^/]+\/api\/partApis\/[^/]+\/defaults(?:\/
 // Anywhere at or inside a host type's `typeArguments`, below the derived entry's own name.
 const HOST_ARGUMENTS = /\/typeArguments(?:\/|$)/u;
 
+/**
+ * Whether a change path runs inside a tuple's elements or rest, in either record. A tuple is a fixed shape, not a list of
+ * options: a union gains a member compatibly, but an element added, removed, retyped, or reordered changes which values the
+ * tuple takes, and an element array's generic diff (one added item) reads as the compatible kind of change.
+ */
+function insideTuple(path, ...records) {
+  const segments = pointerSegments(path);
+  return records.some((record) => {
+    let node = record;
+    for (const segment of segments) {
+      if (isObject(node) && node.kind === 'tuple' && (segment === 'elements' || segment === 'rest')) return true;
+      node = node?.[segment];
+    }
+    return false;
+  });
+}
+
 // In the derived grammar a `description` key is only ever documentation.
 const withoutDescriptions = (value) => {
   if (Array.isArray(value)) return value.map(withoutDescriptions);
@@ -848,7 +865,8 @@ const obligates = (part) => isObject(part)
  * editorial (the spec revision still moves with the block). Adding a required prop or
  * event, or a required or absent (`name?: never`) member to an object type inside one
  * (inline or a named type), is incompatible, and so is any change inside a host type's
- * `typeArguments`: adding, removing, replacing, or reordering an argument or a union member.
+ * `typeArguments`: adding, removing, replacing, or reordering an argument or a union member, and
+ * so is any change inside a tuple's elements or rest (`insideTuple`).
  * A part's block (`partApis`) follows the same rules, and its additions are classified by
  * content, not by the schema's blanket compatible add: a default inside a part is
  * incompatible, as at the root, and so is adding a whole part, or the first `partApis` map,
@@ -871,6 +889,9 @@ function derivedEffect(change, effect, mergedBefore, mergedAfter) {
     // A host application's arguments are part of its type: adding an excluded member, say, narrows
     // what the prop accepts, which the generic rule for an added array item would call compatible.
     if (rest !== undefined && HOST_ARGUMENTS.test(rest)) return 'incompatible';
+    // The same goes for a change inside a tuple, which is incompatible however it is edited (a prefix element added, say,
+    // rejects the one-element values it accepted).
+    if (rest !== undefined && insideTuple(change.path, mergedBefore, mergedAfter)) return 'incompatible';
     if (change.operation !== 'add') return effect;
     if (rest === undefined && field !== 'types' && right?.required === true) return 'incompatible';
     if (/\/members\/\d+$/u.test(change.path) && narrowsInput(change.after)) return 'incompatible';

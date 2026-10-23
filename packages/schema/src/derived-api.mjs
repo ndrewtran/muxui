@@ -15,6 +15,10 @@ function referencedNames(type, names) {
     case 'reference': names.add(type.name); break;
     case 'union': for (const member of type.members) referencedNames(member, names); break;
     case 'array': referencedNames(type.element, names); break;
+    case 'tuple':
+      for (const element of type.elements) referencedNames(element, names);
+      if (type.rest !== undefined) referencedNames(type.rest, names);
+      break;
     case 'record': referencedNames(type.value, names); break;
     case 'function':
       for (const parameter of type.parameters) referencedNames(parameter.type, names);
@@ -33,6 +37,10 @@ function misplacedNever(type, path, found = []) {
     case 'never': found.push(path); break;
     case 'union': type.members.forEach((member, index) => misplacedNever(member, `${path}/members/${index}`, found)); break;
     case 'array': misplacedNever(type.element, `${path}/element`, found); break;
+    case 'tuple':
+      type.elements.forEach((element, index) => misplacedNever(element, `${path}/elements/${index}`, found));
+      if (type.rest !== undefined) misplacedNever(type.rest, `${path}/rest`, found);
+      break;
     case 'record': misplacedNever(type.value, `${path}/value`, found); break;
     case 'function':
       type.parameters.forEach((parameter, index) => misplacedNever(parameter.type, `${path}/parameters/${index}/type`, found));
@@ -49,6 +57,41 @@ function misplacedNever(type, path, found = []) {
   return found;
 }
 
+/**
+ * Paths where `unknown` stands anywhere but as the sole argument of a `Promise` host that a function returns, directly or as a
+ * member of its return union (a callback that may return a promise whose value is never read). `returned` is true only there:
+ * each function restarts it for its own return, and nothing else passes it on, so a parameter, an array, a tuple, a record, an
+ * object member, or another host's argument holds no unknown. The D1 `additional: "unknown"` marker is no type and is not
+ * visited. D3's synthetic erasure of an unconstrained binder (T10b) is serialized as the same `{ kind: 'unknown' }` and needs
+ * its own rule here before it can be admitted; this one rejects it.
+ */
+function misplacedUnknown(type, path, found = [], returned = false) {
+  switch (type.kind) {
+    case 'unknown': found.push(path); break;
+    case 'union': type.members.forEach((member, index) => misplacedUnknown(member, `${path}/members/${index}`, found, returned)); break;
+    case 'array': misplacedUnknown(type.element, `${path}/element`, found); break;
+    case 'tuple':
+      type.elements.forEach((element, index) => misplacedUnknown(element, `${path}/elements/${index}`, found));
+      if (type.rest !== undefined) misplacedUnknown(type.rest, `${path}/rest`, found);
+      break;
+    case 'record': misplacedUnknown(type.value, `${path}/value`, found); break;
+    case 'function':
+      type.parameters.forEach((parameter, index) => misplacedUnknown(parameter.type, `${path}/parameters/${index}/type`, found));
+      misplacedUnknown(type.returns, `${path}/returns`, found, true);
+      break;
+    case 'object': type.members.forEach((member, index) => misplacedUnknown(member.type, `${path}/members/${index}/type`, found)); break;
+    case 'host': {
+      const promised = returned && type.name === 'Promise' && type.typeArguments?.length === 1 && type.typeArguments[0].kind === 'unknown';
+      (type.typeArguments ?? []).forEach((argument, index) => {
+        if (!promised) misplacedUnknown(argument, `${path}/typeArguments/${index}`, found);
+      });
+      break;
+    }
+    default: break;
+  }
+  return found;
+}
+
 function sameSet(left, right) {
   return left.length === right.length && left.every((value) => right.includes(value));
 }
@@ -57,7 +100,8 @@ function sameSet(left, right) {
  * The rules the grammar cannot state, for one block (the root's or a part's): details cover
  * exactly the listed props and events, each event names its on<Event> prop, defaults belong
  * to listed props and their enums, `types` holds exactly the named types the details reach,
- * and `never` is only an optional object member's type. `at` is the block's path.
+ * `never` is only an optional object member's type, and `unknown` is only the argument of a
+ * returned `Promise` (`misplacedUnknown`). `at` is the block's path.
  */
 function blockIssues(block, at) {
   const issues = [];
@@ -106,6 +150,9 @@ function blockIssues(block, at) {
   ];
   for (const path of typed.flatMap(([typePath, type]) => misplacedNever(type, typePath))) {
     issues.push({ path, message: 'never is only an optional object member\'s type, a member that must be absent' });
+  }
+  for (const path of typed.flatMap(([typePath, type]) => misplacedUnknown(type, typePath))) {
+    issues.push({ path, message: 'unknown is only the sole argument of a Promise that a function returns' });
   }
   return issues;
 }
