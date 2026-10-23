@@ -1643,15 +1643,21 @@ function runScopedGroup(result, root, { proof = true } = {}) {
 }
 
 const referencePath = 'packages/react/reference/tree.json';
+// Reordering two theme presets reorders the generated MuxUIStandardThemeId union, and so changes package-level.json.
+const swapPresets = (text) => text.replaceAll('standard-harbour', '\0').replaceAll('standard-lagoon', 'standard-harbour').replaceAll('\0', 'standard-lagoon');
 const STALE_REFERENCES = [
   ['a hand-edited file', (directory) => writeFileSync(join(directory, 'tree.json'), `${readFileSync(join(directory, 'tree.json'), 'utf8')} `)],
   ['a deleted file', (directory) => unlinkSync(join(directory, 'tree.json'))],
   ['an extra file', (directory) => writeFileSync(join(directory, 'removed-family.json'), '{}\n')],
+  ['two reordered theme presets', (directory) => writeFileSync(join(directory, 'package-level.json'), swapPresets(readFileSync(join(directory, 'package-level.json'), 'utf8')))],
 ];
-// What the change names: the reference itself, or only the React source whose declarations the reference describes.
+// What the change names: the reference itself, the React source whose declarations the reference describes, or the
+// theme presets that are generated into themes.d.ts.
 const SCOPED_CHANGES = [
   ['a reference file', () => plan([referencePath])],
   ['React source', () => plan([collectionsPath], treeRuntimeChange)],
+  ['the theme presets', () => plan(['catalog/tokens/default-theme.json'])],
+  ['the token compiler', () => plan(['packages/tokens/src/index.mjs'])],
 ];
 
 test('the scoped route generates, then proves a clean checkout generates the committed reference', async () => {
@@ -1681,6 +1687,32 @@ for (const [stale, makeStale] of STALE_REFERENCES) {
       }
     });
   }
+}
+
+// Everything generation reads to write a shipped declaration, or to say which family owns it. A change to any of
+// them can change the reference while the repaired working tree still passes every check, so each plans the proof.
+const reactManifest = (devDependencies) => JSON.stringify({ name: '@muxui/react', exports: {}, devDependencies });
+const DECLARATION_INPUTS = [
+  ['the theme presets', () => plan(['catalog/tokens/default-theme.json'])],
+  ['the token compiler', () => plan(['packages/tokens/src/index.mjs'])],
+  ['a module that becomes declarations', () => plan([collectionsPath], treeRuntimeChange)],
+  ['the declarations beside a JavaScript module', () => plan(['packages/react/src/list-box.d.ts'])],
+  ['the supplemental declarations', () => plan(['packages/react/src/supplemental/index.d.ts'])],
+  ['the declaration build configuration', () => plan(['packages/react/tsconfig.build.json'])],
+  ['the generator', () => plan(['packages/react/src/generate.mjs'], { moduleSources: { 'packages/react/src/generate.mjs': { before: 'export {};', after: 'export {}; // changed' } } })],
+  ['the family closure', () => plan(['catalog/react-r1-5/closure.json'])],
+  ['the supplemental mapping', () => plan(['catalog/react-r1-6/supplemental-mapping.json'])],
+  ['the reader', () => plan(['packages/react/reference-reader/expand.mjs'])],
+  ['the compilers the package pins', () => plan(['packages/react/package.json'], { reactPackageBefore: reactManifest({ typescript: '6.0.0' }), reactPackageAfter: reactManifest({ typescript: '6.0.1' }) })],
+];
+for (const [input, planned] of DECLARATION_INPUTS) {
+  test(`the scoped route proves a clean checkout generates the committed reference when ${input} changes`, async () => {
+    const groups = executionGroups(await planned(), { packages, environment: {}, pageIndex });
+    const proof = groups.flatMap(({ id, commands }) => commands.map((command) => [id, command]))
+      .filter(([, command]) => command.command === 'pnpm' && command.args.join(' ') === 'generate:check');
+    assert.equal(proof.length, 1, `${input} plans the root generate:check once`);
+    assert.equal(proof[0][0], 'react');
+  });
 }
 
 test('the scoped route passes a reference that is current', async () => {

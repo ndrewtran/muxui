@@ -707,6 +707,8 @@ function applyPackageImpact(plan, packageName, records, pageIndex) {
   if (packageName === '@muxui/tokens') {
     plan.tokens = true;
     plan.reactTheme = true;
+    // The theme presets the token source lists are generated into themes.d.ts, and so into the declaration reference.
+    plan.generationIdentity = true;
     plan.storyTheme = true;
     plan.storyChrome = true;
     plan.tailwind = true;
@@ -1233,6 +1235,9 @@ export async function buildPullRequestImpact({
         }
       }
       plan.reactTheme = true;
+      // The theme presets are generated into themes.d.ts (an order change is a declaration change), so the
+      // reference they feed must be proved current too.
+      plan.generationIdentity = true;
       plan.storyTheme = true;
       plan.tailwind ||= matches(path, config.tailwindRelevantPrefixes) || config.tailwindRelevantPaths.includes(path);
       plan.reasons.push(`${path} changes theme/token inputs; validate compiler, projections, and consumer contrast`);
@@ -1375,7 +1380,11 @@ export async function buildPullRequestImpact({
         plan.tailwind = true;
         plan.reasons.push(`${impact.reason}; validate every direct component consumer`);
       } else {
-        if (impact.developmentDependenciesChanged) plan.packageChecks.add('@muxui/react');
+        if (impact.developmentDependenciesChanged) {
+          plan.packageChecks.add('@muxui/react');
+          // The compilers that emit and read the declarations are development dependencies of the package.
+          plan.generationIdentity = true;
+        }
         if (impact.scriptsChanged || !impact.developmentDependenciesChanged) plan.policy = true;
         plan.reasons.push(`${impact.reason}; validate only the affected package metadata and test owner`);
       }
