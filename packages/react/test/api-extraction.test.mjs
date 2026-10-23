@@ -902,6 +902,127 @@ test('beside named properties, exactly one mutable [key: string]: unknown marks 
   rejects(ownProps('  bad?: string | unknown;'), /Thing\.bad: unknown is not in the grammar/u);
 });
 
+// The members an item type lists, read as one object type: what an interface with a base, or an intersection alias, must equal.
+const itemMembers = [
+  { name: 'id', type: { kind: 'string' }, required: false, readonly: false, description: 'The stable id.' },
+  { name: 'label', type: { kind: 'host', name: 'React.ReactNode' }, required: false, readonly: false },
+  { name: 'color', type: { kind: 'string' }, required: false, readonly: false },
+];
+const openItem = 'export interface Item {\n  /** The stable id. */\n  id?: string;\n  label?: React.ReactNode;\n  [key: string]: unknown;\n}\n';
+
+test('an interface reads its one Mux UI-owned base, and an alias its whole-body intersection, as one object type with the base first', () => {
+  const flat = extract({ declarations: ownProps('  item?: Row;', openItem.replace('Item', 'Row').replace('  [key', '  color?: string;\n  [key')) }).types.Row;
+  const flatType = { kind: 'object', members: itemMembers, additional: 'unknown' };
+  assert.deepEqual(flat.type, flatType);
+  const forms = {
+    'one base': `${openItem}export interface Row extends Item { color?: string }\n`,
+    // The chain's members run from its root down, and a base at any depth may carry the marker.
+    'several levels': `${openItem}export interface Mid extends Item { }\nexport interface Row extends Mid { color?: string }\n`,
+    'an interface and a literal': `${openItem}export type Row = Item & { color?: string };\n`,
+    'a literal and an interface': `export type Row = { color?: string } & Item;\n${openItem}`,
+    'two interfaces and a literal': `${openItem}export interface Tint { color?: string }\nexport type Row = Item & Tint & { };\n`,
+    'an interface with a base, as an operand': `${openItem}export interface Mid extends Item { }\nexport type Row = Mid & { color?: string };\n`,
+  };
+  for (const [form, extra] of Object.entries(forms)) {
+    const api = extract({ declarations: ownProps('  item?: Row;', extra) });
+    const { type } = api.types.Row;
+    // The members are the flat ones, in base-first order and with the marker; the description of a base member is kept.
+    assert.deepEqual(type.members.map(({ name }) => name).sort(), ['color', 'id', 'label'], form);
+    assert.equal(type.additional, 'unknown', form);
+    assert.equal(type.members.find(({ name }) => name === 'id').description, 'The stable id.', form);
+    if (form === 'one base' || form === 'an interface and a literal') assert.deepEqual(type, flatType, form);
+    // The base is flattened into the child's record; it is no type of its own in the block.
+    assert.deepEqual(Object.keys(api.types), ['Row'], form);
+  }
+  // A base that is also a prop's type of its own stays one, with the child as another.
+  const both = extract({ declarations: ownProps('  base?: Item;\n  row?: Row;', `${openItem}export interface Row extends Item { color?: string }\n`) });
+  assert.deepEqual(Object.keys(both.types), ['Item', 'Row']);
+  // A recursive member of the child (a tree item's children) still refers to the child by name.
+  const tree = extract({ declarations: ownProps('  items?: Node[];', `${openItem}export interface Node extends Item { children?: Node[] }\n`) });
+  assert.deepEqual(tree.types.Node.type.members.at(-1), { name: 'children', type: { kind: 'array', element: { kind: 'reference', name: 'Node' }, readonly: false }, required: false, readonly: false });
+  // A base reached through an import, and through an import alias, from another file.
+  const other = "import type * as React from 'react';\nexport interface Source { id?: string; [key: string]: unknown }\n";
+  const imported = extract({
+    declarations: ownProps('  item?: Row;', "import type { Source as Renamed } from './other.js';\nexport interface Row extends Renamed { color?: string }\n"),
+    files: { 'other.d.ts': other },
+  });
+  assert.deepEqual(imported.types.Row.type.members.map(({ name }) => name), ['id', 'color']);
+  assert.equal(imported.types.Row.type.additional, 'unknown');
+  const throughIntersection = extract({
+    declarations: ownProps('  item?: Row;', "import type { Source as Renamed } from './other.js';\nexport type Row = Renamed & { color?: string };\n"),
+    files: { 'other.d.ts': other },
+  });
+  assert.deepEqual(throughIntersection.types.Row, imported.types.Row);
+  // An interface with no base is read as it was: no marker is added.
+  assert.equal(Object.hasOwn(extract({ declarations: ownProps('  item?: Plain;', 'export interface Plain { id?: string }\n') }).types.Plain.type, 'additional'), false);
+});
+
+test('the heritage and intersection rule refuses everything but one non-generic Mux UI-owned base and a whole-body intersection of owned types', () => {
+  const generic = 'export interface Box<T> { value?: T }\n';
+  const library = "import type { HTMLAttributes } from 'react';\n";
+  const cases = [
+    // An interface has at most one base, whichever clause form lists them.
+    ['two bases', `${openItem}export interface Tint { color?: string }\nexport interface Row extends Item, Tint { }\n`, /Thing\.item -> Row: Row extends 2 types; an interface has at most one base/u],
+    ['a base with type arguments', `${generic}export interface Row extends Box<string> { }\n`, /Thing\.item -> Row -> Box: Box is written with type arguments; a base takes none/u],
+    ['a generic base, even without arguments', `${generic}export interface Row extends Box { }\n`, /Thing\.item -> Row -> Box: Box is generic; a base is not/u],
+    ['an alias base', 'export type Shape = { id?: string };\nexport interface Row extends Shape { }\n', /Thing\.item -> Row -> Shape: Shape is not an interface; a base is a Mux UI-owned interface, not an alias, class, or enum/u],
+    ['a qualified base', "export interface Row extends React.HTMLAttributes<HTMLElement> { }\n", /Thing\.item -> Row -> React\.HTMLAttributes: React\.HTMLAttributes is not a plain identifier; a base is one naming a Mux UI-owned interface/u],
+    ['a qualified base from a Mux UI-owned namespace', 'export declare namespace Ns { interface Item { id?: string } }\nexport interface Row extends Ns.Item { }\n', /Thing\.item -> Row -> Ns\.Item: Ns\.Item is not a plain identifier/u],
+    ['a host base by name, with arguments', `${library}export interface Row extends HTMLAttributes<HTMLElement> { }\n`, /Thing\.item -> Row -> HTMLAttributes: HTMLAttributes is written with type arguments/u],
+    ['a host base by name, bare', "import type { Component } from 'react';\nexport interface Row extends Component { }\n", /Thing\.item -> Row -> Component: Component is outside @muxui\/react, or also declared there; a base is a Mux UI-owned interface/u],
+    ['a library base', 'export interface Row extends Event { }\n', /Thing\.item -> Row -> Event: Event is outside @muxui\/react, or also declared there; a base is a Mux UI-owned interface/u],
+    ['a library base with a Mux UI-owned declaration merged in', 'declare global { interface Event { extra?: string } }\nexport interface Row extends Event { }\n', /Thing\.item -> Row -> Event: Event is outside @muxui\/react, or also declared there/u],
+    ['a base declared twice', `${openItem}export interface Item { color?: string }\nexport interface Row extends Item { }\n`, /Thing\.item -> Row -> Item: Item has 2 declarations; a Mux UI-owned type has one/u],
+    ['an unresolved base', 'export interface Row extends Missing { }\n', /Thing\.item -> Row -> Missing: Missing does not resolve/u],
+    // A redeclaration could narrow a base member, which the grammar cannot express.
+    ['a redeclared member', `${openItem}export interface Row extends Item { id?: 'a' | 'b' }\n`, /Thing\.item -> Row\.id: id is declared twice among the joined members/u],
+    ['a redeclared member two levels up', `${openItem}export interface Mid extends Item { }\nexport interface Row extends Mid { label?: string }\n`, /Thing\.item -> Row\.label: label is declared twice/u],
+    ['a second index signature', `${openItem}export interface Row extends Item { [key: string]: unknown }\n`, /Thing\.item -> Row: an index signature is in the grammar only as the one member of its object type, or as the one mutable/u],
+    ['a base with a readonly signature beside members', "export interface Item { id?: string; readonly [key: string]: unknown }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row: .*beside named properties it must be mutable/u],
+    ['a base with another signature value', "export interface Item { id?: string; [key: string]: string | undefined }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row: .*its value is written as the keyword unknown/u],
+    ['a method in the base', "export interface Item { id?: string; call(): void }\nexport interface Row extends Item { color?: string }\n", /Thing\.item -> Row\.call: only property signatures are in the grammar/u],
+    // The chain is walked by resolved symbol, so no spelling or distance escapes the cycle check.
+    ['a base cycle of one', 'export interface Row extends Row { id?: string }\n', /Thing\.item -> Row -> Row: Row extends itself through its bases/u],
+    ['a base cycle of two', 'export interface Row extends Other { id?: string }\nexport interface Other extends Row { color?: string }\n', /Thing\.item -> Row -> Other -> Row: Row extends itself through its bases/u],
+    ['a base cycle of three', 'export interface Row extends A { id?: string }\nexport interface A extends B { }\nexport interface B extends A { }\n', /extends itself through its bases/u],
+    // An intersection is read only as the whole body of a named alias, of type literals and owned interfaces.
+    ['an intersection with a host type', `${openItem}export type Row = Item & React.HTMLAttributes<HTMLElement>;\n`, /Thing\.item -> Row -> React\.HTMLAttributes: React\.HTMLAttributes is not a plain identifier; an intersection operand is one/u],
+    ['an intersection with a library type', `${openItem}export type Row = Item & Event;\n`, /Thing\.item -> Row -> Event: Event is outside @muxui\/react, or also declared there; an intersection operand is a Mux UI-owned interface/u],
+    ['an intersection with a union', `${openItem}export type Row = Item & ({ color?: string } | { size?: string });\n`, /Thing\.item -> Row: a parenthesized type is not an operand of an intersection/u],
+    ['a union that holds an intersection', `${openItem}export type Row = Item & { color?: string } | number;\n`, /Thing\.item -> Row: an intersection type is not in the grammar/u],
+    ['an intersection with an alias of an object', `${openItem}export type Shape = { color?: string };\nexport type Row = Item & Shape;\n`, /Thing\.item -> Row -> Shape: Shape is not an interface; an intersection operand is a Mux UI-owned interface, not an alias, class, or enum/u],
+    ['an intersection with an applied generic', `${openItem}${generic}export type Row = Item & Box<string>;\n`, /Thing\.item -> Row -> Box: Box is written with type arguments; an intersection operand takes none/u],
+    ['an intersection with a generic interface', `${openItem}${generic}export type Row = Item & Box;\n`, /Thing\.item -> Row -> Box: Box is generic; an intersection operand is not/u],
+    ['an intersection with an inline intersection', `${openItem}export type Row = Item & ({ color?: string } & { size?: string });\n`, /Thing\.item -> Row: a parenthesized type is not an operand of an intersection/u],
+    ['an intersection with a primitive', `${openItem}export type Row = Item & string;\n`, /Thing\.item -> Row: string is not an operand of an intersection; an operand is a type literal or a Mux UI-owned interface/u],
+    ['an intersection with an interface that has a host base', `export interface Mid extends Event { }\nexport type Row = Mid & { color?: string };\n`, /Thing\.item -> Row -> Mid -> Event: Event is outside @muxui\/react/u],
+    ['an intersection member named twice', `${openItem}export type Row = Item & { id?: string };\n`, /Thing\.item -> Row\.id: id is declared twice among the joined members/u],
+    ['an intersection of two interfaces that share a base', `${openItem}export interface A extends Item { }\nexport interface B extends Item { }\nexport type Row = A & B;\n`, /Thing\.item -> Row\.id: id is declared twice/u],
+    ['an intersection with two index signatures', `${openItem}export type Row = Item & { [key: string]: unknown };\n`, /Thing\.item -> Row: an index signature is in the grammar only as the one member of its object type, or as the one mutable/u],
+    ['an intersection with an operand cycle', 'export interface A extends B { }\nexport interface B extends A { }\nexport type Row = A & { color?: string };\n', /extends itself through its bases/u],
+    ['a generic alias intersection', `${openItem}export type Row<T> = Item & { value?: T };\n`, /Thing\.item -> Row: Row is generic/u],
+  ];
+  for (const [label, extra, pattern] of cases) {
+    assert.throws(() => extract({ declarations: ownProps('  item?: Row;', extra) }), (error) => {
+      assert.ok(error instanceof ApiExtractionError, `${label}: ${error.stack}`);
+      assert.match(error.message, pattern, label);
+      return true;
+    }, label);
+  }
+  // A cycle through another file is found by symbol too.
+  assert.throws(() => extract({
+    declarations: ownProps('  item?: Row;', "import type { Other } from './other.js';\nexport interface Row extends Other { id?: string }\n"),
+    files: { 'other.d.ts': "import type { Row } from './thing.js';\nexport interface Other extends Row { color?: string }\n" },
+  }), /extends itself through its bases/u);
+  // An intersection anywhere but the whole body of an alias is still not in the grammar: a member, an argument, an element, a union arm.
+  const inline = ['  bad?: Item & Tint;', '  bad?: (Item & Tint)[];', '  bad?: Item & Tint | string;', '  onBad?: (value: Item & Tint) => void;'];
+  for (const members of inline) rejects(ownProps(members, `${openItem}export interface Tint { color?: string }\n`), /Thing\.(?:bad|onBad)(?:\[\]|\(value\))?: an intersection type is not in the grammar/u);
+  // An alias of an intersection is not an alias base, and OwnProps may extend nothing.
+  rejects(ownProps('  size?: string;').replace('export interface ThingOwnProps {', `${openItem}export interface ThingOwnProps extends Item {`), /Thing: ThingOwnProps extends another type/u);
+  rejects(ownProps('  size?: string;').replace('export interface ThingOwnProps {', `${openItem}export type Mixed = Item & { size?: string };\nexport interface ThingOwnProps extends Mixed {`), /Thing: ThingOwnProps extends another type/u);
+  rejects(`${header}${openItem}export type ThingOwnProps = Item & { size?: string };\nexport interface ThingProps extends ThingOwnProps { }\nexport declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLButtonElement>>;\n`, /Thing: ThingOwnProps must be an object type/u);
+});
+
 test('never is in the grammar only as an optional member\'s type, a member that must be absent', () => {
   const rows = `export type ThingRow =
   | { readonly kind: 'added'; readonly values: string; readonly before?: never }
