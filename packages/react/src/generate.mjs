@@ -884,7 +884,17 @@ for (const record of currentMappedRecords.filter(isTypeScriptFamily)) {
 }
 const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map((record) => `export * from './${isTypeScriptFamily(record) ? `${record.slug}.js` : `${record.slug}.mjs`}';\n`).join('')}`;
 const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
-const componentCssBody = `${authoredCss}${supplementalStylesSource ? `\n\n${supplementalStylesSource.trim()}` : ''}${[...currentSubpathRecords, ...currentEagerRecords].map(({ style }) => style ? `\n\n${style.trim()}` : '').join('')}`;
+// The shared supplemental stylesheet is emitted once, right after IconButton's CSS, and skipped wherever a record names it
+// as its styleSource. Anchor it on that record, not on the first or last record that names it: the shared
+// `.muxui-icon-button.muxui-button[data-size='sm']` padding ties icon-button.css on specificity and only wins by
+// following it, and converting a family to TypeScript must not move the block.
+const sharedStyleSource = 'packages/react/src/supplemental/styles.css';
+const sharedStyleAnchorSlug = 'icon-button';
+const componentCssRecords = [...currentSubpathRecords, ...currentEagerRecords];
+if (!componentCssRecords.some(({ slug }) => slug === sharedStyleAnchorSlug)) {
+  throw new Error(`MUXUI_REACT_SHARED_STYLE_ANCHOR_MISSING: the shared stylesheet is emitted after the ${sharedStyleAnchorSlug} record, which is not a root or subpath record`);
+}
+const componentCssBody = `${authoredCss}${componentCssRecords.map(({ slug, styleSource, style }) => `${style && styleSource !== sharedStyleSource ? `\n\n${style.trim()}` : ''}${slug === sharedStyleAnchorSlug ? `\n\n${supplementalStylesSource.trim()}` : ''}`).join('')}`;
 const layeredStylesCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', cssBody)}\n\n${cssLayer('muxui.components', componentCssBody)}`;
 const layeredThemeCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', themeCssBody)}`;
 const layeredSupplementalCss = `${cssLayerOrder}\n\n${cssLayer('muxui.components', supplementalStylesSource.trim())}`;

@@ -89,7 +89,7 @@ test('every shipped CSS transition and animation names a role composite', () => 
   const declarations = [...generatedStyles.matchAll(/(?<![-\w])(?:transition|animation):[^;{}]*;/gu)]
     .map(([declaration]) => declaration)
     .filter((declaration) => !/^(?:transition|animation):\s*none\b/u.test(declaration) && !declaration.includes('progress-'));
-  assert.ok(declarations.length > 100, 'the scan reaches the shipped consumers');
+  assert.ok(declarations.length > 50, 'the scan reaches the shipped consumers');
   const offenders = declarations.filter((declaration) => !/-transition-duration\b/u.test(declaration) || !/-transition-easing\b/u.test(declaration));
   assert.deepEqual(offenders, []);
 });
