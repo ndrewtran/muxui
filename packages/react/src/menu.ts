@@ -21,6 +21,7 @@ import {
   Header as AriaHeader,
   PopoverContext,
   RootMenuTriggerStateContext,
+  useSlottedContext,
 } from 'react-aria-components';
 import type {
   Key,
@@ -77,7 +78,7 @@ export type MenuTriggerProps = ButtonHTMLAttributes<HTMLButtonElement> & MenuTri
 
 /** The props Mux UI defines for Menu.Popup. Every other attribute of a div passes through to the popup. */
 export type MenuPopupOwnProps = {
-  /** Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`. */
+  /** Where the popup opens against its trigger or anchorRef. start and end follow the locale direction. Without one, a top-level popup opens at `bottom-start`, and a popup inside a Menu.Submenu opens beside its item at `end-top`. */
   placement?: MuxUIPlacement;
   /** The distance in pixels between the popup and its trigger, along the placement's side. Must be finite. */
   offset?: number;
@@ -173,7 +174,6 @@ const useMenuLayoutEffect = typeof window === 'undefined' ? React.useEffect : Re
 const MENU_POPUP_GEOMETRY = Object.freeze({ offset: 4, crossOffset: 0, shouldFlip: true, containerPadding: 12 } as const);
 
 const MenuContext = React.createContext<MenuContextValue>({ disabled: false });
-const MenuSubmenuContext = React.createContext(false);
 // The element a popup is anchored to, for the list inside it.
 const MenuAnchorContext = React.createContext<RefObject<Element | null> | null>(null);
 
@@ -205,7 +205,7 @@ function MenuSubmenu({ children, delay = 200 }: MenuSubmenuProps): ReactElement 
   if (!Number.isFinite(delay) || delay < 0) throw new TypeError('Menu.Submenu delay must be a nonnegative finite number');
   const pair = React.Children.toArray(children);
   if (pair.length !== 2 || !pair.every(React.isValidElement)) throw new TypeError('Menu.Submenu requires an item and a popup');
-  return React.createElement(MenuSubmenuContext.Provider, { value: true }, React.createElement(AriaSubmenuTrigger, { delay, children: pair }));
+  return React.createElement(AriaSubmenuTrigger, { delay, children: pair });
 }
 
 export const Menu: MenuComponent = /*#__PURE__*/ (() => {
@@ -226,12 +226,11 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
     };
     const context: MenuContextValue = { disabled, shouldCloseOnSelect, onAction, onSelect };
     return React.createElement(MenuContext.Provider, { value: context },
-      React.createElement(MenuSubmenuContext.Provider, { value: false },
-        React.createElement(AriaMenuTrigger, {
-          isOpen: currentOpen,
-          onOpenChange: setOpen,
-          children: React.createElement('div', { ...props, ref, className: classNames('muxui-menu-root', className), 'data-open': currentOpen || undefined, 'data-disabled': disabled ? disabled : undefined }, children),
-        })));
+      React.createElement(AriaMenuTrigger, {
+        isOpen: currentOpen,
+        onOpenChange: setOpen,
+        children: React.createElement('div', { ...props, ref, className: classNames('muxui-menu-root', className), 'data-open': currentOpen || undefined, 'data-disabled': disabled ? disabled : undefined }, children),
+      }));
   });
 
   const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(function MenuTrigger({ disabled = false, onActivate, className, children, ...props }, ref) {
@@ -241,11 +240,12 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
   });
 
   const MenuPopup = /*#__PURE__*/ React.forwardRef<HTMLDivElement, MenuPopupProps>(function MenuPopup({ children, placement, offset = MENU_POPUP_GEOMETRY.offset, crossOffset = MENU_POPUP_GEOMETRY.crossOffset, shouldFlip = MENU_POPUP_GEOMETRY.shouldFlip, containerPadding = MENU_POPUP_GEOMETRY.containerPadding, anchorRef, modal = true, className, ...props }, ref) {
-    const submenu = React.useContext(MenuSubmenuContext);
-    // The placement has no default of its own to state: it depends on whether a submenu holds the popup. Today `submenu` is never true here:
-    // React Aria renders a submenu's popup outside MenuSubmenuContext.Provider, so an implicit nested popup falls back to bottom-start too.
-    const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, { ...MENU_POPUP_GEOMETRY, placement: submenu ? 'end-top' : 'bottom-start' }, 'Menu.Popup');
-    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) },
+    // The placement has no default of its own to state: a top-level popup falls back to bottom-start, and a popup in a submenu to none, so the
+    // placement React Aria gives a submenu, beside its item (end top), applies. React Aria renders that popup outside Menu.Submenu's React
+    // subtree, so only its PopoverContext, which names the trigger, says the popup is nested.
+    const nested = useSlottedContext(PopoverContext)?.trigger === 'SubmenuTrigger';
+    const { placement: validPlacement, ...geometry } = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, { ...MENU_POPUP_GEOMETRY, placement: 'bottom-start' }, 'Menu.Popup');
+    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, placement: nested && placement === undefined ? undefined : validPlacement, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) },
       React.createElement(MenuAnchorContext.Provider, { value: anchorRef ?? null }, children));
   });
 

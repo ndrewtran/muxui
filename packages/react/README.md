@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:1f0b35d90d1f9985eabe53df9c608be7d28f2b2545864ef6d1ae194f30c823cf -->
+<!-- @generated-content-sha256: sha256:7df7ee57686b90160035fbfdf5c8b8a25742fb9a3a70118ca491ed20ca3b8279 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -201,7 +201,7 @@ These contracts are projected from the component bindings in the canonical catal
 - A Menu.Trigger inside a Toolbar sends Tab or Shift+Tab out of the Toolbar, as Tab from the closed trigger does.
 - Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu-item[data-has-submenu] and [data-open].
 - Items require stable string IDs. Supply textValue for rich content. A per-item onAction runs before list and root onAction/onSelect. Data-backed actions preserve normalized item metadata; compound actions return identity fields id, key, and value.
-- Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Without a placement, a top-level popup opens at bottom-start.
+- Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Without a placement, a top-level popup opens at bottom-start and a popup inside a Menu.Submenu opens beside its item at end-top.
 - For context coordinates, position a consumer-owned element at the desired point and pass its element ref as anchorRef while controlling Menu.Root open. modal=false allows outside content to remain accessible.
 - Mux selectors are .muxui-menu-root, .muxui-menu-trigger, .muxui-menu-popup, .muxui-menu-list, .muxui-menu-item, .muxui-menu-section, .muxui-menu-section-header, and .muxui-menu-separator. Item states use data-disabled, data-focused, data-focus-visible, data-has-submenu, and data-open. Root uses data-open and data-disabled.
 - Trigger refs target native buttons and preserve native handlers. Root, Popup, List, and Item refs target divs; Section and Header refs target section/header elements; Separator refs target an hr.

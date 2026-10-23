@@ -673,6 +673,9 @@ test('the Menu Anatomy story forwards the delay, popup, and close-on-select cont
   // Left alone, the controls are the components' own defaults.
   const unset = await sentToReactAria({});
   assert.deepEqual([unset.delays, unset.popups], [[200], [JSON.stringify({ offset: 4, crossOffset: 0, shouldFlip: true, containerPadding: 12, modal: true })]]);
+  // The story pins no placement either, so each popup falls back by itself: the submenu's beside its item, the root's below its trigger.
+  // The state matrix gives the root's popup a placement on its own placement row (top), which is the one it sets.
+  assert.deepEqual(unset.placements, { root: ['top', undefined], submenu: [undefined] });
   // The nested specimen offers no controls to follow.
   assert.equal(createMenuNestedStory(menu).parameters.controls.disable, true);
 });
