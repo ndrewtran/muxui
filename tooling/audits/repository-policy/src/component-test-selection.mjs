@@ -35,6 +35,25 @@ const SOURCE_ROUTES = Object.freeze({
   'token-field': ['test/r1-3-parity.test.mjs'],
   toolbar: ['test/r1-3-parity.test.mjs'],
   tree: ['test/r1-3-parity.test.mjs'],
+  // The supplemental family modules. A family's source names the module that declares it, not the barrel.
+  text: ['test/supplemental.test.mjs'],
+  'button-group': ['test/supplemental.test.mjs'],
+  'color-mode-toggle': ['test/supplemental.test.mjs'],
+  'progress-circle': ['test/supplemental.test.mjs'],
+  card: ['test/supplemental.test.mjs'],
+  'checkbox-field': ['test/supplemental.test.mjs'],
+  'radio-field': ['test/supplemental.test.mjs'],
+  'switch-field': ['test/supplemental.test.mjs'],
+  input: ['test/supplemental.test.mjs'],
+  'text-area': ['test/supplemental.test.mjs'],
+  'payment-input': ['test/supplemental.test.mjs'],
+  'input-tags': ['test/supplemental.test.mjs'],
+  'alert-dialog': ['test/supplemental.test.mjs'],
+  'command-palette': ['test/supplemental.test.mjs'],
+  'multi-select': ['test/supplemental.test.mjs'],
+  'tag-select': ['test/supplemental.test.mjs'],
+  'header-nav': ['test/supplemental.test.mjs'],
+  sidebar: ['test/supplemental.test.mjs'],
   overlays: ['test/r1-4-overlays.test.mjs'],
   markdown: ['test/heavy-components.test.mjs'],
   'text-editor': ['test/heavy-components.test.mjs'],
@@ -47,12 +66,22 @@ const SOURCE_ROUTES = Object.freeze({
 const COLLECTIONS_GUARD_TESTS = Object.freeze(['test/collections-modules.test.mjs', 'test/tree-shaking.test.mjs']);
 const COLLECTIONS_SHARED_MODULES = Object.freeze(['collections', 'control-utils', 'collection-items', 'read-only-guard', 'color-context', 'collection-trigger', 'grid-virtualizer-context']);
 
+// The same guards for the supplemental modules, for the same reason. Its modules are the barrel, the helpers the
+// families share, and the family modules, which are the SOURCE_ROUTES keys that route to the supplemental group.
+const SUPPLEMENTAL_GUARD_TESTS = Object.freeze(['test/supplemental-modules.test.mjs', 'test/tree-shaking.test.mjs']);
+const SUPPLEMENTAL_SHARED_MODULES = Object.freeze(['index', 'part-utils', 'field-utils', 'field-root', 'modal-parts', 'item-renderer', 'navigation-drawer']);
+
 /** The guard tests a changed React source file selects whatever families it affects. */
 export function sourceGuardTests(path) {
   const name = /^packages\/react\/src\/([\w-]+)\.(?:mjs|ts)$/u.exec(path)?.[1];
   const collections = name !== undefined && (COLLECTIONS_SHARED_MODULES.includes(name)
     || (Object.hasOwn(SOURCE_ROUTES, name) && SOURCE_ROUTES[name].includes('test/r1-3-parity.test.mjs')));
-  return collections ? COLLECTIONS_GUARD_TESTS : [];
+  if (collections) return COLLECTIONS_GUARD_TESTS;
+  // A module moves between .mjs and .ts without leaving the guards' selection.
+  const supplementalName = /^packages\/react\/src\/supplemental\/([\w-]+)\.(?:mjs|ts)$/u.exec(path)?.[1];
+  const supplemental = supplementalName !== undefined && (SUPPLEMENTAL_SHARED_MODULES.includes(supplementalName)
+    || (Object.hasOwn(SOURCE_ROUTES, supplementalName) && SOURCE_ROUTES[supplementalName].includes('test/supplemental.test.mjs')));
+  return supplemental ? SUPPLEMENTAL_GUARD_TESTS : [];
 }
 
 // Tests that belong to a family but are not named for its slug. The slug-named

@@ -58,15 +58,17 @@ import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
 const supplementalPath = 'packages/react/src/supplemental/index.mjs';
+const multiSelectPath = 'packages/react/src/supplemental/multi-select.mjs';
+const tagSelectPath = 'packages/react/src/supplemental/tag-select.mjs';
 const collectionsPath = 'packages/react/src/collections.mjs';
 const fieldsPath = 'packages/react/src/fields.ts';
 const sizingExamplePath = 'catalog/components/number-field/examples/react/sizing.tsx';
 const sizingStoryId = 'muxui-react-r1-2-number-field--sizing';
 
 const records = [
-  { family: 'MultiSelect', export: 'MultiSelect', slug: 'multi-select', source: supplementalPath, parts: ['root', 'input', 'tag'] },
+  { family: 'MultiSelect', export: 'MultiSelect', slug: 'multi-select', source: multiSelectPath, parts: ['root', 'input', 'tag'] },
   { family: 'NumberField', export: 'NumberField', slug: 'number-field', source: fieldsPath, parts: ['root', 'input', 'stepper'] },
-  { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: supplementalPath, parts: ['root', 'input', 'tag'] },
+  { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: tagSelectPath, parts: ['root', 'input', 'tag'] },
   { family: 'Tree', export: 'Tree', slug: 'tree', source: collectionsPath, parts: ['root', 'item', 'children'] },
 ];
 
@@ -154,7 +156,8 @@ const componentTestSources = Object.fromEntries(await Promise.all(componentTestP
 const cssModuleSources = {
   [collectionsPath]: 'export const Tree = () => null;',
   [fieldsPath]: 'export const NumberField = () => null;',
-  [supplementalPath]: 'export const MultiSelect = () => null; export const TagSelect = () => null;',
+  [multiSelectPath]: 'export const MultiSelect = () => null;',
+  [tagSelectPath]: 'export const TagSelect = () => null;',
 };
 
 function inputFor(changedPaths, options = {}) {
@@ -222,14 +225,14 @@ function lockfile(policyImporter, reactImporter = '') {
 }
 
 test('TagSelect helper runtime changes route to TagSelect pages and its focused tests only', async () => {
-  const source = await readFile(resolve(repositoryRoot, supplementalPath), 'utf8');
+  const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
   const before = source.replace('    slot: null,\n', '');
   assert.notEqual(before, source, 'fixture must represent the pre-fix TagSelect helper');
 
-  const result = await plan([supplementalPath], {
+  const result = await plan([tagSelectPath], {
     records: records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)),
-    textSnapshots: { [supplementalPath]: { before, after: source } },
-    moduleSources: { [supplementalPath]: { before, after: source } },
+    textSnapshots: { [tagSelectPath]: { before, after: source } },
+    moduleSources: { ...cssModuleSources, [tagSelectPath]: { before, after: source } },
   });
 
   assert.deepEqual(result.reactFamilies, ['TagSelect']);
@@ -239,7 +242,8 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
     storyIds: [],
     reason: 'all pages in the affected component families',
   }]);
-  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs']);
+  // The Motion boundary test and the supplemental guards run for any supplemental module change, beside the family's own tests below.
+  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs', 'test/supplemental-modules.test.mjs', 'test/tree-shaking.test.mjs']);
   assert.ok(!result.storyRuns.some(({ families }) => families.includes('MultiSelect')));
 
   const selection = selectComponentTests(['TagSelect']);
@@ -258,19 +262,19 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
 });
 
 test('a new supplemental family with no test of its own plans its supplemental group instead of failing', async () => {
-  const source = await readFile(resolve(repositoryRoot, supplementalPath), 'utf8');
+  const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
   const after = `${source}\nexport const ScratchWidget = () => null;\n`;
-  const scratch = { family: 'ScratchWidget', export: 'ScratchWidget', slug: 'scratch-widget', source: supplementalPath, parts: ['root'] };
+  const scratch = { family: 'ScratchWidget', export: 'ScratchWidget', slug: 'scratch-widget', source: tagSelectPath, parts: ['root'] };
   const scratchPage = {
     family: 'ScratchWidget',
     storyFile: 'apps/react-storybook/.storybook/generated/scratch-widget.stories.mjs',
     stories: [{ id: 'muxui-react-r1-6-scratch-widget--default', exportName: 'Default', name: 'Default' }],
   };
-  const result = await plan([supplementalPath], {
+  const result = await plan([tagSelectPath], {
     records: [...records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)), scratch],
     pageIndex: [...pageIndex, scratchPage],
-    textSnapshots: { [supplementalPath]: { before: source, after } },
-    moduleSources: { [supplementalPath]: { before: source, after } },
+    textSnapshots: { [tagSelectPath]: { before: source, after } },
+    moduleSources: { ...cssModuleSources, [tagSelectPath]: { before: source, after } },
   });
   assert.deepEqual(result.reactFamilies, ['ScratchWidget']);
   assert.deepEqual(result.reactBehaviorProofFamilies, []);
@@ -966,11 +970,11 @@ test('scoped CI runner scripts stay bound to the exact React and Storybook entry
     { name: '@muxui/react-storybook', manifest: storybookManifest },
   ], ['react', 'storybook']), ['react', 'storybook']);
 
-  const source = await readFile(resolve(repositoryRoot, supplementalPath), 'utf8');
-  const runtimePlan = await plan([supplementalPath], {
+  const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
+  const runtimePlan = await plan([tagSelectPath], {
     records: records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)),
-    textSnapshots: { [supplementalPath]: { before: source.replace('    slot: null,\n', ''), after: source } },
-    moduleSources: { [supplementalPath]: { before: source.replace('    slot: null,\n', ''), after: source } },
+    textSnapshots: { [tagSelectPath]: { before: source.replace('    slot: null,\n', ''), after: source } },
+    moduleSources: { ...cssModuleSources, [tagSelectPath]: { before: source.replace('    slot: null,\n', ''), after: source } },
   });
   const componentCommand = executionCommands(runtimePlan, { packages })
     .find(({ args }) => args.includes('check:component'));
@@ -1362,12 +1366,12 @@ test('Storybook audit tooling runs explicit focused test names and never launche
 });
 
 test('mixed component and exact-page changes preserve each distinct proof scope', async () => {
-  const source = await readFile(resolve(repositoryRoot, supplementalPath), 'utf8');
+  const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
   const before = source.replace('    slot: null,\n', '');
-  const result = await plan([supplementalPath, sizingExamplePath], {
+  const result = await plan([tagSelectPath, sizingExamplePath], {
     records: records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)),
-    textSnapshots: { [supplementalPath]: { before, after: source } },
-    moduleSources: { [supplementalPath]: { before, after: source } },
+    textSnapshots: { [tagSelectPath]: { before, after: source } },
+    moduleSources: { ...cssModuleSources, [tagSelectPath]: { before, after: source } },
   });
 
   assert.deepEqual(result.storyRuns.map(({ proof, families, storyIds }) => ({ proof, families, storyIds })), [
@@ -1428,6 +1432,20 @@ test('a change to a collections module runs the collections guards even when it 
   assert.deepEqual(result.reactTestFiles, ['test/collections-modules.test.mjs', 'test/motion-package-boundary.test.mjs', 'test/public-surface-baseline.test.mjs', 'test/tree-shaking.test.mjs']);
   const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
   assert.ok(commands.includes('test/collections-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
+});
+
+test('a change to a supplemental module runs the supplemental guards even when it affects no family', async () => {
+  // Dropping the pure annotation changes no export, so no family is affected.
+  const before = 'export const MultiSelect = /*#__PURE__*/ (() => ({}))();\n';
+  const after = 'export const MultiSelect = (() => ({}))();\n';
+  const result = await plan([multiSelectPath], {
+    textSnapshots: { [multiSelectPath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [multiSelectPath]: { before, after } },
+  });
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs', 'test/public-surface-baseline.test.mjs', 'test/supplemental-modules.test.mjs', 'test/tree-shaking.test.mjs']);
+  const commands = executionCommands(result, { packages }).map(({ args }) => args.at(-1));
+  assert.ok(commands.includes('test/supplemental-modules.test.mjs') && commands.includes('test/tree-shaking.test.mjs'));
 });
 
 test('a family module that moves from .mjs to .ts is planned through the barrel that re-exports it', async () => {
@@ -2960,6 +2978,8 @@ const generatorModuleSources = {
   [generatePath]: "import { assertContracts } from './r1-contracts.mjs';\nassertContracts();",
   [contractsPath]: 'export function assertContracts() {}',
   [supplementalPath]: 'export const MultiSelect = () => null; export const TagSelect = () => null; export const Card = () => null;',
+  [multiSelectPath]: 'export const MultiSelect = () => null;',
+  [tagSelectPath]: 'export const TagSelect = () => null;',
 };
 
 test('deleting an unimported React module runs the React package check', async () => {

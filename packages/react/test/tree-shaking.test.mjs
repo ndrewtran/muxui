@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { build } from 'vite';
@@ -15,8 +15,8 @@ test('tsc keeps the pure annotation on Disclosure\'s wrapper', () => {
   assert.match(emitted, /^export const Disclosure = \/\*#__PURE__\*\/ \(\(\) => \{$/mu);
 });
 
-/** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/. */
-async function bundledModules(name, module = 'components.js') {
+/** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/ with the bytes each renders. */
+async function bundledModuleSizes(name, module = 'components.js') {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const directory = mkdtempSync(join(packageRoot, 'build', 'tree-shaking-'));
   try {
@@ -38,10 +38,15 @@ async function bundledModules(name, module = 'components.js') {
       .filter(({ type }) => type === 'chunk')
       .flatMap(({ modules }) => Object.entries(modules))
       .filter(([, { renderedLength }]) => renderedLength > 0)
-      .map(([id]) => relative(generated, id).replaceAll('\\', '/'));
+      .map(([id, { renderedLength }]) => [relative(generated, id).replaceAll('\\', '/'), renderedLength]);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+/** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/. */
+async function bundledModules(name, module = 'components.js') {
+  return (await bundledModuleSizes(name, module)).map(([id]) => id);
 }
 
 test('a bundle that uses another component from components.js drops Disclosure and its motion modules', async () => {
@@ -245,5 +250,78 @@ test('a bundle that uses one control family keeps its own module and only the sh
   };
   for (const [name, expected] of Object.entries(kept)) {
     assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), expected, name);
+  }
+});
+
+// supplemental.mjs re-exports one module per family. Before the split every export kept the whole barrel and the 14
+// modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
+// its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The four
+// wrappers that are an immediately invoked function, the three field factories, the two modal wrappers and the two
+// field roots carry the pure annotation that lets a bundler drop what no export uses.
+test('the supplemental modules keep the pure annotation on each wrapper', () => {
+  const emitted = (module) => {
+    const mjs = resolve(generated, `${module}.mjs`);
+    return readFileSync(existsSync(mjs) ? mjs : resolve(generated, `${module}.js`), 'utf8');
+  };
+  // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
+  const pure = String.raw`\/\*\s*[#@]__PURE__\s*\*\/`;
+  for (const [module, name] of [['alert-dialog', 'AlertDialog'], ['command-palette', 'CommandPalette'], ['multi-select', 'MultiSelect'], ['tag-select', 'TagSelect']]) {
+    assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} \\(\\(\\) => \\(\\{$`, 'mu'), `${module}: ${name}`);
+  }
+  for (const [module, name] of [['checkbox-field', 'CheckboxField'], ['radio-field', 'RadioField'], ['switch-field', 'SwitchField']]) {
+    assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} make${name}\\(\\);$`, 'mu'), `${module}: ${name}`);
+  }
+  for (const wrapper of ['MotionModalBackdrop', 'MotionModalPopup']) {
+    assert.match(emitted('modal-parts'), new RegExp(`^export const ${wrapper}ForwardRef = ${pure} React\\.forwardRef\\(${wrapper}\\);$`, 'mu'), wrapper);
+  }
+  for (const [module, root] of [['input', 'muxui-input__root'], ['text-area', 'muxui-text-area']]) {
+    assert.match(emitted(module), new RegExp(`^  Root: ${pure} fieldRoot\\(AriaTextField, '${root}'\\),$`, 'mu'), module);
+  }
+});
+
+// Per export: its owning module, the helpers it may keep, and the bytes it kept before the split. The byte figure is a
+// ceiling, not a target: the ownership checks are what name a leak, since a bundle's rendered size shifts by a few
+// bytes with the checkout path.
+const supplementalRetention = {
+  ButtonGroup: { module: 'button-group', helpers: ['part-utils'], before: 111775 },
+  Text: { module: 'text', helpers: ['part-utils'], before: 111775 },
+  ColorModeToggle: { module: 'color-mode-toggle', helpers: ['part-utils'], before: 111775 },
+  SwitchField: { module: 'switch-field', helpers: ['field-utils', 'part-utils'], before: 113269 },
+  CheckboxField: { module: 'checkbox-field', helpers: ['field-utils', 'part-utils'], before: 113972 },
+  TextArea: { module: 'text-area', helpers: ['field-root', 'field-utils', 'part-utils'], before: 111775 },
+  ProgressCircle: { module: 'progress-circle', helpers: ['part-utils'], before: 111775 },
+  useCommandPalette: { module: 'command-palette', helpers: [], before: 114805 },
+  Input: { module: 'input', helpers: ['field-root', 'field-utils', 'part-utils'], before: 111779 },
+  PaymentInput: { module: 'payment-input', helpers: ['field-utils', 'part-utils'], before: 111775 },
+  RadioField: { module: 'radio-field', helpers: ['field-utils', 'part-utils'], before: 115764 },
+  Card: { module: 'card', helpers: ['part-utils'], before: 111775 },
+  InputTags: { module: 'input-tags', helpers: ['part-utils'], before: 111775 },
+  HeaderNav: { module: 'header-nav', helpers: ['navigation-drawer', 'part-utils'], before: 111775 },
+  AlertDialog: { module: 'alert-dialog', helpers: ['modal-parts', 'part-utils'], before: 126470 },
+  MultiSelect: { module: 'multi-select', helpers: ['item-renderer', 'part-utils'], before: 120579 },
+  CommandPalette: { module: 'command-palette', helpers: ['modal-parts', 'part-utils'], before: 133366 },
+  TagSelect: { module: 'tag-select', helpers: ['item-renderer', 'part-utils'], before: 122879 },
+  Sidebar: { module: 'sidebar', helpers: ['navigation-drawer', 'part-utils'], before: 111775 },
+};
+
+test('a bundle that uses one supplemental family keeps its own module, only the helpers it needs, and at most the bytes it kept before the split', async () => {
+  const families = new Set(Object.values(supplementalRetention).map(({ module }) => module));
+  const helpers = new Set(['part-utils', 'field-utils', 'field-root', 'modal-parts', 'item-renderer', 'navigation-drawer']);
+  // A module keeps its name's stem when it moves from .mjs to .js.
+  const stem = (id) => id.replace(/\.\w+$/u, '');
+  for (const [name, { module, helpers: allowed, before }] of Object.entries(supplementalRetention)) {
+    const kept = await bundledModuleSizes(name, 'supplemental.mjs');
+    const stems = kept.map(([id]) => stem(id));
+    // No other family's code comes along, which is what one module per family buys over one file.
+    assert.deepEqual(stems.filter((candidate) => families.has(candidate)), [module], name);
+    assert.deepEqual(stems.filter((candidate) => helpers.has(candidate) && !allowed.includes(candidate)), [], `${name} keeps a helper it does not use`);
+    const bytes = kept.reduce((total, [, size]) => total + size, 0);
+    assert.ok(bytes <= before, `${name} keeps ${bytes} bytes, more than the ${before} it kept before the split`);
+  }
+  // Through the root index a bundle keeps the same supplemental modules.
+  for (const name of ['Text', 'ButtonGroup', 'Sidebar']) {
+    const { module, helpers: allowed } = supplementalRetention[name];
+    const stems = (await bundledModules(name, 'index.mjs')).map(stem).filter((candidate) => families.has(candidate) || helpers.has(candidate)).sort();
+    assert.deepEqual(stems, [module, ...allowed].sort(), name);
   }
 });

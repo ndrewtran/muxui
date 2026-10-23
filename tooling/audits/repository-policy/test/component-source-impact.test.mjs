@@ -47,16 +47,18 @@ test('an owned TagSelect helper change reaches only TagSelect', () => {
 });
 
 test('the real TagSelect render factory change does not widen to MultiSelect', async () => {
-  const sourcePath = 'packages/react/src/supplemental/index.mjs';
+  const sourcePath = 'packages/react/src/supplemental/tag-select.mjs';
   const after = await readFile(path.join(repositoryRoot, sourcePath), 'utf8');
   assert.equal((after.match(/slot: null,\n/gu) ?? []).length, 1, 'fixture must target the single approved TagSelect slot change');
   const before = after.replace('slot: null,\n', '');
+  // Each family declares itself in a module of its own, as the mapping records it.
+  const records = tagSelectAndMultiSelect.map((record) => ({ ...record, source: `packages/react/src/supplemental/${record.slug}.mjs` }));
   const result = analyzeReactSourceChange({
-    records: tagSelectAndMultiSelect,
+    records,
     sourcePath,
     before,
     after,
-    moduleSources: { [sourcePath]: { before, after } },
+    moduleSources: { [sourcePath]: { before, after }, 'packages/react/src/supplemental/multi-select.mjs': 'export const MultiSelect = () => null;' },
   });
 
   assert.deepEqual(result.families, ['TagSelect']);
