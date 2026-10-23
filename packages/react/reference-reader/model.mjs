@@ -189,24 +189,14 @@ export function buildReference({ graph, families, sources, manifest, exceptions,
     const queue = [...holding.types, ...[...collectRefs(holding.exports)].filter((id) => types.has(id) || values.has(id))];
     const reached = new Map();
     const reachedValues = new Map();
-    const visited = new Set();
-    // An id can name a type and a value at once (`interface X` beside `declare const X`), and `typeof X` means the value.
     while (queue.length > 0) {
       const id = queue.shift();
-      if (visited.has(id)) continue;
-      visited.add(id);
-      const entries = [];
-      if (types.has(id)) {
-        const entry = modelType(types.get(id));
-        reached.set(id, entry);
-        entries.push(entry);
-      }
-      if (values.has(id)) {
-        const entry = modelValue(values.get(id));
-        reachedValues.set(id, entry);
-        entries.push(entry);
-      }
-      for (const entry of entries) for (const next of entry.refs ?? []) if (types.has(next) || values.has(next)) queue.push(next);
+      if (reached.has(id) || reachedValues.has(id)) continue;
+      const isType = types.has(id);
+      if (!isType && !values.has(id)) continue;
+      const entry = isType ? modelType(types.get(id)) : modelValue(values.get(id));
+      (isType ? reached : reachedValues).set(id, entry);
+      for (const next of entry.refs ?? []) if (types.has(next) || values.has(next)) queue.push(next);
     }
     const typeEntries = [...reached.values()].sort((left, right) => (left.id < right.id ? -1 : 1));
     const valueEntries = [...reachedValues.values()].sort((left, right) => (left.id < right.id ? -1 : 1));

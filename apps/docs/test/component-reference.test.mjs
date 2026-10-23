@@ -200,7 +200,7 @@ test('the declaration reference loads as the schemas the reader writes, and each
     assert.ok(found.export.parts.length > 0, `${ref} has parts`);
     assert.equal(found.source, `packages/react/reference/${found.owner}.json`);
     // A reader never has to look a type up elsewhere: every Mux UI type the export names is printed with it.
-    const known = new Set(found.types.map(({ id }) => id));
+    const known = new Set([...found.types, ...(found.values ?? [])].map(({ id }) => id));
     for (const id of ids(found.export)) assert.ok(known.has(id), `${ref} names ${id}, which its types do not print`);
   }
 });
@@ -242,7 +242,7 @@ test('a component\'s share passes on the values its types name and a ref that is
   const root = mkdtempSync(resolve(tmpdir(), 'muxui-declaration-values-'));
   try {
     mkdirSync(resolve(root, 'packages/react/reference'), { recursive: true });
-    const value = { id: 'card#makeProps', name: 'makeProps', module: 'card', kind: 'function', text: 'declare function makeProps(label: string): { label: string };' };
+    const value = { id: 'card#makeProps:value', name: 'makeProps', module: 'card', kind: 'function', text: 'declare function makeProps(label: string): { label: string };' };
     const part = { member: null, form: 'FC', members: [], ref: { never: true, required: true } };
     writeFileSync(resolve(root, 'packages/react/reference/inventory.json'), JSON.stringify({ schema: INVENTORY_SCHEMA, package: '@muxui/react', entries: [{ key: '.', exports: [{ name: 'Card', kind: 'value', owner: 'card', module: 'card' }] }], owners: { card: 'card.json' } }));
     writeFileSync(resolve(root, 'packages/react/reference/card.json'), JSON.stringify({ schema: REFERENCE_SCHEMA, owner: 'card', sources: {}, exports: [{ name: 'Card', entry: '.', module: 'card', kind: 'component', parts: [part] }], types: [], values: [value] }));

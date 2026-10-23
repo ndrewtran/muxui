@@ -89,6 +89,7 @@ const memberKey = (member) => member.name;
  * The host types a props type may pass through as native attributes: React's attribute surfaces, whose keys
  * the reader does not read. Any other host application (`ReturnType<...>`, `Parameters<...>`, a library
  * type) could hide a member the component declares, so it is refused rather than shown as an envelope.
+ * A surface also has to be applied to a native element (see `createExpander`), or its keys would not be native.
  */
 const NATIVE_SURFACE = /^React\.(?:\w*HTMLAttributes|SVGAttributes|DOMAttributes|AriaAttributes|ComponentPropsWithoutRef)$/u;
 const isNativeSurface = (type) => type.kind === 'host' && type.origin === 'react' && NATIVE_SURFACE.test(type.name);
@@ -194,7 +195,8 @@ function keysOf(type, expandArms, types, chain) {
     case 'keyof': {
       const arms = expandArms(type.type);
       if (arms.some((arm) => arm.natives.length > 0)) throw unsupported(chain, 'keyof a type that passes host attributes through; its keys are not read');
-      const [first, ...rest] = arms.map((arm) => [...arm.members.keys()]);
+      // A forwarded ref is kept beside the members (`ref?: never` and RefAttributes are not ordinary members), but it is a key.
+      const [first, ...rest] = arms.map((arm) => [...arm.members.keys(), ...(arm.ref !== undefined && !arm.members.has('ref') ? ['ref'] : [])]);
       return first.filter((name) => rest.every((names) => names.includes(name)));
     }
     case 'reference': {
@@ -213,6 +215,39 @@ function keysOf(type, expandArms, types, chain) {
  * @param {Map<string, object>} types Every type declaration of the graph, by id.
  */
 export function createExpander(types) {
+  // The type parameters of the component being read: a parameter that reaches an attribute surface is native only if
+  // its constraint is a set of element names.
+  let scope = [];
+
+  /** Whether a type argument of an attribute surface denotes a native element: a DOM element type or an intrinsic element name. */
+  function isNativeElement(argument) {
+    switch (argument.kind) {
+      case 'host': return argument.origin === 'library';
+      case 'union': return argument.members.every(isNativeElement);
+      case 'literal': return typeof argument.value === 'string';
+      case 'parameter': {
+        const constraint = scope.find(({ name }) => name === argument.name)?.constraint;
+        const names = constraint === undefined ? null : valuesOf(constraint, types);
+        return names !== null && names.length > 0 && names.every((name) => typeof name === 'string');
+      }
+      case 'reference': {
+        const names = valuesOf(argument, types);
+        return names !== null && names.every((name) => typeof name === 'string');
+      }
+      default: return false;
+    }
+  }
+
+  /** Whether `type` is a React attribute surface passed through; one applied to something that is not a native element is refused. */
+  function nativeSurface(type, chain) {
+    if (!isNativeSurface(type)) return false;
+    const bad = (type.typeArguments ?? []).find((argument) => !isNativeElement(argument));
+    if (bad !== undefined) {
+      throw unsupported(chain, `${printType(type)} is applied to ${printType(bad)}, which is not a native element; only an intrinsic element name, a DOM element type, or a type parameter constrained to element names passes through as native attributes`);
+    }
+    return true;
+  }
+
   function expand(type, stack, chain) {
     switch (type.kind) {
       case 'object': return [armOf(type.members, chain)];
@@ -277,7 +312,7 @@ export function createExpander(types) {
       case 'Pick': {
         if (type.typeArguments?.length !== 2) throw unsupported(chain, 'Pick without exactly two type arguments');
         // A host type's members are not read, so Pick of one passes through as the exact application.
-        if (isNativeSurface(first)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
+        if (nativeSurface(first, chain)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
         const arms = expand(first, stack, chain);
         if (arms.some((arm) => arm.natives.length > 0)) throw unsupported(chain, 'Pick of a type that passes host attributes through');
         const keep = keysOf(second, (target) => expand(target, stack, chain), types, chain);
@@ -299,10 +334,21 @@ export function createExpander(types) {
         throw unsupported(chain, `${type.name} is a utility type the reader does not evaluate in a props type`);
       default:
         // A React attribute surface the component passes through; its keys are not read.
-        if (isNativeSurface(type)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
+        if (nativeSurface(type, chain)) return [{ ...emptyArm(), natives: [{ type, omit: [] }] }];
         throw unsupported(chain, `${printType(type)} is a host type the reader does not evaluate in a props type; only React's attribute surfaces pass through`);
     }
   }
 
-  return { expand: (type, chain) => expand(type, [], chain), expandStack: expand };
+  return {
+    /** @param {object[]} [typeParameters] The type parameters of the component whose props these are. */
+    expand(type, chain, typeParameters = []) {
+      const outer = scope;
+      scope = typeParameters;
+      try {
+        return expand(type, [], chain);
+      } finally {
+        scope = outer;
+      }
+    },
+  };
 }

@@ -103,7 +103,7 @@ test('the graph names each export of each entry point, with the declaration it r
   assert.equal(entry.key, '.');
   const byName = Object.fromEntries(entry.exports.map((item) => [item.name, item]));
   assert.equal(byName.Size.type, 'shared#Size');
-  assert.equal(byName.Box.value, 'parts#Box');
+  assert.equal(byName.Box.value, 'parts#Box:value');
   assert.equal(byName.BoxProps.type, 'parts#BoxProps');
   assert.deepEqual(entry.exports.map(({ name }) => name), [...entry.exports.map(({ name }) => name)].sort());
 });
@@ -219,9 +219,9 @@ export type Opaque<T> = Base & T;
   assert.equal(byName.Opaque.members, undefined);
 });
 
-const modelOf = (text) => {
+const modelOf = (text, host) => {
   const declarations = single(text);
-  return readReference({ declarations, manifest: fixtureManifest, families: [], exceptions: ownedByFixture(read(declarations)), untypedEntries: {} }).files.get('shared.json');
+  return readReference({ declarations, manifest: fixtureManifest, host, families: [], exceptions: ownedByFixture(read(declarations, host)), untypedEntries: {} }).files.get('shared.json');
 };
 const REACT = "import type * as React from 'react';\nimport type { ReactElement } from 'react';\n";
 const partOf = (file, name) => file.exports.find((item) => item.name === name).parts[0];
@@ -245,6 +245,26 @@ export declare function PickedWithRef(props: Pick<Forwarded, 'a' | 'ref'>): Reac
   assert.equal(partOf(file, 'Picked').ref, null, 'a Pick that leaves ref out leaves no ref');
   assert.deepEqual(partOf(file, 'PickedWithRef').ref, { type: 'HTMLDivElement' });
   assert.deepEqual(partOf(file, 'Omitted').members.map(({ name }) => name), ['a']);
+});
+
+test('keyof a type with a forwarded ref includes ref, so Omit and Pick of those keys take it away or keep it, under both compilers', () => {
+  for (const host of [typescript7Host, typescript6Host]) {
+    const file = modelOf(`${REACT}
+type P = { a: string } & React.RefAttributes<HTMLDivElement>;
+type Q = { b?: string; ref?: never };
+export declare function OmitAll(props: Omit<P, keyof P>): ReactElement | null;
+export declare function PickAll(props: Pick<P, keyof P>): ReactElement | null;
+export declare function OmitAllNever(props: Omit<Q, keyof Q>): ReactElement | null;
+export declare function PickAllNever(props: Pick<Q, keyof Q>): ReactElement | null;
+`, host);
+    const at = (name) => partOf(file, name);
+    assert.equal(at('OmitAll').ref, null, `${host.name}: Omit<P, keyof P> leaves no ref`);
+    assert.deepEqual(at('OmitAll').members, [], host.name);
+    assert.deepEqual(at('PickAll').ref, { type: 'HTMLDivElement' }, `${host.name}: Pick<P, keyof P> keeps the ref`);
+    assert.deepEqual(at('PickAll').members.map(({ name }) => name), ['a'], host.name);
+    assert.equal(at('OmitAllNever').ref, null, `${host.name}: a declared ref?: never is a key too`);
+    assert.deepEqual(at('PickAllNever').ref, { never: true }, host.name);
+  }
 });
 
 test('props that overload a method are refused as OVERLOAD instead of keeping one signature', () => {
@@ -276,9 +296,41 @@ export {};
   assert.equal('public' in byName.Internal, false, 'an internal value says so');
   assert.equal(byName.makeProps.text, 'declare function makeProps(label: string): { label: string };');
   assert.deepEqual(file.sources, { index: 'packages/react/src/fixture/index.ts' });
-  assert.deepEqual(file.types.find(({ name }) => name === 'X').refs, ['index#Internal']);
+  assert.deepEqual(file.types.find(({ name }) => name === 'X').refs, ['index#Internal:value']);
   // A value no type reaches is not listed, so existing files do not change.
   assert.equal('values' in modelOf('export type Z = string;\nexport {};'), false);
+});
+
+test('a type and a value that share a name stay two declarations, internal or exported', () => {
+  const hosts = [typescript7Host, typescript6Host];
+  for (const host of hosts) {
+    // Internal: `Internal` reaches the interface, `typeof Internal` the constant, and the model holds both.
+    const internal = modelOf(`
+interface Internal { readonly tag: 'type' }
+declare const Internal: { readonly tag: 'value' };
+export type Both = { type: Internal; value: typeof Internal };
+export {};
+`, host);
+    const types = Object.fromEntries(internal.types.map((type) => [type.id, type]));
+    assert.deepEqual(Object.keys(types).sort(), ['index#Both', 'index#Internal'], host.name);
+    assert.match(types['index#Internal'].text, /^interface Internal \{/u, host.name);
+    assert.deepEqual(internal.values.map(({ id, name, kind }) => [id, name, kind]), [['index#Internal:value', 'Internal', 'const']], host.name);
+    assert.deepEqual(types['index#Both'].refs, ['index#Internal', 'index#Internal:value'], host.name);
+    assert.equal(internal.values[0].text, "declare const Internal: {\n  readonly tag: 'value';\n};", host.name);
+
+    // Exported: one public name for both, listed once in the inventory as a type and a value, both reachable.
+    const declarations = single(`
+export interface Shared { readonly tag: 'type' }
+export declare const Shared: Readonly<Record<string, string>>;
+export type Reach = { type: Shared; value: typeof Shared };
+`);
+    const { files, inventory } = readReference({ declarations, manifest: fixtureManifest, host, families: [], exceptions: ownedByFixture(read(declarations, host)), untypedEntries: {} });
+    const exported = files.get('shared.json');
+    assert.deepEqual(inventory.entries[0].exports.map(({ name, kind }) => [name, kind]), [['Reach', 'type'], ['Shared', 'type and value']], host.name);
+    assert.deepEqual(exported.types.map(({ id }) => id), ['index#Reach', 'index#Shared'], host.name);
+    assert.deepEqual(exported.values.map(({ id, public: where }) => [id, where]), [['index#Shared:value', [{ entry: '.', name: 'Shared' }]]], host.name);
+    assert.deepEqual(exported.exports.map(({ name, kind }) => [name, kind]), [['Shared', 'value']], host.name);
+  }
 });
 
 test('a host application the reader does not evaluate is refused instead of shown as an attribute envelope', () => {
@@ -291,6 +343,69 @@ test('a host application the reader does not evaluate is refused instead of show
   // React's attribute surfaces are the terminal case: they pass through, named exactly.
   const surfaces = modelOf(`${REACT}export declare const Widget: React.FC<React.HTMLAttributes<HTMLDivElement> & Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & { label: string }>;\n`);
   assert.deepEqual(partOf(surfaces, 'Widget').natives.map(({ type }) => type), ['React.HTMLAttributes<HTMLDivElement>', "Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'>"]);
+});
+
+test('an attribute surface passes through as native only when it is applied to a native element', () => {
+  const refused = (text, fragment) => assert.throws(() => modelOf(`${REACT}${text}`),
+    (error) => error instanceof ReferenceReadError && error.code === 'MUXUI_REACT_REFERENCE_UNSUPPORTED' && error.message.includes('is not a native element') && error.message.includes(fragment), text);
+  // A package component is not a native element: its props are declared, so a "native" envelope would hide them.
+  refused(`declare const Inner: React.FC<{ label: string }>;
+export declare const Outer: React.FC<React.ComponentPropsWithoutRef<typeof Inner>>;
+`, 'typeof Inner');
+  refused(`export declare function Generic<T extends React.ElementType>(props: React.ComponentPropsWithoutRef<T>): ReactElement | null;
+`, 'T');
+  refused(`declare const Inner: React.FC<{ label: string }>;
+export declare const Outer: React.FC<Pick<React.ComponentPropsWithoutRef<typeof Inner>, 'label'>>;
+`, 'typeof Inner');
+  // The real thing is accepted: an intrinsic element name, a DOM element type, a parameter constrained to element names.
+  const file = modelOf(`${REACT}
+type Tag = 'a' | 'button';
+export declare function ByName(props: React.ComponentPropsWithoutRef<'div'> & { label: string }): ReactElement | null;
+export declare function ByDom(props: React.HTMLAttributes<HTMLDivElement> & { label: string }): ReactElement | null;
+export declare function ByParameter<T extends Tag = 'a'>(props: Omit<React.ComponentPropsWithoutRef<T>, 'color'> & { as?: T }): ReactElement | null;
+export declare function ByInlineNames<T extends 'p' | 'span'>(props: React.ComponentPropsWithoutRef<T> & { as?: T }): ReactElement | null;
+`);
+  const natives = (name) => partOf(file, name).natives.map(({ type, omit }) => [type, omit]);
+  assert.deepEqual(natives('ByName'), [["React.ComponentPropsWithoutRef<'div'>", undefined]]);
+  assert.deepEqual(natives('ByDom'), [['React.HTMLAttributes<HTMLDivElement>', undefined]]);
+  assert.deepEqual(natives('ByParameter'), [['React.ComponentPropsWithoutRef<T>', ['color']]]);
+  assert.deepEqual(natives('ByInlineNames'), [['React.ComponentPropsWithoutRef<T>', undefined]]);
+});
+
+// TextEditor (Decision 0031 tranche 11a): a forwardRef component whose `Root` is the component's own type, props whose
+// documents are tuples with a rest, nested method signatures, and a callback that returns a Promise of unknown.
+test('a component whose Root is its own type, with tuples, nested methods and a Promise of unknown, reads exactly, under both compilers', () => {
+  for (const host of [typescript7Host, typescript6Host]) {
+    const file = modelOf(`${REACT}
+type Block = { type: 'p'; content?: Block[] };
+export type Doc = { type: 'doc'; content: [Block, ...Block[]] };
+export type Handle = { focus(): void; execute(command: string): boolean };
+type OwnProps = {
+  value?: Doc;
+  onImageRequest?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;
+  onRequest?: (request: string, actions: Handle) => void | Promise<unknown>;
+};
+export type EditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value'> & OwnProps;
+type EditorComponent = React.ForwardRefExoticComponent<EditorProps & React.RefAttributes<Handle>> & { Root: EditorComponent };
+export declare const Editor: EditorComponent;
+`, host);
+    const parts = file.exports.find(({ name }) => name === 'Editor').parts;
+    assert.deepEqual(parts.map(({ member, form, sameAs }) => [member, form, sameAs]), [[null, 'forwardRef', undefined], ['Root', undefined, 'Editor']], host.name);
+    assert.deepEqual(parts[0].ref, { type: 'Handle', refs: ['index#Handle'] }, host.name);
+    const members = Object.fromEntries(parts[0].members.map((member) => [member.name, member.type]));
+    assert.equal(members.value, 'Doc', host.name);
+    assert.equal(members.onImageRequest, '(actions: { insertImage(src: string, alt?: string): boolean }) => void', host.name);
+    assert.equal(members.onRequest, '(request: string, actions: Handle) => void | Promise<unknown>', host.name);
+    const types = Object.fromEntries(file.types.map((type) => [type.name, type.text]));
+    assert.equal(types.Doc, "type Doc = {\n  type: 'doc';\n  content: [Block, ...Block[]];\n};", host.name);
+    assert.equal(types.Handle, 'type Handle = {\n  focus(): void;\n  execute(command: string): boolean;\n};', host.name);
+  }
+  // A part that is another component, not this one, is still not a single component.
+  assert.throws(() => modelOf(`${REACT}
+type Inner = React.ForwardRefExoticComponent<{ a?: string }> & { Deep: React.ForwardRefExoticComponent<{ b?: string }> };
+type Outer = React.ForwardRefExoticComponent<{ c?: string }> & { Inner: Inner };
+export declare const Widget: Outer;
+`), (error) => error instanceof ReferenceReadError && /a part that is not a single component/u.test(error.message));
 });
 
 test('every printed type compiles again, under TypeScript 7 and 6: optional unnamed tuple elements are parenthesized', () => {

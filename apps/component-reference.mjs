@@ -144,7 +144,7 @@ const tokenGroupThreshold = 8;
 /**
  * A Mux UI value a type reaches through `typeof`, printed as its declaration.
  * @typedef {object} DeclarationValue
- * @property {string} id
+ * @property {string} id `module#Name:value`, so a value never shares an id with a type of the same name.
  * @property {string} name
  * @property {string} module
  * @property {'const' | 'function'} kind

@@ -175,7 +175,7 @@ export function createComponentReader({ types, values }) {
 
   /** One part of a component: its props model, or, when it is `typeof` another export, which. */
   function modelPart(member, callable, chain) {
-    const arms = expand(callable.props, chain);
+    const arms = expand(callable.props, chain, callable.typeParameters);
     const typeParameters = modelTypeParameters(callable.typeParameters);
     return {
       member,

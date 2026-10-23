@@ -70,7 +70,9 @@ export function readGraph(session, entries) {
   // A kind the host does not name comes back as `?Name`.
   const kindName = (node) => session.kind(node).replace(/^\?/u, '');
 
-  const idOf = (node, name) => `${moduleOf(session.fileOf(node).replaceAll('\\', '/'))}#${name}`;
+  // A type is `module#Name`. A value is `module#Name:value`, because a type and a value can share a name
+  // (`interface X` beside `declare const X`) and each must stay one declaration with its own identity.
+  const idOf = (node, name, value) => `${moduleOf(session.fileOf(node).replaceAll('\\', '/'))}#${name}${value ? ':value' : ''}`;
 
   // ---- names -------------------------------------------------------------------------------------
 
@@ -101,7 +103,7 @@ export function readGraph(session, entries) {
     }
     if (wanted.length > 1) throw fail('MERGED', chain, `${written} has ${wanted.length} declarations; a Mux UI type has one`);
     const declaration = wanted[0];
-    const id = idOf(declaration, resolved.name);
+    const id = idOf(declaration, resolved.name, meanings === VALUE_DECLARATIONS);
     if (!types.has(id) && !values.has(id) && !pending.some((entry) => entry.id === id)) pending.push({ id, declaration });
     return { id, name: resolved.name };
   }
