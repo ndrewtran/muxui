@@ -12,7 +12,7 @@ import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { IconButton } from './icon-button.ts';
-import { h, cx, dataState } from './part-utils.mjs';
+import { h, cx, dataState } from './part-utils.ts';
 import { defaultItemLabel, useItemRenderer } from './item-renderer.mjs';
 
 /* TagSelect */

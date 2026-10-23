@@ -7,7 +7,7 @@ import {
 } from 'react-aria-components';
 import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
-import { h, cx, nativePart } from './part-utils.mjs';
+import { h, cx, nativePart } from './part-utils.ts';
 import { fieldText, mappedFieldProps } from './field-utils.mjs';
 
 /* PaymentInput */

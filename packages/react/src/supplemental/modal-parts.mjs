@@ -7,7 +7,7 @@ import {
 } from 'react-aria-components';
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
-import { h, useIsomorphicLayoutEffect } from './part-utils.mjs';
+import { h, useIsomorphicLayoutEffect } from './part-utils.ts';
 
 /* AlertDialog */
 const ModalMotionContext = React.createContext(null);

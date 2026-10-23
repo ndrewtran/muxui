@@ -1,0 +1,87 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/button-group.ts",
+  "component": "muxui:component:button-group",
+  "binding": "web.react",
+  "export": "ButtonGroup",
+  "api": {
+    "props": [
+      "orientation",
+      "attached",
+      "disabled",
+      "role"
+    ],
+    "events": [],
+    "defaults": {
+      "orientation": "horizontal",
+      "attached": false,
+      "disabled": false,
+      "role": "group"
+    },
+    "propDetails": {
+      "orientation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "horizontal"
+            },
+            {
+              "kind": "literal",
+              "value": "vertical"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "horizontal",
+          "vertical"
+        ],
+        "description": "The direction the buttons lay out in."
+      },
+      "attached": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Joins the buttons, rounding only the group's outer corners."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the group disabled. Its buttons keep their own disabled state."
+      },
+      "role": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "group"
+            },
+            {
+              "kind": "literal",
+              "value": "region"
+            },
+            {
+              "kind": "literal",
+              "value": "presentation"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "group",
+          "region",
+          "presentation"
+        ],
+        "description": "`presentation` names nothing; a group or region needs an accessible name, and without one the group is presentation."
+      }
+    },
+    "eventDetails": {},
+    "types": {}
+  }
+}

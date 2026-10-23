@@ -179,6 +179,24 @@ test('each family file holds its own family and the shared files hold what no fa
   }
 });
 
+// The probes compile a file's types as one namespace, and a page lists them by name, so two types of one name in a
+// file would be one name for two declarations. `PartProps` is declared twice until T11 (the helper module and the
+// authored declarations) and is not a problem while no family reaches both; the check turns one that does into a
+// named failure instead of a compiler's "Duplicate identifier".
+const duplicateNames = (map) => [...map].flatMap(([fileName, file]) => {
+  const ids = new Map();
+  for (const type of file.types ?? []) ids.set(type.name, [...(ids.get(type.name) ?? []), type.id]);
+  return [...ids].filter(([, same]) => same.length > 1).map(([name, same]) => `${fileName}: ${name} is ${same.join(' and ')}`);
+});
+
+test('an owner file holds each type name once', () => {
+  assert.deepEqual(duplicateNames(files), []);
+  const mutated = clone(files);
+  const file = mutated.get('button.json');
+  file.types.push({ ...file.types[0], id: `elsewhere#${file.types[0].name}` });
+  assert.deepEqual(duplicateNames(mutated), [`button.json: ${file.types[0].name} is ${file.types[0].id} and elsewhere#${file.types[0].name}`]);
+});
+
 // ---- 3. outside the package and the README --------------------------------------------------------
 
 test('reference/ is not in the package: not in files, not behind an export, and not in what npm would pack', () => {
@@ -239,10 +257,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 66 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 69 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 66, parts: 79, props: 583, events: 96, types: 135, references: 135 });
+  assert.deepEqual(result.counts, { families: 69, parts: 82, props: 596, events: 97, types: 136, references: 136 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -274,17 +292,15 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['alert-dialog', 'button-group', 'card', 'checkbox-field', 'color-mode-toggle', 'command-palette', 'header-nav', 'input', 'input-tags', 'multi-select', 'payment-input', 'progress-circle', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area'];
+const AUTHORED = ['alert-dialog', 'card', 'checkbox-field', 'command-palette', 'header-nav', 'input', 'input-tags', 'multi-select', 'payment-input', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 18 families whose web.react API is still authored list prop names only. Each name is owned by the one part
-// that declares it; these 35 are not, and the table says why and where they are carried instead. The table is
+// The 15 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// that declares it; these 33 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
   'alert-dialog.disabled': { parts: ['Trigger', 'Close'] },
   'alert-dialog.onActivate': { parts: ['Trigger', 'Close'] },
-  'button-group.aria-label': { native: 'ButtonGroup' },
-  'button-group.aria-labelledby': { native: 'ButtonGroup' },
   'card.variant': { parts: ['Root', 'Button'] },
   'card.padding': { parts: ['Root', 'Button'] },
   'checkbox-field.disabled': { parts: ['Root', 'Button'] },
@@ -320,10 +336,10 @@ const AUTHORED_OWNERS = {
 // The catalog lists these channels but not their `on` handler among the props; the handler is declared on the root.
 const UNLISTED_EVENTS = new Set(['text-area.change']);
 
-test('every prop of the 18 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 15 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 18, props: 187, unique: 152, listed: 35, events: 25 });
+  assert.deepEqual(result.counts, { families: 15, props: 172, unique: 139, listed: 33, events: 24 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });

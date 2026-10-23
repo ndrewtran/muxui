@@ -1,5 +1,5 @@
 import React from 'react';
-import { h } from './part-utils.mjs';
+import { h } from './part-utils.ts';
 
 export const defaultItemLabel = (item) => String(item.name ?? item.label ?? item.id);
 

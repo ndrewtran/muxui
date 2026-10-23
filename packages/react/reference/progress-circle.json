@@ -1,28 +1,52 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "progress-circle",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "progress-circle": "packages/react/src/supplemental/progress-circle.ts"
+  },
   "exports": [
     {
       "name": "ProgressCircle",
       "entry": ".",
-      "module": "supplemental",
+      "module": "progress-circle",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "value", "optional": true, "type": "number | null" },
-            { "name": "minValue", "optional": true, "type": "number" },
-            { "name": "maxValue", "optional": true, "type": "number" },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "number | null",
+              "doc": "The progress between `minValue` and `maxValue`; `null` shows indeterminate progress."
+            },
+            {
+              "name": "minValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The value at which the circle is empty."
+            },
+            {
+              "name": "maxValue",
+              "optional": true,
+              "type": "number",
+              "doc": "The value at which the circle is full."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
+              "values": ["sm", "md", "lg"],
+              "doc": "The circle's diameter."
             },
-            { "name": "label", "optional": true, "type": "string" }
+            {
+              "name": "label",
+              "optional": true,
+              "type": "string",
+              "doc": "Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -65,54 +89,90 @@
   ],
   "types": [
     {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     },
     {
-      "id": "supplemental#ProgressCircleLabelProps",
+      "id": "progress-circle#ProgressCircleLabelProps",
       "name": "ProgressCircleLabelProps",
-      "module": "supplemental",
+      "module": "progress-circle",
       "public": [
         { "entry": ".", "name": "ProgressCircleLabelProps" }
       ],
       "owner": "progress-circle",
       "text": "type ProgressCircleLabelProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#ProgressCircleProps",
+      "id": "progress-circle#ProgressCircleOwnProps",
+      "name": "ProgressCircleOwnProps",
+      "module": "progress-circle",
+      "text": "type ProgressCircleOwnProps = {\n  value?: number | null;\n  minValue?: number;\n  maxValue?: number;\n  size?: 'sm' | 'md' | 'lg';\n  label?: string;\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "number | null",
+          "doc": "The progress between `minValue` and `maxValue`; `null` shows indeterminate progress."
+        },
+        {
+          "name": "minValue",
+          "optional": true,
+          "type": "number",
+          "doc": "The value at which the circle is empty."
+        },
+        {
+          "name": "maxValue",
+          "optional": true,
+          "type": "number",
+          "doc": "The value at which the circle is full."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The circle's diameter."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "string",
+          "doc": "Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence."
+        }
+      ]
+    },
+    {
+      "id": "progress-circle#ProgressCircleProps",
       "name": "ProgressCircleProps",
-      "module": "supplemental",
+      "module": "progress-circle",
       "public": [
         { "entry": ".", "name": "ProgressCircleProps" }
       ],
       "owner": "progress-circle",
-      "text": "type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & {\n  value?: number | null;\n  minValue?: number;\n  maxValue?: number;\n  size?: 'sm' | 'md' | 'lg';\n  label?: string;\n};"
+      "text": "type ProgressCircleProps = ProgressCircleOwnProps & React.HTMLAttributes<HTMLDivElement>;",
+      "refs": ["progress-circle#ProgressCircleOwnProps"]
     },
     {
-      "id": "supplemental#ProgressCircleRootProps",
+      "id": "progress-circle#ProgressCircleRootProps",
       "name": "ProgressCircleRootProps",
-      "module": "supplemental",
+      "module": "progress-circle",
       "public": [
         { "entry": ".", "name": "ProgressCircleRootProps" }
       ],
       "owner": "progress-circle",
       "text": "type ProgressCircleRootProps = ProgressCircleProps;",
-      "refs": ["supplemental#ProgressCircleProps"]
+      "refs": ["progress-circle#ProgressCircleProps"]
     },
     {
-      "id": "supplemental#ProgressCircleTrackProps",
+      "id": "progress-circle#ProgressCircleTrackProps",
       "name": "ProgressCircleTrackProps",
-      "module": "supplemental",
+      "module": "progress-circle",
       "public": [
         { "entry": ".", "name": "ProgressCircleTrackProps" }
       ],
@@ -120,15 +180,15 @@
       "text": "type ProgressCircleTrackProps = React.SVGAttributes<SVGSVGElement>;"
     },
     {
-      "id": "supplemental#ProgressCircleValueProps",
+      "id": "progress-circle#ProgressCircleValueProps",
       "name": "ProgressCircleValueProps",
-      "module": "supplemental",
+      "module": "progress-circle",
       "public": [
         { "entry": ".", "name": "ProgressCircleValueProps" }
       ],
       "owner": "progress-circle",
       "text": "type ProgressCircleValueProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     }
   ]
 }

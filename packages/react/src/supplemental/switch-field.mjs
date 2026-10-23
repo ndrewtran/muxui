@@ -5,7 +5,7 @@ import {
   SwitchButton as AriaSwitchButton,
 } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
-import { h, cx, nativePart } from './part-utils.mjs';
+import { h, cx, nativePart } from './part-utils.ts';
 import { fieldText, mappedFieldProps } from './field-utils.mjs';
 
 function makeSwitchField() {

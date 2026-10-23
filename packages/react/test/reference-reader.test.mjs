@@ -17,7 +17,7 @@ import { printDeclaration, printType } from '../reference-reader/printer.mjs';
 import { readGraph } from '../reference-reader/graph.mjs';
 import { readDeclarationGraph, readReference } from '../reference-reader/read.mjs';
 import { typescript6Host } from './support/reference-host-typescript6.mjs';
-import { CONFORMANCE, fixtureManifest, ownedByFixture, realInputs, single } from './support/reference-inputs.mjs';
+import { CONFORMANCE, fixtureManifest, ownedByFixture, realInputs, single, withHeaders } from './support/reference-inputs.mjs';
 
 const read = (declarations, host) => readDeclarationGraph({ declarations, manifest: fixtureManifest, host });
 const printed = (graph) => Object.fromEntries(graph.types.map((declaration) => [declaration.name, printDeclaration(declaration)]));
@@ -330,6 +330,39 @@ export type Reach = { type: Shared; value: typeof Shared };
     assert.deepEqual(exported.types.map(({ id }) => id), ['index#Reach', 'index#Shared'], host.name);
     assert.deepEqual(exported.values.map(({ id, public: where }) => [id, where]), [['index#Shared:value', [{ entry: '.', name: 'Shared' }]]], host.name);
     assert.deepEqual(exported.exports.map(({ name, kind }) => [name, kind]), [['Shared', 'value']], host.name);
+  }
+});
+
+// A declaration file cannot import and declare one name, so a package that moves a type to its own module and keeps
+// the public name where it was writes `import type { X as Renamed }` and `export type X = Renamed`. That alias adds
+// nothing, and read as a declaration it would make two types called X in one model whose text reads `type X = X`.
+test('a bare alias that gives another module\'s type its own name again is that type, and any other alias stays a declaration', () => {
+  const part = "export type X = { kind: 'x' };\nexport interface Box<T> { value: T }";
+  const graphOf = (index, host) => read(withHeaders({ 'part.d.ts': part, 'index.d.ts': `import type { X as Renamed, Box as RenamedBox } from './part.js';\n${index}` }), host);
+  for (const host of [typescript7Host, typescript6Host]) {
+    const same = graphOf('export type X = Renamed;\nexport type Uses = { event: X };', host);
+    assert.deepEqual(same.types.map(({ id }) => id), ['index#Uses', 'part#X'], host.name);
+    assert.deepEqual(same.entries[0].exports, [{ name: 'Uses', type: 'index#Uses' }, { name: 'X', type: 'part#X' }], host.name);
+    assert.deepEqual(printed(same), { Uses: 'type Uses = {\n  event: X;\n};', X: "type X = {\n  kind: 'x';\n};" }, host.name);
+    assert.deepEqual(same.types[0].type.members[0].type, { kind: 'reference', id: 'part#X', name: 'X' }, host.name);
+
+    // Each near miss breaks one of the three conditions (the alias's body is a bare reference, to a package type, of its own
+    // name) or one of the two it states (no type parameters, no type arguments), and stays a declaration of its own.
+    const idsOfIndex = (text) => graphOf(text, host).types.map(({ id }) => id);
+    const renamed = graphOf('export type Y = Renamed;', host);
+    assert.deepEqual(renamed.types.map(({ id }) => id), ['index#Y', 'part#X'], `${host.name}: another name`);
+    assert.equal(printed(renamed).Y, 'type Y = X;', host.name);
+    assert.deepEqual(idsOfIndex('export type X<T = string> = Renamed;'), ['index#X', 'part#X'], `${host.name}: a type parameter`);
+    assert.deepEqual(idsOfIndex('export type Box = RenamedBox<string>;'), ['index#Box', 'part#Box'], `${host.name}: a type argument`);
+    assert.deepEqual(idsOfIndex('export type Box<T> = RenamedBox<T>;'), ['index#Box', 'part#Box'], `${host.name}: both`);
+    const wider = graphOf('export type X = Renamed & { extra: 1 };', host);
+    assert.deepEqual(wider.types.map(({ id }) => id), ['index#X', 'part#X'], `${host.name}: more than the reference`);
+    assert.match(printDeclaration(wider.types.find(({ id }) => id === 'index#X')), /extra: 1/u, host.name);
+    assert.deepEqual(idsOfIndex('export type X = (Renamed);'), ['index#X', 'part#X'], `${host.name}: parenthesized`);
+    // A type of React or the library is no package type, even under the alias's own name.
+    const hostAlias = graphOf("import type { ReactNode as Node } from 'react';\nexport type ReactNode = Node;", host);
+    assert.deepEqual(hostAlias.types.map(({ id }) => id), ['index#ReactNode'], `${host.name}: a host type`);
+    assert.equal(printed(hostAlias).ReactNode, 'type ReactNode = React.ReactNode;', host.name);
   }
 });
 

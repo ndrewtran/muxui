@@ -35,25 +35,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "mode",
-          "defaultMode",
-          "storageKey",
-          "disabled",
-          "onModeChange"
-        ],
-        "events": [
-          "modeChange"
-        ],
-        "parts": [
-          "root"
-        ],
-        "defaults": {
-          "storageKey": "muxui-color-mode",
-          "disabled": false
-        }
-      },
       "behavior": [
         "The first render uses defaultMode, or light when it is not set, so server rendering and the first client render match.",
         "localStorage and the operating system preference are read only after mount, never during server rendering.",

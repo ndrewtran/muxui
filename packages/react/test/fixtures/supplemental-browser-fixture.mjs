@@ -2,7 +2,6 @@ import React from 'react';
 import {
   AlertDialog,
   Card,
-  ColorModeToggle,
   CommandPalette,
   HeaderNav,
   InputTags,
@@ -10,6 +9,7 @@ import {
   Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
+import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 
 const h = React.createElement;
 const options = Object.freeze([

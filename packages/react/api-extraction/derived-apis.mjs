@@ -103,6 +103,11 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'tree', name: 'Tree', source: 'packages/react/src/tree.ts' },
   // TextEditor's handle, commands and document types are declared by its module; only its props and events are derived here.
   { slug: 'text-editor', name: 'TextEditor', source: 'packages/react/src/text-editor/index.ts' },
+  // ButtonGroup and ColorModeToggle are single components: their API is the export's own.
+  { slug: 'button-group', name: 'ButtonGroup', source: 'packages/react/src/supplemental/button-group.ts' },
+  { slug: 'color-mode-toggle', name: 'ColorModeToggle', source: 'packages/react/src/supplemental/color-mode-toggle.ts' },
+  // ProgressCircle is a compound whose root is ProgressCircle.Root; Track, Label and Value own no props.
+  { slug: 'progress-circle', name: 'ProgressCircle', part: 'Root', source: 'packages/react/src/supplemental/progress-circle.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

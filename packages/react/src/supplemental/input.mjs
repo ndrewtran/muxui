@@ -1,6 +1,6 @@
 import React from 'react';
 import { Input as AriaInput, Label as AriaLabel, TextField as AriaTextField } from 'react-aria-components';
-import { h, cx } from './part-utils.mjs';
+import { h, cx } from './part-utils.ts';
 import { fieldText } from './field-utils.mjs';
 import { InputAssociationContext, fieldRoot } from './field-root.mjs';
 

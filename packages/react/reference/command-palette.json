@@ -1,7 +1,10 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "command-palette",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "supplemental": "packages/react/src/supplemental/index.d.ts"
+  },
   "exports": [
     {
       "name": "CommandPalette",
@@ -38,7 +41,7 @@
               "name": "onActivate",
               "optional": true,
               "type": "(event: SupplementalActivation) => void",
-              "refs": ["supplemental#SupplementalActivation"]
+              "refs": ["part-utils#SupplementalActivation"]
             },
             { "name": "className", "optional": true, "type": "string" }
           ],
@@ -101,7 +104,7 @@
               "name": "onActivate",
               "optional": true,
               "type": "(event: SupplementalActivation) => void",
-              "refs": ["supplemental#SupplementalActivation"]
+              "refs": ["part-utils#SupplementalActivation"]
             },
             { "name": "className", "optional": true, "type": "string" }
           ],
@@ -155,7 +158,7 @@
               "name": "onActivate",
               "optional": true,
               "type": "(event: SupplementalActivation) => void",
-              "refs": ["supplemental#SupplementalActivation"]
+              "refs": ["part-utils#SupplementalActivation"]
             },
             { "name": "className", "optional": true, "type": "string" }
           ],
@@ -487,6 +490,25 @@
   ],
   "types": [
     {
+      "id": "part-utils#SupplementalActivation",
+      "name": "SupplementalActivation",
+      "module": "part-utils",
+      "public": [
+        { "entry": ".", "name": "SupplementalActivation" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "pointerType", "optional": true, "type": "string" },
+        { "name": "target", "optional": true, "type": "EventTarget | null" }
+      ]
+    },
+    {
       "id": "supplemental#ButtonPartProps",
       "name": "ButtonPartProps",
       "module": "supplemental",
@@ -495,7 +517,7 @@
       ],
       "owner": "button",
       "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
-      "refs": ["supplemental#SupplementalActivation"]
+      "refs": ["part-utils#SupplementalActivation"]
     },
     {
       "id": "supplemental#CommandPaletteBackdropProps",
@@ -926,25 +948,6 @@
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
-    },
-    {
-      "id": "supplemental#SupplementalActivation",
-      "name": "SupplementalActivation",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalActivation" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
-      "members": [
-        {
-          "name": "type",
-          "type": "'activate'",
-          "values": ["activate"]
-        },
-        { "name": "pointerType", "optional": true, "type": "string" },
-        { "name": "target", "optional": true, "type": "EventTarget | null" }
-      ]
     },
     {
       "id": "supplemental#UseCommandPaletteOptions",

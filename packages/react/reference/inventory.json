@@ -74,13 +74,13 @@
           "name": "ButtonGroup",
           "kind": "value",
           "owner": "button-group",
-          "module": "supplemental"
+          "module": "button-group"
         },
         {
           "name": "ButtonGroupProps",
           "kind": "type",
           "owner": "button-group",
-          "module": "supplemental"
+          "module": "button-group"
         },
         { "name": "ButtonPartProps", "kind": "type", "owner": "button", "module": "supplemental" },
         { "name": "ButtonPointerType", "kind": "type", "owner": "button", "module": "button" },
@@ -162,20 +162,19 @@
           "name": "ColorMode",
           "kind": "type",
           "owner": "color-mode-toggle",
-          "module": "supplemental",
-          "reason": "the mode type of ColorModeToggle"
+          "module": "color-mode-toggle"
         },
         {
           "name": "ColorModeToggle",
           "kind": "value",
           "owner": "color-mode-toggle",
-          "module": "supplemental"
+          "module": "color-mode-toggle"
         },
         {
           "name": "ColorModeToggleProps",
           "kind": "type",
           "owner": "color-mode-toggle",
-          "module": "supplemental"
+          "module": "color-mode-toggle"
         },
         {
           "name": "ColorPicker",
@@ -947,37 +946,37 @@
           "name": "ProgressCircle",
           "kind": "value",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleLabelProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleRootProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleTrackProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleValueProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "PromptComposer",
@@ -1152,7 +1151,7 @@
           "name": "SupplementalActivation",
           "kind": "type",
           "owner": "shared",
-          "module": "supplemental",
+          "module": "part-utils",
           "reason": "helper types of the supplemental declarations that several supplemental families use"
         },
         {
