@@ -14,31 +14,31 @@
           "name": "AlertDialog",
           "kind": "value",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogActionsProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogCloseProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogRootProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogTriggerProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         { "name": "Autocomplete", "kind": "value", "owner": "autocomplete", "module": "fields" },
         { "name": "AutocompleteItem", "kind": "type", "owner": "autocomplete", "module": "fields" },

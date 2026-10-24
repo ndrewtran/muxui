@@ -19,28 +19,6 @@ type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   className?: string;
 };
 
-export type AlertDialogRootProps = {
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  children?: React.ReactNode;
-};
-export type AlertDialogActionsProps = PartProps<HTMLDivElement>;
-export type AlertDialogTriggerProps = ButtonPartProps;
-export type AlertDialogCloseProps = ButtonPartProps;
-
-export declare const AlertDialog: {
-  Root: React.ForwardRefExoticComponent<AlertDialogRootProps & React.RefAttributes<HTMLElement>>;
-  Backdrop: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Popup: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Content: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  Title: React.ForwardRefExoticComponent<PartProps<HTMLHeadingElement> & React.RefAttributes<HTMLHeadingElement>>;
-  Description: React.ForwardRefExoticComponent<PartProps<HTMLParagraphElement> & React.RefAttributes<HTMLParagraphElement>>;
-  Trigger: React.ForwardRefExoticComponent<AlertDialogTriggerProps & React.RefAttributes<HTMLButtonElement>>;
-  Actions: React.ForwardRefExoticComponent<AlertDialogActionsProps & React.RefAttributes<HTMLDivElement>>;
-  Close: React.ForwardRefExoticComponent<AlertDialogCloseProps & React.RefAttributes<HTMLButtonElement>>;
-};
-
 export type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; size?: 'sm' | 'md' | 'lg'; closeOnSelect?: boolean };
 export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; target?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
 export interface CommandPaletteCommand {

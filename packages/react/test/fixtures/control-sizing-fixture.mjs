@@ -25,12 +25,12 @@ import {
   TextField,
 } from '../../src/fields.ts';
 import {
-  AlertDialog,
   CommandPalette,
   MultiSelect,
   Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
+import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
 import { CheckboxField } from '../../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 import { HeaderNav } from '../../src/supplemental/header-nav.ts';

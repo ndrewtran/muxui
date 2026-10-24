@@ -256,7 +256,7 @@ test('a bundle that uses one control family keeps its own module and only the sh
 
 // supplemental.mjs re-exports one module per family. Before the split every export kept the whole barrel and the 14
 // modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
-// its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The four
+// its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The three
 // wrappers that are an immediately invoked function, the three field factories and the two modal wrappers carry the
 // pure annotation that lets a bundler drop what no export uses; the TypeScript families are checked by the bundle test below.
 test('the supplemental modules keep the pure annotation on each wrapper', () => {
@@ -266,7 +266,7 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
   };
   // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
   const pure = String.raw`\/\*\s*[#@]__PURE__\s*\*\/`;
-  for (const [module, name] of [['alert-dialog', 'AlertDialog'], ['command-palette', 'CommandPalette'], ['multi-select', 'MultiSelect'], ['tag-select', 'TagSelect']]) {
+  for (const [module, name] of [['command-palette', 'CommandPalette'], ['multi-select', 'MultiSelect'], ['tag-select', 'TagSelect']]) {
     assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} \\(\\(\\) => \\(\\{$`, 'mu'), `${module}: ${name}`);
   }
   for (const [module, name] of [['checkbox-field', 'CheckboxField'], ['radio-field', 'RadioField'], ['switch-field', 'SwitchField']]) {
@@ -288,6 +288,8 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
 const annotatedFamilies = [
   ['card', 'Card', 5, ['button']],
   ['header-nav', 'HeaderNav', 5, ['icon-button']],
+  // Nine parts, and the two modal-parts wrappers its Backdrop and Popup use, which are marked and so are kept only with them.
+  ['alert-dialog', 'AlertDialog', 11, ['button', 'icon-button']],
   ['button-group', 'ButtonGroup', 1],
   ['color-mode-toggle', 'ColorModeToggle', 1],
   ['progress-circle', 'ProgressCircle', 4],

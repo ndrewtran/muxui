@@ -10,13 +10,13 @@ import { Form as AriaForm } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
 import { parseAst } from 'vite';
 import {
-  AlertDialog,
   CommandPalette,
   MultiSelect,
   Sidebar,
   TagSelect,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
+import { AlertDialog } from '../src/supplemental/alert-dialog.ts';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
 import { Card } from '../src/supplemental/card.ts';
 import { HeaderNav } from '../src/supplemental/header-nav.ts';

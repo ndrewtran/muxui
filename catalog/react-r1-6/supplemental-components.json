@@ -26,7 +26,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/alert-dialog.mjs",
+      "runtimeSource": "packages/react/src/supplemental/alert-dialog.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

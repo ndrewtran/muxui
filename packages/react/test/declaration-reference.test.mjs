@@ -257,10 +257,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 78 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 79 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 78, parts: 98, props: 668, events: 106, types: 139, references: 139 });
+  assert.deepEqual(result.counts, { families: 79, parts: 101, props: 672, events: 109, types: 140, references: 140 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -292,15 +292,13 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['alert-dialog', 'command-palette', 'multi-select', 'sidebar', 'tag-select', 'text'];
+const AUTHORED = ['command-palette', 'multi-select', 'sidebar', 'tag-select', 'text'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 6 families whose web.react API is still authored list prop names only. Each name is owned by the one part
-// that declares it; these 22 are not, and the table says why and where they are carried instead. The table is
+// The 5 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// that declares it; these 20 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
-  'alert-dialog.disabled': { parts: ['Trigger', 'Close'] },
-  'alert-dialog.onActivate': { parts: ['Trigger', 'Close'] },
   'command-palette.closeOnSelect': { parts: ['Root', 'Item'] },
   'command-palette.disabled': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
   'command-palette.onActivate': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
@@ -326,10 +324,10 @@ const AUTHORED_OWNERS = {
 // families still authored list every one of theirs, so nothing is here; a family that needs it gets an entry.
 const UNLISTED_EVENTS = new Set();
 
-test('every prop of the 6 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 5 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 6, props: 92, unique: 70, listed: 22, events: 15 });
+  assert.deepEqual(result.counts, { families: 5, props: 87, unique: 67, listed: 20, events: 13 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });

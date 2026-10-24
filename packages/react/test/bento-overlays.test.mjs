@@ -9,7 +9,7 @@ const installDom = (markup) => createDom(markup, { globals: ['File', 'Blob', 'Fi
 
 const moduleEnvironment = installDom();
 const { Dialog, Popover, PreviewTrigger, Tooltip } = await import('../src/overlays.ts');
-const { AlertDialog } = await import('../src/supplemental/index.mjs');
+const { AlertDialog } = await import('../src/supplemental/alert-dialog.ts');
 moduleEnvironment.restore();
 const h = React.createElement;
 const trigger = h('button', null, 'Open');

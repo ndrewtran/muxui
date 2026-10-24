@@ -44,34 +44,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "open",
-          "defaultOpen",
-          "onOpenChange",
-          "disabled",
-          "onActivate"
-        ],
-        "events": [
-          "openChange",
-          "activate"
-        ],
-        "parts": [
-          "root",
-          "trigger",
-          "backdrop",
-          "popup",
-          "content",
-          "title",
-          "description",
-          "actions",
-          "close"
-        ],
-        "defaults": {
-          "defaultOpen": false,
-          "disabled": false
-        }
-      },
       "behavior": [
         "Open state is controlled with open and onOpenChange, or starts from defaultOpen when uncontrolled.",
         "Escape closes the dialog, and pressing the backdrop does not.",

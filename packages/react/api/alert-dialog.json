@@ -1,0 +1,234 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/alert-dialog.ts",
+  "component": "muxui:component:alert-dialog",
+  "binding": "web.react",
+  "export": "AlertDialog",
+  "api": {
+    "props": [
+      "open",
+      "defaultOpen"
+    ],
+    "events": [
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false
+    },
+    "propDetails": {
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the dialog is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the dialog starts open, when it controls itself."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new open state each time the dialog opens or closes."
+      }
+    },
+    "types": {},
+    "partApis": {
+      "trigger": {
+        "member": "Trigger",
+        "props": [
+          "disabled"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the trigger disabled."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "reference",
+                    "name": "SupplementalActivation"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the trigger is pressed, which opens the dialog."
+          }
+        },
+        "types": {
+          "SupplementalActivation": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "activate"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "pointerType",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "target",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "host",
+                        "name": "EventTarget"
+                      },
+                      {
+                        "kind": "null"
+                      }
+                    ]
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The activation a press reports: the pointer and target of the event that caused it."
+          }
+        }
+      },
+      "close": {
+        "member": "Close",
+        "props": [
+          "disabled"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {},
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the close control disabled."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "reference",
+                    "name": "SupplementalActivation"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the control is pressed, which closes the dialog."
+          }
+        },
+        "types": {
+          "SupplementalActivation": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "activate"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "pointerType",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "target",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "host",
+                        "name": "EventTarget"
+                      },
+                      {
+                        "kind": "null"
+                      }
+                    ]
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The activation a press reports: the pointer and target of the event that caused it."
+          }
+        }
+      }
+    }
+  }
+}

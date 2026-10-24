@@ -309,6 +309,7 @@ const minimalRenders = {
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
   Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
+  AlertDialog: () => alertDialog(),
   // HeaderNav.Root owns no props, so the composition only has to render; the link's own default is observed under 'HeaderNav.nav-button'.
   HeaderNav: () => h(generated.HeaderNav.Root, null, h(generated.HeaderNav.Logo, { href: '/' }, 'Mux'), h(generated.HeaderNav.Secondary, null, h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs'))),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
@@ -328,6 +329,8 @@ const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot
 const partRenders = {
   // Card.Button is the card as one control: its own variant and padding show in its class, and its disabled and pending flags on the button.
   'Card.button': { scope: 'button', render: () => h(generated.Card.Button, null, 'Select') },
+  // AlertDialog.Trigger is the one button a closed dialog renders; Close sits in the popup and states no default.
+  'AlertDialog.trigger': { scope: 'button', render: () => alertDialog() },
   // HeaderNav.NavButton is a plain link, which shows aria-current only when it is the current page.
   'HeaderNav.nav-button': { scope: 'a', render: () => h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs') },
   'ListBox.item': { scope: '[role="option"]', render: () => h(generated.ListBox, { 'aria-label': 'Options' }, h(generated.ListBox.Item, { id: 'one' }, 'One')) },
@@ -359,6 +362,11 @@ async function withMounted(element, run) {
     await act(async () => root.unmount());
     env.restore();
   }
+}
+
+/** AlertDialog.Root with a trigger and a popup holding a titled dialog with a Close, closed unless `rootProps` opens it. */
+function alertDialog(rootProps = null) {
+  return h(generated.AlertDialog.Root, rootProps, h(generated.AlertDialog.Trigger, null, 'Delete'), h(generated.AlertDialog.Backdrop, null, h(generated.AlertDialog.Popup, null, h(generated.AlertDialog.Content, null, h(generated.AlertDialog.Title, null, 'Delete?'), h(generated.AlertDialog.Close, null, 'Cancel')))));
 }
 
 /** Menu.Root with a trigger and a popup, closed unless `rootProps` opens it; `popupProps` go to the popup and `items` to its list. */
@@ -409,6 +417,10 @@ const selectPlaceholder = (props) => new JSDOM(renderToString(selectField(props)
 // Defaults only behaviour shows. Each observer renders the component (optionally
 // with the prop overridden) and returns what the renderer does.
 const behaviourObservers = {
+  AlertDialog: {
+    // The dialog sits in a portal that stays empty until it opens, so the default shows only in whether it is open once mounted.
+    defaultOpen: (props) => withMounted(alertDialog(props), () => document.querySelector('[role="alertdialog"]') !== null),
+  },
   Button: {
     // A pending Button either keeps its label visible beside the spinner or hides it.
     showTextWhileLoading: (props) => {
@@ -813,6 +825,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
     inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
+    defaultOpen: [false, true],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:a5ded6283f576f7253100537e898688780d83efe091049cb28f43d2f5f61e8f3 -->
+<!-- @generated-content-sha256: sha256:2a2d0561bc7e37145dbd3799f8836d9b5b3138011f7754b0617cb593853e8588 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -103,7 +103,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Export | Lifecycle | Module | Selector | Public props |
 | --- | --- | --- | --- | --- |
 | Activity | experimental | . | .muxui-activity | label, items, status, expanded, defaultExpanded, actions |
-| AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
+| AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen; trigger: disabled; close: disabled |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
 | Avatar | experimental | . | .muxui-avatar | size |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |

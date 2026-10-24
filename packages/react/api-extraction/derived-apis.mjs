@@ -120,6 +120,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'card', name: 'Card', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/card.ts' },
   // HeaderNav's Root owns no props (it passes the header's native attributes on); Logo and NavButton own href and current, and MobileTrigger owns none.
   { slug: 'header-nav', name: 'HeaderNav', part: 'Root', parts: { logo: 'Logo', 'nav-button': 'NavButton' }, source: 'packages/react/src/supplemental/header-nav.ts' },
+  // AlertDialog's Root owns the open state; Trigger and Close own disabled and onActivate, and the other parts own none.
+  { slug: 'alert-dialog', name: 'AlertDialog', part: 'Root', parts: { trigger: 'Trigger', close: 'Close' }, source: 'packages/react/src/supplemental/alert-dialog.ts' },
   // Input and TextArea are compounds whose Root owns the props; their other parts own none.
   { slug: 'input', name: 'Input', part: 'Root', source: 'packages/react/src/supplemental/input.ts' },
   { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },

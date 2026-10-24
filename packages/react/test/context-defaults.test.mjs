@@ -109,6 +109,9 @@ const audited = [
       ...expand(['input-tags'], ['disabled', 'invalid']),
       // Card.Button sent isDisabled and isPending to React Aria's Button as its own booleans, false when omitted, before the move, so a ButtonContext never supplied them.
       ...expand(['card.button'], ['disabled', 'pending']),
+      // AlertDialog.Root sent defaultOpen to React Aria's DialogTrigger as its own boolean, false when omitted, and AlertDialog.Trigger sent isDisabled to the Button the same way, before the move.
+      ...expand(['alert-dialog'], ['defaultOpen']),
+      ...expand(['alert-dialog.trigger'], ['disabled']),
     ],
   },
   {

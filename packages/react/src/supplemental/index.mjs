@@ -1,4 +1,3 @@
-export { AlertDialog } from './alert-dialog.mjs';
 export { CommandPalette, useCommandPalette } from './command-palette.mjs';
 export { MultiSelect } from './multi-select.mjs';
 export { Sidebar } from './sidebar.mjs';
