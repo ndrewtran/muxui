@@ -337,8 +337,8 @@ export type Reach = { type: Shared; value: typeof Shared };
 // the public name where it was writes `import type { X as Renamed }` and `export type X = Renamed`. That alias adds
 // nothing, and read as a declaration it would make two types called X in one model whose text reads `type X = X`.
 test('a bare alias that gives another module\'s type its own name again is that type, and any other alias stays a declaration', () => {
-  const part = "export type X = { kind: 'x' };\nexport interface Box<T> { value: T }";
-  const graphOf = (index, host) => read(withHeaders({ 'part.d.ts': part, 'index.d.ts': `import type { X as Renamed, Box as RenamedBox } from './part.js';\n${index}` }), host);
+  const part = "export type X = { kind: 'x' };\nexport interface Box<T> { value: T }\nexport type Defaulted<T = string> = { value: T };\nexport type Pair<A = string, B = number> = { a: A; b: B };\nexport type Mandatory<T> = { value: T };";
+  const graphOf = (index, host) => read(withHeaders({ 'part.d.ts': part, 'index.d.ts': `import type { X as Renamed, Box as RenamedBox, Defaulted as RenamedDefaulted, Pair as RenamedPair, Mandatory as RenamedMandatory } from './part.js';\n${index}` }), host);
   for (const host of [typescript7Host, typescript6Host]) {
     const same = graphOf('export type X = Renamed;\nexport type Uses = { event: X };', host);
     assert.deepEqual(same.types.map(({ id }) => id), ['index#Uses', 'part#X'], host.name);
@@ -359,6 +359,13 @@ test('a bare alias that gives another module\'s type its own name again is that 
     assert.deepEqual(wider.types.map(({ id }) => id), ['index#X', 'part#X'], `${host.name}: more than the reference`);
     assert.match(printDeclaration(wider.types.find(({ id }) => id === 'index#X')), /extra: 1/u, host.name);
     assert.deepEqual(idsOfIndex('export type X = (Renamed);'), ['index#X', 'part#X'], `${host.name}: parenthesized`);
+    // A generic target is no collapse either: `type Defaulted = RenamedDefaulted` fixes the default, and `Defaulted<number>` is an error
+    // on the alias, which a collapsed `Defaulted<T = string>` would hide. Defaults on one or on every parameter alike.
+    const fixed = graphOf('export type Defaulted = RenamedDefaulted;', host);
+    assert.deepEqual(fixed.types.map(({ id }) => id), ['index#Defaulted', 'part#Defaulted'], `${host.name}: a defaulted generic target`);
+    assert.deepEqual(idsOfIndex('export type Pair = RenamedPair;'), ['index#Pair', 'part#Pair'], `${host.name}: every parameter defaulted`);
+    // A generic target with a parameter that has no default cannot be named bare at all: the compiler refuses it, so the read fails by name.
+    assert.throws(() => graphOf('export type Mandatory = RenamedMandatory;', host), (error) => error instanceof ReferenceReadError && error.code === 'MUXUI_REACT_REFERENCE_DIAGNOSTICS', `${host.name}: a generic target without defaults`);
     // A type of React or the library is no package type, even under the alias's own name.
     const hostAlias = graphOf("import type { ReactNode as Node } from 'react';\nexport type ReactNode = Node;", host);
     assert.deepEqual(hostAlias.types.map(({ id }) => id), ['index#ReactNode'], `${host.name}: a host type`);

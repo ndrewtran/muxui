@@ -99,7 +99,9 @@ export function readGraph(session, entries) {
    * second name, adds nothing: it is that `X`, and the package spells it twice only because a declaration file
    * cannot import and declare one name. Read as two declarations, the model would hold two types called `X`, and
    * its printed text would read `type X = X`. Any other alias (another name, type arguments or parameters, a body
-   * that is more than the reference) is a declaration of its own and stays one.
+   * that is more than the reference) is a declaration of its own and stays one, and so is one whose target is generic,
+   * with defaults or without: `type X = Renamed` fixes `Renamed<T = string>` to its default, which `X<T = string>`
+   * would not say.
    */
   function sameNameAliasTarget(declaration) {
     const seen = new Set();
@@ -107,10 +109,13 @@ export function readGraph(session, entries) {
     while (!seen.has(current) && session.kind(current) === 'TypeAliasDeclaration' && (current.typeParameters ?? []).length === 0) {
       seen.add(current);
       const { type } = current;
-      if (session.kind(type) !== 'TypeReference' || type.typeArguments !== undefined) break;
+      if (session.kind(type) !== 'TypeReference') break;
       const target = session.resolve(type.typeName);
       const aliased = target.declarations.filter((candidate) => TYPE_DECLARATIONS.has(session.kind(candidate)));
       if (target.kind !== 'declared' || target.origin !== 'package' || target.name !== current.name.text || aliased.length !== 1) break;
+      // A generic target (with defaults or without) is never collapsed. That also covers a reference with type arguments,
+      // which only a generic type accepts.
+      if ((aliased[0].typeParameters ?? []).length > 0) break;
       [current] = aliased;
     }
     return current;
