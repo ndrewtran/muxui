@@ -39,37 +39,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "checked",
-          "defaultChecked",
-          "name",
-          "value",
-          "size",
-          "disabled",
-          "invalid",
-          "required",
-          "readOnly",
-          "onChange"
-        ],
-        "events": [
-          "change"
-        ],
-        "parts": [
-          "root",
-          "button",
-          "thumb",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "size": "md",
-          "disabled": false,
-          "invalid": false,
-          "required": false,
-          "readOnly": false
-        }
-      },
       "behavior": [
         "Root owns the state: checked or defaultChecked sets it.",
         "onChange receives the new boolean, not a DOM event.",

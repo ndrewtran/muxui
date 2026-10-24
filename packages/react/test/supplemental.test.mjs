@@ -8,26 +8,27 @@ import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { RadioGroup as AriaRadioGroup } from 'react-aria-components';
 import { Form as AriaForm } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
+import { parseAst } from 'vite';
 import {
   AlertDialog,
-  ButtonGroup,
   Card,
-  CheckboxField,
-  ColorModeToggle,
   CommandPalette,
   HeaderNav,
-  Input,
-  InputTags,
   MultiSelect,
-  PaymentInput,
-  ProgressCircle,
-  RadioField,
   Sidebar,
-  SwitchField,
   TagSelect,
-  TextArea,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
+import { ButtonGroup } from '../src/supplemental/button-group.ts';
+import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
+import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
+import { Input } from '../src/supplemental/input.ts';
+import { InputTags } from '../src/supplemental/input-tags.ts';
+import { PaymentInput } from '../src/supplemental/payment-input.ts';
+import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
+import { RadioField } from '../src/supplemental/radio-field.ts';
+import { SwitchField } from '../src/supplemental/switch-field.ts';
+import { TextArea } from '../src/supplemental/text-area.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';
 import { installDom } from './support/dom.mjs';
 
@@ -103,6 +104,14 @@ test('supplemental field and collection modules preserve accessible state hooks 
 test('RadioField outside a RadioGroup throws a Mux error that names the group', () => {
   assert.throws(
     () => renderToStaticMarkup(React.createElement(RadioField.Root, { value: 'monthly' }, React.createElement(RadioField.Button, null, 'Monthly'))),
+    { message: 'RadioField must be used inside RadioGroup' },
+  );
+});
+
+// The group check comes before the size check, so a root with a bad size outside a group names the group.
+test('RadioField reports a missing RadioGroup before it checks its size', () => {
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(RadioField.Root, { value: 'monthly', size: 'xl' })),
     { message: 'RadioField must be used inside RadioGroup' },
   );
 });
@@ -364,6 +373,23 @@ test('supplemental declarations and CSS do not leak external API names or select
   assert.match(styles, /\btransparent\b/u);
 });
 
+// A declaration file with any export clause stops exporting its unmarked declarations, which would silently drop
+// PartProps, ButtonPartProps, CommandPaletteItemsProps and TextVisualProps from the package. `export type X = ...` is
+// a declaration with a modifier, so it is fine: this is how SupplementalActivation reaches the public surface.
+const exportClauses = (text) => parseAst(text, { lang: 'dts' }).body
+  .filter((node) => node.type === 'ExportAllDeclaration' || node.type === 'ExportDefaultDeclaration' || node.type === 'TSExportAssignment'
+    || node.type === 'TSNamespaceExportDeclaration' || (node.type === 'ExportNamedDeclaration' && node.declaration === null))
+  .map((node) => text.slice(node.start, node.end));
+
+test('the authored supplemental declarations use export modifiers, never an export clause or export *', async () => {
+  assert.deepEqual(exportClauses(await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8')), []);
+  const clean = "import type { A } from './a.ts';\nexport type B = A;\ntype C = string;\nexport interface E {}\n";
+  assert.deepEqual(exportClauses(clean), []);
+  for (const clause of ['export { C };', 'export type { C };', "export type { A } from './a.ts';", "export * from './a.ts';", "export * as ns from './a.ts';", 'export {};', 'export default C;', 'export = C;']) {
+    assert.equal(exportClauses(`${clean}${clause}\n`).length, 1, clause);
+  }
+});
+
 test('supplemental CSS classifies foundation tokens separately from local component hooks', async () => {
   const styles = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8');
   const references = new Set([...styles.matchAll(/var\(--([A-Za-z0-9_-]+)/gu)].map((match) => match[1]));
@@ -378,19 +404,27 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   assert.deepEqual(unknown, []);
 });
 
-test('Input and TextArea roots retain native string field props in their declarations', async () => {
+test('the supplemental roots retain native string field props in their declarations', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
-  assert.match(declaration, /export type InputRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
-  assert.match(declaration, /export type TextAreaRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
   assert.match(declaration, /MultiSelectItemProps[\s\S]*?textValue\?: string/u);
-  assert.match(declaration, /CheckboxFieldRootProps[\s\S]*?name\?: string;[\s\S]*?value\?: string/u);
-  assert.match(declaration, /SwitchFieldRootProps[\s\S]*?name\?: string;[\s\S]*?value\?: string/u);
-  assert.match(declaration, /RadioFieldRootProps[\s\S]*?value: string/u);
-  assert.doesNotMatch(declaration, /export type RadioFieldButtonProps = [^\n]*?(?:value|selected|onChange)\?:/u);
   assert.match(declaration, /TagSelectItemProps[\s\S]*?textValue\?: string/u);
   assert.match(declaration, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
   assert.match(declaration, /interface TagSelectRootComponent[\s\S]*?<T extends TagSelectItem/u);
   assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
+});
+
+// The field compounds own their root props in a type of their own, which the Root type intersects with the div's attributes.
+test('the field compounds keep their native string props on the root', async () => {
+  const source = (slug) => readFile(resolve(packageRoot, `src/supplemental/${slug}.ts`), 'utf8');
+  for (const [slug, name] of [['input', 'Input'], ['text-area', 'TextArea']]) {
+    assert.match(await source(slug), new RegExp(`type ${name}OwnProps = \\{[^}]*?value\\?: string;[^}]*?defaultValue\\?: string;[^}]*?onChange\\?: \\(value: string\\) => void;`, 'u'), name);
+  }
+  assert.match(await source('checkbox-field'), /type CheckboxFieldOwnProps = \{[^}]*?name\?: string;[^}]*?value\?: string;/u);
+  assert.match(await source('switch-field'), /type SwitchFieldOwnProps = \{[^}]*?name\?: string;[^}]*?value\?: string;/u);
+  const radio = await source('radio-field');
+  assert.match(radio, /type RadioFieldOwnProps = \{[^}]*?value: string;/u);
+  assert.match(radio, /type RadioFieldButtonOwnProps = \{[^}]*?\};/u);
+  assert.doesNotMatch(radio.match(/type RadioFieldButtonOwnProps = \{[^}]*?\};/u)[0], /\b(?:value|selected|onChange)\??:/u);
 });
 
 test('Input uses the Mux-owned root and control anatomy', () => {
@@ -532,6 +566,19 @@ test('MultiSelect materializes iterable items once for all-selection counts', ()
     (item) => React.createElement(MultiSelect.Item, { id: item.id, textValue: item.label }, item.label),
   ));
   assert.match(html, /2 selected/u);
+});
+
+// The size check is the first statement of the root, so a bad size is reported before the starting value is read.
+test('PaymentInput checks its size before it reads the starting value', () => {
+  const defaultValue = { toString() { throw new Error('the starting value was read'); } };
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(PaymentInput.Root, { size: 'xl', defaultValue })),
+    { message: 'PaymentInput size must be one of: sm, md, lg' },
+  );
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(PaymentInput.Root, { defaultValue })),
+    { message: 'the starting value was read' },
+  );
 });
 
 test('PaymentInput applies the exact Mastercard 2221-2720 range', () => {

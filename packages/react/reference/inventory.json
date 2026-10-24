@@ -74,13 +74,13 @@
           "name": "ButtonGroup",
           "kind": "value",
           "owner": "button-group",
-          "module": "supplemental"
+          "module": "button-group"
         },
         {
           "name": "ButtonGroupProps",
           "kind": "type",
           "owner": "button-group",
-          "module": "supplemental"
+          "module": "button-group"
         },
         { "name": "ButtonPartProps", "kind": "type", "owner": "button", "module": "supplemental" },
         { "name": "ButtonPointerType", "kind": "type", "owner": "button", "module": "button" },
@@ -100,37 +100,37 @@
           "name": "CheckboxField",
           "kind": "value",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldButtonProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldDescriptionProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldErrorProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldIndicatorProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         {
           "name": "CheckboxFieldRootProps",
           "kind": "type",
           "owner": "checkbox-field",
-          "module": "supplemental"
+          "module": "checkbox-field"
         },
         { "name": "CheckboxGroup", "kind": "value", "owner": "checkbox-group", "module": "fields" },
         {
@@ -162,20 +162,19 @@
           "name": "ColorMode",
           "kind": "type",
           "owner": "color-mode-toggle",
-          "module": "supplemental",
-          "reason": "the mode type of ColorModeToggle"
+          "module": "color-mode-toggle"
         },
         {
           "name": "ColorModeToggle",
           "kind": "value",
           "owner": "color-mode-toggle",
-          "module": "supplemental"
+          "module": "color-mode-toggle"
         },
         {
           "name": "ColorModeToggleProps",
           "kind": "type",
           "owner": "color-mode-toggle",
-          "module": "supplemental"
+          "module": "color-mode-toggle"
         },
         {
           "name": "ColorPicker",
@@ -562,30 +561,20 @@
         { "name": "ImageFit", "kind": "type", "owner": "image", "module": "image" },
         { "name": "ImageProps", "kind": "type", "owner": "image", "module": "image" },
         { "name": "ImageRadius", "kind": "type", "owner": "image", "module": "image" },
-        { "name": "Input", "kind": "value", "owner": "input", "module": "supplemental" },
-        { "name": "InputControlProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        {
-          "name": "InputDescriptionProps",
-          "kind": "type",
-          "owner": "input",
-          "module": "supplemental"
-        },
-        { "name": "InputErrorProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputLabelProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputRootProps", "kind": "type", "owner": "input", "module": "supplemental" },
-        { "name": "InputTags", "kind": "value", "owner": "input-tags", "module": "supplemental" },
-        {
-          "name": "InputTagsProps",
-          "kind": "type",
-          "owner": "input-tags",
-          "module": "supplemental"
-        },
+        { "name": "Input", "kind": "value", "owner": "input", "module": "input" },
+        { "name": "InputControlProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputDescriptionProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputErrorProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputLabelProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputRootProps", "kind": "type", "owner": "input", "module": "input" },
+        { "name": "InputTags", "kind": "value", "owner": "input-tags", "module": "input-tags" },
+        { "name": "InputTagsProps", "kind": "type", "owner": "input-tags", "module": "input-tags" },
         {
           "name": "InputTagsRootProps",
           "kind": "type",
           "owner": "input-tags",
-          "module": "supplemental"
+          "module": "input-tags"
         },
         { "name": "Lightbox", "kind": "value", "owner": "lightbox", "module": "lightbox" },
         { "name": "LightboxBackdrop", "kind": "value", "owner": "lightbox", "module": "lightbox" },
@@ -872,55 +861,55 @@
           "name": "PaymentInput",
           "kind": "value",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputCardIconProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputDescriptionProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputErrorProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputGroupProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputInputProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputLabelProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         {
           "name": "PaymentInputRootProps",
           "kind": "type",
           "owner": "payment-input",
-          "module": "supplemental"
+          "module": "payment-input"
         },
         { "name": "Popover", "kind": "value", "owner": "popover", "module": "overlays" },
         { "name": "PopoverProps", "kind": "type", "owner": "popover", "module": "overlays" },
@@ -947,37 +936,37 @@
           "name": "ProgressCircle",
           "kind": "value",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleLabelProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleRootProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleTrackProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "ProgressCircleValueProps",
           "kind": "type",
           "owner": "progress-circle",
-          "module": "supplemental"
+          "module": "progress-circle"
         },
         {
           "name": "PromptComposer",
@@ -1009,42 +998,42 @@
           "owner": "prompt-composer",
           "module": "prompt-composer"
         },
-        { "name": "RadioField", "kind": "value", "owner": "radio-field", "module": "supplemental" },
+        { "name": "RadioField", "kind": "value", "owner": "radio-field", "module": "radio-field" },
         {
           "name": "RadioFieldButtonProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldDescriptionProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldDotProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldErrorProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldIndicatorProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         {
           "name": "RadioFieldRootProps",
           "kind": "type",
           "owner": "radio-field",
-          "module": "supplemental"
+          "module": "radio-field"
         },
         { "name": "RadioGroup", "kind": "value", "owner": "radio-group", "module": "radio-group" },
         {
@@ -1152,7 +1141,7 @@
           "name": "SupplementalActivation",
           "kind": "type",
           "owner": "shared",
-          "module": "supplemental",
+          "module": "part-utils",
           "reason": "helper types of the supplemental declarations that several supplemental families use"
         },
         {
@@ -1167,37 +1156,37 @@
           "name": "SwitchField",
           "kind": "value",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldButtonProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldDescriptionProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldErrorProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldRootProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         {
           "name": "SwitchFieldThumbProps",
           "kind": "type",
           "owner": "switch-field",
-          "module": "supplemental"
+          "module": "switch-field"
         },
         { "name": "SwitchProps", "kind": "type", "owner": "switch", "module": "fields" },
         { "name": "Table", "kind": "value", "owner": "table", "module": "table" },
@@ -1236,32 +1225,27 @@
           "module": "supplemental"
         },
         { "name": "Text", "kind": "value", "owner": "text", "module": "supplemental" },
-        { "name": "TextArea", "kind": "value", "owner": "text-area", "module": "supplemental" },
+        { "name": "TextArea", "kind": "value", "owner": "text-area", "module": "text-area" },
         {
           "name": "TextAreaDescriptionProps",
           "kind": "type",
           "owner": "text-area",
-          "module": "supplemental"
+          "module": "text-area"
         },
         {
           "name": "TextAreaErrorProps",
           "kind": "type",
           "owner": "text-area",
-          "module": "supplemental"
+          "module": "text-area"
         },
         {
           "name": "TextAreaLabelProps",
           "kind": "type",
           "owner": "text-area",
-          "module": "supplemental"
+          "module": "text-area"
         },
-        { "name": "TextAreaProps", "kind": "type", "owner": "text-area", "module": "supplemental" },
-        {
-          "name": "TextAreaRootProps",
-          "kind": "type",
-          "owner": "text-area",
-          "module": "supplemental"
-        },
+        { "name": "TextAreaProps", "kind": "type", "owner": "text-area", "module": "text-area" },
+        { "name": "TextAreaRootProps", "kind": "type", "owner": "text-area", "module": "text-area" },
         { "name": "TextColor", "kind": "type", "owner": "text", "module": "supplemental" },
         { "name": "TextComponent", "kind": "type", "owner": "text", "module": "supplemental" },
         { "name": "TextElement", "kind": "type", "owner": "text", "module": "supplemental" },

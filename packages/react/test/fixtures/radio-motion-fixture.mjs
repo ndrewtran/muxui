@@ -1,6 +1,6 @@
 import React from 'react';
 import { RadioGroup } from '../../src/collections.mjs';
-import { RadioField } from '../../src/supplemental/index.mjs';
+import { RadioField } from '../../src/supplemental/radio-field.ts';
 
 const options = [
   { value: 'one', label: 'One' },

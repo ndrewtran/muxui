@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { build } from 'vite';
@@ -256,8 +257,8 @@ test('a bundle that uses one control family keeps its own module and only the sh
 // supplemental.mjs re-exports one module per family. Before the split every export kept the whole barrel and the 14
 // modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
 // its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The four
-// wrappers that are an immediately invoked function, the three field factories, the two modal wrappers and the two
-// field roots carry the pure annotation that lets a bundler drop what no export uses.
+// wrappers that are an immediately invoked function, the three field factories and the two modal wrappers carry the
+// pure annotation that lets a bundler drop what no export uses; the TypeScript families are checked by the bundle test below.
 test('the supplemental modules keep the pure annotation on each wrapper', () => {
   const emitted = (module) => {
     const mjs = resolve(generated, `${module}.mjs`);
@@ -274,8 +275,49 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
   for (const wrapper of ['MotionModalBackdrop', 'MotionModalPopup']) {
     assert.match(emitted('modal-parts'), new RegExp(`^export const ${wrapper}ForwardRef = ${pure} React\\.forwardRef\\(${wrapper}\\);$`, 'mu'), wrapper);
   }
-  for (const [module, root] of [['input', 'muxui-input__root'], ['text-area', 'muxui-text-area']]) {
-    assert.match(emitted(module), new RegExp(`^  Root: ${pure} fieldRoot\\(AriaTextField, '${root}'\\),$`, 'mu'), module);
+});
+
+// The package marks only its stylesheets as side effects, so a bundler drops an unused module whole before it looks at a single call,
+// which hides the families' constructors. To see them, the emitted modules are copied out of the package, where that marking does not
+// apply, and bundled with every module's side effects retained and its packages left external. Nothing is used but a sentinel, so a
+// forwardRef call that survives is one a bundler must keep: an unmarked construction, or the Object.freeze that holds the parts.
+// Using the family instead keeps every constructor it builds, which shows the count reads the emitted spelling and that the family was
+// bundled at all, so a skipped or externalised module cannot pass the first check by being empty. The number is the family's forwardRef calls.
+const annotatedFamilies = [
+  ['button-group', 'ButtonGroup', 1],
+  ['color-mode-toggle', 'ColorModeToggle', 1],
+  ['progress-circle', 'ProgressCircle', 4],
+  ['input-tags', 'InputTags', 1],
+  ['payment-input', 'PaymentInput', 7],
+  ['checkbox-field', 'CheckboxField', 5],
+  ['switch-field', 'SwitchField', 5],
+  ['radio-field', 'RadioField', 6],
+  ['input', 'Input', 5],
+  ['text-area', 'TextArea', 5],
+];
+
+test('a bundle that uses nothing from a TypeScript supplemental family keeps none of its forwardRef calls, and one that uses it keeps them all', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'muxui-tree-shaking-'));
+  try {
+    for (const file of readdirSync(generated)) if (/\.m?js$/u.test(file)) copyFileSync(resolve(generated, file), join(directory, file));
+    const retainedConstructors = async (entryText) => {
+      const entry = join(directory, 'entry.mjs');
+      writeFileSync(entry, entryText);
+      const bundle = await build({
+        root: directory,
+        configFile: false,
+        logLevel: 'silent',
+        build: { write: false, minify: false, lib: { entry, formats: ['es'], fileName: 'bundle' }, rollupOptions: { external: [/^[^./]/u], treeshake: { moduleSideEffects: true } } },
+      });
+      const code = [bundle].flat().flatMap(({ output }) => output).filter(({ type }) => type === 'chunk').map((chunk) => chunk.code).join('\n');
+      return code.match(/forwardRef\(/gu)?.length ?? 0;
+    };
+    for (const [module, name, constructors] of annotatedFamilies) {
+      assert.equal(await retainedConstructors(`import './${module}.js';\nexport const sentinel = 1;\n`), 0, `${name} keeps a forwardRef call nothing uses`);
+      assert.equal(await retainedConstructors(`export { ${name} } from './${module}.js';\n`), constructors, `${name} keeps the forwardRef calls it uses`);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
@@ -310,7 +352,8 @@ test('a bundle that uses one supplemental family keeps its own module, only the 
   // A module keeps its name's stem when it moves from .mjs to .js.
   const stem = (id) => id.replace(/\.\w+$/u, '');
   for (const [name, { module, helpers: allowed, before }] of Object.entries(supplementalRetention)) {
-    const kept = await bundledModuleSizes(name, 'supplemental.mjs');
+    // A family in TypeScript ships as its own module and is exported from the root index; the rest come from the supplemental barrel.
+    const kept = await bundledModuleSizes(name, existsSync(resolve(generated, `${module}.js`)) ? 'index.mjs' : 'supplemental.mjs');
     const stems = kept.map(([id]) => stem(id));
     // No other family's code comes along, which is what one module per family buys over one file.
     assert.deepEqual(stems.filter((candidate) => families.has(candidate)), [module], name);

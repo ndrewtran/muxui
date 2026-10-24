@@ -1,0 +1,117 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/input.ts",
+  "component": "muxui:component:input",
+  "binding": "web.react",
+  "export": "Input",
+  "api": {
+    "props": [
+      "value",
+      "defaultValue",
+      "disabled",
+      "invalid",
+      "required",
+      "readOnly",
+      "size"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "size": "md"
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text, when the caller controls it."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The starting text, when the field controls itself."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field disabled."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required."
+      },
+      "readOnly": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field read-only."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The field's size."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new text each time it changes."
+      }
+    },
+    "types": {}
+  }
+}

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:f6b85f7959f73861f9520e47065d7096a3c58d32ddf081d0f4a524b61e91c09d -->
+<!-- @generated-content-sha256: sha256:34580a3c38a82c67427f8bc64717a680f67f81650cddd39a71c98917200dccbe -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -108,16 +108,16 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Avatar | experimental | . | .muxui-avatar | size |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
-| ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
+| ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, role |
 | Calendar | experimental | . | .muxui-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Card | experimental | . | .muxui-card | variant, padding, selected, pending, disabled, onActivate |
 | Checkbox | experimental | . | .muxui-checkbox | checked, defaultChecked, disabled, size, indeterminate, name, required, value, invalid |
-| CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, size, disabled, invalid, required, readOnly, onChange |
+| CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, disabled, invalid, required, readOnly, size; button: disabled |
 | CheckboxGroup | experimental | . | .muxui-checkbox-group | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, name, orientation, size |
 | CodeBlock | experimental | . | .muxui-code-block | mode, source, before, after, language, filename, lineNumbers, copyable, wrap |
 | ColorArea | experimental | . | .muxui-color-area | label, value, defaultValue, disabled, readOnly |
 | ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, size, name |
-| ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
+| ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
@@ -140,8 +140,8 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
-| Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
-| InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
+| Input | experimental | . | .muxui-input | value, defaultValue, disabled, invalid, required, readOnly, size |
+| InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, allowDuplicates, maxTags, validate, label, description, errorMessage, disabled, invalid, required |
 | Lightbox | experimental | . | .muxui-lightbox | items, renderContent, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
 | ListBox | experimental | . | .muxui-list-box | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; section: title; item: id, textValue, disabled |
@@ -151,13 +151,13 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
-| PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |
+| PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, invalid, required, readOnly, size; card-icon: cardType |
 | Popover | experimental | . | .muxui-popover | trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, modal |
 | PreviewTrigger | experimental | . | .muxui-preview-trigger | trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding |
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
 | PromptComposer | experimental | . | .muxui-prompt-composer | inputLabel, value, defaultValue, inputProps, pending, disabled, error, sources, commands, attachments, accept, multiple, models, selectedModel, defaultSelectedModel |
-| RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, value |
+| RadioField | experimental | . | .muxui-radio-field | value, disabled, invalid, required, size; button: disabled |
 | RadioGroup | experimental | . | .muxui-radio-group | label, errorMessage, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, keyboardStep, keyboardLargeStep, precision, disabled, readOnly |
@@ -168,13 +168,13 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Sidebar | experimental | . | .muxui-sidebar | collapsed, defaultCollapsed, onCollapsedChange, shortcut, hideBorder, density, label, href, current, external, items, expanded, defaultExpanded, onExpandedChange, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss, onAction |
 | Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
-| SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
+| SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, disabled, invalid, required, readOnly, size; button: disabled |
 | Table | experimental | . | .muxui-table | columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
 | Tabs | experimental | . | .muxui-tabs | items, value, defaultValue, disabled, orientation, keyboardActivation, size, variant |
 | TagGroup | experimental | . | .muxui-tag-group | label, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
-| TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |
+| TextArea | experimental | . | .muxui-text-area | value, defaultValue, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, inputProps |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |

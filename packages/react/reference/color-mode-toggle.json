@@ -1,12 +1,12 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "color-mode-toggle",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": { "color-mode-toggle": "packages/react/src/supplemental/color-mode-toggle.ts" },
   "exports": [
     {
       "name": "ColorModeToggle",
       "entry": ".",
-      "module": "supplemental",
+      "module": "color-mode-toggle",
       "kind": "component",
       "parts": [
         {
@@ -18,22 +18,35 @@
               "optional": true,
               "type": "ColorMode",
               "values": ["light", "dark"],
-              "refs": ["supplemental#ColorMode"]
+              "refs": ["color-mode-toggle#ColorMode"],
+              "doc": "The color mode, when the page controls it."
             },
             {
               "name": "defaultMode",
               "optional": true,
               "type": "ColorMode",
               "values": ["light", "dark"],
-              "refs": ["supplemental#ColorMode"]
+              "refs": ["color-mode-toggle#ColorMode"],
+              "doc": "The mode the toggle starts in, before a saved mode or the operating system's preference is read."
             },
-            { "name": "storageKey", "optional": true, "type": "string" },
-            { "name": "disabled", "optional": true, "type": "boolean" },
+            {
+              "name": "storageKey",
+              "optional": true,
+              "type": "string",
+              "doc": "The localStorage key the chosen mode is saved under."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the toggle disabled."
+            },
             {
               "name": "onModeChange",
               "optional": true,
               "type": "(mode: ColorMode) => void",
-              "refs": ["supplemental#ColorMode"]
+              "refs": ["color-mode-toggle#ColorMode"],
+              "doc": "Called with the new mode when the toggle changes it."
             }
           ],
           "ref": { "type": "HTMLLabelElement" },
@@ -46,9 +59,9 @@
   ],
   "types": [
     {
-      "id": "supplemental#ColorMode",
+      "id": "color-mode-toggle#ColorMode",
       "name": "ColorMode",
-      "module": "supplemental",
+      "module": "color-mode-toggle",
       "public": [
         { "entry": ".", "name": "ColorMode" }
       ],
@@ -57,15 +70,59 @@
       "values": ["light", "dark"]
     },
     {
-      "id": "supplemental#ColorModeToggleProps",
+      "id": "color-mode-toggle#ColorModeToggleOwnProps",
+      "name": "ColorModeToggleOwnProps",
+      "module": "color-mode-toggle",
+      "text": "type ColorModeToggleOwnProps = {\n  mode?: ColorMode;\n  defaultMode?: ColorMode;\n  storageKey?: string;\n  disabled?: boolean;\n  onModeChange?: (mode: ColorMode) => void;\n};",
+      "members": [
+        {
+          "name": "mode",
+          "optional": true,
+          "type": "ColorMode",
+          "values": ["light", "dark"],
+          "refs": ["color-mode-toggle#ColorMode"],
+          "doc": "The color mode, when the page controls it."
+        },
+        {
+          "name": "defaultMode",
+          "optional": true,
+          "type": "ColorMode",
+          "values": ["light", "dark"],
+          "refs": ["color-mode-toggle#ColorMode"],
+          "doc": "The mode the toggle starts in, before a saved mode or the operating system's preference is read."
+        },
+        {
+          "name": "storageKey",
+          "optional": true,
+          "type": "string",
+          "doc": "The localStorage key the chosen mode is saved under."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the toggle disabled."
+        },
+        {
+          "name": "onModeChange",
+          "optional": true,
+          "type": "(mode: ColorMode) => void",
+          "refs": ["color-mode-toggle#ColorMode"],
+          "doc": "Called with the new mode when the toggle changes it."
+        }
+      ],
+      "refs": ["color-mode-toggle#ColorMode"]
+    },
+    {
+      "id": "color-mode-toggle#ColorModeToggleProps",
       "name": "ColorModeToggleProps",
-      "module": "supplemental",
+      "module": "color-mode-toggle",
       "public": [
         { "entry": ".", "name": "ColorModeToggleProps" }
       ],
       "owner": "color-mode-toggle",
-      "text": "type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  mode?: ColorMode;\n  defaultMode?: ColorMode;\n  storageKey?: string;\n  disabled?: boolean;\n  onModeChange?: (mode: ColorMode) => void;\n};",
-      "refs": ["supplemental#ColorMode"]
+      "text": "type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> & ColorModeToggleOwnProps;",
+      "refs": ["color-mode-toggle#ColorModeToggleOwnProps"]
     }
   ]
 }

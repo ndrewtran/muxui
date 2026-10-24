@@ -94,6 +94,33 @@ export function readGraph(session, entries) {
 
   // ---- references --------------------------------------------------------------------------------
 
+  /**
+   * The type a bare same-name alias stands for. `type X = Y`, where `Y` is another module's `X` imported under a
+   * second name, adds nothing: it is that `X`, and the package spells it twice only because a declaration file
+   * cannot import and declare one name. Read as two declarations, the model would hold two types called `X`, and
+   * its printed text would read `type X = X`. Any other alias (another name, type arguments or parameters, a body
+   * that is more than the reference) is a declaration of its own and stays one, and so is one whose target is generic,
+   * with defaults or without: `type X = Renamed` fixes `Renamed<T = string>` to its default, which `X<T = string>`
+   * would not say.
+   */
+  function sameNameAliasTarget(declaration) {
+    const seen = new Set();
+    let current = declaration;
+    while (!seen.has(current) && session.kind(current) === 'TypeAliasDeclaration' && (current.typeParameters ?? []).length === 0) {
+      seen.add(current);
+      const { type } = current;
+      if (session.kind(type) !== 'TypeReference') break;
+      const target = session.resolve(type.typeName);
+      const aliased = target.declarations.filter((candidate) => TYPE_DECLARATIONS.has(session.kind(candidate)));
+      if (target.kind !== 'declared' || target.origin !== 'package' || target.name !== current.name.text || aliased.length !== 1) break;
+      // A generic target (with defaults or without) is never collapsed. That also covers a reference with type arguments,
+      // which only a generic type accepts.
+      if ((aliased[0].typeParameters ?? []).length > 0) break;
+      [current] = aliased;
+    }
+    return current;
+  }
+
   /** A reference to a package declaration, queued to be read once. */
   function packageReference(resolved, written, chain, meanings) {
     const wanted = resolved.declarations.filter((declaration) => meanings.has(session.kind(declaration)));
@@ -102,7 +129,7 @@ export function readGraph(session, entries) {
       throw unsupported(chain, `${written} resolves to ${found}, not ${[...meanings].join(' or ')}`);
     }
     if (wanted.length > 1) throw fail('MERGED', chain, `${written} has ${wanted.length} declarations; a Mux UI type has one`);
-    const declaration = wanted[0];
+    const declaration = meanings === TYPE_DECLARATIONS ? sameNameAliasTarget(wanted[0]) : wanted[0];
     const id = idOf(declaration, resolved.name, meanings === VALUE_DECLARATIONS);
     if (!types.has(id) && !values.has(id) && !pending.some((entry) => entry.id === id)) pending.push({ id, declaration });
     return { id, name: resolved.name };

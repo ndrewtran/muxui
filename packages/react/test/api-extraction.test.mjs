@@ -590,7 +590,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'input-tags.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
@@ -763,6 +763,12 @@ export const Thing = forwardRef(function Thing({
   rejects(declarations, /Thing: the props parameter must be an object pattern/u, {
     source: "const DEFAULTS = Object.freeze({ variant: 'primary' });\nexport function Thing(props: Record<string, unknown>) { const { variant = DEFAULTS.variant } = props; return variant; }\n",
   });
+  // A rest-marked first parameter destructures the arguments array: its names are dummy bindings and its defaults are never the props'.
+  // The first source defaults variant to primary in the pattern and neutral in the body, which the dummy default used to hide; the second agrees with itself.
+  const restSource = (patternDefault, bodyDefault) => `export function Thing(...{ variant = '${patternDefault}', size = 'md', count = -2, tags = ['a', 'b'], pending, onActivate, ...args }: [Record<string, unknown>]) { return [variant, args[0].variant ?? '${bodyDefault}', size, count, tags, pending, onActivate]; }\n`;
+  for (const source of [restSource('primary', 'neutral'), restSource('primary', 'primary')]) {
+    rejects(declarations, /Thing: the props parameter must not be a rest parameter: a rest pattern destructures the arguments array, so its names and defaults are not the props'/u, { source });
+  }
   rejects(declarations, /Thing\.variant: the props parameter must destructure each Mux UI-owned prop/u, {
     source: "export function Thing({ size, count, tags, pending, onActivate, ...props }: Record<string, unknown>) { const variant = props.variant ?? 'primary'; return [size, count, tags, pending, onActivate, variant]; }\n",
   });
@@ -1464,7 +1470,7 @@ test('an exported component may be a zero-argument wrapper that returns one forw
     ['a side-effecting const', wrapped(`const hit = register();\n  ${component}\n  return component;`, { before: 'declare function register(): number;\n' }), /Thing: register is not React's forwardRef or memo; /u],
     ['a conditional return', wrapped(`${component}\n  const other = forwardRef(function Other() { return null; });\n  return flag ? component : other;`, { before: 'declare const flag: boolean;\n' }),
       /Thing: the wrapper does not end by returning one of its consts; /u],
-    ['a return of something other than a const', wrapped(`${component}\n  return Object.freeze({ Root: component });`), /Thing: the wrapper does not end by returning one of its consts; /u],
+    ['a return of something other than a const', wrapped(`${component}\n  return { Root: component };`), /Thing: the wrapper does not end by returning one of its consts; /u],
     ['a return of an outer binding', wrapped(`${component}\n  return outer;`, { before: 'declare const outer: unknown;\n' }), /Thing: the wrapper does not end by returning one of its consts; /u],
     ['no return', wrapped(`${component}\n  component.displayName = 'Thing';`), /Thing: the wrapper does not end by returning one of its consts; /u],
     ['a return before the end', wrapped(`${component}\n  return component;\n  component.displayName = 'Thing';`), /Thing: the wrapper holds a statement that is not a const, a displayName or part assignment, or its final return; /u],
@@ -1482,6 +1488,84 @@ test('an exported component may be a zero-argument wrapper that returns one forw
   ];
   for (const [label, text, pattern] of rejections) {
     assert.throws(() => read(text), (error) => error instanceof ApiExtractionError && pattern.test(error.message), label);
+  }
+});
+
+// A compound a wrapper builds: the three field modules return `Object.freeze({ Root, ... })` of their own consts from a
+// private factory. The rule is a restricted shape, not a proof of purity: an extra evaluated argument to forwardRef or
+// memo is never read, so the author's PURE annotation, not the extractor, asserts the factory is safe to drop.
+test('an exported wrapper may return a frozen compound of its own consts', () => {
+  const declarations = `${header}export interface ThingOwnProps {
+  size?: 'sm' | 'md';
+}
+export interface ThingRootProps extends ThingOwnProps, React.HTMLAttributes<HTMLSpanElement> {}
+export interface ThingImageProps extends React.ImgHTMLAttributes<HTMLImageElement> { alt: string }
+export declare const Thing: {
+  Root: React.ForwardRefExoticComponent<ThingRootProps & React.RefAttributes<HTMLSpanElement>>;
+  Image: React.ForwardRefExoticComponent<ThingImageProps & React.RefAttributes<HTMLImageElement>>;
+};
+`;
+  const imports = "import { forwardRef } from 'react';\n";
+  const consts = (size = 'sm') => `const Root = forwardRef(function Root({ size = '${size}', ...props }: Record<string, unknown>) { return [size, props]; });\n  const Image = forwardRef(function Image({ alt }: { alt: string }) { return alt; });\n  `;
+  const standard = `${consts()}return Object.freeze({ Root, Image });`;
+  const read = (text, part = 'Root') => extract({ declarations, source: text, part });
+  const arrow = (body, { before = '', after = '', call = '(() => {\n  %BODY%\n})()' } = {}) => `${imports}${before}export const Thing = /*#__PURE__*/ ${call.replace('%BODY%', body)};\n${after}`;
+  const factory = (body, { before = '', after = '', declare = 'function makeThing()', call = 'makeThing()' } = {}) => `${imports}${before}${declare} {\n  ${body}\n}\nexport const Thing = /*#__PURE__*/ ${call};\n${after}`;
+
+  // The three shapes: an arrow or function-expression IIFE, and a private top-level factory declaration.
+  assert.deepEqual(read(arrow(standard)).defaults, { size: 'sm' });
+  assert.deepEqual(read(arrow(standard, { call: '(function () {\n  %BODY%\n})()' })).defaults, { size: 'sm' });
+  assert.deepEqual(read(factory(standard)).defaults, { size: 'sm' });
+  // A property or member that only shares the factory's name is no reference to it.
+  assert.deepEqual(read(factory(standard, { after: 'export const table = { makeThing: 1 };\nexport const read = table.makeThing;\n' })).defaults, { size: 'sm' });
+  // The PURE annotation is optional to the reader, and string keys, shorthand and displayName statements are plain.
+  assert.deepEqual(read(arrow(standard).replace('/*#__PURE__*/ ', '')).defaults, { size: 'sm' });
+  assert.deepEqual(read(factory(`${consts()}Root.displayName = 'Thing.Root';\n  return Object.freeze({ 'Root': Root, Image: Image });`)).defaults, { size: 'sm' });
+  // The key names the part, not the const: Root here is the second const.
+  assert.deepEqual(read(arrow(`const Wide = forwardRef(function Wide({ size = 'md' }: Record<string, unknown>) { return size; });\n  ${consts()}return Object.freeze({ Root: Wide, Image });`)).defaults, { size: 'md' });
+  assert.throws(() => read(arrow(standard), 'Body'), /Thing\.Body: the exported Thing has no Body part/u);
+
+  const wrapperRule = / an exported component's wrapper is called with no arguments/u;
+  const rejections = [
+    // What the frozen object may hold.
+    ['a spread', arrow(`${consts()}const rest = { Root };\n  return Object.freeze({ ...rest, Image });`), /Thing\.Root: the frozen compound holds only Name: const parts; a spread, method, accessor, or computed key could replace a part; /u],
+    ['a computed key', arrow(`${consts()}const key = 'Root';\n  return Object.freeze({ [key]: Root, Image });`), /Thing\.Root: the frozen compound holds only Name: const parts; /u],
+    ['a method', arrow(`${consts()}return Object.freeze({ Root, Image() { return Root; } });`), /Thing\.Root: the frozen compound holds only Name: const parts; /u],
+    ['an accessor', arrow(`${consts()}return Object.freeze({ get Root() { return Image; }, Image });`), /Thing\.Root: the frozen compound holds only Name: const parts; /u],
+    ['a part named twice', arrow(`${consts()}return Object.freeze({ Root, Root: Image });`), /Thing\.Root: the frozen compound assigns Root twice; /u],
+    ['a part not in PascalCase', arrow(`${consts()}return Object.freeze({ root: Root, Image });`), /Thing\.Root: the frozen compound names root, which is not a part named in PascalCase; /u],
+    ['an inline part', arrow(`${consts()}return Object.freeze({ Root: forwardRef(function Inline() { return null; }), Image });`), /Thing\.Root: the frozen compound's Root is not one of the wrapper's consts; /u],
+    ['an outer binding', arrow(`${consts()}return Object.freeze({ Root: Outer, Image });`, { before: 'declare const Outer: unknown;\n' }), /Thing\.Root: the frozen compound's Root is Outer, which is not one of the wrapper's consts; /u],
+    // What is returned.
+    ['an Object.assign return', arrow(`${consts()}return Object.assign({}, { Root, Image });`), /Thing\.Root: the wrapper does not end by returning one of its consts; /u],
+    ['a frozen call', arrow(`${consts()}return Object.freeze(Root());`), /Thing\.Root: the wrapper freezes something other than an object literal of its consts; /u],
+    ['a frozen array', arrow(`${consts()}return Object.freeze([Root, Image]);`), /Thing\.Root: the wrapper freezes something other than an object literal of its consts; /u],
+    ['an expression body, which T10a and T10b replace with an annotated Object.freeze', arrow('', { call: '(() => Object.freeze({}))()' }), /Thing\.Root: the wrapper has an expression body; /u],
+    // What else the wrapper runs, and what the source does to the compound afterwards.
+    ['a part assigned beside the freeze', arrow(`${consts()}Root.Image = Image;\n  return Object.freeze({ Root, Image });`), /Thing\.Root: the wrapper assigns Root\.Image, but a frozen compound's parts are named in its Object\.freeze; /u],
+    ['a call on a part', arrow(`${consts()}Root.register();\n  return Object.freeze({ Root, Image });`), /Thing\.Root: the wrapper runs a statement that is not a displayName or part assignment to one of its consts; /u],
+    ['a write to the compound', arrow(standard, { after: '(Thing as { Root: unknown }).Root = null;\n' }), /Thing\.Root: the source writes to Thing beyond the wrapper's displayName and part assignments; /u],
+    ['an alias of a part', arrow(`${consts()}const alias = Root;\n  return Object.freeze({ Root: alias, Image });`), /Thing\.Root: alias is not a forwardRef or memo call; /u],
+    ['a part used as a value', arrow(standard, { after: 'export const leaked = Thing.Root;\n' }), /Thing\.Root: the source uses Thing as a value, which could hand an alias of the component to code that replaces a part; /u],
+    // A factory is private and called once, with no arguments or parameters.
+    ['a factory called twice', factory(standard, { after: 'export const Other = makeThing();\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; a type-only reference such as typeof makeThing counts; /u],
+    ['a factory called with an argument', factory(standard, { call: 'makeThing(1)' }), /Thing\.Root: the factory makeThing is called with arguments; /u],
+    ['a factory with a parameter', factory(standard, { declare: 'function makeThing(flag?: boolean)' }), /Thing\.Root: the factory makeThing takes parameters; /u],
+    ['an exported factory declaration', factory(standard, { declare: 'export function makeThing()' }), /Thing\.Root: the factory makeThing is exported, so another module could call it again; /u],
+    ['a factory re-exported in a clause', factory(standard, { after: 'export { makeThing };\n' }), /Thing\.Root: the factory makeThing is exported, so another module could call it again; /u],
+    ['a factory re-exported under another name', factory(standard, { after: 'export { makeThing as make };\n' }), /Thing\.Root: the factory makeThing is exported, so another module could call it again; /u],
+    ['a default export of the factory', factory(standard, { after: 'export default makeThing;\n' }), /Thing\.Root: the factory makeThing is exported, so another module could call it again; /u],
+    // A shorthand property reads the factory, though the checker resolves its name to the property it declares.
+    ['a factory read through a shorthand property', factory(standard, { after: 'const leaked = { makeThing };\nexport const Other = leaked.makeThing();\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; /u],
+    ['a factory read through an exported shorthand property', factory(standard, { after: 'export const leaked = { makeThing };\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; /u],
+    ['a factory read through a shorthand property of a default export', factory(standard, { after: 'export default { makeThing };\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; /u],
+    ['a factory read through a spread shorthand property', factory(standard, { after: 'export const leaked = { ...{ makeThing } };\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; /u],
+    ['a factory written through a destructuring assignment', factory(standard, { after: 'declare const source: Record<string, never>;\n({ makeThing } = source);\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; /u],
+    ['a factory held in an array', factory(standard, { after: 'export const leaked = [...[makeThing]];\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; /u],
+    ['a type-only reference, refused though it adds no runtime call', factory(standard, { after: 'export type Factory = typeof makeThing;\n' }), /Thing\.Root: the factory makeThing is referenced more than once, so it could build a second compound; a type-only reference such as typeof makeThing counts; /u],
+  ];
+  for (const [label, text, pattern] of rejections) {
+    assert.throws(() => read(text), (error) => error instanceof ApiExtractionError && pattern.test(error.message) && wrapperRule.test(error.message), label);
   }
 });
 

@@ -1,28 +1,51 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "radio-field",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "radio-field": "packages/react/src/supplemental/radio-field.ts"
+  },
   "exports": [
     {
       "name": "RadioField",
       "entry": ".",
-      "module": "supplemental",
+      "module": "radio-field",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
+            {
+              "name": "value",
+              "type": "string",
+              "doc": "The option's value, which the enclosing RadioGroup selects by."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the option disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the option invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the option required."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
-            { "name": "value", "type": "string" }
+              "values": ["sm", "md", "lg"],
+              "doc": "The option's size, in place of the enclosing RadioGroup's."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -36,7 +59,12 @@
           "member": "Button",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" }
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the option disabled, whatever its field says."
+            }
           ],
           "ref": { "type": "HTMLLabelElement" },
           "natives": [
@@ -92,104 +120,131 @@
   ],
   "types": [
     {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     },
     {
-      "id": "supplemental#RadioFieldButtonProps",
+      "id": "radio-field#RadioFieldButtonOwnProps",
+      "name": "RadioFieldButtonOwnProps",
+      "module": "radio-field",
+      "text": "type RadioFieldButtonOwnProps = {\n  disabled?: boolean;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the option disabled, whatever its field says."
+        }
+      ]
+    },
+    {
+      "id": "radio-field#RadioFieldButtonProps",
       "name": "RadioFieldButtonProps",
-      "module": "supplemental",
+      "module": "radio-field",
       "public": [
         { "entry": ".", "name": "RadioFieldButtonProps" }
       ],
       "owner": "radio-field",
-      "text": "type RadioFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  disabled?: boolean;\n};"
+      "text": "type RadioFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & RadioFieldButtonOwnProps;",
+      "refs": ["radio-field#RadioFieldButtonOwnProps"]
     },
     {
-      "id": "supplemental#RadioFieldDescriptionProps",
+      "id": "radio-field#RadioFieldDescriptionProps",
       "name": "RadioFieldDescriptionProps",
-      "module": "supplemental",
+      "module": "radio-field",
       "public": [
         { "entry": ".", "name": "RadioFieldDescriptionProps" }
       ],
       "owner": "radio-field",
       "text": "type RadioFieldDescriptionProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#RadioFieldDotProps",
+      "id": "radio-field#RadioFieldDotProps",
       "name": "RadioFieldDotProps",
-      "module": "supplemental",
+      "module": "radio-field",
       "public": [
         { "entry": ".", "name": "RadioFieldDotProps" }
       ],
       "owner": "radio-field",
       "text": "type RadioFieldDotProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#RadioFieldErrorProps",
+      "id": "radio-field#RadioFieldErrorProps",
       "name": "RadioFieldErrorProps",
-      "module": "supplemental",
+      "module": "radio-field",
       "public": [
         { "entry": ".", "name": "RadioFieldErrorProps" }
       ],
       "owner": "radio-field",
       "text": "type RadioFieldErrorProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#RadioFieldIndicatorProps",
+      "id": "radio-field#RadioFieldIndicatorProps",
       "name": "RadioFieldIndicatorProps",
-      "module": "supplemental",
+      "module": "radio-field",
       "public": [
         { "entry": ".", "name": "RadioFieldIndicatorProps" }
       ],
       "owner": "radio-field",
       "text": "type RadioFieldIndicatorProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#RadioFieldRootProps",
-      "name": "RadioFieldRootProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "RadioFieldRootProps" }
-      ],
-      "owner": "radio-field",
-      "text": "type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size' | 'readOnly'> & {\n  size?: 'sm' | 'md' | 'lg';\n  value: string;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "id": "radio-field#RadioFieldOwnProps",
+      "name": "RadioFieldOwnProps",
+      "module": "radio-field",
+      "text": "type RadioFieldOwnProps = {\n  value: string;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
       "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "value",
+          "type": "string",
+          "doc": "The option's value, which the enclosing RadioGroup selects by."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the option disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the option invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the option required."
+        },
         {
           "name": "size",
           "optional": true,
           "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
+          "values": ["sm", "md", "lg"],
+          "doc": "The option's size, in place of the enclosing RadioGroup's."
         }
       ]
+    },
+    {
+      "id": "radio-field#RadioFieldRootProps",
+      "name": "RadioFieldRootProps",
+      "module": "radio-field",
+      "public": [
+        { "entry": ".", "name": "RadioFieldRootProps" }
+      ],
+      "owner": "radio-field",
+      "text": "type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & RadioFieldOwnProps;",
+      "refs": ["radio-field#RadioFieldOwnProps"]
     }
   ]
 }

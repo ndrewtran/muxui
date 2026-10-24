@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
@@ -227,13 +228,33 @@ const markupFlags = {
   defaultChecked: '[checked], [data-selected]',
   // Menu.Root marks itself open.
   defaultOpen: '[data-open]',
+  // ButtonGroup marks itself attached.
+  attached: '[data-attached]',
+};
+// A progress circle's range shows as the ARIA values of its bar: the value is absent while it is indeterminate.
+const ariaNumber = (doc, attribute) => {
+  const text = doc.querySelector(`[${attribute}]`)?.getAttribute(attribute);
+  return text === undefined ? null : Number(text);
 };
 const markupValues = {
-  size: (doc) => doc.querySelector('[data-size]')?.getAttribute('data-size'),
+  // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
+  size: (doc) => {
+    const circle = doc.querySelector('.muxui-progress-circle');
+    if (circle !== null) return ['sm', 'lg'].find((size) => circle.classList.contains(`muxui-progress-circle--${size}`)) ?? 'md';
+    return doc.querySelector('[data-size]')?.getAttribute('data-size');
+  },
+  // ButtonGroup's resolved role, which is presentation unless it carries a name.
+  role: (doc) => doc.querySelector('[role]')?.getAttribute('role'),
+  value: (doc) => ariaNumber(doc, 'aria-valuenow'),
+  minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
+  maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
+  // InputTags lists its tags as rows, so its starting tags are the labels in them.
+  tagPlacement: (doc) => (doc.querySelector('.muxui-input-tags--below') === null ? 'inline' : 'below'),
   // A text field shows its starting text as its input's value; a composer, in its textarea.
   defaultValue: (doc) => {
+    if (doc.querySelector('.muxui-input-tags') !== null) return [...doc.querySelectorAll('.muxui-input-tags__tag')].map((tag) => tag.textContent);
     const input = doc.querySelector('input');
     return input === null ? doc.querySelector('textarea')?.textContent : input.getAttribute('value');
   },
@@ -277,9 +298,20 @@ const minimalRenders = {
   TagGroup: () => h(generated.TagGroup, { label: 'Tags', items: ['One', 'Two'] }),
   Table: () => h(generated.Table, { 'aria-label': 'People', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'ada', name: 'Ada' }] }),
   Tree: () => treeOf(),
+  ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
+  ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
+  ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
+  InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),
+  PaymentInput: () => h(generated.PaymentInput.Root, { 'aria-label': 'Card number' }, h(generated.PaymentInput.Group, null, h(generated.PaymentInput.Input), h(generated.PaymentInput.CardIcon))),
+  CheckboxField: () => h(generated.CheckboxField.Root, null, h(generated.CheckboxField.Button, null, h(generated.CheckboxField.Indicator), 'Accept')),
+  SwitchField: () => h(generated.SwitchField.Root, null, h(generated.SwitchField.Button, null, h(generated.SwitchField.Thumb), 'Updates')),
+  Input: () => h(generated.Input.Root, null, h(generated.Input.Label, null, 'Name'), h(generated.Input.Input)),
+  TextArea: () => h(generated.TextArea.Root, null, h(generated.TextArea.Label, null, 'Notes'), h(generated.TextArea.TextArea)),
+  // RadioField takes its size from the group around it, so its block states no defaults.
+  RadioField: () => h(generated.RadioGroup, { 'aria-label': 'Plan' }, h(generated.RadioField.Root, { value: 'monthly' }, h(generated.RadioField.Button, null, h(generated.RadioField.Indicator, null, h(generated.RadioField.Dot)), 'Monthly'))),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
-const rootDeclarations = { Menu: 'MenuRoot' };
+const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
@@ -378,6 +410,27 @@ const behaviourObservers = {
         return container.querySelector('[aria-checked="true"], [aria-pressed="true"]') !== null;
       },
     ),
+  },
+  ColorModeToggle: {
+    // A controlled dark mode is saved under the toggle's storage key, which is the one localStorage key that then holds it.
+    storageKey: (props) => withMounted(h(generated.ColorModeToggle, { mode: 'dark', 'aria-label': 'Theme', ...props }), () => {
+      const saved = [...Array(window.localStorage.length).keys()].map((index) => window.localStorage.key(index));
+      return saved.find((key) => window.localStorage.getItem(key) === 'dark');
+    }),
+  },
+  InputTags: {
+    // Adding a tag the field already holds either adds a second row or does nothing. React DOM was imported before the DOM exists, so it
+    // reads a changed value through its keydown path: the value is set, a keydown makes React read it, and Enter adds the tag.
+    allowDuplicates: (props) => withMounted(h(generated.InputTags.Root, { 'aria-label': 'Tags', defaultValue: ['a'], ...props }), async (container) => {
+      const input = container.querySelector('input');
+      await act(async () => {
+        input.focus();
+        Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, 'a');
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      });
+      await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+      return container.querySelectorAll('[role="row"]').length > 1;
+    }),
   },
   Menu: {
     // Choosing an item either closes the menu or leaves it open.
@@ -498,7 +551,8 @@ function defaultMismatches(markup, defaults, scope) {
   const mismatches = [];
   for (const [key, expected] of Object.entries(defaults)) {
     const observed = key in markupFlags ? present(markupFlags[key]) : markupValues[key]?.(container);
-    if ((key in markupFlags || key in markupValues) && observed !== expected) mismatches.push(`${key}: catalog ${JSON.stringify(expected)}, rendered ${JSON.stringify(observed)}`);
+    // A default may be an array (InputTags' starting tags), which no identity comparison can match.
+    if ((key in markupFlags || key in markupValues) && !isDeepStrictEqual(observed, expected)) mismatches.push(`${key}: catalog ${JSON.stringify(expected)}, rendered ${JSON.stringify(observed)}`);
   }
   return mismatches;
 }
@@ -743,7 +797,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     shouldCloseOnSelect: [false, true], offset: [4, 9], crossOffset: [0, 3], shouldFlip: [false, true], containerPadding: [12, 7], modal: [false, true], delay: [200, 33],
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
-    inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'],
+    inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {
@@ -753,6 +807,36 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
         assert.equal(await observe({ [key]: value }), value, `${name}.${key} observer sees ${value}`);
         assert.equal((await behaviourMismatches(name, { [key]: value })).length, value === rendered ? 0 : 1, `${name}.${key}=${value} is compared with the rendered ${rendered}`);
       }
+    }
+  }
+});
+
+// The simple supplemental families state defaults the renderer runs, each seen in the markup or in what the mounted component does.
+// For each, a catalog value the renderer does not run fails with that default's name, and the families are checked default by default:
+// a default added to a block without a value here, or an observer that stops reading one, fails this test.
+test('every default a simple supplemental family states is compared with what the renderer runs', async () => {
+  const different = {
+    ButtonGroup: { orientation: 'vertical', attached: true, disabled: true, role: 'region' },
+    ColorModeToggle: { disabled: true, storageKey: 'theme' },
+    ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
+    InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
+    PaymentInput: { defaultValue: '4111', size: 'lg' },
+    Input: { size: 'lg' },
+    TextArea: { size: 'lg' },
+    CheckboxField: { size: 'lg' },
+    SwitchField: { size: 'lg' },
+    // RadioField states none: its size follows the enclosing RadioGroup.
+    RadioField: {},
+  };
+  for (const [name, values] of Object.entries(different)) {
+    const api = await catalogApi(kebab(name));
+    assert.deepEqual(Object.keys(values).sort(), Object.keys(api.defaults).sort(), `${name} is checked for each default it states`);
+    const markup = renderToString(minimalRenders[name]());
+    for (const [key, value] of Object.entries(values)) {
+      const defaults = { ...api.defaults, [key]: value };
+      const mismatches = key in (behaviourObservers[name] ?? {}) ? await behaviourMismatches(name, defaults) : defaultMismatches(markup, defaults);
+      assert.equal(mismatches.length, 1, `${name}.${key}: ${mismatches.join('; ')}`);
+      assert.ok(mismatches[0].startsWith(`${key}: catalog ${JSON.stringify(value)}, `), `${name}.${key} is the default that fails: ${mismatches[0]}`);
     }
   }
 });

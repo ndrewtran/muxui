@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProgressCircle } from '../../src/supplemental/index.mjs';
+import { ProgressCircle } from '../../src/supplemental/progress-circle.ts';
 
 const h = React.createElement;
 

@@ -1,0 +1,102 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/color-mode-toggle.ts",
+  "component": "muxui:component:color-mode-toggle",
+  "binding": "web.react",
+  "export": "ColorModeToggle",
+  "api": {
+    "props": [
+      "mode",
+      "defaultMode",
+      "storageKey",
+      "disabled"
+    ],
+    "events": [
+      "modeChange"
+    ],
+    "defaults": {
+      "storageKey": "muxui-color-mode",
+      "disabled": false
+    },
+    "propDetails": {
+      "mode": {
+        "type": {
+          "kind": "reference",
+          "name": "ColorMode"
+        },
+        "required": false,
+        "enum": [
+          "light",
+          "dark"
+        ],
+        "description": "The color mode, when the page controls it."
+      },
+      "defaultMode": {
+        "type": {
+          "kind": "reference",
+          "name": "ColorMode"
+        },
+        "required": false,
+        "enum": [
+          "light",
+          "dark"
+        ],
+        "description": "The mode the toggle starts in, before a saved mode or the operating system's preference is read."
+      },
+      "storageKey": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The localStorage key the chosen mode is saved under."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the toggle disabled."
+      }
+    },
+    "eventDetails": {
+      "modeChange": {
+        "prop": "onModeChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": {
+                "kind": "reference",
+                "name": "ColorMode"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new mode when the toggle changes it."
+      }
+    },
+    "types": {
+      "ColorMode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "light"
+            },
+            {
+              "kind": "literal",
+              "value": "dark"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/input-tags.ts",
+  "component": "muxui:component:input-tags",
+  "binding": "web.react",
+  "export": "InputTags",
+  "api": {
+    "props": [
+      "tagPlacement",
+      "size",
+      "placeholder",
+      "value",
+      "defaultValue",
+      "allowDuplicates",
+      "maxTags",
+      "validate",
+      "label",
+      "description",
+      "errorMessage",
+      "disabled",
+      "invalid",
+      "required"
+    ],
+    "events": [
+      "change",
+      "tagAdded",
+      "tagRemoved"
+    ],
+    "defaults": {
+      "tagPlacement": "inline",
+      "size": "md",
+      "defaultValue": [],
+      "allowDuplicates": false,
+      "disabled": false,
+      "invalid": false,
+      "required": false
+    },
+    "propDetails": {
+      "tagPlacement": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "inline"
+            },
+            {
+              "kind": "literal",
+              "value": "below"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "inline",
+          "below"
+        ],
+        "description": "Where the tags sit: inline with the input, or below it."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The field's size."
+      },
+      "placeholder": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The hint shown in the input while it is empty, and beside the tags when they sit below."
+      },
+      "value": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The tags, when the caller controls them."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "string"
+          },
+          "readonly": false
+        },
+        "required": false,
+        "description": "The starting tags, when the field controls itself."
+      },
+      "allowDuplicates": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Lets the same tag be added more than once."
+      },
+      "maxTags": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The most tags the field holds; adding another does nothing."
+      },
+      "validate": {
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "boolean"
+          }
+        },
+        "required": false,
+        "description": "Decides whether a typed tag may be added."
+      },
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The visible label, which also names the input."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown with the field."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message shown, in place of the description, while the field is invalid."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field disabled."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field invalid."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the field required."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "tags",
+              "type": {
+                "kind": "array",
+                "element": {
+                  "kind": "string"
+                },
+                "readonly": false
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with all of the tags each time one is added or removed."
+      },
+      "tagAdded": {
+        "prop": "onTagAdded",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the tag that was just added."
+      },
+      "tagRemoved": {
+        "prop": "onTagRemoved",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "tag",
+              "type": {
+                "kind": "string"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the tag that was just removed."
+      }
+    },
+    "types": {}
+  }
+}

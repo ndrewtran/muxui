@@ -1,34 +1,88 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "checkbox-field",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "checkbox-field": "packages/react/src/supplemental/checkbox-field.ts",
+    "part-utils": "packages/react/src/supplemental/part-utils.ts"
+  },
   "exports": [
     {
       "name": "CheckboxField",
       "entry": ".",
-      "module": "supplemental",
+      "module": "checkbox-field",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "checked",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the checkbox is checked, when the caller controls it."
+            },
+            {
+              "name": "defaultChecked",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the checkbox starts checked, when the field controls itself."
+            },
+            {
+              "name": "indeterminate",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the mixed state in place of checked or unchecked."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(checked: boolean) => void",
+              "doc": "Called with the new checked state."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The name the checkbox submits under in a form."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The value the checkbox submits while it is checked."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field read-only."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
-            { "name": "checked", "optional": true, "type": "boolean" },
-            { "name": "defaultChecked", "optional": true, "type": "boolean" },
-            { "name": "indeterminate", "optional": true, "type": "boolean" },
-            { "name": "name", "optional": true, "type": "string" },
-            { "name": "value", "optional": true, "type": "string" },
-            { "name": "onChange", "optional": true, "type": "(checked: boolean) => void" }
+              "values": ["sm", "md", "lg"],
+              "doc": "The field's size."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -42,7 +96,12 @@
           "member": "Button",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" }
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the checkbox disabled, whatever its field says."
+            }
           ],
           "ref": { "type": "HTMLLabelElement" },
           "natives": [
@@ -87,93 +146,157 @@
   ],
   "types": [
     {
-      "id": "supplemental#CheckboxFieldButtonProps",
+      "id": "checkbox-field#CheckboxFieldButtonOwnProps",
+      "name": "CheckboxFieldButtonOwnProps",
+      "module": "checkbox-field",
+      "text": "type CheckboxFieldButtonOwnProps = {\n  disabled?: boolean;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the checkbox disabled, whatever its field says."
+        }
+      ]
+    },
+    {
+      "id": "checkbox-field#CheckboxFieldButtonProps",
       "name": "CheckboxFieldButtonProps",
-      "module": "supplemental",
+      "module": "checkbox-field",
       "public": [
         { "entry": ".", "name": "CheckboxFieldButtonProps" }
       ],
       "owner": "checkbox-field",
-      "text": "type CheckboxFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  disabled?: boolean;\n};"
+      "text": "type CheckboxFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & CheckboxFieldButtonOwnProps;",
+      "refs": ["checkbox-field#CheckboxFieldButtonOwnProps"]
     },
     {
-      "id": "supplemental#CheckboxFieldDescriptionProps",
+      "id": "checkbox-field#CheckboxFieldDescriptionProps",
       "name": "CheckboxFieldDescriptionProps",
-      "module": "supplemental",
+      "module": "checkbox-field",
       "public": [
         { "entry": ".", "name": "CheckboxFieldDescriptionProps" }
       ],
       "owner": "checkbox-field",
       "text": "type CheckboxFieldDescriptionProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CheckboxFieldErrorProps",
+      "id": "checkbox-field#CheckboxFieldErrorProps",
       "name": "CheckboxFieldErrorProps",
-      "module": "supplemental",
+      "module": "checkbox-field",
       "public": [
         { "entry": ".", "name": "CheckboxFieldErrorProps" }
       ],
       "owner": "checkbox-field",
       "text": "type CheckboxFieldErrorProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CheckboxFieldIndicatorProps",
+      "id": "checkbox-field#CheckboxFieldIndicatorProps",
       "name": "CheckboxFieldIndicatorProps",
-      "module": "supplemental",
+      "module": "checkbox-field",
       "public": [
         { "entry": ".", "name": "CheckboxFieldIndicatorProps" }
       ],
       "owner": "checkbox-field",
       "text": "type CheckboxFieldIndicatorProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CheckboxFieldRootProps",
-      "name": "CheckboxFieldRootProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CheckboxFieldRootProps" }
-      ],
-      "owner": "checkbox-field",
-      "text": "type CheckboxFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  indeterminate?: boolean;\n  name?: string;\n  value?: string;\n  onChange?: (checked: boolean) => void;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
-    },
-    {
-      "id": "supplemental#PartProps",
-      "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
-      "typeParameters": [
-        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
-      ],
-      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "id": "checkbox-field#CheckboxFieldOwnProps",
+      "name": "CheckboxFieldOwnProps",
+      "module": "checkbox-field",
+      "text": "type CheckboxFieldOwnProps = {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  indeterminate?: boolean;\n  onChange?: (checked: boolean) => void;\n  name?: string;\n  value?: string;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
       "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
+        {
+          "name": "checked",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the checkbox is checked, when the caller controls it."
+        },
+        {
+          "name": "defaultChecked",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the checkbox starts checked, when the field controls itself."
+        },
+        {
+          "name": "indeterminate",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the mixed state in place of checked or unchecked."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(checked: boolean) => void",
+          "doc": "Called with the new checked state."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The name the checkbox submits under in a form."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The value the checkbox submits while it is checked."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field read-only."
+        },
         {
           "name": "size",
           "optional": true,
           "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
+          "values": ["sm", "md", "lg"],
+          "doc": "The field's size."
         }
       ]
+    },
+    {
+      "id": "checkbox-field#CheckboxFieldRootProps",
+      "name": "CheckboxFieldRootProps",
+      "module": "checkbox-field",
+      "public": [
+        { "entry": ".", "name": "CheckboxFieldRootProps" }
+      ],
+      "owner": "checkbox-field",
+      "text": "type CheckboxFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & CheckboxFieldOwnProps;",
+      "refs": ["checkbox-field#CheckboxFieldOwnProps"]
+    },
+    {
+      "id": "part-utils#PartProps",
+      "name": "PartProps",
+      "module": "part-utils",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     }
   ]
 }

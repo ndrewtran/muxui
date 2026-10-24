@@ -19,7 +19,7 @@ import ExternalLinkIcon from 'lucide-react/dist/esm/icons/external-link.mjs';
 import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.ts';
 import { IconButton } from './icon-button.ts';
-import { h, useIsomorphicLayoutEffect, cx, dataState, nativePart } from './part-utils.mjs';
+import { h, useIsomorphicLayoutEffect, cx, dataState, nativePart } from './part-utils.ts';
 import { sidebarUnreachable, sidebarFocusFirst, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.mjs';
 
 /* Sidebar */

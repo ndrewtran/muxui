@@ -4,8 +4,7 @@ import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
-import { Button, Checkbox, FileTrigger, IconButton } from '../../generated/index.mjs';
-import { CheckboxField } from '../../generated/supplemental.mjs';
+import { Button, Checkbox, CheckboxField, FileTrigger, IconButton } from '../../generated/index.mjs';
 import { MUXUI_THEME_PRESETS } from '../../generated/themes.mjs';
 import { launchBrowser } from './harness.mjs';
 

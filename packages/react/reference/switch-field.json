@@ -1,33 +1,82 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "switch-field",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "switch-field": "packages/react/src/supplemental/switch-field.ts"
+  },
   "exports": [
     {
       "name": "SwitchField",
       "entry": ".",
-      "module": "supplemental",
+      "module": "switch-field",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "checked",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the switch is on, when the caller controls it."
+            },
+            {
+              "name": "defaultChecked",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the switch starts on, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(checked: boolean) => void",
+              "doc": "Called with the new on state."
+            },
+            {
+              "name": "name",
+              "optional": true,
+              "type": "string",
+              "doc": "The name the switch submits under in a form."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The value the switch submits while it is on."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field read-only."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
-            { "name": "checked", "optional": true, "type": "boolean" },
-            { "name": "defaultChecked", "optional": true, "type": "boolean" },
-            { "name": "name", "optional": true, "type": "string" },
-            { "name": "value", "optional": true, "type": "string" },
-            { "name": "onChange", "optional": true, "type": "(checked: boolean) => void" }
+              "values": ["sm", "md", "lg"],
+              "doc": "The field's size."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -41,7 +90,12 @@
           "member": "Button",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" }
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the switch disabled, whatever its field says."
+            }
           ],
           "ref": { "type": "HTMLLabelElement" },
           "natives": [
@@ -86,93 +140,151 @@
   ],
   "types": [
     {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     },
     {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "id": "switch-field#SwitchFieldButtonOwnProps",
+      "name": "SwitchFieldButtonOwnProps",
+      "module": "switch-field",
+      "text": "type SwitchFieldButtonOwnProps = {\n  disabled?: boolean;\n};",
       "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
         {
-          "name": "size",
+          "name": "disabled",
           "optional": true,
-          "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
+          "type": "boolean",
+          "doc": "Marks the switch disabled, whatever its field says."
         }
       ]
     },
     {
-      "id": "supplemental#SwitchFieldButtonProps",
+      "id": "switch-field#SwitchFieldButtonProps",
       "name": "SwitchFieldButtonProps",
-      "module": "supplemental",
+      "module": "switch-field",
       "public": [
         { "entry": ".", "name": "SwitchFieldButtonProps" }
       ],
       "owner": "switch-field",
-      "text": "type SwitchFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & {\n  disabled?: boolean;\n};"
+      "text": "type SwitchFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & SwitchFieldButtonOwnProps;",
+      "refs": ["switch-field#SwitchFieldButtonOwnProps"]
     },
     {
-      "id": "supplemental#SwitchFieldDescriptionProps",
+      "id": "switch-field#SwitchFieldDescriptionProps",
       "name": "SwitchFieldDescriptionProps",
-      "module": "supplemental",
+      "module": "switch-field",
       "public": [
         { "entry": ".", "name": "SwitchFieldDescriptionProps" }
       ],
       "owner": "switch-field",
       "text": "type SwitchFieldDescriptionProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#SwitchFieldErrorProps",
+      "id": "switch-field#SwitchFieldErrorProps",
       "name": "SwitchFieldErrorProps",
-      "module": "supplemental",
+      "module": "switch-field",
       "public": [
         { "entry": ".", "name": "SwitchFieldErrorProps" }
       ],
       "owner": "switch-field",
       "text": "type SwitchFieldErrorProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#SwitchFieldRootProps",
+      "id": "switch-field#SwitchFieldOwnProps",
+      "name": "SwitchFieldOwnProps",
+      "module": "switch-field",
+      "text": "type SwitchFieldOwnProps = {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  onChange?: (checked: boolean) => void;\n  name?: string;\n  value?: string;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        {
+          "name": "checked",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the switch is on, when the caller controls it."
+        },
+        {
+          "name": "defaultChecked",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the switch starts on, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(checked: boolean) => void",
+          "doc": "Called with the new on state."
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "type": "string",
+          "doc": "The name the switch submits under in a form."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The value the switch submits while it is on."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field read-only."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The field's size."
+        }
+      ]
+    },
+    {
+      "id": "switch-field#SwitchFieldRootProps",
       "name": "SwitchFieldRootProps",
-      "module": "supplemental",
+      "module": "switch-field",
       "public": [
         { "entry": ".", "name": "SwitchFieldRootProps" }
       ],
       "owner": "switch-field",
-      "text": "type SwitchFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  checked?: boolean;\n  defaultChecked?: boolean;\n  name?: string;\n  value?: string;\n  onChange?: (checked: boolean) => void;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
+      "text": "type SwitchFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SwitchFieldOwnProps;",
+      "refs": ["switch-field#SwitchFieldOwnProps"]
     },
     {
-      "id": "supplemental#SwitchFieldThumbProps",
+      "id": "switch-field#SwitchFieldThumbProps",
       "name": "SwitchFieldThumbProps",
-      "module": "supplemental",
+      "module": "switch-field",
       "public": [
         { "entry": ".", "name": "SwitchFieldThumbProps" }
       ],
       "owner": "switch-field",
       "text": "type SwitchFieldThumbProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     }
   ]
 }

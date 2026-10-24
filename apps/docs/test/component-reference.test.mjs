@@ -218,9 +218,10 @@ test('a component\'s share keeps "not declared" apart from a declared never, and
   assert.equal(dialog.alternatives.length, 3);
   const iconButton = partOf(declared('muxui:component:icon-button'));
   for (const name of ['children', 'style']) assert.equal('doc' in memberOf(iconButton, name), false, `IconButton ${name}`);
-  const switchField = declared('muxui:component:switch-field').export.parts;
-  assert.ok(switchField.every((part) => part.members.every((member) => !('doc' in member))));
-  assert.deepEqual(Object.fromEntries(switchField.map(({ member, ref }) => [member, ref.type])), { Root: 'HTMLDivElement', Button: 'HTMLLabelElement', Thumb: 'HTMLSpanElement', Description: 'HTMLElement', Error: 'HTMLElement' });
+  // Card is still declared by hand in the supplemental declarations, which carry no member comments.
+  const card = declared('muxui:component:card').export.parts;
+  assert.ok(card.every((part) => part.members.every((member) => !('doc' in member))));
+  assert.deepEqual(Object.fromEntries(card.map(({ member, ref }) => [member, ref.type])), { Root: 'HTMLDivElement', Button: 'HTMLButtonElement', Header: 'HTMLDivElement', Body: 'HTMLDivElement', Footer: 'HTMLDivElement' });
   // A generic part names its binder and the host element its ref follows.
   const text = partOf(declared('muxui:component:text'));
   assert.deepEqual([text.typeParameters[0].name, text.typeParameters[0].default, text.ref.type], ['T', "'span'", 'HTMLElementTagNameMap[T]']);
