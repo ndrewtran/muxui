@@ -55,6 +55,9 @@ function catalogOf(family) {
   return { artifact, api: artifact.bindings['web.react'].api };
 }
 
+/** Whether a family's catalog still lists its API by hand: a derived (executed) family carries `propDetails`, an authored one does not. */
+const isAuthored = (api) => api.propDetails === undefined;
+
 /** The owner of a family's own export: the file the inventory keeps its declarations in. */
 function ownerOf(family) {
   return inventory.entries.flatMap((entry) => entry.exports ?? []).find(({ name }) => name === family).owner;
@@ -330,12 +333,23 @@ test('every family Docs page lists its parts and related exports and shows each 
 test('every rendered default is the catalog\'s, every executed catalog default is shown, and an authored one says so', async () => {
   let executed = 0;
   let authored = 0;
+  // The defaults the authored families should show, counted from the catalog and the model alone: a row of a part that
+  // declares its prop optional, where the catalog lists a default and the prop's finite values (if any) hold it.
+  let expectedAuthored = 0;
   for (const record of manifest.families) {
     const page = pageOf(await entryOf(record));
     const { api } = catalogOf(record.family);
-    const provenance = api.propDetails === undefined ? 'authored' : 'executed';
+    const provenance = isAuthored(api) ? 'authored' : 'executed';
     // The catalog block that owns a part of the family's own export: its partApis entry, or the root's for the export and its Root.
     const blockOf = (member) => Object.values(api.partApis ?? {}).find((block) => block.member === member) ?? (member === null || member === 'Root' ? api : undefined);
+    if (provenance === 'authored') {
+      for (const part of ownerFile(ownerOf(record.family)).exports.find(({ name }) => name === record.family).parts.filter(({ sameAs }) => sameAs === undefined)) {
+        const defaults = blockOf(part.member)?.defaults ?? {};
+        for (const member of [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)]) {
+          if (member.never !== true && member.optional === true && Object.hasOwn(defaults, member.name) && (member.values === undefined || member.values.includes(defaults[member.name]))) expectedAuthored += 1;
+        }
+      }
+    }
     const shown = new Map();
     for (const node of partNodes(page)) {
       const [exportName, member = null] = node.getAttribute('data-part').split('.');
@@ -365,7 +379,9 @@ test('every rendered default is the catalog\'s, every executed catalog default i
     const caption = page.querySelector('[data-fact="typed.provenance"]').textContent;
     assert.match(caption, provenance === 'authored' ? /authored by hand, so each is marked authored/u : /each is the default its source executes/u, `${record.family} says where its defaults come from`);
   }
-  assert.ok(executed > 100 && authored > 10, `${executed} executed and ${authored} authored defaults are shown`);
+  assert.ok(executed > 100, `${executed} executed defaults are shown`);
+  // Every default an authored family can show is shown, and marked; as families are derived they leave this count.
+  assert.equal(authored, expectedAuthored, 'the authored defaults shown are those the catalog and the model give the authored families');
 });
 
 test('a callback row names the event channel the catalog reports through it', async () => {
@@ -722,9 +738,10 @@ test('the Controls describe each prop with its member comment and its declared t
   let described = 0;
   let typed = 0;
   let undeclared = 0;
-  let categories = 0;
   let differing = 0;
   let total = 0;
+  const merged = new Map();
+  const derivedButUndeclared = [];
   for (const record of manifest.families) {
     const module = await moduleOf(record);
     const { api } = catalogOf(record.family);
@@ -766,20 +783,26 @@ test('the Controls describe each prop with its member comment and its declared t
         if (new Set(declarations(owner, name).map(({ type }) => type)).size > 1) differing += 1;
         assert.equal(control.table.category, owner.root ? undefined : `${record.family}.${owner.member}`, `${record.family}.${name} owner`);
       }
-      if (owner === undefined) { undeclared += 1; continue; }
+      if (owner === undefined) {
+        undeclared += 1;
+        if (!isAuthored(api)) derivedButUndeclared.push(`${record.family}.${name}`);
+        continue;
+      }
       const member = declaration(owner, name);
       typed += 1;
       if (member.doc !== undefined) described += 1;
-      if (!owner.root) categories += 1;
+      if (!owner.root) merged.set(record.family, (merged.get(record.family) ?? 0) + 1);
     }
   }
-  assert.ok(typed > 600 && described > 400, `${typed} Controls rows are typed, ${described} described`);
-  // Every Controls row is typed by the model or left alone: the 58 that no part declares belong to authored families.
-  assert.equal(undeclared, 58, 'the props of the authored families that no part declares');
+  assert.ok(typed > total / 2 && described > typed / 2, `${typed} of ${total} Controls rows are typed, ${described} described`);
+  // Every Controls row is typed by the model or left alone (checked row by row above). Only a family whose API the catalog
+  // still lists by hand has rows no part declares; once it is derived, every one of its Controls is typed.
+  assert.deepEqual(derivedButUndeclared, [], 'no derived family has a Controls row that no part declares');
   assert.equal(typed + undeclared, total, 'every Controls row is typed or left alone');
   assert.ok(differing > 0, 'some props are declared differently by different alternatives, as Text\'s variant and size are');
   // Menu's popup (six props), list (items) and submenu (delay), which the adapter folds into the root's Controls.
-  assert.equal(categories, 8, 'merged-part rows name their owner');
+  assert.equal(merged.get('Menu'), 8, 'merged-part rows name their owner');
+  assert.ok([...merged.keys()].every((family) => family in STORY_API_PARTS), 'only a family the adapter folds parts into has merged-part rows');
 });
 
 test('a Control of a prop that alternatives declare differently offers the union, as Text\'s variant does', async () => {
