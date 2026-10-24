@@ -8,10 +8,12 @@
 //   SWITCH-FIELD-01  Root's ref is HTMLDivElement and Button's is HTMLLabelElement, with onChange(checked: boolean), name and value.
 //   TEXT-AREA-01     TextArea.Root's ref is HTMLDivElement, TextArea.TextArea's is HTMLTextAreaElement, with its native surface named.
 //   TEXT-EDITOR-02   the text-editor entry lists all 32 exports with exact signatures.
+//   X-002 (part)     CommandPalette says which parts need a Root around them.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
-import { renderedComponent, routeFile } from './typed-reference.mjs';
+import { attributeValue, elements } from './html-tree.mjs';
+import { renderedComponent, routeFile, text } from './typed-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const dist = process.argv[2] === undefined ? resolve(repositoryRoot, 'apps/docs/dist') : resolve(process.argv[2]);
@@ -108,5 +110,15 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 	expect(record, members.every((member) => command.includes(member)), 'TextEditorCommand must show its seven members by their type.');
 }
 
+// X-002: the ancestry of CommandPalette's parts, authored in its behavior list and shown on its page.
+{
+	const record = 'X-002';
+	const { root } = page('command-palette');
+	const behavior = elements(root).find((node) => attributeValue(node, 'data-fact') === 'binding.behavior');
+	const items = behavior === undefined ? [] : elements(behavior).filter((node) => node.tagName === 'li').map((node) => text(node));
+	const sentence = 'Trigger, Backdrop, Close, Input, ListBox, and Item throw outside Root, because they read its context; Root renders without any of them.';
+	expect(record, items.includes(sentence), `CommandPalette behavior must say "${sentence}".`);
+}
+
 if (problems.length > 0) throw new Error(`A ledger record's fact is not on its page:\n${problems.map((problem) => `- ${problem}`).join('\n')}`);
-console.log('Ledger record pins passed: DISCLOSURE-01, SWITCH-FIELD-01, TEXT-AREA-01 and TEXT-EDITOR-02 show the facts their records ask for.');
+console.log('Ledger record pins passed: DISCLOSURE-01, SWITCH-FIELD-01, TEXT-AREA-01 and TEXT-EDITOR-02 show the facts their records ask for, and CommandPalette says which parts need a Root (X-002).');
