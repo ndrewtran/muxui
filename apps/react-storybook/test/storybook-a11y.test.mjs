@@ -871,6 +871,59 @@ function typedReferenceSelection() {
   return families.length > 0 ? { families } : { skip: 'no selected family is among the typed reference pages' };
 }
 
+/** A Storybook, a browser and a way to find a family's Docs page, for the typed reference proofs. The resources close with the test. */
+async function typedReferenceSession(signal, resources) {
+  throwIfAborted(signal);
+  const executablePath = await findBrowser();
+  throwIfAborted(signal);
+  assert.ok(executablePath, 'Chrome or Chromium is required for the typed reference proof (set MUXUI_CHROME_EXECUTABLE to override)');
+  let port;
+  try {
+    port = await reservePort(configuredPort());
+  } catch {
+    port = await reservePort(undefined);
+  }
+  const started = await startStorybook(port, signal);
+  await resources.trackStorybook(started.child);
+  const index = await fetch(`${started.baseUrl}/index.json`, {
+    signal: AbortSignal.any([AbortSignal.timeout(10_000), signal]),
+  }).then((response) => response.json());
+  const browser = await chromium.launch({ executablePath, headless: true });
+  await resources.trackBrowser(browser);
+  return {
+    baseUrl: started.baseUrl,
+    browser,
+    docsUrl(family, scheme = 'light', hash = '') {
+      const entry = Object.values(index.entries).find((candidate) => candidate.type === 'docs' && storyFamily(candidate) === family);
+      assert.ok(entry, `${family}: Storybook must expose its Docs page`);
+      return `${started.baseUrl}/iframe.html?viewMode=docs&id=${encodeURIComponent(entry.id)}&globals=${encodeURIComponent(`colorScheme:${scheme}`)}${hash}`;
+    },
+    async newPage(viewport = { width: 1_190, height: 900 }) {
+      const page = await browser.newPage({ viewport });
+      page.setDefaultNavigationTimeout(storyTimeoutMs * 4);
+      page.setDefaultTimeout(storyTimeoutMs * 4);
+      return page;
+    },
+  };
+}
+
+/**
+ * Embedded stories and code blocks settle after the reference appears and move what is below them, so a proof that follows a
+ * link to a target near the end of the page waits for the page to stop growing first.
+ */
+const waitForStableHeight = (page) => page.waitForFunction(() => new Promise((resolveStable) => {
+  let height = document.documentElement.scrollHeight;
+  let stableFrames = 0;
+  const frame = () => {
+    const next = document.documentElement.scrollHeight;
+    stableFrames = next === height ? stableFrames + 1 : 0;
+    height = next;
+    if (stableFrames >= 30) resolveStable(true);
+    else requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}));
+
 test('Storybook typed API reference is axe-clean, keyboard-operable and reflows in light and dark', {
   timeout: testTimeoutMs,
   skip: typedReferenceSelection().skip ?? false,
@@ -878,51 +931,18 @@ test('Storybook typed API reference is axe-clean, keyboard-operable and reflows 
   const { families } = typedReferenceSelection();
   const resources = createAuditResources(t.signal);
   try {
-    throwIfAborted(t.signal);
-    const executablePath = await findBrowser();
-    throwIfAborted(t.signal);
-    assert.ok(executablePath, 'Chrome or Chromium is required for the typed reference proof (set MUXUI_CHROME_EXECUTABLE to override)');
-    let port;
-    try {
-      port = await reservePort(configuredPort());
-    } catch {
-      port = await reservePort(undefined);
-    }
-    const started = await startStorybook(port, t.signal);
-    await resources.trackStorybook(started.child);
-    const index = await fetch(`${started.baseUrl}/index.json`, {
-      signal: AbortSignal.any([AbortSignal.timeout(10_000), t.signal]),
-    }).then((response) => response.json());
-    const browser = await chromium.launch({ executablePath, headless: true });
-    await resources.trackBrowser(browser);
-    const page = await browser.newPage({ viewport: { width: 1_190, height: 900 } });
-    page.setDefaultNavigationTimeout(storyTimeoutMs * 4);
-    page.setDefaultTimeout(storyTimeoutMs * 4);
+    const session = await typedReferenceSession(t.signal, resources);
+    const page = await session.newPage();
     for (const family of families) {
-      const entry = Object.values(index.entries).find((candidate) => candidate.type === 'docs' && storyFamily(candidate) === family);
-      assert.ok(entry, `${family}: Storybook must expose its Docs page`);
       for (const scheme of ['light', 'dark']) {
         throwIfAborted(t.signal);
         const label = `${family}/${scheme}`;
         await page.setViewportSize({ width: 1_190, height: 900 });
-        await page.goto(`${started.baseUrl}/iframe.html?viewMode=docs&id=${encodeURIComponent(entry.id)}&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`, { waitUntil: 'domcontentloaded' });
+        await page.goto(session.docsUrl(family, scheme), { waitUntil: 'domcontentloaded' });
         await page.locator('[data-typed-reference]').waitFor();
         await page.addScriptTag({ content: axe.source });
         await waitForDocumentAnimations(page);
-        // Embedded stories and code blocks settle after the reference appears and move what is below them, so let the
-        // page stop growing before a link is followed to a target near its end.
-        await page.waitForFunction(() => new Promise((resolveStable) => {
-          let height = document.documentElement.scrollHeight;
-          let stableFrames = 0;
-          const frame = () => {
-            const next = document.documentElement.scrollHeight;
-            stableFrames = next === height ? stableFrames + 1 : 0;
-            height = next;
-            if (stableFrames >= 30) resolveStable(true);
-            else requestAnimationFrame(frame);
-          };
-          requestAnimationFrame(frame);
-        }));
+        await waitForStableHeight(page);
 
         // Keyboard: from the reference's first heading, Tab reaches a link of the exports index, then a collapsed summary,
         // and Enter on each does what it names.
@@ -1010,6 +1030,89 @@ test('Storybook typed API reference is axe-clean, keyboard-operable and reflows 
         t.diagnostic(`${label}: keyboard, overflow and axe pass`);
       }
     }
+  } finally {
+    await resources.close();
+  }
+});
+
+/** Waits until the fragment of the address names a disclosure that is open and on screen, or says where it is instead. */
+async function waitForFragmentShown(page, label) {
+  const place = () => page.evaluate(() => {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    return { hash: location.hash, found: target !== null, open: target?.open, top: target?.getBoundingClientRect().top, scrollY, height: document.documentElement.scrollHeight, viewport: innerHeight };
+  });
+  await page.waitForFunction(() => {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target === null) return false;
+    const { top } = target.getBoundingClientRect();
+    return target.open === true && top > -1 && top < innerHeight;
+  }, undefined, { timeout: 20_000 }).catch(async (error) => {
+    throw new Error(`${label}: the fragment's target is not open and in view (${JSON.stringify(await place())})`, { cause: error });
+  });
+}
+
+test('Storybook typed API reference opens and scrolls to the part or type a fragment names, on load, on a hash change, and on Back and Forward', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = typedReferenceSelection();
+    if (selection.skip) return selection.skip;
+    return selection.families.includes('CommandPalette') ? false : 'CommandPalette is outside the selected families';
+  })(),
+}, async (t) => {
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    // CommandPalette has 29 parts, so all but the first are closed, and its page is long: a fragment is far below the first screen.
+    const url = session.docsUrl('CommandPalette');
+    const probe = await session.newPage();
+    await probe.goto(url, { waitUntil: 'domcontentloaded' });
+    await probe.locator('[data-typed-reference]').waitFor();
+    const ids = await probe.evaluate(() => {
+      const closed = [...document.querySelectorAll('[data-typed-reference] details:not([open])')];
+      return {
+        part: closed.filter((details) => details.hasAttribute('data-part')).at(2)?.id,
+        type: closed.filter((details) => details.hasAttribute('data-type')).at(-2)?.id,
+      };
+    });
+    await probe.close();
+    assert.ok(ids.part && ids.type, `CommandPalette has closed parts and types to link to (${JSON.stringify(ids)})`);
+
+    // A cold load at a fragment, with nothing yet settled: the part and the type each open and end in view.
+    for (const [kind, id] of Object.entries(ids)) {
+      const page = await session.newPage();
+      await page.goto(`${url}#${id}`, { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-typed-reference]').waitFor();
+      await waitForStableHeight(page);
+      await waitForFragmentShown(page, `cold load at a ${kind} fragment`);
+      await page.close();
+    }
+
+    const page = await session.newPage();
+    const closeTarget = () => page.evaluate(() => { document.getElementById(decodeURIComponent(location.hash.slice(1))).open = false; });
+    await page.goto(`${url}#${ids.part}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-typed-reference]').waitFor();
+    await waitForStableHeight(page);
+    await waitForFragmentShown(page, 'cold load before the hash changes');
+    // The reader closes the part, then follows a link to a type: the type opens and is in view.
+    await closeTarget();
+    await page.evaluate((id) => { location.hash = id; }, ids.type);
+    await waitForFragmentShown(page, 'a hash change to a type');
+    // Back returns to the part they had closed, which opens again and is in view; Forward returns to the type, closed meanwhile.
+    await closeTarget();
+    await page.goBack();
+    assert.equal(new URL(page.url()).hash, `#${ids.part}`, 'Back returns to the part fragment');
+    await waitForFragmentShown(page, 'Back to a part that was closed');
+    await closeTarget();
+    await page.goForward();
+    assert.equal(new URL(page.url()).hash, `#${ids.type}`, 'Forward returns to the type fragment');
+    await waitForFragmentShown(page, 'Forward to a type that was closed');
+    // Leaving the page and coming Back returns to the fragment with its target open and in view, whether the page reloads or comes from the cache.
+    await closeTarget();
+    await page.goto('about:blank');
+    await page.goBack();
+    await page.locator('[data-typed-reference]').waitFor();
+    await waitForStableHeight(page);
+    await waitForFragmentShown(page, 'Back from another document');
   } finally {
     await resources.close();
   }

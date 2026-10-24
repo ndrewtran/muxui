@@ -303,9 +303,56 @@ function ExportsIndex({ typed }) {
     h('tbody', null, rows));
 }
 
+/** The id the address names, or an empty one when it names none (or is not a valid fragment). */
+function fragmentId() {
+  try {
+    return decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    return '';
+  }
+}
+
 /** Opens the collapsed part or type that an id names, and what contains it, so following a link shows what it points to. */
 function reveal(id) {
-  for (let node = document.getElementById(id)?.closest('details'); node; node = node.parentElement?.closest('details')) node.open = true;
+  const target = id === '' ? null : document.getElementById(id);
+  for (let node = target?.closest('details'); node; node = node.parentElement?.closest('details')) node.open = true;
+  return target;
+}
+
+/** Resolves once the page has stopped growing for half a second of frames, or after four seconds: embedded stories and code blocks settle late. */
+function untilSettled() {
+  return new Promise((done) => {
+    const limit = performance.now() + 4000;
+    let height = document.documentElement.scrollHeight;
+    let steady = 0;
+    const frame = () => {
+      const next = document.documentElement.scrollHeight;
+      steady = next === height ? steady + 1 : 0;
+      height = next;
+      if (steady >= 30 || performance.now() > limit) done();
+      else requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+}
+
+/**
+ * Opens the part or type the address names and scrolls to it. What is above it keeps growing for a moment, which moves it away, so
+ * it scrolls again once the page has settled, unless the reader has scrolled or pressed a key in the meantime.
+ */
+function showFragment() {
+  const id = fragmentId();
+  const target = reveal(id);
+  if (target === null) return;
+  target.scrollIntoView();
+  let moved = false;
+  const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+  const stop = () => { moved = true; };
+  for (const type of events) window.addEventListener(type, stop, { once: true, passive: true });
+  untilSettled().then(() => {
+    for (const type of events) window.removeEventListener(type, stop);
+    if (!moved && fragmentId() === id) reveal(id)?.scrollIntoView();
+  });
 }
 
 function TypeDeclaration({ type }) {
@@ -323,7 +370,20 @@ function TypedReference({ typed }) {
   const hasNever = typed.exports.some((exported) => exported.kind === 'component' && exported.parts.some(usesNever));
   const components = typed.exports.filter(({ kind }) => kind === 'component');
   const others = typed.exports.filter(({ kind }) => kind === 'function' || kind === 'value');
-  React.useEffect(() => reveal(decodeURIComponent(window.location.hash.slice(1))), []);
+  React.useEffect(() => {
+    // A page opened at a fragment, a link, and Back and Forward (a fragment change or a page restored from the cache) all end at the target, opened.
+    showFragment();
+    const onPageShow = (event) => { if (event.persisted) showFragment(); };
+    window.addEventListener('hashchange', showFragment);
+    window.addEventListener('popstate', showFragment);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      window.removeEventListener('hashchange', showFragment);
+      window.removeEventListener('popstate', showFragment);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, []);
+  // Following a link to the fragment the address already has changes no hash, so no event fires: opening is all the click needs.
   const follow = (event) => {
     const link = event.target.closest('a[href^="#"]');
     if (link) reveal(decodeURIComponent(link.hash.slice(1)));
