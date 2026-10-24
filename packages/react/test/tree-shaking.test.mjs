@@ -283,7 +283,10 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
 // forwardRef call that survives is one a bundler must keep: an unmarked construction, or the Object.freeze that holds the parts.
 // Using the family instead keeps every constructor it builds, which shows the count reads the emitted spelling and that the family was
 // bundled at all, so a skipped or externalised module cannot pass the first check by being empty. The number is the family's forwardRef calls.
+// A family that imports a module still unmarked (Button) keeps that module's constructor too in this copy, so an optional
+// fourth entry names those imports, and their bare constructors are counted first and added to both expectations.
 const annotatedFamilies = [
+  ['card', 'Card', 5, ['button']],
   ['button-group', 'ButtonGroup', 1],
   ['color-mode-toggle', 'ColorModeToggle', 1],
   ['progress-circle', 'ProgressCircle', 4],
@@ -312,9 +315,10 @@ test('a bundle that uses nothing from a TypeScript supplemental family keeps non
       const code = [bundle].flat().flatMap(({ output }) => output).filter(({ type }) => type === 'chunk').map((chunk) => chunk.code).join('\n');
       return code.match(/forwardRef\(/gu)?.length ?? 0;
     };
-    for (const [module, name, constructors] of annotatedFamilies) {
-      assert.equal(await retainedConstructors(`import './${module}.js';\nexport const sentinel = 1;\n`), 0, `${name} keeps a forwardRef call nothing uses`);
-      assert.equal(await retainedConstructors(`export { ${name} } from './${module}.js';\n`), constructors, `${name} keeps the forwardRef calls it uses`);
+    for (const [module, name, constructors, imports = []] of annotatedFamilies) {
+      const imported = await retainedConstructors(`${imports.map((file) => `import './${file}.js';\n`).join('')}export const sentinel = 1;\n`);
+      assert.equal(await retainedConstructors(`import './${module}.js';\nexport const sentinel = 1;\n`), imported, `${name} keeps a forwardRef call nothing uses`);
+      assert.equal(await retainedConstructors(`export { ${name} } from './${module}.js';\n`), imported + constructors, `${name} keeps the forwardRef calls it uses`);
     }
   } finally {
     rmSync(directory, { recursive: true, force: true });

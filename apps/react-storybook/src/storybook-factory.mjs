@@ -83,7 +83,11 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
  */
 // Menu's adapter renders its popup, list, and submenu from the root's args: the geometry and modality go to Menu.Popup, the items to
 // Menu.List, and the delay to Menu.Submenu. The trigger, item, and section are children the stories compose themselves.
-export const STORY_API_PARTS = Object.freeze({ Menu: Object.freeze(['popup', 'list', 'submenu']) });
+// Card's adapter routes selected, pending, disabled, and activation to the Card.Button it renders beside the static root.
+export const STORY_API_PARTS = Object.freeze({
+  Menu: Object.freeze(['popup', 'list', 'submenu']),
+  Card: Object.freeze(['button']),
+});
 
 /**
  * The catalog blocks the stories read, root first: the binding's root API, then each part `parts` names for its

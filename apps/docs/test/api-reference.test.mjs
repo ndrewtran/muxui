@@ -182,15 +182,20 @@ test('a default shows only where it applies: executed for a derived family, auth
 });
 
 test('an authored family gives a catalog fact to the root that declares it, else to the only part that does, and borrows none across parts', () => {
-	const api = page('card');
-	const [root, button] = ['Card.Root', 'Card.Button'].map((heading) => partNamed(api, heading));
-	// variant is declared by both Root and Button, and the catalog's default belongs to the root.
-	assert.deepEqual(rowNamed(root, 'variant').default, { text: "'outlined'", authored: true });
-	assert.equal('default' in rowNamed(button, 'variant'), false);
-	// disabled is declared by Button alone, so it takes the catalog's false, and so does the event the catalog names for it.
-	assert.deepEqual(rowNamed(button, 'disabled').default, { text: 'false', authored: true });
-	assert.equal(rowNamed(button, 'onActivate').event, 'activate');
-	assert.equal(rowNamed(root, 'variant').event, undefined);
+	const [root, item] = ['MultiSelect.Root', 'MultiSelect.Item'].map((heading) => partNamed(page('multi-select'), heading));
+	// disabled is declared by both Root and Item, and the catalog's default belongs to the root.
+	assert.deepEqual(rowNamed(root, 'disabled').default, { text: 'false', authored: true });
+	assert.equal('default' in rowNamed(item, 'disabled'), false);
+	// onSelectionChange is the root's, so the root's row names the catalog event and no other row does.
+	assert.equal(rowNamed(root, 'onSelectionChange').event, 'selectionChange');
+	assert.equal(rowNamed(root, 'disabled').event, undefined);
+	// dismissable is declared by Backdrop alone, so it takes the catalog's true.
+	const palette = page('command-palette');
+	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Backdrop'), 'dismissable').default, { text: 'true', authored: true });
+	// disabled is declared by four parts and not by the root, so none of them borrows the catalog's false, nor its activate event.
+	const trigger = partNamed(palette, 'CommandPalette.Trigger');
+	assert.equal('default' in rowNamed(trigger, 'disabled'), false);
+	assert.equal(rowNamed(trigger, 'onActivate').event, undefined);
 	// A derived family's part has the defaults of its own partApis entry.
 	const select = page('select');
 	assert.ok(rowsOf(partNamed(select, 'Select.Root')).some((row) => row.default !== undefined && !row.default.authored));

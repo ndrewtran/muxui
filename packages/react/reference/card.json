@@ -2,14 +2,14 @@
   "schema": "muxui-declaration-reference-v1",
   "owner": "card",
   "sources": {
-    "part-utils": "packages/react/src/supplemental/part-utils.ts",
-    "supplemental": "packages/react/src/supplemental/index.d.ts"
+    "card": "packages/react/src/supplemental/card.ts",
+    "part-utils": "packages/react/src/supplemental/part-utils.ts"
   },
   "exports": [
     {
       "name": "Card",
       "entry": ".",
-      "module": "supplemental",
+      "module": "card",
       "kind": "component",
       "parts": [
         {
@@ -21,14 +21,16 @@
               "optional": true,
               "type": "CardVariant",
               "values": ["elevated", "outlined", "filled"],
-              "refs": ["supplemental#CardVariant"]
+              "refs": ["card#CardVariant"],
+              "doc": "The card's surface: raised, outlined or filled."
             },
             {
               "name": "padding",
               "optional": true,
               "type": "CardPadding",
               "values": ["sm", "md", "lg"],
-              "refs": ["supplemental#CardPadding"]
+              "refs": ["card#CardPadding"],
+              "doc": "The space inside the card."
             }
           ],
           "ref": { "type": "HTMLDivElement" },
@@ -40,30 +42,48 @@
           "member": "Button",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            {
-              "name": "onActivate",
-              "optional": true,
-              "type": "(event: SupplementalActivation) => void",
-              "refs": ["part-utils#SupplementalActivation"]
-            },
             { "name": "className", "optional": true, "type": "string" },
             {
               "name": "variant",
               "optional": true,
               "type": "CardVariant",
               "values": ["elevated", "outlined", "filled"],
-              "refs": ["supplemental#CardVariant"]
+              "refs": ["card#CardVariant"],
+              "doc": "The card's surface: raised, outlined or filled."
             },
             {
               "name": "padding",
               "optional": true,
               "type": "CardPadding",
               "values": ["sm", "md", "lg"],
-              "refs": ["supplemental#CardPadding"]
+              "refs": ["card#CardPadding"],
+              "doc": "The space inside the card."
             },
-            { "name": "selected", "optional": true, "type": "boolean" },
-            { "name": "pending", "optional": true, "type": "boolean" }
+            {
+              "name": "selected",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the card as the chosen one, as aria-pressed."
+            },
+            {
+              "name": "pending",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the card busy: it ignores presses until the work finishes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the card disabled."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: SupplementalActivation) => void",
+              "refs": ["part-utils#SupplementalActivation"],
+              "doc": "Called when the card is pressed."
+            }
           ],
           "ref": { "type": "HTMLButtonElement" },
           "natives": [
@@ -108,6 +128,167 @@
   ],
   "types": [
     {
+      "id": "card#CardBodyProps",
+      "name": "CardBodyProps",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardBodyProps" }
+      ],
+      "owner": "card",
+      "text": "type CardBodyProps = PartProps<HTMLDivElement>;",
+      "refs": ["part-utils#PartProps"]
+    },
+    {
+      "id": "card#CardButtonOwnProps",
+      "name": "CardButtonOwnProps",
+      "module": "card",
+      "text": "type CardButtonOwnProps = {\n  variant?: CardVariant;\n  padding?: CardPadding;\n  selected?: boolean;\n  pending?: boolean;\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n};",
+      "members": [
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "CardVariant",
+          "values": ["elevated", "outlined", "filled"],
+          "refs": ["card#CardVariant"],
+          "doc": "The card's surface: raised, outlined or filled."
+        },
+        {
+          "name": "padding",
+          "optional": true,
+          "type": "CardPadding",
+          "values": ["sm", "md", "lg"],
+          "refs": ["card#CardPadding"],
+          "doc": "The space inside the card."
+        },
+        {
+          "name": "selected",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the card as the chosen one, as aria-pressed."
+        },
+        {
+          "name": "pending",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the card busy: it ignores presses until the work finishes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the card disabled."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: SupplementalActivation) => void",
+          "refs": ["part-utils#SupplementalActivation"],
+          "doc": "Called when the card is pressed."
+        }
+      ],
+      "refs": ["card#CardVariant", "card#CardPadding", "part-utils#SupplementalActivation"]
+    },
+    {
+      "id": "card#CardButtonProps",
+      "name": "CardButtonProps",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardButtonProps" }
+      ],
+      "owner": "card",
+      "text": "type CardButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  className?: string;\n} & CardButtonOwnProps;",
+      "refs": ["card#CardButtonOwnProps"]
+    },
+    {
+      "id": "card#CardFooterProps",
+      "name": "CardFooterProps",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardFooterProps" }
+      ],
+      "owner": "card",
+      "text": "type CardFooterProps = PartProps<HTMLDivElement>;",
+      "refs": ["part-utils#PartProps"]
+    },
+    {
+      "id": "card#CardHeaderProps",
+      "name": "CardHeaderProps",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardHeaderProps" }
+      ],
+      "owner": "card",
+      "text": "type CardHeaderProps = PartProps<HTMLDivElement>;",
+      "refs": ["part-utils#PartProps"]
+    },
+    {
+      "id": "card#CardOwnProps",
+      "name": "CardOwnProps",
+      "module": "card",
+      "text": "type CardOwnProps = {\n  variant?: CardVariant;\n  padding?: CardPadding;\n};",
+      "members": [
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "CardVariant",
+          "values": ["elevated", "outlined", "filled"],
+          "refs": ["card#CardVariant"],
+          "doc": "The card's surface: raised, outlined or filled."
+        },
+        {
+          "name": "padding",
+          "optional": true,
+          "type": "CardPadding",
+          "values": ["sm", "md", "lg"],
+          "refs": ["card#CardPadding"],
+          "doc": "The space inside the card."
+        }
+      ],
+      "refs": ["card#CardVariant", "card#CardPadding"]
+    },
+    {
+      "id": "card#CardPadding",
+      "name": "CardPadding",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardPadding" }
+      ],
+      "owner": "card",
+      "text": "type CardPadding = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "card#CardRootProps",
+      "name": "CardRootProps",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardRootProps" }
+      ],
+      "owner": "card",
+      "text": "type CardRootProps = React.HTMLAttributes<HTMLDivElement> & CardOwnProps;",
+      "refs": ["card#CardOwnProps"]
+    },
+    {
+      "id": "card#CardVariant",
+      "name": "CardVariant",
+      "module": "card",
+      "public": [
+        { "entry": ".", "name": "CardVariant" }
+      ],
+      "owner": "card",
+      "text": "type CardVariant = 'elevated' | 'outlined' | 'filled';",
+      "values": ["elevated", "outlined", "filled"]
+    },
+    {
+      "id": "part-utils#PartProps",
+      "name": "PartProps",
+      "module": "part-utils",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
       "id": "part-utils#SupplementalActivation",
       "name": "SupplementalActivation",
       "module": "part-utils",
@@ -125,131 +306,6 @@
         { "name": "pointerType", "optional": true, "type": "string" },
         { "name": "target", "optional": true, "type": "EventTarget | null" }
       ]
-    },
-    {
-      "id": "supplemental#ButtonPartProps",
-      "name": "ButtonPartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "ButtonPartProps" }
-      ],
-      "owner": "button",
-      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
-      "refs": ["part-utils#SupplementalActivation"]
-    },
-    {
-      "id": "supplemental#CardBodyProps",
-      "name": "CardBodyProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardBodyProps" }
-      ],
-      "owner": "card",
-      "text": "type CardBodyProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
-    },
-    {
-      "id": "supplemental#CardButtonProps",
-      "name": "CardButtonProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardButtonProps" }
-      ],
-      "owner": "card",
-      "extends": [
-        {
-          "type": "ButtonPartProps",
-          "refs": ["supplemental#ButtonPartProps"]
-        }
-      ],
-      "text": "type CardButtonProps = ButtonPartProps & {\n  variant?: CardVariant;\n  padding?: CardPadding;\n  selected?: boolean;\n  pending?: boolean;\n};",
-      "members": [
-        {
-          "name": "variant",
-          "optional": true,
-          "type": "CardVariant",
-          "values": ["elevated", "outlined", "filled"],
-          "refs": ["supplemental#CardVariant"]
-        },
-        {
-          "name": "padding",
-          "optional": true,
-          "type": "CardPadding",
-          "values": ["sm", "md", "lg"],
-          "refs": ["supplemental#CardPadding"]
-        },
-        { "name": "selected", "optional": true, "type": "boolean" },
-        { "name": "pending", "optional": true, "type": "boolean" }
-      ],
-      "refs": ["supplemental#ButtonPartProps", "supplemental#CardVariant", "supplemental#CardPadding"]
-    },
-    {
-      "id": "supplemental#CardFooterProps",
-      "name": "CardFooterProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardFooterProps" }
-      ],
-      "owner": "card",
-      "text": "type CardFooterProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
-    },
-    {
-      "id": "supplemental#CardHeaderProps",
-      "name": "CardHeaderProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardHeaderProps" }
-      ],
-      "owner": "card",
-      "text": "type CardHeaderProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
-    },
-    {
-      "id": "supplemental#CardPadding",
-      "name": "CardPadding",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardPadding" }
-      ],
-      "owner": "card",
-      "text": "type CardPadding = 'sm' | 'md' | 'lg';",
-      "values": ["sm", "md", "lg"]
-    },
-    {
-      "id": "supplemental#CardRootProps",
-      "name": "CardRootProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardRootProps" }
-      ],
-      "owner": "card",
-      "text": "type CardRootProps = React.HTMLAttributes<HTMLDivElement> & {\n  variant?: CardVariant;\n  padding?: CardPadding;\n};",
-      "refs": ["supplemental#CardVariant", "supplemental#CardPadding"]
-    },
-    {
-      "id": "supplemental#CardVariant",
-      "name": "CardVariant",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "CardVariant" }
-      ],
-      "owner": "card",
-      "text": "type CardVariant = 'elevated' | 'outlined' | 'filled';",
-      "values": ["elevated", "outlined", "filled"]
-    },
-    {
-      "id": "supplemental#PartProps",
-      "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
-      "typeParameters": [
-        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
-      ],
-      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     }
   ]
 }

@@ -257,10 +257,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 76 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 77 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 76, parts: 93, props: 659, events: 105, types: 136, references: 136 });
+  assert.deepEqual(result.counts, { families: 77, parts: 95, props: 666, events: 106, types: 139, references: 139 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -292,17 +292,15 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['alert-dialog', 'card', 'command-palette', 'header-nav', 'multi-select', 'sidebar', 'tag-select', 'text'];
+const AUTHORED = ['alert-dialog', 'command-palette', 'header-nav', 'multi-select', 'sidebar', 'tag-select', 'text'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 8 families whose web.react API is still authored list prop names only. Each name is owned by the one part
-// that declares it; these 25 are not, and the table says why and where they are carried instead. The table is
+// The 7 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// that declares it; these 23 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
   'alert-dialog.disabled': { parts: ['Trigger', 'Close'] },
   'alert-dialog.onActivate': { parts: ['Trigger', 'Close'] },
-  'card.variant': { parts: ['Root', 'Button'] },
-  'card.padding': { parts: ['Root', 'Button'] },
   'command-palette.closeOnSelect': { parts: ['Root', 'Item'] },
   'command-palette.disabled': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
   'command-palette.onActivate': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
@@ -329,25 +327,25 @@ const AUTHORED_OWNERS = {
 // families still authored list every one of theirs, so nothing is here; a family that needs it gets an entry.
 const UNLISTED_EVENTS = new Set();
 
-test('every prop of the 8 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 7 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 8, props: 101, unique: 76, listed: 25, events: 16 });
+  assert.deepEqual(result.counts, { families: 7, props: 95, unique: 72, listed: 23, events: 15 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });
 
 test('the authored owner table can fail: a wrong part list, a native claim nothing carries, a hook that does not declare it, a stale entry, an event wrongly or no longer unlisted', () => {
   const check = (table, unlisted = UNLISTED_EVENTS) => crossCheckAuthored({ files, table, authored: AUTHORED, unlistedEvents: unlisted }).problems;
-  assert.match(check({ ...AUTHORED_OWNERS, 'card.variant': { parts: ['Root'] } }).join('\n'), /card\.variant: declared by Root, Button, the table says Root/u);
+  assert.match(check({ ...AUTHORED_OWNERS, 'multi-select.disabled': { parts: ['Root'] } }).join('\n'), /multi-select\.disabled: declared by Root, Item, the table says Root/u);
   assert.match(check({ ...AUTHORED_OWNERS, 'header-nav.aria-label': { native: 'NoSuchPart' } }).join('\n'), /header-nav\.aria-label: NoSuchPart has no native attribute envelope that carries it/u);
   assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.commands': { hook: 'useCommandPalette', type: 'UseCommandPaletteReturn' } }).join('\n'), /command-palette\.commands: useCommandPalette \(UseCommandPaletteReturn\) does not declare it/u);
-  assert.match(check({ ...AUTHORED_OWNERS, 'card.gone': { parts: ['Root'] } }).join('\n'), /card\.gone: the table lists a prop the catalog no longer has/u);
+  assert.match(check({ ...AUTHORED_OWNERS, 'multi-select.gone': { parts: ['Root'] } }).join('\n'), /multi-select\.gone: the table lists a prop the catalog no longer has/u);
   const without = { ...AUTHORED_OWNERS };
   delete without['sidebar.items'];
   assert.match(check(without).join('\n'), /sidebar\.items: declared by NavItem, AccountMenu and the table does not say why/u);
-  assert.match(check(AUTHORED_OWNERS, new Set(['card.activate'])).join('\n'), /card\.activate: the props list onActivate, against/u);
-  assert.match(check(AUTHORED_OWNERS, new Set(['card.gone'])).join('\n'), /card\.gone: listed as an unlisted event the catalog no longer has/u);
+  assert.match(check(AUTHORED_OWNERS, new Set(['multi-select.selectionChange'])).join('\n'), /multi-select\.selectionChange: the props list onSelectionChange, against/u);
+  assert.match(check(AUTHORED_OWNERS, new Set(['multi-select.gone'])).join('\n'), /multi-select\.gone: listed as an unlisted event the catalog no longer has/u);
 });
 
 // ---- 5. the compiler ------------------------------------------------------------------------------

@@ -334,7 +334,7 @@ test('storyApi folds the parts the adapter names into the root\'s API and leaves
   // The binding it read from is untouched.
   assert.deepEqual(binding.api.props, ['open', 'placement']);
   // Every part the shipped table names exists in that family's partApis, so a renamed part cannot leave a stale entry.
-  const byFamily = new Map(descriptor.bindings.map((entry) => [entry.export, entry]));
+  const byFamily = new Map(descriptorSource.bindings.map((entry) => [entry.export, entry]));
   for (const [family, parts] of Object.entries(STORY_API_PARTS)) {
     assert.ok(byFamily.has(family), `${family} is a family`);
     for (const part of parts) assert.ok(byFamily.get(family).api.partApis?.[part] !== undefined, `${family} has a ${part} part API`);
@@ -464,7 +464,7 @@ function currentRecord(family) {
 const overlayTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/overlays.d.ts'), 'utf8');
 // Truncated image data: the browser fires an error event instead of loading it.
 const AVATAR_FAILING_SRC = 'data:image/png;base64,AAAA';
-const supplementalTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/supplemental.d.ts'), 'utf8');
+const cardTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/card.d.ts'), 'utf8');
 const selectNativeTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/select-native.d.ts'), 'utf8');
 
 /** The string members of an exported union, read from the generated public declarations. */
@@ -921,8 +921,8 @@ test('controls offer only what the public types admit and match their value kind
   for (const family of ['GridList', 'ListBox', 'Table', 'Tree']) {
     assert.deepEqual(controls(family).selectionMode.options, ['none', 'single', 'multiple'], family);
   }
-  assert.deepEqual(controls('Card').variant.options, declaredUnion(supplementalTypes, 'CardVariant'));
-  assert.deepEqual(controls('Card').padding.options, declaredUnion(supplementalTypes, 'CardPadding'));
+  assert.deepEqual(controls('Card').variant.options, declaredUnion(cardTypes, 'CardVariant'));
+  assert.deepEqual(controls('Card').padding.options, declaredUnion(cardTypes, 'CardPadding'));
   // A color value is a string, not a collection.
   for (const family of ['ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatchPicker', 'ColorWheel']) {
     assert.equal(controls(family).value.control, 'text', family);
@@ -1003,8 +1003,8 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
 
 test('Card routes variant and padding to both roots and selection, pending, disabled, and activation to Card.Button', async () => {
   const cards = (args) => [...new JSDOM(renderToStaticMarkup(renderFamily('Card', args))).window.document.querySelectorAll('.muxui-card')];
-  for (const variant of declaredUnion(supplementalTypes, 'CardVariant')) {
-    for (const padding of declaredUnion(supplementalTypes, 'CardPadding')) {
+  for (const variant of declaredUnion(cardTypes, 'CardVariant')) {
+    for (const padding of declaredUnion(cardTypes, 'CardPadding')) {
       const [staticCard, interactive] = cards({ variant, padding });
       for (const card of [staticCard, interactive]) {
         assert.ok(card.classList.contains(`muxui-card--${variant}`) && card.classList.contains(`muxui-card--${padding}`), `${variant}/${padding}`);

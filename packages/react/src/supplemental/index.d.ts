@@ -41,21 +41,6 @@ export declare const AlertDialog: {
   Close: React.ForwardRefExoticComponent<AlertDialogCloseProps & React.RefAttributes<HTMLButtonElement>>;
 };
 
-export type CardVariant = 'elevated' | 'outlined' | 'filled';
-export type CardPadding = 'sm' | 'md' | 'lg';
-export type CardRootProps = React.HTMLAttributes<HTMLDivElement> & { variant?: CardVariant; padding?: CardPadding };
-export type CardButtonProps = ButtonPartProps & { variant?: CardVariant; padding?: CardPadding; selected?: boolean; pending?: boolean };
-export type CardHeaderProps = PartProps<HTMLDivElement>;
-export type CardBodyProps = PartProps<HTMLDivElement>;
-export type CardFooterProps = PartProps<HTMLDivElement>;
-export declare const Card: {
-  Root: React.ForwardRefExoticComponent<CardRootProps & React.RefAttributes<HTMLDivElement>>;
-  Button: React.ForwardRefExoticComponent<CardButtonProps & React.RefAttributes<HTMLButtonElement>>;
-  Header: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Body: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Footer: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-};
-
 export type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; size?: 'sm' | 'md' | 'lg'; closeOnSelect?: boolean };
 export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; target?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
 export interface CommandPaletteCommand {

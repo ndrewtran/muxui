@@ -1,0 +1,262 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/card.ts",
+  "component": "muxui:component:card",
+  "binding": "web.react",
+  "export": "Card",
+  "api": {
+    "props": [
+      "variant",
+      "padding"
+    ],
+    "events": [],
+    "defaults": {
+      "variant": "outlined",
+      "padding": "md"
+    },
+    "propDetails": {
+      "variant": {
+        "type": {
+          "kind": "reference",
+          "name": "CardVariant"
+        },
+        "required": false,
+        "enum": [
+          "elevated",
+          "outlined",
+          "filled"
+        ],
+        "description": "The card's surface: raised, outlined or filled."
+      },
+      "padding": {
+        "type": {
+          "kind": "reference",
+          "name": "CardPadding"
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The space inside the card."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "CardPadding": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        }
+      },
+      "CardVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "elevated"
+            },
+            {
+              "kind": "literal",
+              "value": "outlined"
+            },
+            {
+              "kind": "literal",
+              "value": "filled"
+            }
+          ]
+        }
+      }
+    },
+    "partApis": {
+      "button": {
+        "member": "Button",
+        "props": [
+          "variant",
+          "padding",
+          "selected",
+          "pending",
+          "disabled"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {
+          "variant": "outlined",
+          "padding": "md",
+          "pending": false,
+          "disabled": false
+        },
+        "propDetails": {
+          "variant": {
+            "type": {
+              "kind": "reference",
+              "name": "CardVariant"
+            },
+            "required": false,
+            "enum": [
+              "elevated",
+              "outlined",
+              "filled"
+            ],
+            "description": "The card's surface: raised, outlined or filled."
+          },
+          "padding": {
+            "type": {
+              "kind": "reference",
+              "name": "CardPadding"
+            },
+            "required": false,
+            "enum": [
+              "sm",
+              "md",
+              "lg"
+            ],
+            "description": "The space inside the card."
+          },
+          "selected": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the card as the chosen one, as aria-pressed."
+          },
+          "pending": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the card busy: it ignores presses until the work finishes."
+          },
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the card disabled."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "reference",
+                    "name": "SupplementalActivation"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the card is pressed."
+          }
+        },
+        "types": {
+          "CardPadding": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "sm"
+                },
+                {
+                  "kind": "literal",
+                  "value": "md"
+                },
+                {
+                  "kind": "literal",
+                  "value": "lg"
+                }
+              ]
+            }
+          },
+          "CardVariant": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "elevated"
+                },
+                {
+                  "kind": "literal",
+                  "value": "outlined"
+                },
+                {
+                  "kind": "literal",
+                  "value": "filled"
+                }
+              ]
+            }
+          },
+          "SupplementalActivation": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "activate"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "pointerType",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "target",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "host",
+                        "name": "EventTarget"
+                      },
+                      {
+                        "kind": "null"
+                      }
+                    ]
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The activation a press reports: the pointer and target of the event that caused it."
+          }
+        }
+      }
+    }
+  }
+}

@@ -107,6 +107,8 @@ const audited = [
       ...expand(['progress-circle'], ['value', 'minValue', 'maxValue']),
       // InputTags sent isDisabled and isInvalid to React Aria's Group as its own values, false when omitted, before the move.
       ...expand(['input-tags'], ['disabled', 'invalid']),
+      // Card.Button sent isDisabled and isPending to React Aria's Button as its own booleans, false when omitted, before the move, so a ButtonContext never supplied them.
+      ...expand(['card.button'], ['disabled', 'pending']),
     ],
   },
   {

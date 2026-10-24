@@ -188,6 +188,7 @@ const GUIDES = {
   input: { native: ['name', 'type', 'placeholder'] },
   // rows, maxLength, placeholder, onKeyDown and name are the native attributes and handlers TextArea.TextArea takes; the root owns none of them.
   'text-area': { native: ['rows', 'maxLength', 'placeholder', 'onKeyDown', 'name'] },
+  card: {},
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.

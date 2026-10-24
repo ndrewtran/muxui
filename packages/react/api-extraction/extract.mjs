@@ -74,7 +74,8 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
  * PromptComposer's inputProps declares, Set<string> for the selected item ids of TagGroup, and
  * Record<string, React.ReactNode> for the cell values of a Table row, and AbortSignal with Promise<unknown>
- * for the signal and the result of TextEditor's selection request.
+ * for the signal and the result of TextEditor's selection request, and EventTarget for the target
+ * of a supplemental part's activation.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -118,6 +119,8 @@ export const HOST_ALLOWLIST = Object.freeze([
   // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns, whose result the editor ignores. Promise<unknown> is read only as a callback's return.
   'AbortSignal',
   hostApplication('Promise', { kind: 'unknown' }),
+  // The target of the press a supplemental part's onActivate reports (SupplementalActivation), which is any event target to the type.
+  'EventTarget',
 ]);
 
 // A namespace or wildcard would admit every type under it.

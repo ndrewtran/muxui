@@ -11,7 +11,6 @@ import { JSDOM } from 'jsdom';
 import { parseAst } from 'vite';
 import {
   AlertDialog,
-  Card,
   CommandPalette,
   HeaderNav,
   MultiSelect,
@@ -20,6 +19,7 @@ import {
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
+import { Card } from '../src/supplemental/card.ts';
 import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
 import { Input } from '../src/supplemental/input.ts';

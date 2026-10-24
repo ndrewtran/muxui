@@ -751,6 +751,8 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns.
   assert.deepEqual(reached.get('AbortSignal'), ['text-editor.json'], 'the signal of a selection request');
   assert.deepEqual(reached.get(hostEntryKey(host('Promise', { kind: 'unknown' }))), ['text-editor.json'], 'the result of a selection request handler');
+  // The target of a supplemental part's activation, which SupplementalActivation types as any event target.
+  assert.deepEqual(reached.get('EventTarget'), ['card.json'], 'the target of a Card.Button activation');
 });
 
 const omitInputAttributes = (names, element = 'HTMLInputElement') => `Omit<React.InputHTMLAttributes<${element}>, ${names.map((name) => `'${name}'`).join(' | ')}>`;

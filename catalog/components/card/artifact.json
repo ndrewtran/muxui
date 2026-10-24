@@ -45,32 +45,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "variant",
-          "padding",
-          "selected",
-          "pending",
-          "disabled",
-          "onActivate"
-        ],
-        "events": [
-          "activate"
-        ],
-        "parts": [
-          "root",
-          "button",
-          "header",
-          "body",
-          "footer"
-        ],
-        "defaults": {
-          "variant": "outlined",
-          "padding": "md",
-          "disabled": false,
-          "pending": false
-        }
-      },
       "behavior": [
         "Card.Root is a static div.",
         "Card.Button is the interactive alternate root: a button that makes the whole card one control.",

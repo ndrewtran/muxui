@@ -236,6 +236,11 @@ const ariaNumber = (doc, attribute) => {
   const text = doc.querySelector(`[${attribute}]`)?.getAttribute(attribute);
   return text === undefined ? null : Number(text);
 };
+// Card names its variant and padding in the class modifiers of its surface, which a part's scope selects and the root's markup holds.
+const cardLook = (container, values) => {
+  const card = container.matches?.('.muxui-card') ? container : container.querySelector('.muxui-card');
+  return card === null ? undefined : values.find((value) => card.classList.contains(`muxui-card--${value}`));
+};
 const markupValues = {
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
@@ -248,7 +253,8 @@ const markupValues = {
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
   tagPlacement: (doc) => (doc.querySelector('.muxui-input-tags--below') === null ? 'inline' : 'below'),
@@ -300,6 +306,7 @@ const minimalRenders = {
   Tree: () => treeOf(),
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
+  Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
   InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),
   PaymentInput: () => h(generated.PaymentInput.Root, { 'aria-label': 'Card number' }, h(generated.PaymentInput.Group, null, h(generated.PaymentInput.Input), h(generated.PaymentInput.CardIcon))),
@@ -315,6 +322,8 @@ const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
+  // Card.Button is the card as one control: its own variant and padding show in its class, and its disabled and pending flags on the button.
+  'Card.button': { scope: 'button', render: () => h(generated.Card.Button, null, 'Select') },
   'ListBox.item': { scope: '[role="option"]', render: () => h(generated.ListBox, { 'aria-label': 'Options' }, h(generated.ListBox.Item, { id: 'one' }, 'One')) },
   'Menu.trigger': { scope: 'button', render: () => menuRoot() },
   'Menu.list': { scope: '[role="menu"]', render: () => h(generated.Menu.List, { 'aria-label': 'Actions', items: ['One'] }) },

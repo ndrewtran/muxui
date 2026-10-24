@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:34580a3c38a82c67427f8bc64717a680f67f81650cddd39a71c98917200dccbe -->
+<!-- @generated-content-sha256: sha256:592d89dc4b0c948f823d4e5c282fdbcc3b6fdb52376cb3e09227d2cb8c4e8224 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -110,7 +110,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, role |
 | Calendar | experimental | . | .muxui-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
-| Card | experimental | . | .muxui-card | variant, padding, selected, pending, disabled, onActivate |
+| Card | experimental | . | .muxui-card | variant, padding; button: variant, padding, selected, pending, disabled |
 | Checkbox | experimental | . | .muxui-checkbox | checked, defaultChecked, disabled, size, indeterminate, name, required, value, invalid |
 | CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, disabled, invalid, required, readOnly, size; button: disabled |
 | CheckboxGroup | experimental | . | .muxui-checkbox-group | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, name, orientation, size |

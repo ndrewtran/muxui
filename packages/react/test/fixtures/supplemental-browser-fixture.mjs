@@ -1,13 +1,13 @@
 import React from 'react';
 import {
   AlertDialog,
-  Card,
   CommandPalette,
   HeaderNav,
   MultiSelect,
   Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
+import { Card } from '../../src/supplemental/card.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
 

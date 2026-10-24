@@ -116,6 +116,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'checkbox-field', name: 'CheckboxField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/checkbox-field.ts' },
   { slug: 'radio-field', name: 'RadioField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/radio-field.ts' },
   { slug: 'switch-field', name: 'SwitchField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/switch-field.ts' },
+  // Card's root is Card.Root; Button owns the same two props and more, and Header, Body and Footer own none.
+  { slug: 'card', name: 'Card', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/card.ts' },
   // Input and TextArea are compounds whose Root owns the props; their other parts own none.
   { slug: 'input', name: 'Input', part: 'Root', source: 'packages/react/src/supplemental/input.ts' },
   { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },

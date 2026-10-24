@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../../src/button.ts';
-import { Card } from '../../src/supplemental/index.mjs';
+import { Card } from '../../src/supplemental/card.ts';
 
 // Forms with a pending submit Button or Card.Button for button.test.mjs. The page that loads
 // this module (and, for server markup, node) counts submissions in window.__submits by form id
