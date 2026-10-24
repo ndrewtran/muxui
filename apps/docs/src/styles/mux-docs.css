@@ -533,7 +533,8 @@ pre code {
 
 /* Typed API reference of a component page. The section is a size container: the tables are a real table where it is wide,
    two-line rows where it is middling, and stacked rows where it is narrow, whatever the viewport and sidebar leave it. */
-#api-reference { container: api-reference / inline-size; }
+#api-reference,
+#events { container: api-reference / inline-size; }
 
 .api-legend {
 	max-width: 50rem;
@@ -664,10 +665,13 @@ pre code {
 	font-size: var(--muxui-semantic-typography-text-l-font-size);
 }
 
+.api-part > summary h3 { min-width: 0; }
+
 .api-part > summary h3 code {
 	font-family: var(--muxui-semantic-typography-mono-font-family);
 	font-size: inherit;
 	color: var(--muxui-semantic-content-strong);
+	overflow-wrap: anywhere;
 }
 
 .api-meta {
@@ -763,7 +767,9 @@ pre code {
 .api-closing > th .api-name { font-weight: var(--muxui-semantic-typography-text-font-weight); }
 
 .api-authored {
+	display: inline-block;
 	margin-inline-start: var(--muxui-reference-dimension-space-2xs);
+	white-space: nowrap;
 	padding-inline: var(--muxui-reference-dimension-space-2xs);
 	border: 1px solid var(--muxui-semantic-border-default);
 	border-radius: var(--muxui-semantic-shape-option-radius);
@@ -785,10 +791,11 @@ pre code {
 .api-declaration {
 	margin: 0 0 var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-m);
 	padding: var(--muxui-reference-dimension-space-xs);
-	overflow-x: auto;
 	border: 1px solid var(--muxui-semantic-border-subtle);
 	border-radius: var(--muxui-semantic-shape-container-radius);
 	background: var(--muxui-semantic-surface-raised);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 .api-declaration-text a { color: var(--muxui-semantic-content-link); }
 
@@ -799,7 +806,7 @@ pre code {
 	.api-table thead, .api-events thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
 	.api-table tr.api-row {
 		display: grid;
-		grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) 7.5rem;
+		grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) 9rem;
 		gap: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-s);
 		padding-block: var(--muxui-reference-dimension-space-2xs);
 		border-block-end: 1px solid var(--muxui-semantic-border-subtle);
