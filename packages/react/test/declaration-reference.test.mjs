@@ -238,8 +238,10 @@ const EXPLAINED_DIFFERENCES = [
     .map((key) => `own-props-comment ${key}`),
   // Select's arms re-declare errorMessage with a comment of their own, so the declaration and the catalog say different things.
   'arm-comment select.errorMessage',
-  // A type parameter is recorded at its constraint (D3): the catalog writes Text's `as` as TextElement and MultiSelect's items as Iterable<MultiSelectItem>, and the declaration through the parameter T.
+  // A type parameter is recorded at its constraint (D3): the catalog writes Text's `as` as TextElement, MultiSelect's items as Iterable<MultiSelectItem> and TagSelect's as TagSelectItem[], and the declaration through the parameter T.
   'binder-constraint multi-select.items',
+  'binder-constraint tag-select.getItemLabel',
+  'binder-constraint tag-select.items',
   'binder-constraint text.as',
   // The catalog spells the lib type without its namespace; the model names it as the declaration does.
   'lib-namespace meter.formatOptions',
@@ -262,10 +264,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 82 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 83 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 82, parts: 114, props: 725, events: 117, types: 149, references: 149 });
+  assert.deepEqual(result.counts, { families: 83, parts: 116, props: 739, events: 118, types: 150, references: 150 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -297,11 +299,11 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['command-palette', 'tag-select'];
+const AUTHORED = ['command-palette'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 2 families whose web.react API is still authored list prop names only. Each name is owned by the one part
-// that declares it; these 16 are not, and the table says why and where they are carried instead. The table is
+// The 1 family whose web.react API is still authored lists prop names only. Each name is owned by the one part
+// that declares it; these 14 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
   'command-palette.closeOnSelect': { parts: ['Root', 'Item'] },
@@ -318,16 +320,15 @@ const AUTHORED_OWNERS = {
   'command-palette.onAction': hookOption('UseCommandPaletteOptions'),
   'command-palette.close': hookOption('UseCommandPaletteOptions'),
   'command-palette.onError': hookOption('UseCommandPaletteOptions'),
-  'tag-select.disabled': { parts: ['Root', 'Item'] },
 };
 // The channels whose `on` handler the catalog does not list among the props, because the root declares it. The
 // families still authored list every one of theirs, so nothing is here; a family that needs it gets an entry.
 const UNLISTED_EVENTS = new Set();
 
-test('every prop of the 2 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the authored family has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 2, props: 37, unique: 22, listed: 15, events: 5 });
+  assert.deepEqual(result.counts, { families: 1, props: 24, unique: 10, listed: 14, events: 4 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });

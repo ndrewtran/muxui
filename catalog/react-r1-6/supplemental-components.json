@@ -404,7 +404,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/tag-select.mjs",
+      "runtimeSource": "packages/react/src/supplemental/tag-select.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

@@ -131,6 +131,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'text', name: 'Text', source: 'packages/react/src/supplemental/text.ts' },
   // MultiSelect is generic over the item it lists; the root is Root, and Item owns disabled and textValue. Its other parts are rendered, not exported.
   { slug: 'multi-select', name: 'MultiSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/multi-select.ts' },
+  // TagSelect is generic over the item it lists in the same way; Item owns disabled and textValue.
+  { slug: 'tag-select', name: 'TagSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/tag-select.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

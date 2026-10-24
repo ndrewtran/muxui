@@ -115,6 +115,9 @@ const audited = [
       // MultiSelect.Root sent isDisabled to the Button that opens its list, and MultiSelect.Item sent it to its ListBoxItem, as their own booleans (false when omitted), before the move.
       ...expand(['multi-select'], ['disabled']),
       ...expand(['multi-select.item'], ['disabled']),
+      // TagSelect.Root sent isDisabled to its ComboBox and Group and isInvalid to the Group as its own booleans (false when omitted), and TagSelect.Item sent isDisabled to its ListBoxItem, before the move.
+      ...expand(['tag-select'], ['disabled', 'invalid']),
+      ...expand(['tag-select.item'], ['disabled']),
     ],
   },
   {
@@ -158,6 +161,8 @@ const audited = [
       ...expand(['sidebar.nav-button'], ['current']),
       // MultiSelect turns required and invalid into a status line, a description and data attributes of its own: aria-required is unsupported on the button that opens it, so React Aria receives neither.
       ...expand(['multi-select'], ['required', 'invalid']),
+      // TagSelect sends required to React Aria only as aria-required, never as isRequired, and filters its items into the list it gives the ListBox, so no React Aria context reaches either.
+      ...expand(['tag-select'], ['required', 'items']),
       // TextEditor renders its own contenteditable and buttons and sends React Aria no isDisabled, isReadOnly, isRequired, or isInvalid, so no React Aria context reaches its flags.
       ...expand(['text-editor'], ['disabled', 'readOnly', 'required', 'invalid']),
     ],

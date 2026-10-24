@@ -47,22 +47,23 @@ test('an owned TagSelect helper change reaches only TagSelect', () => {
 });
 
 test('the real TagSelect render factory change does not widen to MultiSelect', async () => {
-  const sourcePath = 'packages/react/src/supplemental/tag-select.mjs';
+  const sourcePath = 'packages/react/src/supplemental/tag-select.ts';
   const after = await readFile(path.join(repositoryRoot, sourcePath), 'utf8');
-  assert.equal((after.match(/slot: null,\n/gu) ?? []).length, 1, 'fixture must target the single approved TagSelect slot change');
-  const before = after.replace('slot: null,\n', '');
+  assert.equal((after.match(/slot: null as unknown as undefined,\n/gu) ?? []).length, 1, 'fixture must target the single approved TagSelect slot change');
+  const before = after.replace('slot: null as unknown as undefined,\n', '');
   // Each family declares itself in a module of its own, as the mapping records it.
-  const records = tagSelectAndMultiSelect.map((record) => ({ ...record, source: `packages/react/src/supplemental/${record.slug}.mjs` }));
+  const records = tagSelectAndMultiSelect.map((record) => ({ ...record, source: `packages/react/src/supplemental/${record.slug}.ts` }));
   const result = analyzeReactSourceChange({
     records,
     sourcePath,
     before,
     after,
-    moduleSources: { [sourcePath]: { before, after }, 'packages/react/src/supplemental/multi-select.mjs': 'export const MultiSelect = () => null;' },
+    moduleSources: { [sourcePath]: { before, after }, 'packages/react/src/supplemental/multi-select.ts': 'export const MultiSelect = () => null;' },
   });
 
+  // The compound is a frozen object built by a top-level call, which the analysis cannot own, so it names the change shared. The families it affects stay TagSelect's alone.
   assert.deepEqual(result.families, ['TagSelect']);
-  assert.equal(result.shared, false);
+  assert.match(result.reason, /^changed declarations are used by an unowned top-level side effect in packages\/react\/src\/supplemental\/tag-select\.ts$/u);
 });
 
 test('changed helper declarations select their reachable source families', () => {

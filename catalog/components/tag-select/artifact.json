@@ -48,47 +48,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "items",
-          "size",
-          "selectedKeys",
-          "defaultSelectedKeys",
-          "getItemLabel",
-          "label",
-          "placeholder",
-          "description",
-          "errorMessage",
-          "disabled",
-          "invalid",
-          "required",
-          "onSelectionChange"
-        ],
-        "events": [
-          "selectionChange"
-        ],
-        "parts": [
-          "root",
-          "label",
-          "combobox",
-          "group",
-          "tag",
-          "tag-text",
-          "tag-remove",
-          "input",
-          "listbox",
-          "item",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "size": "md",
-          "items": [],
-          "disabled": false,
-          "invalid": false,
-          "required": false
-        }
-      },
       "behavior": [
         "Filters unselected items, adds selected IDs, and removes tags without exposing upstream key types."
       ],

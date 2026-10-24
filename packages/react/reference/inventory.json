@@ -1173,31 +1173,26 @@
         { "name": "TagGroupItem", "kind": "type", "owner": "tag-group", "module": "tag-group" },
         { "name": "TagGroupProps", "kind": "type", "owner": "tag-group", "module": "tag-group" },
         { "name": "TagGroupVariant", "kind": "type", "owner": "tag-group", "module": "tag-group" },
-        { "name": "TagSelect", "kind": "value", "owner": "tag-select", "module": "supplemental" },
-        { "name": "TagSelectItem", "kind": "type", "owner": "tag-select", "module": "supplemental" },
+        { "name": "TagSelect", "kind": "value", "owner": "tag-select", "module": "tag-select" },
+        { "name": "TagSelectItem", "kind": "type", "owner": "tag-select", "module": "tag-select" },
         {
           "name": "TagSelectItemProps",
           "kind": "type",
           "owner": "tag-select",
-          "module": "supplemental"
+          "module": "tag-select"
         },
-        {
-          "name": "TagSelectProps",
-          "kind": "type",
-          "owner": "tag-select",
-          "module": "supplemental"
-        },
+        { "name": "TagSelectProps", "kind": "type", "owner": "tag-select", "module": "tag-select" },
         {
           "name": "TagSelectRootComponent",
           "kind": "type",
           "owner": "tag-select",
-          "module": "supplemental"
+          "module": "tag-select"
         },
         {
           "name": "TagSelectRootProps",
           "kind": "type",
           "owner": "tag-select",
-          "module": "supplemental"
+          "module": "tag-select"
         },
         { "name": "Text", "kind": "value", "owner": "text", "module": "text" },
         { "name": "TextArea", "kind": "value", "owner": "text-area", "module": "text-area" },

@@ -266,7 +266,7 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
   };
   // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
   const pure = String.raw`\/\*\s*[#@]__PURE__\s*\*\/`;
-  for (const [module, name] of [['command-palette', 'CommandPalette'], ['tag-select', 'TagSelect']]) {
+  for (const [module, name] of [['command-palette', 'CommandPalette']]) {
     assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} \\(\\(\\) => \\(\\{$`, 'mu'), `${module}: ${name}`);
   }
   for (const [module, name] of [['checkbox-field', 'CheckboxField'], ['radio-field', 'RadioField'], ['switch-field', 'SwitchField']]) {
@@ -298,6 +298,8 @@ const annotatedFamilies = [
   ['input-tags', 'InputTags', 1],
   // Two parts, and the constructor of the popover motion wrapper its list opens in, which is marked and so is kept only with it.
   ['multi-select', 'MultiSelect', 3],
+  // The same two parts and the popover motion wrapper, and the unmarked constructor of the IconButton its tags remove with.
+  ['tag-select', 'TagSelect', 3, ['icon-button']],
   ['payment-input', 'PaymentInput', 7],
   ['checkbox-field', 'CheckboxField', 5],
   ['switch-field', 'SwitchField', 5],
