@@ -86,6 +86,21 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
 export const STORY_API_PARTS = Object.freeze({ Menu: Object.freeze(['popup', 'list', 'submenu']) });
 
 /**
+ * The catalog blocks the stories read, root first: the binding's root API, then each part `parts` names for its
+ * family, with the part's key and the export member that renders it.
+ * @param {{ export: string, api: object }} binding
+ * @param {Readonly<Record<string, readonly string[]>>} [parts]
+ */
+export function storyApiBlocks(binding, parts = STORY_API_PARTS) {
+  const { api } = binding;
+  return [
+    { part: 'root', api },
+    ...(parts[binding.export] ?? []).filter((part) => api.partApis?.[part] !== undefined)
+      .map((part) => ({ part, member: api.partApis[part].member, api: api.partApis[part] })),
+  ];
+}
+
+/**
  * The props, events, defaults and details the stories read: the binding's root API, with the parts
  * `parts` names for its family folded in. A prop the root and a part both own keeps the root's
  * default and detail (the root comes first), and a prop or event listed by more than one is listed once.
@@ -94,9 +109,9 @@ export const STORY_API_PARTS = Object.freeze({ Menu: Object.freeze(['popup', 'li
  */
 export function storyApi(binding, parts = STORY_API_PARTS) {
   const { api } = binding;
-  const merged = (parts[binding.export] ?? []).filter((part) => api.partApis?.[part] !== undefined);
+  const [, ...merged] = storyApiBlocks(binding, parts);
   if (merged.length === 0) return api;
-  const blocks = [api, ...merged.map((part) => api.partApis[part])];
+  const blocks = [api, ...merged.map(({ api: part }) => part)];
   return {
     ...api,
     props: [...new Set(blocks.flatMap((block) => block.props))],
@@ -200,20 +215,61 @@ function inferControl(name, defaults, props, family, propDetails) {
   return { control: 'object' };
 }
 
-export function argTypesForBinding(binding) {
+/** The first non-`never` declaration of `name` in the parts, shared members first, then each alternative's. */
+function declaredMember(parts, name) {
+  for (const part of parts) {
+    const member = [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)]
+      .find((candidate) => candidate.name === name && candidate.never !== true);
+    if (member !== undefined) return member;
+  }
+  return undefined;
+}
+
+/**
+ * How the declarations (the family's typed reference, Decision 0031) declare each prop the Controls drive. The
+ * adapter's owner is the first catalog block that lists the prop and whose part declares it: the export itself
+ * and its Root part for the root, a named part for a part the adapter merges (see STORY_API_PARTS).
+ * A prop no owning part declares is left out, and so keeps no type or description.
+ */
+function declaredControls(binding, typed) {
+  const component = typed.exports.find(({ name, kind }) => kind === 'component' && name === binding.export);
+  const owners = storyApiBlocks(binding).map((block) => ({
+    block,
+    parts: component.parts.filter(({ member }) => block.part === 'root' ? member === null || member === 'Root' : member === block.member),
+  }));
+  return new Map(storyApi(binding).props.flatMap((name) => {
+    for (const { block, parts } of owners) {
+      const member = block.api.props.includes(name) ? declaredMember(parts, name) : undefined;
+      if (member !== undefined) return [[name, { member, ...(block.part !== 'root' && { owner: `${binding.export}.${block.member}` }) }]];
+    }
+    return [];
+  }));
+}
+
+/**
+ * The Controls of a binding. With the family's typed reference, each row takes its description from the
+ * member's own comment (absent when the declaration has none) and its type summary from the declared type;
+ * a merged part's row also names its owner as its category. Without it a row has no description.
+ */
+export function argTypesForBinding(binding, typed) {
   const { props, defaults = {}, propDetails } = storyApi(binding);
   const family = binding.export;
-  return Object.fromEntries(props.map((name) => [
-    name,
-    {
-      ...inferControl(name, defaults, props, family, propDetails),
-      description: `Mux UI-owned ${name} property`,
+  const declared = typed === undefined ? new Map() : declaredControls(binding, typed);
+  return Object.fromEntries(props.map((name) => {
+    const { control, options, table = {} } = inferControl(name, defaults, props, family, propDetails);
+    const { member, owner } = declared.get(name) ?? {};
+    return [name, {
+      control,
+      ...(options && { options }),
+      ...(member?.doc && { description: member.doc }),
       table: {
-        ...(inferControl(name, defaults, props, family, propDetails).table ?? {}),
+        ...table,
+        ...(member && { type: { summary: member.type } }),
+        ...(owner && { category: owner }),
         defaultValue: defaults[name] === undefined ? undefined : { summary: defaults[name] },
       },
-    },
-  ]));
+    }];
+  }));
 }
 
 function normalizeDefaultArgs(binding) {
@@ -2671,13 +2727,13 @@ export function createEventsStory(record) {
   return {
     name: 'Events',
     args: storyArgsForBinding(record.binding, 'default', record.family),
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     render: (args) => renderEvents(args),
   };
 }
 
 export function createAnatomyStory(record) {
-  const argTypes = argTypesForBinding(record.binding);
+  const argTypes = argTypesForBinding(record.binding, record.typed);
   // Menu's Anatomy is a fixed composition (see anatomyArgsForBinding): its children take precedence over `items`, so that control is not offered.
   if (record.family === 'Menu') argTypes.items = { ...argTypes.items, control: false };
   return {
@@ -2694,7 +2750,7 @@ export function createControlledStory(record) {
   return {
     name: 'Controlled',
     args,
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     render: (args) => e(ControlledHarness, { record, args }),
   };
 }
@@ -2708,7 +2764,7 @@ export function createUncontrolledStory(record) {
   return {
     name: 'Uncontrolled',
     args,
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     render: (args) => e(UncontrolledHarness, { record, args }),
   };
 }
@@ -2721,7 +2777,7 @@ export function createBrowserProofStory(record) {
   return {
     name: 'Browser proof',
     args: storyArgsForBinding(record.binding, 'default', record.family),
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     parameters: {
       muxuiProof: {
         browser: true,
@@ -2785,7 +2841,7 @@ export function createSelectNativeSelectionStory(record) {
   return {
     name: 'Native selection',
     args: {},
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     parameters: { controls: { disable: true } },
     render: () => e(SelectNativeSelection),
   };
@@ -2823,7 +2879,7 @@ export function createMenuNestedStory(record) {
   return {
     name: 'Nested submenu keyboard navigation',
     args: {},
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     parameters: { controls: { disable: true } },
     render: () => e(MenuNestedSpecimen),
   };
@@ -2839,7 +2895,7 @@ export function createButtonMatrixStory(record) {
   return {
     name: 'Variant × size',
     args: {},
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     parameters: {
       controls: { disable: true },
       muxuiButtonMatrix: { combinations: BUTTON_MATRIX_VARIANTS.length * BUTTON_MATRIX_SIZES.length },
@@ -2904,7 +2960,7 @@ export function createStoryMeta(record, category) {
         controlled: controlledDefaultPairsForBinding(record.binding),
       },
     },
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
   };
 }
 
@@ -2918,7 +2974,7 @@ export function createStory(record, variant) {
   return {
     name: variant === 'states' ? 'States' : 'Default',
     args: storyArgsForBinding(record.binding, variant, record.family),
-    argTypes: argTypesForBinding(record.binding),
+    argTypes: argTypesForBinding(record.binding, record.typed),
     parameters: variant === 'states'
       ? { muxuiStateCoverage: stateCoverageForBinding(record.binding, record.family) }
       : undefined,

@@ -7,6 +7,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { STORY_API_PARTS, argTypesForBinding, storyApi } from '../src/storybook-factory.mjs';
 
 // The typed reference on every family Docs page (Decision 0031). What the page should show is read here straight from
 // the committed declaration reference, the catalog and the package manifest, never from the projection under test, and
@@ -382,4 +383,67 @@ test('each Docs page points to the two reference files that hold the package-lev
   const owned = inventory.entries.flatMap((entry) => (entry.exports ?? []).filter(({ owner }) => ['package-level', 'shared'].includes(owner))
     .map(({ name, kind }) => `${entry.key}:${kind === 'type' ? 'type' : 'value'}:${name}`));
   assert.deepEqual([...unownedSubjects()].sort(), owned.sort());
+});
+
+/** The generated story module of a family. */
+const moduleOf = ({ family, tranche }) => import(`../.storybook/generated/${tranche.replaceAll('.', '-').toLowerCase()}-${slugOf(family)}.stories.mjs`);
+
+test('the Controls describe each prop with its member comment and its declared type, and name a merged part as the owner', async () => {
+  let described = 0;
+  let typed = 0;
+  let undeclared = 0;
+  let categories = 0;
+  for (const record of manifest.families) {
+    const module = await moduleOf(record);
+    const { api } = catalogOf(record.family);
+    const component = ownerFile(ownerOf(record.family)).exports.find(({ name }) => name === record.family);
+    // The blocks the adapter reads, root first, as STORY_API_PARTS names them for the family.
+    const blocksOfFamily = [
+      { member: null, root: true, block: api },
+      ...(STORY_API_PARTS[record.family] ?? []).filter((key) => api.partApis?.[key]).map((key) => ({ member: api.partApis[key].member, root: false, block: api.partApis[key] })),
+    ];
+    const declaration = (owner, name) => component.parts
+      .filter(({ member }) => owner.root ? member === null || member === 'Root' : member === owner.member)
+      .flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)])
+      .find((member) => member.name === name && member.never !== true);
+    for (const name of module.default.parameters.muxuiApi.props) {
+      const owner = blocksOfFamily.find((candidate) => candidate.block.props.includes(name) && declaration(candidate, name) !== undefined);
+      // The Docs page's Controls come from the primary story, whose own argTypes take precedence over the meta's.
+      for (const argTypes of [module.default.argTypes, module.Default?.argTypes].filter(Boolean)) {
+        const control = argTypes[name];
+        if (owner === undefined) {
+          assert.equal(control.description, undefined, `${record.family}.${name} has no declaration, so no description`);
+          assert.ok(['MuxUI callback', 'React element', 'function', undefined].includes(control.table.type?.summary), `${record.family}.${name} keeps no invented type`);
+          assert.equal(control.table.category, undefined);
+          continue;
+        }
+        const member = declaration(owner, name);
+        assert.equal(control.description, member.doc, `${record.family}.${name} description`);
+        assert.equal(control.table.type.summary, member.type, `${record.family}.${name} type`);
+        assert.equal(control.table.category, owner.root ? undefined : `${record.family}.${owner.member}`, `${record.family}.${name} owner`);
+      }
+      if (owner === undefined) { undeclared += 1; continue; }
+      const member = declaration(owner, name);
+      typed += 1;
+      if (member.doc !== undefined) described += 1;
+      if (!owner.root) categories += 1;
+    }
+  }
+  assert.ok(typed > 600 && described > 400, `${typed} Controls rows are typed, ${described} described`);
+  // The 60 catalog props no part declares, less Menu's open and defaultOpen, which its Root part does.
+  assert.equal(undeclared, 58, 'the props of the authored families that no part declares');
+  // Menu's popup (six props), list (items) and submenu (delay), which the adapter folds into the root's Controls.
+  assert.equal(categories, 8, 'merged-part rows name their owner');
+});
+
+test('a Controls row without a model has no description, and one with a model but no comment has none either', async () => {
+  const { default: meta } = await moduleOf(manifest.families.find(({ family }) => family === 'IconButton'));
+  const binding = { export: 'IconButton', api: catalogOf('IconButton').api };
+  const without = argTypesForBinding(binding);
+  assert.deepEqual(Object.keys(without), storyApi(binding).props);
+  for (const control of Object.values(without)) assert.equal(control.description, undefined);
+  // IconButton's own `children` has no comment in its declarations, and Controls does not list it.
+  assert.equal(meta.argTypes.disabled.description, 'Applies the native disabled attribute: the IconButton is neither focusable nor activatable.');
+  assert.equal(meta.argTypes.variant.table.type.summary, 'ButtonVariant');
+  assert.equal(meta.argTypes.size.table.defaultValue.summary, 'md', 'the catalog still supplies the executed default');
 });

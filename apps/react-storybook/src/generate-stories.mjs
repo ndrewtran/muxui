@@ -262,9 +262,9 @@ import React from 'react';
 import { ${canonicalExample.importName} } from './${canonicalExample.helperName}';` : ''}${dedicatedImport}
 
 const binding = ${JSON.stringify(record.binding, null, 2)};
-// The typed reference of the family's declarations (see src/component-docs.mjs), which the Docs page lays out.
+// The typed reference of the family's declarations (see src/component-docs.mjs), once: the Docs page lays it out and the Controls take their types from it.
 const typed = ${JSON.stringify(typed)};
-const record = { family: '${record.family}', tranche: '${record.tranche}', binding };
+const record = { family: '${record.family}', tranche: '${record.tranche}', binding, typed };
 
 export default {
   title: 'Mux UI React/${componentCategory(componentRecordCategory(familySlug(record.family)))}/${record.family}',
@@ -290,7 +290,7 @@ export default {
       },
     },
   },
-  argTypes: argTypesForBinding(binding),
+  argTypes: argTypesForBinding(binding, typed),
 };
 ${storyPagesFor(record).map(({ emit }) => emit).join('\n')}${record.family === 'Autocomplete' ? '' : '\n'}`;
 }
