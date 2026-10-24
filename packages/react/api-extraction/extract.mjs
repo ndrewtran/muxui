@@ -982,8 +982,10 @@ function intersectsHostMember(project, { propsType, prop, own, type }, overlap) 
   const hosts = carriers.filter(({ member }) => member.id !== own.id);
   if (owned.length !== 1 || hosts.length !== 1) return false;
   const [{ constituent, member }] = hosts;
-  // An instantiation of an interface that React declares: a local interface that extends one (of a mapped copy of it, say) keeps the
-  // member's declaration, not its type.
+  // An instantiation of an interface that React declares, and nothing else does: a local interface that extends one (of a mapped copy of
+  // it, say) keeps the member's declaration, not its type. An augmentation of the host interface is refused as well, though it adds
+  // only an unrelated member: the extraction runs on this repository's own sources, so that is a loud, named failure and not a silent
+  // mismatch, and accepting it would take a proof that the augmentation leaves the overlapping member alone.
   if (!isTypeReference(constituent) || !declaredInReact(constituent.getTarget().getSymbol())) return false;
   // The element the host's attributes are instantiated with, read from the resolved type and not from the text that wrote it, is the
   // entry's DOM element: the host member is that element's event handler, so another element is another public type.

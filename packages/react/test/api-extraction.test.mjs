@@ -707,6 +707,9 @@ test('a member that is the host\'s intersected with the owned one is read only a
   refuse({ extra: 'export interface HTMLDivElement extends HTMLElement {}\n' }, [OVERLAP]);
   refuse({}, [{ ...OVERLAP, element: 'HTMLTextAreaElement' }]);
   assert.deepEqual(read({ publicType: 'React.HTMLAttributes<HTMLTextAreaElement> & ThingOwnProps' }, [{ ...OVERLAP, element: 'HTMLTextAreaElement' }]).events, ['change'], 'the element is the entry\'s, not a fixed one');
+  // An augmentation of the host interface is refused by design, though this one adds an unrelated member: the extraction runs on this
+  // repository's own sources, so that is a loud, named failure, and accepting it would take a proof that the overlapping member is untouched.
+  refuse({ extra: "declare module 'react' { interface HTMLAttributes<T> { extra?: string } }\n" }, [OVERLAP], /Thing\.onChange: the exported Thing's props redeclare onChange as optional/u);
   // A host member declared outside React is no React member.
   refuse({ publicType: 'LocalHost & ThingOwnProps', extra: 'export interface DOMAttributes { onChange?: React.ChangeEventHandler<HTMLDivElement>; }\nexport type LocalHost = DOMAttributes;\n' }, [OVERLAP]);
   // Only the family's own props are read against the entry: another member of the export that carries the same overlap is not covered by it.
