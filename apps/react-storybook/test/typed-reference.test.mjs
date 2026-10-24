@@ -73,51 +73,127 @@ function ownedExports(owner) {
   };
 }
 
-/** The rows a part's table should hold, as groups, from the part's members and alternatives alone. */
-function expectedGroups(part) {
-  const row = (member) => ({
+/**
+ * How an alternative is named in the "Applies when" column, from its members alone: the member the alternatives tell apart
+ * by disjoint finite values, else the members only this one requires, else `otherwise`. Written here, not read from the page.
+ */
+function alternativeName(alternatives, index) {
+  const own = alternatives[index];
+  const byName = alternatives.map(({ members }) => new Map(members.map((member) => [member.name, member])));
+  for (const member of own.members) {
+    if (member.never === true || member.values === undefined) continue;
+    const siblings = byName.map((map) => map.get(member.name));
+    if (siblings.some((sibling) => sibling === undefined || sibling.never === true || sibling.values === undefined || sibling.values.length === 0)) continue;
+    const every = siblings.flatMap((sibling) => sibling.values);
+    if (new Set(every).size === every.length) return `${member.name} = ${member.values.map(literal).join(' | ')}`;
+  }
+  const only = own.members.filter((member) => member.optional !== true && member.never !== true && byName.some((map, other) => {
+    const sibling = map.get(member.name);
+    return other !== index && (sibling === undefined || sibling.optional === true || sibling.never === true);
+  }));
+  return only.length > 0 ? `requires ${only.map(({ name }) => name).join(', ')}` : 'otherwise';
+}
+
+/** The names of all the alternatives of a part; two that read alike are numbered. */
+function alternativeNames(alternatives) {
+  const names = alternatives.map((_, index) => alternativeName(alternatives, index));
+  return names.map((name, index) => names.indexOf(name) === names.lastIndexOf(name) ? name : `${name} (${index + 1})`);
+}
+
+/**
+ * What a part's table must show: its columns, and per group its label, rows (with the "Applies when" cell), closing rows and
+ * the order they come in, from the part's members and alternatives alone. A member declared `never` is no row, and a group
+ * ends with its closing rows: what it declares `never` ("not allowed"), then what only its siblings declare ("not declared").
+ */
+function expectedTable(part) {
+  const alternatives = part.alternatives ?? [];
+  const row = (member, applies) => ({
     name: member.name,
-    required: member.optional !== true,
+    applies,
+    state: member.optional === true ? 'optional' : 'required',
     type: member.type,
     values: member.values !== undefined && member.values.map(literal).join(' | ') !== member.type ? member.values.map(literal).join(' | ') : null,
     doc: member.doc ?? '',
   });
-  const alternatives = part.alternatives ?? [];
-  // A member declared `never` is no row in any group: the group's closing row names it.
-  const allowed = (members) => members.filter(({ never }) => never !== true).map(row);
-  const forbidden = (members) => members.filter(({ never }) => never === true).map(({ name }) => name);
-  if (alternatives.length === 0) return [{ rows: allowed(part.members ?? []), notAllowed: forbidden(part.members ?? []), notDeclared: [], ref: null, native: null }];
-  const declared = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
   const refText = (ref) => ref === undefined ? null : ref === null ? 'none declared' : ref.never === true ? `not allowed, ${ref.required === true ? 'ref: never' : 'ref?: never'}` : ref.type;
   const nativeText = (natives) => natives === undefined ? null : natives.map(({ type, omit }) => `${type}${omit?.length > 0 ? ` except ${omit.join('')}` : ''}`).join('');
-  return [
-    ...((part.members ?? []).length > 0 ? [{ rows: allowed(part.members), notAllowed: forbidden(part.members), notDeclared: [], ref: null, native: null }] : []),
-    ...alternatives.map(({ members, ref, natives }) => ({
-      rows: allowed(members),
-      notAllowed: forbidden(members),
-      notDeclared: declared.filter((name) => !members.some((member) => member.name === name)),
-      ref: refText(ref),
-      native: nativeText(natives),
-    })),
-  ];
+  const group = (label, members, applies, notDeclared, ref, native) => {
+    const rows = members.filter(({ never }) => never !== true).map((member) => row(member, applies));
+    const notAllowed = members.filter(({ never }) => never === true).map(({ name }) => name);
+    const closing = [
+      ...(notAllowed.length > 0 ? [{ state: 'not allowed', names: notAllowed }] : []),
+      ...(notDeclared.length > 0 ? [{ state: 'not declared', names: notDeclared }] : []),
+    ];
+    return { label, rows, closing, order: [...(label === null ? [] : ['group']), ...rows.map(() => 'row'), ...closing.map(() => 'closing')], ref, native };
+  };
+  if (alternatives.length === 0) return { columns: 5, groups: [group(null, part.members ?? [], null, [], null, null)] };
+  const declared = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
+  const names = alternativeNames(alternatives);
+  return {
+    columns: 6,
+    groups: [
+      ...((part.members ?? []).length > 0 ? [group('Common', part.members, 'always', [], null, null)] : []),
+      ...alternatives.map(({ members, ref, natives }, index) => group(
+        names[index], members, names[index], declared.filter((name) => !members.some((member) => member.name === name)), refText(ref), nativeText(natives),
+      )),
+    ],
+  };
 }
 
-/** The groups a rendered part table holds, read the same way. */
-function renderedGroups(partNode) {
-  return [...partNode.querySelectorAll('table.muxui-docs-table tbody')].map((body) => ({
-    rows: [...body.querySelectorAll('tr[data-prop]')].map((row) => ({
-      name: row.getAttribute('data-prop'),
-      required: row.querySelector('[data-cell="required"]').firstChild.textContent === 'required',
-      type: row.querySelector('[data-cell="type"] > code').textContent,
-      values: row.querySelector('[data-cell="type"] .muxui-docs-values')?.textContent ?? null,
-      doc: row.querySelector('[data-cell="description"]').textContent,
-    })),
-    notAllowed: (body.querySelector('tr[data-not-allowed]')?.getAttribute('data-not-allowed') ?? '').split(',').filter(Boolean),
-    notDeclared: (body.querySelector('tr[data-not-declared]')?.getAttribute('data-not-declared') ?? '').split(',').filter(Boolean),
-    // An alternative's own ref and native envelope sit in its group's heading.
-    ref: [...body.querySelectorAll('.muxui-docs-group-ref')].map((node) => node.textContent).find((value) => value.startsWith('Ref '))?.slice(4) ?? null,
-    native: [...body.querySelectorAll('.muxui-docs-group-ref')].map((node) => node.textContent).find((value) => value.startsWith('Native '))?.slice(7) ?? null,
-  }));
+const cellsOf = (row) => [...row.children].filter((cell) => cell.localName === 'th' || cell.localName === 'td');
+const columnSpan = (cell) => Number(cell.getAttribute('colspan') ?? 1);
+/** How many columns a table row spans: its cells, each counted by its colspan. */
+const spanOf = (row) => cellsOf(row).reduce((total, cell) => total + columnSpan(cell), 0);
+/** The column a cell starts in, counting the colspans before it. */
+const startOf = (row, cell) => cellsOf(row).slice(0, cellsOf(row).indexOf(cell)).reduce((total, other) => total + columnSpan(other), 0);
+
+/**
+ * The table a part shows, read the way a reader sees it: the words of its header, the label of each group, the words in each
+ * cell, the order of the rows, and how many columns every row spans. A cell that is missing reads as null, so the page's
+ * difference is reported and nothing here throws.
+ */
+function renderedTable(partNode) {
+  const table = partNode.querySelector('table.muxui-docs-table');
+  const headRow = table?.querySelector('thead tr');
+  const head = headRow === null || headRow === undefined ? null : { words: cellsOf(headRow).map((cell) => cell.textContent), span: spanOf(headRow) };
+  const requiredAt = head === null ? -1 : head.words.indexOf('Required');
+  const layout = [];
+  const groups = [...(table?.querySelectorAll('tbody') ?? [])].map((body) => {
+    const trs = [...body.children].filter((child) => child.localName === 'tr');
+    const kind = (tr) => tr.classList.contains('muxui-docs-group') ? 'group' : tr.classList.contains('muxui-docs-closing') ? 'closing' : tr.hasAttribute('data-prop') ? 'row' : 'other';
+    const header = trs.find((tr) => kind(tr) === 'group');
+    const refs = [...(header?.querySelectorAll('.muxui-docs-group-ref') ?? [])].map((node) => node.textContent);
+    for (const tr of trs) {
+      const at = `${partNode.getAttribute('data-part')} ${kind(tr) === 'group' ? `group ${header?.querySelector('th')?.firstChild?.textContent}` : kind(tr) === 'closing' ? 'closing row' : `row ${tr.getAttribute('data-prop')}`}`;
+      if (head !== null && spanOf(tr) !== head.span) layout.push(`${at} spans ${spanOf(tr)} columns, the table has ${head.span}`);
+      if (kind(tr) === 'closing') {
+        const state = tr.querySelector('td[data-cell="required"]');
+        if (state === null || startOf(tr, state) !== requiredAt) layout.push(`${at} puts its state in column ${state === null ? 'none' : startOf(tr, state)}, under ${requiredAt}`);
+      }
+    }
+    return {
+      label: header === undefined ? null : header.querySelector('th')?.firstChild?.textContent ?? null,
+      rows: trs.filter((tr) => kind(tr) === 'row').map((row) => ({
+        name: row.querySelector('th .muxui-docs-name')?.textContent ?? null,
+        applies: row.querySelector('[data-cell="applies"]')?.textContent ?? null,
+        state: row.querySelector('[data-cell="required"]')?.firstChild?.textContent ?? null,
+        type: row.querySelector('[data-cell="type"] > code')?.textContent ?? null,
+        values: row.querySelector('[data-cell="type"] .muxui-docs-values')?.textContent ?? null,
+        doc: row.querySelector('[data-cell="description"]')?.textContent ?? null,
+      })),
+      closing: trs.filter((tr) => kind(tr) === 'closing').map((tr) => ({
+        // The word a reader sees in the Required column, and the names in the first cell; the marker must say the same.
+        state: tr.querySelector('td[data-cell="required"]')?.textContent ?? null,
+        names: texts(tr.querySelectorAll('td:first-child code')),
+        marker: tr.hasAttribute('data-not-allowed') ? 'not allowed' : tr.hasAttribute('data-not-declared') ? 'not declared' : null,
+      })),
+      order: trs.map(kind),
+      // An alternative's own ref and native envelope sit in its group's heading.
+      ref: refs.find((value) => value.startsWith('Ref '))?.slice(4) ?? null,
+      native: refs.find((value) => value.startsWith('Native '))?.slice(7) ?? null,
+    };
+  });
+  return { head, groups, layout };
 }
 
 const partNodes = (page) => [...page.querySelectorAll('.muxui-docs-reference [data-part]')].filter((node) => node.localName !== 'tr');
@@ -171,12 +247,17 @@ function pageProblems(page, owner) {
       if (meta('same-as')?.textContent !== labelOf(record, canonical) || target?.getAttribute('data-part') !== labelOf(record, canonical) || node.querySelector('table') !== null) problems.push(`${label} should be the same as ${labelOf(record, canonical)}, linked to it, and list no table; it says ${meta('same-as')?.textContent}`);
       continue;
     }
-    const expected = expectedGroups(part);
-    const rendered = renderedGroups(node);
-    if (JSON.stringify(rendered) !== JSON.stringify(expected)) {
-      const at = expected.findIndex((group, index) => JSON.stringify(group) !== JSON.stringify(rendered[index]));
-      problems.push(`${label} table differs in group ${at}: rendered ${JSON.stringify(rendered[at])}, expected ${JSON.stringify(expected[at])}`);
+    const expected = expectedTable(part);
+    const rendered = renderedTable(node);
+    const words = ['Prop', ...(expected.columns === 6 ? ['Applies when'] : []), 'Type', 'Required', 'Default', 'Description'];
+    if (JSON.stringify(rendered.head) !== JSON.stringify({ words, span: expected.columns })) problems.push(`${label} header is ${JSON.stringify(rendered.head)}, expected ${JSON.stringify({ words, span: expected.columns })}`);
+    problems.push(...rendered.layout);
+    for (const [index, group] of expected.groups.entries()) {
+      // The marker on a closing row is only a hook; the visible word is what a reader sees, and the two must agree.
+      const shown = rendered.groups[index] === undefined ? undefined : { ...rendered.groups[index], closing: rendered.groups[index].closing.map(({ state, names, marker }) => ({ state, names, ...(marker !== state && { marker }) })) };
+      if (JSON.stringify(shown) !== JSON.stringify({ ...group, order: group.order })) problems.push(`${label} group ${group.label ?? 'props'} differs: rendered ${JSON.stringify(shown)}, expected ${JSON.stringify(group)}`);
     }
+    if (rendered.groups.length !== expected.groups.length) problems.push(`${label} has ${rendered.groups.length} groups, expected ${expected.groups.length}`);
   }
 
   // The functions and values, with their exact signatures or types.
@@ -375,6 +456,135 @@ test('an aliased part shows the generics, ref and native surface of the part it 
   assert.equal(root.querySelector('[data-meta="ref"]').textContent, 'TextEditorHandle');
   assert.equal(root.querySelector('[data-meta="native"]').textContent, 'React.HTMLAttributes<HTMLDivElement> except valuedefaultValueonChange');
   assert.deepEqual(texts(root.querySelectorAll('[data-meta="native"] code')), ['React.HTMLAttributes<HTMLDivElement>', 'value', 'defaultValue', 'onChange']);
+});
+
+// A change to the rendered page itself, with the model unchanged, is what a reader would see differently: the checker reads the
+// words in a cell, the order of the rows and the columns each row spans, so each of these must fail it on the part it changed.
+test('a rendered page changed by hand fails the checker with a problem on the part it changed, and never crashes it', async () => {
+  const problemsOf = async (family, change) => {
+    const page = pageOf(await entryOf(manifest.families.find((record) => record.family === family)));
+    change?.(page);
+    return pageProblems(page, ownerOf(family));
+  };
+  const part = (page, label) => partNodes(page).find((node) => node.getAttribute('data-part') === label);
+  const body = (page, label, group) => [...part(page, label).querySelectorAll('tbody')].find((node) => node.getAttribute('data-group') === group);
+  const rowsIn = (node) => [...node.querySelectorAll('tr[data-prop]')];
+  const closingIn = (node) => [...node.querySelectorAll('tr.muxui-docs-closing')];
+  const cell = (row, name) => row.querySelector(`[data-cell="${name}"]`);
+  const dataCells = (page, label) => [...part(page, label).querySelectorAll('tbody tr[data-prop]')];
+  const mutations = [
+    {
+      label: 'the visible state of a not allowed row reads "optional" (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'stack' differs"],
+      change: (page) => { cell(closingIn(body(page, 'Virtualizer', "layout = 'stack'")).at(0), 'required').textContent = 'optional'; },
+    },
+    {
+      label: 'the visible state of a not declared row reads "not allowed" (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'stack' differs"],
+      change: (page) => { cell(closingIn(body(page, 'Virtualizer', "layout = 'stack'")).at(-1), 'required').textContent = 'not allowed'; },
+    },
+    {
+      label: 'the visible state of a row reads "required" where the model says optional (Dialog)', family: 'Dialog', expect: ['Dialog group Common differs'],
+      change: (page) => { cell(rowsIn(body(page, 'Dialog', 'Common'))[1], 'required').firstChild.textContent = 'required'; },
+    },
+    {
+      label: 'a closing row moves before the rows of its group (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'stack' differs", '"order":["group","closing"'],
+      change: (page) => {
+        const tbody = body(page, 'Virtualizer', "layout = 'stack'");
+        const [first] = rowsIn(tbody);
+        first.before(closingIn(tbody)[0]);
+      },
+    },
+    {
+      label: 'a closing row moves above its group heading (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'stack' differs"],
+      change: (page) => { const tbody = body(page, 'Virtualizer', "layout = 'stack'"); tbody.prepend(closingIn(tbody)[0]); },
+    },
+    {
+      label: 'two rows swap places (IconButton)', family: 'IconButton', expect: ['IconButton group Common differs'],
+      change: (page) => { const [first, second] = rowsIn(body(page, 'IconButton', 'Common')); first.before(second); },
+    },
+    {
+      label: 'a row loses its type cell (IconButton)', family: 'IconButton', expect: ['IconButton row ', 'spans 5 columns, the table has 6'],
+      change: (page) => cell(rowsIn(body(page, 'IconButton', 'Common'))[0], 'type').remove(),
+    },
+    {
+      label: 'a row loses its state cell (Dialog)', family: 'Dialog', expect: ['Dialog row ', 'spans 5 columns, the table has 6'],
+      change: (page) => cell(rowsIn(body(page, 'Dialog', 'Common'))[0], 'required').remove(),
+    },
+    {
+      label: 'the word of a closing row and its marker disagree (Dialog)', family: 'Dialog', expect: ['Dialog group requires aria-label differs'],
+      change: (page) => { const row = closingIn(body(page, 'Dialog', 'requires aria-label'))[0]; row.removeAttribute('data-not-allowed'); row.setAttribute('data-not-declared', 'x'); },
+    },
+    {
+      label: 'the closing row of a table with no alternatives is removed (DataDiff)', family: 'DataDiff', expect: ['DataDiff group props differs'],
+      change: (page) => closingIn(part(page, 'DataDiff')).forEach((row) => row.remove()),
+    },
+    {
+      label: 'the closing row of a five-column table spans the six columns of another (DataDiff)', family: 'DataDiff', expect: ['DataDiff closing row spans 6 columns, the table has 5'],
+      change: (page) => closingIn(part(page, 'DataDiff'))[0].querySelector('td').setAttribute('colspan', '3'),
+    },
+    {
+      label: 'a closing row loses its last cell (Virtualizer)', family: 'Virtualizer', expect: ['Virtualizer closing row spans 5 columns, the table has 6'],
+      change: (page) => closingIn(body(page, 'Virtualizer', "layout = 'stack'"))[0].lastElementChild.remove(),
+    },
+    {
+      label: 'a closing row puts its state under another column (Virtualizer)', family: 'Virtualizer', expect: ['Virtualizer closing row puts its state in column 2, under 3'],
+      change: (page) => {
+        const row = closingIn(body(page, 'Virtualizer', "layout = 'stack'"))[0];
+        row.firstElementChild.setAttribute('colspan', '2');
+        row.lastElementChild.setAttribute('colspan', '2');
+      },
+    },
+    {
+      label: 'a group heading spans too few columns (Dialog)', family: 'Dialog', expect: ['Dialog group requires title spans 5 columns, the table has 6'],
+      change: (page) => body(page, 'Dialog', 'requires title').querySelector('tr.muxui-docs-group th').setAttribute('colspan', '5'),
+    },
+    {
+      label: 'a column is added to every row and to the header (IconButton)', family: 'IconButton', expect: ['IconButton header is', '"Extra"'],
+      change: (page) => {
+        const table = part(page, 'IconButton').querySelector('table');
+        table.querySelector('thead tr').append(Object.assign(page.createElement('th'), { textContent: 'Extra' }));
+        for (const row of table.querySelectorAll('tbody tr')) row.append(page.createElement('td'));
+      },
+    },
+    {
+      label: 'a column is added to the rows and not to the header (IconButton)', family: 'IconButton', expect: ['spans 7 columns, the table has 6'],
+      change: (page) => { for (const row of part(page, 'IconButton').querySelectorAll('tbody tr[data-prop]')) row.append(page.createElement('td')); },
+    },
+    {
+      label: 'a "Applies when" cell is changed (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'grid' differs"],
+      change: (page) => { cell(rowsIn(body(page, 'Virtualizer', "layout = 'grid'"))[0], 'applies').firstChild.textContent = "layout = 'stack'"; },
+    },
+    {
+      label: 'an "Applies when" cell says always in an alternative (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'stack' differs"],
+      change: (page) => { cell(rowsIn(body(page, 'Virtualizer', "layout = 'stack'"))[0], 'applies').textContent = 'always'; },
+    },
+    {
+      label: 'a group is relabelled (Dialog)', family: 'Dialog', expect: ['Dialog group '],
+      change: (page) => { body(page, 'Dialog', 'requires title').querySelector('tr.muxui-docs-group th').firstChild.textContent = 'otherwise'; },
+    },
+    {
+      label: 'a header word is changed (Text)', family: 'Text', expect: ['Text header is'],
+      change: (page) => { part(page, 'Text').querySelector('thead th:nth-child(5)').textContent = 'Optional'; },
+    },
+    {
+      label: 'an aliased part says it declares no ref (TextEditor.Root)', family: 'TextEditor', expect: ['TextEditor.Root ref is none declared, expected TextEditorHandle'],
+      change: (page) => { part(page, 'TextEditor.Root').querySelector('[data-meta="ref"]').textContent = 'none declared'; },
+    },
+  ];
+  const unchanged = (await Promise.all([...new Set(mutations.map(({ family }) => family))].map((family) => problemsOf(family)))).flat();
+  assert.deepEqual(unchanged, [], 'the pages these changes start from pass the checker');
+  const failures = [];
+  for (const { label, family, expect, change } of mutations) {
+    let problems;
+    try {
+      problems = await problemsOf(family, change);
+    } catch (error) {
+      failures.push(`${label}: the checker crashed (${error.message}) instead of naming the difference`);
+      continue;
+    }
+    if (problems.length === 0) failures.push(`${label}: no problem`);
+    for (const fragment of expect) if (!problems.some((problem) => problem.includes(fragment))) failures.push(`${label}: no problem contains "${fragment}"; got ${problems.map((problem) => `"${problem.slice(0, 140)}"`).join(', ') || 'nothing'}`);
+  }
+  assert.deepEqual(failures, []);
 });
 
 /** The exports and public types the reference files for the package-level and shared owners hold, which no family page lists. */
