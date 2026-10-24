@@ -19,6 +19,8 @@ const hasNatives = part.natives.length > 0;
 		<h3 id={part.anchor}><code>{part.heading}</code></h3>
 	</summary>
 	<dl class="api-meta">
+		<dt>Import</dt>
+		<dd><code data-api-part-import>{part.import}</code></dd>
 		<dt>Ref</dt>
 		<dd data-api-ref>{part.ref === 'none declared' || part.ref === 'not allowed' || part.ref === 'per alternative' ? <span class="api-none">{part.ref}</span> : <code>{part.ref}</code>}</dd>
 		{part.generics.length > 0 && (

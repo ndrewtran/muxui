@@ -131,10 +131,11 @@ export function expectedComponent({ exportName, entry, packageName, reference, b
 		};
 	};
 	const natives = (list) => (list ?? []).map(({ type, omit }) => ({ type, omit: omit ?? [] }));
-	const partOf = (exportOf, part, catalog, siblings) => {
+	const partOf = (exportOf, importFrom, part, catalog, siblings) => {
 		const alternatives = part.alternatives ?? [];
 		const base = {
 			heading: heading(exportOf, part),
+			import: importFrom,
 			natives: natives(part.natives),
 			generics: (part.typeParameters ?? []).map(({ name, constraint, default: fallback }) => `${name}${constraint === undefined ? '' : ` extends ${constraint}`}${fallback === undefined ? '' : ` = ${fallback}`}`),
 		};
@@ -171,12 +172,13 @@ export function expectedComponent({ exportName, entry, packageName, reference, b
 			groups,
 		};
 	};
+	const specifier = (key) => (key === '.' ? packageName : `${packageName}${key.slice(1)}`);
+	const importOf = (candidate) => `import { ${candidate.name} } from '${specifier(candidate.entry)}';`;
 	const parts = [
-		...mainParts.map((part) => partOf(exportName, part, catalogOf(part), mainParts)),
-		...related.filter(({ kind }) => kind === 'component').flatMap((flat) => (flat.parts ?? []).filter(isPartOf).map((part) => partOf(flat.name, part, { defaults: {}, events: [], authored: false }, flat.parts))),
+		...mainParts.map((part) => partOf(exportName, importOf(main), part, catalogOf(part), mainParts)),
+		...related.filter(({ kind }) => kind === 'component').flatMap((flat) => (flat.parts ?? []).filter(isPartOf).map((part) => partOf(flat.name, importOf(flat), part, { defaults: {}, events: [], authored: false }, flat.parts))),
 	];
 
-	const specifier = (key) => (key === '.' ? packageName : `${packageName}${key.slice(1)}`);
 	const exportsOf = [main, ...related].map((candidate) => {
 		const label = candidate === main ? exportName : candidate.name;
 		const own = (candidate.parts ?? []).filter(isPartOf);
@@ -279,6 +281,7 @@ export function renderedComponent(root) {
 		const rendered = {
 			heading: text(heading),
 			anchor: attributeValue(heading, 'id'),
+			import: text(inside.find((child) => attributeValue(child, 'data-api-part-import') !== undefined)),
 			open: attributeValue(node, 'open') !== undefined,
 			ref: text(inside.find((child) => attributeValue(child, 'data-api-ref') !== undefined)),
 			natives: natives === undefined ? [] : nativesOf(natives),
@@ -418,6 +421,7 @@ export function compareComponent(expected, rendered, events, route, { collapseAb
 		const where = `${part.heading}`;
 		if (shown.anchor !== `api-reference-${slug(part.heading)}`) report(`${where} has the anchor ${shown.anchor}.`);
 		if (shown.open !== (!collapsed || index === 0)) report(`${where} is ${shown.open ? 'open' : 'closed'}, expected ${!collapsed || index === 0 ? 'open' : 'closed'} by the page's part count.`);
+		if (shown.import !== part.import) report(`${where} import line is "${shown.import}", expected "${part.import}".`);
 		if (shown.ref !== part.ref) report(`${where} ref line is "${shown.ref}", expected "${part.ref}".`);
 		if (!same(shown.natives, part.natives)) report(`${where} native line is ${JSON.stringify(shown.natives)}, expected ${JSON.stringify(part.natives)}.`);
 		if (!same(shown.generics, part.generics)) report(`${where} generics are ${JSON.stringify(shown.generics)}, expected ${JSON.stringify(part.generics)}.`);

@@ -67,6 +67,8 @@ export interface ApiGroup {
 export interface ApiPart {
 	heading: string;
 	anchor: string;
+	/** The import of the export that holds the part. */
+	import: string;
 	/** The ref line: the element, `not allowed`, `per alternative`, or `none declared`. */
 	ref: string;
 	natives: readonly ApiNative[];
@@ -333,12 +335,13 @@ function rowOf(member: DeclarationMember, appliesWhen: string, catalog: Catalog,
 	};
 }
 
-function partView(exportName: string, part: DeclarationPart, catalog: Catalog, context: Context, byMember: (member: string) => DeclarationPart | undefined): ApiPart {
+function partView(exportName: string, importFrom: string, part: DeclarationPart, catalog: Catalog, context: Context, byMember: (member: string) => DeclarationPart | undefined): ApiPart {
 	const heading = partHeading(exportName, part);
 	const alternatives = part.alternatives ?? [];
 	const base = {
 		heading,
 		anchor: partAnchor(heading),
+		import: importFrom,
 		natives: nativesOf(part.natives),
 		generics: (part.typeParameters ?? []).map(genericOf),
 		hasAlternatives: alternatives.length > 0,
@@ -446,8 +449,8 @@ export function buildApiReference({ packageName, exportName, anatomy, catalog, d
 	const byMember = (member: string) => mainParts.find((part) => part.member === member);
 	const flat = declarations.related.filter((item) => item.kind === 'component');
 	const parts: ApiPart[] = [
-		...mainParts.map((part) => partView(exportName, part, owned(part), context, byMember)),
-		...flat.flatMap((item) => (item.parts ?? []).map((part) => partView(item.name, part, none, context, (member) => item.parts?.find((candidate) => candidate.member === member)))),
+		...mainParts.map((part) => partView(exportName, importLine(packageName, main.entry, main.name), part, owned(part), context, byMember)),
+		...flat.flatMap((item) => (item.parts ?? []).map((part) => partView(item.name, importLine(packageName, item.entry, item.name), part, none, context, (member) => item.parts?.find((candidate) => candidate.member === member)))),
 	];
 
 	const exports: ApiExport[] = [main, ...declarations.related].map((item) => exportView(item, packageName, parts, context, item === main ? exportName : item.name));

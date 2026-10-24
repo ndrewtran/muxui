@@ -199,6 +199,10 @@ test('parts and related exports list every export of the family with its exact i
 	const compound = palette.exports.find(({ name }) => name === 'CommandPalette');
 	assert.equal(compound.parts.length, 29);
 	assert.ok(compound.parts.every(({ heading, anchor }) => anchor === partAnchor(heading) && palette.parts.some((part) => part.heading === heading && part.anchor === anchor)));
+	// Each part shows the import of the export that holds it, a flat part its own.
+	assert.equal(partNamed(palette, 'CommandPalette.Item').import, "import { CommandPalette } from '@muxui/react';");
+	assert.equal(partNamed(page('resizable'), 'ResizablePanel').import, "import { ResizablePanel } from '@muxui/react';");
+	assert.equal(partNamed(page('text-editor'), 'TextEditor').import, "import { TextEditor } from '@muxui/react/text-editor';");
 	// A part that is the same component as another has no table of its own.
 	const editor = page('text-editor');
 	assert.deepEqual(editor.parts.map(({ heading, sameAs }) => [heading, sameAs?.heading]), [['TextEditor', undefined], ['TextEditor.Root', 'TextEditor']]);
