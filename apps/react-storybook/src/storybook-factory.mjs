@@ -215,14 +215,25 @@ function inferControl(name, defaults, props, family, propDetails) {
   return { control: 'object' };
 }
 
-/** The first non-`never` declaration of `name` in the parts, shared members first, then each alternative's. */
+/** A finite value as the declarations write it in a type: a string in single quotes, anything else as JSON. */
+const literal = (value) => typeof value === 'string' ? `'${value}'` : JSON.stringify(value);
+
+/**
+ * How the parts declare `name`, in their shared members and then each alternative's (a member declared `never` is no
+ * declaration). Where one declaration is all there is, it is that one. Where alternatives declare it differently (Text's
+ * `variant` is `'body'` in one, `'display' | 'heading' | 'title'` in another), a Control offers a value of any of them, so
+ * its type is the union: the finite values of every declaration when each has them, else the distinct types joined.
+ */
 function declaredMember(parts, name) {
-  for (const part of parts) {
-    const member = [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)]
-      .find((candidate) => candidate.name === name && candidate.never !== true);
-    if (member !== undefined) return member;
-  }
-  return undefined;
+  const declarations = parts.flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)])
+    .filter((candidate) => candidate.name === name && candidate.never !== true);
+  const types = [...new Set(declarations.map(({ type }) => type))];
+  if (types.length <= 1) return declarations[0];
+  const finite = declarations.every(({ values }) => values !== undefined);
+  const type = finite
+    ? [...new Set(declarations.flatMap(({ values }) => values))].map(literal).join(' | ')
+    : types.map((candidate) => candidate.includes('=>') ? `(${candidate})` : candidate).join(' | ');
+  return { ...declarations[0], type };
 }
 
 /**

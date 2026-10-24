@@ -663,6 +663,8 @@ test('the Controls describe each prop with its member comment and its declared t
   let typed = 0;
   let undeclared = 0;
   let categories = 0;
+  let differing = 0;
+  let total = 0;
   for (const record of manifest.families) {
     const module = await moduleOf(record);
     const { api } = catalogOf(record.family);
@@ -672,10 +674,21 @@ test('the Controls describe each prop with its member comment and its declared t
       { member: null, root: true, block: api },
       ...(STORY_API_PARTS[record.family] ?? []).filter((key) => api.partApis?.[key]).map((key) => ({ member: api.partApis[key].member, root: false, block: api.partApis[key] })),
     ];
-    const declaration = (owner, name) => component.parts
+    // Every non-never declaration of `name` in the owner's parts, and how a Control types it: the one declaration, or where
+    // alternatives declare it differently the union of what they accept, written here from the declarations alone.
+    const declarations = (owner, name) => component.parts
       .filter(({ member }) => owner.root ? member === null || member === 'Root' : member === owner.member)
       .flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)])
-      .find((member) => member.name === name && member.never !== true);
+      .filter((member) => member.name === name && member.never !== true);
+    const declaration = (owner, name) => declarations(owner, name)[0];
+    const controlType = (owner, name) => {
+      const all = declarations(owner, name);
+      const types = [...new Set(all.map(({ type }) => type))];
+      if (types.length === 1) return types[0];
+      if (all.every(({ values }) => values !== undefined)) return [...new Set(all.flatMap(({ values }) => values))].map(literal).join(' | ');
+      return types.map((type) => type.includes('=>') ? `(${type})` : type).join(' | ');
+    };
+    total += module.default.parameters.muxuiApi.props.length;
     for (const name of module.default.parameters.muxuiApi.props) {
       const owner = blocksOfFamily.find((candidate) => candidate.block.props.includes(name) && declaration(candidate, name) !== undefined);
       // The Docs page's Controls come from the primary story, whose own argTypes take precedence over the meta's.
@@ -689,7 +702,8 @@ test('the Controls describe each prop with its member comment and its declared t
         }
         const member = declaration(owner, name);
         assert.equal(control.description, member.doc, `${record.family}.${name} description`);
-        assert.equal(control.table.type.summary, member.type, `${record.family}.${name} type`);
+        assert.equal(control.table.type.summary, controlType(owner, name), `${record.family}.${name} type`);
+        if (new Set(declarations(owner, name).map(({ type }) => type)).size > 1) differing += 1;
         assert.equal(control.table.category, owner.root ? undefined : `${record.family}.${owner.member}`, `${record.family}.${name} owner`);
       }
       if (owner === undefined) { undeclared += 1; continue; }
@@ -700,10 +714,23 @@ test('the Controls describe each prop with its member comment and its declared t
     }
   }
   assert.ok(typed > 600 && described > 400, `${typed} Controls rows are typed, ${described} described`);
-  // The 60 catalog props no part declares, less Menu's open and defaultOpen, which its Root part does.
+  // Every Controls row is typed by the model or left alone: the 58 that no part declares belong to authored families.
   assert.equal(undeclared, 58, 'the props of the authored families that no part declares');
+  assert.equal(typed + undeclared, total, 'every Controls row is typed or left alone');
+  assert.ok(differing > 0, 'some props are declared differently by different alternatives, as Text\'s variant and size are');
   // Menu's popup (six props), list (items) and submenu (delay), which the adapter folds into the root's Controls.
   assert.equal(categories, 8, 'merged-part rows name their owner');
+});
+
+test('a Control of a prop that alternatives declare differently offers the union, as Text\'s variant does', async () => {
+  const { default: meta } = await moduleOf(manifest.families.find(({ family }) => family === 'Text'));
+  // Each alternative declares a part of the variants, so a Control that typed the first one alone would say 'body'.
+  assert.equal(meta.argTypes.variant.table.type.summary, "'body' | 'display' | 'heading' | 'title' | 'label' | 'expressive' | 'mono'");
+  assert.deepEqual([...meta.argTypes.variant.options].sort(), ['body', 'display', 'expressive', 'heading', 'label', 'mono', 'title'], 'the Control offers every variant the summary names');
+  assert.equal(meta.argTypes.size.table.type.summary, "'xs' | 'sm' | 'md' | 'lg'");
+  assert.equal(meta.argTypes.variant.table.defaultValue.summary, 'body', 'the catalog still supplies the executed default');
+  // A type declared the same everywhere stays as written.
+  assert.equal(meta.argTypes.color.table.type.summary, 'TextColor');
 });
 
 test('a Controls row without a model has no description, and one with a model but no comment has none either', async () => {
