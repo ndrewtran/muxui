@@ -10,6 +10,7 @@ interface Props {
 }
 
 const { part, open } = Astro.props;
+// Prop, Applies when (with alternatives), Type, Required, Default and Description. A closing row spans everything left of the state, then the state, then the default and the description.
 const columns = part.hasAlternatives ? 6 : 5;
 const hasNatives = part.natives.length > 0;
 ---
@@ -92,7 +93,7 @@ const hasNatives = part.natives.length > 0;
 							))}
 							{group.closing.map((closing) => (
 								<tr class="api-row api-closing" data-api-closing={closing.state}>
-									<th scope="row" colspan={3}>{closing.names.map((name, index) => <Fragment>{index > 0 && ', '}<code class="api-name">{name}</code></Fragment>)}</th>
+									<th scope="row" colspan={columns - 3}>{closing.names.map((name, index) => <Fragment>{index > 0 && ', '}<code class="api-name">{name}</code></Fragment>)}</th>
 									<td class="api-state" data-api-state={closing.state}>{closing.state}</td>
 									<td colspan={2}></td>
 								</tr>

@@ -10,6 +10,8 @@ import { attributeValue, classNames, elements, textContent } from './html-tree.m
 export const text = (node) => textContent(node).replace(/\s+/gu, ' ').trim();
 /** The text of an element the page may be missing, which then reads as null so the page's difference is reported, not a crash. */
 const read = (node) => (node === undefined ? null : text(node));
+/** How many columns a table row spans: its cells, each counted by its colspan. */
+const spanOf = (row) => row.childNodes.filter((cell) => cell.tagName === 'th' || cell.tagName === 'td').reduce((total, cell) => total + Number(attributeValue(cell, 'colspan') ?? 1), 0);
 
 /** A page with more parts than this opens only its first part. */
 export const collapsePartsAbove = 8;
@@ -299,6 +301,8 @@ export function renderedComponent(root) {
 			sameAsHref: sameAsLink === undefined ? null : attributeValue(sameAsLink, 'href'),
 			hasTable: table !== undefined,
 			hasAlternatives: table !== undefined && classNames(table).has('api-table-alternatives'),
+			// The columns the table's header has, which every row of every group must fill exactly.
+			columns: table === undefined ? 0 : elements(table).filter((child) => child.tagName === 'thead').flatMap((head) => head.childNodes.filter((row) => row.tagName === 'tr')).reduce((widest, row) => Math.max(widest, spanOf(row)), 0),
 			groups: [],
 		};
 		if (table === undefined) return rendered;
@@ -347,7 +351,13 @@ export function renderedComponent(root) {
 					event: event === undefined ? null : text(event).replace(/^event /u, ''),
 				};
 			});
+			// What each row spans, in the page's order: a row that spans more or fewer columns than the header has makes a column of its own.
+			const spans = group.childNodes.filter((child) => child.tagName === 'tr').map((row) => ({
+				what: classNames(row).has('api-group-row') ? 'group header' : classNames(row).has('api-closing') ? `closing row ${elements(row).filter((child) => child.tagName === 'code').map((code) => text(code)).join(', ')}` : `row ${read(elements(row).find((child) => child.tagName === 'code' && classNames(child).has('api-name')))}`,
+				span: spanOf(row),
+			}));
 			return {
+				spans,
 				label: headerCell === undefined ? null : (() => {
 					const code = elements(headerCell).find((child) => child.tagName === 'code');
 					return code === undefined ? headerCell.childNodes.filter((child) => child.nodeName === '#text').map((child) => child.value).join('').trim() : text(code);
@@ -454,6 +464,14 @@ export function compareComponent(expected, rendered, events, route, { collapseAb
 			continue;
 		}
 		if (!shown.hasTable || shown.hasAlternatives !== (part.groups.length > 1)) report(`${where} table ${shown.hasTable ? 'has' : 'lacks'} the Applies when column wrongly.`);
+		// Prop, Applies when (only with alternatives), Type, Required, Default, Description: every row fills those and no more.
+		const columns = part.groups.length > 1 ? 6 : 5;
+		if (shown.columns !== columns) report(`${where} table has ${shown.columns} columns, expected ${columns}.`);
+		for (const group of shown.groups) {
+			for (const { what, span } of group.spans) {
+				if (span !== columns) report(`${where}${group.label === null ? '' : ` (${group.label})`} ${what} spans ${span} columns, the table has ${columns}.`);
+			}
+		}
 		if (!same(shown.groups.map(({ label }) => label), part.groups.map(({ label }) => label))) {
 			report(`${where} groups are ${JSON.stringify(shown.groups.map(({ label }) => label))}, expected ${JSON.stringify(part.groups.map(({ label }) => label))}.`);
 			continue;

@@ -110,6 +110,21 @@ const mutations = [
 		change: (root) => closingOf(part(root, 'DataDiff')).forEach(detach),
 	},
 	{
+		label: 'the closing row of a table with five columns spans the six columns of one with alternatives (DataDiff, as it was built)',
+		slug: 'data-diff',
+		expect: ['DataDiff closing row children, dangerouslySetInnerHTML spans 6 columns, the table has 5'],
+		change: (root) => setAttribute(closingOf(part(root, 'DataDiff'))[0].childNodes.find((child) => child.tagName === 'th'), 'colspan', '3'),
+	},
+	{
+		label: 'a closing row loses its last cell (Virtualizer)',
+		slug: 'virtualizer',
+		expect: ["Virtualizer (layout = 'stack') closing row children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns spans 4 columns, the table has 6"],
+		change: (root) => {
+			const row = closingOf(group(root, 'Virtualizer', "layout = 'stack'"))[0];
+			detach(row.childNodes.filter((child) => child.tagName === 'td').at(-1));
+		},
+	},
+	{
 		label: 'an alias says "none declared" for the ref it shares (TextEditor.Root)',
 		slug: 'text-editor',
 		expect: ['TextEditor.Root ref line is "none declared", expected "TextEditorHandle"'],
@@ -140,4 +155,4 @@ for (const { label, slug, expect, change } of mutations) {
 	if (problems.some((line) => !line.startsWith(`/components/${slug}/ `))) failures.push(`${label}: a problem does not name the page /components/${slug}/.`);
 }
 if (failures.length > 0) throw new Error(`The typed reference checker missed a change to a built page, or failed to report it on the page:\n${failures.map((line) => `- ${line}`).join('\n')}`);
-console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, an alias reworded) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
+console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);

@@ -172,3 +172,51 @@ test('where the browser can show a closed details element\'s content, a printed 
 		assert.equal(print.open, screen.open, 'without opening anything: no script ran');
 	});
 });
+
+test('every row of a table fills the table\'s columns at 1920, 1280 and 390 px, so a closing row\'s state sits under Required', async () => {
+	await withSite(async ({ origin, newPage }) => {
+		// DataDiff has no alternatives (five columns), Virtualizer has (six), SwitchField's root has no closing row.
+		for (const [slug, heading] of [['data-diff', 'DataDiff'], ['virtualizer', 'Virtualizer'], ['switch-field', 'SwitchField.Root']]) {
+			for (const width of [1920, 1280, 390]) {
+				const page = await newPage({ width, height: 1080 });
+				await page.goto(`${origin}/components/${slug}/`);
+				const layout = await page.evaluate((name) => {
+					const part = document.querySelector(`details.api-part[data-api-part="${name}"]`);
+					const table = part.querySelector('table.api-table');
+					const box = (node) => node.getBoundingClientRect();
+					const required = [...table.querySelectorAll('thead th')].find((th) => th.textContent.trim() === 'Required');
+					const section = document.querySelector('#api-reference');
+					const rows = [...table.querySelectorAll('tbody tr')].map((row) => {
+						const cells = [...row.children].filter((cell) => getComputedStyle(cell).display !== 'none');
+						const state = row.querySelector('td.api-state');
+						return {
+							what: row.classList.contains('api-group-row') ? 'group header' : row.classList.contains('api-closing') ? 'closing row' : `row ${row.querySelector('.api-name')?.textContent}`,
+							rightmost: Math.max(...cells.map((cell) => box(cell).right)),
+							rowRight: box(row).right,
+							state: state === null ? null : { left: box(state).left, right: box(state).right },
+						};
+					});
+					return {
+						display: getComputedStyle(table).display,
+						columns: [...table.querySelectorAll('thead th')].length,
+						required: { left: box(required).left, right: box(required).right },
+						tableRight: box(table).right,
+						rows,
+						sectionOverflow: section.scrollWidth - section.clientWidth,
+					};
+				}, heading);
+				const where = `${slug} at ${width}px`;
+				assert.ok(layout.sectionOverflow <= 0, `${where}: the API reference does not scroll sideways`);
+				for (const row of layout.rows) {
+					assert.ok(row.rightmost <= row.rowRight + 1, `${where}: a ${row.what} has no cell past its own edge (${row.rightmost} > ${row.rowRight})`);
+					if (layout.display !== 'table') continue;
+					// The real table: no row is wider than the table, and every state cell is the Required column.
+					assert.ok(row.rightmost <= layout.tableRight + 1, `${where}: a ${row.what} makes no column of its own`);
+					if (row.state !== null) assert.ok(Math.abs(row.state.left - layout.required.left) <= 1 && Math.abs(row.state.right - layout.required.right) <= 1, `${where}: the state of a ${row.what} is under Required (${JSON.stringify(row.state)} against ${JSON.stringify(layout.required)})`);
+				}
+				if (width === 1920) assert.equal(layout.display, 'table', `${where}: the wide layout is a real table`);
+				assert.equal(layout.columns, slug === 'virtualizer' ? 6 : 5, `${where}: the table has the columns of a part ${slug === 'virtualizer' ? 'with' : 'without'} alternatives`);
+			}
+		}
+	});
+});
