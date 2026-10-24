@@ -74,8 +74,9 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
  * PromptComposer's inputProps declares, Set<string> for the selected item ids of TagGroup, and
  * Record<string, React.ReactNode> for the cell values of a Table row, and AbortSignal with Promise<unknown>
- * for the signal and the result of TextEditor's selection request, and EventTarget for the target
- * of a supplemental part's activation.
+ * for the signal and the result of TextEditor's selection request, EventTarget for the target
+ * of a supplemental part's activation, and React.ChangeEvent<HTMLInputElement> with React.ComponentType<SidebarIconProps>
+ * for the change event of Sidebar.Search and the icon of a Sidebar nav item or button.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
