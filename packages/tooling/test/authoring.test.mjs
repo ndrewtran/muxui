@@ -886,17 +886,19 @@ test('Decision 0031: any change inside a tuple is incompatible, at the root, in 
 
 test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
   const { context } = await setup();
-  // Text is generic over its element, which the closed grammar cannot derive, so it keeps an authored api.
+  // Text derives its web.react api from its declarations, so its record authors none, and authoring one with propDetails is rejected.
   const recordPath = 'catalog/components/text/artifact.json';
   const record = JSON.parse(await readFile(resolve(repositoryRoot, recordPath), 'utf8'));
   const diagnose = (candidate) => diagnoseCanonicalSource({ context, family: 'component', record: candidate, recordPath });
-  assert.equal(diagnose(record).valid, true, 'Text authors its web.react api');
+  assert.equal(diagnose(record).valid, true, 'Text authors no web.react api');
+  assert.equal(record.bindings['web.react'].api, undefined);
   const typed = structuredClone(record);
-  typed.bindings['web.react'].api.propDetails = {};
+  typed.bindings['web.react'].api = { props: [], events: [], parts: [], defaults: {}, propDetails: {} };
   const diagnosis = diagnose(typed);
   assert.equal(diagnosis.valid, false);
   assert.deepEqual(diagnosis.diagnostics.map(({ message, details }) => [details.source.path, message]), [
     ['$/bindings/web.react/api/propDetails', 'The canonical source is invalid: is derived only and cannot be authored'],
+    ['$/bindings/web.react/api', 'The canonical source is invalid: is derived from source; remove the authored api'],
   ]);
   assert.throws(() => mergeDerivedApis(typed), /\$\/bindings\/web\.react\/api\/propDetails is derived only/u);
 });

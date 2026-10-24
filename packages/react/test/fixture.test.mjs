@@ -250,11 +250,21 @@ const cardLook = (container, values) => {
   const card = container.matches?.('.muxui-card') ? container : container.querySelector('.muxui-card');
   return card === null ? undefined : values.find((value) => card.classList.contains(`muxui-card--${value}`));
 };
+// Text names its variant and size in one class modifier of its element, its colour in another unless it is the default, and a third marks
+// it truncated; the element it renders is its tag.
+const textLook = (container) => {
+  const text = container.matches?.('.muxui-text') ? container : container.querySelector('.muxui-text');
+  if (text === null) return undefined;
+  const [, variant, size] = /muxui-text--([a-z]+)-([a-z]+)/u.exec(text.className) ?? [];
+  return { variant, size, color: text.classList.contains('muxui-text--muted') ? 'muted' : 'default', as: text.localName, truncate: text.classList.contains('muxui-text--truncate') };
+};
 const markupValues = {
   // Sidebar marks only the compact density; the default one carries no attribute.
   density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
+    const text = textLook(doc);
+    if (text !== undefined) return text.size;
     const circle = doc.querySelector('.muxui-progress-circle');
     if (circle !== null) return ['sm', 'lg'].find((size) => circle.classList.contains(`muxui-progress-circle--${size}`)) ?? 'md';
     return doc.querySelector('[data-size]')?.getAttribute('data-size');
@@ -264,7 +274,7 @@ const markupValues = {
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
@@ -287,7 +297,9 @@ const markupValues = {
   },
   layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
   // A tag carries its colour, which the group's default sets for a tag that names none.
-  color: (doc) => doc.querySelector('[data-color]')?.getAttribute('data-color'),
+  color: (doc) => textLook(doc)?.color ?? doc.querySelector('[data-color]')?.getAttribute('data-color'),
+  as: (doc) => textLook(doc)?.as,
+  truncate: (doc) => textLook(doc)?.truncate,
 };
 const h = React.createElement;
 const minimalRenders = {
@@ -317,6 +329,7 @@ const minimalRenders = {
   Tree: () => treeOf(),
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
+  Text: () => h(generated.Text, null, 'Hello'),
   Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
   AlertDialog: () => alertDialog(),
   // Sidebar.Root's block is the column's own; the provider, search and nav parts are observed under 'Sidebar.<part>'.
@@ -882,6 +895,7 @@ test('every default a simple supplemental family states is compared with what th
   const different = {
     ButtonGroup: { orientation: 'vertical', attached: true, disabled: true, role: 'region' },
     ColorModeToggle: { disabled: true, storageKey: 'theme' },
+    Text: { variant: 'display', size: 'lg', color: 'muted', as: 'h1', truncate: true },
     ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
     InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
     PaymentInput: { defaultValue: '4111', size: 'lg' },

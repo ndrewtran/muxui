@@ -6,7 +6,7 @@ import {
   TextField as AriaTextField,
 } from 'react-aria-components';
 import { TextField } from '../../src/fields.ts';
-import { Text } from '../../src/supplemental/index.mjs';
+import { Text } from '../../src/supplemental/text.ts';
 
 const h = React.createElement;
 

@@ -15,7 +15,7 @@ import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { h, cx, dataState } from './part-utils.ts';
-import { defaultItemLabel, useItemRenderer } from './item-renderer.mjs';
+import { defaultItemLabel, useItemRenderer } from './item-renderer.ts';
 
 function normalizeKeys(value) {
   if (value === 'all') return 'all';

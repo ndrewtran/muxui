@@ -13,7 +13,7 @@ import {
 } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
 import { TextField } from '../src/fields.ts';
-import { Text } from '../src/supplemental/index.mjs';
+import { Text } from '../src/supplemental/text.ts';
 import { installDom } from './support/dom.mjs';
 
 const h = React.createElement;

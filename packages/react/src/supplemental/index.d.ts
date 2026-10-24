@@ -159,25 +159,6 @@ export declare const TagSelect: {
   Item: React.ForwardRefExoticComponent<TagSelectItemProps & React.RefAttributes<HTMLDivElement>>;
 };
 
-export type TextVariant = 'display' | 'heading' | 'title' | 'label' | 'body' | 'expressive' | 'mono';
-export type TextSize = 'xs' | 'sm' | 'md' | 'lg';
-export type TextColor = 'default' | 'muted';
-export type TextElement = 'p' | 'span' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'div' | 'label';
-type TextVisualProps =
-  | { variant?: 'body'; size?: TextSize }
-  | { variant: 'display' | 'heading' | 'title'; size?: Exclude<TextSize, 'xs'> }
-  | { variant: 'label' | 'expressive' | 'mono'; size?: TextSize };
-export type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & {
-  as?: T;
-  color?: TextColor;
-  truncate?: boolean;
-  className?: string;
-};
-export interface TextComponent {
-  <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;
-}
-export declare const Text: TextComponent;
-
 export declare const supplementalFamilies: readonly [
   'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text'
 ];

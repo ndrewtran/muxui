@@ -234,10 +234,12 @@ const labelOnly = ['autocomplete', 'calendar', 'checkbox-group', 'color-area', '
 const EXPLAINED_DIFFERENCES = [
   // The arm of a props type re-declares the member without its comment (Omit drops it), so the comment the
   // catalog carries is the one on the same-named member of the family's OwnProps type, which the model keeps.
-  ...[...labelOnly.map((slug) => `${slug}.label`), 'resizable.sizes', 'resizable.defaultSizes', 'dialog.title', 'code-block.mode', 'code-block.source', 'code-block.before', 'code-block.after', 'virtualizer.layout', 'virtualizer.children', 'select.description']
+  ...[...labelOnly.map((slug) => `${slug}.label`), 'resizable.sizes', 'resizable.defaultSizes', 'dialog.title', 'code-block.mode', 'code-block.source', 'code-block.before', 'code-block.after', 'virtualizer.layout', 'virtualizer.children', 'select.description', 'text.variant', 'text.size']
     .map((key) => `own-props-comment ${key}`),
   // Select's arms re-declare errorMessage with a comment of their own, so the declaration and the catalog say different things.
   'arm-comment select.errorMessage',
+  // A type parameter is recorded at its constraint (D3): the catalog writes Text's `as` as TextElement, and the declaration as the parameter T.
+  'binder-constraint text.as',
   // The catalog spells the lib type without its namespace; the model names it as the declaration does.
   'lib-namespace meter.formatOptions',
   'lib-namespace number-field.formatOptions',
@@ -259,10 +261,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 80 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 81 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 80, parts: 111, props: 701, events: 114, types: 144, references: 144 });
+  assert.deepEqual(result.counts, { families: 81, parts: 112, props: 706, events: 114, types: 148, references: 148 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -294,10 +296,10 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['command-palette', 'multi-select', 'tag-select', 'text'];
+const AUTHORED = ['command-palette', 'multi-select', 'tag-select'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 4 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// The 3 families whose web.react API is still authored list prop names only. Each name is owned by the one part
 // that declares it; these 16 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
@@ -322,10 +324,10 @@ const AUTHORED_OWNERS = {
 // families still authored list every one of theirs, so nothing is here; a family that needs it gets an entry.
 const UNLISTED_EVENTS = new Set();
 
-test('every prop of the 4 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 3 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 4, props: 62, unique: 46, listed: 16, events: 8 });
+  assert.deepEqual(result.counts, { families: 3, props: 57, unique: 41, listed: 16, events: 8 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });

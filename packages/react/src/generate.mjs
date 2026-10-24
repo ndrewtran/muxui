@@ -983,11 +983,6 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 for (const name of ['collections']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
 }
-// The modules the supplemental families share. None declares a family, so the mapping does not name them. A helper
-// that moves to TypeScript leaves this list in the same change, even while JavaScript modules still import it.
-for (const name of ['item-renderer']) {
-  outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/supplemental/${name}.mjs`, await readFile(resolve(packageRoot, `src/supplemental/${name}.mjs`), 'utf8')));
-}
 // Each JavaScript family the mapping places in a module of its own ships beside the barrel it is re-exported from.
 for (const record of currentMappedRecords.filter((candidate) => !candidate.subpath && !isTypeScriptFamily(candidate) && candidate.source !== 'packages/react/src/supplemental/index.mjs')) {
   outputs.set(flatModuleName(record.source), shippedModule(record.source, record.sourceText));

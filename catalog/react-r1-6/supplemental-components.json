@@ -420,7 +420,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/text.mjs",
+      "runtimeSource": "packages/react/src/supplemental/text.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

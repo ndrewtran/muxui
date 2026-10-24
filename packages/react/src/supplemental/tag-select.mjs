@@ -13,7 +13,7 @@ import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { IconButton } from './icon-button.ts';
 import { h, cx, dataState } from './part-utils.ts';
-import { defaultItemLabel, useItemRenderer } from './item-renderer.mjs';
+import { defaultItemLabel, useItemRenderer } from './item-renderer.ts';
 
 /* TagSelect */
 const TagSelectContext = React.createContext({ size: 'md' });

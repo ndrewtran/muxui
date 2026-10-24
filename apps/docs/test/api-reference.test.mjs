@@ -169,10 +169,10 @@ test('a default shows only where it applies: executed for a derived family, auth
 	const iconButton = partNamed(page('icon-button'), 'IconButton');
 	assert.deepEqual(rowNamed(iconButton, 'variant').default, { text: "'ghost'", authored: false });
 	assert.equal('default' in rowNamed(iconButton, 'children'), false);
-	// Text is authored: its defaults are labelled so, and variant's default body belongs only to the body alternative.
+	// Text derives its block too: its defaults are the executed ones, and variant's default body belongs only to the body alternative.
 	const text = partNamed(page('text'), 'Text');
-	assert.deepEqual(rowNamed(text, 'as').default, { text: "'span'", authored: true });
-	assert.deepEqual(rowNamed(text, 'variant', 1).default, { text: "'body'", authored: true });
+	assert.deepEqual(rowNamed(text, 'as').default, { text: "'span'", authored: false });
+	assert.deepEqual(rowNamed(text, 'variant', 1).default, { text: "'body'", authored: false });
 	assert.equal('default' in rowNamed(text, 'variant', 2), false, 'body is not one of display, heading or title');
 	assert.equal('default' in rowNamed(text, 'variant', 3), false);
 	// Virtualizer: height's default belongs to the stack, where height is a row, and a required row has none.

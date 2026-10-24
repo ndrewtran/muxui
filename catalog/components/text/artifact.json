@@ -36,26 +36,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "variant",
-          "size",
-          "color",
-          "as",
-          "truncate"
-        ],
-        "events": [],
-        "parts": [
-          "root"
-        ],
-        "defaults": {
-          "variant": "body",
-          "size": "md",
-          "color": "default",
-          "as": "span",
-          "truncate": false
-        }
-      },
       "behavior": [
         "variant selects the typography role: display, heading, title, label, body, expressive, or mono.",
         "display, heading, and title support the sizes sm, md, and lg; label, body, expressive, and mono also support xs.",
