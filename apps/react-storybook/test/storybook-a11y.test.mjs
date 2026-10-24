@@ -1036,7 +1036,7 @@ test('Storybook typed API reference is axe-clean, keyboard-operable and reflows 
 });
 
 /** Waits until the fragment of the address names a disclosure that is open and on screen, or says where it is instead. */
-async function waitForFragmentShown(page, label) {
+async function waitForFragmentShown(page, label, timeout = 20_000) {
   const place = () => page.evaluate(() => {
     const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
     return { hash: location.hash, found: target !== null, open: target?.open, top: target?.getBoundingClientRect().top, scrollY, height: document.documentElement.scrollHeight, viewport: innerHeight };
@@ -1046,9 +1046,27 @@ async function waitForFragmentShown(page, label) {
     if (target === null) return false;
     const { top } = target.getBoundingClientRect();
     return target.open === true && top > -1 && top < innerHeight;
-  }, undefined, { timeout: 20_000 }).catch(async (error) => {
+  }, undefined, { timeout }).catch(async (error) => {
     throw new Error(`${label}: the fragment's target is not open and in view (${JSON.stringify(await place())})`, { cause: error });
   });
+}
+
+/** CommandPalette's Docs address, and the ids of a closed part and a closed type to link to. It has 29 parts, so all but the first are closed, and its page is long. */
+async function commandPaletteFragments(session) {
+  const url = session.docsUrl('CommandPalette');
+  const probe = await session.newPage();
+  await probe.goto(url, { waitUntil: 'domcontentloaded' });
+  await probe.locator('[data-typed-reference]').waitFor();
+  const ids = await probe.evaluate(() => {
+    const closed = [...document.querySelectorAll('[data-typed-reference] details:not([open])')];
+    return {
+      part: closed.filter((details) => details.hasAttribute('data-part')).at(2)?.id,
+      type: closed.filter((details) => details.hasAttribute('data-type')).at(-2)?.id,
+    };
+  });
+  await probe.close();
+  assert.ok(ids.part && ids.type, `CommandPalette has closed parts and types to link to (${JSON.stringify(ids)})`);
+  return { url, ids };
 }
 
 test('Storybook typed API reference opens and scrolls to the part or type a fragment names, on load, on a hash change, and on Back and Forward', {
@@ -1062,20 +1080,7 @@ test('Storybook typed API reference opens and scrolls to the part or type a frag
   const resources = createAuditResources(t.signal);
   try {
     const session = await typedReferenceSession(t.signal, resources);
-    // CommandPalette has 29 parts, so all but the first are closed, and its page is long: a fragment is far below the first screen.
-    const url = session.docsUrl('CommandPalette');
-    const probe = await session.newPage();
-    await probe.goto(url, { waitUntil: 'domcontentloaded' });
-    await probe.locator('[data-typed-reference]').waitFor();
-    const ids = await probe.evaluate(() => {
-      const closed = [...document.querySelectorAll('[data-typed-reference] details:not([open])')];
-      return {
-        part: closed.filter((details) => details.hasAttribute('data-part')).at(2)?.id,
-        type: closed.filter((details) => details.hasAttribute('data-type')).at(-2)?.id,
-      };
-    });
-    await probe.close();
-    assert.ok(ids.part && ids.type, `CommandPalette has closed parts and types to link to (${JSON.stringify(ids)})`);
+    const { url, ids } = await commandPaletteFragments(session);
 
     // A cold load at a fragment, with nothing yet settled: the part and the type each open and end in view.
     for (const [kind, id] of Object.entries(ids)) {
@@ -1113,6 +1118,79 @@ test('Storybook typed API reference opens and scrolls to the part or type a frag
     await page.locator('[data-typed-reference]').waitFor();
     await waitForStableHeight(page);
     await waitForFragmentShown(page, 'Back from another document');
+  } finally {
+    await resources.close();
+  }
+});
+
+// Storybook loads its syntax highlighter and formatter on demand, and each code block of the page grows when they arrive: that is the
+// late content that moves a fragment's target after the page first shows it. These requests are the ones the proof delays.
+const lateContent = /\/sb-vite\/deps\/(?:formatter|syntaxhighlighter)-[^/?]*\.js/u;
+
+test('Storybook typed API reference keeps the part or type a fragment names in view while the page loads late, until the reader scrolls', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = typedReferenceSelection();
+    if (selection.skip) return selection.skip;
+    return selection.families.includes('CommandPalette') ? false : 'CommandPalette is outside the selected families';
+  })(),
+}, async (t) => {
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    const { url, ids } = await commandPaletteFragments(session);
+    /** A cold load at `id` in which the highlighter and formatter arrive `lateMs` after they are asked for. Resolves once both have and the page has settled. */
+    const loadLate = async (id, lateMs) => {
+      const page = await session.newPage();
+      let arrived = 0;
+      await page.route(lateContent, async (route) => {
+        await delay(lateMs);
+        await route.continue();
+      });
+      page.on('requestfinished', (request) => { if (lateContent.test(request.url())) arrived += 1; });
+      await page.goto(`${url}#${id}`, { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-typed-reference]').waitFor();
+      const arrival = async () => {
+        const deadline = Date.now() + lateMs + 20_000;
+        while (arrived < 2) {
+          if (Date.now() > deadline) throw new Error(`the delayed highlighter and formatter did not arrive (${arrived} of 2)`);
+          await delay(50);
+        }
+        await waitForStableHeight(page);
+      };
+      return { page, arrival };
+    };
+    const topOf = (page) => page.evaluate(() => document.getElementById(decodeURIComponent(location.hash.slice(1))).getBoundingClientRect().top);
+
+    // The late content arrives after the page first shows, and the target is still in view once it has.
+    for (const lateMs of [1_800, 4_000]) {
+      for (const [kind, id] of Object.entries(ids)) {
+        const { page, arrival } = await loadLate(id, lateMs);
+        await arrival();
+        await waitForFragmentShown(page, `a cold load at a ${kind} fragment with the highlighter ${lateMs} ms late`, 3_000);
+        t.diagnostic(`${kind} fragment, content ${lateMs} ms late: the target ends ${Math.round(await topOf(page))} px from the top of the viewport`);
+        await page.close();
+      }
+    }
+
+    // A reader who scrolls, presses a key or touches the page is not pulled back to the target by content that arrives after.
+    const interruptions = {
+      'scrolls the wheel': (page) => page.mouse.wheel(0, -4_000),
+      'presses a key': (page) => page.keyboard.press('Shift'),
+      'presses the pointer': async (page) => { await page.mouse.move(600, 12); await page.mouse.down(); await page.mouse.up(); },
+    };
+    for (const [what, interrupt] of Object.entries(interruptions)) {
+      const { page, arrival } = await loadLate(ids.part, 4_000);
+      // The first scroll happens when the page loads, long before the highlighter arrives.
+      await page.waitForFunction(() => document.getElementById(decodeURIComponent(location.hash.slice(1))).getBoundingClientRect().top < 400);
+      await page.mouse.move(600, 400);
+      await interrupt(page);
+      await arrival();
+      const top = await topOf(page);
+      const height = await page.evaluate(() => innerHeight);
+      assert.ok(top < -1 || top >= height, `after the reader ${what}, late content does not scroll the page back to the target (it is ${Math.round(top)} px from the top of a ${height} px viewport)`);
+      await page.close();
+    }
   } finally {
     await resources.close();
   }

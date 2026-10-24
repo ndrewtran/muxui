@@ -319,40 +319,48 @@ function reveal(id) {
   return target;
 }
 
-/** Resolves once the page has stopped growing for half a second of frames, or after four seconds: embedded stories and code blocks settle late. */
-function untilSettled() {
-  return new Promise((done) => {
-    const limit = performance.now() + 4000;
-    let height = document.documentElement.scrollHeight;
-    let steady = 0;
-    const frame = () => {
-      const next = document.documentElement.scrollHeight;
-      steady = next === height ? steady + 1 : 0;
-      height = next;
-      if (steady >= 30 || performance.now() > limit) done();
-      else requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-}
+/** How long the page may go without a layout change before it stops following the target, and the longest it follows it at all (ms). */
+const followQuietMs = 6000;
+const followLimitMs = 20000;
+let stopFollowing = () => {};
 
 /**
- * Opens the part or type the address names and scrolls to it. What is above it keeps growing for a moment, which moves it away, so
- * it scrolls again once the page has settled, unless the reader has scrolled or pressed a key in the meantime.
+ * Opens the part or type the address names, scrolls to it, and keeps it there while the page loads around it. What is above it
+ * renders late (Storybook loads its syntax highlighter and formatter on demand, and each code block grows when they arrive), and
+ * each growth moves the target, so every layout change of the page scrolls to it again if it has moved. It stops when the page
+ * has been quiet for `followQuietMs`, when `followLimitMs` have passed, or as soon as the reader scrolls, presses a key or
+ * touches the page, so it never fights a reader.
  */
 function showFragment() {
+  stopFollowing();
   const id = fragmentId();
   const target = reveal(id);
   if (target === null) return;
   target.scrollIntoView();
-  let moved = false;
-  const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
-  const stop = () => { moved = true; };
-  for (const type of events) window.addEventListener(type, stop, { once: true, passive: true });
-  untilSettled().then(() => {
-    for (const type of events) window.removeEventListener(type, stop);
-    if (!moved && fragmentId() === id) reveal(id)?.scrollIntoView();
-  });
+  const interruptions = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+  let quiet = 0;
+  const resize = new ResizeObserver(() => follow());
+  const mutations = new MutationObserver(() => follow());
+  const stop = () => {
+    clearTimeout(quiet);
+    clearTimeout(limit);
+    resize.disconnect();
+    mutations.disconnect();
+    for (const type of interruptions) window.removeEventListener(type, stop);
+    stopFollowing = () => {};
+  };
+  function follow() {
+    clearTimeout(quiet);
+    quiet = setTimeout(stop, followQuietMs);
+    if (Math.abs(target.getBoundingClientRect().top) > 1) target.scrollIntoView();
+  }
+  const limit = setTimeout(stop, followLimitMs);
+  for (const type of interruptions) window.addEventListener(type, stop, { once: true, passive: true });
+  resize.observe(document.documentElement);
+  resize.observe(document.body);
+  mutations.observe(document.body, { childList: true, subtree: true, characterData: true });
+  stopFollowing = stop;
+  follow();
 }
 
 /** Every part and type of the reference, each a details element. */
