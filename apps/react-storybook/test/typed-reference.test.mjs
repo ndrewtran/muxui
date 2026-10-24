@@ -8,6 +8,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { CommandPalette } from '@muxui/react';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { componentDeclarations, readDeclarationReference, readReactPackageFacts } from '../../component-reference.mjs';
+import { typedReference } from '../src/component-docs.mjs';
 import { STORY_API_PARTS, argTypesForBinding, storyApi } from '../src/storybook-factory.mjs';
 
 // The typed reference on every family Docs page (Decision 0031). What the page should show is read here straight from
@@ -81,14 +83,18 @@ function expectedGroups(part) {
     doc: member.doc ?? '',
   });
   const alternatives = part.alternatives ?? [];
-  if (alternatives.length === 0) return [{ rows: (part.members ?? []).map(row), notAllowed: [], notDeclared: [] }];
+  if (alternatives.length === 0) return [{ rows: (part.members ?? []).map(row), notAllowed: [], notDeclared: [], ref: null, native: null }];
   const declared = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
+  const refText = (ref) => ref === undefined ? null : ref === null ? 'none declared' : ref.never === true ? `not allowed, ${ref.required === true ? 'ref: never' : 'ref?: never'}` : ref.type;
+  const nativeText = (natives) => natives === undefined ? null : natives.map(({ type, omit }) => `${type}${omit?.length > 0 ? ` except ${omit.join('')}` : ''}`).join('');
   return [
-    ...((part.members ?? []).length > 0 ? [{ rows: part.members.map(row), notAllowed: [], notDeclared: [] }] : []),
-    ...alternatives.map(({ members }) => ({
+    ...((part.members ?? []).length > 0 ? [{ rows: part.members.map(row), notAllowed: [], notDeclared: [], ref: null, native: null }] : []),
+    ...alternatives.map(({ members, ref, natives }) => ({
       rows: members.filter(({ never }) => never !== true).map(row),
       notAllowed: members.filter(({ never }) => never === true).map(({ name }) => name),
       notDeclared: declared.filter((name) => !members.some((member) => member.name === name)),
+      ref: refText(ref),
+      native: nativeText(natives),
     })),
   ];
 }
@@ -105,6 +111,9 @@ function renderedGroups(partNode) {
     })),
     notAllowed: (body.querySelector('tr[data-not-allowed]')?.getAttribute('data-not-allowed') ?? '').split(',').filter(Boolean),
     notDeclared: (body.querySelector('tr[data-not-declared]')?.getAttribute('data-not-declared') ?? '').split(',').filter(Boolean),
+    // An alternative's own ref and native envelope sit in its group's heading.
+    ref: [...body.querySelectorAll('.muxui-docs-group-ref')].map((node) => node.textContent).find((value) => value.startsWith('Ref '))?.slice(4) ?? null,
+    native: [...body.querySelectorAll('.muxui-docs-group-ref')].map((node) => node.textContent).find((value) => value.startsWith('Native '))?.slice(7) ?? null,
   }));
 }
 
@@ -469,4 +478,217 @@ test('the CommandPalette page states which parts need a Root ancestor, and the i
   });
   assert.deepEqual(needsRoot.sort(), [...named].sort());
   assert.doesNotThrow(() => renderToStaticMarkup(h(CommandPalette.Root, null)), 'Root renders with none of its parts');
+});
+
+// ---- The four records the typed reference closes, and what an omission does to the checks ----
+
+const packageFacts = readReactPackageFacts(repositoryRoot);
+
+/** A copy of the declaration reference that `mutate` has changed. Nothing on disk changes. */
+function mutatedReference(mutate) {
+  const reference = readDeclarationReference(repositoryRoot);
+  const copy = { inventory: structuredClone(reference.inventory), files: new Map([...reference.files].map(([owner, file]) => [owner, structuredClone(file)])) };
+  mutate(copy);
+  return copy;
+}
+
+/** The Docs page of `family` as its typed reference reads from `declarations`; generation throws when they no longer agree. */
+async function pageFrom(family, declarations) {
+  const { artifact, api } = catalogOf(family);
+  const typed = typedReference({ share: componentDeclarations({ artifact, packageFacts, declarations }), declarations, packageName, primary: family, api });
+  return pageOf({ ...await entryOf(manifest.families.find((record) => record.family === family)), typed });
+}
+
+/** The first thing that fails when `mutate` changes the reference: generation, or `check` of the page it renders. Null when nothing does. */
+async function failureOf(family, mutate, check = (page) => pageProblems(page, ownerOf(family))) {
+  let page;
+  try {
+    page = await pageFrom(family, mutatedReference(mutate));
+  } catch (error) {
+    return `generation: ${error.message}`;
+  }
+  return check(page)[0] ?? null;
+}
+
+const partOf = (copy, owner, exportName, member) => copy.files.get(owner).exports.find(({ name }) => name === exportName).parts.find((part) => part.member === member);
+const dropExport = (copy, owner, name) => {
+  const file = copy.files.get(owner);
+  file.exports = file.exports.filter((item) => item.name !== name);
+};
+const dropInventory = (copy, name) => {
+  for (const entry of copy.inventory.entries) if (entry.exports) entry.exports = entry.exports.filter((item) => item.name !== name);
+};
+
+const rowsOf = (node) => new Map([...node.querySelectorAll('tr[data-prop]')].map((row) => [row.getAttribute('data-prop'), {
+  required: row.querySelector('[data-cell="required"]').firstChild.textContent === 'required',
+  type: row.querySelector('[data-cell="type"] > code').textContent,
+}]));
+const refOf = (node) => node.querySelector('[data-meta="ref"]')?.textContent;
+const nativeOf = (node) => node.querySelector('[data-meta="native"]')?.textContent;
+const printedType = (page, name) => [...page.querySelectorAll('[data-type]')].find((node) => node.getAttribute('data-type') === name)?.querySelector('pre').textContent;
+
+/** Each pin is what the ledger record asks the page to show, written out here by hand; it lists what differs. */
+const pins = {
+  'DISCLOSURE-01': (page) => {
+    const problems = [];
+    const nodes = partNodes(page);
+    if (nodes.map((node) => node.getAttribute('data-part')).join() !== 'Disclosure') problems.push('Disclosure has one part and no Title part');
+    if ([...page.querySelectorAll('[data-part], [data-export]')].some((node) => /Title$/u.test(node.getAttribute('data-part') ?? node.getAttribute('data-export')))) problems.push('there is a Disclosure.Title');
+    const rows = rowsOf(nodes[0]);
+    const expected = {
+      title: [true, 'React.ReactNode'], children: [false, 'React.ReactNode'], expanded: [false, 'boolean'], defaultExpanded: [false, 'boolean'],
+      disabled: [false, 'boolean'], id: [false, 'string'], onExpandedChange: [false, '(expanded: boolean) => void'],
+    };
+    for (const [name, [required, type]] of Object.entries(expected)) {
+      const row = rows.get(name);
+      if (row?.required !== required || row?.type !== type) problems.push(`Disclosure ${name} is ${JSON.stringify(row)}, expected ${required ? 'required' : 'optional'} ${type}`);
+    }
+    if (refOf(nodes[0]) !== 'HTMLDivElement') problems.push(`Disclosure ref is ${refOf(nodes[0])}`);
+    return problems;
+  },
+  'SWITCH-FIELD-01': (page) => {
+    const problems = [];
+    const expectedRefs = { Root: 'HTMLDivElement', Button: 'HTMLLabelElement', Thumb: 'HTMLSpanElement', Description: 'HTMLElement', Error: 'HTMLElement' };
+    for (const [member, ref] of Object.entries(expectedRefs)) {
+      const node = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === `SwitchField.${member}`);
+      if (refOf(node) !== ref) problems.push(`SwitchField.${member} ref is ${refOf(node)}, expected ${ref}`);
+    }
+    const root = rowsOf(partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'SwitchField.Root'));
+    for (const [name, type] of [['onChange', '(checked: boolean) => void'], ['name', 'string'], ['value', 'string']]) {
+      if (root.get(name)?.type !== type) problems.push(`SwitchField.Root ${name} is ${root.get(name)?.type}, expected ${type}`);
+    }
+    return problems;
+  },
+  'TEXT-AREA-01': (page) => {
+    const problems = [];
+    const part = (label) => partNodes(page).find((candidate) => candidate.getAttribute('data-part') === label);
+    if (refOf(part('TextArea.Root')) !== 'HTMLDivElement') problems.push(`TextArea.Root ref is ${refOf(part('TextArea.Root'))}`);
+    if (refOf(part('TextArea.TextArea')) !== 'HTMLTextAreaElement') problems.push(`TextArea.TextArea ref is ${refOf(part('TextArea.TextArea'))}`);
+    if (nativeOf(part('TextArea.TextArea')) !== 'React.TextareaHTMLAttributes<HTMLTextAreaElement>') problems.push(`TextArea.TextArea native is ${nativeOf(part('TextArea.TextArea'))}`);
+    if (rowsOf(part('TextArea.Root')).get('onChange')?.type !== '(value: string) => void') problems.push('TextArea.Root onChange is not (value: string) => void');
+    return problems;
+  },
+  'TEXT-EDITOR-02': (page) => {
+    const problems = [];
+    const fixture = readJson('packages/react/test/fixtures/public-surface-inventory.json').baseline['./text-editor'];
+    const listed = [...page.querySelectorAll('table.muxui-docs-exports tbody tr[data-export]')];
+    const subpath = `from '${packageName}/text-editor';`;
+    if (listed.length !== 32 || !listed.every((row) => row.querySelector('td code').textContent.endsWith(subpath))) problems.push(`the text-editor section lists ${listed.length} exports, not all 32 from its subpath`);
+    const names = listed.map((row) => row.querySelector('th').textContent).sort();
+    const expectedNames = [...fixture.types, ...fixture.values].sort();
+    if (JSON.stringify(names) !== JSON.stringify(expectedNames)) problems.push(`the exports differ from the inventory: ${names.filter((name) => !expectedNames.includes(name)).concat(expectedNames.filter((name) => !names.includes(name)))}`);
+    const signature = (name) => page.querySelector(`div[data-export="${name}"] [data-meta="signature"]`)?.textContent;
+    if (signature('isTextEditorDocument') !== 'isTextEditorDocument(value: unknown): value is TextEditorDocument') problems.push(`isTextEditorDocument is ${signature('isTextEditorDocument')}`);
+    if (signature('normalizeTextEditorDocument') !== 'normalizeTextEditorDocument(value: unknown): TextEditorDocument') problems.push(`normalizeTextEditorDocument is ${signature('normalizeTextEditorDocument')}`);
+    const command = printedType(page, 'TextEditorCommand') ?? '';
+    for (const arm of ["type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate'", "type: 'align'", "type: 'color'", "type: 'fontFamily'", "type: 'fontSize'", "type: 'link'", "type: 'image'"]) {
+      if (!command.includes(arm)) problems.push(`TextEditorCommand lacks ${arm}`);
+    }
+    const actions = printedType(page, 'TextEditorSelectionActions') ?? '';
+    for (const member of ['readonly selection', 'readonly signal: AbortSignal', 'replace(', 'insertAfter(', 'close(): void']) {
+      if (!actions.includes(member)) problems.push(`TextEditorSelectionActions lacks ${member}`);
+    }
+    const props = rowsOf(partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor'));
+    for (const [name, type] of Object.entries({
+      onLinkRequest: '(actions: TextEditorActionCallbacks) => void',
+      onImageRequest: '(actions: { insertImage(src: string, alt?: string): boolean }) => void',
+      onColorRequest: '(actions: { setColor(value: string): boolean }) => void',
+      onGenerate: '() => void',
+      onSelectionRequest: '(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>',
+    })) {
+      if (props.get(name)?.type !== type) problems.push(`TextEditor ${name} is ${props.get(name)?.type}`);
+    }
+    if (refOf(partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor')) !== 'TextEditorHandle') problems.push('TextEditor ref is not TextEditorHandle');
+    return problems;
+  },
+};
+
+const pinFamilies = { 'DISCLOSURE-01': 'Disclosure', 'SWITCH-FIELD-01': 'SwitchField', 'TEXT-AREA-01': 'TextArea', 'TEXT-EDITOR-02': 'TextEditor' };
+
+test('the four records pin what their pages show, against the shipped declarations where they can be', async () => {
+  for (const [record, family] of Object.entries(pinFamilies)) {
+    const page = pageOf(await entryOf(manifest.families.find((item) => item.family === family)));
+    assert.deepEqual(pins[record](page), [], record);
+  }
+  // The pinned TextEditor signatures are the ones the package ships, read without the reference.
+  const shipped = readFileSync(resolve(repositoryRoot, 'packages/react/generated/text-editor.d.ts'), 'utf8').replace(/[\s;]+/gu, '');
+  for (const text of [
+    'onLinkRequest?:(actions:TextEditorActionCallbacks)=>void',
+    'onImageRequest?:(actions:{insertImage(src:string,alt?:string):boolean})=>void',
+    'onColorRequest?:(actions:{setColor(value:string):boolean})=>void',
+    'onGenerate?:()=>void',
+    'onSelectionRequest?:(request:TextEditorSelectionRequest,actions:TextEditorSelectionActions)=>void|Promise<unknown>',
+    'declarefunctionisTextEditorDocument(value:unknown):valueisTextEditorDocument',
+    'declarefunctionnormalizeTextEditorDocument(value:unknown):TextEditorDocument',
+  ]) assert.ok(shipped.includes(text), `the shipped declarations say ${text}`);
+});
+
+test('a model that changes what a record pins fails the pin, as an omission from the reference fails the page checks', async () => {
+  const text = (copy, name, change) => { const type = copy.files.get('text-editor').types.find((item) => item.name === name); type.text = change(type.text); };
+  const mutations = [
+    // The record pins, each broken in the model.
+    ['DISCLOSURE-01', 'Disclosure', 'title becomes optional', (copy) => { partOf(copy, 'disclosure', 'Disclosure', null).members.find(({ name }) => name === 'title').optional = true; }],
+    ['DISCLOSURE-01', 'Disclosure', 'a Title part appears', (copy) => { const part = partOf(copy, 'disclosure', 'Disclosure', null); copy.files.get('disclosure').exports[0].parts.push({ ...structuredClone(part), member: 'Title' }); }],
+    ['SWITCH-FIELD-01', 'SwitchField', 'Button becomes HTMLButtonElement', (copy) => { partOf(copy, 'switch-field', 'SwitchField', 'Button').ref = { type: 'HTMLButtonElement' }; }],
+    ['SWITCH-FIELD-01', 'SwitchField', 'Root loses its onChange payload', (copy) => { partOf(copy, 'switch-field', 'SwitchField', 'Root').members.find(({ name }) => name === 'onChange').type = '() => void'; }],
+    ['TEXT-AREA-01', 'TextArea', 'the textarea ref becomes HTMLInputElement', (copy) => { partOf(copy, 'text-area', 'TextArea', 'TextArea').ref = { type: 'HTMLInputElement' }; }],
+    ['TEXT-AREA-01', 'TextArea', 'the native surface loses its element', (copy) => { partOf(copy, 'text-area', 'TextArea', 'TextArea').natives[0].type = 'React.TextareaHTMLAttributes<HTMLElement>'; }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a helper is deleted', (copy) => { dropExport(copy, 'text-editor', 'isTextEditorDocument'); dropInventory(copy, 'isTextEditorDocument'); }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'the selection request loses its promise', (copy) => { const member = partOf(copy, 'text-editor', 'TextEditor', null).members.find(({ name }) => name === 'onSelectionRequest'); member.type = member.type.replace(' | Promise<unknown>', ''); }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a command arm is lost', (copy) => text(copy, 'TextEditorCommand', (value) => value.replace("type: 'image';", "type: 'picture';"))],
+    ['TEXT-EDITOR-02', 'TextEditor', 'the selection actions lose close', (copy) => text(copy, 'TextEditorSelectionActions', (value) => value.replace('close(): void;', ''))],
+  ];
+  for (const [record, family, name, mutate] of mutations) {
+    assert.notEqual(await failureOf(family, mutate, pins[record]), null, `${record}: ${name} must fail its pin`);
+  }
+  // Negative control: an untouched copy passes both.
+  for (const [record, family] of Object.entries(pinFamilies)) {
+    assert.equal(await failureOf(family, () => {}, pins[record]), null, `${record} passes on the committed reference`);
+    assert.equal(await failureOf(family, () => {}), null, `${family} passes the page checks on the committed reference`);
+  }
+});
+
+test('deleting a part, a hook, a helper, a ref or an import from a copy of the reference fails the checks', async () => {
+  const cases = [
+    ['a part', 'SwitchField', (copy) => { const record = copy.files.get('switch-field').exports.find(({ name }) => name === 'SwitchField'); record.parts = record.parts.filter(({ member }) => member !== 'Thumb'); }],
+    ['a hook from the file', 'Toast', (copy) => dropExport(copy, 'toast', 'useToast')],
+    ['a hook from the inventory', 'Toast', (copy) => dropInventory(copy, 'useToast')],
+    ['a helper from the file', 'TextEditor', (copy) => dropExport(copy, 'text-editor', 'normalizeTextEditorDocument')],
+    ['a helper from the inventory', 'TextEditor', (copy) => dropInventory(copy, 'normalizeTextEditorDocument')],
+    ['a flat part', 'Resizable', (copy) => dropExport(copy, 'resizable', 'ResizablePanel')],
+    ['a ref', 'SwitchField', (copy) => { delete partOf(copy, 'switch-field', 'SwitchField', 'Button').ref; }],
+    ['a ref of an alternative', 'Virtualizer', (copy) => { delete copy.files.get('virtualizer').exports[0].parts[0].alternatives[0].ref; }],
+    ['an import', 'TextEditor', (copy) => { copy.inventory.entries.find(({ key }) => key === './text-editor').key = './editor'; }],
+    ['an exported type', 'IconButton', (copy) => { const file = copy.files.get('icon-button'); file.types = file.types.filter(({ name }) => name !== 'IconButtonProps'); }],
+    ['an alternative', 'Dialog', (copy) => { partOf(copy, 'dialog', 'Dialog', null).alternatives.pop(); }],
+    ['a member', 'IconButton', (copy) => { const part = partOf(copy, 'icon-button', 'IconButton', null); part.members = part.members.filter(({ name }) => name !== 'size'); }],
+    ['a generic', 'Text', (copy) => { delete partOf(copy, 'text', 'Text', null).typeParameters; }],
+  ];
+  for (const [name, family, mutate] of cases) {
+    assert.notEqual(await failureOf(family, mutate), null, `deleting ${name} must fail the page checks`);
+  }
+
+  // The public surface inventory finds the same omissions in the pages taken together.
+  const pages = await allPages();
+  const swap = async (family, mutate) => {
+    const index = manifest.families.findIndex((record) => record.family === family);
+    const copy = [...pages];
+    try {
+      copy[index] = await pageFrom(family, mutatedReference(mutate));
+    } catch {
+      return null;
+    }
+    return coverageProblems(copy).problems;
+  };
+  assert.deepEqual(coverageProblems(pages).problems, [], 'the committed pages cover the public surface');
+  for (const [name, family, mutate, expected] of [
+    ['a part', 'SwitchField', cases[0][2], '.:part:SwitchField.Thumb is on no page'],
+    ['a hook', 'Toast', cases[2][2], '.:value:useToast is on no page'],
+    ['a helper', 'TextEditor', cases[4][2], './text-editor:value:normalizeTextEditorDocument is on no page'],
+    ['an import', 'TextEditor', cases[8][2], './editor:value:TextEditor is not in the public surface'],
+  ]) {
+    const problems = await swap(family, mutate);
+    assert.ok(problems === null || problems.includes(expected), `${name}: ${expected} (got ${JSON.stringify(problems)})`);
+    assert.notEqual(problems === null ? 'generation fails' : problems.length === 0 ? null : 'problems', null, name);
+  }
 });
