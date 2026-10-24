@@ -50,12 +50,12 @@ function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist,
   }
 }
 
-function rejects(declarations, pattern, options = {}) {
+function rejects(declarations, pattern, options = {}, rule) {
   assert.throws(() => extract({ declarations, ...options }), (error) => {
     assert.ok(error instanceof ApiExtractionError, error.stack);
     assert.match(error.message, pattern);
     return true;
-  });
+  }, rule);
 }
 
 const event = `/** What an activation reports. */
@@ -698,7 +698,29 @@ test('a member that is the host\'s intersected with the owned one is read only a
   refuse({ extra: 'export interface Attributes<T> extends React.DOMAttributes<T> {}\n', publicType: 'Attributes<HTMLDivElement> & ThingOwnProps' }, [OVERLAP]);
   // A declaration outside React is a second declaration of React's member, which the entry does not allow.
   refuse({ extra: "declare module 'react' { interface DOMAttributes<T> { onChange?: React.FormEventHandler<T> | undefined } }\n" }, [OVERLAP]);
-  refuse({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  // The host's attributes may be the default library's Omit of an interface React declares, when the Omit keeps the member and with it the host's own type
+  // for it (MultiSelect omits the div's children and keeps its onReset). An Omit that drops the member leaves the owned type alone, which needs no entry.
+  assert.deepEqual(read({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }).events, ['change']);
+  assert.deepEqual(read({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'color'> & ThingOwnProps" }).events, ['change']);
+  assert.deepEqual(read({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & ThingOwnProps" }, []).events, ['change'], 'an Omit of the member itself');
+  // Any other wrapper of them is another type: a mapped type of another name around the Omit or inside it, an Omit of an Omit, a Pick (which is no
+  // Omit), an Omit of a local interface or alias that shares the name, and an Omit over another element.
+  for (const wrapper of ['Broaden', 'Narrow']) {
+    const extra = wrapper === 'Broaden' ? BROADEN : NARROW;
+    refuse({ extra, publicType: `${wrapper}<Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>> & ThingOwnProps` }, [OVERLAP]);
+    refuse({ extra, publicType: `Omit<${wrapper}<React.HTMLAttributes<HTMLDivElement>>, 'children'> & ThingOwnProps` }, [OVERLAP]);
+    refuse({ extra, publicType: `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ${wrapper}<ThingOwnProps>` }, [OVERLAP]);
+  }
+  refuse({ publicType: "Omit<Omit<React.HTMLAttributes<HTMLDivElement>, 'children'>, 'color'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ publicType: "Pick<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onChange'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Pick<ThingOwnProps, 'onChange'>" }, [OVERLAP]);
+  refuse({ extra: `${BROADEN}type Omit<T, K extends keyof any> = Broaden<T>;\n`, publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ extra: 'type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;\n', publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ extra: 'export interface LocalAttributes extends React.HTMLAttributes<HTMLDivElement> {}\n', publicType: "Omit<LocalAttributes, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ publicType: "Omit<React.HTMLAttributes<HTMLTextAreaElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ publicType: "Omit<React.HTMLAttributes<HTMLElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  // The Omit has to be the host's whole attributes: the one that drops the member and a second carrier that declares it leaves two hosts.
+  refuse({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & React.InputHTMLAttributes<HTMLInputElement> & ThingOwnProps" }, [OVERLAP]);
   refuse({ publicType: "React.HTMLAttributes<HTMLDivElement> & Omit<ThingOwnProps, 'other'>" }, [OVERLAP]);
   // The host's attributes are instantiated with the entry's element, read from the resolved type: the same props over another element
   // give an identical API record and another public type, so a textarea's or a button's attributes, any other element's, and a local
@@ -731,6 +753,41 @@ test('a member that is the host\'s intersected with the owned one is read only a
   ]) assert.throws(() => assertHostOverlaps([entry]), /host overlaps/u, JSON.stringify(entry));
   assert.throws(() => assertHostOverlaps([OVERLAP, OVERLAP]), /names a member twice/u);
   assert.equal(assertHostOverlaps(HOST_OVERLAPS).size, HOST_OVERLAPS.length);
+});
+
+test('a host overlap is read through an OwnProps that is generic only by the instantiation with the exported signature\'s own parameters', () => {
+  const members = '  onChange?: React.ChangeEventHandler<HTMLInputElement>;\n  items?: T[];';
+  const thing = (body, extra = '') => genericThing({ declarations: `${ROW}${extra}`, members, body });
+  const withHost = (wrapped) => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ${wrapped}`;
+  const read = (declarations, hostOverlaps = [OVERLAP]) => extract({ declarations, hostOverlaps, hostAllowlist: CHANGE_ALLOWLIST });
+  assert.deepEqual(read(thing(() => withHost('ThingOwnProps<T>'))).events, ['change']);
+  assert.deepEqual(read(thing(() => `React.HTMLAttributes<HTMLDivElement> & ThingOwnProps<T>`)).events, ['change']);
+  const refused = /Thing\.\w+: the exported Thing's props redeclare/u;
+  // Without the entry it is the redeclaration it always was.
+  assert.throws(() => read(thing(() => withHost('ThingOwnProps<T>')), []), refused);
+  // The owned carrier is OwnProps instantiated with the exported signature's own parameters, in order: a mapped copy, a concrete instantiation and
+  // a copy that is no instantiation at all are not it.
+  for (const [rule, body, extra] of [
+    ['a mapped copy of the instantiation', (a) => withHost(`Broaden<ThingOwnProps${a}>`), BROADEN],
+    ['a narrowing mapped copy', (a) => withHost(`Narrow<ThingOwnProps${a}>`), NARROW],
+    ['an instantiation with the constraint', () => withHost('ThingOwnProps<Row>')],
+    ['an instantiation with another row', () => withHost('ThingOwnProps<SubRow>')],
+    ['an Omit of the instantiation', (a) => withHost(`Omit<ThingOwnProps${a}, 'items'>`)],
+    // A local alias of the mapped copy that takes the signature's parameters in order carries those arguments, and is no instantiation of OwnProps.
+    ['an alias of a mapped copy, taking the parameters', () => withHost('Copy<T>'), "type Copy<T extends Row = Row> = { [K in keyof ThingOwnProps<T>]: K extends 'onChange' ? ThingOwnProps<T>[K] | number : ThingOwnProps<T>[K] };\n"],
+  ]) assert.throws(() => read(thing(body, extra)), refused, rule);
+  // Two parameters: the arguments must be the signature's in its order.
+  const pair = (args) => genericThing({
+    own: '<A extends Row = Row, B extends Row = Row>',
+    members: '  onChange?: React.ChangeEventHandler<HTMLInputElement>;\n  a?: A;\n  b?: B;',
+    props: '<A extends Row = Row, B extends Row = Row>',
+    args,
+    signature: '<A extends Row = Row, B extends Row = Row>',
+    call: '<A, B>',
+    body: (a) => withHost(`ThingOwnProps${a}`),
+  });
+  assert.deepEqual(read(pair('<A, B>')).events, ['change']);
+  assert.throws(() => read(pair('<B, A>')), /Thing\.onChange: the exported Thing's props redeclare onChange/u, 'the arguments in the other order');
 });
 
 test('Sidebar.Search\'s onChange is read through the one shipped host overlap, and the real family cannot be read without it', () => {
@@ -777,6 +834,266 @@ test('the real Sidebar.Search is not read through its host overlap once its onCh
   for (const element of ['HTMLTextAreaElement', 'HTMLInputElement']) {
     assert.throws(() => read([alias, alias.replace('HTMLDivElement', element)]), refused, element);
   }
+});
+
+// ---- D3: type parameters (Decision 0031 tranche 10b) ----------------------------------------------------------------------
+//
+// A props type may declare type parameters, and the exported component must keep them: the same count, constraint and default by
+// position, with every member that mentions one carrying the exported signature's parameter in its place. The catalog records each
+// occurrence at the parameter's constraint. The fixture is the shape of MultiSelect and TagSelect: OwnProps generic over a row, a
+// public alias that intersects it with the host's attributes, and a call signature that is generic over the row again.
+const ROW = 'export interface Row { id: string; [key: string]: unknown }\nexport interface SubRow extends Row { extra: string }\n';
+const genericThing = ({
+  declarations = ROW,
+  own = '<T extends Row = Row>',
+  members = '  items?: T[];',
+  props = '<T extends Row = Row>',
+  body = (args) => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps${args}`,
+  args = '<T>',
+  signature = '<T extends Row = Row>',
+  call = '<T>',
+} = {}) => `${header}${declarations}
+export type ThingOwnProps${own} = {
+${members}
+};
+export type ThingProps${props} = ${body(args)};
+export interface ThingComponent {
+  ${signature}(props: ThingProps${call} & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
+}
+export declare const Thing: ThingComponent;
+`;
+const GENERIC_MEMBERS = `  /** The rows. */
+  items?: T[];
+  pick?: T;
+  onPick?: (item: T, index?: number) => void;
+  choice?: T | 'all';
+  size?: 'sm' | 'md';`;
+const rowReference = { kind: 'reference', name: 'Row' };
+const ROW_TYPE = {
+  type: {
+    kind: 'object',
+    members: [{ name: 'id', type: keyword('string'), required: true, readonly: false }],
+    additional: 'unknown',
+  },
+};
+const rowIterable = host('Iterable', rowReference);
+
+test('type parameters are read at their constraint, and the exported signature keeps them by position', () => {
+  const api = extract({ declarations: genericThing({ members: `${GENERIC_MEMBERS}\n  rows?: Iterable<T>;` }), hostAllowlist: [rowIterable] });
+  assert.deepEqual(api.props, ['items', 'pick', 'choice', 'size', 'rows']);
+  assert.deepEqual(api.events, ['pick']);
+  assert.deepEqual(api.propDetails.items, { type: { kind: 'array', element: rowReference, readonly: false }, required: false, description: 'The rows.' });
+  assert.deepEqual(api.propDetails.pick.type, rowReference);
+  assert.deepEqual(api.propDetails.choice.type, { kind: 'union', members: [rowReference, { kind: 'literal', value: 'all' }] });
+  assert.deepEqual(api.propDetails.rows.type, rowIterable);
+  assert.deepEqual(api.eventDetails.pick.type, {
+    kind: 'function',
+    parameters: [{ name: 'item', type: rowReference, required: true }, { name: 'index', type: keyword('number'), required: false }],
+    returns: keyword('void'),
+  });
+  assert.deepEqual(api.types, { Row: ROW_TYPE });
+  // Nothing of the parameter is in the block but its constraint: the same block, whatever the parameters are called.
+  const renamed = genericThing({ members: `${GENERIC_MEMBERS}\n  rows?: Iterable<T>;`, signature: '<U extends Row = Row>', call: '<U>' });
+  assert.deepEqual(extract({ declarations: renamed, hostAllowlist: [rowIterable] }), api, 'a renamed signature parameter');
+  assert.deepEqual(extract({ declarations: genericThing({ members: GENERIC_MEMBERS, own: '<Item extends Row = Row>'.replaceAll('Item', 'T'), props: '<P extends Row = Row>', args: '<P>' }) }).propDetails.pick.type, rowReference, 'a renamed props parameter');
+  // Spelled another way, a union is the same union: the arms in another order, written through an alias, or flattened from several.
+  const reordered = (choice) => genericThing({
+    declarations: `${ROW}export type AllOr<T> = 'all' | T;\n`,
+    members: GENERIC_MEMBERS,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, 'choice'> & { choice?: ${choice} }`,
+  });
+  for (const choice of ["'all' | T", 'AllOr<T>', "T | ('all')", "('all' | T) | 'all'"]) assert.deepEqual(extract({ declarations: reordered(choice) }).props, ['items', 'pick', 'choice', 'size'], choice);
+  // A binder no member uses is still compared, and a callable that never was generic is a count of none.
+  assert.deepEqual(extract({ declarations: genericThing({ members: "  size?: 'sm' | 'md';" }) }).props, ['size']);
+  assert.deepEqual(extract({ declarations: genericThing({ own: '', members: "  size?: 'sm' | 'md';", props: '', args: '', signature: '', call: '' }) }).props, ['size']);
+});
+
+test('a lost, added, or changed type parameter fails extraction, whether or not a member uses it', () => {
+  const lostBinder = /Thing: ThingOwnProps declares 1 type parameters and the exported Thing 0/u;
+  // A constraint and a default that are unions, as OwnProps declares them and as the signature does; the parameter is unused.
+  const union = ({ own, twin, ownDefault = own.split(' | ')[0], twinDefault = twin.split(' | ')[0] }) => ({
+    own: `<T extends ${own} = ${ownDefault}>`,
+    members: "  size?: 'sm';",
+    props: `<T extends ${own} = ${ownDefault}>`,
+    signature: `<T extends ${twin} = ${twinDefault}>`,
+  });
+  // The same union spelled another way, through an alias or flattened from two, is accepted.
+  const spelled = (own, twin, declarations = '') => extract({ declarations: genericThing({ declarations: `${ROW}${declarations}`, ...union({ own, twin, ownDefault: "'a'", twinDefault: "'a'" }) }) }).props;
+  assert.deepEqual(spelled("'a' | 'b' | 'c'", 'AB | Cee', "type AB = 'b' | 'a';\ntype Cee = 'c';\n"), ['size']);
+  assert.deepEqual(spelled("'a' | 'b'", "'b' | 'a'"), ['size']);
+  const cases = [
+    // The signature loses its parameter, or the props alias does and the signature keeps it.
+    ['the signature lost the parameter', { signature: '', call: '<Row>' }, lostBinder],
+    ['the signature lost the parameter of a member-free props type', { members: "  size?: 'sm';", signature: '', call: '<Row>' }, lostBinder],
+    ['the signature gained a parameter', { signature: '<T extends Row = Row, U = unknown>' }, /Thing: ThingOwnProps declares 1 type parameters and the exported Thing 2/u],
+    ['the props alias lost the parameter', { props: '', args: '<Row>', call: '' }, /Thing\.items: the exported Thing's props redeclare items as optional Row\[\] \| undefined; ThingOwnProps declares optional T\[\] \| undefined/u],
+    // The constraint and the default are compared even when no member uses the parameter.
+    ['a changed constraint', { members: "  size?: 'sm';", signature: '<T extends SubRow = SubRow>' }, /Thing<T>: type parameter 1 is T in ThingOwnProps and T in the exported Thing, and they differ in their constraint$/u],
+    ['a changed constraint of a used parameter', { signature: '<T extends SubRow = SubRow>' }, /differ in their constraint$/u],
+    ['a constraint on one side only', { members: "  size?: 'sm';", props: '', args: '', call: '', signature: '<T = Row>' }, /differ in their constraint \(one has none\)/u],
+    ['a changed default', { members: "  size?: 'sm';", signature: '<T extends Row = SubRow>' }, /Thing<T>: type parameter 1 is T in ThingOwnProps and T in the exported Thing, and they differ in their default$/u],
+    ['a default on one side only', { members: "  size?: 'sm';", signature: '<T extends Row>' }, /differ in their default \(one has none\)/u],
+    ['a default on the other side only', { own: '<T extends Row>', members: "  size?: 'sm';" }, /differ in their default \(one has none\)/u],
+    // A union is the same union only with the same arms: one arm more or fewer, in the constraint or the default, whichever side has it.
+    ['a constraint with an arm more', union({ own: "'a' | 'b'", twin: "'a' | 'b' | 'c'" }), /differ in their constraint$/u],
+    ['a constraint with an arm less', union({ own: "'a' | 'b' | 'c'", twin: "'a' | 'b'" }), /differ in their constraint$/u],
+    ['a constraint with an arm swapped', union({ own: "'a' | 'b'", twin: "'a' | 'c'" }), /differ in their constraint$/u],
+    ['a default with an arm more', union({ own: 'string', twin: 'string', ownDefault: "'a' | 'b'", twinDefault: "'a' | 'b' | 'c'" }), /differ in their default$/u],
+    ['a default with an arm less', union({ own: 'string', twin: 'string', ownDefault: "'a' | 'b' | 'c'", twinDefault: "'a' | 'b'" }), /differ in their default$/u],
+    // A default outside the grammar fails whether or not a member uses the parameter.
+    ['a default outside the grammar', { own: '<T = Promise<number>>', members: "  size?: 'sm';", props: '', args: '', call: '', signature: '<T = Promise<number>>' }, /Thing<T> -> Promise: Promise<number> is not/u],
+    // The one default that is not a type of the grammar is exact, and belongs to an unconstrained parameter on both sides.
+    ['an unknown default against none', { own: '<T = unknown>', members: "  size?: 'sm';", props: '', args: '', call: '', signature: '<T>' }, /differ in their default \(one has none\)/u],
+    ['an unknown default against another', { own: '<T = unknown>', members: "  size?: 'sm';", props: '', args: '', call: '', signature: '<T = {}>' }, /differ in their default \(unknown is the default of an unconstrained parameter only, on both sides\)/u],
+    ['an unknown default on a constrained parameter', { own: '<T extends Row = unknown>', members: "  size?: 'sm';", signature: '<T extends Row = unknown>' }, /differ in their default \(unknown is the default of an unconstrained parameter only, on both sides\)/u],
+    // The modifiers a binder correspondence does not read, on either side, with the parameter unused.
+    ['a const parameter of OwnProps', { own: '<const T extends Row = Row>', members: "  size?: 'sm';" }, /the type parameter T of ThingOwnProps is declared const/u],
+    ['a const parameter of the signature', { members: "  size?: 'sm';", signature: '<const T extends Row = Row>' }, /the type parameter T of the exported Thing is declared const/u],
+    ['an in parameter', { own: '<in T extends Row = Row>', members: "  size?: 'sm';" }, /the type parameter T of ThingOwnProps is declared in/u],
+    ['an out parameter of the signature', { members: "  size?: 'sm';", signature: '<out T extends Row = Row>' }, /the type parameter T of the exported Thing is declared out/u],
+    // A constraint or a default that names a type parameter is parameter-dependent.
+    ['a dependent constraint', { own: '<T extends Row, U extends T[] = T[]>', members: "  size?: 'sm';", props: '<T extends Row = Row, U extends T[] = T[]>', args: '<T, U>', signature: '<T extends Row, U extends T[] = T[]>', call: '<T, U>' }, /the type parameter U of ThingOwnProps has a constraint that names a type parameter/u],
+    ['a dependent default', { own: '<T extends Row, U extends Row = T>', members: "  size?: 'sm';", props: '<T extends Row, U extends Row = T>', args: '<T, U>', signature: '<T extends Row, U extends Row = T>', call: '<T, U>' }, /the type parameter U of ThingOwnProps has a default that names a type parameter/u],
+    ['a dependent default of the signature', { own: '<T extends Row, U extends Row = Row>', members: "  size?: 'sm';", props: '<T extends Row, U extends Row = Row>', args: '<T, U>', signature: '<T extends Row, U extends Row = T>', call: '<T, U>' }, /the type parameter U of the exported Thing has a default that names a type parameter/u],
+  ];
+  for (const [rule, options, pattern] of cases) rejects(genericThing(options), pattern, { hostAllowlist: [rowIterable] }, rule);
+});
+
+test('a member that mentions a type parameter is the same type only with the signature\'s parameter in its place', () => {
+  const redeclared = (member, body) => genericThing({
+    members: GENERIC_MEMBERS,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${body} }`,
+  });
+  // Each declares the member again in the public type, in a form that is no longer the owned one with the parameter replaced.
+  const cases = [
+    ['a member replaced by its constraint (an array)', 'items', 'items?: Row[]', /Thing\.items: the exported Thing's props redeclare items as optional Row\[\] \| undefined; ThingOwnProps declares optional T\[\] \| undefined \(a member that mentions a type parameter is compared with each of OwnProps's replaced by the exported component's at the same position\)/u],
+    ['a member replaced by its constraint (a plain member)', 'pick', 'pick?: Row', /Thing\.pick: the exported Thing's props redeclare pick as optional Row \| undefined/u],
+    ['a member that is another generic of the same argument', 'items', 'items?: readonly T[]', /Thing\.items: the exported Thing's props redeclare items/u],
+    ['a member that is another parameter\'s array', 'items', 'items?: SubRow[]', /Thing\.items: the exported Thing's props redeclare items/u],
+    ['a lost arm of a union', 'choice', "choice?: Row | 'all'", /Thing\.choice: the exported Thing's props redeclare choice/u],
+    ['a swapped arm of a union', 'choice', "choice?: T | 'none'", /Thing\.choice: the exported Thing's props redeclare choice/u],
+    ['an added arm of a union', 'choice', "choice?: T | 'all' | 'none'", /Thing\.choice: the exported Thing's props redeclare choice/u],
+    ['an occurrence in a union that became its constraint and a second occurrence', 'choice', "choice?: T | Row | 'all'", /Thing\.choice: the exported Thing's props redeclare choice/u],
+    ['a callback parameter replaced by the constraint', 'onPick', 'onPick?: (item: Row, index?: number) => void', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    ['a callback parameter that became required', 'onPick', 'onPick?: (item: T, index: number) => void', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    ['a callback with a parameter fewer', 'onPick', 'onPick?: (item: T) => void', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    ['a callback with a rest parameter', 'onPick', 'onPick?: (item: T, ...rest: number[]) => void', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    ['a callback whose return changed', 'onPick', 'onPick?: (item: T, index?: number) => string', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    ['a callback with a this parameter', 'onPick', 'onPick?: (this: Row, item: T, index?: number) => void', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    ['a generic callback', 'onPick', 'onPick?: <U>(item: T, index?: number) => void', /Thing\.onPick: the exported Thing's props redeclare onPick/u],
+    // A conditional or an indexed access of the parameter in the public type is not the owned member, whatever it evaluates to for a row.
+    ['a public conditional type', 'items', 'items?: T extends Row ? T[] : never', /Thing\.items: the exported Thing's props redeclare items/u],
+    ['a public indexed access', 'pick', "pick?: T['id']", /Thing\.pick: the exported Thing's props redeclare pick/u],
+    ['a public keyof', 'pick', 'pick?: keyof T', /Thing\.pick: the exported Thing's props redeclare pick/u],
+    // The optionality is not a type, and the owned member's own flags are kept.
+    ['a member that became required', 'items', 'items: T[]', /Thing\.items: the exported Thing's props redeclare items as required/u],
+  ];
+  for (const [rule, member, text, pattern] of cases) rejects(redeclared(member, text), pattern, {}, rule);
+  // The same text in the public type is accepted: the cases above differ in the occurrence and nothing else.
+  assert.deepEqual(extract({ declarations: redeclared('items', 'items?: T[]') }).props, ['items', 'pick', 'choice', 'size']);
+  assert.deepEqual(extract({ declarations: redeclared('onPick', 'onPick?: (item: T, index?: number) => void') }).events, ['pick']);
+  // The parameters are matched by position, not by name or by constraint: two of the same constraint swap when the signature does.
+  const pair = (options) => genericThing({
+    own: '<A extends Row = Row, B extends Row = Row>',
+    members: '  a?: A;\n  b?: B;\n  both?: [A, B];',
+    props: '<A extends Row = Row, B extends Row = Row>',
+    args: '<A, B>',
+    signature: '<A extends Row = Row, B extends Row = Row>',
+    call: '<A, B>',
+    ...options,
+  });
+  assert.deepEqual(extract({ declarations: pair({}) }).props, ['a', 'b', 'both']);
+  assert.deepEqual(extract({ declarations: pair({ signature: '<X extends Row = Row, Y extends Row = Row>', call: '<X, Y>' }) }).props, ['a', 'b', 'both'], 'renamed in order');
+  rejects(pair({ signature: '<B extends Row = Row, A extends Row = Row>', call: '<A, B>' }), /Thing\.a: the exported Thing's props redeclare a/u, {}, 'the signature lists the parameters in the other order');
+  rejects(pair({ body: () => "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<A, B>, 'a' | 'b'> & { a?: B; b?: A }" }), /Thing\.a: the exported Thing's props redeclare a/u, {}, 'two occurrences swapped');
+  rejects(pair({ body: () => "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps<B, A>" }), /Thing\.a: the exported Thing's props redeclare a/u, {}, 'the arguments swapped');
+  rejects(pair({ body: () => "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<A, B>, 'both'> & { both?: [B, A] }" }), /Thing\.both: the exported Thing's props redeclare both/u, {}, 'a tuple\'s elements swapped');
+  rejects(pair({ body: () => "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<A, B>, 'both'> & { both?: [A] }" }), /Thing\.both: the exported Thing's props redeclare both/u, {}, 'a tuple that lost an element');
+});
+
+test('an object literal that mentions a type parameter matches its properties, their flags, and their types', () => {
+  const holder = (member) => genericThing({
+    members: '  holder?: { readonly row: T; note?: string };',
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, 'holder'> & { ${member} }`,
+  });
+  assert.deepEqual(extract({ declarations: holder('holder?: { readonly row: T; note?: string }') }).props, ['holder']);
+  for (const [rule, member] of [
+    ['a property that is not readonly', 'holder?: { row: T; note?: string }'],
+    ['a property that became required', 'holder?: { readonly row: T; note: string }'],
+    ['a property replaced by the constraint', 'holder?: { readonly row: Row; note?: string }'],
+    ['a property fewer', 'holder?: { readonly row: T }'],
+    ['a property more', 'holder?: { readonly row: T; note?: string; extra?: number }'],
+    ['a property of another name', 'holder?: { readonly item: T; note?: string }'],
+  ]) rejects(holder(member), /Thing\.holder: the exported Thing's props redeclare holder/u, {}, rule);
+});
+
+test('callbacks, unions and object literals that mention a parameter are matched arm by arm and flag by flag', () => {
+  const members = `  onRest?: (item: T, rest: number[]) => void;
+  onIndex?: (item: T, index?: number) => void;
+  holder?: { row: T; note?: string };
+  twins?: { k: T } | { k: T };`;
+  const redeclared = (member, text, options = {}) => genericThing({
+    members,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
+    ...options,
+  });
+  const same = {
+    onRest: 'onRest?: (item: T, rest: number[]) => void',
+    onIndex: 'onIndex?: (item: T, index?: number) => void',
+    holder: 'holder?: { row: T; note?: string }',
+    twins: 'twins?: { k: T } | { k: T }',
+  };
+  for (const [member, text] of Object.entries(same)) assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, ['holder', 'twins'], text);
+  const cases = [
+    // A rest parameter is no array parameter, and an optional one is no required one that admits undefined, whatever the types say.
+    ['onRest', 'onRest?: (item: T, ...rest: number[]) => void'],
+    ['onIndex', 'onIndex?: (item: T, index: number | undefined) => void'],
+    ['holder', 'holder?: { row: T; note: string | undefined }'],
+    // An intersection of the two halves of an object literal is another type, with the same properties.
+    ['holder', 'holder?: { row: T } & { note?: string }'],
+    // Two arms of OwnProps cannot both stand for one arm of the public type.
+    ['twins', 'twins?: { k: T } | { k: T; extra: number }'],
+  ];
+  for (const [member, text] of cases) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, text);
+  // A parameter whose constraint is a callback is no callback: a member that has the callback where the public type names the parameter is not it.
+  const callable = (text) => genericThing({
+    declarations: `${ROW}export type Fn = (x: Row) => void;\n`,
+    own: '<A extends Row = Row, F extends Fn = Fn>',
+    members: '  fn?: Fn | A;',
+    props: '<A extends Row = Row, F extends Fn = Fn>',
+    args: '<A, F>',
+    signature: '<A extends Row = Row, F extends Fn = Fn>',
+    call: '<A, F>',
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<A, F>, 'fn'> & { ${text} }`,
+  });
+  assert.deepEqual(extract({ declarations: callable('fn?: Fn | A') }).props, ['fn']);
+  rejects(callable('fn?: F | A'), /Thing\.fn: the exported Thing's props redeclare fn/u);
+});
+
+test('what an unconstrained, conditional, mapped, indexed, or callback-local parameter would add is outside the grammar', () => {
+  const cases = [
+    ['an unconstrained parameter used in a member', { own: '<T = unknown>', props: '<T = unknown>', signature: '<T = unknown>' }, /Thing\.items\[\] -> T: T has no constraint, so it would erase to unknown/u],
+    ['a type argument on the parameter', { members: '  bad?: T<string>;' }, /Thing\.bad -> T: T is a type parameter and takes no type arguments/u],
+    ['a conditional type over the parameter', { members: "  bad?: T extends string ? 'a' : 'b';" }, /Thing\.bad: a conditional type is not in the grammar/u],
+    ['a mapped type over the parameter', { members: '  bad?: { [K in keyof T]: string };' }, /Thing\.bad: a mapped type is not in the grammar/u],
+    ['an indexed access of the parameter', { members: "  bad?: T['id'];" }, /Thing\.bad: an indexed access type is not in the grammar/u],
+    ['keyof the parameter', { members: '  bad?: keyof T;' }, /Thing\.bad: a type operator other than readonly T\[\] is not in the grammar/u],
+    ['a generic callback of the parameter', { members: '  onBad?: <U extends T>(item: U) => void;' }, /Thing\.onBad: a generic function is not in the grammar/u],
+    ['the parameter with a type argument', { declarations: `${ROW}export interface Box<V = Row> { value: V }\n`, members: '  bad?: Box<T>;' }, /Thing\.bad -> Box: Box is a Mux UI-owned type; it takes no type arguments/u],
+    ['an intersection with the parameter', { members: '  bad?: T & { extra: string };' }, /Thing\.bad: an intersection type is not in the grammar/u],
+    ['a parameter that is the host\'s argument, left unconstrained', { own: '<T = unknown>', members: '  bad?: Iterable<T>;', props: '<T = unknown>', signature: '<T = unknown>' }, /Thing\.bad -> Iterable<0> -> T: T has no constraint/u],
+    // The constraint of a used parameter is read by the grammar like any type, host applications included.
+    ['a constraint outside the grammar', { own: '<T extends Row | Promise<number> = Row>', props: '<T extends Row | Promise<number> = Row>', signature: '<T extends Row | Promise<number> = Row>' }, /Thing<T> -> Promise: Promise<number> is not an application on the host allowlist/u],
+  ];
+  for (const [rule, options, pattern] of cases) rejects(genericThing(options), pattern, {}, rule);
+});
+
+test('the exported callable of another member is checked for its type parameters like the root', () => {
+  const declarations = (alsoSignature) => `${genericThing({})}export declare const Thing: ThingComponent & { Root: { ${alsoSignature}(props: ThingProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null } };\n`
+    .replace('export declare const Thing: ThingComponent;\n', '');
+  assert.deepEqual(extract({ declarations: declarations('<T extends Row = Row>'), also: [{ member: 'Root' }] }).props, ['items']);
+  rejects(declarations('<T extends SubRow = SubRow>'), /Thing<T>: type parameter 1 is T in ThingOwnProps and T in the exported Thing\.Root, and they differ in their constraint/u, { also: [{ member: 'Root' }] });
+  rejects(declarations(''), /Thing: ThingOwnProps declares 1 type parameters and the exported Thing\.Root 0/u, { also: [{ member: 'Root' }] });
 });
 
 test('the shipped allowlist holds exactly the host types the committed derived APIs reach', () => {
@@ -1020,6 +1337,38 @@ test('defaults are read only through React\'s forwardRef and memo, from their fi
   for (const [exported, before, head, pattern] of rejections) {
     assert.throws(() => read(exported, before, head), (error) => error instanceof ApiExtractionError && pattern.test(error.message), exported);
   }
+});
+
+test('an export that is one name reads defaults from the component that name stands for', () => {
+  const declarations = ownProps("  size?: 'sm' | 'md';");
+  const imports = "import { forwardRef } from 'react';\n";
+  const fn = "function Root({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; }\n";
+  const wrapped = `${imports}const Root = forwardRef(function Root({ size = 'sm', ...props }: Record<string, unknown>) { return [size, props]; });\n`;
+  const read = (source) => extract({ declarations, source }).defaults;
+  // A function declaration or a forwardRef const, exported as itself, typed, or through a cast (the typed-export idiom of a family whose
+  // exported type is wider than the function it renders with).
+  for (const source of [
+    `${fn}export const Thing = Root;\n`,
+    `${fn}export const Thing: typeof Root = (Root) as unknown as typeof Root;\n`,
+    `${wrapped}export const Thing = Root;\n`,
+    `${wrapped}export const Thing: typeof Root = Root as unknown as typeof Root;\n`,
+    // A literal displayName assignment is the one write a component is read through.
+    `${wrapped}Root.displayName = 'Thing';\nexport const Thing = Root;\n`,
+  ]) assert.deepEqual(read(source), { size: 'sm' }, source);
+  // The name is read as any named component is: a top-level function or const of this source that is one, and nothing it could be
+  // swapped for.
+  const rejections = [
+    ['Missing', '', /Thing: Missing is not a top-level function declaration or const in the component's source/u],
+    ['Root', "let Root = function Root({ size = 'sm' }: Record<string, unknown>) { return size; };\n", /Thing: Root is not a top-level function declaration or const in the component's source/u],
+    ['Root', "import { Root } from './other';\n", /Thing: Root is not a top-level function declaration or const in the component's source/u],
+    ['Alias', `${fn}const Alias = Root;\n`, /Thing: Alias must be a function, forwardRef, or memo call/u],
+    ['Root', "const Root = { size: 'sm' };\n", /Thing: Root must be a function, forwardRef, or memo call/u],
+    ['Root', `${wrapped}Root.render = () => null;\n`, /Thing: the source writes to Root, which the component's defaults are read through, beyond a literal displayName assignment/u],
+    // What the function does with a prop outside its parameter is refused as for any component.
+    ['Root', "function Root({ size = 'sm' }: Record<string, unknown>) { size ??= 'md'; return size; }\n", /Thing\.size: the component assigns to size outside its props parameter/u],
+    ['Root', "function Root(props: Record<string, unknown>) { const { size = 'sm' } = props; return size; }\n", /Thing: the props parameter must be an object pattern/u],
+  ];
+  for (const [exported, before, pattern] of rejections) rejects(declarations, pattern, { source: `${before}export const Thing = ${exported};\n` });
 });
 
 test('a default the component executes outside its props parameter fails extraction', () => {

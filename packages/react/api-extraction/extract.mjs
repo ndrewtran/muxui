@@ -440,8 +440,187 @@ function eventHandlerAlias(project, symbol) {
   return { event, parameter };
 }
 
-function declarationReader({ project, declarationRoot, allowed }) {
+// The modifiers a type parameter may carry, none of which the binder correspondence reads: `const` changes how an argument is inferred,
+// and `in` and `out` change how the parameter is compared, so a source that used one would be a different public type.
+const BINDER_MODIFIERS = new Map([[SyntaxKind.ConstKeyword, 'const'], [SyntaxKind.InKeyword, 'in'], [SyntaxKind.OutKeyword, 'out']]);
+
+/** Whether a type node names a type parameter anywhere inside it. */
+function namesTypeParameter(project, node) {
+  let found = false;
+  const visit = (child) => {
+    if (found) return;
+    if (child.kind === SyntaxKind.TypeReference && (referencedSymbol(project, child)?.flags ?? 0) & SymbolFlags.TypeParameter) found = true;
+    child.forEachChild(visit);
+  };
+  visit(node);
+  return found;
+}
+
+/**
+ * The type parameters a declaration or a signature lists, as the correspondence reads them: each one's name, its type (the binder
+ * itself, the thing an occurrence refers to), and its constraint and default nodes. A `const`, `in`, or `out` modifier, a constraint
+ * that names a type parameter, and a default that names one are not in the grammar (D3), so none is read: each fails here, whichever
+ * side declares it and whether or not a member uses the parameter. `where` is how the diagnostic names the declaration.
+ */
+function bindersOf(project, nodes, chain, where) {
+  return nodes.map((node) => {
+    const fail = (message) => {
+      throw new ApiExtractionError(chain, `the type parameter ${node.name.text} of ${where} ${message}; a binder is a plain parameter with an optional constraint and default that name no type parameter`);
+    };
+    const modifier = (node.modifiers ?? []).map(({ kind }) => BINDER_MODIFIERS.get(kind)).find((name) => name !== undefined);
+    if (modifier !== undefined) fail(`is declared ${modifier}`);
+    if (node.constraint && namesTypeParameter(project, node.constraint)) fail('has a constraint that names a type parameter');
+    if (node.defaultType && namesTypeParameter(project, node.defaultType)) fail('has a default that names a type parameter');
+    const symbol = project.checker.getSymbolAtLocation(node.name);
+    return { name: node.name.text, node, symbol, type: project.checker.getDeclaredTypeOfSymbol(symbol), constraint: node.constraint, defaultType: node.defaultType };
+  });
+}
+
+/** The type parameter declarations of a signature's type parameters. */
+function signatureBinders(project, signature, chain, where) {
+  return bindersOf(project, signature.getTypeParameters().map((parameter) => {
+    const declarations = parameter.getSymbol()?.declarations ?? [];
+    const node = declarations.length === 1 ? declarations[0].resolve(project) : undefined;
+    if (node?.kind !== SyntaxKind.TypeParameter) throw new ApiExtractionError(chain, `${where} has a type parameter without exactly one declaration`);
+    return node;
+  }), chain, where);
+}
+
+/**
+ * Whether two types are the same type. TypeScript keys a union by how it was written (an alias, or the flattened members), so
+ * equal unions can be two objects; they are the same type when their constituents are the same.
+ */
+function sameType(left, right) {
+  if (left.id === right.id) return true;
+  if (!left.isUnionType() || !right.isUnionType()) return false;
+  const [one, other] = [left.getTypes(), right.getTypes()];
+  return one.length === other.length && one.every(({ id }) => other.some((candidate) => candidate.id === id));
+}
+
+/**
+ * The matcher of a binder correspondence: `matches(own, pub)` is whether the public type `pub` is the OwnProps type `own` with
+ * each OwnProps binder replaced by the exported signature's binder at its position (`pairs`, binder type id to binder type id).
+ * It compares resolved types, so a constraint projection can never stand in for an occurrence. It reads the forms OwnProps members
+ * take once they mention a binder, and fails closed on everything else, never falling back to assignability:
+ *  - the same type object, which no OwnProps binder is in, since a public declaration cannot name one;
+ *  - a binder, matched to the signature binder at the same position, never to another or to a type;
+ *  - a union, one-to-one with equal cardinality, so the order and the spelling of the arms do not matter and a lost, extra or
+ *    swapped arm does;
+ *  - a type reference (an array, `Set<K>`, `Iterable<T>`), with the same target and arguments that match in order;
+ *  - a callback: one call signature each, with no type parameters or `this`, the same optional and rest parameters, matching
+ *    parameter types and a matching return;
+ *  - an object literal: the same properties, optional and readonly alike, with matching types.
+ * An intersection, a conditional or mapped type, an indexed access and the like are not matched.
+ */
+function bindingMatcher(project, pairs) {
+  const { checker } = project;
+  // A parameter's optionality is on its declaration; a property's is on its symbol (its declaration holds the `?` as a postfix token).
+  const optionalParameter = (symbol) => symbol.declarations.some((declaration) => declaration.resolve(project)?.questionToken !== undefined);
+  const optionalProperty = (symbol) => (symbol.flags & SymbolFlags.Optional) !== 0;
+  const readonly = (symbol) => symbol.declarations.some((declaration) => hasModifier(declaration.resolve(project), SyntaxKind.ReadonlyKeyword));
+  const call = (type) => {
+    const calls = checker.getSignaturesOfType(type, SignatureKind.Call);
+    return calls.length === 1 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getPropertiesOfType(type).length === 0 ? calls[0] : undefined;
+  };
+  const unionMatches = (ownTypes, pubTypes) => {
+    if (ownTypes.length !== pubTypes.length) return false;
+    const used = new Set();
+    const assign = (index) => {
+      if (index === ownTypes.length) return true;
+      for (const [candidate, pub] of pubTypes.entries()) {
+        if (used.has(candidate) || !matches(ownTypes[index], pub)) continue;
+        used.add(candidate);
+        if (assign(index + 1)) return true;
+        used.delete(candidate);
+      }
+      return false;
+    };
+    return assign(0);
+  };
+  const signatureMatches = (own, pub) => {
+    const [ownParameters, pubParameters] = [own.getParameters(), pub.getParameters()];
+    return own.getTypeParameters().length === 0 && pub.getTypeParameters().length === 0
+      && own.getThisParameter() === undefined && pub.getThisParameter() === undefined
+      && own.hasRestParameter === pub.hasRestParameter && ownParameters.length === pubParameters.length
+      && ownParameters.every((parameter, index) => optionalParameter(parameter) === optionalParameter(pubParameters[index])
+        && matches(checker.getTypeOfSymbol(parameter), checker.getTypeOfSymbol(pubParameters[index])))
+      && matches(checker.getReturnTypeOfSignature(own), checker.getReturnTypeOfSignature(pub));
+  };
+  const objectMatches = (own, pub) => {
+    const [ownProperties, pubProperties] = [checker.getPropertiesOfType(own), checker.getPropertiesOfType(pub)];
+    return ownProperties.length === pubProperties.length && own.isObjectType() && pub.isObjectType()
+      && [own, pub].every((type) => checker.getSignaturesOfType(type, SignatureKind.Call).length === 0 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getIndexInfosOfType(type).length === 0)
+      && ownProperties.every((property) => {
+        const twin = pubProperties.find(({ name }) => name === property.name);
+        return twin !== undefined && optionalProperty(property) === optionalProperty(twin) && readonly(property) === readonly(twin)
+          && matches(checker.getTypeOfSymbol(property), checker.getTypeOfSymbol(twin));
+      });
+  };
+  function matches(own, pub) {
+    if (own.id === pub.id) return true;
+    if (own.isTypeParameter()) return pub.isTypeParameter() && pairs.get(own.id) === pub.id;
+    if (pub.isTypeParameter()) return false;
+    if (own.isUnionType()) return pub.isUnionType() && unionMatches(own.getTypes(), pub.getTypes());
+    if (own.isTypeReference()) {
+      if (!pub.isTypeReference() || own.getTarget().id !== pub.getTarget().id) return false;
+      // One target has one arity, so the arguments pair up.
+      const pubArguments = checker.getTypeArguments(pub);
+      return checker.getTypeArguments(own).every((argument, index) => matches(argument, pubArguments[index]));
+    }
+    const [ownCall, pubCall] = [call(own), call(pub)];
+    if (ownCall !== undefined && pubCall !== undefined) return signatureMatches(ownCall, pubCall);
+    return own.isObjectType() && pub.isObjectType() && objectMatches(own, pub);
+  }
+  return matches;
+}
+
+/**
+ * Checks that the exported signature's type parameters are the OwnProps declaration's, by position: the same count, and for each
+ * pair the same constraint and the same default, or none on both sides, whether or not a member uses the parameter. A parameter's
+ * name is free to differ. An unconstrained parameter's default may be the keyword `unknown` (`<T = unknown>`), the one default
+ * that is not a type of the grammar: it is validated here and never serialized, and the public parameter must have exactly it.
+ * Any other default is read by the grammar (`reader.typeOf`), so a default outside it fails too. Returns the correspondence.
+ */
+function assertBinderCorrespondence(project, reader, { label, ownName, signatureName, own, pub }) {
+  const { checker } = project;
+  if (own.length !== pub.length) {
+    throw new ApiExtractionError(label, `${ownName}OwnProps declares ${own.length} type parameters and the exported ${signatureName} ${pub.length}; the exported component keeps each one, by position`);
+  }
+  const pairs = new Map();
+  own.forEach((binder, index) => {
+    const twin = pub[index];
+    const fail = (what) => {
+      throw new ApiExtractionError(`${label}<${binder.name}>`, `type parameter ${index + 1} is ${binder.name} in ${ownName}OwnProps and ${twin.name} in the exported ${signatureName}, and they differ in their ${what}`);
+    };
+    if ((binder.constraint === undefined) !== (twin.constraint === undefined)) fail('constraint (one has none)');
+    if (binder.constraint !== undefined) {
+      reader.typeOf(binder.constraint, `${label}<${binder.name}>`);
+      if (!sameType(checker.getTypeFromTypeNode(binder.constraint), checker.getTypeFromTypeNode(twin.constraint))) fail('constraint');
+    }
+    if ((binder.defaultType === undefined) !== (twin.defaultType === undefined)) fail('default (one has none)');
+    if (binder.defaultType !== undefined) {
+      const bare = (node) => node.kind === SyntaxKind.UnknownKeyword;
+      if (bare(binder.defaultType) || bare(twin.defaultType)) {
+        if (!(bare(binder.defaultType) && bare(twin.defaultType)) || binder.constraint !== undefined) fail('default (unknown is the default of an unconstrained parameter only, on both sides)');
+      } else {
+        reader.typeOf(binder.defaultType, `${label}<${binder.name}>`);
+        if (!sameType(checker.getTypeFromTypeNode(binder.defaultType), checker.getTypeFromTypeNode(twin.defaultType))) fail('default');
+      }
+    }
+    pairs.set(binder.type.id, twin.type.id);
+  });
+  return pairs;
+}
+
+/**
+ * `binders` maps the symbol of each type parameter OwnProps declares to its binder (`bindersOf`). A reference to one reads as the
+ * binder's constraint, so the catalog records each occurrence at the constraint (D3), and `binderUses()` counts those reads, so the
+ * caller knows which members mention a binder and need the correspondence (`bindingMatcher`) and not the type's identity. An
+ * unconstrained binder would erase to `unknown`, which the grammar admits nowhere a family reaches it, so it is refused.
+ */
+function declarationReader({ project, declarationRoot, allowed, binders = new Map() }) {
   const { checker, program } = project;
+  let binderReads = 0;
   // Named types by name, each with the symbol it was read from. A type being read (a
   // recursive reference) is pending, also by symbol: a name alone would let another
   // module's same-named type pass as the recursion.
@@ -592,6 +771,7 @@ function declarationReader({ project, declarationRoot, allowed }) {
     if (!found) throw new ApiExtractionError(hop, `${written} does not resolve`);
     const symbol = found.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
     if (symbol.flags & SymbolFlags.Enum) throw new ApiExtractionError(hop, `${written} is an enum; use a union of literals`);
+    if (symbol.flags & SymbolFlags.TypeParameter) return binderReference(symbol, node, hop);
     const paths = symbol.declarations.map(({ path }) => path);
     const applied = (node.typeArguments?.length ?? 0) > 0;
     if (paths.length > 0 && paths.every((path) => isUnder(path, declarationRoot))) {
@@ -613,6 +793,18 @@ function declarationReader({ project, declarationRoot, allowed }) {
       throw new ApiExtractionError(hop, `${host} is outside @muxui/react and not in the host allowlist`);
     }
     return hostApplicationOf(host, node.typeArguments, hop);
+  }
+
+  /** An occurrence of a type parameter OwnProps declares, read at the parameter's constraint. */
+  function binderReference(symbol, node, hop) {
+    // The only type parameters the grammar reaches are OwnProps's own: it admits no generic function, mapped or conditional type, and no generic named type.
+    const binder = binders.get(symbol.id);
+    if (node.typeArguments?.length) throw new ApiExtractionError(hop, `${symbol.name} is a type parameter and takes no type arguments`);
+    if (binder.constraint === undefined) {
+      throw new ApiExtractionError(hop, `${symbol.name} has no constraint, so it would erase to unknown, which the catalog grammar admits only for the index value of an open item, an exact \`= unknown\` default, and Promise<unknown> as a return; constrain ${symbol.name}`);
+    }
+    binderReads += 1;
+    return typeOf(binder.constraint, hop);
   }
 
   // An application matches an entry only exactly, so the arguments are read like any type
@@ -841,7 +1033,7 @@ function declarationReader({ project, declarationRoot, allowed }) {
     }
   }
 
-  return { memberOf, types };
+  return { memberOf, typeOf, types, binderUses: () => binderReads };
 }
 
 const literalValues = (type, types) => {
@@ -871,8 +1063,10 @@ function exportedNamed(sourceFile, name) {
   return found;
 }
 
-// `ownName` names the declaration, `<ownName>OwnProps`; `label` is the component in a diagnostic.
-function ownPropsOf(checker, sourceFile, ownName, label) {
+// `ownName` names the declaration, `<ownName>OwnProps`; `label` is the component in a diagnostic. It returns the declaration's
+// members, its type parameters (as `bindersOf` reads them), and the symbol of the declaration.
+function ownPropsOf(project, sourceFile, ownName, label) {
+  const { checker } = project;
   const declaration = sourceFile.statements.find((statement) => (
     (statement.kind === SyntaxKind.InterfaceDeclaration || statement.kind === SyntaxKind.TypeAliasDeclaration)
     && statement.name.text === `${ownName}OwnProps`
@@ -881,13 +1075,14 @@ function ownPropsOf(checker, sourceFile, ownName, label) {
   // A second, merged declaration would add members the first one does not show.
   const { declarations } = checker.getSymbolAtLocation(declaration.name);
   if (declarations.length !== 1) throw new ApiExtractionError(label, `${ownName}OwnProps has ${declarations.length} declarations; declaration merging is not in the grammar`);
-  if (declaration.typeParameters?.length) throw new ApiExtractionError(label, `${ownName}OwnProps is generic`);
+  const binders = bindersOf(project, declaration.typeParameters ?? [], label, `${ownName}OwnProps`);
+  const symbol = checker.getSymbolAtLocation(declaration.name);
   if (declaration.kind === SyntaxKind.InterfaceDeclaration) {
     if (declaration.heritageClauses?.length) throw new ApiExtractionError(label, `${ownName}OwnProps extends another type; list the Mux UI-owned props instead`);
-    return declaration.members;
+    return { members: declaration.members, binders, symbol };
   }
   if (declaration.type.kind !== SyntaxKind.TypeLiteral) throw new ApiExtractionError(label, `${ownName}OwnProps must be an object type`);
-  return declaration.type.members;
+  return { members: declaration.type.members, binders, symbol };
 }
 
 /**
@@ -933,7 +1128,7 @@ function componentTypeProps(project, type) {
   return shaped(SignatureKind.Call, renders) && shaped(SignatureKind.Construct, instance) ? argument : undefined;
 }
 
-// The props type the exported component accepts: the first parameter of its one call signature, or P of a part typed React.ComponentType<P>.
+// The props type the exported component accepts, with the signature it came from: the first parameter of its one call signature, or P of a part typed React.ComponentType<P> (which has none).
 // A compound export (Avatar) names the part whose props the binding's API is: its root. A
 // callable compound (ListBox) is its own root, and its other parts are members of the export.
 function publicPropsType(project, sourceFile, name, part) {
@@ -950,12 +1145,12 @@ function publicPropsType(project, sourceFile, name, part) {
   const signatures = checker.getSignaturesOfType(type, SignatureKind.Call);
   if (signatures.length === 0) {
     const props = componentTypeProps(project, type);
-    if (props !== undefined) return props;
+    if (props !== undefined) return { type: props };
   }
   if (signatures.length !== 1 || signatures[0].getParameters().length === 0) {
     throw new ApiExtractionError(name, `the exported ${component} must be a component with one call signature that takes props, or React's ComponentType<P>`);
   }
-  return checker.getParameterType(signatures[0], 0);
+  return { type: checker.getParameterType(signatures[0], 0), signature: signatures[0] };
 }
 
 const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(type).map((property) => [property.name, property]));
@@ -964,34 +1159,51 @@ const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(
  * Whether a public member is exactly the host member intersected with the owned one, as its `HOST_OVERLAPS` entry says. TypeScript
  * gives a member of an intersection the intersection of the member types the constituents that declare it give, so the public
  * member is that when the public props are a plain intersection and exactly two constituents declare it: the owned type, whose
- * member is the very symbol the family declares, and an instantiation of an interface that @types/react declares, whose member
- * the entry's interface declares there and nowhere else (an augmentation outside React is a second declaration). A mapped type
- * keeps the declarations of the members it copies and may rewrite their types, so a wrapper around the intersection, the host's
- * attributes (Omit is one), the owned type, or a local interface that extends a mapped copy is no such constituent and fails, as
- * does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry pins, and
- * so is the DOM element the host's attributes are instantiated with: the same props over another element are another public type.
+ * member is the very symbol the family declares (or, when OwnProps is generic, that declaration through the instantiation of
+ * OwnProps with the exported signature's own type parameters, in order), and the host's attributes: an instantiation of an interface
+ * that @types/react declares, or the default library's `Omit` of one, whose member is that interface's own with its type unchanged
+ * (`Omit<HTMLAttributes<HTMLDivElement>, 'children'>` keeps `onReset`; the entry's interface declares the member there and nowhere
+ * else, and an augmentation outside React is a second declaration). Any other mapped type keeps the declarations of the members
+ * it copies and may rewrite their types, so a wrapper around the intersection, around the host's attributes (a mapped type of
+ * another name, or an `Omit` of one), around the owned type, or a local interface that extends a mapped copy is no such constituent
+ * and fails, as does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry
+ * pins, and so is the DOM element the host's attributes are instantiated with: the same props over another element are another
+ * public type.
  */
-function intersectsHostMember(project, { propsType, prop, own, type }, overlap) {
+function intersectsHostMember(project, { propsType, prop, own, type, ownProps, binders }, overlap) {
   if (hostEntryKey(type) !== hostEntryKey(overlap.type) || !propsType.isIntersectionType()) return false;
-  const { checker } = project;
+  const { checker, program } = project;
+  // OwnProps instantiated with the signature's parameters in order: the alias is the family's own and its arguments are those parameters.
+  const instantiated = ({ constituent }) => constituent.getAliasSymbol()?.id === ownProps.id
+    && constituent.getAliasTypeArguments().every(({ id }, index) => id === binders[index].type.id);
   const carriers = propsType.getTypes().flatMap((constituent) => {
     const member = checker.getPropertyOfType(constituent, prop);
     return member === undefined ? [] : [{ constituent, member }];
   });
-  const owned = carriers.filter(({ member }) => member.id === own.id);
-  const hosts = carriers.filter(({ member }) => member.id !== own.id);
+  const isOwned = (carrier) => carrier.member.id === own.id || instantiated(carrier);
+  const owned = carriers.filter(isOwned);
+  const hosts = carriers.filter((carrier) => !isOwned(carrier));
   if (owned.length !== 1 || hosts.length !== 1) return false;
   const [{ constituent, member }] = hosts;
-  // An instantiation of an interface that React declares, and nothing else does: a local interface that extends one (of a mapped copy of
-  // it, say) keeps the member's declaration, not its type. An augmentation of the host interface is refused as well, though it adds
+  // The attributes are an instantiation of an interface that React declares, and nothing else is: a local interface that extends one (of a
+  // mapped copy of it, say) keeps the member's declaration, not its type. An Omit of one is the default library's own and leaves the
+  // member's type the interface's, which the types themselves say. An augmentation of the host interface is refused as well, though it adds
   // only an unrelated member: the extraction runs on this repository's own sources, so that is a loud, named failure and not a silent
   // mismatch, and accepting it would take a proof that the augmentation leaves the overlapping member alone.
-  if (!isTypeReference(constituent) || !declaredInReact(constituent.getTarget().getSymbol())) return false;
+  let attributes = constituent;
+  let attribute = member;
+  const alias = constituent.getAliasSymbol();
+  if (alias?.name === 'Omit' && alias.declarations.length > 0 && alias.declarations.every(({ path }) => isDefaultLibrary(program, path))) {
+    [attributes] = constituent.getAliasTypeArguments();
+    attribute = attributes === undefined ? undefined : checker.getPropertyOfType(attributes, prop);
+    if (attribute === undefined || checker.getTypeOfSymbol(attribute).id !== checker.getTypeOfSymbol(member).id) return false;
+  }
+  if (!isTypeReference(attributes) || !declaredInReact(attributes.getTarget().getSymbol())) return false;
   // The element the host's attributes are instantiated with, read from the resolved type and not from the text that wrote it, is the
   // entry's DOM element: the host member is that element's event handler, so another element is another public type.
-  const elementSymbol = checker.getTypeArguments(constituent)[0]?.getSymbol();
-  if (elementSymbol?.name !== overlap.element || !elementSymbol.declarations.some(({ path }) => isDefaultLibrary(project.program, path))) return false;
-  return declaredInReact(member) && member.declarations.every((declaration) => declaration.resolve(project)?.parent?.name?.text === overlap.host);
+  const elementSymbol = checker.getTypeArguments(attributes)[0]?.getSymbol();
+  if (elementSymbol?.name !== overlap.element || !elementSymbol.declarations.some(({ path }) => isDefaultLibrary(program, path))) return false;
+  return declaredInReact(attribute) && attribute.declarations.every((declaration) => declaration.resolve(project)?.parent?.name?.text === overlap.host);
 }
 
 /**
@@ -1009,16 +1221,20 @@ function intersectsHostMember(project, { propsType, prop, own, type }, overlap) 
  * Widening is checked on the arms: some arm of the signature's props, a union of arms, must accept
  * everything the owned type does, so an arm that narrows the member is not hidden by the others.
  */
-function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, member, label, also = [], overlaps }) {
+function readDeclaredApi(makeReader, project, sourceFile, { exportName, ownName, member, label, also = [], overlaps }) {
   const { checker } = project;
-  const members = ownPropsOf(checker, sourceFile, ownName, label);
-  const propsType = publicPropsType(project, sourceFile, exportName, member);
+  const { members, binders: ownBinders, symbol: ownProps } = ownPropsOf(project, sourceFile, ownName, label);
+  const reader = makeReader(new Map(ownBinders.map((binder) => [binder.symbol.id, binder])));
+  // The exported signature's type parameters correspond to OwnProps's by position (D3), before any member is compared: `matches` is
+  // the member comparison for a member that mentions one, and the correspondence is checked for every signature, used or not.
+  const signatureOf = (name, widen, found) => {
+    const binders = found.signature === undefined ? [] : signatureBinders(project, found.signature, label, `the exported ${name}`);
+    const pairs = assertBinderCorrespondence(project, reader, { label, ownName, signatureName: name, own: ownBinders, pub: binders });
+    return { name, widen, props: propertiesByName(checker, found.type), type: found.type, binders, matches: bindingMatcher(project, pairs) };
+  };
   const signatures = [
-    { name: label, widen: [], props: propertiesByName(checker, propsType), type: propsType },
-    ...also.map(({ member: alsoMember, widen = [] }) => {
-      const type = publicPropsType(project, sourceFile, exportName, alsoMember);
-      return { name: `${exportName}.${alsoMember}`, widen, props: propertiesByName(checker, type), type };
-    }),
+    signatureOf(label, [], publicPropsType(project, sourceFile, exportName, member)),
+    ...also.map(({ member: alsoMember, widen = [] }) => signatureOf(`${exportName}.${alsoMember}`, widen, publicPropsType(project, sourceFile, exportName, alsoMember))),
   ];
   const owned = new Set(members.map((ownMember) => ownMember.name?.text));
   for (const { name, widen } of signatures) {
@@ -1032,7 +1248,9 @@ function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, mem
   const eventDetails = {};
   const shown = (symbol, type) => `${symbol.flags & SymbolFlags.Optional ? 'optional' : 'required'} ${checker.typeToString(type)}`;
   for (const ownMember of members) {
+    const bindersBefore = reader.binderUses();
     const { name: prop, type, required, readonly: _readonly, ...documented } = reader.memberOf(ownMember, `${label}.`);
+    const mentionsBinder = reader.binderUses() > bindersBefore;
     if (type.kind === 'never') throw new ApiExtractionError(`${label}.${prop}`, `a member that must be absent is no prop; leave ${prop} to the host part of the props`);
     const own = checker.getSymbolAtLocation(ownMember.name);
     const ownType = checker.getTypeOfSymbol(own);
@@ -1040,12 +1258,14 @@ function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, mem
       const accepted = signature.props.get(prop);
       if (!accepted) throw new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props do not include ${prop}`);
       const acceptedType = checker.getTypeOfSymbol(accepted);
-      const redeclared = (reason) => new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props ${reason} ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}`);
+      const redeclared = (reason) => new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props ${reason} ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}${mentionsBinder ? ' (a member that mentions a type parameter is compared with each of OwnProps\'s replaced by the exported component\'s at the same position)' : ''}`);
+      // A member that mentions a type parameter is the same type once each parameter is replaced by the signature's, by position.
+      const sameAsOwn = mentionsBinder ? signature.matches(ownType, acceptedType) : sameType(acceptedType, ownType);
       const optionalityKept = Boolean(accepted.flags & SymbolFlags.Optional) === !required;
       if (!signature.widen.includes(prop)) {
         const overlap = signature === signatures[0] ? overlaps?.get(`${label}.${prop}`) : undefined;
-        const overlapped = overlap !== undefined && optionalityKept && intersectsHostMember(project, { propsType: signature.type, prop, own, type }, overlap);
-        if ((acceptedType.id !== ownType.id || !optionalityKept) && !overlapped) throw redeclared('redeclare');
+        const overlapped = overlap !== undefined && optionalityKept && intersectsHostMember(project, { propsType: signature.type, prop, own, type, ownProps, binders: signature.binders }, overlap);
+        if ((!sameAsOwn || !optionalityKept) && !overlapped) throw redeclared('redeclare');
         continue;
       }
       if (!optionalityKept) throw redeclared('change the optionality of');
@@ -1058,7 +1278,7 @@ function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, mem
       if (!takes) {
         throw new ApiExtractionError(`${label}.${prop}`, `no arm of the exported ${signature.name}'s props takes ${prop} as ${ownName}OwnProps declares it, ${shown(own, ownType)}; ${prop} may widen there, never narrow (if ${signature.name} declares it as ${ownName}OwnProps does, remove it from widen)`);
       }
-      if (acceptedType.id === ownType.id) {
+      if (sameAsOwn) {
         throw new ApiExtractionError(`${label}.${prop}`, `${prop} is listed to widen on ${signature.name}, whose props declare it as ${shown(accepted, acceptedType)}, the type ${ownName}OwnProps declares; remove it from widen`);
       }
     }
@@ -1073,7 +1293,7 @@ function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, mem
       propDetails[prop] = { type, required, ...documented };
     }
   }
-  return { props, events, propDetails, eventDetails };
+  return { props, events, propDetails, eventDetails, types: reader.types };
 }
 
 const REACT_WRAPPERS = new Set(['forwardRef', 'memo']);
@@ -1886,6 +2106,10 @@ function readSourceDefaults(project, sourceFile, { exportName, member, label }, 
   } else if (member !== undefined) {
     // A compound's defaults are its part's, whatever else the export is.
     component = componentFunction(project, sourceFile, chain, compoundPart(project, sourceFile, exported, exportName, member, followed), new Set(), followed);
+  } else if (initializer !== undefined && unwrap(initializer).kind === SyntaxKind.Identifier) {
+    // An export that is one name, however it is typed (`export const Text: TextComponent = TextRoot as unknown as TextComponent`), renders with
+    // the component that name stands for: a top-level function or const, read as any named component is, and checked for writes below.
+    component = namedFunction(project, sourceFile, chain, unwrap(initializer), new Set(), followed);
   } else {
     component = exported?.node.kind === SyntaxKind.FunctionDeclaration ? exported.node
       : componentFunction(project, sourceFile, chain, initializer, new Set(), followed);
@@ -1958,13 +2182,13 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
     const declarationFile = project.program.getSourceFile(resolve(declarations));
     const sourceFile = source ? project.program.getSourceFile(resolve(source)) : undefined;
     // One block: the API of the export's root, or of one part of it.
+    const readerFor = (binders) => declarationReader({ project, declarationRoot: root, allowed, binders });
     const read = ({ ownName, member, label, also: rootAlso = [], part: isPart = false }) => {
-      const reader = declarationReader({ project, declarationRoot: root, allowed });
-      const declared = readDeclaredApi(reader, project, declarationFile, { exportName: name, ownName, member, label, also: rootAlso, overlaps });
+      const declared = readDeclaredApi(readerFor, project, declarationFile, { exportName: name, ownName, member, label, also: rootAlso, overlaps });
       if (isPart && declared.props.length === 0 && declared.events.length === 0) {
         throw new ApiExtractionError(label, `${ownName}OwnProps declares no Mux UI-owned prop; a part without Mux UI-owned props has no partApis entry`);
       }
-      const types = Object.fromEntries([...reader.types].sort(([left], [right]) => left.localeCompare(right))
+      const types = Object.fromEntries([...declared.types].sort(([left], [right]) => left.localeCompare(right))
         .map(([typeName, { symbol: _symbol, ...definition }]) => [typeName, definition]));
       // A prop whose type is a finite set of literals also lists them, in declaration order.
       const propDetails = Object.fromEntries(Object.entries(declared.propDetails).map(([prop, { type, required, ...documented }]) => {
@@ -2006,7 +2230,7 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
       const member = parts[callable];
       if (member === undefined) throw new ApiExtractionError(name, `callable names ${callable}, which is not one of the parts`);
       // The export itself must carry that part's props with the same types and requiredness.
-      readDeclaredApi(declarationReader({ project, declarationRoot: root, allowed }), project, declarationFile, { exportName: name, ownName: `${name}${member}`, member: undefined, label: `${name} (callable)` });
+      readDeclaredApi(readerFor, project, declarationFile, { exportName: name, ownName: `${name}${member}`, member: undefined, label: `${name} (callable)` });
     }
     return [name, { ...api, ...(Object.keys(partApis).length === 0 ? {} : { partApis }) }];
   })));
