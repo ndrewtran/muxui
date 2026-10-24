@@ -227,27 +227,40 @@ function PartTable({ exported, part, provenance }) {
       group.notDeclared.length > 0 && h(ClosingRow, { names: group.notDeclared, state: 'not declared', columns }))));
 }
 
+/**
+ * The part an alias is the same component as. The model writes `sameAs` as the export's own name (the component itself,
+ * as in `Root: TextEditorComponent`) or the name of a sibling member; one that names neither is a broken reference.
+ */
+function canonicalPart(exported, part) {
+  if (part.sameAs === undefined) return part;
+  const target = exported.parts.find(({ member }) => member === (part.sameAs === exported.name ? null : part.sameAs));
+  if (target === undefined || target.sameAs !== undefined) throw new Error(`${partLabel(exported, part)} is the same as ${part.sameAs}, which is no part of ${exported.name} with a description of its own.`);
+  return target;
+}
+
 /** A part: its import, how it is declared, generics, ref and native envelope, then its unified table. */
 function PartReference({ exported, part, provenance, heading, collapsible }) {
   const label = partLabel(exported, part);
-  const hasAlternativeRef = (part.alternatives ?? []).some((alternative) => alternative.ref !== undefined);
-  const hasAlternativeNative = (part.alternatives ?? []).some((alternative) => alternative.natives !== undefined);
+  // An alias is the same component, so its generics, ref and native surface are those of the part it names.
+  const canonical = canonicalPart(exported, part);
+  const hasAlternativeRef = (canonical.alternatives ?? []).some((alternative) => alternative.ref !== undefined);
+  const hasAlternativeNative = (canonical.alternatives ?? []).some((alternative) => alternative.natives !== undefined);
   const meta = h('dl', { key: 'meta', className: 'muxui-docs-meta' },
     h('dt', null, 'Import'), h('dd', { 'data-meta': 'import' }, h('code', null, importLine(exported))),
     part.form !== undefined && [h('dt', { key: 'form-title' }, 'Declared as'), h('dd', { key: 'form', 'data-meta': 'form' }, h('code', null, part.form))],
-    part.typeParameters !== undefined && [h('dt', { key: 'generics-title' }, 'Generics'), h('dd', { key: 'generics', 'data-meta': 'generics' },
-      part.typeParameters.map((parameter, index) => h(React.Fragment, { key: parameter.name },
+    canonical.typeParameters !== undefined && [h('dt', { key: 'generics-title' }, 'Generics'), h('dd', { key: 'generics', 'data-meta': 'generics' },
+      canonical.typeParameters.map((parameter, index) => h(React.Fragment, { key: parameter.name },
         index > 0 && ', ',
         h(TypeText, { text: `${parameter.name}${parameter.constraint ? ` extends ${parameter.constraint}` : ''}${parameter.default ? ` = ${parameter.default}` : ''}`, refs: parameter.refs }))))],
-    part.sameAs !== undefined && [h('dt', { key: 'same-title' }, 'Same as'), h('dd', { key: 'same', 'data-meta': 'same-as' }, h('code', null, `${exported.name}.${part.sameAs}`))],
-    (part.ref !== undefined || !hasAlternativeRef) && [h('dt', { key: 'ref-title' }, 'Ref'), h('dd', { key: 'ref', 'data-meta': 'ref' }, h(RefText, { ref: part.ref }))],
-    (part.natives !== undefined || !hasAlternativeNative) && [h('dt', { key: 'native-title' }, 'Native'), h('dd', { key: 'native', 'data-meta': 'native' }, h(NativeText, { natives: part.natives }))]);
+    part.sameAs !== undefined && [h('dt', { key: 'same-title' }, 'Same as'), h('dd', { key: 'same', 'data-meta': 'same-as' }, h('a', { href: `#${partAnchor(exported, canonical)}` }, h('code', null, partLabel(exported, canonical))))],
+    (canonical.ref !== undefined || !hasAlternativeRef) && [h('dt', { key: 'ref-title' }, 'Ref'), h('dd', { key: 'ref', 'data-meta': 'ref' }, h(RefText, { ref: canonical.ref }))],
+    (canonical.natives !== undefined || !hasAlternativeNative) && [h('dt', { key: 'native-title' }, 'Native'), h('dd', { key: 'native', 'data-meta': 'native' }, h(NativeText, { natives: canonical.natives }))]);
   const body = [meta, part.sameAs === undefined && h(PartTable, { key: 'table', exported, part, provenance })];
   const count = new Set([...(part.members ?? []), ...(part.alternatives ?? []).flatMap(({ members }) => members)].map(({ name }) => name)).size;
   const title = h('h4', { 'data-part-title': true }, h('code', null, label));
   const props = { id: partAnchor(exported, part), className: 'muxui-docs-part', 'data-part': label };
   if (collapsible) {
-    return h('details', props, h('summary', null, title, h('span', { className: 'muxui-docs-count' }, `${count} ${count === 1 ? 'prop' : 'props'}`)), body);
+    return h('details', props, h('summary', null, title, h('span', { className: 'muxui-docs-count' }, part.sameAs === undefined ? `${count} ${count === 1 ? 'prop' : 'props'}` : `same as ${partLabel(exported, canonical)}`)), body);
   }
   return h('div', props, heading && title, body);
 }

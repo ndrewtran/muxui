@@ -151,16 +151,24 @@ function pageProblems(page, owner) {
     if (node === undefined) continue;
     const meta = (name) => node.querySelector(`[data-meta="${name}"]`);
     if (meta('import')?.textContent !== importOf(record.name, 'value', record.entry)) problems.push(`${label} import is ${meta('import')?.textContent}`);
-    const alternativeRefs = (part.alternatives ?? []).some((alternative) => alternative.ref !== undefined);
-    if (part.ref !== undefined && part.ref !== null && part.ref.never !== true && meta('ref')?.textContent !== part.ref.type) problems.push(`${label} ref is ${meta('ref')?.textContent}, expected ${part.ref.type}`);
-    if (part.ref?.never === true && !meta('ref')?.textContent.includes(part.ref.required === true ? 'ref: never' : 'ref?: never')) problems.push(`${label} ref should be never`);
-    if ((part.ref === undefined || part.ref === null) && !alternativeRefs && meta('ref')?.textContent !== 'none declared') problems.push(`${label} should say it declares no ref`);
-    const natives = (part.natives ?? []).map(({ type, omit }) => `${type}${omit?.length > 0 ? ` except ${omit.join('')}` : ''}`).join('');
-    if (part.natives !== undefined && meta('native')?.textContent !== natives) problems.push(`${label} native is ${meta('native')?.textContent}, expected ${natives}`);
-    const generics = (part.typeParameters ?? []).map(({ name, constraint, default: fallback }) => `${name}${constraint ? ` extends ${constraint}` : ''}${fallback ? ` = ${fallback}` : ''}`).join(', ');
-    if (meta('generics')?.textContent !== (part.typeParameters === undefined ? undefined : generics)) problems.push(`${label} generics are ${meta('generics')?.textContent}`);
+    // An alias is the same component as the part it names (the export itself, or a sibling member), so it shows that part's surface.
+    const canonical = part.sameAs === undefined ? part : record.parts.find(({ member }) => member === (part.sameAs === record.name ? null : part.sameAs));
+    if (canonical === undefined || canonical.sameAs !== undefined) {
+      problems.push(`${label} is the same as ${part.sameAs}, which the reference does not hold as a part of its own`);
+      continue;
+    }
+    const alternativeRefs = (canonical.alternatives ?? []).some((alternative) => alternative.ref !== undefined);
+    if (canonical.ref !== undefined && canonical.ref !== null && canonical.ref.never !== true && meta('ref')?.textContent !== canonical.ref.type) problems.push(`${label} ref is ${meta('ref')?.textContent}, expected ${canonical.ref.type}`);
+    if (canonical.ref?.never === true && !meta('ref')?.textContent.includes(canonical.ref.required === true ? 'ref: never' : 'ref?: never')) problems.push(`${label} ref should be never`);
+    if ((canonical.ref === undefined || canonical.ref === null) && !alternativeRefs && meta('ref')?.textContent !== 'none declared') problems.push(`${label} should say it declares no ref, not ${meta('ref')?.textContent}`);
+    const natives = (canonical.natives ?? []).map(({ type, omit }) => `${type}${omit?.length > 0 ? ` except ${omit.join('')}` : ''}`).join('');
+    if (canonical.natives !== undefined && meta('native')?.textContent !== natives) problems.push(`${label} native is ${meta('native')?.textContent}, expected ${natives}`);
+    if (canonical.natives === undefined && !(canonical.alternatives ?? []).some((alternative) => alternative.natives !== undefined) && meta('native')?.textContent !== 'none declared') problems.push(`${label} should say it declares no native surface, not ${meta('native')?.textContent}`);
+    const generics = (canonical.typeParameters ?? []).map(({ name, constraint, default: fallback }) => `${name}${constraint ? ` extends ${constraint}` : ''}${fallback ? ` = ${fallback}` : ''}`).join(', ');
+    if (meta('generics')?.textContent !== (canonical.typeParameters === undefined ? undefined : generics)) problems.push(`${label} generics are ${meta('generics')?.textContent}`);
     if (part.sameAs !== undefined) {
-      if (meta('same-as')?.textContent !== `${record.name}.${part.sameAs}` || node.querySelector('table') !== null) problems.push(`${label} should be the same as ${part.sameAs} and list no table`);
+      const target = page.getElementById(meta('same-as')?.querySelector('a[href^="#"]')?.getAttribute('href').slice(1) ?? '');
+      if (meta('same-as')?.textContent !== labelOf(record, canonical) || target?.getAttribute('data-part') !== labelOf(record, canonical) || node.querySelector('table') !== null) problems.push(`${label} should be the same as ${labelOf(record, canonical)}, linked to it, and list no table; it says ${meta('same-as')?.textContent}`);
       continue;
     }
     const expected = expectedGroups(part);
@@ -338,6 +346,35 @@ test('the hard cases show their alternatives, refs, generics and flat exports as
   // The optional `never` explanation appears on a page that has one, and only there.
   assert.ok((await page('Virtualizer')).querySelector('[data-fact="typed.never"]'));
   assert.equal((await page('Button')).querySelector('[data-fact="typed.never"]'), null);
+});
+
+test('an aliased part shows the generics, ref and native surface of the part it is the same as, in every family', async () => {
+  let aliases = 0;
+  for (const record of manifest.families) {
+    const page = pageOf(await entryOf(record));
+    const { exports } = ownedExports(ownerOf(record.family));
+    for (const { record: exported } of exports) {
+      for (const part of exported?.kind === 'component' ? exported.parts.filter(({ sameAs }) => sameAs !== undefined) : []) {
+        const node = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === labelOf(exported, part));
+        const canonical = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === (part.sameAs === exported.name ? exported.name : `${exported.name}.${part.sameAs}`));
+        assert.ok(canonical !== undefined, `${labelOf(exported, part)} names a part the page has`);
+        for (const meta of ['ref', 'native', 'generics']) {
+          assert.equal(node.querySelector(`[data-meta="${meta}"]`)?.textContent, canonical.querySelector(`[data-meta="${meta}"]`)?.textContent, `${labelOf(exported, part)} ${meta} is its canonical part's`);
+        }
+        assert.ok(!/none declared/u.test(node.querySelector('[data-meta="ref"]').textContent) || /none declared/u.test(canonical.querySelector('[data-meta="ref"]').textContent));
+        assert.equal(node.querySelector('[data-meta="same-as"]').textContent, canonical.getAttribute('data-part'));
+        aliases += 1;
+      }
+    }
+  }
+  assert.equal(aliases, 1, 'TextEditor.Root is the one alias in the reference');
+  // TextEditor.Root is the component itself, so it has the component's ref and attribute surface.
+  const page = pageOf(await entryOf(manifest.families.find(({ family }) => family === 'TextEditor')));
+  const root = partNodes(page).find((node) => node.getAttribute('data-part') === 'TextEditor.Root');
+  assert.equal(root.querySelector('[data-meta="same-as"]').textContent, 'TextEditor');
+  assert.equal(root.querySelector('[data-meta="ref"]').textContent, 'TextEditorHandle');
+  assert.equal(root.querySelector('[data-meta="native"]').textContent, 'React.HTMLAttributes<HTMLDivElement> except valuedefaultValueonChange');
+  assert.deepEqual(texts(root.querySelectorAll('[data-meta="native"] code')), ['React.HTMLAttributes<HTMLDivElement>', 'value', 'defaultValue', 'onChange']);
 });
 
 /** The exports and public types the reference files for the package-level and shared owners hold, which no family page lists. */
@@ -676,6 +713,9 @@ test('deleting a part, a hook, a helper, a ref or an import from a copy of the r
     ['a member', 'IconButton', (copy) => { const part = partOf(copy, 'icon-button', 'IconButton', null); part.members = part.members.filter(({ name }) => name !== 'size'); }],
     ['a generic', 'Text', (copy) => { delete partOf(copy, 'text', 'Text', null).typeParameters; }],
     ['a member declared never from a part with no alternatives', 'DataDiff', (copy) => { const part = partOf(copy, 'data-diff', 'DataDiff', null); part.members = part.members.filter(({ name }) => name !== 'dangerouslySetInnerHTML'); }],
+    ['the ref of the part an alias is the same as', 'TextEditor', (copy) => { delete partOf(copy, 'text-editor', 'TextEditor', null).ref; }],
+    ['the native surface of the part an alias is the same as', 'TextEditor', (copy) => { partOf(copy, 'text-editor', 'TextEditor', null).natives[0].omit.pop(); }],
+    ['an alias that names no part', 'TextEditor', (copy) => { partOf(copy, 'text-editor', 'TextEditor', 'Root').sameAs = 'Nowhere'; }],
     ['the never of a member of a part with no alternatives', 'DataDiff', (copy) => { delete partOf(copy, 'data-diff', 'DataDiff', null).members.find(({ name }) => name === 'children').never; }],
   ];
   for (const [name, family, mutate] of cases) {
