@@ -1,0 +1,33 @@
+---
+import type { ApiExport } from '../../lib/api-reference.ts';
+import Doc from './Doc.astro';
+import TypeText from './TypeText.astro';
+
+interface Props {
+	exports: readonly ApiExport[];
+}
+
+const { exports } = Astro.props;
+---
+
+<dl class="api-exports not-content" data-api-exports>
+	{exports.map((item) => (
+		<div class="api-export" data-api-export={item.name} data-api-kind={item.kind}>
+			<dt>
+				{item.anchor === undefined ? <code class="api-name">{item.name}</code> : <a href={`#${item.anchor}`}><code class="api-name">{item.name}</code></a>}
+				<span class="api-kind">{item.kind}</span>
+			</dt>
+			<dd>
+				<code class="api-import" data-api-import>{item.import}</code>
+				{item.signature !== undefined && <TypeText segments={item.signature} class="api-signature" />}
+				{item.doc !== undefined && <p class="api-export-doc"><Doc text={item.doc} /></p>}
+				{item.reason !== undefined && <p class="api-export-doc" data-api-reason>{item.reason}</p>}
+				{item.parts.length > 0 && (
+					<ul class="api-parts" data-api-parts>
+						{item.parts.map((part) => <li><a href={`#${part.anchor}`}><code>{part.heading}</code></a></li>)}
+					</ul>
+				)}
+			</dd>
+		</div>
+	))}
+</dl>

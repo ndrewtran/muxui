@@ -2,8 +2,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getReactPackageFacts } from '../../lib/catalog.ts';
+import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getDeclarationReference, getReactPackageFacts } from '../../lib/catalog.ts';
 import { componentReference } from '../../../../component-reference.mjs';
+import { buildApiReference, collapsePartsAbove } from '../../lib/api-reference.ts';
+import legacyPartAnchors from '../../lib/legacy-part-anchors.json';
 import { resolveUsedIn } from '../../lib/blocks.ts';
 import { variantPath } from '../../lib/block-paths.ts';
 import { assertExampleSource } from '../../lib/example-modules.tsx';
@@ -13,6 +15,11 @@ import TimeFieldExampleHost from '../../components/TimeFieldExampleHost.tsx';
 import GuideProjection from '../../components/GuideProjection.astro';
 import CodeBlock from '../../components/CodeBlock.astro';
 import TokenInlineMarkup from '../../components/TokenInlineMarkup.astro';
+import ApiPart from '../../components/api/ApiPart.astro';
+import ApiExports from '../../components/api/ApiExports.astro';
+import ApiTypes from '../../components/api/ApiTypes.astro';
+import TypeText from '../../components/api/TypeText.astro';
+import ApiDisclosures from '../../components/api/ApiDisclosures.astro';
 
 export const prerender = true;
 
@@ -40,7 +47,21 @@ const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
 // The blocks that use this component, from the usedIn view the catalog derives. Block variants are never listed as component examples.
 const usedInBlocks = resolveUsedIn(page.usedIn);
 // Every fact below is projected from the catalog record; this page authors none.
-const { imports, usage, behavior, events, parts, accessibility, styling, sources } = componentReference({ artifact, examples, packageFacts: getReactPackageFacts() });
+const packageFacts = getReactPackageFacts();
+const { imports, usage, behavior, accessibility, styling, sources, declarations } = componentReference({ artifact, examples, packageFacts, declarations: getDeclarationReference() });
+// The types come from the declarations the package ships; the catalog adds each default and which prop reports which event.
+if (declarations === undefined) throw new Error(`The declaration reference has no share for ${summary.id}.`);
+const legacyAnchorsByPage: Readonly<Record<string, Readonly<Record<string, string>>>> = legacyPartAnchors.anchors;
+const api = buildApiReference({
+	packageName: packageFacts.packageName,
+	exportName: imports.component,
+	anatomy: artifact.anatomy,
+	catalog: reactBinding.api,
+	declarations,
+	legacyAnchors: legacyAnchorsByPage[componentSlug] ?? {},
+});
+// A family with many parts opens only its first table; every part stays listed and reachable.
+const collapsed = api.parts.length > collapsePartsAbove;
 
 for (const example of examples) {
 	assertExampleSource(example.source.content);
@@ -72,7 +93,9 @@ const headings = [
 	})),
 	...(usedInBlocks.length > 0 ? [{ depth: 2, text: 'Used in blocks', slug: 'used-in-blocks' }] : []),
 	{ depth: 2, text: 'API reference', slug: 'api-reference' },
-	...parts.map(({ part, owner }) => ({ depth: 3, text: owner, slug: `api-reference-${part}` })),
+	{ depth: 3, text: 'Parts and related exports', slug: 'api-reference-exports' },
+	...api.parts.map(({ heading, anchor }) => ({ depth: 3, text: heading, slug: anchor })),
+	...(api.types.length > 0 ? [{ depth: 3, text: 'Types', slug: 'api-reference-types' }] : []),
 	{ depth: 2, text: 'Events', slug: 'events' },
 	{ depth: 2, text: 'Accessibility', slug: 'accessibility' },
 	{ depth: 2, text: 'Anatomy and styling', slug: 'anatomy-and-styling' },
@@ -165,34 +188,61 @@ const headings = [
 	<section id="api-reference" class="docs-section">
 		<h2>API reference</h2>
 		<p class="api-binding"><strong>web.react</strong><span>binding · lifecycle: {reactBinding.lifecycle}</span></p>
-		<table>
-			<thead><tr><th scope="col">Prop</th><th scope="col">Default</th></tr></thead>
-			<tbody data-fact="binding.api.props">
-				{reactBinding.api.props.map((prop) => <tr><th scope="row"><code>{prop}</code></th><td><code>{reactBinding.api.defaults[prop] === undefined ? 'Not specified' : JSON.stringify(reactBinding.api.defaults[prop])}</code></td></tr>)}
-			</tbody>
-		</table>
-		{parts.map((api) => (
+		<ul class="api-legend" data-api-legend>
+			<li><strong>Required</strong> and <strong>optional</strong> come from the declaration the package ships.</li>
+			<li><strong>not allowed</strong> is a member the declaration types <code>never</code>. An optional <code>never</code> still accepts an explicit <code>undefined</code> unless <code>exactOptionalPropertyTypes</code> is on.</li>
+			<li><strong>not declared</strong> is a member the alternative does not list. It is not the same as not allowed.</li>
+			<li><strong>Default</strong> is the catalog's {reactBinding.api.derived ? 'executed default' : <Fragment>default. This family's defaults are <em>authored</em> in its component record, not read from the code that runs</Fragment>}. <strong>none</strong> means the catalog declares none.</li>
+		</ul>
+		<h3 id="api-reference-exports">Parts and related exports</h3>
+		<ApiExports exports={api.exports} />
+		{api.parts.map((part, index) => <ApiPart part={part} open={!collapsed || index === 0} />)}
+		{api.catalogOnly.length > 0 && (
+			<p class="api-catalog-only" data-api-catalog-only>
+				Listed by the catalog with no member of their own, because the host element or a hook's options carry them:
+				{api.catalogOnly.map(({ owner, names }) => <Fragment> {owner !== null && <Fragment><code>{owner}</code>: </Fragment>}{names.map((name) => <code class="inline-code">{name}</code>)}</Fragment>)}
+			</p>
+		)}
+		{api.types.length > 0 && (
 			<Fragment>
-				<h3 id={`api-reference-${api.part}`}><code>{api.owner}</code></h3>
-				{api.props.length > 0 && (
-					<table>
-						<thead><tr><th scope="col">Prop</th><th scope="col">Default</th></tr></thead>
-						<tbody data-fact={`binding.api.partApis.${api.part}.props`}>
-							{api.props.map((prop) => <tr><th scope="row"><code>{prop}</code></th><td><code>{api.defaults[prop] === undefined ? 'Not specified' : JSON.stringify(api.defaults[prop])}</code></td></tr>)}
-						</tbody>
-					</table>
-				)}
+				<h3 id="api-reference-types">Types</h3>
+				<ApiTypes types={api.types} />
 			</Fragment>
-		))}
+		)}
 	</section>
 
 	<section id="events" class="docs-section">
 		<h2>Events</h2>
-		<p data-fact="binding.api.events">{events.length ? events.map((event) => <code class="inline-code">{event}</code>) : parts.some((api) => api.events.length > 0) ? 'The root declares no events.' : 'This binding does not declare events.'}</p>
-		{parts.filter((api) => api.events.length > 0).map((api) => (
+		{api.events.some(({ part }) => part === null)
+			? null
+			: <p data-fact="binding.api.events">{api.events.length > 0 ? 'The root declares no events.' : 'This binding does not declare events.'}</p>}
+		{api.events.map((group) => (
 			<Fragment>
-				<h3><code>{api.owner}</code></h3>
-				<p data-fact={`binding.api.partApis.${api.part}.events`}>{api.events.map((event) => <code class="inline-code">{event}</code>)}</p>
+				{group.owner !== null && <h3><code>{group.owner}</code></h3>}
+				<div class="api-table-scroll not-content">
+					<table class="api-events">
+						<caption class="visually-hidden">{group.owner ?? 'Root'} events</caption>
+						<thead><tr><th scope="col">Event</th><th scope="col">Prop</th><th scope="col">Signature</th></tr></thead>
+						<tbody data-fact={group.part === null ? 'binding.api.events' : `binding.api.partApis.${group.part}.events`}>
+							{group.events.map((event) => (
+								<tr data-api-event-row={event.channel}>
+									<th scope="row"><code class="inline-code">{event.channel}</code></th>
+									<td><code>{event.handler}</code></td>
+									<td class="api-signatures" data-api-signatures>
+										{event.signatures.length === 0
+											? <span class="api-none">not declared</span>
+											: event.signatures.map((signature) => (
+												<span class="api-signature-entry">
+													<TypeText segments={signature.segments} class="api-signature" />
+													{signature.declaredBy.length > 0 && <span class="api-declared-by" data-api-declared-by>on {signature.declaredBy.map((name, index) => <Fragment>{index > 0 && ', '}<code>{name}</code></Fragment>)}</span>}
+												</span>
+											))}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
 			</Fragment>
 		))}
 	</section>
@@ -234,6 +284,8 @@ const headings = [
 			))}
 		</TokenInlineMarkup>
 	</section>
+
+	<ApiDisclosures />
 
 	<section id="sources" class="docs-section">
 		<h2>Sources</h2>

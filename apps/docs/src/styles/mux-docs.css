@@ -531,6 +531,339 @@ pre code {
 
 :where(.sl-markdown-content) table:not(:where(.not-content *)) td { color: var(--muxui-semantic-content-default); }
 
+/* Typed API reference of a component page. The section is a size container: the tables are a real table where it is wide,
+   two-line rows where it is middling, and stacked rows where it is narrow, whatever the viewport and sidebar leave it. */
+#api-reference,
+#events { container: api-reference / inline-size; }
+
+.api-legend {
+	max-width: 50rem;
+	margin-block: 0 var(--muxui-reference-dimension-space-m);
+	padding-inline-start: var(--muxui-reference-dimension-space-m);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+
+.api-legend strong { color: var(--muxui-semantic-content-default); }
+
+.api-exports {
+	margin: var(--muxui-reference-dimension-space-xs) 0 var(--muxui-reference-dimension-space-l);
+	border-block-start: 1px solid var(--muxui-semantic-border-default);
+}
+
+.api-exports + .api-part { border-block-start-width: 0; }
+
+.api-export {
+	display: grid;
+	grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+	gap: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-s);
+	padding-block: var(--muxui-reference-dimension-space-xs);
+	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+}
+
+.api-export dt {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 var(--muxui-reference-dimension-space-xs);
+	margin: 0;
+}
+
+.api-export dd {
+	display: grid;
+	gap: var(--muxui-reference-dimension-space-3xs);
+	min-width: 0;
+	margin: 0;
+}
+
+.api-kind {
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.api-name,
+.api-import,
+.api-signature,
+.api-type-text,
+.api-values,
+.api-declaration-text,
+.api-meta code,
+.api-group-row code,
+.api-when code,
+.api-default code,
+.api-doc code,
+.api-export-doc code,
+.api-events code {
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	overflow-wrap: anywhere;
+}
+
+.api-name { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
+.api-import,
+.api-signature { display: block; color: var(--muxui-semantic-content-default); }
+.api-export-doc { margin: 0; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-s-font-size); }
+
+.api-parts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-s);
+	margin: var(--muxui-reference-dimension-space-3xs) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* Starlight styles a details element itself (its own box, not what is inside), so these sit outside its rule. */
+.api-part,
+.api-type-entry {
+	margin-inline: 0;
+	padding-inline: 0;
+	border-inline-start: 0;
+}
+
+.api-part {
+	border-block-start: 1px solid var(--muxui-semantic-border-default);
+}
+
+.api-part[open] { padding-block-end: var(--muxui-reference-dimension-space-s); }
+
+.api-part > summary,
+.api-type-entry > summary {
+	display: flex;
+	align-items: center;
+	gap: var(--muxui-reference-dimension-space-xs);
+	padding-block: var(--muxui-reference-dimension-space-xs);
+	cursor: pointer;
+	list-style: none;
+}
+
+.api-part > summary::-webkit-details-marker,
+.api-type-entry > summary::-webkit-details-marker { display: none; }
+
+.api-part > summary::before,
+.api-type-entry > summary::before {
+	content: '';
+	flex: none;
+	inline-size: 0.5em;
+	block-size: 0.5em;
+	border-inline-end: 2px solid var(--muxui-semantic-content-muted);
+	border-block-end: 2px solid var(--muxui-semantic-content-muted);
+	transform: rotate(-45deg);
+}
+
+.api-part[open] > summary::before,
+.api-type-entry[open] > summary::before { transform: rotate(45deg); }
+
+.api-part > summary:focus-visible,
+.api-type-entry > summary:focus-visible {
+	outline: 2px solid var(--muxui-semantic-focus-ring);
+	outline-offset: 2px;
+}
+
+.api-part > summary h3 {
+	margin: 0;
+	font-size: var(--muxui-semantic-typography-text-l-font-size);
+}
+
+.api-part > summary h3 { min-width: 0; }
+
+.api-part > summary h3 code {
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: inherit;
+	color: var(--muxui-semantic-content-strong);
+	overflow-wrap: anywhere;
+}
+
+.api-meta {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-s);
+	margin: 0 0 var(--muxui-reference-dimension-space-xs);
+	font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+
+.api-meta dt { color: var(--muxui-semantic-content-muted); }
+.api-meta dd { margin: 0; min-width: 0; }
+.api-meta dd code + code { margin-inline-start: var(--muxui-reference-dimension-space-xs); }
+.api-except { color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+.api-same-as { margin-block: 0 var(--muxui-reference-dimension-space-s); }
+
+.api-none { color: var(--muxui-semantic-content-muted); }
+
+.api-table-scroll {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.api-table,
+.api-events {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+	font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+
+.api-table th,
+.api-table td,
+.api-events th,
+.api-events td {
+	padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-s) var(--muxui-reference-dimension-space-2xs) 0;
+	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+	color: var(--muxui-semantic-content-default);
+	font-weight: var(--muxui-semantic-typography-text-font-weight);
+	text-align: start;
+	vertical-align: top;
+	overflow-wrap: anywhere;
+}
+
+.api-table thead th,
+.api-events thead th {
+	border-block-end-color: var(--muxui-semantic-border-default);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+	font-weight: var(--muxui-semantic-typography-label-weight);
+}
+
+.api-table thead th:nth-child(1) { width: 16%; }
+.api-table thead th:nth-child(2) { width: 24%; }
+.api-table thead th:nth-child(3) { width: 7rem; }
+.api-table thead th:nth-child(4) { width: 7rem; }
+.api-table-alternatives thead th:nth-child(1) { width: 15%; }
+.api-table-alternatives thead th:nth-child(2) { width: 14%; }
+.api-table-alternatives thead th:nth-child(3) { width: 20%; }
+.api-table-alternatives thead th:nth-child(4) { width: 6rem; }
+.api-table-alternatives thead th:nth-child(5) { width: 7rem; }
+
+.api-group-row th {
+	padding-block-start: var(--muxui-reference-dimension-space-s);
+	border-block-end-color: var(--muxui-semantic-border-default);
+	color: var(--muxui-semantic-content-strong);
+	font-weight: var(--muxui-semantic-typography-label-weight);
+}
+
+.api-group-ref {
+	margin-inline-start: var(--muxui-reference-dimension-space-m);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+	font-weight: var(--muxui-semantic-typography-text-font-weight);
+}
+
+.api-event {
+	display: block;
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.api-type-text a { color: var(--muxui-semantic-content-link); }
+.api-values { display: block; margin-block-start: var(--muxui-reference-dimension-space-3xs); color: var(--muxui-semantic-content-muted); }
+.api-when { color: var(--muxui-semantic-content-muted); }
+.api-state { font-size: var(--muxui-semantic-typography-text-xs-font-size); white-space: nowrap; }
+.api-state[data-api-state='required'] { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
+.api-state[data-api-state='optional'],
+.api-state[data-api-state='not declared'] { color: var(--muxui-semantic-content-muted); }
+.api-state[data-api-state='not declared'] { font-style: italic; }
+.api-state[data-api-state='not allowed'] { color: var(--muxui-semantic-feedback-invalid); }
+.api-closing > th { color: var(--muxui-semantic-content-muted); }
+.api-closing > th .api-name { font-weight: var(--muxui-semantic-typography-text-font-weight); }
+
+.api-authored {
+	display: inline-block;
+	margin-inline-start: var(--muxui-reference-dimension-space-2xs);
+	white-space: nowrap;
+	padding-inline: var(--muxui-reference-dimension-space-2xs);
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-shape-option-radius);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.api-catalog-only { max-width: 50rem; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-s-font-size); }
+
+.api-events thead th:nth-child(1) { width: 22%; }
+.api-events thead th:nth-child(2) { width: 22%; }
+.api-signature-entry { display: block; }
+.api-declared-by { display: block; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+
+.api-types { margin-block: var(--muxui-reference-dimension-space-xs) 0; border-block-start: 1px solid var(--muxui-semantic-border-default); }
+.api-type-entry { border-block-end: 1px solid var(--muxui-semantic-border-subtle); scroll-margin-block-start: var(--muxui-reference-dimension-space-xl); }
+.api-type-entry > .api-import { margin-block-end: var(--muxui-reference-dimension-space-2xs); padding-inline-start: var(--muxui-reference-dimension-space-m); }
+.api-type-reason { margin-block: 0 var(--muxui-reference-dimension-space-2xs); padding-inline-start: var(--muxui-reference-dimension-space-m); color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-s-font-size); }
+.api-declaration {
+	margin: 0 0 var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-m);
+	padding: var(--muxui-reference-dimension-space-xs);
+	border: 1px solid var(--muxui-semantic-border-subtle);
+	border-radius: var(--muxui-semantic-shape-container-radius);
+	background: var(--muxui-semantic-surface-raised);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.api-declaration-text a { color: var(--muxui-semantic-content-link); }
+
+/* Middling width: each row is two lines. Name, type and requirement above; when it applies, its comment and its default below. */
+@container api-reference (max-width: 52rem) {
+	.api-export { grid-template-columns: minmax(0, 1fr); }
+	.api-table, .api-table thead, .api-table tbody, .api-events, .api-events thead, .api-events tbody { display: block; }
+	.api-table thead, .api-events thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+	.api-table tr.api-row {
+		display: grid;
+		grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) 9rem;
+		gap: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-s);
+		padding-block: var(--muxui-reference-dimension-space-2xs);
+		border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+	}
+	.api-table tr.api-row > th,
+	.api-table tr.api-row > td { padding: 0; border: 0; }
+	.api-table tr.api-row > th { grid-column: 1; grid-row: 1; }
+	.api-table tr.api-row > .api-type { grid-column: 2; grid-row: 1; }
+	.api-table tr.api-row > .api-state { grid-column: 3; grid-row: 1; }
+	.api-table tr.api-row > .api-when { grid-column: 1; grid-row: 2; }
+	.api-table tr.api-row > .api-doc { grid-column: 2; grid-row: 2; }
+	.api-table tr.api-row > .api-default { grid-column: 3; grid-row: 2; }
+	.api-table:not(.api-table-alternatives) tr.api-row > .api-doc { grid-column: 1 / 3; }
+	.api-table tr.api-row > .api-doc:empty,
+	.api-table tr.api-row > .api-when,
+	.api-table tr.api-row > .api-default:has(.api-none) { display: none; }
+	.api-table tr.api-row > .api-default::before { content: 'default '; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+	.api-table tr.api-closing { grid-template-columns: minmax(0, 1fr) auto; }
+	.api-table tr.api-closing > th { grid-column: 1; }
+	.api-table tr.api-closing > .api-state { grid-column: 2; }
+	.api-table tr.api-closing > td:not(.api-state) { display: none; }
+	.api-table tr.api-group-row { display: block; padding-block-start: var(--muxui-reference-dimension-space-s); border-block-end: 1px solid var(--muxui-semantic-border-default); }
+	.api-table tr.api-group-row th { display: block; padding: 0 0 var(--muxui-reference-dimension-space-3xs); border: 0; }
+	.api-group-ref { display: block; margin: 0; }
+	.api-events tr { display: grid; grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr); gap: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-s); padding-block: var(--muxui-reference-dimension-space-2xs); border-block-end: 1px solid var(--muxui-semantic-border-subtle); }
+	.api-events tr > th, .api-events tr > td { padding: 0; border: 0; }
+	.api-events tr > .api-signatures { grid-column: 1 / -1; }
+}
+
+/* Narrow: name and requirement above, then each fact on its own line. */
+@container api-reference (max-width: 34rem) {
+	.api-table tr.api-row { grid-template-columns: minmax(0, 1fr) auto; }
+	.api-table tr.api-row > th { grid-column: 1; grid-row: 1; }
+	.api-table tr.api-row > .api-state { grid-column: 2; grid-row: 1; }
+	.api-table tr.api-row > .api-type,
+	.api-table tr.api-row > .api-default,
+	.api-table tr.api-row > .api-when,
+	.api-table:not(.api-table-alternatives) tr.api-row > .api-doc,
+	.api-table tr.api-row > .api-doc { grid-column: 1 / -1; grid-row: auto; }
+	.api-table tr.api-row > .api-type { order: 1; }
+	.api-table tr.api-row > .api-default { order: 2; }
+	.api-table tr.api-row > .api-doc { order: 3; }
+	.api-table tr.api-row > .api-when { order: 4; }
+	.api-table tr.api-row > .api-when:not(.api-when-always) { display: block; }
+	.api-table tr.api-row > .api-when::before { content: 'applies when '; font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+	.api-meta { grid-template-columns: minmax(0, 1fr); }
+	.api-meta dd { margin-block-end: var(--muxui-reference-dimension-space-2xs); }
+	.api-events tr { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* A printed page cannot open a part. The script opens them all around printing; where the browser lets the content of a closed
+   details element be shown, this does the same without it. */
+@media print {
+	.api-part::details-content,
+	.api-type-entry::details-content { content-visibility: visible; }
+}
+
 .home-showcase {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -226,6 +226,29 @@ test('a component\'s share keeps "not declared" apart from a declared never, and
   assert.deepEqual([text.typeParameters[0].name, text.typeParameters[0].default, text.ref.type], ['T', "'span'", 'HTMLElementTagNameMap[T]']);
 });
 
+test('a component\'s share lists the other exports of its owner as related, and never the component itself', () => {
+  const related = (slug) => declared(`muxui:component:${slug}`).related.map(({ name, kind }) => `${name}:${kind}`);
+  assert.deepEqual(related('icon-button'), [], 'a family with one export has nothing related');
+  assert.deepEqual(related('resizable'), ['ResizableHandle:component', 'ResizablePanel:component']);
+  assert.deepEqual(related('command-palette'), ['useCommandPalette:function']);
+  assert.deepEqual(related('toast'), ['ToastProvider:component', 'useToast:function']);
+  assert.deepEqual(related('text-editor'), ['isTextEditorDocument:function', 'normalizeTextEditorDocument:function']);
+  assert.equal(related('lightbox').length, 8);
+  assert.equal(related('markdown').length, 5);
+  for (const slug of ['icon-button', 'toast', 'markdown']) {
+    const { related: others, export: component } = declared(`muxui:component:${slug}`);
+    assert.ok(!others.includes(component));
+  }
+  // A function names its signature and the types it uses, and a value its type, so a page prints them as written.
+  const hook = declared('muxui:component:command-palette').related[0];
+  assert.deepEqual([hook.signature, hook.parameters.map(({ name }) => name), hook.returns.type], [
+    'useCommandPalette<T extends CommandPaletteCommand>(options: UseCommandPaletteOptions<T>): UseCommandPaletteReturn<T>',
+    ['options'],
+    'UseCommandPaletteReturn<T>',
+  ]);
+  assert.equal(declared('muxui:component:markdown').related[0].type, 'number');
+});
+
 test('the shared reference carries the declarations only when asked, and nothing else changes', () => {
   const plain = componentReference({ artifact: record(), examples, packageFacts: packageFacts() });
   assert.equal('declarations' in plain, false);

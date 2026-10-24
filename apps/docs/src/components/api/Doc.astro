@@ -1,0 +1,10 @@
+---
+interface Props {
+	text: string;
+}
+
+// A member's comment keeps its own code spans; nothing else in it is markup.
+const { text } = Astro.props;
+---
+
+{text.split('`').map((run, index) => index % 2 === 1 ? <code>{run}</code> : run)}

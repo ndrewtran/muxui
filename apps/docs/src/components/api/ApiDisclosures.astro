@@ -1,0 +1,49 @@
+<script>
+	// The API reference keeps most parts and types of a long page closed. This opens them where a reader needs them.
+	const disclosures = 'details.api-part, details.api-type-entry';
+
+	/** Opens every disclosure around the element with this id, and returns the element. */
+	function reveal(id: string) {
+		const target = id === '' ? null : document.getElementById(id);
+		if (target === null) return null;
+		if (target instanceof HTMLDetailsElement) target.open = true;
+		for (let node = target.parentElement; node !== null; node = node.parentElement) {
+			if (node instanceof HTMLDetailsElement) node.open = true;
+		}
+		return target;
+	}
+
+	const fragment = (hash: string) => decodeURIComponent(hash.slice(1));
+
+	// A link to a part or a type that is closed opens it and keeps it in view: the parts list, the outline, a type link and a
+	// saved link all point at headings and declarations that sit inside a collapsed details element.
+	function openHash() {
+		reveal(fragment(window.location.hash))?.scrollIntoView();
+	}
+	window.addEventListener('hashchange', openHash);
+	openHash();
+
+	// Following a link to the fragment the page is already at (after closing the part it names) changes no hash, so no
+	// hashchange fires. Opening the part is all the click needs to do: the browser scrolls to the fragment on its own.
+	document.addEventListener('click', (event) => {
+		if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+		if (link === null) return;
+		const url = new URL(link.getAttribute('href') ?? '', window.location.href);
+		if (url.origin === window.location.origin && url.pathname === window.location.pathname && url.hash === window.location.hash) reveal(fragment(url.hash));
+	});
+
+	// A printed page has no way to open a part, so printing opens them all and puts back the ones it opened.
+	let openedForPrint: HTMLDetailsElement[] = [];
+	window.addEventListener('beforeprint', () => {
+		for (const details of document.querySelectorAll<HTMLDetailsElement>(disclosures)) {
+			if (details.open) continue;
+			details.open = true;
+			openedForPrint.push(details);
+		}
+	});
+	window.addEventListener('afterprint', () => {
+		for (const details of openedForPrint) details.open = false;
+		openedForPrint = [];
+	});
+</script>

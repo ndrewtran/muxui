@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { groupComponentNavigation } from '../../../component-navigation.mjs';
-import { readReactPackageFacts, usageGuideId } from '../../../component-reference.mjs';
+import { readDeclarationReference, readReactPackageFacts, usageGuideId } from '../../../component-reference.mjs';
 import { componentRecordCategory } from './component-categories.ts';
 
 export interface CatalogSummary {
@@ -49,6 +49,8 @@ export interface CatalogPartApi {
 
 export interface CatalogBinding {
 	api: {
+		/** Its defaults are executed (the family's API is derived from its TypeScript source); otherwise they are authored in the record. */
+		derived: boolean;
 		props: readonly string[];
 		events: readonly string[];
 		parts: readonly string[];
@@ -168,6 +170,13 @@ let reactPackageFacts: ReturnType<typeof readReactPackageFacts> | undefined;
 export function getReactPackageFacts() {
 	reactPackageFacts ??= readReactPackageFacts(canonicalRepositoryRoot);
 	return reactPackageFacts;
+}
+
+let declarationReference: ReturnType<typeof readDeclarationReference> | undefined;
+/** The committed declaration reference (`packages/react/reference/`): every export's types as the declarations write them. Read on first use. */
+export function getDeclarationReference() {
+	declarationReference ??= readDeclarationReference(canonicalRepositoryRoot);
+	return declarationReference;
 }
 
 export function requiredString(value: unknown, field: string): string {
@@ -364,6 +373,7 @@ function readBinding(value: unknown): CatalogBinding {
 	if (!isRecord(defaults)) throw new Error('Canonical React binding is missing API defaults.');
 	return Object.freeze({
 		api: Object.freeze({
+			derived: value.api.propDetails !== undefined,
 			props: stringArray(value.api.props, 'binding.api.props'),
 			events: stringArray(value.api.events, 'binding.api.events'),
 			parts: stringArray(value.api.parts, 'binding.api.parts'),

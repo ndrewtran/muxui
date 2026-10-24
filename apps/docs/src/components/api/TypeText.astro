@@ -1,0 +1,12 @@
+---
+import type { Segment } from '../../lib/api-reference.ts';
+
+interface Props {
+	segments: readonly Segment[];
+	class?: string;
+}
+
+const { segments, class: className = 'api-type-text' } = Astro.props;
+---
+
+<code class={className}>{segments.map((segment) => segment.href === undefined ? segment.text : <a href={segment.href}>{segment.text}</a>)}</code>

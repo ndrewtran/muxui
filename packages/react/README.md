@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:6d4c9881c140f7cb732bdac7eebc91f5b16d0a5d7602c2c0a81653a8c3f1ef79 -->
+<!-- @generated-content-sha256: sha256:f6b85f7959f73861f9520e47065d7096a3c58d32ddf081d0f4a524b61e91c09d -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -329,6 +329,7 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Search and collection navigation preserve React Aria keyboard semantics.
 - Escape closes the palette.
 - closeOnSelect controls whether activating an item closes the palette.
+- Trigger, Backdrop, Close, Input, ListBox, and Item throw outside Root, because they read its context; Root renders without any of them.
 - Input is a native input. It takes value, defaultValue, onChange, and keyboard, paste, composition, and selection handlers.
 - The ref on Input resolves to an HTMLInputElement for focus and cursor restoration.
 - The application controls the query on Input and supplies the Item results to ListBox.

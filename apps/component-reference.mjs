@@ -118,13 +118,31 @@ const tokenGroupThreshold = 8;
  */
 
 /**
- * An export of the package: a component with its parts, a function, or a value.
+ * A parameter of a function export, as the declaration wrote it.
+ * @typedef {object} DeclarationParameter
+ * @property {string} name
+ * @property {true} [optional]
+ * @property {true} [rest]
+ * @property {string} type The printed type.
+ * @property {readonly string[]} [refs] The ids of the Mux UI types `type` names.
+ */
+
+/**
+ * An export of the package: a component with its parts, a function, or a value. A component has `parts`; a
+ * function has its printed `signature` and the pieces it was printed from; a value has its printed `type`.
  * @typedef {object} DeclarationExport
  * @property {string} name
  * @property {string} entry The export-map key, such as `.` or `./text-editor`.
  * @property {string} module
  * @property {'component' | 'function' | 'value'} kind
+ * @property {string} [doc] The declaration's own comment; absent when the declaration has none.
  * @property {readonly DeclarationPart[]} [parts]
+ * @property {string} [signature] A function's printed signature, such as `useToast(): ToastManager`.
+ * @property {readonly { name: string, constraint?: string, default?: string, refs?: readonly string[] }[]} [typeParameters] A function's type parameters.
+ * @property {readonly DeclarationParameter[]} [parameters]
+ * @property {{ type: string, predicate?: true, refs?: readonly string[] }} [returns]
+ * @property {string} [type] A value's printed type.
+ * @property {readonly string[]} [refs] The ids of the Mux UI types a value's `type` names.
  */
 
 /**
@@ -134,6 +152,7 @@ const tokenGroupThreshold = 8;
  * @property {string} name
  * @property {string} module
  * @property {readonly { entry: string, name: string }[]} [public] Where a consumer can import it; absent for an internal type.
+ * @property {string} [owner] The owner of the public type, which is the page or section that documents it: a family slug, `shared` or `package-level`; absent for an internal type.
  * @property {string} text The printed declaration.
  * @property {readonly { type: string, refs?: readonly string[] }[]} [extends] The bases an interface (or `Base & { ... }`) extends.
  * @property {readonly DeclarationMember[]} [members]
@@ -186,6 +205,7 @@ const tokenGroupThreshold = 8;
  * @property {string} owner
  * @property {string} source The reference file that holds it.
  * @property {DeclarationExport} export
+ * @property {readonly DeclarationExport[]} related Every other export of the owner's file, in the order it lists them: the hooks, helpers, providers and flat parts that belong with the component.
  * @property {readonly DeclarationType[]} types Every Mux UI type the export reaches, printed in full.
  * @property {readonly DeclarationValue[]} [values] Every Mux UI value those types name through `typeof`, when there are any.
  * @property {Readonly<Record<string, string>>} sources
@@ -285,6 +305,7 @@ export function componentDeclarations({ artifact, packageFacts, declarations }) 
     owner: item.owner,
     source: `${referenceDirectory}/${declarations.inventory.owners[item.owner]}`,
     export: record,
+    related: file.exports.filter((candidate) => candidate !== record),
     types: file.types,
     ...(file.values !== undefined && { values: file.values }),
     sources: file.sources,
