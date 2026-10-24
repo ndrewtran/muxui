@@ -1,0 +1,39 @@
+<script>
+	// The API reference keeps most parts and types of a long page closed. This opens them where a reader needs them.
+	const disclosures = 'details.api-part, details.api-type-entry';
+
+	/** Opens every disclosure around the element with this id, and returns the element. */
+	function reveal(id: string) {
+		const target = id === '' ? null : document.getElementById(id);
+		if (target === null) return null;
+		if (target instanceof HTMLDetailsElement) target.open = true;
+		for (let node = target.parentElement; node !== null; node = node.parentElement) {
+			if (node instanceof HTMLDetailsElement) node.open = true;
+		}
+		return target;
+	}
+
+	const fragment = (hash: string) => decodeURIComponent(hash.slice(1));
+
+	// A link to a part or a type that is closed opens it and keeps it in view: the parts list, the outline, a type link and a
+	// saved link all point at headings and declarations that sit inside a collapsed details element.
+	function openHash() {
+		reveal(fragment(window.location.hash))?.scrollIntoView();
+	}
+	window.addEventListener('hashchange', openHash);
+	openHash();
+
+	// A printed page has no way to open a part, so printing opens them all and puts back the ones it opened.
+	let openedForPrint: HTMLDetailsElement[] = [];
+	window.addEventListener('beforeprint', () => {
+		for (const details of document.querySelectorAll<HTMLDetailsElement>(disclosures)) {
+			if (details.open) continue;
+			details.open = true;
+			openedForPrint.push(details);
+		}
+	});
+	window.addEventListener('afterprint', () => {
+		for (const details of openedForPrint) details.open = false;
+		openedForPrint = [];
+	});
+</script>

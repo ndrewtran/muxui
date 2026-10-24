@@ -1,7 +1,7 @@
-// Browser proof for how the typed API reference of the built docs opens. Run after `pnpm --filter @muxui/docs build`.
+// Browser proof for how the typed API reference of the built docs opens and prints. Run after `pnpm --filter @muxui/docs build`.
 //
-// Most parts and types of a long component page are closed when it loads. A link has to open what it names, including a saved link
-// to a heading the earlier layout had.
+// Most parts and types of a long component page are closed when it loads. A link has to open what it names (including a saved link
+// to a heading the earlier layout had), and printing has to show all of it.
 import assert from 'node:assert/strict';
 import { createReadStream } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
@@ -14,6 +14,7 @@ import { chromeExecutable } from './chrome.mjs';
 const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
 const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const { anchors: legacyAnchors } = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../docs/src/lib/legacy-part-anchors.json'), 'utf8'));
+const disclosures = 'details.api-part, details.api-type-entry';
 
 function staticDocsServer() {
 	return createServer(async (request, response) => {
@@ -81,5 +82,60 @@ test('a saved link to a part of the earlier layout opens the part it now names a
 			}
 		}
 		assert.equal(checked, 13);
+	});
+});
+
+test('printing shows every part and type, and puts back the ones it opened', async () => {
+	await withSite(async ({ origin, newPage }) => {
+		for (const route of ['/components/command-palette/', '/package-exports/']) {
+			const page = await newPage();
+			await page.goto(`${origin}${route}`);
+			const tableRows = '#api-reference tr.api-row';
+			// The reader has opened one disclosure of their own, which must stay as they left it.
+			await page.locator(disclosures).last().locator('summary').click();
+			const before = await page.evaluate((selector) => [...document.querySelectorAll(selector)].map((node) => node.open), disclosures);
+			assert.ok(before.includes(false) && before.includes(true), `${route} starts with some disclosures closed and one open`);
+			const rowsAtScreen = await page.evaluate((selector) => [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length, tableRows);
+			// The recorder listens after the page's own handlers, so it sees what printing leaves open.
+			await page.evaluate(({ closed, rows }) => {
+				const measure = () => ({
+					closed: document.querySelectorAll(closed).length,
+					rows: [...document.querySelectorAll(rows)].filter((row) => row.checkVisibility()).length,
+					declarations: [...document.querySelectorAll('pre.api-declaration')].filter((pre) => pre.checkVisibility()).length,
+				});
+				window.printLog = [];
+				window.addEventListener('beforeprint', () => window.printLog.push(['beforeprint', measure()]));
+				window.addEventListener('afterprint', () => window.printLog.push(['afterprint', measure()]));
+			}, { closed: 'details.api-part:not([open]), details.api-type-entry:not([open])', rows: tableRows });
+			// The browser's own print path (a PDF of the page) dispatches beforeprint and afterprint.
+			await page.pdf({ format: 'A4' });
+			const [[, during], [, after]] = await page.evaluate(() => window.printLog);
+			const totals = await page.evaluate(({ rows }) => ({ rows: document.querySelectorAll(rows).length, declarations: document.querySelectorAll('pre.api-declaration').length }), { rows: tableRows });
+			assert.equal(during.closed, 0, `${route} prints with every disclosure open`);
+			assert.equal(during.rows, totals.rows, `${route} prints all ${totals.rows} rows (the page shows ${rowsAtScreen} of them)`);
+			assert.equal(during.declarations, totals.declarations, `${route} prints all ${totals.declarations} type declarations`);
+			assert.deepEqual(await page.evaluate((selector) => [...document.querySelectorAll(selector)].map((node) => node.open), disclosures), before, `${route} puts back what printing opened and keeps what the reader opened`);
+			assert.equal(after.closed, before.filter((open) => !open).length, `${route} is closed again after printing`);
+			if (route === '/components/command-palette/') assert.ok(rowsAtScreen < totals.rows, 'the page hides most rows until they are opened, so printing has something to open');
+		}
+	});
+});
+
+test('where the browser can show a closed details element\'s content, a printed page needs no script to show every row', async () => {
+	await withSite(async ({ origin, newPage }) => {
+		const page = await newPage();
+		await page.goto(`${origin}/components/command-palette/`);
+		if (!await page.evaluate(() => CSS.supports('selector(::details-content)'))) return;
+		const visibleRows = () => page.evaluate(() => ({
+			shown: [...document.querySelectorAll('#api-reference tr.api-row')].filter((row) => row.checkVisibility()).length,
+			total: document.querySelectorAll('#api-reference tr.api-row').length,
+			open: document.querySelectorAll('details.api-part[open]').length,
+		}));
+		const screen = await visibleRows();
+		assert.ok(screen.shown < screen.total, 'on screen most rows are hidden');
+		await page.emulateMedia({ media: 'print' });
+		const print = await visibleRows();
+		assert.equal(print.shown, print.total, 'in print every row is shown');
+		assert.equal(print.open, screen.open, 'without opening anything: no script ran');
 	});
 });

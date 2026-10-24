@@ -4,7 +4,7 @@ import { getDeclarationReference, getReactPackageFacts } from '../lib/catalog.ts
 import { buildPackageExports } from '../lib/api-reference.ts';
 import ApiExports from '../components/api/ApiExports.astro';
 import ApiTypes from '../components/api/ApiTypes.astro';
-import OpenTarget from '../components/api/OpenTarget.astro';
+import ApiDisclosures from '../components/api/ApiDisclosures.astro';
 
 export const prerender = true;
 
@@ -53,5 +53,5 @@ const headings = [
 		<ApiTypes types={exported.sharedTypes} />
 	</section>
 
-	<OpenTarget />
+	<ApiDisclosures />
 </StarlightPage>

@@ -857,6 +857,13 @@ pre code {
 	.api-events tr { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* A printed page cannot open a part. The script opens them all around printing; where the browser lets the content of a closed
+   details element be shown, this does the same without it. */
+@media print {
+	.api-part::details-content,
+	.api-type-entry::details-content { content-visibility: visible; }
+}
+
 .home-showcase {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
