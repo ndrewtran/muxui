@@ -144,6 +144,7 @@ export default defineConfig({
 			sidebar: [
 				{ label: 'Home', slug: 'index' },
 				{ label: 'Installation', link: '/installation/' },
+				{ label: 'Package exports', link: '/package-exports/' },
 				{ label: 'Themes & tokens', link: '/themes/' },
 				{ label: 'Token migration', link: '/token-migration/' },
 				{ label: 'Foundations', items: foundationSidebar },

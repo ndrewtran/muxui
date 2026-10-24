@@ -1,0 +1,57 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getDeclarationReference, getReactPackageFacts } from '../lib/catalog.ts';
+import { buildPackageExports } from '../lib/api-reference.ts';
+import ApiExports from '../components/api/ApiExports.astro';
+import ApiTypes from '../components/api/ApiTypes.astro';
+import OpenTarget from '../components/api/OpenTarget.astro';
+
+export const prerender = true;
+
+// The exports no component page holds: each entry of the package's export map, the values and types that belong to the
+// package as a whole, and the types several families share. Everything is read from the declaration reference.
+const exported = buildPackageExports(getDeclarationReference(), getReactPackageFacts().packageName);
+const headings = [
+	{ depth: 2, text: 'Entry points', slug: 'entry-points' },
+	{ depth: 2, text: 'Package-level exports', slug: 'package-level' },
+	{ depth: 3, text: 'Types', slug: 'package-level-types' },
+	{ depth: 2, text: 'Shared types', slug: 'shared-types' },
+];
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Package exports',
+		description: 'Every entry point of the package, and the exports that no single component page owns.',
+	}}
+	headings={headings}
+>
+	<section id="entry-points" class="docs-section">
+		<h2>Entry points</h2>
+		<table class="package-entries" data-package-entries>
+			<thead><tr><th scope="col">Import from</th><th scope="col">Declarations</th></tr></thead>
+			<tbody>
+				{exported.entries.map((entry) => (
+					<tr data-package-entry={entry.key}>
+						<th scope="row"><code>{entry.specifier}</code></th>
+						<td>{entry.untyped === undefined ? `${entry.exports} exports` : `None: ${entry.untyped}`}</td>
+					</tr>
+				))}
+			</tbody>
+		</table>
+	</section>
+
+	<section id="package-level" class="docs-section">
+		<h2>Package-level exports</h2>
+		<ApiExports exports={exported.packageLevel} />
+		<h3 id="package-level-types">Types</h3>
+		<ApiTypes types={exported.packageTypes} />
+	</section>
+
+	<section id="shared-types" class="docs-section">
+		<h2>Shared types</h2>
+		<ApiTypes types={exported.sharedTypes} />
+	</section>
+
+	<OpenTarget />
+</StarlightPage>

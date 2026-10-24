@@ -1,0 +1,103 @@
+---
+import type { ApiPart } from '../../lib/api-reference.ts';
+import Doc from './Doc.astro';
+import TypeText from './TypeText.astro';
+
+interface Props {
+	part: ApiPart;
+	/** Whether the part's table shows when the page loads. */
+	open: boolean;
+}
+
+const { part, open } = Astro.props;
+const columns = part.hasAlternatives ? 6 : 5;
+const hasNatives = part.natives.length > 0;
+---
+
+<details class="api-part not-content" open={open} data-api-part={part.heading}>
+	<summary>
+		<h3 id={part.anchor}><code>{part.heading}</code></h3>
+	</summary>
+	<dl class="api-meta">
+		<dt>Ref</dt>
+		<dd data-api-ref>{part.ref === 'none declared' || part.ref === 'not allowed' || part.ref === 'per alternative' ? <span class="api-none">{part.ref}</span> : <code>{part.ref}</code>}</dd>
+		{part.generics.length > 0 && (
+			<Fragment>
+				<dt>Generic</dt>
+				<dd data-api-generics>{part.generics.map((generic) => <code>{generic}</code>)}</dd>
+			</Fragment>
+		)}
+		<dt>Native</dt>
+		<dd data-api-natives>
+			{hasNatives
+				? part.natives.map((native) => (
+					<span class="api-native">
+						<code>{native.type}</code>
+						{native.omit.length > 0 && <Fragment> <span class="api-except">except</span> {native.omit.map((name, index) => <Fragment>{index > 0 && ', '}<code>{name}</code></Fragment>)}</Fragment>}
+					</span>
+				))
+				: <span class="api-none">none declared</span>}
+		</dd>
+	</dl>
+	{part.sameAs !== undefined
+		? <p class="api-same-as" data-api-same-as>The same component as <a href={`#${part.sameAs.anchor}`}><code>{part.sameAs.heading}</code></a>.</p>
+		: (
+			<div class="api-table-scroll">
+				<table class={part.hasAlternatives ? 'api-table api-table-alternatives' : 'api-table'}>
+					<caption class="visually-hidden">{part.heading} props{part.hasAlternatives ? ' by alternative' : ''}</caption>
+					<thead>
+						<tr>
+							<th scope="col">Prop</th>
+							{part.hasAlternatives && <th scope="col">Applies when</th>}
+							<th scope="col">Type</th>
+							<th scope="col">Required</th>
+							<th scope="col">Default</th>
+							<th scope="col">Description</th>
+						</tr>
+					</thead>
+					{part.groups.map((group) => (
+						<tbody class="api-group" data-api-group={group.label ?? ''}>
+							{group.label !== null && (
+								<tr class="api-group-row">
+									<th scope="rowgroup" colspan={columns}>
+										{group.label === 'Common' && group.appliesWhen === 'always' ? 'Common' : <code>{group.label}</code>}
+										{group.ref !== undefined && <span class="api-group-ref" data-api-group-ref>Ref {group.ref === 'not allowed' ? <span class="api-none">not allowed</span> : <code>{group.ref}</code>}</span>}
+										{group.natives.map((native) => (
+											<span class="api-group-ref" data-api-group-native>Native <code>{native.type}</code>{native.omit.length > 0 && <Fragment> <span class="api-except">except</span> {native.omit.map((name, index) => <Fragment>{index > 0 && ', '}<code>{name}</code></Fragment>)}</Fragment>}</span>
+										))}
+									</th>
+								</tr>
+							)}
+							{group.rows.map((row) => (
+								<tr class="api-row" data-api-row={row.name}>
+									<th scope="row">
+										<code class="api-name">{row.name}</code>
+										{row.event !== undefined && <span class="api-event" data-api-event>event {row.event}</span>}
+									</th>
+									{part.hasAlternatives && <td class={row.appliesWhen === 'always' ? 'api-when api-when-always' : 'api-when'} data-api-when>{row.appliesWhen === 'always' ? 'always' : <code>{row.appliesWhen}</code>}</td>}
+									<td class="api-type" data-api-type>
+										<TypeText segments={row.type} />
+										{row.values !== undefined && <code class="api-values" data-api-values>{row.values}</code>}
+									</td>
+									<td class="api-state" data-api-state={row.state}>{row.state}</td>
+									<td class="api-default" data-api-default>
+										{row.default === undefined
+											? <span class="api-none">none</span>
+											: <Fragment><code>{row.default.text}</code>{row.default.authored && <span class="api-authored" data-api-authored>authored</span>}</Fragment>}
+									</td>
+									<td class="api-doc" data-api-doc>{row.doc !== undefined && <Doc text={row.doc} />}</td>
+								</tr>
+							))}
+							{group.closing.map((closing) => (
+								<tr class="api-row api-closing" data-api-closing={closing.state}>
+									<th scope="row" colspan={3}>{closing.names.map((name, index) => <Fragment>{index > 0 && ', '}<code class="api-name">{name}</code></Fragment>)}</th>
+									<td class="api-state" data-api-state={closing.state}>{closing.state}</td>
+									<td colspan={2}></td>
+								</tr>
+							))}
+						</tbody>
+					))}
+				</table>
+			</div>
+		)}
+</details>

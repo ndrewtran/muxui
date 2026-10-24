@@ -5,9 +5,12 @@ import { parse } from 'parse5';
 import { linkedFamilies } from '../../guide-links.mjs';
 import { renderedEventGroups, expectedEventGroups } from './event-groups.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
+import { compareComponent, comparePackageExports, expectedComponent, expectedPackageExports, loadReference, renderedComponent, renderedEvents, renderedPackageExports, routeExists, routeFile } from './typed-reference.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
 // The catalog query API and the package files are read here directly, not through the docs loader or the shared projection.
+// The typed API reference of each route (its tables, refs, imports, types and events) must equal the committed declaration
+// reference and the catalog, which `typed-reference.mjs` derives from those files alone.
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsDist = process.argv[2] === undefined
 	? resolve(repositoryRoot, 'apps/docs/dist')
@@ -28,6 +31,8 @@ const sections = [
 	['sources', 'Sources'],
 ];
 const tokenGroupThreshold = 8;
+/** A page with more parts than this opens only its first part. */
+const collapsePartsAbove = 8;
 
 function assert(condition, message) {
 	if (!condition) throw new Error(message);
@@ -51,6 +56,7 @@ function listComponents() {
 }
 
 const manifest = readJson('packages/react/package.json');
+const reference = loadReference(resolve(repositoryRoot, 'packages/react/reference'));
 const descriptor = readJson('packages/react/generated/descriptor.json');
 // The generated contract carries two marker comment lines ahead of its JSON; it names the runtime file of every family.
 const contract = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
@@ -91,13 +97,18 @@ function codeTexts(root) {
 let routes = 0;
 let projectedStrings = 0;
 let guideLinks = 0;
-let partStrings = 0;
+const apiCounts = { parts: 0, rows: 0, exports: 0, types: 0, events: 0 };
+const problems = [];
+const apiByOwner = new Map();
+const idsByRoute = new Map();
+const apiLinks = [];
 for (const component of listComponents()) {
 	const slug = component.id.slice(component.id.lastIndexOf(':') + 1);
 	const route = `/components/${slug}/`;
 	const routePath = resolve(docsDist, 'components', slug, 'index.html');
 	assert(existsSync(routePath), `Built component route is missing: ${slug}.`);
 	const root = parse(readFileSync(routePath, 'utf8'));
+	idsByRoute.set(route, new Set(elements(root).map((node) => attributeValue(node, 'id')).filter((id) => id !== undefined)));
 	const detail = canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full' });
 	assert(detail.type === 'artifact.detail', `Could not retrieve ${component.id}.`);
 	const artifact = detail.data.artifact;
@@ -163,29 +174,20 @@ for (const component of listComponents()) {
 
 	// Behavior, events, accessibility.
 	assertList(section('behavior'), 'binding.behavior', binding.behavior ?? [], route);
-	const eventNames = facts(section('events'), 'binding.api.events');
-	assert(eventNames.length === 1 && JSON.stringify(codeTexts(eventNames[0])) === JSON.stringify(binding.api.events), `${route} events differ from the catalog.`);
-	// A part's events follow the root's, under the part's owner, and only a part that declares events has any.
+	// Each event group is headed by its owner, in anatomy order, and the heading is followed by that part's event table.
 	// The parts follow the anatomy's order, whatever order the compiled record keys them in.
 	const partApis = Object.entries(binding.api.partApis ?? {}).sort(([left], [right]) => artifact.anatomy.indexOf(left) - artifact.anatomy.indexOf(right));
-	for (const [part, api] of partApis) {
-		const rendered = facts(section('events'), `binding.api.partApis.${part}.events`);
-		assert(
-			api.events.length === 0 ? rendered.length === 0 : rendered.length === 1 && JSON.stringify(codeTexts(rendered[0])) === JSON.stringify(api.events),
-			`${route} ${part} events differ from the catalog.`,
-		);
-	}
-	// Each event group is headed by its owner, in anatomy order, and the heading is followed by that part's event list.
 	const eventGroups = renderedEventGroups(section('events'));
 	const expectedEvents = expectedEventGroups(exported.export, partApis);
 	assert(
 		JSON.stringify(eventGroups) === JSON.stringify(expectedEvents),
 		`${route} event groups are not headed by their owners in the catalog's order: ${eventGroups.join(', ') || 'none'}, expected ${expectedEvents.join(', ') || 'none'}.`,
 	);
-	const projectedParts = new Set(elements(main).map((node) => /^binding\.api\.partApis\.([^.]+)\./u.exec(attributeValue(node, 'data-fact') ?? '')?.[1]).filter((part) => part !== undefined));
+	const rootEvents = facts(section('events'), 'binding.api.events');
+	assert(rootEvents.length === 1, `${route} must render the root events exactly once.`);
 	assert(
-		JSON.stringify([...projectedParts].sort()) === JSON.stringify(partApis.filter(([, api]) => api.props.length + api.events.length > 0).map(([part]) => part).sort()),
-		`${route} projects a part that the catalog does not list, or leaves one out.`,
+		binding.api.events.length > 0 || textContent(rootEvents[0]) === (partApis.some(([, api]) => api.events.length > 0) ? 'The root declares no events.' : 'This binding does not declare events.'),
+		`${route} says the wrong thing about a root with no events.`,
 	);
 	const nameRequired = facts(section('accessibility'), 'accessibility.nameRequired');
 	assert(
@@ -201,35 +203,24 @@ for (const component of listComponents()) {
 		route,
 	);
 
-	// API reference keeps the Prop and Default table.
-	const props = elements(facts(section('api-reference'), 'binding.api.props')[0]).filter((node) => node.tagName === 'tr');
-	assert(props.length === binding.api.props.length, `${route} props differ from the catalog.`);
-	for (const [position, prop] of binding.api.props.entries()) {
-		const [name, value] = elements(props[position]).filter((node) => node.tagName === 'code').map((node) => textContent(node));
-		const declared = binding.api.defaults[prop];
-		assert(name === prop && value === (declared === undefined ? 'Not specified' : JSON.stringify(declared)), `${route} prop ${prop} differs from the catalog.`);
+	// API reference: every table, ref, import, type and event equals the declaration reference and the catalog.
+	const expectedApi = expectedComponent({ exportName: exported.export, entry: exported.module, packageName: manifest.name, reference, binding, anatomy: artifact.anatomy });
+	const renderedApi = renderedComponent(root);
+	const renderedEventTables = renderedEvents(section('events'));
+	problems.push(...compareComponent(expectedApi, renderedApi, renderedEventTables, route, { collapseAbove: collapsePartsAbove }));
+	apiByOwner.set(expectedApi.owner, { route, rendered: renderedApi });
+	for (const node of [...elements(section('api-reference')), ...elements(section('events'))]) {
+		if (node.tagName === 'a' && attributeValue(node, 'href') !== undefined) apiLinks.push({ route, href: attributeValue(node, 'href') });
 	}
-	// Each part that owns Mux UI props follows under its owner, with the same Prop and Default rows. A missing group, prop or default fails.
-	const partHeadings = elements(section('api-reference')).filter((node) => node.tagName === 'h3');
-	assert(
-		JSON.stringify(partHeadings.map((node) => attributeValue(node, 'id'))) === JSON.stringify(partApis.map(([part]) => `api-reference-${part}`)),
-		`${route} part groups differ from the catalog: ${partHeadings.map((node) => attributeValue(node, 'id')).join(', ') || 'none'}.`,
-	);
-	for (const [part, api] of partApis) {
-		const heading = partHeadings.find((node) => attributeValue(node, 'id') === `api-reference-${part}`);
-		assert(textContent(heading) === `${exported.export}.${api.member}`, `${route} ${part} is not owned by ${exported.export}.${api.member}.`);
-		const tables = facts(section('api-reference'), `binding.api.partApis.${part}.props`);
-		assert(tables.length === (api.props.length > 0 ? 1 : 0), `${route} ${part} props table is missing or repeated.`);
-		const rows = tables.length === 0 ? [] : elements(tables[0]).filter((node) => node.tagName === 'tr');
-		assert(rows.length === api.props.length, `${route} ${part} props differ from the catalog.`);
-		for (const [position, prop] of api.props.entries()) {
-			const [name, value] = elements(rows[position]).filter((node) => node.tagName === 'code').map((node) => textContent(node));
-			const declared = api.defaults[prop];
-			assert(name === prop && value === (declared === undefined ? 'Not specified' : JSON.stringify(declared)), `${route} ${part} prop ${prop} differs from the catalog.`);
-		}
-		partStrings += api.props.length + api.events.length;
+	// The outline links to the parts, their exports index and the types, and each target is on the page.
+	for (const [id, label] of outline) {
+		if (id !== undefined && id !== '' && !idsByRoute.get(route).has(id)) problems.push(`${route} outline entry "${label}" links to #${id}, which is not on the page.`);
 	}
-	assert(!elements(section('api-reference')).some((node) => node.tagName === 'th' && attributeValue(node, 'scope') === 'col' && /^(?:type|presence)$/iu.test(textContent(node).trim())), `${route} API reference has a Type or Presence column.`);
+	apiCounts.parts += expectedApi.parts.length;
+	apiCounts.rows += expectedApi.parts.reduce((total, part) => total + part.groups.reduce((sum, group) => sum + group.rows.length, 0), 0);
+	apiCounts.exports += expectedApi.exports.length;
+	apiCounts.types += expectedApi.types.length;
+	apiCounts.events += expectedApi.events.reduce((total, group) => total + group.events.length, 0);
 
 	// Anatomy and styling: parts, states and every token requirement, with no class names or selectors.
 	const styling = section('anatomy-and-styling');
@@ -293,4 +284,60 @@ for (const id of sharedUsageGuides) {
 	);
 }
 
-console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values (${partStrings} of them a part's props and events); ${guideLinks} guide links to other families reach a built family page; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);
+// The exports no family page holds have one destination: the package exports page, which lists every entry of the export map.
+const packageRoute = '/package-exports/';
+assert(routeExists(docsDist, packageRoute), `Built route is missing: ${packageRoute}.`);
+const packageRoot = parse(readFileSync(routeFile(docsDist, packageRoute), 'utf8'));
+idsByRoute.set(packageRoute, new Set(elements(packageRoot).map((node) => attributeValue(node, 'id')).filter((id) => id !== undefined)));
+const renderedPackage = renderedPackageExports(packageRoot);
+problems.push(...comparePackageExports(expectedPackageExports({ manifest, reference }), renderedPackage, Object.keys(manifest.exports)));
+assert(
+	elements(packageRoot).some((node) => node.tagName === 'a' && attributeValue(node, 'href') === packageRoute && attributeValue(node, 'aria-current') === 'page'),
+	`${packageRoute} has no sidebar entry.`,
+);
+for (const section of elements(packageRoot).filter((node) => node.tagName === 'section' && classNames(node).has('docs-section'))) {
+	for (const node of elements(section)) {
+		if (node.tagName === 'a' && attributeValue(node, 'href') !== undefined) apiLinks.push({ route: packageRoute, href: attributeValue(node, 'href') });
+	}
+}
+
+// The inventory, the list of what the package exports, is independent of how any page was built: each export has a destination
+// that shows it under the import its export-map entry gives it, and none is left without one.
+let inventoried = 0;
+const importFor = (key, name, type) => `import ${type ? 'type ' : ''}{ ${name} } from '${key === '.' ? manifest.name : `${manifest.name}${key.slice(1)}`}';`;
+for (const entry of reference.inventory.entries) {
+	for (const item of entry.exports ?? []) {
+		inventoried += 1;
+		const destination = item.owner === 'shared' || item.owner === 'package-level' ? { route: packageRoute, rendered: { exports: renderedPackage.packageLevel, types: [...renderedPackage.packageTypes, ...renderedPackage.sharedTypes] } } : apiByOwner.get(item.owner);
+		if (destination === undefined) {
+			problems.push(`${entry.key} ${item.name} is owned by ${item.owner}, which has no page.`);
+			continue;
+		}
+		const shown = (item.kind === 'type' ? destination.rendered.types : destination.rendered.exports).find(({ name }) => name === item.name);
+		if (shown === undefined) {
+			problems.push(`${destination.route} does not show ${item.kind === 'type' ? 'the type' : 'the export'} ${item.name} of ${entry.key}.`);
+			continue;
+		}
+		const line = importFor(entry.key, item.name, item.kind === 'type');
+		if (!(item.kind === 'type' ? shown.imports.includes(line) : shown.import === line)) problems.push(`${destination.route} shows ${item.name} without the import "${line}".`);
+	}
+}
+
+// Every link into the API reference, the events and the package exports page reaches a heading, part or type that exists.
+for (const { route, href } of apiLinks) {
+	const [path, fragment] = href.split('#');
+	if (/^https?:/u.test(href)) continue;
+	const target = path === '' ? route : path;
+	const ids = idsByRoute.get(target);
+	if (ids === undefined) {
+		if (/^\/components\/[^/]+\/$/u.test(target) || target === packageRoute) problems.push(`${route} links to ${href}, which is not a built route.`);
+		continue;
+	}
+	if (fragment !== undefined && !ids.has(fragment)) problems.push(`${route} links to ${href}, which is not on that page.`);
+}
+
+if (problems.length > 0) {
+	throw new Error(`The typed API reference differs from the declaration reference and the catalog in ${problems.length} places:\n${problems.map((problem) => `- ${problem}`).join('\n')}`);
+}
+
+console.log(`Component reference contract passed: ${routes} component routes keep the section order, and ${projectedStrings} projected strings equal their catalog values; the typed API reference of every route equals the declaration reference and the catalog (${apiCounts.parts} parts with ${apiCounts.rows} rows, ${apiCounts.exports} parts and related exports, ${apiCounts.types} exported types and ${apiCounts.events} events), ${inventoried} inventory exports each reach a destination under their import, and ${packageRoute} lists ${renderedPackage.entries.length} entry points; ${guideLinks} guide links to other families reach a built family page; ${sharedUsageGuides.length} shared usage ${sharedUsageGuides.length === 1 ? 'guide is' : 'guides are'} reachable from the Docs sidebar.`);

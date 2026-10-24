@@ -1,0 +1,23 @@
+---
+import type { ApiType } from '../../lib/api-reference.ts';
+import TypeText from './TypeText.astro';
+
+interface Props {
+	types: readonly ApiType[];
+	/** Show each declaration when the section loads. */
+	open?: boolean;
+}
+
+const { types, open = false } = Astro.props;
+---
+
+<div class="api-types not-content" data-api-types>
+	{types.map((type) => (
+		<details class="api-type-entry" id={type.anchor} open={open} data-api-type-entry={type.name}>
+			<summary><code class="api-name">{type.name}</code></summary>
+			{type.imports.map((line) => <code class="api-import" data-api-import>{line}</code>)}
+			{type.reason !== undefined && <p class="api-type-reason" data-api-reason>{type.reason}</p>}
+			<pre class="api-declaration"><TypeText segments={type.segments} class="api-declaration-text" /></pre>
+		</details>
+	))}
+</div>

@@ -1,0 +1,16 @@
+<script>
+	// A link to a part or a type that is closed opens it, and keeps it in view: the part list, the outline and a type link all
+	// point at headings and declarations that sit inside a collapsed details element.
+	function openTarget() {
+		const id = decodeURIComponent(window.location.hash.slice(1));
+		const target = id === '' ? null : document.getElementById(id);
+		if (target === null) return;
+		if (target instanceof HTMLDetailsElement) target.open = true;
+		for (let node = target.parentElement; node !== null; node = node.parentElement) {
+			if (node instanceof HTMLDetailsElement) node.open = true;
+		}
+		target.scrollIntoView();
+	}
+	window.addEventListener('hashchange', openTarget);
+	openTarget();
+</script>
