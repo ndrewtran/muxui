@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { DERIVED_API_COMPONENTS, deriveApis, extractionComponent, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
@@ -641,11 +641,15 @@ test('a handler alias with defaulted parameters after its element is read, and o
 
 // A part whose public props extend the host attributes can inherit a member it also owns: Sidebar.Search's onChange is the div's change
 // handler and the input's. HOST_OVERLAPS names such a member, exactly, and the extraction proves the public type is that intersection.
-const overlapDeclarations = ({ publicType = 'React.HTMLAttributes<HTMLDivElement> & ThingOwnProps', own = 'onChange?: React.ChangeEventHandler<HTMLInputElement>;', extra = '' } = {}) => `${header}${extra}
+const overlapDeclarations = ({ publicType = 'React.HTMLAttributes<HTMLDivElement> & ThingOwnProps', own = 'onChange?: React.ChangeEventHandler<HTMLInputElement>;', extra = '', exported = 'ThingProps & React.RefAttributes<HTMLDivElement>' } = {}) => `${header}${extra}
 export interface ThingOwnProps { ${own} }
 export type ThingProps = ${publicType};
-export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>>;
+export declare const Thing: React.ForwardRefExoticComponent<${exported}>;
 `;
+// Mapped types keep the declarations of the members they copy and rewrite their types: one broadens the handler (it takes a number too),
+// the other narrows it (it needs another property). Neither is the host's member intersected with the owned one.
+const BROADEN = "type Broaden<T> = { [K in keyof T]: K extends 'onChange' ? T[K] | number : T[K] };\n";
+const NARROW = "type Narrow<T> = { [K in keyof T]: K extends 'onChange' ? T[K] & { extra: string } : T[K] };\n";
 const OVERLAP = Object.freeze({ member: 'Thing.onChange', host: 'DOMAttributes', type: handlerFunction('event', changeEvent) });
 
 test('a member that is the host\'s intersected with the owned one is read only as its exact host overlap entry says', () => {
@@ -680,8 +684,16 @@ test('a member that is the host\'s intersected with the owned one is read only a
   refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & { other?: true }' }, [OVERLAP]);
   refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & React.InputHTMLAttributes<HTMLInputElement>' }, [OVERLAP]);
   refuse({ publicType: 'Required<React.HTMLAttributes<HTMLDivElement>> & ThingOwnProps' }, [OVERLAP], /Thing\.onChange: the exported Thing's props redeclare onChange as required/u);
-  // A mapped copy of the host's attributes keeps the host's declaration, so the Omit of a family's own host attributes is read the same way.
-  assert.deepEqual(read({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }).events, ['change']);
+  // The public type is a plain intersection of the two. A mapped type keeps the declarations of both and may rewrite the member's type,
+  // wherever it sits: around the intersection, around the host's attributes (Omit is one), or around the owned type.
+  for (const [wrapper, extra] of [['Broaden', BROADEN], ['Narrow', NARROW]]) {
+    refuse({ extra, exported: `${wrapper}<ThingProps & React.RefAttributes<HTMLDivElement>>` }, [OVERLAP]);
+    refuse({ extra, publicType: `${wrapper}<React.HTMLAttributes<HTMLDivElement> & ThingOwnProps>` }, [OVERLAP]);
+    refuse({ extra, publicType: `${wrapper}<React.HTMLAttributes<HTMLDivElement>> & ThingOwnProps` }, [OVERLAP]);
+    refuse({ extra, publicType: `React.HTMLAttributes<HTMLDivElement> & ${wrapper}<ThingOwnProps>` }, [OVERLAP]);
+  }
+  refuse({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
+  refuse({ publicType: "React.HTMLAttributes<HTMLDivElement> & Omit<ThingOwnProps, 'other'>" }, [OVERLAP]);
   // A host member declared outside React is no React member.
   refuse({ publicType: 'LocalHost & ThingOwnProps', extra: 'export interface DOMAttributes { onChange?: React.ChangeEventHandler<HTMLDivElement>; }\nexport type LocalHost = DOMAttributes;\n' }, [OVERLAP]);
   // Only the family's own props are read against the entry: another member of the export that carries the same overlap is not covered by it.
@@ -713,6 +725,32 @@ test('Sidebar.Search\'s onChange is read through the one shipped host overlap, a
   assert.deepEqual(HOST_OVERLAPS.map(({ member }) => member), ['Sidebar.Search.onChange']);
   assert.deepEqual(read(HOST_OVERLAPS).partApis.search.events, ['change']);
   assert.throws(() => read([]), /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u);
+});
+
+test('the real Sidebar.Search is not read through its host overlap once a mapped type rewrites its onChange', () => {
+  const entry = DERIVED_API_COMPONENTS.find(({ slug }) => slug === 'sidebar');
+  const search = 'Search: ForwardRefExoticComponent<SidebarSearchProps & RefAttributes<HTMLDivElement>>;';
+  const emitted = readFileSync(resolve(packageRoot, 'generated', 'sidebar.d.ts'), 'utf8');
+  assert.ok(emitted.includes(search), 'the emitted Search declaration is the one the controls rewrite');
+  // The emitted declarations beside a copy of sidebar.d.ts whose Search is `search`, with the mapped types it may use declared after it.
+  const read = (rewritten) => {
+    mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
+    const base = mkdtempSync(join(packageRoot, 'build', 'api-extraction-sidebar-'));
+    try {
+      cpSync(resolve(packageRoot, 'generated'), base, { recursive: true, filter: (path) => !path.endsWith('.js') });
+      writeFileSync(join(base, 'sidebar.d.ts'), `${emitted.replace(search, rewritten)}\n${BROADEN}${NARROW}`);
+      return extractApis({
+        declarationRoot: base,
+        components: [extractionComponent(entry, { declarations: join(base, 'sidebar.d.ts'), source: resolve(packageRoot, '../..', entry.source) })],
+      }).get('Sidebar');
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  };
+  assert.deepEqual(read(search).partApis.search.events, ['change'], 'the unrewritten copy reads as the real family does');
+  for (const wrapper of ['Broaden', 'Narrow']) {
+    assert.throws(() => read(`Search: ForwardRefExoticComponent<${wrapper}<SidebarSearchProps & RefAttributes<HTMLDivElement>>>;`), /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u, wrapper);
+  }
 });
 
 test('the shipped allowlist holds exactly the host types the committed derived APIs reach', () => {

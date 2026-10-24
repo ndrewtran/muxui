@@ -20,7 +20,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeFlags, SyntaxKind, getTextOfJSDocComment, isAssignmentOperator } from 'typescript/unstable/ast';
-import { API, SignatureKind, SymbolFlags } from 'typescript/unstable/sync';
+import { API, SignatureKind, SymbolFlags, isTypeReference } from 'typescript/unstable/sync';
 
 export class ApiExtractionError extends Error {
   constructor(chain, message) {
@@ -957,19 +957,28 @@ function publicPropsType(project, sourceFile, name, part) {
 const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(type).map((property) => [property.name, property]));
 
 /**
- * Whether a public member is exactly the host member intersected with the owned one, as its `HOST_OVERLAPS` entry says. A member of
- * an intersection has the type every constituent that declares it gives, so the public member is that intersection when two
- * declarations give it and no more: the owned member's, and one in the entry's interface in @types/react (a mapped copy of that
- * interface, such as Omit, keeps the declaration). A union of arms that differ declares it more than twice, and a member the
- * public type adds, or takes from another interface, makes a third. The owned type is the one the entry pins.
+ * Whether a public member is exactly the host member intersected with the owned one, as its `HOST_OVERLAPS` entry says. TypeScript
+ * gives a member of an intersection the intersection of the member types the constituents that declare it give, so the public
+ * member is that when the public props are a plain intersection and exactly two constituents declare it: the owned type, whose
+ * member is the very symbol the family declares, and an instantiation of an interface in @types/react, whose member the entry's
+ * interface declares once. A mapped type keeps the declarations of the members it copies and may rewrite their types, so a
+ * wrapper around the intersection, the host's attributes (Omit is one) or the owned type is no such constituent and fails, as
+ * does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry pins.
  */
-function intersectsHostMember(project, { accepted, ownMember, type }, overlap) {
-  if (hostEntryKey(type) !== hostEntryKey(overlap.type)) return false;
-  const owned = project.checker.getSymbolAtLocation(ownMember.name).declarations[0];
-  const hosts = accepted.declarations.filter(({ path, index }) => path !== owned.path || index !== owned.index);
-  // Two declarations, the owned member's among them, so the other is the host's.
-  if (accepted.declarations.length !== 2 || hosts.length !== 1 || !REACT_TYPES.test(hosts[0].path)) return false;
-  return hosts[0].resolve(project)?.parent?.name?.text === overlap.host;
+function intersectsHostMember(project, { propsType, prop, own, type }, overlap) {
+  if (hostEntryKey(type) !== hostEntryKey(overlap.type) || !propsType.isIntersectionType()) return false;
+  const { checker } = project;
+  const carriers = propsType.getTypes().flatMap((constituent) => {
+    const member = checker.getPropertyOfType(constituent, prop);
+    return member === undefined ? [] : [{ constituent, member }];
+  });
+  if (carriers.length !== 2) return false;
+  const ownCarriers = carriers.filter(({ member }) => member.id === own.id);
+  const [hostCarrier] = carriers.filter(({ member }) => member.id !== own.id);
+  if (ownCarriers.length !== 1 || hostCarrier === undefined) return false;
+  const { constituent, member } = hostCarrier;
+  if (!isTypeReference(constituent) || !constituent.getTarget().isClassOrInterface() || !declaredInReact(constituent.getTarget().getSymbol())) return false;
+  return member.declarations.length === 1 && declaredInReact(member) && member.declarations[0].resolve(project)?.parent?.name?.text === overlap.host;
 }
 
 /**
@@ -1022,7 +1031,7 @@ function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, mem
       const optionalityKept = Boolean(accepted.flags & SymbolFlags.Optional) === !required;
       if (!signature.widen.includes(prop)) {
         const overlap = signature === signatures[0] ? overlaps?.get(`${label}.${prop}`) : undefined;
-        const overlapped = overlap !== undefined && optionalityKept && intersectsHostMember(project, { accepted, ownMember, type }, overlap);
+        const overlapped = overlap !== undefined && optionalityKept && intersectsHostMember(project, { propsType: signature.type, prop, own, type }, overlap);
         if ((acceptedType.id !== ownType.id || !optionalityKept) && !overlapped) throw redeclared('redeclare');
         continue;
       }
