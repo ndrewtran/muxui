@@ -83,15 +83,18 @@ function expectedGroups(part) {
     doc: member.doc ?? '',
   });
   const alternatives = part.alternatives ?? [];
-  if (alternatives.length === 0) return [{ rows: (part.members ?? []).map(row), notAllowed: [], notDeclared: [], ref: null, native: null }];
+  // A member declared `never` is no row in any group: the group's closing row names it.
+  const allowed = (members) => members.filter(({ never }) => never !== true).map(row);
+  const forbidden = (members) => members.filter(({ never }) => never === true).map(({ name }) => name);
+  if (alternatives.length === 0) return [{ rows: allowed(part.members ?? []), notAllowed: forbidden(part.members ?? []), notDeclared: [], ref: null, native: null }];
   const declared = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
   const refText = (ref) => ref === undefined ? null : ref === null ? 'none declared' : ref.never === true ? `not allowed, ${ref.required === true ? 'ref: never' : 'ref?: never'}` : ref.type;
   const nativeText = (natives) => natives === undefined ? null : natives.map(({ type, omit }) => `${type}${omit?.length > 0 ? ` except ${omit.join('')}` : ''}`).join('');
   return [
-    ...((part.members ?? []).length > 0 ? [{ rows: part.members.map(row), notAllowed: [], notDeclared: [], ref: null, native: null }] : []),
+    ...((part.members ?? []).length > 0 ? [{ rows: allowed(part.members), notAllowed: forbidden(part.members), notDeclared: [], ref: null, native: null }] : []),
     ...alternatives.map(({ members, ref, natives }) => ({
-      rows: members.filter(({ never }) => never !== true).map(row),
-      notAllowed: members.filter(({ never }) => never === true).map(({ name }) => name),
+      rows: allowed(members),
+      notAllowed: forbidden(members),
       notDeclared: declared.filter((name) => !members.some((member) => member.name === name)),
       ref: refText(ref),
       native: nativeText(natives),
@@ -322,6 +325,15 @@ test('the hard cases show their alternatives, refs, generics and flat exports as
   // The default stack does not appear on the grid, which does not admit it.
   assert.equal(grid.querySelector('tr[data-prop="layout"] [data-cell="default"]').textContent, 'none listed');
   assert.equal(stack.querySelector('tr[data-prop="layout"] [data-cell="default"]').textContent, "'stack'");
+
+  // DataDiff: no alternatives, and two members declared `never`. They are no rows; one closing row names them and ends the table.
+  const dataDiff = part(await page('DataDiff'), 'DataDiff');
+  assert.deepEqual(groupLabels(dataDiff), ['props']);
+  const dataDiffRows = [...dataDiff.querySelectorAll('tbody tr')];
+  assert.ok(!dataDiffRows.some((row) => ['children', 'dangerouslySetInnerHTML'].includes(row.getAttribute('data-prop'))), 'a never member is not an optional row');
+  assert.deepEqual(closing(dataDiff, 'not-allowed'), ['children,dangerouslySetInnerHTML']);
+  assert.equal(dataDiffRows.at(-1).getAttribute('data-not-allowed'), 'children,dangerouslySetInnerHTML', 'the closing row ends the table');
+  assert.equal(dataDiffRows.at(-1).querySelector('[data-cell="required"]').textContent, 'not allowed');
 
   // The optional `never` explanation appears on a page that has one, and only there.
   assert.ok((await page('Virtualizer')).querySelector('[data-fact="typed.never"]'));
@@ -663,6 +675,8 @@ test('deleting a part, a hook, a helper, a ref or an import from a copy of the r
     ['an alternative', 'Dialog', (copy) => { partOf(copy, 'dialog', 'Dialog', null).alternatives.pop(); }],
     ['a member', 'IconButton', (copy) => { const part = partOf(copy, 'icon-button', 'IconButton', null); part.members = part.members.filter(({ name }) => name !== 'size'); }],
     ['a generic', 'Text', (copy) => { delete partOf(copy, 'text', 'Text', null).typeParameters; }],
+    ['a member declared never from a part with no alternatives', 'DataDiff', (copy) => { const part = partOf(copy, 'data-diff', 'DataDiff', null); part.members = part.members.filter(({ name }) => name !== 'dangerouslySetInnerHTML'); }],
+    ['the never of a member of a part with no alternatives', 'DataDiff', (copy) => { delete partOf(copy, 'data-diff', 'DataDiff', null).members.find(({ name }) => name === 'children').never; }],
   ];
   for (const [name, family, mutate] of cases) {
     assert.notEqual(await failureOf(family, mutate), null, `deleting ${name} must fail the page checks`);

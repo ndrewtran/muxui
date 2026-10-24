@@ -126,21 +126,24 @@ function alternativeLabels(alternatives) {
 /**
  * The groups of a part's unified table (layout C): the members every alternative shares first, then one group per
  * alternative, each closing with the members it declares `never` (not allowed) and the members only other
- * alternatives declare (not declared). A part without alternatives is one unlabelled group.
+ * alternatives declare (not declared). A part without alternatives is one unlabelled group. In every group a member
+ * declared `never` is no row: it is named by the closing row, so it never reads as an optional prop.
  */
 function partGroups(part) {
   const alternatives = part.alternatives ?? [];
-  if (alternatives.length === 0) return [{ label: null, members: part.members ?? [], notAllowed: [], notDeclared: [] }];
+  const allowed = (members) => members.filter(({ never }) => never !== true);
+  const forbidden = (members) => members.filter(({ never }) => never === true).map(({ name }) => name);
+  if (alternatives.length === 0) return [{ label: null, members: allowed(part.members ?? []), notAllowed: forbidden(part.members ?? []), notDeclared: [] }];
   const labels = alternativeLabels(alternatives);
   const declared = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
   return [
-    ...((part.members ?? []).length > 0 ? [{ label: 'Common', common: true, members: part.members, notAllowed: [], notDeclared: [] }] : []),
+    ...((part.members ?? []).length > 0 ? [{ label: 'Common', common: true, members: allowed(part.members), notAllowed: forbidden(part.members), notDeclared: [] }] : []),
     ...alternatives.map((alternative, index) => ({
       label: labels[index],
       ref: alternative.ref,
       natives: alternative.natives,
-      members: alternative.members.filter(({ never }) => never !== true),
-      notAllowed: alternative.members.filter(({ never }) => never === true).map(({ name }) => name),
+      members: allowed(alternative.members),
+      notAllowed: forbidden(alternative.members),
       notDeclared: declared.filter((name) => !alternative.members.some((member) => member.name === name)),
     })),
   ];
