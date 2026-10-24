@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { DERIVED_API_COMPONENTS, deriveApis, extractionComponent, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
-import { ApiExtractionError, HOST_ALLOWLIST, extractApis, hostEntryKey } from '../api-extraction/extract.mjs';
+import { ApiExtractionError, HOST_ALLOWLIST, HOST_OVERLAPS, assertHostOverlaps, extractApis, hostEntryKey } from '../api-extraction/extract.mjs';
 
 // Synthetic fixtures for the closed grammar (Decision 0031 item 3). They sit under the
 // package's ignored build/ directory so `react` resolves to the package's own types.
@@ -22,7 +22,7 @@ export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.R
 
 // `outside` holds files beside the package under test, such as a stand-in node_modules/@types/react: when given, the
 // declarations and the sources sit in a package/ directory of their own, so those files are not Mux UI-owned.
-function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, files = {}, outside = {}, part, callable, also, parts }) {
+function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist, hostOverlaps, files = {}, outside = {}, part, callable, also, parts }) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const base = mkdtempSync(join(packageRoot, 'build', 'api-extraction-'));
   const root = Object.keys(outside).length > 0 ? join(base, 'package') : base;
@@ -44,7 +44,7 @@ function extract({ declarations, source, sourceName = 'thing.ts', hostAllowlist,
       declarations: join(root, 'thing.d.ts'),
       ...(source === undefined ? {} : { source: join(root, sourceName) }),
     };
-    return extractApis({ declarationRoot: root, components: [component], ...(hostAllowlist ? { hostAllowlist } : {}) }).get('Thing');
+    return extractApis({ declarationRoot: root, components: [component], ...(hostAllowlist ? { hostAllowlist } : {}), ...(hostOverlaps ? { hostOverlaps } : {}) }).get('Thing');
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -500,8 +500,8 @@ export type UIEventHandler<T = Element> = EventHandler<React.UIEvent<T>>;
   read('  scroller?: React.EventHandler<React.UIEvent<HTMLDivElement>>;', '', /Thing\.scroller -> React\.EventHandler: React\.EventHandler<React\.UIEvent<HTMLDivElement>> is not an application on the host allowlist/u);
   assert.deepEqual(extract({ declarations: ownProps('  scroller?: React.EventHandler<React.UIEvent<HTMLDivElement>>;'), hostAllowlist: [...SCROLL_ALLOWLIST, host('React.EventHandler', scrollEvent)] }).propDetails.scroller.type, host('React.EventHandler', scrollEvent));
   read('  onScroll?: React.EventHandler<React.UIEvent<HTMLDivElement>>;', '', /Thing\.onScroll: an on<Event> prop must be a function type/u, [...SCROLL_ALLOWLIST, host('React.EventHandler', scrollEvent)]);
-  // A handler alias with two type parameters is another shape.
-  read('  onChange?: React.ChangeEventHandler<HTMLDivElement>;', '', /Thing\.onChange -> React\.ChangeEventHandler: React\.ChangeEventHandler<HTMLDivElement> is not an application on the host allowlist/u, [...SCROLL_ALLOWLIST, host('React.ChangeEvent', host('HTMLDivElement'))]);
+  // A handler alias with a second, defaulted type parameter is read when its event is on the allowlist, and refused like any other when it is not.
+  read('  onChange?: React.ChangeEventHandler<HTMLDivElement>;', '', /Thing\.onChange -> React\.ChangeEventHandler\(event\): React\.ChangeEvent<HTMLDivElement> is not an application on the host allowlist/u);
   // A package declaration that merges into React's event type makes it no React type alone, so the alias over it is not read.
   read('  onScroll?: React.UIEventHandler<HTMLDivElement>;', "declare module 'react' { interface UIEvent<T> { merged: T } }\n", /Thing\.onScroll -> React\.UIEventHandler: React\.UIEventHandler<HTMLDivElement> is not an application on the host allowlist/u);
 });
@@ -578,6 +578,128 @@ test('a React event handler alias is the whole type of a member and names its el
   read('  onScroll?: React.UIEventHandler;', /one of React's event handler aliases and needs one type argument naming the element/u);
   // A member that is not an on<Event> prop may be one, and is a function; an on<Event> prop may not be a union of one.
   assert.deepEqual(extract({ declarations: ownProps('  scroller?: React.UIEventHandler<HTMLDivElement>;'), hostAllowlist: SCROLL_ALLOWLIST }).propDetails.scroller.type, handlerFunction('event', scrollEvent));
+});
+
+// React's ChangeEventHandler takes the element and the event's target, and the use names the element alone, so the serialized event leaves
+// the target to the event's own default. A stand-in React varies the declarations one rule at a time, as for the one-parameter aliases above.
+const FAITHFUL_CHANGE_ALIAS = 'export type ChangeEventHandler<C = Element, T = Element> = EventHandler<ChangeEvent<C, T>>;';
+const FAITHFUL_CHANGE_EVENT = 'export interface ChangeEvent<C = Element, T = Element> extends SyntheticEvent<C> { target: EventTarget & T }';
+const standInChange = ({ alias = FAITHFUL_CHANGE_ALIAS, event = FAITHFUL_CHANGE_EVENT, extra = '' } = {}) => ({
+  'node_modules/@types/react/package.json': JSON.stringify({ name: '@types/react', version: '0.0.0', types: 'index.d.ts' }),
+  'node_modules/@types/react/index.d.ts': `${FAITHFUL_HANDLER}
+export interface SyntheticEvent<T = Element, E = Event> { readonly currentTarget: EventTarget & T; readonly nativeEvent: E }
+${event}
+${alias}
+${extra}
+`,
+});
+const standInChangeThing = (written = 'ChangeEventHandler<HTMLInputElement>') => `import type { ChangeEventHandler } from 'react';\nexport interface ThingOwnProps { onChange?: ${written}; }\nexport interface ThingProps extends ThingOwnProps {}\nexport declare const Thing: (props: ThingProps) => null;\n`;
+const CHANGE_ALLOWLIST = Object.freeze(['HTMLInputElement', host('React.ChangeEvent', host('HTMLInputElement'))]);
+const changeEvent = host('React.ChangeEvent', host('HTMLInputElement'));
+
+test('a handler alias with defaulted parameters after its element is read, and only while the defaults it omits are the event\'s', () => {
+  // The real alias, ChangeEventHandler<CurrentTarget = Element, Target = Element>, reads as the function of its event with the element alone.
+  const real = extract({ declarations: ownProps('  /** Called on change. */\n  onChange?: React.ChangeEventHandler<HTMLInputElement>;'), hostAllowlist: CHANGE_ALLOWLIST });
+  assert.deepEqual(real.events, ['change']);
+  assert.deepEqual(real.eventDetails.change, { prop: 'onChange', type: handlerFunction('event', changeEvent), required: false, description: 'Called on change.' });
+  assert.deepEqual(real, extract({ declarations: ownProps('  /** Called on change. */\n  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;'), hostAllowlist: CHANGE_ALLOWLIST }));
+  // The use names the element alone, and the event must be on the allowlist like any other application.
+  rejects(ownProps('  onChange?: React.ChangeEventHandler<HTMLInputElement>;'), /Thing\.onChange -> React\.ChangeEventHandler\(event\): React\.ChangeEvent<HTMLInputElement> is not an application on the host allowlist/u, { hostAllowlist: ['HTMLInputElement'] });
+  rejects(ownProps('  onChange?: React.ChangeEventHandler<HTMLInputElement, HTMLInputElement>;'), /needs one type argument naming the element/u, { hostAllowlist: CHANGE_ALLOWLIST });
+  rejects(ownProps('  onChange?: React.ChangeEventHandler;'), /needs one type argument naming the element/u, { hostAllowlist: CHANGE_ALLOWLIST });
+  rejects(ownProps('  onChange?: React.ChangeEventHandler<HTMLInputElement> | undefined;'), /only as the whole type of a member/u, { hostAllowlist: CHANGE_ALLOWLIST });
+  const read = (variant, written) => extract({ declarations: standInChangeThing(written), outside: standInChange(variant), hostAllowlist: CHANGE_ALLOWLIST });
+  // The stand-in of the faithful shape reads the same way.
+  assert.deepEqual(read().eventDetails.change.type, handlerFunction('event', changeEvent));
+  // Each rule, broken alone, leaves the alias an unlisted host application.
+  const refused = /Thing\.onChange -> ChangeEventHandler: React\.ChangeEventHandler<HTMLInputElement> is not an application on the host allowlist/u;
+  for (const [rule, variant] of [
+    // The omitted target would be another type than the event's own, and the catalog would state the wrong event.
+    ['a default that is another library type', { alias: 'export type ChangeEventHandler<C = Element, T = Node> = EventHandler<ChangeEvent<C, T>>;' }],
+    ['a default that is a keyword', { alias: 'export type ChangeEventHandler<C = Element, T = string> = EventHandler<ChangeEvent<C, T>>;' }],
+    ['a default that depends on the element', { alias: 'export type ChangeEventHandler<C = Element, T = C> = EventHandler<ChangeEvent<C, T>>;' }],
+    ['a default the event does not have', { event: 'export interface ChangeEvent<C = Element, T = Node> extends SyntheticEvent<C> { target: EventTarget & T }' }],
+    ['a default on the alias only', { event: 'export interface ChangeEvent<C = Element, T> extends SyntheticEvent<C> { target: EventTarget & T }' }],
+    ['a parameter after the element with no default', { alias: 'export type ChangeEventHandler<C = Element, T> = EventHandler<ChangeEvent<C, T>>;' }],
+    ['the parameters swapped in the event', { alias: 'export type ChangeEventHandler<C = Element, T = Element> = EventHandler<ChangeEvent<T, C>>;' }],
+    ['a parameter the event is not given', { alias: 'export type ChangeEventHandler<C = Element, T = Element> = EventHandler<ChangeEvent<C>>;' }],
+    ['a parameter the event is given twice', { alias: 'export type ChangeEventHandler<C = Element, T = Element> = EventHandler<ChangeEvent<C, T, T>>;' }],
+    ['a default that applies a generic to other arguments', { alias: 'export type ChangeEventHandler<C = Element, T = Array<string>> = EventHandler<ChangeEvent<C, T>>;', event: 'export interface ChangeEvent<C = Element, T = Array<number>> extends SyntheticEvent<C> { target: EventTarget }' }],
+    ['an event declared twice', { extra: 'export interface ChangeEvent<C = Element, T = Element> { merged: true }' }],
+    ['an alias that takes no type parameters', { alias: 'export type ChangeEventHandler = EventHandler<ChangeEvent<Element>>;' }],
+    ['an event with one parameter', { event: 'export interface ChangeEvent<C = Element> extends SyntheticEvent<C> { target: EventTarget }' }],
+    // The default has to be the library's, not a type of the same name declared beside the handler.
+    ['a default declared in React\'s own module', { extra: 'interface Element { local: true }', alias: 'export type ChangeEventHandler<C = Element, T = Element> = EventHandler<ChangeEvent<C, T>>;', event: 'interface Element { local: true }\nexport interface ChangeEvent<C = Element, T = Element> extends SyntheticEvent<C> { target: EventTarget & T }' }],
+  ]) {
+    assert.throws(() => read(variant), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, refused, rule);
+      return true;
+    }, rule);
+  }
+});
+
+// A part whose public props extend the host attributes can inherit a member it also owns: Sidebar.Search's onChange is the div's change
+// handler and the input's. HOST_OVERLAPS names such a member, exactly, and the extraction proves the public type is that intersection.
+const overlapDeclarations = ({ publicType = 'React.HTMLAttributes<HTMLDivElement> & ThingOwnProps', own = 'onChange?: React.ChangeEventHandler<HTMLInputElement>;', extra = '' } = {}) => `${header}${extra}
+export interface ThingOwnProps { ${own} }
+export type ThingProps = ${publicType};
+export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>>;
+`;
+const OVERLAP = Object.freeze({ member: 'Thing.onChange', host: 'DOMAttributes', type: handlerFunction('event', changeEvent) });
+
+test('a member that is the host\'s intersected with the owned one is read only as its exact host overlap entry says', () => {
+  const read = (options = {}, hostOverlaps = [OVERLAP], hostAllowlist = CHANGE_ALLOWLIST) => extract({ declarations: overlapDeclarations(options), hostOverlaps, hostAllowlist });
+  // Without an entry the public type is a redeclaration of the owned member, as always.
+  rejects(overlapDeclarations(), /Thing\.onChange: the exported Thing's props redeclare onChange as optional .*ChangeEventHandler<HTMLDivElement, Element> & .*ChangeEventHandler<HTMLInputElement, Element>/u, { hostAllowlist: CHANGE_ALLOWLIST });
+  const api = read();
+  assert.deepEqual(api.events, ['change']);
+  assert.deepEqual(api.eventDetails.change, { prop: 'onChange', type: handlerFunction('event', changeEvent), required: false });
+  // The entry names one member of one family, so another member, another family and another host interface are redeclarations.
+  const refuse = (options, hostOverlaps, pattern = /Thing\.\w+: the exported Thing's props redeclare/u, hostAllowlist = CHANGE_ALLOWLIST) => assert.throws(() => read(options, hostOverlaps, hostAllowlist), (error) => {
+    assert.ok(error instanceof ApiExtractionError, error.stack);
+    assert.match(error.message, pattern);
+    return true;
+  });
+  refuse({}, [{ ...OVERLAP, member: 'Thing.onInput' }]);
+  refuse({}, [{ ...OVERLAP, member: 'Other.onChange' }]);
+  refuse({}, [{ ...OVERLAP, member: 'Thing.Part.onChange' }]);
+  refuse({}, [{ ...OVERLAP, host: 'HTMLAttributes' }]);
+  // Another member with a host overlap of its own is not covered by this entry.
+  refuse({ own: 'onChange?: React.ChangeEventHandler<HTMLInputElement>;\n  onInput?: React.InputEventHandler<HTMLInputElement>;' }, [OVERLAP], /Thing\.onInput: the exported Thing's props redeclare/u, [...CHANGE_ALLOWLIST, host('React.InputEvent', host('HTMLInputElement'))]);
+  // The owned member is the one the entry pins: another handler, element or signature is a different overlap that needs its own review.
+  refuse({ own: 'onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;' }, [OVERLAP], undefined, ['HTMLTextAreaElement', host('React.ChangeEvent', host('HTMLTextAreaElement'))]);
+  refuse({ own: 'onChange?: (event: React.ChangeEvent<HTMLInputElement>, value: string) => void;' }, [OVERLAP]);
+  refuse({ own: 'onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;' }, [{ ...OVERLAP, type: handlerFunction('event', host('React.ChangeEvent', host('HTMLTextAreaElement'))) }]);
+  // The public type is the intersection of the host's and the owned member and nothing else: not a union, and not a third declaration.
+  refuse({ publicType: '(React.HTMLAttributes<HTMLDivElement> & ThingOwnProps) | (ThingOwnProps & { other: true })' }, [OVERLAP]);
+  refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & ThingOwnProps & { onChange?: React.ChangeEventHandler<HTMLInputElement> }' }, [OVERLAP]);
+  refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & ThingOwnProps & { onChange?: () => void }' }, [OVERLAP]);
+  refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & React.InputHTMLAttributes<HTMLInputElement> & ThingOwnProps' }, [OVERLAP]);
+  // The owned member has to be the public one's other half, and the intersection keeps its optionality.
+  refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & { other?: true }' }, [OVERLAP]);
+  refuse({ publicType: 'React.HTMLAttributes<HTMLDivElement> & React.InputHTMLAttributes<HTMLInputElement>' }, [OVERLAP]);
+  refuse({ publicType: 'Required<React.HTMLAttributes<HTMLDivElement>> & ThingOwnProps' }, [OVERLAP], /Thing\.onChange: the exported Thing's props redeclare onChange as required/u);
+  // A mapped copy of the host's attributes keeps the host's declaration, so the Omit of a family's own host attributes is read the same way.
+  assert.deepEqual(read({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }).events, ['change']);
+  // A host member declared outside React is no React member.
+  refuse({ publicType: 'LocalHost & ThingOwnProps', extra: 'export interface DOMAttributes { onChange?: React.ChangeEventHandler<HTMLDivElement>; }\nexport type LocalHost = DOMAttributes;\n' }, [OVERLAP]);
+  // Only the family's own props are read against the entry: another member of the export that carries the same overlap is not covered by it.
+  const alsoDeclarations = `${overlapDeclarations()}export declare const Wrapper: { Root: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> };\n`
+    .replace('export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>>;', 'export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> & { Root: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> };');
+  assert.deepEqual(extract({ declarations: alsoDeclarations, hostOverlaps: [OVERLAP], hostAllowlist: CHANGE_ALLOWLIST }).events, ['change']);
+  rejects(alsoDeclarations, /Thing\.onChange: the exported Thing\.Root's props redeclare onChange/u, { hostOverlaps: [OVERLAP], hostAllowlist: CHANGE_ALLOWLIST, also: [{ member: 'Root' }] });
+  // The entry is checked on its own: exactly member, host, type, and a member once.
+  for (const entry of [
+    { member: 'Thing.onChange', host: 'DOMAttributes' },
+    { ...OVERLAP, extra: true },
+    { ...OVERLAP, member: 'onChange' },
+    { ...OVERLAP, member: 'thing.onChange' },
+    { ...OVERLAP, host: 'dom' },
+    { ...OVERLAP, type: keyword('string') },
+  ]) assert.throws(() => assertHostOverlaps([entry]), /host overlaps/u, JSON.stringify(entry));
+  assert.throws(() => assertHostOverlaps([OVERLAP, OVERLAP]), /names a member twice/u);
+  assert.equal(assertHostOverlaps(HOST_OVERLAPS).size, HOST_OVERLAPS.length);
 });
 
 test('the shipped allowlist holds exactly the host types the committed derived APIs reach', () => {
@@ -1438,6 +1560,136 @@ ${after}`;
   for (const [exported, options, pattern] of cases) {
     assert.throws(() => read(exported, options), (error) => error instanceof ApiExtractionError && pattern.test(error.message), exported);
   }
+});
+
+// A part typed React.ComponentType<P> (Sidebar.Provider, NavItem and MobileTrigger) is a union of a function and a class component, so it has no
+// one call signature. It is read as P only when its type is React's own ComponentType alias; the by-shape guard stays, fail-closed, for the arms.
+const componentDeclarations = (type, extra = '') => `${header}${extra}
+export interface ThingOwnProps { collapsed?: boolean; }
+export interface ThingProviderProps extends ThingOwnProps {}
+export declare const Thing: { Provider: ${type}; Other: React.ForwardRefExoticComponent<ThingProviderProps & React.RefAttributes<HTMLDivElement>>; };
+`;
+
+test('a part typed React.ComponentType<P> reads as P, and no other union of a function and a class component does', () => {
+  const read = (type, extra) => extract({ declarations: componentDeclarations(type, extra), part: 'Provider' });
+  // React's alias, and every other form the extraction already read, give the same props.
+  for (const type of ['React.ComponentType<ThingProviderProps>', 'React.FunctionComponent<ThingProviderProps>', '(props: ThingProviderProps) => React.ReactNode', 'React.ForwardRefExoticComponent<ThingProviderProps>', 'React.ExoticComponent<ThingProviderProps>']) {
+    const api = read(type);
+    assert.deepEqual([api.props, api.propDetails.collapsed.type], [['collapsed'], { kind: 'boolean' }], type);
+  }
+  // A union the alias does not name, or one with another shape, is a component the reader cannot tell from a stranger.
+  const refused = /Thing: the exported Thing\.Provider must be a component with one call signature that takes props, or React's ComponentType<P>/u;
+  for (const [rule, type, extra] of [
+    ['a class component alone', 'React.ComponentClass<ThingProviderProps>'],
+    ['the two arms written by hand', 'React.FunctionComponent<ThingProviderProps> | React.ComponentClass<ThingProviderProps>'],
+    ['arms of other props', 'React.ComponentType<ThingProviderProps> | React.ComponentType<{ other: true }>'],
+    ['arms of other props, one each', 'React.FunctionComponent<ThingProviderProps> | React.ComponentClass<{ other: true }>'],
+    ['an intersection', 'React.ComponentType<ThingProviderProps> & { extra: number }'],
+    ['an empty object intersected', 'React.ComponentType<ThingProviderProps> & {}'],
+    ['a nullable type', 'React.ComponentType<ThingProviderProps> | null'],
+    ['an undefined arm', 'React.ComponentType<ThingProviderProps> | undefined'],
+    ['a local alias of the same name', 'ComponentType<ThingProviderProps>', 'export type ComponentType<P> = React.ComponentClass<P> | React.FunctionComponent<P>;\n'],
+    ['a local alias of the real one', 'LocalComponent<ThingProviderProps>', 'export type LocalComponent<P> = React.ComponentType<P>;\n'],
+  ]) {
+    assert.throws(() => read(type, extra), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, refused, rule);
+      return true;
+    }, rule);
+  }
+  // Without the props it takes, or typed any, it reaches the check that the props carry the owned members.
+  rejects(componentDeclarations('React.ComponentType'), /Thing\.collapsed: the exported Thing's props do not include collapsed/u, { part: 'Provider' });
+  rejects(componentDeclarations('React.ComponentType<any>'), /Thing\.collapsed: the exported Thing's props do not include collapsed/u, { part: 'Provider' });
+  // The props are the argument's, so a type that lost an owned member fails the same way.
+  rejects(componentDeclarations('React.ComponentType<{ other?: boolean }>'), /Thing\.collapsed: the exported Thing's props do not include collapsed/u, { part: 'Provider' });
+  rejects(componentDeclarations('React.ComponentType<{ collapsed: boolean }>'), /Thing\.collapsed: the exported Thing's props redeclare collapsed as required boolean; ThingOwnProps declares optional boolean \| undefined/u, { part: 'Provider' });
+});
+
+// A stand-in React: a type declared in a node_modules/@types/react directory is React's, so the arms of its ComponentType can be varied one rule at a time.
+const standInComponent = ({
+  alias = 'export type ComponentType<P = {}> = ComponentClass<P> | FunctionComponent<P>;',
+  functionComponent = 'export interface FunctionComponent<P = {}> { (props: P): ReactNode | Promise<ReactNode>; displayName?: string; }',
+  componentClass = 'export interface ComponentClass<P = {}> { new (props: P, context?: any): Component<P>; displayName?: string; }',
+  node = 'export type ReactNode = ReactElement | string | number | boolean | null | undefined | Iterable<ReactNode>;',
+  extra = '',
+  // The arms are declared in another package, which React's alias then imports.
+  elsewhere = false,
+} = {}) => ({
+  'node_modules/@types/react/package.json': JSON.stringify({ name: '@types/react', version: '0.0.0', types: 'index.d.ts' }),
+  'node_modules/@types/react/index.d.ts': `${elsewhere ? "import type { FunctionComponent, ComponentClass } from 'elsewhere';\nimport type { ReactNode } from 'elsewhere';" : `${functionComponent}\n${componentClass}`}
+export interface ReactElement { readonly type: unknown }
+${elsewhere ? '' : node}
+export declare class Component<P = {}> { readonly props: P; }
+${alias}
+${extra}
+`,
+  ...(elsewhere ? {
+    'node_modules/elsewhere/package.json': JSON.stringify({ name: 'elsewhere', version: '0.0.0', types: 'index.d.ts' }),
+    'node_modules/elsewhere/index.d.ts': `export type ReactNode = string | number | boolean | null | undefined;
+export declare class Component<P = {}> { readonly props: P; }
+${functionComponent}
+${componentClass}
+`,
+  } : {}),
+});
+const standInProvider = (type = 'ComponentType<ThingProviderProps>') => `import type { ComponentType, FunctionComponent, ComponentClass, Strange, Fine } from 'react';
+export interface ThingOwnProps { collapsed?: boolean; }
+export interface ThingProviderProps extends ThingOwnProps {}
+export declare const Thing: { Provider: ${type}; };
+`;
+
+test('the arms of React\'s ComponentType are guarded: one signature each of a call and a construct, props first and nothing else required, and what React renders', () => {
+  const read = (variant, type) => extract({ declarations: standInProvider(type), outside: standInComponent(variant), part: 'Provider' });
+  // The faithful shape reads, with the optional context parameter and the statics the real components have.
+  assert.deepEqual(read().props, ['collapsed']);
+  assert.deepEqual(read({ functionComponent: 'export interface FunctionComponent<P = {}> { (props: P, legacyContext?: any): ReactNode; displayName?: string; defaultProps?: Partial<P> }' }).props, ['collapsed']);
+  const refused = /Thing: the exported Thing\.Provider must be a component with one call signature that takes props, or React's ComponentType<P>/u;
+  for (const [rule, variant] of [
+    ['a call with another required argument', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: P, required: number): ReactNode; }' }],
+    ['a construct with another required argument', { componentClass: 'export interface ComponentClass<P = {}> { new (props: P, required: number): Component<P>; }' }],
+    ['a call that returns a Date', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: P): Date; }' }],
+    ['a construct of a Date', { componentClass: 'export interface ComponentClass<P = {}> { new (props: P): Date; }' }],
+    ['a generic call', { functionComponent: 'export interface FunctionComponent<P = {}> { <Q>(props: P): ReactNode; }' }],
+    ['a generic construct', { componentClass: 'export interface ComponentClass<P = {}> { new <Q>(props: P): Component<P>; }' }],
+    ['a rest parameter', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: P, ...rest: unknown[]): ReactNode; }' }],
+    ['two calls', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: P): ReactNode; (props: P, other: string): ReactNode; }' }],
+    ['a call that takes no props', { functionComponent: 'export interface FunctionComponent<P = {}> { (): ReactNode; }' }],
+    ['a call of other props', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: { other: true }): ReactNode; }' }],
+    ['arms written inline', { alias: 'export type ComponentType<P = {}> = ((props: P) => ReactNode) | (new (props: P) => Component<P>);' }],
+    ['one arm alone', { alias: 'export type ComponentType<P = {}> = ComponentClass<P>;' }],
+    ['a third arm that is not a React type', { alias: 'export type ComponentType<P = {}> = ComponentClass<P> | FunctionComponent<P> | null;' }],
+    ['a third arm that is a React type', { alias: 'export type ComponentType<P = {}> = ComponentClass<P> | FunctionComponent<P> | ExoticComponent<P>;', extra: 'export interface ExoticComponent<P = {}> { (props: P): ReactNode; readonly $$typeof: symbol }' }],
+    ['an arm that does not take the alias\'s parameter', { alias: 'export type ComponentType<P = {}> = ComponentClass<{}> | FunctionComponent<P>;' }],
+    ['an alias that takes two parameters', { alias: 'export type ComponentType<P = {}, Q = {}> = ComponentClass<P> | FunctionComponent<P>;' }],
+    // Each of these is the faithful alias and arms but for the one thing named.
+    ['an arm the alias gives another argument than its parameter', { alias: 'export type ComponentType<P = {}> = ComponentClass<P & {}> | FunctionComponent<P>;' }],
+    ['arms React imports from another package', { elsewhere: true }],
+    ['no ReactNode to compare a result with', { node: '' }],
+    ['a call with a this parameter', { functionComponent: 'export interface FunctionComponent<P = {}> { (this: Date, props: P): ReactNode; }' }],
+    ['a function component that can also be constructed', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: P): ReactNode; new (props: P): Component<P>; }' }],
+    ['one arm that is both, and the other neither', { functionComponent: 'export interface FunctionComponent<P = {}> { (props: P): ReactNode; new (props: P): Component<P>; }', componentClass: 'export interface ComponentClass<P = {}> { displayName?: string; }' }],
+  ]) {
+    assert.throws(() => read(variant), (error) => {
+      assert.ok(error instanceof ApiExtractionError, error.stack);
+      assert.match(error.message, refused, rule);
+      return true;
+    }, rule);
+  }
+  // What a package merges into React's Component or into either arm makes the type no longer React's alone.
+  for (const merged of ['interface Component<P> { merged: P }', 'interface FunctionComponent<P> { merged: P }', 'interface ComponentClass<P> { merged: P }']) {
+    assert.throws(() => extract({ declarations: `declare module 'react' { ${merged} }\n${standInProvider()}`, outside: standInComponent(), part: 'Provider' }), refused, merged);
+  }
+  // A union of this shape under another name is not React's alias, even where React declares it.
+  const strange = { extra: 'export type Strange<P> = ((props: P, required: number) => string) | (new (props: P, required: number) => Date);\nexport type Fine<P> = ComponentClass<P> | FunctionComponent<P>;' };
+  for (const name of ['Strange', 'Fine']) {
+    assert.throws(() => read(strange, `${name}<ThingProviderProps>`), refused, name);
+  }
+  // The alias is React's only where React declares it: the same declarations in the package are not.
+  assert.throws(() => extract({
+    declarations: standInProvider().replace("import type { ComponentType, FunctionComponent, ComponentClass, Strange, Fine } from 'react';", "import type { FunctionComponent, ComponentClass, ReactNode } from 'react';\nexport type ComponentType<P = {}> = ComponentClass<P> | FunctionComponent<P>;"),
+    outside: standInComponent(),
+    part: 'Provider',
+  }), refused);
 });
 
 test('an exported component may be a zero-argument wrapper that returns one forwardRef or memo const', () => {
