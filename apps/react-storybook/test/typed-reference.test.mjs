@@ -10,6 +10,7 @@ import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
 import { componentDeclarations, readDeclarationReference, readReactPackageFacts } from '../../component-reference.mjs';
 import { typedReference } from '../src/component-docs.mjs';
+import { sourceProblems, textEditorExports, textEditorFunctions, textEditorNative, textEditorProps, textEditorRef, textEditorTypes } from './text-editor-declarations.mjs';
 import { STORY_API_PARTS, argTypesForBinding, storyApi } from '../src/storybook-factory.mjs';
 
 // The typed reference on every family Docs page (Decision 0031). What the page should show is read here straight from
@@ -827,37 +828,34 @@ const pins = {
     if (rowsOf(part('TextArea.Root')).get('onChange')?.type !== '(value: string) => void') problems.push('TextArea.Root onChange is not (value: string) => void');
     return problems;
   },
+  // The 32 exports of @muxui/react/text-editor, each as text-editor-declarations.mjs writes it, which holds them against the source.
   'TEXT-EDITOR-02': (page) => {
     const problems = [];
-    const fixture = readJson('packages/react/test/fixtures/public-surface-inventory.json').baseline['./text-editor'];
     const listed = [...page.querySelectorAll('table.muxui-docs-exports tbody tr[data-export]')];
     const subpath = `from '${packageName}/text-editor';`;
-    if (listed.length !== 32 || !listed.every((row) => row.querySelector('td code').textContent.endsWith(subpath))) problems.push(`the text-editor section lists ${listed.length} exports, not all 32 from its subpath`);
-    const names = listed.map((row) => row.querySelector('th').textContent).sort();
-    const expectedNames = [...fixture.types, ...fixture.values].sort();
-    if (JSON.stringify(names) !== JSON.stringify(expectedNames)) problems.push(`the exports differ from the inventory: ${names.filter((name) => !expectedNames.includes(name)).concat(expectedNames.filter((name) => !names.includes(name)))}`);
-    const signature = (name) => page.querySelector(`div[data-export="${name}"] [data-meta="signature"]`)?.textContent;
-    if (signature('isTextEditorDocument') !== 'isTextEditorDocument(value: unknown): value is TextEditorDocument') problems.push(`isTextEditorDocument is ${signature('isTextEditorDocument')}`);
-    if (signature('normalizeTextEditorDocument') !== 'normalizeTextEditorDocument(value: unknown): TextEditorDocument') problems.push(`normalizeTextEditorDocument is ${signature('normalizeTextEditorDocument')}`);
-    const command = printedType(page, 'TextEditorCommand') ?? '';
-    for (const arm of ["type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate'", "type: 'align'", "type: 'color'", "type: 'fontFamily'", "type: 'fontSize'", "type: 'link'", "type: 'image'"]) {
-      if (!command.includes(arm)) problems.push(`TextEditorCommand lacks ${arm}`);
+    if (!listed.every((row) => row.querySelector('td code').textContent.endsWith(subpath))) problems.push('an export of the text-editor section is not imported from its subpath');
+    const shown = listed.map((row) => `${row.querySelector('th').textContent}:${row.querySelectorAll('td')[0].textContent}`).sort();
+    const expected = textEditorExports.map((name) => `${name}:${name === 'TextEditor' ? 'component' : name in textEditorFunctions ? 'function' : 'type'}`).sort();
+    if (JSON.stringify(shown) !== JSON.stringify(expected)) problems.push(`the exports are ${shown.filter((item) => !expected.includes(item)).join()} instead of ${expected.filter((item) => !shown.includes(item)).join()}`);
+    const component = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor');
+    if (refOf(component) !== textEditorRef) problems.push(`TextEditor ref is ${refOf(component)}, expected ${textEditorRef}`);
+    const native = `${textEditorNative.type} except ${textEditorNative.omit.join('')}`;
+    if (nativeOf(component) !== native) problems.push(`TextEditor native is ${nativeOf(component)}, expected ${native}`);
+    const props = [...component.querySelectorAll('tr[data-prop]')].map((row) => [row.getAttribute('data-prop'), row.querySelector('[data-cell="type"] > code').textContent, row.querySelector('[data-cell="required"]').firstChild.textContent]);
+    const expectedProps = textEditorProps.map(([name, type]) => [name, type, 'optional']);
+    if (JSON.stringify(props) !== JSON.stringify(expectedProps)) problems.push(`the props are ${JSON.stringify(props.filter((row, index) => JSON.stringify(row) !== JSON.stringify(expectedProps[index])))}, expected ${JSON.stringify(expectedProps.filter((row, index) => JSON.stringify(row) !== JSON.stringify(props[index])))}`);
+    const root = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor.Root');
+    if (root?.querySelector('[data-meta="same-as"]')?.textContent !== 'TextEditor' || refOf(root) !== textEditorRef || nativeOf(root) !== native) problems.push(`TextEditor.Root is ${root?.querySelector('[data-meta="same-as"]')?.textContent} with ref ${refOf(root)} and native ${nativeOf(root)}`);
+    for (const [name, signature] of Object.entries(textEditorFunctions)) {
+      const shownSignature = page.querySelector(`div[data-export="${name}"] [data-meta="signature"]`)?.textContent;
+      if (shownSignature !== signature) problems.push(`${name} is ${shownSignature}, expected ${signature}`);
     }
-    const actions = printedType(page, 'TextEditorSelectionActions') ?? '';
-    for (const member of ['readonly selection', 'readonly signal: AbortSignal', 'replace(', 'insertAfter(', 'close(): void']) {
-      if (!actions.includes(member)) problems.push(`TextEditorSelectionActions lacks ${member}`);
+    for (const [name, declaration] of Object.entries(textEditorTypes)) {
+      const printed = printedType(page, name);
+      if (printed !== declaration) problems.push(`type ${name} is printed as ${JSON.stringify(printed)}, expected ${JSON.stringify(declaration)}`);
+      const node = [...page.querySelectorAll('[data-type]')].find((candidate) => candidate.getAttribute('data-type') === name);
+      if (!texts(node?.querySelectorAll('.muxui-docs-import code') ?? []).includes(`import type { ${name} } from '${packageName}/text-editor';`)) problems.push(`type ${name} does not print its import`);
     }
-    const props = rowsOf(partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor'));
-    for (const [name, type] of Object.entries({
-      onLinkRequest: '(actions: TextEditorActionCallbacks) => void',
-      onImageRequest: '(actions: { insertImage(src: string, alt?: string): boolean }) => void',
-      onColorRequest: '(actions: { setColor(value: string): boolean }) => void',
-      onGenerate: '() => void',
-      onSelectionRequest: '(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>',
-    })) {
-      if (props.get(name)?.type !== type) problems.push(`TextEditor ${name} is ${props.get(name)?.type}`);
-    }
-    if (refOf(partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor')) !== 'TextEditorHandle') problems.push('TextEditor ref is not TextEditorHandle');
     return problems;
   },
 };
@@ -869,17 +867,9 @@ test('the four records pin what their pages show, against the shipped declaratio
     const page = pageOf(await entryOf(manifest.families.find((item) => item.family === family)));
     assert.deepEqual(pins[record](page), [], record);
   }
-  // The pinned TextEditor signatures are the ones the package ships, read without the reference.
-  const shipped = readFileSync(resolve(repositoryRoot, 'packages/react/generated/text-editor.d.ts'), 'utf8').replace(/[\s;]+/gu, '');
-  for (const text of [
-    'onLinkRequest?:(actions:TextEditorActionCallbacks)=>void',
-    'onImageRequest?:(actions:{insertImage(src:string,alt?:string):boolean})=>void',
-    'onColorRequest?:(actions:{setColor(value:string):boolean})=>void',
-    'onGenerate?:()=>void',
-    'onSelectionRequest?:(request:TextEditorSelectionRequest,actions:TextEditorSelectionActions)=>void|Promise<unknown>',
-    'declarefunctionisTextEditorDocument(value:unknown):valueisTextEditorDocument',
-    'declarefunctionnormalizeTextEditorDocument(value:unknown):TextEditorDocument',
-  ]) assert.ok(shipped.includes(text), `the shipped declarations say ${text}`);
+  // The pinned TextEditor declarations are the source's, read without the reference.
+  assert.deepEqual(sourceProblems(repositoryRoot), []);
+  assert.equal(textEditorExports.length, 32);
 });
 
 test('a model that changes what a record pins fails the pin, as an omission from the reference fails the page checks', async () => {
@@ -896,9 +886,35 @@ test('a model that changes what a record pins fails the pin, as an omission from
     ['TEXT-EDITOR-02', 'TextEditor', 'the selection request loses its promise', (copy) => { const member = partOf(copy, 'text-editor', 'TextEditor', null).members.find(({ name }) => name === 'onSelectionRequest'); member.type = member.type.replace(' | Promise<unknown>', ''); }],
     ['TEXT-EDITOR-02', 'TextEditor', 'a command arm is lost', (copy) => text(copy, 'TextEditorCommand', (value) => value.replace("type: 'image';", "type: 'picture';"))],
     ['TEXT-EDITOR-02', 'TextEditor', 'the selection actions lose close', (copy) => text(copy, 'TextEditorSelectionActions', (value) => value.replace('close(): void;', ''))],
+    // A return type, a payload field or a callback changes where only the printed declaration shows it.
+    ['TEXT-EDITOR-02', 'TextEditor', 'the handle executes to a number', (copy) => text(copy, 'TextEditorHandle', (value) => value.replace('execute(command: TextEditorCommand): boolean', 'execute(command: TextEditorCommand): number'))],
+    ['TEXT-EDITOR-02', 'TextEditor', 'the link command takes a number href', (copy) => text(copy, 'TextEditorCommand', (value) => value.replace("type: 'link';\n  href: string;", "type: 'link';\n  href: number;"))],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a selection replace returns a number', (copy) => text(copy, 'TextEditorSelectionActions', (value) => value.replace('replace(content: string | TextEditorDocument): boolean', 'replace(content: string | TextEditorDocument): number'))],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a selection action id is a number', (copy) => text(copy, 'TextEditorSelectionAction', (value) => value.replace('id: string;', 'id: number;'))],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a type is not exported any more', (copy) => { dropInventory(copy, 'TextEditorMark'); }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'onChange reports a string', (copy) => { partOf(copy, 'text-editor', 'TextEditor', null).members.find(({ name }) => name === 'onChange').type = '(value: string) => void'; }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a prop is lost', (copy) => { const part = partOf(copy, 'text-editor', 'TextEditor', null); part.members = part.members.filter(({ name }) => name !== 'limit'); }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'the ref is the element', (copy) => { partOf(copy, 'text-editor', 'TextEditor', null).ref = { type: 'HTMLDivElement' }; }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'the native surface keeps onChange', (copy) => { partOf(copy, 'text-editor', 'TextEditor', null).natives[0].omit.pop(); }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'Root stops being an alias', (copy) => { delete partOf(copy, 'text-editor', 'TextEditor', 'Root').sameAs; }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a function returns a number', (copy) => { const item = copy.files.get('text-editor').exports.find(({ name }) => name === 'normalizeTextEditorDocument'); item.signature = item.signature.replace('): TextEditorDocument', '): number'); }],
   ];
   for (const [record, family, name, mutate] of mutations) {
     assert.notEqual(await failureOf(family, mutate, pins[record]), null, `${record}: ${name} must fail its pin`);
+  }
+  // The pinned declarations are held against the source: a source that declares any of them differently fails that check.
+  const source = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/index.ts'), 'utf8');
+  for (const [from, to] of [
+    ['execute(command: TextEditorCommand): boolean', 'execute(command: TextEditorCommand): number'],
+    ["{ type: 'link'; href: string }", "{ type: 'link'; href: number }"],
+    ['replace(content: string | TextEditorDocument): boolean;', 'replace(content: string | TextEditorDocument): number;'],
+    ['  id: string;\n  label: string;', '  id: number;\n  label: string;'],
+    ['limit?: number;', 'limit?: string;'],
+    ['export function isTextEditorDocument(value: unknown): value is TextEditorDocument', 'export function isTextEditorDocument(value: unknown): boolean'],
+    ['RefAttributes<TextEditorHandle>', 'RefAttributes<HTMLDivElement>'],
+  ]) {
+    assert.ok(source.includes(from), `the source holds ${from}`);
+    assert.notDeepEqual(sourceProblems(repositoryRoot, source.replace(from, to)), [], `a source with ${to} must fail the source check`);
   }
   // Negative control: an untouched copy passes both.
   for (const [record, family] of Object.entries(pinFamilies)) {
