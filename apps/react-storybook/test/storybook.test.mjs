@@ -1276,6 +1276,61 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
   });
 });
 
+// The adapter decides where each control of a compound goes, so this table is that decision for every prop and event the story API lists
+// for Card, HeaderNav, AlertDialog and Sidebar: a control a part newly owns has no sample until the adapter routes it and says so here.
+const STORY_CONTROL_SAMPLES = {
+  Card: { variant: 'filled', padding: 'lg', selected: true, pending: true, disabled: true, onActivate: () => {} },
+  HeaderNav: { href: '/start', current: true },
+  AlertDialog: { open: true, defaultOpen: true, disabled: true, onActivate: () => {}, onOpenChange: () => {} },
+  Sidebar: {
+    collapsed: false, defaultCollapsed: false, shortcut: 'b', hideBorder: true, density: 'compact',
+    label: 'Inbox', href: '/inbox', current: true, external: true, badge: '3', icon: ({ className }) => React.createElement('svg', { className }), items: [{ href: '/a', label: 'Alpha' }],
+    expanded: true, defaultExpanded: true, placeholder: 'Find', value: 'roadmap', name: 'Ada', email: 'ada@example.com', avatarSrc: '/ada.png', avatarAlt: 'Ada at work', status: 'online',
+    title: 'Try Beta', description: 'Early access', dismissLabel: 'Not now', logo: 'Acme',
+    onCollapsedChange: () => {}, onChange: () => {}, onExpandedChange: () => {}, onAction: () => {}, onDismiss: () => {},
+  },
+};
+// The element a family's own attributes land on; AlertDialog.Root renders none, so nothing of it can leak.
+const STORY_ROOT_SELECTORS = { Card: '.muxui-card', HeaderNav: '.muxui-header-nav', Sidebar: '.muxui-sidebar' };
+
+test('every control of a moved compound reaches the part that owns it and none leaks onto the root', () => {
+  for (const [family, samples] of Object.entries(STORY_CONTROL_SAMPLES)) {
+    const { binding } = currentRecord(family);
+    const listed = [...storyApi(binding).props, ...eventBindingsForBinding(binding).map(({ prop }) => prop)];
+    assert.deepEqual(Object.keys(samples).sort(), listed.sort(), `${family}: a sample for every control the story API lists`);
+    const warnings = [];
+    const original = console.error;
+    console.error = (...message) => warnings.push(message.join(' '));
+    let rendered;
+    try {
+      rendered = new JSDOM(renderToStaticMarkup(renderFamily(family, samples))).window.document;
+    } finally {
+      console.error = original;
+    }
+    // React names an unknown prop on a DOM element (avatarAlt, dismissLabel) when it reaches one.
+    assert.deepEqual(warnings, [], `${family} renders every control without a React warning`);
+    const selector = STORY_ROOT_SELECTORS[family];
+    if (selector === undefined) continue;
+    const attributes = rendered.querySelector(selector).getAttributeNames();
+    for (const control of Object.keys(samples)) assert.equal(attributes.includes(control.toLowerCase()), false, `${family}: ${control} is not an attribute of the root`);
+  }
+
+  // The five controls deriving added to Sidebar's parts each reach their part's element.
+  const full = new JSDOM(renderToStaticMarkup(renderFamily('Sidebar', STORY_CONTROL_SAMPLES.Sidebar))).window.document;
+  assert.equal(full.querySelector('.muxui-sidebar__account-avatar').getAttribute('alt'), 'Ada at work', 'avatarAlt names the avatar');
+  assert.equal(full.querySelector('.muxui-sidebar__mobile-logo').textContent, 'Acme', 'logo sits beside the drawer button');
+  assert.equal(full.querySelector('.muxui-sidebar__feature-card-title').textContent, 'Try Beta', 'title heads the feature card');
+  assert.equal(full.querySelector('.muxui-sidebar__feature-card-description').textContent, 'Early access', 'description supports it');
+  assert.equal(full.querySelector('.muxui-sidebar__feature-card-dismiss').textContent, 'Not now', 'dismissLabel names its button');
+  // Left out, each part keeps its own sample or default.
+  const bare = new JSDOM(renderToStaticMarkup(renderFamily('Sidebar', { avatarSrc: '/ada.png' }))).window.document;
+  assert.equal(bare.querySelector('.muxui-sidebar__account-avatar').getAttribute('alt'), 'Sample user');
+  assert.equal(bare.querySelector('.muxui-sidebar__mobile-logo').textContent, 'Field team');
+  assert.equal(bare.querySelector('.muxui-sidebar__feature-card-title').textContent, 'Try Scale');
+  assert.equal(bare.querySelector('.muxui-sidebar__feature-card-description').textContent, 'Explore tokens');
+  assert.equal(bare.querySelector('.muxui-sidebar__feature-card-dismiss').textContent, 'Dismiss');
+});
+
 test('InputTags keeps supplied seeds and copy, and offers placement and tag-focus specimens', async () => {
   const tags = (args) => new JSDOM(renderToStaticMarkup(renderFamily('InputTags', args))).window.document;
   const supplied = tags({ defaultValue: ['One'], label: 'Skills', placeholder: 'Add a skill' });
