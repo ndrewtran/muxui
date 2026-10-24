@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button as AriaButton } from 'react-aria-components';
 import { usePendingSubmitProps } from '../button.ts';
-import { h, cx, dataState, nativePart, pressHandler } from './part-utils.mjs';
+import { h, cx, dataState, nativePart, pressHandler } from './part-utils.ts';
 
 /* Card */
 function cardProps({ variant = 'outlined', padding = 'md', className, ...props }) {

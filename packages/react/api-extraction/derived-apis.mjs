@@ -103,6 +103,22 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'tree', name: 'Tree', source: 'packages/react/src/tree.ts' },
   // TextEditor's handle, commands and document types are declared by its module; only its props and events are derived here.
   { slug: 'text-editor', name: 'TextEditor', source: 'packages/react/src/text-editor/index.ts' },
+  // ButtonGroup and ColorModeToggle are single components: their API is the export's own.
+  { slug: 'button-group', name: 'ButtonGroup', source: 'packages/react/src/supplemental/button-group.ts' },
+  { slug: 'color-mode-toggle', name: 'ColorModeToggle', source: 'packages/react/src/supplemental/color-mode-toggle.ts' },
+  // ProgressCircle is a compound whose root is ProgressCircle.Root; Track, Label and Value own no props.
+  { slug: 'progress-circle', name: 'ProgressCircle', part: 'Root', source: 'packages/react/src/supplemental/progress-circle.ts' },
+  // InputTags is a compound of one part, Root, whose props are the family's.
+  { slug: 'input-tags', name: 'InputTags', part: 'Root', source: 'packages/react/src/supplemental/input-tags.ts' },
+  // PaymentInput's root is PaymentInput.Root; CardIcon owns cardType, and the other parts own no props.
+  { slug: 'payment-input', name: 'PaymentInput', part: 'Root', parts: { 'card-icon': 'CardIcon' }, source: 'packages/react/src/supplemental/payment-input.ts' },
+  // The field compounds' root is Root, and each Button owns disabled; their other parts own no props.
+  { slug: 'checkbox-field', name: 'CheckboxField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/checkbox-field.ts' },
+  { slug: 'radio-field', name: 'RadioField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/radio-field.ts' },
+  { slug: 'switch-field', name: 'SwitchField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/switch-field.ts' },
+  // Input and TextArea are compounds whose Root owns the props; their other parts own none.
+  { slug: 'input', name: 'Input', part: 'Root', source: 'packages/react/src/supplemental/input.ts' },
+  { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

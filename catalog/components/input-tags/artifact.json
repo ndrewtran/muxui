@@ -49,52 +49,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "tagPlacement",
-          "size",
-          "placeholder",
-          "value",
-          "defaultValue",
-          "label",
-          "description",
-          "errorMessage",
-          "allowDuplicates",
-          "maxTags",
-          "validate",
-          "disabled",
-          "invalid",
-          "required",
-          "onChange",
-          "onTagAdded",
-          "onTagRemoved"
-        ],
-        "events": [
-          "change",
-          "tagAdded",
-          "tagRemoved"
-        ],
-        "parts": [
-          "root",
-          "label",
-          "group",
-          "tag-wrapper",
-          "tag-group",
-          "tag-list",
-          "tag",
-          "input",
-          "description",
-          "error"
-        ],
-        "defaults": {
-          "tagPlacement": "inline",
-          "size": "md",
-          "allowDuplicates": false,
-          "disabled": false,
-          "invalid": false,
-          "required": false
-        }
-      },
       "behavior": [
         "Enter adds the trimmed draft as a tag, if it passes validation, and empties the input.",
         "Enter never submits a surrounding form.",

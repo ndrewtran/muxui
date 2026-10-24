@@ -182,13 +182,15 @@ test('a default shows only where it applies: executed for a derived family, auth
 });
 
 test('an authored family gives a catalog fact to the root that declares it, else to the only part that does, and borrows none across parts', () => {
-	const api = page('switch-field');
-	const [root, button] = ['SwitchField.Root', 'SwitchField.Button'].map((heading) => partNamed(api, heading));
-	// disabled is declared by both Root and Button, and the catalog's false belongs to the root.
-	assert.deepEqual(rowNamed(root, 'disabled').default, { text: 'false', authored: true });
-	assert.equal('default' in rowNamed(button, 'disabled'), false);
-	assert.equal(rowNamed(root, 'onChange').event, 'change');
-	assert.equal(rowNamed(button, 'disabled').event, undefined);
+	const api = page('card');
+	const [root, button] = ['Card.Root', 'Card.Button'].map((heading) => partNamed(api, heading));
+	// variant is declared by both Root and Button, and the catalog's default belongs to the root.
+	assert.deepEqual(rowNamed(root, 'variant').default, { text: "'outlined'", authored: true });
+	assert.equal('default' in rowNamed(button, 'variant'), false);
+	// disabled is declared by Button alone, so it takes the catalog's false, and so does the event the catalog names for it.
+	assert.deepEqual(rowNamed(button, 'disabled').default, { text: 'false', authored: true });
+	assert.equal(rowNamed(button, 'onActivate').event, 'activate');
+	assert.equal(rowNamed(root, 'variant').event, undefined);
 	// A derived family's part has the defaults of its own partApis entry.
 	const select = page('select');
 	assert.ok(rowsOf(partNamed(select, 'Select.Root')).some((row) => row.default !== undefined && !row.default.authored));
@@ -212,11 +214,10 @@ test('events list the catalog channels with the exact signatures the declaration
 });
 
 test('catalog props no part declares are listed, and a family whose parts declare them all lists none', () => {
-	assert.deepEqual(page('text-area').catalogOnly, [{ owner: null, names: ['rows', 'maxLength', 'placeholder'] }]);
-	assert.deepEqual(page('input').catalogOnly, [{ owner: null, names: ['type', 'placeholder'] }]);
+	assert.deepEqual(page('header-nav').catalogOnly, [{ owner: null, names: ['aria-label'] }]);
 	assert.equal(page('command-palette').catalogOnly[0].names.length, 11);
-	assert.deepEqual(page('icon-button').catalogOnly, []);
-	assert.deepEqual(page('select').catalogOnly, []);
+	// Input and TextArea derive their blocks, which no longer list the natives their control parts carry.
+	for (const slug of ['icon-button', 'select', 'input', 'text-area']) assert.deepEqual(page(slug).catalogOnly, [], slug);
 });
 
 test('parts and related exports list every export of the family with its exact import, and a hook, helper, flat part and value each have a kind', () => {

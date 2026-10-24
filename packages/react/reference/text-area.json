@@ -1,37 +1,76 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "text-area",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": {
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "text-area": "packages/react/src/supplemental/text-area.ts"
+  },
   "exports": [
     {
       "name": "TextArea",
       "entry": ".",
-      "module": "supplemental",
+      "module": "text-area",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The text, when the caller controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The starting text, when the field controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: string) => void",
+              "doc": "Called with the new text each time it changes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field disabled."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field invalid."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field required."
+            },
+            {
+              "name": "readOnly",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the field read-only."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
-            },
-            { "name": "value", "optional": true, "type": "string" },
-            { "name": "defaultValue", "optional": true, "type": "string" },
-            { "name": "onChange", "optional": true, "type": "(value: string) => void" }
+              "values": ["sm", "md", "lg"],
+              "doc": "The field's size."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
             {
               "type": "React.HTMLAttributes<HTMLDivElement>",
-              "omit": ["onChange"]
+              "omit": ["onChange", "defaultValue"]
             }
           ]
         },
@@ -82,77 +121,108 @@
   ],
   "types": [
     {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     },
     {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
-      "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
-        {
-          "name": "size",
-          "optional": true,
-          "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
-        }
-      ]
-    },
-    {
-      "id": "supplemental#TextAreaDescriptionProps",
+      "id": "text-area#TextAreaDescriptionProps",
       "name": "TextAreaDescriptionProps",
-      "module": "supplemental",
+      "module": "text-area",
       "public": [
         { "entry": ".", "name": "TextAreaDescriptionProps" }
       ],
       "owner": "text-area",
       "text": "type TextAreaDescriptionProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#TextAreaErrorProps",
+      "id": "text-area#TextAreaErrorProps",
       "name": "TextAreaErrorProps",
-      "module": "supplemental",
+      "module": "text-area",
       "public": [
         { "entry": ".", "name": "TextAreaErrorProps" }
       ],
       "owner": "text-area",
       "text": "type TextAreaErrorProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#TextAreaLabelProps",
+      "id": "text-area#TextAreaLabelProps",
       "name": "TextAreaLabelProps",
-      "module": "supplemental",
+      "module": "text-area",
       "public": [
         { "entry": ".", "name": "TextAreaLabelProps" }
       ],
       "owner": "text-area",
       "text": "type TextAreaLabelProps = PartProps<HTMLLabelElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#TextAreaProps",
+      "id": "text-area#TextAreaOwnProps",
+      "name": "TextAreaOwnProps",
+      "module": "text-area",
+      "text": "type TextAreaOwnProps = {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The text, when the caller controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The starting text, when the field controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: string) => void",
+          "doc": "Called with the new text each time it changes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field disabled."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field invalid."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field required."
+        },
+        {
+          "name": "readOnly",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the field read-only."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The field's size."
+        }
+      ]
+    },
+    {
+      "id": "text-area#TextAreaProps",
       "name": "TextAreaProps",
-      "module": "supplemental",
+      "module": "text-area",
       "public": [
         { "entry": ".", "name": "TextAreaProps" }
       ],
@@ -160,15 +230,15 @@
       "text": "type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;"
     },
     {
-      "id": "supplemental#TextAreaRootProps",
+      "id": "text-area#TextAreaRootProps",
       "name": "TextAreaRootProps",
-      "module": "supplemental",
+      "module": "text-area",
       "public": [
         { "entry": ".", "name": "TextAreaRootProps" }
       ],
       "owner": "text-area",
-      "text": "type TextAreaRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {\n  value?: string;\n  defaultValue?: string;\n  onChange?: (value: string) => void;\n};",
-      "refs": ["supplemental#SupplementalFieldProps"]
+      "text": "type TextAreaRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> & TextAreaOwnProps;",
+      "refs": ["text-area#TextAreaOwnProps"]
     }
   ]
 }

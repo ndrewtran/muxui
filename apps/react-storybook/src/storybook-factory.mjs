@@ -204,8 +204,6 @@ function inferControl(name, defaults, props, family, propDetails) {
     && props.some((prop) => NUMBER_VALUE_CONTEXT_PROPS.has(prop))) {
     return { control: { type: 'number' } };
   }
-  // TextArea rows is the native line count, not table rows.
-  if (family === 'TextArea' && name === 'rows') return { control: { type: 'number' } };
   if (ARRAY_PROPS.has(name) || Array.isArray(defaults[name])) return { control: 'object' };
   if (NUMBER_PROPS.has(name)) return { control: { type: 'number' } };
   if (typeof defaults[name] === 'number') return { control: { type: 'number' } };
@@ -283,8 +281,19 @@ export function argTypesForBinding(binding, typed) {
   }));
 }
 
+// The list prop whose adapter supplies sample entries when a story gives none, so an empty default list is no list.
+const SAMPLED_LIST_PROPS = Object.freeze({ Breadcrumbs: 'items', TagSelect: 'items', InputTags: 'defaultValue' });
+
+/** The binding's API defaults a story seeds from, less an empty list its adapter replaces with samples. */
+function seedDefaults(binding) {
+  const defaults = { ...(storyApi(binding).defaults ?? {}) };
+  const list = SAMPLED_LIST_PROPS[binding.export];
+  if (list !== undefined && Array.isArray(defaults[list]) && defaults[list].length === 0) delete defaults[list];
+  return defaults;
+}
+
 function normalizeDefaultArgs(binding) {
-  const args = { ...(storyApi(binding).defaults ?? {}) };
+  const args = seedDefaults(binding);
   const props = new Set(storyApi(binding).props);
   for (const [controlled, uncontrolled] of CONTROLLED_DEFAULT_PAIRS) {
     if (!props.has(controlled) || !props.has(uncontrolled)) continue;
@@ -292,10 +301,6 @@ function normalizeDefaultArgs(binding) {
       args[uncontrolled] = args[controlled];
     }
     delete args[controlled];
-  }
-  // The adapters supply sample items when none are given, so an empty default list is no list.
-  if ((binding.export === 'Breadcrumbs' || binding.export === 'TagSelect') && Array.isArray(args.items) && args.items.length === 0) {
-    delete args.items;
   }
   if (binding.export === 'Message') {
     for (const name of ['actions', 'sources', 'followUps']) if (Array.isArray(args[name]) && args[name].length === 0) delete args[name];
@@ -318,7 +323,7 @@ function kebabCase(value) {
 }
 
 function sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs) {
-  const defaults = storyApi(binding).defaults ?? {};
+  const defaults = seedDefaults(binding);
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
   if (sourceValue !== undefined) return sourceValue;
   if (controlled === 'mode') return 'light';
@@ -427,7 +432,7 @@ function resetStateArgs(binding, sourceArgs, preserveExplicit = false) {
     if (preserveExplicit && (Object.hasOwn(args, controlled) || Object.hasOwn(args, uncontrolled))) continue;
     delete args[controlled];
     if (args[uncontrolled] === undefined) {
-      const defaults = storyApi(binding).defaults ?? {};
+      const defaults = seedDefaults(binding);
       const value = defaults[uncontrolled] ?? defaults[controlled];
       if (value !== undefined) args[uncontrolled] = value;
     }

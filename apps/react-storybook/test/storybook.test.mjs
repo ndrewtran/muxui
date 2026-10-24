@@ -928,7 +928,6 @@ test('controls offer only what the public types admit and match their value kind
     assert.equal(controls(family).value.control, 'text', family);
     assert.equal(controls(family).defaultValue.control, 'text', family);
   }
-  assert.equal(controls('TextArea').rows.control.type, 'number');
   assert.equal(controls('Table').rows.control, 'object');
   assert.deepEqual(controls('Sidebar').status.options, ['online', 'offline']);
   // SelectNative's size is a visual size or a positive native row count; every other family offers the visual sizes alone.

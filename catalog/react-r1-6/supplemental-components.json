@@ -54,7 +54,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/button-group.mjs",
+      "runtimeSource": "packages/react/src/supplemental/button-group.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -83,7 +83,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/checkbox-field.mjs",
+      "runtimeSource": "packages/react/src/supplemental/checkbox-field.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -110,7 +110,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/color-mode-toggle.mjs",
+      "runtimeSource": "packages/react/src/supplemental/color-mode-toggle.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -200,7 +200,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/input.mjs",
+      "runtimeSource": "packages/react/src/supplemental/input.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -216,7 +216,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/input-tags.mjs",
+      "runtimeSource": "packages/react/src/supplemental/input-tags.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -289,7 +289,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/payment-input.mjs",
+      "runtimeSource": "packages/react/src/supplemental/payment-input.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -304,7 +304,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/progress-circle.mjs",
+      "runtimeSource": "packages/react/src/supplemental/progress-circle.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -332,7 +332,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/radio-field.mjs",
+      "runtimeSource": "packages/react/src/supplemental/radio-field.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -390,7 +390,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/switch-field.mjs",
+      "runtimeSource": "packages/react/src/supplemental/switch-field.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -434,7 +434,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/text-area.mjs",
+      "runtimeSource": "packages/react/src/supplemental/text-area.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
