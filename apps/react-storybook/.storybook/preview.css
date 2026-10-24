@@ -830,6 +830,14 @@ aside.sbdocs-toc--custom .toc-list-item.is-active-li::before {
   padding-inline-start: var(--muxui-semantic-layout-content-indent);
 }
 
+/* A printed page cannot open a part. The page opens them all around printing; where the browser lets the content of a closed
+   details element be shown, this does the same without a script. */
+@media print {
+  .sbdocs-content .muxui-docs-reference details::details-content {
+    content-visibility: visible;
+  }
+}
+
 /* A part, or a type, that opens on demand. */
 .sbdocs-content .muxui-docs-reference details > summary {
   display: list-item;

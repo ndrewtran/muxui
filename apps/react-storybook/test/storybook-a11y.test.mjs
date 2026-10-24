@@ -1118,6 +1118,75 @@ test('Storybook typed API reference opens and scrolls to the part or type a frag
   }
 });
 
+/** How many pages a PDF has, counted from its page objects. */
+const pdfPages = (pdf) => (pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/gu) ?? []).length;
+
+test('Storybook typed API reference prints every part and type, and puts back what printing opened', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = typedReferenceSelection();
+    if (selection.skip) return selection.skip;
+    return selection.families.includes('CommandPalette') ? false : 'CommandPalette is outside the selected families';
+  })(),
+}, async (t) => {
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    const page = await session.newPage();
+    await page.goto(session.docsUrl('CommandPalette'), { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-typed-reference]').waitFor();
+    await waitForStableHeight(page);
+    const states = () => page.evaluate(() => [...document.querySelectorAll('[data-typed-reference] details')].map((details) => details.open));
+    const rows = '[data-typed-reference] tr[data-prop]';
+    // The reader has opened one declaration of their own, which must stay as they left it.
+    await page.locator('[data-typed-reference] details[data-type] > summary').last().click();
+    const before = await states();
+    assert.ok(before.includes(false) && before.includes(true), 'the page starts with some disclosures closed and one open');
+    const onScreen = await page.evaluate((selector) => [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length, rows);
+    // The recorder listens after the page's own handlers, so it sees what printing leaves open.
+    await page.evaluate((selector) => {
+      const measure = () => ({
+        closed: document.querySelectorAll('[data-typed-reference] details:not([open])').length,
+        rows: [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length,
+        declarations: [...document.querySelectorAll('[data-typed-reference] [data-type] pre')].filter((pre) => pre.checkVisibility()).length,
+      });
+      window.printLog = [];
+      window.addEventListener('beforeprint', () => window.printLog.push(measure()));
+      window.addEventListener('afterprint', () => window.printLog.push(measure()));
+    }, rows);
+    // The browser's own print path (a PDF of the page) dispatches beforeprint and afterprint.
+    const printed = await page.pdf({ format: 'A4' });
+    const [during, after] = await page.evaluate(() => window.printLog);
+    const totals = await page.evaluate((selector) => ({ rows: document.querySelectorAll(selector).length, declarations: document.querySelectorAll('[data-typed-reference] [data-type] pre').length }), rows);
+    assert.ok(onScreen < totals.rows, `the page hides most of its ${totals.rows} rows until they are opened (it shows ${onScreen})`);
+    assert.equal(during.closed, 0, 'printing opens every part and type');
+    assert.equal(during.rows, totals.rows, `printing shows all ${totals.rows} rows`);
+    assert.equal(during.declarations, totals.declarations, `printing shows all ${totals.declarations} type declarations`);
+    assert.deepEqual(await states(), before, 'what printing opened is put back and what the reader opened stays open');
+    assert.equal(after.closed, before.filter((open) => !open).length, 'the page is closed again after printing');
+    // The PDF is as long as the page printed with everything open by hand.
+    await page.evaluate(() => document.querySelectorAll('[data-typed-reference] details').forEach((details) => { details.open = true; }));
+    const expanded = await page.pdf({ format: 'A4' });
+    assert.equal(pdfPages(printed), pdfPages(expanded), 'the printed page is the page with every part and type open');
+    assert.ok(pdfPages(printed) > 1, 'the printed page has pages');
+    // Where the browser can show the content of a closed details element, printing needs no script to show every row.
+    const fallback = await session.newPage();
+    await fallback.goto(session.docsUrl('CommandPalette'), { waitUntil: 'domcontentloaded' });
+    await fallback.locator('[data-typed-reference]').waitFor();
+    if (await fallback.evaluate(() => CSS.supports('selector(::details-content)'))) {
+      const visible = () => fallback.evaluate((selector) => ({ shown: [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length, total: document.querySelectorAll(selector).length, open: document.querySelectorAll('[data-typed-reference] details[open]').length }), rows);
+      const screen = await visible();
+      assert.ok(screen.shown < screen.total, 'on screen most rows are hidden');
+      await fallback.emulateMedia({ media: 'print' });
+      const print = await visible();
+      assert.equal(print.shown, print.total, 'in print every row is shown');
+      assert.equal(print.open, screen.open, 'without opening anything: no script ran');
+    }
+  } finally {
+    await resources.close();
+  }
+});
+
 async function runA11yWorker({
   browser,
   baseUrl,

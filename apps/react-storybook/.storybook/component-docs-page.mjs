@@ -355,6 +355,9 @@ function showFragment() {
   });
 }
 
+/** Every part and type of the reference, each a details element. */
+const disclosures = () => [...document.querySelectorAll('[data-typed-reference] details')];
+
 function TypeDeclaration({ type }) {
   return h('details', { id: typeAnchor(type.id), className: 'muxui-docs-type-declaration', 'data-type': type.name },
     h('summary', null, h('code', null, type.name), h('span', { className: 'muxui-docs-count' }, type.public === undefined ? 'not exported' : 'exported')),
@@ -377,10 +380,24 @@ function TypedReference({ typed }) {
     window.addEventListener('hashchange', showFragment);
     window.addEventListener('popstate', showFragment);
     window.addEventListener('pageshow', onPageShow);
+    // A printed page has no way to open a part, so printing opens them all and puts back the ones it opened.
+    let openedForPrint = [];
+    const beforePrint = () => {
+      openedForPrint = disclosures().filter((details) => !details.open);
+      for (const details of openedForPrint) details.open = true;
+    };
+    const afterPrint = () => {
+      for (const details of openedForPrint) details.open = false;
+      openedForPrint = [];
+    };
+    window.addEventListener('beforeprint', beforePrint);
+    window.addEventListener('afterprint', afterPrint);
     return () => {
       window.removeEventListener('hashchange', showFragment);
       window.removeEventListener('popstate', showFragment);
       window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('beforeprint', beforePrint);
+      window.removeEventListener('afterprint', afterPrint);
     };
   }, []);
   // Following a link to the fragment the address already has changes no hash, so no event fires: opening is all the click needs.
