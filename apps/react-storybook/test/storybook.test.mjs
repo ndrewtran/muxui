@@ -19,7 +19,6 @@ import defaultTheme from '../../../catalog/tokens/default-theme.json' with { typ
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
 import { componentRecordCategory } from '../src/component-categories.mjs';
 import { exactLockedProblems, readLockfile } from '../../../packages/react/test/support/locked-dependencies.mjs';
-import { familyDeclarations, joinedDeclarations } from '../../../packages/react/test/support/declarations.mjs';
 import {
   argTypesForBinding,
   adapterNames,
@@ -68,6 +67,23 @@ const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/reac
 const colorGraphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
   colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
 ]));
+
+// What a family declares, read from the committed declaration reference (Decision 0031), not from the shipped text.
+const referenceInventory = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/react/reference/inventory.json'), 'utf8'));
+
+/** The reference file of the owner of `family`'s own export. */
+async function referenceFileOf(family) {
+  const { owner } = referenceInventory.entries.flatMap((entry) => entry.exports ?? []).find(({ name }) => name === family);
+  return JSON.parse(await readFile(resolve(repositoryRoot, 'packages/react', 'reference', referenceInventory.owners[owner]), 'utf8'));
+}
+
+/** The member names `family`'s own export declares in any part and any alternative of it, from an owner's reference file. */
+function declaredMembers(file, family) {
+  const record = file.exports.find(({ name, kind }) => name === family && kind === 'component');
+  return new Set((record?.parts ?? [])
+    .flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap(({ members }) => members)])
+    .map(({ name }) => name));
+}
 
 function canonicalColorValue(colorScheme, tokenId) {
   const token = colorGraphs[colorScheme][tokenId];
@@ -351,8 +367,6 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     historicalManifest.families.map(({ family }) => family).sort(),
     'every exact manifest family has a substantive Browser Proof plan',
   );
-  // Every shipped declaration: a family's types sit in the index or in the declarations of the module that owns it.
-  const publicTypes = joinedDeclarations();
   let pairCount = 0;
   let eventCount = 0;
   let partCount = 0;
@@ -389,8 +403,9 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     );
     const events = eventBindingsForBinding(binding);
     eventCount += events.length;
-    // The callback is a member of this family's own declarations, not a name found anywhere in the package.
-    for (const { prop } of events) assert.match(familyDeclarations(publicTypes, record.family), declaresCallback(prop), `${record.family}/${prop} must be a real public callback`);
+    // The callback is a member of one of this family's own parts in the declaration reference, not a name found anywhere in the package.
+    const declared = declaredMembers(await referenceFileOf(record.family), record.family);
+    for (const { prop } of events) assert.ok(declared.has(prop), `${record.family}/${prop} must be a real public callback`);
     partCount += binding.api.parts.length;
     const anatomyMarkup = renderToStaticMarkup(story.Anatomy.render(story.Anatomy.args));
     assert.equal(
@@ -404,30 +419,25 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
   assert.equal(partCount, descriptor.bindings.reduce((count, binding) => count + binding.api.parts.length, 0), 'every descriptor API part gets an anatomy proof row');
 });
 
-/** A pattern for the member `prop` of a declaration, so a description that mentions the name does not match. */
-const declaresCallback = (prop) => new RegExp(`\\b${prop}\\??\\s*:`, 'u');
-
-test('a family\'s callback must be declared by that family, not by an unrelated declaration', () => {
-  const unrelated = [
-    'export type SliderProps = { onChange?: (value: number) => void };',
-    'export declare const Slider: ForwardRefExoticComponent<SliderProps & RefAttributes<HTMLDivElement>>;',
-    'export type HelperProps = { onChange?: (value: string) => void; onClear?: () => void };',
-    '/** Called with the value when the user changes it, onClear: also described here. */',
-    'export type ClearProps = { /** onClear: describes the member. */ label?: string };',
-    'export declare const Clear: ForwardRefExoticComponent<ClearProps & RefAttributes<HTMLDivElement>>;',
-  ].join('\n');
-  assert.match(familyDeclarations(unrelated, 'Slider'), declaresCallback('onChange'));
+test('a family\'s callback must be declared by that family, not by an unrelated export or a comment', () => {
+  const member = (name, doc) => ({ name, ...(doc && { doc }) });
+  const component = (name, ...parts) => ({ name, kind: 'component', parts });
+  const file = { exports: [
+    component('Slider', { member: null, members: [member('onChange', 'Called with the value')] }),
+    component('Helper', { member: null, members: [member('onChange'), member('onClear')] }),
+    component('Clear', { member: null, members: [member('label', 'onClear: describes the member.')] }),
+    // A compound's callbacks sit on its parts, and an alternative's members count with them.
+    component('Menu', { member: null, members: [] }, { member: 'Root', members: [member('onOpenChange')] }, { member: 'Item', alternatives: [{ members: [member('onAction')] }] }),
+  ] };
+  assert.ok(declaredMembers(file, 'Slider').has('onChange'));
   // Slider declares onChange; it does not declare onClear, which only an unrelated helper does.
-  assert.doesNotMatch(familyDeclarations(unrelated, 'Slider'), declaresCallback('onClear'));
+  assert.equal(declaredMembers(file, 'Slider').has('onClear'), false);
   // The name in a member's description is not the member.
-  assert.doesNotMatch(familyDeclarations(unrelated, 'Clear'), declaresCallback('onClear'));
-  // A compound's parts are part of its declaration.
-  const compound = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport declare const Menu: ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport type MenuProps = {};';
-  assert.match(familyDeclarations(compound, 'Menu'), declaresCallback('onOpenChange'));
-  // A compound a module declares as a type of its own (Menu's `MenuComponent`) counts the same, though the module does not export it.
-  const aliased = 'export type RootProps = { onOpenChange?: (open: boolean) => void };\nexport type OtherProps = { onClear?: () => void };\ntype MenuComponent = ForwardRefExoticComponent<MenuProps> & {\n  Root: ForwardRefExoticComponent<RootProps>;\n};\nexport declare const Menu: MenuComponent;\nexport type MenuProps = {};';
-  assert.match(familyDeclarations(aliased, 'Menu'), declaresCallback('onOpenChange'));
-  assert.doesNotMatch(familyDeclarations(aliased, 'Menu'), declaresCallback('onClear'));
+  assert.equal(declaredMembers(file, 'Clear').has('onClear'), false);
+  assert.ok(declaredMembers(file, 'Menu').has('onOpenChange'));
+  assert.ok(declaredMembers(file, 'Menu').has('onAction'));
+  assert.equal(declaredMembers(file, 'Menu').has('onClear'), false);
+  assert.equal(declaredMembers(file, 'Missing').size, 0, 'a family the file does not hold declares nothing');
 });
 
 test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {

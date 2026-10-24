@@ -858,6 +858,413 @@ test('NumberField sizing story computes fit-content, 12rem, and full container w
   }
 });
 
+// Every Docs page carries the typed API reference as Storybook's own interface. These are the pages where it is largest or hardest.
+const typedReferenceFamilies = ['IconButton', 'Dialog', 'Resizable', 'Text', 'Virtualizer', 'SwitchField', 'TextArea', 'CommandPalette', 'Select'];
+
+/** The typed-reference families this run proves: all of them for a full or chrome run, else the selected ones that are among them. */
+function typedReferenceSelection() {
+  if (process.env.MUXUI_STORYBOOK_UI_PROOF === 'skip') return { skip: 'Storybook own-interface proof is skipped by MUXUI_STORYBOOK_UI_PROOF=skip' };
+  const { proof } = resolveStorybookPageSelection();
+  if (proof === 'full' || proof === 'chrome') return { families: typedReferenceFamilies };
+  if (proof !== 'component') return { skip: `not part of ${proof} proof` };
+  const families = typedReferenceFamilies.filter((family) => (selectedStorybookFamilies() ?? []).includes(family));
+  return families.length > 0 ? { families } : { skip: 'no selected family is among the typed reference pages' };
+}
+
+/** A Storybook, a browser and a way to find a family's Docs page, for the typed reference proofs. The resources close with the test. */
+async function typedReferenceSession(signal, resources) {
+  throwIfAborted(signal);
+  const executablePath = await findBrowser();
+  throwIfAborted(signal);
+  assert.ok(executablePath, 'Chrome or Chromium is required for the typed reference proof (set MUXUI_CHROME_EXECUTABLE to override)');
+  let port;
+  try {
+    port = await reservePort(configuredPort());
+  } catch {
+    port = await reservePort(undefined);
+  }
+  const started = await startStorybook(port, signal);
+  await resources.trackStorybook(started.child);
+  const index = await fetch(`${started.baseUrl}/index.json`, {
+    signal: AbortSignal.any([AbortSignal.timeout(10_000), signal]),
+  }).then((response) => response.json());
+  const browser = await chromium.launch({ executablePath, headless: true });
+  await resources.trackBrowser(browser);
+  return {
+    baseUrl: started.baseUrl,
+    browser,
+    docsUrl(family, scheme = 'light', hash = '') {
+      const entry = Object.values(index.entries).find((candidate) => candidate.type === 'docs' && storyFamily(candidate) === family);
+      assert.ok(entry, `${family}: Storybook must expose its Docs page`);
+      return `${started.baseUrl}/iframe.html?viewMode=docs&id=${encodeURIComponent(entry.id)}&globals=${encodeURIComponent(`colorScheme:${scheme}`)}${hash}`;
+    },
+    async newPage(viewport = { width: 1_190, height: 900 }) {
+      const page = await browser.newPage({ viewport });
+      page.setDefaultNavigationTimeout(storyTimeoutMs * 4);
+      page.setDefaultTimeout(storyTimeoutMs * 4);
+      return page;
+    },
+  };
+}
+
+/**
+ * Embedded stories and code blocks settle after the reference appears and move what is below them, so a proof that follows a
+ * link to a target near the end of the page waits for the page to stop growing first.
+ */
+const waitForStableHeight = (page) => page.waitForFunction(() => new Promise((resolveStable) => {
+  let height = document.documentElement.scrollHeight;
+  let stableFrames = 0;
+  const frame = () => {
+    const next = document.documentElement.scrollHeight;
+    stableFrames = next === height ? stableFrames + 1 : 0;
+    height = next;
+    if (stableFrames >= 30) resolveStable(true);
+    else requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}));
+
+test('Storybook typed API reference is axe-clean, keyboard-operable and reflows in light and dark', {
+  timeout: testTimeoutMs,
+  skip: typedReferenceSelection().skip ?? false,
+}, async (t) => {
+  const { families } = typedReferenceSelection();
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    const page = await session.newPage();
+    for (const family of families) {
+      for (const scheme of ['light', 'dark']) {
+        throwIfAborted(t.signal);
+        const label = `${family}/${scheme}`;
+        await page.setViewportSize({ width: 1_190, height: 900 });
+        await page.goto(session.docsUrl(family, scheme), { waitUntil: 'domcontentloaded' });
+        await page.locator('[data-typed-reference]').waitFor();
+        await page.addScriptTag({ content: axe.source });
+        await waitForDocumentAnimations(page);
+        await waitForStableHeight(page);
+
+        // Keyboard: from the reference's first heading, Tab reaches a link of the exports index, then a collapsed summary,
+        // and Enter on each does what it names.
+        await page.evaluate(() => {
+          const start = document.querySelector('#api-exports');
+          start.tabIndex = -1;
+          start.focus();
+        });
+        const reached = [];
+        for (let presses = 0; presses < 600 && !reached.includes('summary'); presses += 1) {
+          await page.keyboard.press('Tab');
+          const where = await page.evaluate(() => {
+            const active = document.activeElement;
+            if (!active?.closest('[data-typed-reference]')) return 'outside';
+            if (active.matches('summary')) return 'summary';
+            if (active.matches('a[href]')) return 'link';
+            return active.localName;
+          });
+          assert.notEqual(where, 'outside', `${label}: Tab must reach a summary before leaving the reference`);
+          assert.ok(['link', 'summary'].includes(where), `${label}: only links and summaries take focus in the reference, got ${where}`);
+          if (!reached.includes(where)) reached.push(where);
+          if (where === 'summary' || presses === 0) {
+            const focus = await page.evaluate(() => {
+              const style = getComputedStyle(document.activeElement);
+              return { outline: style.outlineStyle, width: style.outlineWidth, shadow: style.boxShadow };
+            });
+            assert.ok(focus.outline !== 'none' || focus.shadow !== 'none', `${label}: the focused ${where} must show a focus indicator`);
+          }
+        }
+        assert.deepEqual(reached, ['link', 'summary'], `${label}: Tab reaches the index links, then a summary`);
+        const toggled = await page.evaluate(() => document.activeElement.parentElement.open);
+        assert.equal(toggled, false, `${label}: the first summary starts collapsed`);
+        await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement.parentElement.open), true, `${label}: Enter opens the summary`);
+        await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement.parentElement.open), false, `${label}: Enter closes it again`);
+
+        // Following a type link lands on its declaration, opened.
+        const target = await page.evaluate(() => {
+          const link = document.querySelector('[data-typed-reference] a[href^="#type-"]');
+          link.focus();
+          return link.getAttribute('href');
+        });
+        await page.keyboard.press('Enter');
+        const landed = await page.evaluate((href) => ({ hash: window.location.hash, open: document.getElementById(href.slice(1))?.open }), target);
+        assert.equal(landed.hash, target, `${label}: Enter follows the type link`);
+        assert.equal(landed.open, true, `${label}: the linked declaration opens`);
+        // The browser scrolls to the target, so its top lands at the viewport top (give or take a subpixel).
+        await page.waitForFunction((href) => {
+          const top = document.getElementById(href.slice(1)).getBoundingClientRect().top;
+          return top > -1 && top < innerHeight;
+        }, target, { timeout: 15_000 }).catch(async (error) => {
+          const where = await page.evaluate((href) => ({
+            top: document.getElementById(href.slice(1)).getBoundingClientRect().top, scrollY, height: document.documentElement.scrollHeight, hash: location.hash,
+          }), target);
+          throw new Error(`${label}: following ${target} did not scroll to it (${JSON.stringify(where)})`, { cause: error });
+        });
+
+        // Every part and type open, at the page width and at a phone width.
+        await page.evaluate(() => document.querySelectorAll('[data-typed-reference] details').forEach((details) => { details.open = true; }));
+        for (const width of [1_190, 390]) {
+          await page.setViewportSize({ width, height: 900 });
+          await waitForDocumentAnimations(page);
+          const overflow = await page.evaluate(() => {
+            const reference = document.querySelector('[data-typed-reference]');
+            const wide = [...reference.querySelectorAll('*')].filter((element) => {
+              const box = element.getBoundingClientRect();
+              return box.width > 0 && box.right > document.documentElement.clientWidth + 1
+                && !element.closest('pre');
+            }).slice(0, 5).map((element) => `${element.localName}.${element.className} ${element.textContent.slice(0, 40)}`);
+            // A cell squeezed into a sliver breaks its words letter by letter without overflowing, so measure it too.
+            const slivers = [...reference.querySelectorAll('tbody td, tbody th')].filter((cell) => {
+              const box = cell.getBoundingClientRect();
+              return cell.textContent.trim() !== '' && box.width > 0 && box.height > box.width * 2;
+            }).slice(0, 5).map((cell) => `${cell.localName}[${cell.dataset.cell ?? ''}] ${cell.getBoundingClientRect().width}x${cell.getBoundingClientRect().height} ${cell.textContent.slice(0, 30)}`);
+            return { reference: reference.scrollWidth - reference.clientWidth, wide, slivers };
+          });
+          // The page's own code blocks scroll sideways on a narrow viewport; only the reference has to fit.
+          assert.ok(overflow.reference <= 0, `${label}@${width}: the reference clips ${overflow.reference}px`);
+          assert.deepEqual(overflow.wide, [], `${label}@${width}: nothing in the reference runs past the viewport`);
+          assert.deepEqual(overflow.slivers, [], `${label}@${width}: no table cell is squeezed into a sliver`);
+          const result = await runAxe(page, '[data-typed-reference]');
+          assert.equal(result.violations.length, 0, `${label}@${width} has axe violations:\n${formatViolations(result.violations)}`);
+        }
+        t.diagnostic(`${label}: keyboard, overflow and axe pass`);
+      }
+    }
+  } finally {
+    await resources.close();
+  }
+});
+
+/** Waits until the fragment of the address names a disclosure that is open and on screen, or says where it is instead. */
+async function waitForFragmentShown(page, label, timeout = 20_000) {
+  const place = () => page.evaluate(() => {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    return { hash: location.hash, found: target !== null, open: target?.open, top: target?.getBoundingClientRect().top, scrollY, height: document.documentElement.scrollHeight, viewport: innerHeight };
+  });
+  await page.waitForFunction(() => {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target === null) return false;
+    const { top } = target.getBoundingClientRect();
+    return target.open === true && top > -1 && top < innerHeight;
+  }, undefined, { timeout }).catch(async (error) => {
+    throw new Error(`${label}: the fragment's target is not open and in view (${JSON.stringify(await place())})`, { cause: error });
+  });
+}
+
+/** CommandPalette's Docs address, and the ids of a closed part and a closed type to link to. It has 29 parts, so all but the first are closed, and its page is long. */
+async function commandPaletteFragments(session) {
+  const url = session.docsUrl('CommandPalette');
+  const probe = await session.newPage();
+  await probe.goto(url, { waitUntil: 'domcontentloaded' });
+  await probe.locator('[data-typed-reference]').waitFor();
+  const ids = await probe.evaluate(() => {
+    const closed = [...document.querySelectorAll('[data-typed-reference] details:not([open])')];
+    return {
+      part: closed.filter((details) => details.hasAttribute('data-part')).at(2)?.id,
+      type: closed.filter((details) => details.hasAttribute('data-type')).at(-2)?.id,
+    };
+  });
+  await probe.close();
+  assert.ok(ids.part && ids.type, `CommandPalette has closed parts and types to link to (${JSON.stringify(ids)})`);
+  return { url, ids };
+}
+
+test('Storybook typed API reference opens and scrolls to the part or type a fragment names, on load, on a hash change, and on Back and Forward', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = typedReferenceSelection();
+    if (selection.skip) return selection.skip;
+    return selection.families.includes('CommandPalette') ? false : 'CommandPalette is outside the selected families';
+  })(),
+}, async (t) => {
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    const { url, ids } = await commandPaletteFragments(session);
+
+    // A cold load at a fragment, with nothing yet settled: the part and the type each open and end in view.
+    for (const [kind, id] of Object.entries(ids)) {
+      const page = await session.newPage();
+      await page.goto(`${url}#${id}`, { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-typed-reference]').waitFor();
+      await waitForStableHeight(page);
+      await waitForFragmentShown(page, `cold load at a ${kind} fragment`);
+      await page.close();
+    }
+
+    const page = await session.newPage();
+    const closeTarget = () => page.evaluate(() => { document.getElementById(decodeURIComponent(location.hash.slice(1))).open = false; });
+    await page.goto(`${url}#${ids.part}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-typed-reference]').waitFor();
+    await waitForStableHeight(page);
+    await waitForFragmentShown(page, 'cold load before the hash changes');
+    // The reader closes the part, then follows a link to a type: the type opens and is in view.
+    await closeTarget();
+    await page.evaluate((id) => { location.hash = id; }, ids.type);
+    await waitForFragmentShown(page, 'a hash change to a type');
+    // Back returns to the part they had closed, which opens again and is in view; Forward returns to the type, closed meanwhile.
+    await closeTarget();
+    await page.goBack();
+    assert.equal(new URL(page.url()).hash, `#${ids.part}`, 'Back returns to the part fragment');
+    await waitForFragmentShown(page, 'Back to a part that was closed');
+    await closeTarget();
+    await page.goForward();
+    assert.equal(new URL(page.url()).hash, `#${ids.type}`, 'Forward returns to the type fragment');
+    await waitForFragmentShown(page, 'Forward to a type that was closed');
+    // Leaving the page and coming Back returns to the fragment with its target open and in view, whether the page reloads or comes from the cache.
+    await closeTarget();
+    await page.goto('about:blank');
+    await page.goBack();
+    await page.locator('[data-typed-reference]').waitFor();
+    await waitForStableHeight(page);
+    await waitForFragmentShown(page, 'Back from another document');
+  } finally {
+    await resources.close();
+  }
+});
+
+// Storybook loads its syntax highlighter and formatter on demand, and each code block of the page grows when they arrive: that is the
+// late content that moves a fragment's target after the page first shows it. These requests are the ones the proof delays.
+const lateContent = /\/sb-vite\/deps\/(?:formatter|syntaxhighlighter)-[^/?]*\.js/u;
+
+test('Storybook typed API reference keeps the part or type a fragment names in view while the page loads late, until the reader scrolls', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = typedReferenceSelection();
+    if (selection.skip) return selection.skip;
+    return selection.families.includes('CommandPalette') ? false : 'CommandPalette is outside the selected families';
+  })(),
+}, async (t) => {
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    const { url, ids } = await commandPaletteFragments(session);
+    /** A cold load at `id` in which the highlighter and formatter arrive `lateMs` after they are asked for. Resolves once both have and the page has settled. */
+    const loadLate = async (id, lateMs) => {
+      const page = await session.newPage();
+      let arrived = 0;
+      await page.route(lateContent, async (route) => {
+        await delay(lateMs);
+        await route.continue();
+      });
+      page.on('requestfinished', (request) => { if (lateContent.test(request.url())) arrived += 1; });
+      await page.goto(`${url}#${id}`, { waitUntil: 'domcontentloaded' });
+      await page.locator('[data-typed-reference]').waitFor();
+      const arrival = async () => {
+        const deadline = Date.now() + lateMs + 20_000;
+        while (arrived < 2) {
+          if (Date.now() > deadline) throw new Error(`the delayed highlighter and formatter did not arrive (${arrived} of 2)`);
+          await delay(50);
+        }
+        await waitForStableHeight(page);
+      };
+      return { page, arrival };
+    };
+    const topOf = (page) => page.evaluate(() => document.getElementById(decodeURIComponent(location.hash.slice(1))).getBoundingClientRect().top);
+
+    // The late content arrives after the page first shows, and the target is still in view once it has.
+    for (const lateMs of [1_800, 4_000]) {
+      for (const [kind, id] of Object.entries(ids)) {
+        const { page, arrival } = await loadLate(id, lateMs);
+        await arrival();
+        await waitForFragmentShown(page, `a cold load at a ${kind} fragment with the highlighter ${lateMs} ms late`, 3_000);
+        t.diagnostic(`${kind} fragment, content ${lateMs} ms late: the target ends ${Math.round(await topOf(page))} px from the top of the viewport`);
+        await page.close();
+      }
+    }
+
+    // A reader who scrolls, presses a key or touches the page is not pulled back to the target by content that arrives after.
+    const interruptions = {
+      'scrolls the wheel': (page) => page.mouse.wheel(0, -4_000),
+      'presses a key': (page) => page.keyboard.press('Shift'),
+      'presses the pointer': async (page) => { await page.mouse.move(600, 12); await page.mouse.down(); await page.mouse.up(); },
+    };
+    for (const [what, interrupt] of Object.entries(interruptions)) {
+      const { page, arrival } = await loadLate(ids.part, 4_000);
+      // The first scroll happens when the page loads, long before the highlighter arrives.
+      await page.waitForFunction(() => document.getElementById(decodeURIComponent(location.hash.slice(1))).getBoundingClientRect().top < 400);
+      await page.mouse.move(600, 400);
+      await interrupt(page);
+      await arrival();
+      const top = await topOf(page);
+      const height = await page.evaluate(() => innerHeight);
+      assert.ok(top < -1 || top >= height, `after the reader ${what}, late content does not scroll the page back to the target (it is ${Math.round(top)} px from the top of a ${height} px viewport)`);
+      await page.close();
+    }
+  } finally {
+    await resources.close();
+  }
+});
+
+/** How many pages a PDF has, counted from its page objects. */
+const pdfPages = (pdf) => (pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/gu) ?? []).length;
+
+test('Storybook typed API reference prints every part and type, and puts back what printing opened', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = typedReferenceSelection();
+    if (selection.skip) return selection.skip;
+    return selection.families.includes('CommandPalette') ? false : 'CommandPalette is outside the selected families';
+  })(),
+}, async (t) => {
+  const resources = createAuditResources(t.signal);
+  try {
+    const session = await typedReferenceSession(t.signal, resources);
+    const page = await session.newPage();
+    await page.goto(session.docsUrl('CommandPalette'), { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-typed-reference]').waitFor();
+    await waitForStableHeight(page);
+    const states = () => page.evaluate(() => [...document.querySelectorAll('[data-typed-reference] details')].map((details) => details.open));
+    const rows = '[data-typed-reference] tr[data-prop]';
+    // The reader has opened one declaration of their own, which must stay as they left it.
+    await page.locator('[data-typed-reference] details[data-type] > summary').last().click();
+    const before = await states();
+    assert.ok(before.includes(false) && before.includes(true), 'the page starts with some disclosures closed and one open');
+    const onScreen = await page.evaluate((selector) => [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length, rows);
+    // The recorder listens after the page's own handlers, so it sees what printing leaves open.
+    await page.evaluate((selector) => {
+      const measure = () => ({
+        closed: document.querySelectorAll('[data-typed-reference] details:not([open])').length,
+        rows: [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length,
+        declarations: [...document.querySelectorAll('[data-typed-reference] [data-type] pre')].filter((pre) => pre.checkVisibility()).length,
+      });
+      window.printLog = [];
+      window.addEventListener('beforeprint', () => window.printLog.push(measure()));
+      window.addEventListener('afterprint', () => window.printLog.push(measure()));
+    }, rows);
+    // The browser's own print path (a PDF of the page) dispatches beforeprint and afterprint.
+    const printed = await page.pdf({ format: 'A4' });
+    const [during, after] = await page.evaluate(() => window.printLog);
+    const totals = await page.evaluate((selector) => ({ rows: document.querySelectorAll(selector).length, declarations: document.querySelectorAll('[data-typed-reference] [data-type] pre').length }), rows);
+    assert.ok(onScreen < totals.rows, `the page hides most of its ${totals.rows} rows until they are opened (it shows ${onScreen})`);
+    assert.equal(during.closed, 0, 'printing opens every part and type');
+    assert.equal(during.rows, totals.rows, `printing shows all ${totals.rows} rows`);
+    assert.equal(during.declarations, totals.declarations, `printing shows all ${totals.declarations} type declarations`);
+    assert.deepEqual(await states(), before, 'what printing opened is put back and what the reader opened stays open');
+    assert.equal(after.closed, before.filter((open) => !open).length, 'the page is closed again after printing');
+    // The PDF is as long as the page printed with everything open by hand.
+    await page.evaluate(() => document.querySelectorAll('[data-typed-reference] details').forEach((details) => { details.open = true; }));
+    const expanded = await page.pdf({ format: 'A4' });
+    assert.equal(pdfPages(printed), pdfPages(expanded), 'the printed page is the page with every part and type open');
+    assert.ok(pdfPages(printed) > 1, 'the printed page has pages');
+    // Where the browser can show the content of a closed details element, printing needs no script to show every row.
+    const fallback = await session.newPage();
+    await fallback.goto(session.docsUrl('CommandPalette'), { waitUntil: 'domcontentloaded' });
+    await fallback.locator('[data-typed-reference]').waitFor();
+    if (await fallback.evaluate(() => CSS.supports('selector(::details-content)'))) {
+      const visible = () => fallback.evaluate((selector) => ({ shown: [...document.querySelectorAll(selector)].filter((row) => row.checkVisibility()).length, total: document.querySelectorAll(selector).length, open: document.querySelectorAll('[data-typed-reference] details[open]').length }), rows);
+      const screen = await visible();
+      assert.ok(screen.shown < screen.total, 'on screen most rows are hidden');
+      await fallback.emulateMedia({ media: 'print' });
+      const print = await visible();
+      assert.equal(print.shown, print.total, 'in print every row is shown');
+      assert.equal(print.open, screen.open, 'without opening anything: no script ran');
+    }
+  } finally {
+    await resources.close();
+  }
+});
+
 async function runA11yWorker({
   browser,
   baseUrl,

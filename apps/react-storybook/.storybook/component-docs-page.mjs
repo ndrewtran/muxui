@@ -74,6 +74,370 @@ function PageLink({ Anchor, href, children, ...props }) {
     : h('a', { href: standaloneAddress(href), ...props }, children);
 }
 
+/** A literal for a finite value or a default, written as TypeScript does. */
+const literal = (value) => typeof value === 'string' ? `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'` : JSON.stringify(value);
+const slug = (text) => text.replace(/([a-z0-9])([A-Z])/gu, '$1-$2').replace(/[^A-Za-z0-9]+/gu, '-').replace(/^-|-$/gu, '').toLowerCase();
+const typeAnchor = (id) => `type-${slug(id)}`;
+const partLabel = (exported, part) => part.member === null ? exported.name : `${exported.name}.${part.member}`;
+const exportAnchor = (exported) => `api-${slug(exported.name)}`;
+const partAnchor = (exported, part) => part.member === null ? `${exportAnchor(exported)}-component` : `${exportAnchor(exported)}-${slug(part.member)}`;
+const importLine = (exported) => exported.kind === 'type'
+  ? `import type { ${exported.name} } from '${exported.specifier}';`
+  : `import { ${exported.name} } from '${exported.specifier}';`;
+/** A part with more members than this shows only the first behind its heading; the rest open on demand. */
+const collapsedFrom = 8;
+
+/** The names a type text shares with the Mux UI types it refers to link to those types' printed declarations. */
+function TypeText({ text, refs = [], className }) {
+  const links = new Map(refs.map((id) => [id.slice(id.indexOf('#') + 1), id]));
+  const pieces = text.split(/('(?:[^'\\]|\\.)*'|[A-Za-z_$][\w$]*)/u).map((piece, index) => links.has(piece)
+    ? h('a', { key: index, href: `#${typeAnchor(links.get(piece))}` }, piece)
+    : piece);
+  return h('code', { className }, pieces);
+}
+
+function InlineCodes({ items }) {
+  return h('span', { className: 'muxui-docs-codes' }, items.map((item, index) => h('code', { key: index }, item)));
+}
+
+/**
+ * How an alternative is named in the unified table's "Applies when" column, from its own members alone: the finite
+ * values of the member every alternative declares with disjoint literals, else the members it requires and another
+ * alternative does not, else `otherwise`. Two alternatives that read alike are numbered.
+ */
+function alternativeLabels(alternatives) {
+  const names = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
+  const find = (alternative, name) => alternative.members.find((member) => member.name === name);
+  const discriminant = names.find((name) => {
+    const members = alternatives.map((alternative) => find(alternative, name));
+    if (members.some((member) => member === undefined || member.never === true || member.values === undefined)) return false;
+    const values = members.flatMap((member) => member.values);
+    return new Set(values).size === values.length;
+  });
+  const required = (alternative, name) => { const member = find(alternative, name); return member !== undefined && member.optional !== true && member.never !== true; };
+  const labels = alternatives.map((alternative) => {
+    if (discriminant !== undefined) return `${discriminant} = ${find(alternative, discriminant).values.map(literal).join(' | ')}`;
+    const own = names.filter((name) => required(alternative, name) && alternatives.some((other) => !required(other, name)));
+    return own.length > 0 ? `requires ${own.join(', ')}` : 'otherwise';
+  });
+  return labels.map((label, index) => labels.indexOf(label) === labels.lastIndexOf(label) ? label : `${label} (${index + 1})`);
+}
+
+/**
+ * The groups of a part's unified table (layout C): the members every alternative shares first, then one group per
+ * alternative, each closing with the members it declares `never` (not allowed) and the members only other
+ * alternatives declare (not declared). A part without alternatives is one unlabelled group. In every group a member
+ * declared `never` is no row: it is named by the closing row, so it never reads as an optional prop.
+ */
+function partGroups(part) {
+  const alternatives = part.alternatives ?? [];
+  const allowed = (members) => members.filter(({ never }) => never !== true);
+  const forbidden = (members) => members.filter(({ never }) => never === true).map(({ name }) => name);
+  if (alternatives.length === 0) return [{ label: null, members: allowed(part.members ?? []), notAllowed: forbidden(part.members ?? []), notDeclared: [] }];
+  const labels = alternativeLabels(alternatives);
+  const declared = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))];
+  return [
+    ...((part.members ?? []).length > 0 ? [{ label: 'Common', common: true, members: allowed(part.members), notAllowed: forbidden(part.members), notDeclared: [] }] : []),
+    ...alternatives.map((alternative, index) => ({
+      label: labels[index],
+      ref: alternative.ref,
+      natives: alternative.natives,
+      members: allowed(alternative.members),
+      notAllowed: forbidden(alternative.members),
+      notDeclared: declared.filter((name) => !alternative.members.some((member) => member.name === name)),
+    })),
+  ];
+}
+
+/** True when a part declares a member or a ref `never`, so the page explains what that means. */
+const usesNever = (part) => [part, ...(part.alternatives ?? [])].some((body) => body.ref?.never === true || (body.members ?? []).some(({ never }) => never === true));
+
+function RefText({ ref: declared }) {
+  if (declared === undefined || declared === null) return h('span', { className: 'muxui-docs-none' }, 'none declared');
+  if (declared.never === true) return h(React.Fragment, null, 'not allowed, ', h('code', null, declared.required === true ? 'ref: never' : 'ref?: never'));
+  return h(TypeText, { text: declared.type, refs: declared.refs });
+}
+
+function NativeText({ natives }) {
+  if (natives === undefined || natives.length === 0) return h('span', { className: 'muxui-docs-none' }, 'none declared');
+  return natives.map((native, index) => h('span', { key: index, className: 'muxui-docs-native' },
+    h(TypeText, { text: native.type, refs: native.refs }),
+    native.omit?.length > 0 && h(React.Fragment, null, ' except ', h(InlineCodes, { items: native.omit }))));
+}
+
+/**
+ * The catalog's default for a prop, where it applies to this declaration of it: not to a required member, and not
+ * where the member's finite values leave the default out (Virtualizer's `layout` defaults to stack, which its grid
+ * alternative does not admit).
+ */
+function DefaultCell({ member, part, provenance }) {
+  const applies = part.defaults !== undefined && Object.hasOwn(part.defaults, member.name)
+    && member.optional === true && (member.values === undefined || member.values.includes(part.defaults[member.name]));
+  if (!applies) return h('span', { className: 'muxui-docs-none' }, 'none listed');
+  return h(React.Fragment, null,
+    h('code', null, literal(part.defaults[member.name])),
+    provenance === 'authored' && h('span', { className: 'muxui-docs-authored' }, 'authored'));
+}
+
+/** One member as a row: its name (and the event channel it reports), what applies, type, requiredness, default and comment. */
+function MemberRow({ member, part, provenance, applies }) {
+  const expanded = member.values !== undefined && member.values.map(literal).join(' | ') !== member.type;
+  return h('tr', { 'data-prop': member.name },
+    h('th', { scope: 'row' },
+      h('code', { className: 'muxui-docs-name' }, member.name),
+      part.events?.[member.name] !== undefined && h('span', { className: 'muxui-docs-event', 'data-event': part.events[member.name] }, `event ${part.events[member.name]}`)),
+    applies !== undefined && h('td', { 'data-cell': 'applies', className: applies === null ? 'muxui-docs-always' : undefined }, applies === null ? 'always' : h('code', null, applies)),
+    h('td', { 'data-cell': 'type' },
+      h(TypeText, { text: member.type, refs: member.refs, className: 'muxui-docs-type' }),
+      expanded && h('span', { className: 'muxui-docs-values' }, member.values.map(literal).join(' | '))),
+    h('td', { 'data-cell': 'required', className: member.optional === true ? 'muxui-docs-optional' : 'muxui-docs-required' },
+      member.optional === true ? 'optional' : 'required',
+      member.readonly === true && h('span', { className: 'muxui-docs-flag' }, 'readonly')),
+    h('td', { 'data-cell': 'default' }, h(DefaultCell, { member, part, provenance })),
+    h('td', { 'data-cell': 'description' }, member.doc));
+}
+
+/** A closing row: the names an alternative declares `never`, or does not declare at all. */
+function ClosingRow({ names, state, columns }) {
+  return h('tr', { className: 'muxui-docs-closing', [`data-${state.replace(' ', '-')}`]: names.join(',') },
+    h('td', { colSpan: columns - 3 }, h(InlineCodes, { items: names })),
+    h('td', { 'data-cell': 'required', className: 'muxui-docs-absent' }, state),
+    h('td'),
+    h('td'));
+}
+
+function PartTable({ exported, part, provenance }) {
+  const groups = partGroups(part);
+  const alternatives = (part.alternatives ?? []).length > 0;
+  const columns = alternatives ? 6 : 5;
+  const head = ['Prop', ...(alternatives ? ['Applies when'] : []), 'Type', 'Required', 'Default', 'Description'];
+  return h('table', { className: 'muxui-docs-table', 'data-columns': columns },
+    h('caption', { className: 'muxui-docs-visually-hidden' }, `${partLabel(exported, part)} props${alternatives ? ' by alternative' : ''}`),
+    h('thead', null, h('tr', null, head.map((title) => h('th', { key: title, scope: 'col' }, title)))),
+    groups.map((group, index) => h('tbody', { key: index, 'data-group': group.label ?? 'props' },
+      group.label !== null && h('tr', { className: 'muxui-docs-group' },
+        h('th', { scope: 'rowgroup', colSpan: columns },
+          group.common ? group.label : h('code', null, group.label),
+          group.ref !== undefined && h('span', { className: 'muxui-docs-group-ref' }, 'Ref ', h(RefText, { ref: group.ref })),
+          group.natives !== undefined && h('span', { className: 'muxui-docs-group-ref' }, 'Native ', h(NativeText, { natives: group.natives })))),
+      group.members.map((member) => h(MemberRow, {
+        key: member.name, member, part, provenance, applies: alternatives ? (group.common ? null : group.label) : undefined,
+      })),
+      group.notAllowed.length > 0 && h(ClosingRow, { names: group.notAllowed, state: 'not allowed', columns }),
+      group.notDeclared.length > 0 && h(ClosingRow, { names: group.notDeclared, state: 'not declared', columns }))));
+}
+
+/**
+ * The part an alias is the same component as. The model writes `sameAs` as the export's own name (the component itself,
+ * as in `Root: TextEditorComponent`) or the name of a sibling member; one that names neither is a broken reference.
+ */
+function canonicalPart(exported, part) {
+  if (part.sameAs === undefined) return part;
+  const target = exported.parts.find(({ member }) => member === (part.sameAs === exported.name ? null : part.sameAs));
+  if (target === undefined || target.sameAs !== undefined) throw new Error(`${partLabel(exported, part)} is the same as ${part.sameAs}, which is no part of ${exported.name} with a description of its own.`);
+  return target;
+}
+
+/** A part: its import, how it is declared, generics, ref and native envelope, then its unified table. */
+function PartReference({ exported, part, provenance, heading, collapsible }) {
+  const label = partLabel(exported, part);
+  // An alias is the same component, so its generics, ref and native surface are those of the part it names.
+  const canonical = canonicalPart(exported, part);
+  const hasAlternativeRef = (canonical.alternatives ?? []).some((alternative) => alternative.ref !== undefined);
+  const hasAlternativeNative = (canonical.alternatives ?? []).some((alternative) => alternative.natives !== undefined);
+  const meta = h('dl', { key: 'meta', className: 'muxui-docs-meta' },
+    h('dt', null, 'Import'), h('dd', { 'data-meta': 'import' }, h('code', null, importLine(exported))),
+    part.form !== undefined && [h('dt', { key: 'form-title' }, 'Declared as'), h('dd', { key: 'form', 'data-meta': 'form' }, h('code', null, part.form))],
+    canonical.typeParameters !== undefined && [h('dt', { key: 'generics-title' }, 'Generics'), h('dd', { key: 'generics', 'data-meta': 'generics' },
+      canonical.typeParameters.map((parameter, index) => h(React.Fragment, { key: parameter.name },
+        index > 0 && ', ',
+        h(TypeText, { text: `${parameter.name}${parameter.constraint ? ` extends ${parameter.constraint}` : ''}${parameter.default ? ` = ${parameter.default}` : ''}`, refs: parameter.refs }))))],
+    part.sameAs !== undefined && [h('dt', { key: 'same-title' }, 'Same as'), h('dd', { key: 'same', 'data-meta': 'same-as' }, h('a', { href: `#${partAnchor(exported, canonical)}` }, h('code', null, partLabel(exported, canonical))))],
+    (canonical.ref !== undefined || !hasAlternativeRef) && [h('dt', { key: 'ref-title' }, 'Ref'), h('dd', { key: 'ref', 'data-meta': 'ref' }, h(RefText, { ref: canonical.ref }))],
+    (canonical.natives !== undefined || !hasAlternativeNative) && [h('dt', { key: 'native-title' }, 'Native'), h('dd', { key: 'native', 'data-meta': 'native' }, h(NativeText, { natives: canonical.natives }))]);
+  const body = [meta, part.sameAs === undefined && h(PartTable, { key: 'table', exported, part, provenance })];
+  const count = new Set([...(part.members ?? []), ...(part.alternatives ?? []).flatMap(({ members }) => members)].map(({ name }) => name)).size;
+  const title = h('h4', { 'data-part-title': true }, h('code', null, label));
+  const props = { id: partAnchor(exported, part), className: 'muxui-docs-part', 'data-part': label };
+  if (collapsible) {
+    return h('details', props, h('summary', null, title, h('span', { className: 'muxui-docs-count' }, part.sameAs === undefined ? `${count} ${count === 1 ? 'prop' : 'props'}` : `same as ${partLabel(exported, canonical)}`)), body);
+  }
+  return h('div', props, heading && title, body);
+}
+
+/** A component export: each of its parts, behind its own heading when it has more than one. */
+function ComponentReference({ exported, provenance }) {
+  const collapsible = exported.parts.length > collapsedFrom;
+  return h('div', { id: exportAnchor(exported), className: 'muxui-docs-export', 'data-export': exported.name },
+    h('h3', null, h('code', null, exported.name), !exported.primary && h('span', { className: 'muxui-docs-count' }, 'related export')),
+    exported.parts.map((part, index) => h(PartReference, {
+      key: part.member ?? '', exported, part, provenance, heading: exported.parts.length > 1, collapsible: collapsible && index > 0,
+    })));
+}
+
+function ValueReference({ exported }) {
+  return h('div', { id: exportAnchor(exported), className: 'muxui-docs-export', 'data-export': exported.name },
+    h('h4', null, h('code', null, exported.name), h('span', { className: 'muxui-docs-count' }, exported.kind === 'function' ? 'function' : 'value')),
+    h('dl', { className: 'muxui-docs-meta' },
+      h('dt', null, 'Import'), h('dd', { 'data-meta': 'import' }, h('code', null, importLine(exported))),
+      h('dt', null, exported.kind === 'function' ? 'Signature' : 'Type'),
+      h('dd', { 'data-meta': exported.kind === 'function' ? 'signature' : 'type' }, h(TypeText, { text: exported.kind === 'function' ? exported.signature : exported.type, refs: exported.refs ?? [] }))),
+    exported.doc !== undefined && h('p', { 'data-fact': 'typed.doc' }, exported.doc));
+}
+
+/** Every part and related export with the exact import that reaches it. */
+function ExportsIndex({ typed }) {
+  const rows = typed.exports.flatMap((exported) => [
+    h('tr', { key: exported.name, 'data-export': exported.name, 'data-kind': exported.kind },
+      h('th', { scope: 'row' }, h('a', { href: `#${exported.kind === 'type' ? typeAnchor(exported.id) : exportAnchor(exported)}` }, h('code', null, exported.name))),
+      h('td', null, exported.kind),
+      h('td', null, h('code', null, importLine(exported)), exported.reason !== undefined && h('span', { className: 'muxui-docs-reason' }, exported.reason))),
+    ...(exported.kind === 'component' ? exported.parts.filter(({ member }) => member !== null).map((part) => h('tr', { key: `${exported.name}.${part.member}`, 'data-part': `${exported.name}.${part.member}` },
+      h('th', { scope: 'row', className: 'muxui-docs-indent' }, h('a', { href: `#${partAnchor(exported, part)}` }, h('code', null, `${exported.name}.${part.member}`))),
+      h('td', null, 'part'),
+      h('td', null, h('code', null, importLine(exported))))) : []),
+  ]);
+  return h('table', { className: 'muxui-docs-table muxui-docs-exports', 'data-columns': 3 },
+    h('caption', { className: 'muxui-docs-visually-hidden' }, 'Parts and related exports'),
+    h('thead', null, h('tr', null, ['Export', 'Kind', 'Import'].map((title) => h('th', { key: title, scope: 'col' }, title)))),
+    h('tbody', null, rows));
+}
+
+/** The id the address names, or an empty one when it names none (or is not a valid fragment). */
+function fragmentId() {
+  try {
+    return decodeURIComponent(window.location.hash.slice(1));
+  } catch {
+    return '';
+  }
+}
+
+/** Opens the collapsed part or type that an id names, and what contains it, so following a link shows what it points to. */
+function reveal(id) {
+  const target = id === '' ? null : document.getElementById(id);
+  for (let node = target?.closest('details'); node; node = node.parentElement?.closest('details')) node.open = true;
+  return target;
+}
+
+/** How long the page may go without a layout change before it stops following the target, and the longest it follows it at all (ms). */
+const followQuietMs = 6000;
+const followLimitMs = 20000;
+let stopFollowing = () => {};
+
+/**
+ * Opens the part or type the address names, scrolls to it, and keeps it there while the page loads around it. What is above it
+ * renders late (Storybook loads its syntax highlighter and formatter on demand, and each code block grows when they arrive), and
+ * each growth moves the target, so every layout change of the page scrolls to it again if it has moved. It stops when the page
+ * has been quiet for `followQuietMs`, when `followLimitMs` have passed, or as soon as the reader scrolls, presses a key or
+ * touches the page, so it never fights a reader.
+ */
+function showFragment() {
+  stopFollowing();
+  const id = fragmentId();
+  const target = reveal(id);
+  if (target === null) return;
+  target.scrollIntoView();
+  const interruptions = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
+  let quiet = 0;
+  const resize = new ResizeObserver(() => follow());
+  const mutations = new MutationObserver(() => follow());
+  const stop = () => {
+    clearTimeout(quiet);
+    clearTimeout(limit);
+    resize.disconnect();
+    mutations.disconnect();
+    for (const type of interruptions) window.removeEventListener(type, stop);
+    stopFollowing = () => {};
+  };
+  function follow() {
+    clearTimeout(quiet);
+    quiet = setTimeout(stop, followQuietMs);
+    if (Math.abs(target.getBoundingClientRect().top) > 1) target.scrollIntoView();
+  }
+  const limit = setTimeout(stop, followLimitMs);
+  for (const type of interruptions) window.addEventListener(type, stop, { once: true, passive: true });
+  resize.observe(document.documentElement);
+  resize.observe(document.body);
+  mutations.observe(document.body, { childList: true, subtree: true, characterData: true });
+  stopFollowing = stop;
+  follow();
+}
+
+/** Every part and type of the reference, each a details element. */
+const disclosures = () => [...document.querySelectorAll('[data-typed-reference] details')];
+
+function TypeDeclaration({ type }) {
+  return h('details', { id: typeAnchor(type.id), className: 'muxui-docs-type-declaration', 'data-type': type.name },
+    h('summary', null, h('code', null, type.name), h('span', { className: 'muxui-docs-count' }, type.public === undefined ? 'not exported' : 'exported')),
+    (type.public ?? []).map((where) => h('p', { key: `${where.entry}:${where.name}`, className: 'muxui-docs-import' }, h('code', null, importLine({ kind: 'type', name: where.name, specifier: where.specifier })))),
+    h('pre', null, h('code', null, type.text)));
+}
+
+/**
+ * The family's typed reference (Decision 0031), laid out from `entry.typed`: its parts and related exports, each
+ * component part as a unified table, the functions and values, and the types they name.
+ */
+function TypedReference({ typed }) {
+  const hasNever = typed.exports.some((exported) => exported.kind === 'component' && exported.parts.some(usesNever));
+  const components = typed.exports.filter(({ kind }) => kind === 'component');
+  const others = typed.exports.filter(({ kind }) => kind === 'function' || kind === 'value');
+  React.useEffect(() => {
+    // A page opened at a fragment, a link, and Back and Forward (a fragment change or a page restored from the cache) all end at the target, opened.
+    showFragment();
+    const onPageShow = (event) => { if (event.persisted) showFragment(); };
+    window.addEventListener('hashchange', showFragment);
+    window.addEventListener('popstate', showFragment);
+    window.addEventListener('pageshow', onPageShow);
+    // A printed page has no way to open a part, so printing opens them all and puts back the ones it opened.
+    let openedForPrint = [];
+    const beforePrint = () => {
+      openedForPrint = disclosures().filter((details) => !details.open);
+      for (const details of openedForPrint) details.open = true;
+    };
+    const afterPrint = () => {
+      for (const details of openedForPrint) details.open = false;
+      openedForPrint = [];
+    };
+    window.addEventListener('beforeprint', beforePrint);
+    window.addEventListener('afterprint', afterPrint);
+    return () => {
+      window.removeEventListener('hashchange', showFragment);
+      window.removeEventListener('popstate', showFragment);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('beforeprint', beforePrint);
+      window.removeEventListener('afterprint', afterPrint);
+    };
+  }, []);
+  // Following a link to the fragment the address already has changes no hash, so no event fires: opening is all the click needs.
+  const follow = (event) => {
+    const link = event.target.closest('a[href^="#"]');
+    if (link) reveal(decodeURIComponent(link.hash.slice(1)));
+  };
+  return h('div', { className: 'muxui-docs-reference', 'data-typed-reference': typed.owner, onClick: follow },
+    h('p', { className: 'muxui-docs-caption', 'data-fact': 'typed.provenance' },
+      'Types, requiredness, refs and comments come from the declarations the package ships. Defaults come from the catalog: ',
+      typed.provenance === 'authored' ? 'this family\'s are authored by hand, so each is marked authored. ' : 'each is the default its source executes. ',
+      'none listed means the catalog lists no default for the prop; a native or layout default may still apply.'),
+    hasNever && h('p', { className: 'muxui-docs-caption', 'data-fact': 'typed.never' },
+      'not allowed marks a prop an alternative declares as never; not declared marks one it does not declare at all. With exactOptionalPropertyTypes, ',
+      h('code', null, '?: never'), ' rejects an explicit ', h('code', null, 'undefined'), '; without it TypeScript accepts one.'),
+    h('h3', { id: 'api-exports' }, 'Parts and related exports'),
+    h(ExportsIndex, { typed }),
+    h('p', { className: 'muxui-docs-caption', 'data-fact': 'typed.package' },
+      'The package-level exports (the compatibility record, the supplemental family list and the theme presets) and the types several families share are listed, with their imports, in ',
+      h(SourceLink, { path: typed.packageSources[0] }, typed.packageSources[0].slice(typed.packageSources[0].lastIndexOf('/') + 1)), ' and ',
+      h(SourceLink, { path: typed.packageSources[1] }, typed.packageSources[1].slice(typed.packageSources[1].lastIndexOf('/') + 1)),
+      '. The shared types this family names are printed under Types.'),
+    components.map((exported) => h(ComponentReference, { key: exported.name, exported, provenance: typed.provenance })),
+    typed.unplacedDefaults !== undefined && h('p', { className: 'muxui-docs-caption', 'data-fact': 'typed.unplaced' },
+      'The catalog lists these defaults without naming the part that has them: ',
+      typed.unplacedDefaults.map(({ name, value }, index) => h(React.Fragment, { key: name }, index > 0 && ', ', h('code', null, `${name} = ${literal(value)}`))), '.'),
+    others.length > 0 && h('h3', { id: 'api-functions' }, 'Functions and values'),
+    others.map((exported) => h(ValueReference, { key: exported.name, exported })),
+    typed.types.length > 0 && h('h3', { id: 'api-types' }, 'Types'),
+    typed.types.map((type) => h(TypeDeclaration, { key: type.id, type })));
+}
+
 /** The catalog facts of a family, laid out as the continuous reference. Everything it shows comes from `entry`. */
 export function ComponentDocs({ entry, blocks }) {
   const { Title, Primary, Controls, Source, Markdown, Anchor } = blocks;
@@ -123,8 +487,12 @@ export function ComponentDocs({ entry, blocks }) {
     'used-in-blocks': () => h('ul', null, entry.usedIn.map(({ name, storyId, roles }) => h('li', { key: storyId },
       h(PageLink, { Anchor, href: `?path=/story/${storyId}` }, name),
       h('span', { className: 'muxui-docs-roles' }, roles.map(({ role, requirement }) => requirement === 'optional' ? `${role} (optional)` : role).join(', '))))),
-    // The existing Controls table is the API reference: it lists the props and edits them live.
-    'api-reference': () => h(Controls),
+    // The typed reference lists every part as its declarations wrote it. Controls follows it as the live editor of the props the stories drive.
+    'api-reference': () => [
+      h(TypedReference, { key: 'typed', typed: entry.typed }),
+      h('h3', { key: 'controls-title', id: 'api-controls' }, 'Controls'),
+      h(Controls, { key: 'controls' }),
+    ],
     // The root's events, then each part's under its owner, so Item events read as ListBox.Item's.
     events: () => [
       entry.events.length > 0

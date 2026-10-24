@@ -234,7 +234,7 @@ function storyFilename(record) {
 }
 
 function storySource(record) {
-  const docs = componentDocs.get(record.binding.binding.slice(0, record.binding.binding.indexOf('#')));
+  const { typed, ...docs } = componentDocs.get(record.binding.binding.slice(0, record.binding.binding.indexOf('#')));
   const canonicalExample = canonicalStoryExamples.get(record.family);
   const dedicatedImport = record.binding.module === './text-editor'
     ? "\nimport { TextEditor as TextEditorSubpath } from '@muxui/react/text-editor';"
@@ -262,7 +262,9 @@ import React from 'react';
 import { ${canonicalExample.importName} } from './${canonicalExample.helperName}';` : ''}${dedicatedImport}
 
 const binding = ${JSON.stringify(record.binding, null, 2)};
-const record = { family: '${record.family}', tranche: '${record.tranche}', binding };
+// The typed reference of the family's declarations (see src/component-docs.mjs), once: the Docs page lays it out and the Controls take their types from it.
+const typed = ${JSON.stringify(typed)};
+const record = { family: '${record.family}', tranche: '${record.tranche}', binding, typed };
 
 export default {
   title: 'Mux UI React/${componentCategory(componentRecordCategory(familySlug(record.family)))}/${record.family}',
@@ -281,14 +283,14 @@ export default {
       controlled: controlledDefaultPairsForBinding(binding),
     },
     // The catalog facts the Docs page projects (see .storybook/component-docs-page.mjs).
-    muxuiReference: ${JSON.stringify(docs, null, 2).replaceAll('\n', '\n    ')},
+    muxuiReference: Object.assign(${JSON.stringify(docs, null, 2).replaceAll('\n', '\n    ')}, { typed }),
     docs: {
       description: {
         component: ${stringLiteral(docs.summary)},
       },
     },
   },
-  argTypes: argTypesForBinding(binding),
+  argTypes: argTypesForBinding(binding, typed),
 };
 ${storyPagesFor(record).map(({ emit }) => emit).join('\n')}${record.family === 'Autocomplete' ? '' : '\n'}`;
 }
