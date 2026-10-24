@@ -1,7 +1,7 @@
 // Browser proof for how the typed API reference of the built docs opens and prints. Run after `pnpm --filter @muxui/docs build`.
 //
 // Most parts and types of a long component page are closed when it loads. A link has to open what it names (including a saved link
-// to a heading the earlier layout had), and printing has to show all of it.
+// to a heading the earlier layout had, and a link to the fragment the page is already at), and printing has to show all of it.
 import assert from 'node:assert/strict';
 import { createReadStream } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
@@ -82,6 +82,39 @@ test('a saved link to a part of the earlier layout opens the part it now names a
 			}
 		}
 		assert.equal(checked, 13);
+	});
+});
+
+test('a link to the part that is already the page\'s fragment opens it again after it was closed', async () => {
+	await withSite(async ({ origin, newPage }) => {
+		const page = await newPage();
+		/** The details element once it is open, which a hashchange does a moment after the click that causes it. */
+		const opens = (selector, message) => page.waitForFunction((query) => document.querySelector(query).open, selector, { timeout: 3000 }).then(() => undefined, () => assert.fail(message));
+		await page.goto(`${origin}/components/command-palette/`);
+		const link = page.locator('[data-api-parts] a', { hasText: /^CommandPalette\.Input$/u });
+		const input = 'details.api-part[data-api-part="CommandPalette.Input"]';
+		const part = page.locator(input);
+		assert.equal(await part.evaluate((node) => node.open), false, 'Input is closed when the page loads');
+		await link.click();
+		await opens(input, 'following the link opens Input');
+		const hash = await page.evaluate(() => window.location.hash);
+		await part.locator('summary').click();
+		assert.equal(await part.evaluate((node) => node.open), false, 'Input collapses');
+		await link.click();
+		assert.equal(await page.evaluate(() => window.location.hash), hash, 'the hash is the same, so no hashchange fires');
+		await opens(input, 'following the same link again opens Input again');
+		// A link to a type opens the declaration in the same way, whether or not the hash changes.
+		await page.goto(`${origin}/components/button/`);
+		const typeLink = page.locator('#api-reference td.api-type a[href^="#type-"]').first();
+		const target = await typeLink.getAttribute('href');
+		const typeSelector = `details.api-type-entry[id="${target.slice(1)}"]`;
+		assert.equal(await page.locator(typeSelector).evaluate((node) => node.open), false, `${target} is closed when the page loads`);
+		await typeLink.click();
+		await opens(typeSelector, `${target} opens`);
+		await page.locator(typeSelector).locator('summary').click();
+		assert.equal(await page.locator(typeSelector).evaluate((node) => node.open), false, `${target} collapses`);
+		await typeLink.click();
+		await opens(typeSelector, `${target} opens again`);
 	});
 });
 

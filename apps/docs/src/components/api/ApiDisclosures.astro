@@ -23,6 +23,16 @@
 	window.addEventListener('hashchange', openHash);
 	openHash();
 
+	// Following a link to the fragment the page is already at (after closing the part it names) changes no hash, so no
+	// hashchange fires. Opening the part is all the click needs to do: the browser scrolls to the fragment on its own.
+	document.addEventListener('click', (event) => {
+		if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+		if (link === null) return;
+		const url = new URL(link.getAttribute('href') ?? '', window.location.href);
+		if (url.origin === window.location.origin && url.pathname === window.location.pathname && url.hash === window.location.hash) reveal(fragment(url.hash));
+	});
+
 	// A printed page has no way to open a part, so printing opens them all and puts back the ones it opened.
 	let openedForPrint: HTMLDetailsElement[] = [];
 	window.addEventListener('beforeprint', () => {
