@@ -5,6 +5,7 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getDeclarationReference, getReactPackageFacts } from '../../lib/catalog.ts';
 import { componentReference } from '../../../../component-reference.mjs';
 import { buildApiReference, collapsePartsAbove } from '../../lib/api-reference.ts';
+import legacyPartAnchors from '../../lib/legacy-part-anchors.json';
 import { resolveUsedIn } from '../../lib/blocks.ts';
 import { variantPath } from '../../lib/block-paths.ts';
 import { assertExampleSource } from '../../lib/example-modules.tsx';
@@ -50,12 +51,14 @@ const packageFacts = getReactPackageFacts();
 const { imports, usage, behavior, accessibility, styling, sources, declarations } = componentReference({ artifact, examples, packageFacts, declarations: getDeclarationReference() });
 // The types come from the declarations the package ships; the catalog adds each default and which prop reports which event.
 if (declarations === undefined) throw new Error(`The declaration reference has no share for ${summary.id}.`);
+const legacyAnchorsByPage: Readonly<Record<string, Readonly<Record<string, string>>>> = legacyPartAnchors.anchors;
 const api = buildApiReference({
 	packageName: packageFacts.packageName,
 	exportName: imports.component,
 	anatomy: artifact.anatomy,
 	catalog: reactBinding.api,
 	declarations,
+	legacyAnchors: legacyAnchorsByPage[componentSlug] ?? {},
 });
 // A family with many parts opens only its first table; every part stays listed and reachable.
 const collapsed = api.parts.length > collapsePartsAbove;

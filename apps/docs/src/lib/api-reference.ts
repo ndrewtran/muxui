@@ -67,6 +67,8 @@ export interface ApiGroup {
 export interface ApiPart {
 	heading: string;
 	anchor: string;
+	/** Ids the part's heading answered to before the typed tables, kept so a saved link still reaches it. */
+	legacyAnchors: readonly string[];
 	/** The import of the export that holds the part. */
 	import: string;
 	/** The ref line: the element, `not allowed`, `per alternative`, or `none declared`. */
@@ -372,7 +374,7 @@ interface Canonical {
 function partView(exportName: string, importFrom: string, part: DeclarationPart, catalog: Catalog, context: Context, canonical: (alias: DeclarationPart) => Canonical): ApiPart {
 	const heading = partHeading(exportName, part);
 	const alternatives = part.alternatives ?? [];
-	const base = { heading, anchor: partAnchor(heading), import: importFrom };
+	const base = { heading, anchor: partAnchor(heading), legacyAnchors: [], import: importFrom };
 	if (part.sameAs !== undefined) {
 		// An alias is the same component, so its ref, native surface and generics are those of the part it names, not "none declared".
 		const target = canonical(part);
@@ -463,22 +465,28 @@ function eventGroup(
  * @param input.exportName the export the page is for
  * @param input.anatomy the record's anatomy, which orders the parts of a derived family's `partApis`
  */
-export function buildApiReference({ packageName, exportName, anatomy, catalog, declarations }: {
+export function buildApiReference({ packageName, exportName, anatomy, catalog, declarations, legacyAnchors = {} }: {
 	packageName: string;
 	exportName: string;
 	anatomy: readonly string[];
 	catalog: ApiCatalog;
 	declarations: ComponentDeclarations;
+	/** The ids this page's parts used to have, each with the heading of the part that has it now. */
+	legacyAnchors?: Readonly<Record<string, string>>;
 }): ApiReference {
 	const context: Context = { owner: declarations.owner, types: new Map(declarations.types.map((type) => [type.id, type])) };
 	const main = declarations.export;
 	const mainParts = (main.parts ?? []).filter((part) => part.form !== undefined || part.sameAs !== undefined);
 	const owned = catalogOwnership(catalog, mainParts);
 	const flat = declarations.related.filter((item) => item.kind === 'component');
-	const parts: ApiPart[] = [
+	const built: ApiPart[] = [
 		...mainParts.map((part) => partView(exportName, importLine(packageName, main.entry, main.name), part, owned(part), context, aliasResolver(main, exportName, mainParts))),
 		...flat.flatMap((item) => (item.parts ?? []).filter((part) => part.form !== undefined || part.sameAs !== undefined).map((part) => partView(item.name, importLine(packageName, item.entry, item.name), part, none, context, aliasResolver(item, item.name, item.parts ?? [])))),
 	];
+	for (const [id, heading] of Object.entries(legacyAnchors)) {
+		if (!built.some((part) => part.heading === heading)) throw new Error(`The anchor #${id} was the part ${heading}, which ${exportName}'s page no longer has: say where it goes in legacy-part-anchors.json.`);
+	}
+	const parts = built.map((part) => ({ ...part, legacyAnchors: Object.entries(legacyAnchors).filter(([, heading]) => heading === part.heading).map(([id]) => id) }));
 
 	const exports: ApiExport[] = [main, ...declarations.related].map((item) => exportView(item, packageName, parts, context, item === main ? exportName : item.name));
 	const types = typesView(declarations.types, declarations.owner, packageName, undefined, context);

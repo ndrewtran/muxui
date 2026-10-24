@@ -1,0 +1,26 @@
+{
+	"source": "The part headings (h3 ids starting api-reference-) of the built component pages of origin/main 29cfd6ae.",
+	"anchors": {
+		"grid-list": {
+			"api-reference-item": "GridList.Item"
+		},
+		"list-box": {
+			"api-reference-item": "ListBox.Item",
+			"api-reference-section": "ListBox.Section"
+		},
+		"menu": {
+			"api-reference-item": "Menu.Item",
+			"api-reference-list": "Menu.List",
+			"api-reference-popup": "Menu.Popup",
+			"api-reference-section": "Menu.Section",
+			"api-reference-submenu": "Menu.Submenu",
+			"api-reference-trigger": "Menu.Trigger"
+		},
+		"select": {
+			"api-reference-list": "Select.List",
+			"api-reference-option": "Select.Item",
+			"api-reference-popup": "Select.Popup",
+			"api-reference-trigger": "Select.Trigger"
+		}
+	}
+}

@@ -15,7 +15,7 @@ const required = (name, extra = {}) => ({ name, type: 'string', ...extra });
 const never = (name) => ({ name, type: 'never', optional: true, never: true });
 
 /** A component's page data, from the real reference and catalog. */
-function page(slug) {
+function page(slug, legacyAnchors) {
 	const id = `muxui:component:${slug}`;
 	const artifact = catalog.getArtifact({ id, platform: 'web.react', detail: 'full' }).data.artifact;
 	const binding = artifact.bindings['web.react'];
@@ -26,6 +26,7 @@ function page(slug) {
 		anatomy: artifact.anatomy,
 		catalog: { derived: binding.api.propDetails !== undefined, ...binding.api },
 		declarations,
+		legacyAnchors,
 	});
 }
 const partNamed = (api, heading) => api.parts.find((part) => part.heading === heading);
@@ -242,6 +243,15 @@ test('parts and related exports list every export of the family with its exact i
 	const editor = page('text-editor');
 	assert.deepEqual(editor.parts.map(({ heading, sameAs }) => [heading, sameAs?.heading]), [['TextEditor', undefined], ['TextEditor.Root', 'TextEditor']]);
 	assert.deepEqual(partNamed(editor, 'TextEditor.Root').groups, []);
+});
+
+test('the ids a part used to answer to stay on its heading, and an id for a part the page lost stops the build', () => {
+	const select = page('select', { 'api-reference-option': 'Select.Item', 'api-reference-trigger': 'Select.Trigger' });
+	assert.deepEqual(partNamed(select, 'Select.Item').legacyAnchors, ['api-reference-option']);
+	assert.deepEqual(partNamed(select, 'Select.Trigger').legacyAnchors, ['api-reference-trigger']);
+	assert.deepEqual(select.parts.filter(({ legacyAnchors }) => legacyAnchors.length > 0).map(({ heading }) => heading), ['Select.Trigger', 'Select.Item']);
+	assert.deepEqual(partNamed(page('select'), 'Select.Item').legacyAnchors, []);
+	assert.throws(() => page('select', { 'api-reference-option': 'Select.Option' }), /Select\.Option, which Select's page no longer has/u);
 });
 
 test('the anchors of a page are unique, and every family page shows its owner\'s exported types under import lines', () => {

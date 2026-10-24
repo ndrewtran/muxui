@@ -16,7 +16,7 @@ const hasNatives = part.natives.length > 0;
 
 <details class="api-part not-content" open={open} data-api-part={part.heading}>
 	<summary>
-		<h3 id={part.anchor}><code>{part.heading}</code></h3>
+		<h3 id={part.anchor}>{part.legacyAnchors.map((id) => <span id={id} data-api-legacy />)}<code>{part.heading}</code></h3>
 	</summary>
 	<dl class="api-meta">
 		<dt>Import</dt>
