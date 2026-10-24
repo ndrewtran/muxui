@@ -66,6 +66,17 @@ function guideBody(raw) {
 /** The body of a guide's `## <heading>` section, split on the heading lines rather than by the projection under test. */
 const guideSection = (raw, heading) => raw.split(/^## /mu).find((part) => part.startsWith(`${heading}\n`)).slice(heading.length + 1).trim();
 
+/**
+ * The declarations a family's typed reference was read from: its reference file, then the source of each declaration
+ * module that file was generated from, taken from the committed reference rather than from the page.
+ */
+function declarationSources(family) {
+  const inventory = JSON.parse(read('packages/react/reference/inventory.json'));
+  const owner = inventory.entries.flatMap(({ exports = [] }) => exports).find(({ name }) => name === family).owner;
+  const file = JSON.parse(read(`packages/react/reference/${inventory.owners[owner]}`));
+  return [`packages/react/reference/${inventory.owners[owner]}`, ...Object.values(file.sources)];
+}
+
 /** The generated story modules the Docs pages read, one per family, with the catalog record each projects. */
 async function families() {
   return Promise.all(manifest.families.map(async ({ family, tranche }) => {
@@ -132,7 +143,12 @@ test('every family Docs page runs the continuous reference sections in order, pr
     assert.equal(basic.at(-1).textContent, read(examples[0].source.content), `${family} basic example source`);
     assert.equal(page.querySelectorAll('[data-block="primary"]').length, 1, `${family} one live preview`);
     assert.equal(page.querySelectorAll('[data-block="controls"]').length, 1, `${family} one Controls table`);
-    assert.deepEqual([...section('api-reference').children].map((node) => node.localName === 'h2' ? 'h2' : node.getAttribute('data-block')), ['h2', 'controls'], `${family} API reference is the Controls table alone`);
+    // The API reference is the typed reference of the declarations, then the live Controls beside it (see typed-reference.test.mjs).
+    assert.deepEqual(
+      [...section('api-reference').children].map((node) => node.localName === 'h2' ? 'h2' : node.getAttribute('data-typed-reference') !== null ? 'typed' : node.localName === 'h3' ? node.textContent : node.getAttribute('data-block')),
+      ['h2', 'typed', 'Controls', 'controls'],
+      `${family} API reference is the typed reference, then the Controls table`,
+    );
 
     // Installation: the import follows the descriptor and the package exports.
     const exported = descriptor.bindings.find(({ binding: ref }) => ref === `${artifact.id}#web.react`);
@@ -250,7 +266,7 @@ test('every family Docs page runs the continuous reference sections in order, pr
     assert.ok(runtime, `${family} has a runtime source in the renderer contract`);
     assert.deepEqual(
       [...section('sources').querySelectorAll('a')].map((node) => node.getAttribute('href')),
-      [artifact.source.record, ...examples.map((example) => example.source.content), runtime, 'packages/react/package.json']
+      [artifact.source.record, ...examples.map((example) => example.source.content), runtime, 'packages/react/package.json', ...declarationSources(family)]
         .map((path) => `https://github.com/ndrewtran/muxui/blob/main/${path}`),
       `${family} sources`,
     );

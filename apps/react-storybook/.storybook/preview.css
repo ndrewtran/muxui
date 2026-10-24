@@ -632,3 +632,319 @@ aside.sbdocs-toc--custom .toc-list-item.is-active-li::before {
 .sbdocs-content .muxui-docs-sources dd {
   margin-inline-start: 0;
 }
+
+/* The typed reference (.storybook/component-docs-page.mjs): each part's props as one table, laid out from the family's
+   declarations. Its paint is Mux tokens only; the tables restate Storybook's own table styles in them. */
+.sbdocs-content .muxui-docs-reference {
+  container-type: inline-size;
+}
+
+.sbdocs-content .muxui-docs-visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sbdocs-content .muxui-docs-reference :is(h3, h4) {
+  scroll-margin-block-start: var(--muxui-semantic-layout-group-gap);
+}
+
+/* Storybook sizes a bare span itself; the text inside a cell or a meta line keeps the size of its container. */
+.sbdocs-content .muxui-docs-reference span {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.sbdocs-content .muxui-docs-reference .muxui-docs-export,
+.sbdocs-content .muxui-docs-section h3#api-controls {
+  margin-block-start: var(--muxui-semantic-layout-section-gap);
+}
+
+.sbdocs-content .muxui-docs-reference .muxui-docs-part {
+  margin-block-start: var(--muxui-semantic-layout-group-gap);
+}
+
+.sbdocs-content .muxui-docs-reference :is(.muxui-docs-count, .muxui-docs-reason, .muxui-docs-authored, .muxui-docs-flag, .muxui-docs-event, .muxui-docs-group-ref, .muxui-docs-values, .muxui-docs-none, .muxui-docs-always) {
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-text-font-weight);
+}
+
+.sbdocs-content .muxui-docs-reference :is(.muxui-docs-count, .muxui-docs-reason, .muxui-docs-authored, .muxui-docs-flag, .muxui-docs-group-ref) {
+  margin-inline-start: var(--muxui-semantic-layout-action-gap);
+}
+
+.sbdocs-content .muxui-docs-reference :is(.muxui-docs-event, .muxui-docs-values) {
+  display: block;
+}
+
+.sbdocs-content .muxui-docs-table .muxui-docs-authored {
+  display: block;
+  margin-inline-start: 0;
+  overflow-wrap: normal;
+}
+
+/* Meta lines: import, how the part is declared, generics, ref and native envelope. */
+.sbdocs-content .muxui-docs-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--muxui-semantic-layout-micro-gap) var(--muxui-semantic-layout-group-gap);
+  margin: var(--muxui-semantic-layout-tight-gap) 0 0;
+}
+
+.sbdocs-content .muxui-docs-meta :is(dt, dd) {
+  margin: 0;
+  padding: 0;
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
+}
+
+.sbdocs-content .muxui-docs-meta dt {
+  color: var(--muxui-semantic-content-muted);
+  font-style: normal;
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.sbdocs-content .muxui-docs-meta dd {
+  min-inline-size: 0;
+}
+
+.sbdocs-content .muxui-docs-reference code {
+  overflow-wrap: anywhere;
+}
+
+.sbdocs-content .muxui-docs-reference :not(pre) > code {
+  /* Storybook keeps inline code on one line; an import line or a signature wraps on a narrow page instead. */
+  white-space: normal;
+  padding-block: 0;
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
+  font-size: inherit;
+}
+
+.sbdocs-content .muxui-docs-reference a:not(:hover, :focus-visible) {
+  text-decoration-color: var(--muxui-semantic-border-default);
+}
+
+.sbdocs-content .muxui-docs-reference .muxui-docs-codes code + code::before {
+  content: ", ";
+}
+
+.sbdocs-content .muxui-docs-reference .muxui-docs-codes code {
+  margin-inline-end: 0;
+}
+
+/* The tables. */
+.sbdocs-content .muxui-docs-table {
+  inline-size: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: var(--muxui-semantic-layout-tight-gap) 0 0;
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
+}
+
+.sbdocs-content .muxui-docs-table :is(tr, tr:nth-of-type(2n), thead th, tbody th, td) {
+  background: var(--muxui-semantic-surface-canvas);
+  border-color: var(--muxui-semantic-border-subtle);
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sbdocs-content .muxui-docs-table :is(th, td) {
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-action-gap) var(--muxui-semantic-layout-inset-tight) 0;
+  border-width: 0 0 1px;
+  border-style: solid;
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.sbdocs-content .muxui-docs-table :is(tr, tr:nth-of-type(2n)) {
+  border-width: 0;
+}
+
+.sbdocs-content .muxui-docs-table thead th {
+  color: var(--muxui-semantic-content-muted);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  border-color: var(--muxui-semantic-border-default);
+}
+
+.sbdocs-content .muxui-docs-table tbody th[scope='row'] {
+  font-weight: var(--muxui-semantic-typography-text-font-weight);
+}
+
+.sbdocs-content .muxui-docs-table tr.muxui-docs-group th {
+  padding-block-start: var(--muxui-semantic-layout-group-gap);
+  border-color: var(--muxui-semantic-border-default);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.sbdocs-content .muxui-docs-table .muxui-docs-name {
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.sbdocs-content .muxui-docs-table .muxui-docs-type {
+  color: var(--muxui-semantic-content-link);
+}
+
+.sbdocs-content .muxui-docs-table .muxui-docs-type a {
+  color: inherit;
+}
+
+.sbdocs-content .muxui-docs-table :is(.muxui-docs-optional, .muxui-docs-absent) {
+  color: var(--muxui-semantic-content-muted);
+}
+
+.sbdocs-content .muxui-docs-table .muxui-docs-required {
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.sbdocs-content .muxui-docs-table tr[data-not-allowed] .muxui-docs-absent {
+  color: var(--muxui-semantic-feedback-invalid);
+}
+
+/* Columns: prop, applies when, type, required, default, then the description takes the rest. */
+.sbdocs-content .muxui-docs-table[data-columns='6'] :is(th:nth-child(1), td:nth-child(1)) { inline-size: 19%; }
+.sbdocs-content .muxui-docs-table[data-columns='6'] :is(th:nth-child(2), td:nth-child(2)) { inline-size: 11%; }
+.sbdocs-content .muxui-docs-table[data-columns='6'] :is(th:nth-child(3), td:nth-child(3)) { inline-size: 21%; }
+.sbdocs-content .muxui-docs-table[data-columns='6'] :is(th:nth-child(4), td:nth-child(4)) { inline-size: 4.5rem; }
+.sbdocs-content .muxui-docs-table[data-columns='6'] :is(th:nth-child(5), td:nth-child(5)) { inline-size: 5rem; }
+.sbdocs-content .muxui-docs-table[data-columns='5'] :is(th:nth-child(1), td:nth-child(1)) { inline-size: 22%; }
+.sbdocs-content .muxui-docs-table[data-columns='5'] :is(th:nth-child(2), td:nth-child(2)) { inline-size: 28%; }
+.sbdocs-content .muxui-docs-table[data-columns='5'] :is(th:nth-child(3), td:nth-child(3)) { inline-size: 4.5rem; }
+.sbdocs-content .muxui-docs-table[data-columns='5'] :is(th:nth-child(4), td:nth-child(4)) { inline-size: 5rem; }
+.sbdocs-content .muxui-docs-table[data-columns='3'] :is(th:nth-child(1), td:nth-child(1)) { inline-size: 36%; }
+.sbdocs-content .muxui-docs-table[data-columns='3'] :is(th:nth-child(2), td:nth-child(2)) { inline-size: 6rem; }
+
+.sbdocs-content .muxui-docs-exports .muxui-docs-indent {
+  padding-inline-start: var(--muxui-semantic-layout-content-indent);
+}
+
+/* A part, or a type, that opens on demand. */
+.sbdocs-content .muxui-docs-reference details > summary {
+  display: list-item;
+  border-radius: 2px;
+}
+
+.sbdocs-content .muxui-docs-reference details > summary:focus-visible {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
+}
+
+.sbdocs-content .muxui-docs-reference details > summary h4 {
+  display: inline;
+  margin: 0;
+}
+
+
+.sbdocs-content .muxui-docs-type-declaration {
+  margin-block-start: var(--muxui-semantic-layout-tight-gap);
+}
+
+.sbdocs-content .muxui-docs-type-declaration > pre {
+  margin: var(--muxui-semantic-layout-tight-gap) 0 0;
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
+  border: 1px solid var(--muxui-semantic-border-subtle);
+  background: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-strong);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sbdocs-content .muxui-docs-type-declaration > pre code {
+  background: transparent;
+  color: inherit;
+  /* Storybook sets pre code to nowrap; a long declaration wraps instead of scrolling the page sideways. */
+  white-space: inherit;
+}
+
+.sbdocs-content .muxui-docs-type-declaration > .muxui-docs-import {
+  margin: var(--muxui-semantic-layout-tight-gap) 0 0;
+}
+
+/* Below this width the six columns no longer fit side by side, so each row becomes its own block. */
+@container (max-width: 46rem) {
+  .muxui-docs-table,
+  .muxui-docs-table :is(thead, tbody) {
+    display: block;
+  }
+
+  .muxui-docs-table thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .muxui-docs-table :is(tr[data-prop], tr[data-export], tr[data-part]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--muxui-semantic-layout-group-gap);
+    padding-block: var(--muxui-semantic-layout-inset-tight);
+  }
+
+  .muxui-docs-table :is(tr[data-prop], tr[data-export], tr[data-part]) > :is(th, td) {
+    display: block;
+    inline-size: auto !important;
+    padding: 0;
+    border-width: 0;
+  }
+
+  .muxui-docs-table tr[data-prop] > [data-cell='required'] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .muxui-docs-table tr[data-prop] > :is([data-cell='applies'], [data-cell='type'], [data-cell='default'], [data-cell='description']) {
+    grid-column: 1 / -1;
+  }
+
+  .muxui-docs-table tr[data-prop] > :is([data-cell='type'], [data-cell='description']):empty {
+    display: none;
+  }
+
+  .muxui-docs-table tr[data-prop] > [data-cell='applies'].muxui-docs-always {
+    display: none;
+  }
+
+  .muxui-docs-table tr[data-prop] > [data-cell='default']::before {
+    content: "default ";
+    color: var(--muxui-semantic-content-muted);
+  }
+
+  .muxui-docs-table tr[data-prop] > [data-cell='applies']::before {
+    content: "applies when ";
+    color: var(--muxui-semantic-content-muted);
+  }
+
+  .muxui-docs-table tr.muxui-docs-closing {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .muxui-docs-table tr.muxui-docs-closing > td {
+    display: block;
+    inline-size: auto !important;
+    padding: 0;
+    border-width: 0;
+  }
+
+  .muxui-docs-table tr.muxui-docs-closing > td:empty {
+    display: none;
+  }
+
+  .muxui-docs-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
