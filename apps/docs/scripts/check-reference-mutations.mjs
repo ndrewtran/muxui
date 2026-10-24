@@ -85,6 +85,15 @@ try {
 			const members = part(file, 'DataDiff', null).members;
 			for (const name of ['children', 'dangerouslySetInnerHTML']) members.splice(members.findIndex((candidate) => candidate.name === name), 1);
 		}) },
+		{ label: 'change the return type of a handle method (TextEditorHandle.execute returns number)', slug: 'text-editor', expect: ['type TextEditorHandle declaration differs from the model'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditorHandle' }, apply: () => edit('text-editor', (file) => {
+			const handle = file.types.find(({ name }) => name === 'TextEditorHandle');
+			handle.text = handle.text.replace('execute(command: TextEditorCommand): boolean;', 'execute(command: TextEditorCommand): number;');
+			handle.members.find(({ name }) => name === 'execute').type = '(command: TextEditorCommand): number';
+		}) },
+		{ label: 'change a command payload field (TextEditorCommand link href?: number)', slug: 'text-editor', expect: ['type TextEditorCommand declaration differs from the model'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditorCommand' }, apply: () => edit('text-editor', (file) => {
+			const command = file.types.find(({ name }) => name === 'TextEditorCommand');
+			command.text = command.text.replace("type: 'link';\n  href: string;", "type: 'link';\n  href?: number;");
+		}) },
 		{ label: 'change the ref of a part that has an alias (TextEditor to HTMLDivElement)', slug: 'text-editor', expect: ['TextEditor ref line is "HTMLDivElement", expected "TextEditorHandle"', 'TextEditor.Root ref line is "HTMLDivElement", expected "TextEditorHandle"'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditor.Root' }, apply: () => edit('text-editor', (file) => {
 			part(file, 'TextEditor', null).ref = { type: 'HTMLDivElement' };
 		}) },
@@ -122,7 +131,7 @@ try {
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, and the members a part forbids) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type and a payload field) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }

@@ -7,13 +7,14 @@
 //   DISCLOSURE-01    title is required and children optional, the ref is HTMLDivElement, and there is no Disclosure.Title.
 //   SWITCH-FIELD-01  Root's ref is HTMLDivElement and Button's is HTMLLabelElement, with onChange(checked: boolean), name and value.
 //   TEXT-AREA-01     TextArea.Root's ref is HTMLDivElement, TextArea.TextArea's is HTMLTextAreaElement, with its native surface named.
-//   TEXT-EDITOR-02   the text-editor entry lists all 32 exports with exact signatures.
+//   TEXT-EDITOR-02   the text-editor entry lists all 32 exports, each declared exactly (the component's props, two signatures, 29 types).
 //   X-002 (part)     CommandPalette says which parts need a Root around them.
 //   DATA-DIFF        DataDiff closes its table with the members it types never (a reviewed fact, not a ledger record).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
 import { attributeValue, elements } from './html-tree.mjs';
+import { textEditorFunctions, textEditorNative, textEditorProps, textEditorRef, textEditorTypes } from './text-editor-declarations.mjs';
 import { renderedComponent, routeFile, text } from './typed-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -75,45 +76,36 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 	hasRow(record, partOf(record, api, 'TextArea.Root'), 'onChange', 'optional', '(value: string) => void');
 }
 
-// TEXT-EDITOR-02
+// TEXT-EDITOR-02: the whole entry, every export with its declaration as written (see text-editor-declarations.mjs).
 {
 	const record = 'TEXT-EDITOR-02';
 	const { api } = page('text-editor');
-	const names = [
-		'TextEditor', 'isTextEditorDocument', 'normalizeTextEditorDocument',
-		'TextEditorActionCallbacks', 'TextEditorAlignment', 'TextEditorBlockNode', 'TextEditorBlockquoteNode', 'TextEditorBulletListNode', 'TextEditorCodeBlockNode',
-		'TextEditorCommand', 'TextEditorDocument', 'TextEditorFontFamily', 'TextEditorFontSize', 'TextEditorHandle', 'TextEditorHardBreakNode', 'TextEditorHeadingNode',
-		'TextEditorHorizontalRuleNode', 'TextEditorImageNode', 'TextEditorInlineNode', 'TextEditorListItemNode', 'TextEditorListNode', 'TextEditorMark', 'TextEditorNode',
-		'TextEditorOrderedListNode', 'TextEditorOrderedListType', 'TextEditorParagraphNode', 'TextEditorPlainTextNode', 'TextEditorProps', 'TextEditorSelectionAction',
-		'TextEditorSelectionActions', 'TextEditorSelectionRequest', 'TextEditorTextNode',
-	];
+	const names = ['TextEditor', ...Object.keys(textEditorFunctions), ...Object.keys(textEditorTypes)];
 	const shown = [...api.exports.map(({ name }) => name), ...api.types.map(({ name }) => name)];
 	expect(record, names.length === 32 && shown.length === 32 && names.every((name) => shown.includes(name)), `the page must list the 32 exports of @muxui/react/text-editor, and lists ${shown.length}: missing ${names.filter((name) => !shown.includes(name)).join(', ') || 'none'}.`);
 	for (const item of api.exports) expect(record, item.import === `import { ${item.name} } from '@muxui/react/text-editor';`, `${item.name} must be imported from @muxui/react/text-editor, and shows "${item.import}".`);
 	for (const type of api.types) expect(record, type.imports.length === 1 && type.imports[0] === `import type { ${type.name} } from '@muxui/react/text-editor';`, `${type.name} must be imported from @muxui/react/text-editor.`);
-	const signature = (name) => api.exports.find((item) => item.name === name)?.signature;
-	expect(record, signature('isTextEditorDocument') === 'isTextEditorDocument(value: unknown): value is TextEditorDocument', `isTextEditorDocument shows "${signature('isTextEditorDocument')}".`);
-	expect(record, signature('normalizeTextEditorDocument') === 'normalizeTextEditorDocument(value: unknown): TextEditorDocument', `normalizeTextEditorDocument shows "${signature('normalizeTextEditorDocument')}".`);
+	// The two functions, by their exact signatures.
+	for (const [name, signature] of Object.entries(textEditorFunctions)) {
+		const got = api.exports.find((item) => item.name === name)?.signature;
+		expect(record, got === signature, `${name} must have the signature "${signature}", and shows "${got}".`);
+	}
+	// The component: its ref, its attribute surface, and every prop, in order, with its requirement and exact type.
 	const editor = partOf(record, api, 'TextEditor');
-	ref(record, editor, 'TextEditorHandle');
+	ref(record, editor, textEditorRef);
+	expect(record, JSON.stringify(editor?.natives) === JSON.stringify(textEditorNative), `TextEditor must show the native surface ${JSON.stringify(textEditorNative)}, and shows ${JSON.stringify(editor?.natives)}.`);
+	const props = editor === undefined ? [] : rows(editor);
+	expect(record, JSON.stringify(props.map(({ name }) => name)) === JSON.stringify(textEditorProps.map(([name]) => name)), `TextEditor must list the props ${textEditorProps.map(([name]) => name).join(', ')}, and lists ${props.map(({ name }) => name).join(', ')}.`);
+	for (const [name, type] of textEditorProps) hasRow(record, editor, name, 'optional', type);
 	// Root is the same component as TextEditor, so it shows TextEditor's ref and native surface, never "none declared".
 	const alias = partOf(record, api, 'TextEditor.Root');
-	ref(record, alias, 'TextEditorHandle');
-	const surface = JSON.stringify([{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] }]);
-	expect(record, alias?.sameAs === 'TextEditor' && alias.groups.length === 0 && JSON.stringify(alias.natives) === surface, `TextEditor.Root must be shown as the same component as TextEditor with ${surface}, and shows ${JSON.stringify({ sameAs: alias?.sameAs, natives: alias?.natives })}.`);
-	const requests = {
-		onLinkRequest: '(actions: TextEditorActionCallbacks) => void',
-		onImageRequest: '(actions: { insertImage(src: string, alt?: string): boolean }) => void',
-		onColorRequest: '(actions: { setColor(value: string): boolean }) => void',
-		onGenerate: '() => void',
-		onSelectionRequest: '(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>',
-	};
-	for (const [name, type] of Object.entries(requests)) hasRow(record, editor, name, 'optional', type);
-	const declaration = (name) => api.types.find((type) => type.name === name)?.text ?? '';
-	expect(record, declaration('TextEditorSelectionActions') === 'type TextEditorSelectionActions = {\n  readonly selection: { readonly text: string; readonly document: TextEditorDocument };\n  readonly signal: AbortSignal;\n  replace(content: string | TextEditorDocument): boolean;\n  insertAfter(content: string | TextEditorDocument): boolean;\n  close(): void;\n};', 'TextEditorSelectionActions must show its readonly selection, signal, replace, insertAfter and close as declared.');
-	const command = declaration('TextEditorCommand');
-	const members = ["type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate';", "type: 'align';", "type: 'color';", "type: 'fontFamily';", "type: 'fontSize';", "type: 'link';", "type: 'image';"];
-	expect(record, members.every((member) => command.includes(member)), 'TextEditorCommand must show its seven members by their type.');
+	ref(record, alias, textEditorRef);
+	expect(record, alias?.sameAs === 'TextEditor' && alias.groups.length === 0 && JSON.stringify(alias.natives) === JSON.stringify(textEditorNative), `TextEditor.Root must be shown as the same component as TextEditor with ${JSON.stringify(textEditorNative)}, and shows ${JSON.stringify({ sameAs: alias?.sameAs, natives: alias?.natives })}.`);
+	// The types, each declaration as written, so a return type, a payload field or a callback that changes is a different page.
+	for (const [name, declaration] of Object.entries(textEditorTypes)) {
+		const got = api.types.find((type) => type.name === name)?.text;
+		expect(record, got === declaration, `${name} must be declared ${JSON.stringify(declaration)}, and is declared ${JSON.stringify(got)}.`);
+	}
 }
 
 // DATA-DIFF: children and dangerouslySetInnerHTML are typed never on DataDiff, so its table closes with them as not allowed.
