@@ -65,21 +65,28 @@ try {
 		{ label: 'move an import (normalizeTextEditorDocument from the root)', slug: 'text-editor', expect: ['export normalizeTextEditorDocument differs', 'without the import'], apply: () => edit('text-editor', (file) => {
 			component(file, 'normalizeTextEditorDocument').entry = '.';
 		}) },
-		{ label: 'delete a type (TextEditorSelectionActions)', slug: 'text-editor', expect: ['types are'], record: 'TEXT-EDITOR-02', apply: () => edit('text-editor', (file) => {
+		{ label: 'delete a type (TextEditorSelectionActions)', slug: 'text-editor', expect: ['types are'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditorSelectionActions' }, apply: () => edit('text-editor', (file) => {
 			file.types.splice(file.types.findIndex(({ name }) => name === 'TextEditorSelectionActions'), 1);
 		}) },
 		{ label: 'delete a legal value of an alternative (Resizable defaultSizes)', slug: 'resizable', expect: ['Resizable (otherwise) rows are'], apply: () => edit('resizable', (file) => {
 			const alternative = part(file, 'Resizable', null).alternatives[1];
 			alternative.members.splice(alternative.members.findIndex(({ name }) => name === 'defaultSizes'), 1);
 		}) },
-		{ label: 'change a requirement (Disclosure title becomes optional)', slug: 'disclosure', expect: ['row title differs in state'], record: 'DISCLOSURE-01', apply: () => edit('disclosure', (file) => {
+		{ label: 'change a requirement (Disclosure title becomes optional)', slug: 'disclosure', expect: ['row title differs in state'], pin: { record: 'DISCLOSURE-01', includes: 'title' }, apply: () => edit('disclosure', (file) => {
 			part(file, 'Disclosure', null).members.find(({ name }) => name === 'title').optional = true;
 		}) },
-		{ label: 'change a ref (SwitchField.Button to HTMLButtonElement)', slug: 'switch-field', expect: ['SwitchField.Button ref line is "HTMLButtonElement", expected "HTMLLabelElement"'], record: 'SWITCH-FIELD-01', apply: () => edit('switch-field', (file) => {
+		{ label: 'change a ref (SwitchField.Button to HTMLButtonElement)', slug: 'switch-field', expect: ['SwitchField.Button ref line is "HTMLButtonElement", expected "HTMLLabelElement"'], pin: { record: 'SWITCH-FIELD-01', includes: 'SwitchField.Button' }, apply: () => edit('switch-field', (file) => {
 			part(file, 'SwitchField', 'Button').ref = { type: 'HTMLButtonElement' };
 		}) },
-		{ label: 'change a ref (TextArea.TextArea to HTMLInputElement)', slug: 'text-area', expect: ['TextArea.TextArea ref line is "HTMLInputElement", expected "HTMLTextAreaElement"'], record: 'TEXT-AREA-01', apply: () => edit('text-area', (file) => {
+		{ label: 'change a ref (TextArea.TextArea to HTMLInputElement)', slug: 'text-area', expect: ['TextArea.TextArea ref line is "HTMLInputElement", expected "HTMLTextAreaElement"'], pin: { record: 'TEXT-AREA-01', includes: 'TextArea.TextArea' }, apply: () => edit('text-area', (file) => {
 			part(file, 'TextArea', 'TextArea').ref = { type: 'HTMLInputElement' };
+		}) },
+		{ label: 'delete the never members of a part (DataDiff children and dangerouslySetInnerHTML)', slug: 'data-diff', expect: ['DataDiff closing rows are []'], pin: { record: 'DATA-DIFF', includes: 'children' }, apply: () => edit('data-diff', (file) => {
+			const members = part(file, 'DataDiff', null).members;
+			for (const name of ['children', 'dangerouslySetInnerHTML']) members.splice(members.findIndex((candidate) => candidate.name === name), 1);
+		}) },
+		{ label: 'change the ref of a part that has an alias (TextEditor to HTMLDivElement)', slug: 'text-editor', expect: ['TextEditor ref line is "HTMLDivElement", expected "TextEditorHandle"', 'TextEditor.Root ref line is "HTMLDivElement", expected "TextEditorHandle"'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditor.Root' }, apply: () => edit('text-editor', (file) => {
+			part(file, 'TextEditor', null).ref = { type: 'HTMLDivElement' };
 		}) },
 	];
 	for (const mutation of mutations) mutation.apply();
@@ -106,14 +113,16 @@ try {
 
 	const records = run('ledger record pins', [resolve(import.meta.dirname, 'check-reference-records.mjs'), dist]);
 	if (records.status === 0) throw new Error('The ledger record pins passed on a build of a changed reference.');
-	for (const mutation of mutations.filter(({ record }) => record !== undefined)) {
-		if (!records.output.includes(`- ${mutation.record}:`)) missed.push(`${mutation.label}: the pin ${mutation.record} did not fail`);
+	// A pin must fail for its own change: a problem on its record that names what the change touched.
+	const pinned = records.output.split('\n').filter((line) => line.startsWith('- '));
+	for (const { label, pin } of mutations.filter(({ pin: candidate }) => candidate !== undefined)) {
+		if (!pinned.some((line) => line.startsWith(`- ${pin.record}:`) && line.includes(pin.includes))) missed.push(`${label}: the pin ${pin.record} did not fail on "${pin.includes}"`);
 	}
 	if (process.argv.includes('--show')) console.log(`${reported.join('\n')}\n${records.output.split('\n').filter((line) => line.startsWith('- ')).join('\n')}`);
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, two refs and an import, a type, a legal value and a requirement) each fail the component reference checker on their own page, and the pins of ${mutations.filter(({ record }) => record !== undefined).length} ledger records each fail (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, and the members a part forbids) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }

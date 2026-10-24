@@ -335,33 +335,61 @@ function rowOf(member: DeclarationMember, appliesWhen: string, catalog: Catalog,
 	};
 }
 
-function partView(exportName: string, importFrom: string, part: DeclarationPart, catalog: Catalog, context: Context, byMember: (member: string) => DeclarationPart | undefined): ApiPart {
-	const heading = partHeading(exportName, part);
+/**
+ * Finds the part an alias names. The model writes `sameAs` as the export's own name (the component itself, as in
+ * `Root: TextEditorComponent`) or the name of a sibling member. An alias that names neither is a broken reference, which fails.
+ */
+function aliasResolver(item: DeclarationExport, label: string, siblings: readonly DeclarationPart[]): (alias: DeclarationPart) => Canonical {
+	return (alias) => {
+		const target = alias.sameAs === item.name ? siblings.find(({ member }) => member === null) : siblings.find(({ member }) => member === alias.sameAs);
+		if (target === undefined || target.sameAs !== undefined) throw new Error(`${label}.${alias.member ?? ''} is the same as ${alias.sameAs}, which is no part of ${item.name} with a description of its own.`);
+		return { part: target, label };
+	};
+}
+
+/** What a part says about its element and its attribute surface, which an alias shares with the part it names. */
+function surfaceOf(part: DeclarationPart) {
 	const alternatives = part.alternatives ?? [];
-	const base = {
-		heading,
-		anchor: partAnchor(heading),
-		import: importFrom,
+	return {
 		natives: nativesOf(part.natives),
 		generics: (part.typeParameters ?? []).map(genericOf),
-		hasAlternatives: alternatives.length > 0,
+		ref: refText(part.ref) ?? (alternatives.some(({ ref }) => refText(ref) !== undefined) ? 'per alternative' : 'none declared'),
 	};
+}
+
+/** The members a part itself declares `never`: closing "not allowed" names for the group that holds its shared members. */
+function forbiddenOf(members: readonly DeclarationMember[]): readonly ApiClosing[] {
+	const names = members.filter(({ never }) => never === true).map(({ name }) => name);
+	return names.length > 0 ? [{ state: 'not allowed', names }] : [];
+}
+
+/** Where a part that is the same component as another is described: the part it names, and the label of the export that holds it. */
+interface Canonical {
+	part: DeclarationPart;
+	label: string;
+}
+
+function partView(exportName: string, importFrom: string, part: DeclarationPart, catalog: Catalog, context: Context, canonical: (alias: DeclarationPart) => Canonical): ApiPart {
+	const heading = partHeading(exportName, part);
+	const alternatives = part.alternatives ?? [];
+	const base = { heading, anchor: partAnchor(heading), import: importFrom };
 	if (part.sameAs !== undefined) {
-		const target = byMember(part.sameAs);
-		const targetHeading = target === undefined ? part.sameAs : partHeading(exportName, target);
-		return { ...base, ref: 'none declared', sameAs: { heading: targetHeading, anchor: partAnchor(targetHeading) }, groups: [], rowCount: 0 };
+		// An alias is the same component, so its ref, native surface and generics are those of the part it names, not "none declared".
+		const target = canonical(part);
+		const targetHeading = partHeading(target.label, target.part);
+		return { ...base, ...surfaceOf(target.part), hasAlternatives: false, sameAs: { heading: targetHeading, anchor: partAnchor(targetHeading) }, groups: [], rowCount: 0 };
 	}
 	const rowsOf = (members: readonly DeclarationMember[], appliesWhen: string) => members.filter(({ never }) => never !== true).map((member) => rowOf(member, appliesWhen, catalog, context));
 	const common = rowsOf(part.members ?? [], 'always');
+	const commonClosing = forbiddenOf(part.members ?? []);
 	const groups: ApiGroup[] = alternatives.length === 0
-		? [{ label: null, appliesWhen: 'always', natives: [], rows: common, closing: [] }]
+		? [{ label: null, appliesWhen: 'always', natives: [], rows: common, closing: commonClosing }]
 		: [
-			{ label: 'Common', appliesWhen: 'always', natives: [], rows: common, closing: [] },
+			{ label: 'Common', appliesWhen: 'always', natives: [], rows: common, closing: commonClosing },
 			...alternatives.map((alternative, index): ApiGroup => {
 				const label = alternativeLabel(alternatives, index);
 				const own = new Set(alternative.members.map(({ name }) => name));
 				const absent = [...new Set(alternatives.flatMap(({ members }) => members.map(({ name }) => name)))].filter((name) => !own.has(name));
-				const forbidden = alternative.members.filter(({ never }) => never === true).map(({ name }) => name);
 				const ref = refText(alternative.ref);
 				return {
 					label,
@@ -370,16 +398,16 @@ function partView(exportName: string, importFrom: string, part: DeclarationPart,
 					natives: nativesOf(alternative.natives),
 					rows: rowsOf(alternative.members, label),
 					closing: [
-						...(forbidden.length > 0 ? [{ state: 'not allowed' as const, names: forbidden }] : []),
+						...forbiddenOf(alternative.members),
 						...(absent.length > 0 ? [{ state: 'not declared' as const, names: absent }] : []),
 					],
 				};
 			}),
 		];
-	const ownRef = refText(part.ref);
 	return {
 		...base,
-		ref: ownRef ?? (alternatives.some(({ ref }) => refText(ref) !== undefined) ? 'per alternative' : 'none declared'),
+		...surfaceOf(part),
+		hasAlternatives: alternatives.length > 0,
 		groups,
 		rowCount: groups.reduce((count, group) => count + group.rows.length + group.closing.length, 0),
 	};
@@ -446,11 +474,10 @@ export function buildApiReference({ packageName, exportName, anatomy, catalog, d
 	const main = declarations.export;
 	const mainParts = (main.parts ?? []).filter((part) => part.form !== undefined || part.sameAs !== undefined);
 	const owned = catalogOwnership(catalog, mainParts);
-	const byMember = (member: string) => mainParts.find((part) => part.member === member);
 	const flat = declarations.related.filter((item) => item.kind === 'component');
 	const parts: ApiPart[] = [
-		...mainParts.map((part) => partView(exportName, importLine(packageName, main.entry, main.name), part, owned(part), context, byMember)),
-		...flat.flatMap((item) => (item.parts ?? []).map((part) => partView(item.name, importLine(packageName, item.entry, item.name), part, none, context, (member) => item.parts?.find((candidate) => candidate.member === member)))),
+		...mainParts.map((part) => partView(exportName, importLine(packageName, main.entry, main.name), part, owned(part), context, aliasResolver(main, exportName, mainParts))),
+		...flat.flatMap((item) => (item.parts ?? []).filter((part) => part.form !== undefined || part.sameAs !== undefined).map((part) => partView(item.name, importLine(packageName, item.entry, item.name), part, none, context, aliasResolver(item, item.name, item.parts ?? [])))),
 	];
 
 	const exports: ApiExport[] = [main, ...declarations.related].map((item) => exportView(item, packageName, parts, context, item === main ? exportName : item.name));

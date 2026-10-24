@@ -100,6 +100,41 @@ test('a part with alternatives shows common members first, then one group per al
 	assert.deepEqual([switchRoot.groups.length, switchRoot.groups[0].label, switchRoot.hasAlternatives, switchRoot.groups[0].closing], [1, null, false, []]);
 });
 
+test('members a part types never close its table as not allowed, with or without alternatives', () => {
+	// DataDiff has no alternatives: children and dangerouslySetInnerHTML are never, so they are not rows but one closing row.
+	const dataDiff = partNamed(page('data-diff'), 'DataDiff');
+	assert.equal(dataDiff.hasAlternatives, false);
+	assert.deepEqual(dataDiff.groups[0].closing, [{ state: 'not allowed', names: ['children', 'dangerouslySetInnerHTML'] }]);
+	assert.equal(rowsOf(dataDiff).some(({ name }) => name === 'children' || name === 'dangerouslySetInnerHTML'), false);
+	assert.equal(dataDiff.rowCount, rowsOf(dataDiff).length + 1);
+	// With alternatives, the shared members' never names close the Common group, and each alternative closes its own.
+	const model = { members: [member('id'), never('children')], alternatives: [{ members: [required('a')] }, { members: [required('b')] }] };
+	const common = buildApiReference({
+		packageName: '@x/y', exportName: 'X', anatomy: [], catalog: { derived: false, props: [], events: [], defaults: {} },
+		declarations: { owner: 'x', export: { name: 'X', entry: '.', kind: 'component', parts: [{ member: null, form: 'function', ...model }] }, related: [], types: [] },
+	}).parts[0];
+	assert.deepEqual(common.groups[0].closing, [{ state: 'not allowed', names: ['children'] }]);
+	assert.deepEqual(common.groups[1].closing, [{ state: 'not declared', names: ['b'] }]);
+});
+
+test('a part that is the same component as another shows that part\'s ref, native surface and generics, never "none declared"', () => {
+	let aliases = 0;
+	for (const slug of facts.runtimeSources.keys()) {
+		const api = page(slug);
+		for (const alias of api.parts.filter((part) => part.sameAs !== undefined)) {
+			aliases += 1;
+			const target = partNamed(api, alias.sameAs.heading);
+			assert.ok(target !== undefined && target.sameAs === undefined, `${alias.heading} names ${alias.sameAs.heading}, which has no table of its own`);
+			assert.deepEqual([alias.ref, alias.natives, alias.generics], [target.ref, target.natives, target.generics], alias.heading);
+		}
+	}
+	assert.equal(aliases, 1, 'TextEditor.Root is the one alias in the reference');
+	const root = partNamed(page('text-editor'), 'TextEditor.Root');
+	assert.equal(root.ref, 'TextEditorHandle');
+	assert.deepEqual(root.natives, [{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] }]);
+	assert.deepEqual(root.groups, []);
+});
+
 test('Dialog keeps three alternatives, IconButton and Text show the facts their records ask for', () => {
 	const dialog = partNamed(page('dialog'), 'Dialog');
 	assert.deepEqual(dialog.groups.map(({ label }) => label), ['Common', 'requires title', 'requires aria-label', 'requires aria-labelledby']);

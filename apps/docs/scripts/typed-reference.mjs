@@ -8,12 +8,17 @@ import { attributeValue, classNames, elements, textContent } from './html-tree.m
 
 /** Collapse the whitespace a template adds between inline pieces. */
 export const text = (node) => textContent(node).replace(/\s+/gu, ' ').trim();
+/** The text of an element the page may be missing, which then reads as null so the page's difference is reported, not a crash. */
+const read = (node) => (node === undefined ? null : text(node));
+
+/** A page with more parts than this opens only its first part. */
+export const collapsePartsAbove = 8;
 
 /** The reference as the JSON files hold it: the inventory and each owner's file, by owner. */
 export function loadReference(directory) {
-	const read = (name) => JSON.parse(readFileSync(resolve(directory, name), 'utf8'));
-	const inventory = read('inventory.json');
-	const files = new Map(Object.entries(inventory.owners).map(([owner, name]) => [owner, read(name)]));
+	const readJson = (name) => JSON.parse(readFileSync(resolve(directory, name), 'utf8'));
+	const inventory = readJson('inventory.json');
+	const files = new Map(Object.entries(inventory.owners).map(([owner, name]) => [owner, readJson(name)]));
 	return { inventory, files };
 }
 
@@ -131,28 +136,34 @@ export function expectedComponent({ exportName, entry, packageName, reference, b
 		};
 	};
 	const natives = (list) => (list ?? []).map(({ type, omit }) => ({ type, omit: omit ?? [] }));
+	// What a part says about its element and attribute surface; an alias says what the part it names says.
+	const surface = (part) => ({
+		natives: natives(part.natives),
+		generics: (part.typeParameters ?? []).map(({ name, constraint, default: fallback }) => `${name}${constraint === undefined ? '' : ` extends ${constraint}`}${fallback === undefined ? '' : ` = ${fallback}`}`),
+		ref: refLine(part.ref) ?? ((part.alternatives ?? []).some((alternative) => refLine(alternative.ref) !== undefined) ? 'per alternative' : 'none declared'),
+	});
+	const forbidden = (members) => {
+		const names = members.filter((member) => member.never).map((member) => member.name);
+		return names.length > 0 ? [{ state: 'not allowed', names }] : [];
+	};
 	const partOf = (exportOf, importFrom, part, catalog, siblings) => {
 		const alternatives = part.alternatives ?? [];
-		const base = {
-			heading: heading(exportOf, part),
-			import: importFrom,
-			natives: natives(part.natives),
-			generics: (part.typeParameters ?? []).map(({ name, constraint, default: fallback }) => `${name}${constraint === undefined ? '' : ` extends ${constraint}`}${fallback === undefined ? '' : ` = ${fallback}`}`),
-		};
+		const base = { heading: heading(exportOf, part), import: importFrom };
 		if (part.sameAs !== undefined) {
-			const target = siblings.find(({ member }) => member === part.sameAs);
-			return { ...base, ref: 'none declared', sameAs: target === undefined ? part.sameAs : heading(exportOf, target), groups: [] };
+			// `sameAs` is the export's own name (the component itself) or a sibling member.
+			const target = siblings.find(({ member }) => member === (part.sameAs === exportOf ? null : part.sameAs));
+			if (target === undefined) throw new Error(`${base.heading} is the same as ${part.sameAs}, which the reference does not hold`);
+			return { ...base, ...surface(target), sameAs: heading(exportOf, target), groups: [] };
 		}
 		const rows = (members, when) => members.filter((member) => !member.never).map((member) => rowFor(member, when, catalog));
 		const groups = alternatives.length === 0
-			? [{ label: null, ref: null, natives: [], rows: rows(part.members ?? [], 'always'), closing: [] }]
+			? [{ label: null, ref: null, natives: [], rows: rows(part.members ?? [], 'always'), closing: forbidden(part.members ?? []) }]
 			: [
-				{ label: 'Common', ref: null, natives: [], rows: rows(part.members ?? [], 'always'), closing: [] },
+				{ label: 'Common', ref: null, natives: [], rows: rows(part.members ?? [], 'always'), closing: forbidden(part.members ?? []) },
 				...alternatives.map((alternative, index) => {
 					const label = labelOf(alternatives, index);
 					const listed = new Set(alternative.members.map((member) => member.name));
 					const everywhere = [...new Set(alternatives.flatMap((other) => other.members.map((member) => member.name)))];
-					const forbidden = alternative.members.filter((member) => member.never).map((member) => member.name);
 					const absent = everywhere.filter((name) => !listed.has(name));
 					return {
 						label,
@@ -160,17 +171,13 @@ export function expectedComponent({ exportName, entry, packageName, reference, b
 						natives: natives(alternative.natives),
 						rows: rows(alternative.members, label),
 						closing: [
-							...(forbidden.length > 0 ? [{ state: 'not allowed', names: forbidden }] : []),
+							...forbidden(alternative.members),
 							...(absent.length > 0 ? [{ state: 'not declared', names: absent }] : []),
 						],
 					};
 				}),
 			];
-		return {
-			...base,
-			ref: refLine(part.ref) ?? (alternatives.some((alternative) => refLine(alternative.ref) !== undefined) ? 'per alternative' : 'none declared'),
-			groups,
-		};
+		return { ...base, ...surface(part), groups };
 	};
 	const specifier = (key) => (key === '.' ? packageName : `${packageName}${key.slice(1)}`);
 	const importOf = (candidate) => `import { ${candidate.name} } from '${specifier(candidate.entry)}';`;
@@ -273,21 +280,23 @@ export function renderedComponent(root) {
 	});
 	const partsRendered = inApi.filter((node) => node.tagName === 'details' && classNames(node).has('api-part')).map((node) => {
 		const inside = elements(node);
-		const heading = inside.find((child) => child.tagName === 'h3');
-		const generics = inside.find((child) => attributeValue(child, 'data-api-generics') !== undefined);
-		const natives = inside.find((child) => attributeValue(child, 'data-api-natives') !== undefined);
-		const sameAs = inside.find((child) => attributeValue(child, 'data-api-same-as') !== undefined);
-		const table = inside.find((child) => child.tagName === 'table' && classNames(child).has('api-table'));
+		const find = (predicate) => inside.find(predicate);
+		const heading = find((child) => child.tagName === 'h3');
+		const generics = find((child) => attributeValue(child, 'data-api-generics') !== undefined);
+		const natives = find((child) => attributeValue(child, 'data-api-natives') !== undefined);
+		const sameAs = find((child) => attributeValue(child, 'data-api-same-as') !== undefined);
+		const sameAsLink = sameAs === undefined ? undefined : elements(sameAs).find((child) => child.tagName === 'a');
+		const table = find((child) => child.tagName === 'table' && classNames(child).has('api-table'));
 		const rendered = {
-			heading: text(heading),
-			anchor: attributeValue(heading, 'id'),
-			import: text(inside.find((child) => attributeValue(child, 'data-api-part-import') !== undefined)),
+			heading: read(heading),
+			anchor: heading === undefined ? null : (attributeValue(heading, 'id') ?? null),
+			import: read(find((child) => attributeValue(child, 'data-api-part-import') !== undefined)),
 			open: attributeValue(node, 'open') !== undefined,
-			ref: text(inside.find((child) => attributeValue(child, 'data-api-ref') !== undefined)),
+			ref: read(find((child) => attributeValue(child, 'data-api-ref') !== undefined)),
 			natives: natives === undefined ? [] : nativesOf(natives),
 			generics: generics === undefined ? [] : elements(generics).filter((child) => child.tagName === 'code').map((code) => text(code)),
-			sameAs: sameAs === undefined ? null : text(elements(sameAs).find((child) => child.tagName === 'a')),
-			sameAsHref: sameAs === undefined ? null : attributeValue(elements(sameAs).find((child) => child.tagName === 'a'), 'href'),
+			sameAs: sameAsLink === undefined ? null : text(sameAsLink),
+			sameAsHref: sameAsLink === undefined ? null : attributeValue(sameAsLink, 'href'),
 			hasTable: table !== undefined,
 			hasAlternatives: table !== undefined && classNames(table).has('api-table-alternatives'),
 			groups: [],
@@ -302,6 +311,42 @@ export function renderedComponent(root) {
 				const codes = elements(child).filter((code) => code.tagName === 'code').map((code) => text(code));
 				return { type: codes[0], omit: codes.slice(1) };
 			});
+			// Every row in the order the page has it, as a row or a closing row, so the order itself can be compared.
+			const sequence = inGroup.filter((child) => child.tagName === 'tr' && classNames(child).has('api-row')).map((row) => {
+				const cell = (name) => elements(row).find((child) => attributeValue(child, name) !== undefined);
+				const stateCell = cell('data-api-state');
+				const state = read(stateCell);
+				// The text a reader sees, and the attribute the colour and the checker key on, must say the same.
+				const marked = stateCell === undefined ? null : (attributeValue(stateCell, 'data-api-state') ?? null);
+				if (classNames(row).has('api-closing')) {
+					return {
+						closing: true,
+						state,
+						marked: [marked, attributeValue(row, 'data-api-closing') ?? null],
+						names: elements(row).filter((child) => child.tagName === 'code').map((code) => text(code)),
+					};
+				}
+				const typeCell = cell('data-api-type');
+				const typeText = typeCell === undefined ? undefined : elements(typeCell).find((child) => child.tagName === 'code' && classNames(child).has('api-type-text'));
+				const values = typeCell === undefined ? undefined : elements(typeCell).find((child) => attributeValue(child, 'data-api-values') !== undefined);
+				const defaultCell = cell('data-api-default');
+				const when = cell('data-api-when');
+				const event = cell('data-api-event');
+				const docCell = cell('data-api-doc');
+				return {
+					closing: false,
+					name: read(elements(row).find((child) => child.tagName === 'code' && classNames(child).has('api-name'))),
+					when: when === undefined ? 'always' : text(when),
+					type: read(typeText),
+					links: typeCell === undefined ? [] : [...new Set(elements(typeCell).filter((child) => child.tagName === 'a').map((anchor) => `${text(anchor)} -> ${attributeValue(anchor, 'href')}`))].sort(),
+					...(values !== undefined && { values: text(values) }),
+					state,
+					marked: [marked],
+					default: defaultCell === undefined ? undefined : (elements(defaultCell).some((child) => classNames(child).has('api-none')) ? null : { text: read(elements(defaultCell).find((child) => child.tagName === 'code')), authored: elements(defaultCell).some((child) => attributeValue(child, 'data-api-authored') !== undefined) }),
+					doc: docCell === undefined ? undefined : (text(docCell) || null),
+					event: event === undefined ? null : text(event).replace(/^event /u, ''),
+				};
+			});
 			return {
 				label: headerCell === undefined ? null : (() => {
 					const code = elements(headerCell).find((child) => child.tagName === 'code');
@@ -309,30 +354,9 @@ export function renderedComponent(root) {
 				})(),
 				ref: ref === undefined ? null : text(elements(ref).find((child) => child.tagName === 'code' || (child.tagName === 'span' && classNames(child).has('api-none')))),
 				natives: groupNatives,
-				rows: inGroup.filter((child) => child.tagName === 'tr' && classNames(child).has('api-row') && !classNames(child).has('api-closing')).map((row) => {
-					const cell = (name) => elements(row).find((child) => attributeValue(child, name) !== undefined);
-					const typeCell = cell('data-api-type');
-					const values = elements(typeCell).find((child) => attributeValue(child, 'data-api-values') !== undefined);
-					const defaultCell = cell('data-api-default');
-					const none = elements(defaultCell).some((child) => classNames(child).has('api-none'));
-					const when = cell('data-api-when');
-					const event = cell('data-api-event');
-					return {
-						name: text(elements(row).find((child) => child.tagName === 'code' && classNames(child).has('api-name'))),
-						when: when === undefined ? 'always' : text(when),
-						type: text(elements(typeCell).find((child) => child.tagName === 'code' && classNames(child).has('api-type-text'))),
-						links: [...new Set(elements(typeCell).filter((child) => child.tagName === 'a').map((anchor) => `${text(anchor)} -> ${attributeValue(anchor, 'href')}`))].sort(),
-						...(values !== undefined && { values: text(values) }),
-						state: text(cell('data-api-state')),
-						default: none ? null : { text: text(elements(defaultCell).find((child) => child.tagName === 'code')), authored: elements(defaultCell).some((child) => attributeValue(child, 'data-api-authored') !== undefined) },
-						doc: text(cell('data-api-doc')) || null,
-						event: event === undefined ? null : text(event).replace(/^event /u, ''),
-					};
-				}),
-				closing: inGroup.filter((child) => child.tagName === 'tr' && classNames(child).has('api-closing')).map((row) => ({
-					state: attributeValue(row, 'data-api-closing'),
-					names: elements(row).filter((child) => child.tagName === 'code').map((code) => text(code)),
-				})),
+				order: sequence.map(({ closing }) => (closing ? 'closing' : 'row')),
+				rows: sequence.filter(({ closing }) => !closing),
+				closing: sequence.filter(({ closing }) => closing),
 			};
 		});
 		return rendered;
@@ -439,6 +463,9 @@ export function compareComponent(expected, rendered, events, route, { collapseAb
 			const context = `${where}${group.label === null ? '' : ` (${group.label})`}`;
 			if (got.ref !== group.ref) report(`${context} group ref is ${JSON.stringify(got.ref)}, expected ${JSON.stringify(group.ref)}.`);
 			if (!same(got.natives, group.natives)) report(`${context} group native line differs.`);
+			// The rows come first in the model's order and the closing rows finish the group; the page's whole order is that.
+			const wantedOrder = [...group.rows.map(() => 'row'), ...group.closing.map(() => 'closing')];
+			if (!same(got.order, wantedOrder)) report(`${context} shows its rows in the order ${got.order.join(', ')}, expected ${group.rows.length} rows then ${group.closing.length} closing rows.`);
 			if (!same(got.rows.map(({ name }) => name), group.rows.map(({ name }) => name))) {
 				report(`${context} rows are ${got.rows.map(({ name }) => name).join(', ')}, expected ${group.rows.map(({ name }) => name).join(', ')}.`);
 				continue;
@@ -449,9 +476,15 @@ export function compareComponent(expected, rendered, events, route, { collapseAb
 				if (!same(seen.values, row.values)) diff.push('values');
 				if (!same(seen.default, row.default)) diff.push('default');
 				if (!same(seen.links, row.links)) diff.push('links');
+				if (!same(seen.marked, [row.state])) diff.push('state marker');
 				if (diff.length > 0) report(`${context} row ${row.name} differs in ${diff.join(', ')}: ${JSON.stringify(Object.fromEntries(diff.map((key) => [key, [seen[key], row[key]]])))}.`);
 			}
-			if (!same(got.closing, group.closing)) report(`${context} closing rows are ${JSON.stringify(got.closing)}, expected ${JSON.stringify(group.closing)}.`);
+			// A closing row is what a reader sees: the state it shows and the names it lists, not only what it is marked with.
+			const closing = got.closing.map(({ state, names }) => ({ state, names }));
+			if (!same(closing, group.closing)) report(`${context} closing rows are ${JSON.stringify(closing)}, expected ${JSON.stringify(group.closing)}.`);
+			for (const row of got.closing) {
+				if (row.marked.some((marked) => marked !== row.state)) report(`${context} closing row ${row.names.join(', ')} shows "${row.state}" but is marked ${JSON.stringify(row.marked)}.`);
+			}
 		}
 	}
 	// "No type cell without a model source": every type cell on the page belongs to a row the model has.

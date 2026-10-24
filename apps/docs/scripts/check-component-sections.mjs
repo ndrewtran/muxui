@@ -5,7 +5,7 @@ import { parse } from 'parse5';
 import { linkedFamilies } from '../../guide-links.mjs';
 import { renderedEventGroups, expectedEventGroups } from './event-groups.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
-import { compareComponent, comparePackageExports, expectedComponent, expectedPackageExports, loadReference, renderedComponent, renderedEvents, renderedPackageExports, routeExists, routeFile } from './typed-reference.mjs';
+import { collapsePartsAbove, compareComponent, comparePackageExports, expectedComponent, expectedPackageExports, loadReference, renderedComponent, renderedEvents, renderedPackageExports, routeExists, routeFile } from './typed-reference.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
 // The catalog query API and the package files are read here directly, not through the docs loader or the shared projection.
@@ -31,8 +31,6 @@ const sections = [
 	['sources', 'Sources'],
 ];
 const tokenGroupThreshold = 8;
-/** A page with more parts than this opens only its first part. */
-const collapsePartsAbove = 8;
 
 function assert(condition, message) {
 	if (!condition) throw new Error(message);

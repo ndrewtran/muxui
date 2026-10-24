@@ -42,7 +42,7 @@ const hasNatives = part.natives.length > 0;
 		</dd>
 	</dl>
 	{part.sameAs !== undefined
-		? <p class="api-same-as" data-api-same-as>The same component as <a href={`#${part.sameAs.anchor}`}><code>{part.sameAs.heading}</code></a>.</p>
+		? <p class="api-same-as" data-api-same-as>The same component as <a href={`#${part.sameAs.anchor}`}><code>{part.sameAs.heading}</code></a>, so its ref, native surface and props are the ones shown there.</p>
 		: (
 			<div class="api-table-scroll">
 				<table class={part.hasAlternatives ? 'api-table api-table-alternatives' : 'api-table'}>

@@ -29,6 +29,7 @@ try {
 	runNode('Astro build', [astroCli, 'build', '--outDir', outputDirectory]);
 	runNode('Rendered source contract', [resolve(import.meta.dirname, 'check-rendered-source.mjs'), outputDirectory]);
 	runNode('Component reference contract', [resolve(import.meta.dirname, 'check-component-sections.mjs'), outputDirectory]);
+	runNode('Page mutations fail the checker', [resolve(import.meta.dirname, 'check-page-mutations.mjs'), outputDirectory]);
 	runNode('Ledger record pins', [resolve(import.meta.dirname, 'check-reference-records.mjs'), outputDirectory]);
 	runNode('Shared guidance contract', [resolve(import.meta.dirname, 'check-shared-guidance.mjs'), outputDirectory]);
 	runNode('Blocks contract', [resolve(import.meta.dirname, 'check-blocks.mjs'), outputDirectory]);

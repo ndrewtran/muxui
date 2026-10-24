@@ -9,6 +9,7 @@
 //   TEXT-AREA-01     TextArea.Root's ref is HTMLDivElement, TextArea.TextArea's is HTMLTextAreaElement, with its native surface named.
 //   TEXT-EDITOR-02   the text-editor entry lists all 32 exports with exact signatures.
 //   X-002 (part)     CommandPalette says which parts need a Root around them.
+//   DATA-DIFF        DataDiff closes its table with the members it types never (a reviewed fact, not a ledger record).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
@@ -95,6 +96,11 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 	expect(record, signature('normalizeTextEditorDocument') === 'normalizeTextEditorDocument(value: unknown): TextEditorDocument', `normalizeTextEditorDocument shows "${signature('normalizeTextEditorDocument')}".`);
 	const editor = partOf(record, api, 'TextEditor');
 	ref(record, editor, 'TextEditorHandle');
+	// Root is the same component as TextEditor, so it shows TextEditor's ref and native surface, never "none declared".
+	const alias = partOf(record, api, 'TextEditor.Root');
+	ref(record, alias, 'TextEditorHandle');
+	const surface = JSON.stringify([{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] }]);
+	expect(record, alias?.sameAs === 'TextEditor' && alias.groups.length === 0 && JSON.stringify(alias.natives) === surface, `TextEditor.Root must be shown as the same component as TextEditor with ${surface}, and shows ${JSON.stringify({ sameAs: alias?.sameAs, natives: alias?.natives })}.`);
 	const requests = {
 		onLinkRequest: '(actions: TextEditorActionCallbacks) => void',
 		onImageRequest: '(actions: { insertImage(src: string, alt?: string): boolean }) => void',
@@ -110,6 +116,18 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 	expect(record, members.every((member) => command.includes(member)), 'TextEditorCommand must show its seven members by their type.');
 }
 
+// DATA-DIFF: children and dangerouslySetInnerHTML are typed never on DataDiff, so its table closes with them as not allowed.
+{
+	const record = 'DATA-DIFF';
+	const { api } = page('data-diff');
+	const part = partOf(record, api, 'DataDiff');
+	ref(record, part, 'HTMLDivElement');
+	const closing = JSON.stringify(part?.groups[0].closing.map(({ state, names }) => ({ state, names })));
+	const wanted = JSON.stringify([{ state: 'not allowed', names: ['children', 'dangerouslySetInnerHTML'] }]);
+	expect(record, part?.groups.length === 1 && closing === wanted, `DataDiff must close its table with ${wanted}, and closes it with ${closing}.`);
+	expect(record, part !== undefined && !rows(part).some(({ name }) => name === 'children' || name === 'dangerouslySetInnerHTML'), 'DataDiff lists children or dangerouslySetInnerHTML as a row, but they are not allowed.');
+}
+
 // X-002: the ancestry of CommandPalette's parts, authored in its behavior list and shown on its page.
 {
 	const record = 'X-002';
@@ -121,4 +139,4 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 }
 
 if (problems.length > 0) throw new Error(`A ledger record's fact is not on its page:\n${problems.map((problem) => `- ${problem}`).join('\n')}`);
-console.log('Ledger record pins passed: DISCLOSURE-01, SWITCH-FIELD-01, TEXT-AREA-01 and TEXT-EDITOR-02 show the facts their records ask for, and CommandPalette says which parts need a Root (X-002).');
+console.log('Ledger record pins passed: DISCLOSURE-01, SWITCH-FIELD-01, TEXT-AREA-01 and TEXT-EDITOR-02 show the facts their records ask for, CommandPalette says which parts need a Root (X-002), and DataDiff closes its table with the members it forbids.');
