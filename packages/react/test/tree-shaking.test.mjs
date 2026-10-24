@@ -287,6 +287,7 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
 // fourth entry names those imports, and their bare constructors are counted first and added to both expectations.
 const annotatedFamilies = [
   ['card', 'Card', 5, ['button']],
+  ['header-nav', 'HeaderNav', 5, ['icon-button']],
   ['button-group', 'ButtonGroup', 1],
   ['color-mode-toggle', 'ColorModeToggle', 1],
   ['progress-circle', 'ProgressCircle', 4],

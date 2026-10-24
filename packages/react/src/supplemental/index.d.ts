@@ -158,17 +158,6 @@ export declare const CommandPalette: {
   ChipRemove: React.ForwardRefExoticComponent<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>>;
 };
 
-export type HeaderNavRootProps = React.HTMLAttributes<HTMLElement>;
-export type HeaderNavNavButtonProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & { current?: boolean };
-export declare const HeaderNav: {
-  Root: React.ForwardRefExoticComponent<HeaderNavRootProps & React.RefAttributes<HTMLElement>>;
-  Logo: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { href?: string } & React.RefAttributes<HTMLDivElement>>;
-  NavButton: React.ForwardRefExoticComponent<HeaderNavNavButtonProps & React.RefAttributes<HTMLAnchorElement>>;
-  Actions: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Secondary: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
-  MobileTrigger: React.ComponentType<{ children?: React.ReactNode }>;
-};
-
 export type MultiSelectItem = { id: React.Key; [key: string]: unknown };
 export type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; supportingText?: React.ReactNode; emptyStateTitle?: string; emptyStateDescription?: string; items?: Iterable<T>; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key> | 'all'; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key> | 'all') => void; showSearch?: boolean; showFooter?: boolean; onReset?: () => void; onSelectAll?: () => void; selectedCountFormatter?: (count: number) => React.ReactNode };
 export type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;

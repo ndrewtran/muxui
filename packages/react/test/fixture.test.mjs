@@ -230,6 +230,8 @@ const markupFlags = {
   defaultOpen: '[data-open]',
   // ButtonGroup marks itself attached.
   attached: '[data-attached]',
+  // A link marks the current page with aria-current.
+  current: '[aria-current="page"]',
 };
 // A progress circle's range shows as the ARIA values of its bar: the value is absent while it is indeterminate.
 const ariaNumber = (doc, attribute) => {
@@ -307,6 +309,8 @@ const minimalRenders = {
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
   Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
+  // HeaderNav.Root owns no props, so the composition only has to render; the link's own default is observed under 'HeaderNav.nav-button'.
+  HeaderNav: () => h(generated.HeaderNav.Root, null, h(generated.HeaderNav.Logo, { href: '/' }, 'Mux'), h(generated.HeaderNav.Secondary, null, h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs'))),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
   InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),
   PaymentInput: () => h(generated.PaymentInput.Root, { 'aria-label': 'Card number' }, h(generated.PaymentInput.Group, null, h(generated.PaymentInput.Input), h(generated.PaymentInput.CardIcon))),
@@ -324,6 +328,8 @@ const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot
 const partRenders = {
   // Card.Button is the card as one control: its own variant and padding show in its class, and its disabled and pending flags on the button.
   'Card.button': { scope: 'button', render: () => h(generated.Card.Button, null, 'Select') },
+  // HeaderNav.NavButton is a plain link, which shows aria-current only when it is the current page.
+  'HeaderNav.nav-button': { scope: 'a', render: () => h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs') },
   'ListBox.item': { scope: '[role="option"]', render: () => h(generated.ListBox, { 'aria-label': 'Options' }, h(generated.ListBox.Item, { id: 'one' }, 'One')) },
   'Menu.trigger': { scope: 'button', render: () => menuRoot() },
   'Menu.list': { scope: '[role="menu"]', render: () => h(generated.Menu.List, { 'aria-label': 'Actions', items: ['One'] }) },

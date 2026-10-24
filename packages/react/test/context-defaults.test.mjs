@@ -145,6 +145,8 @@ const audited = [
       ...expand(['payment-input'], ['defaultValue']),
       // PromptComposer renders a native form, textarea, and buttons, and gives its model Select explicit flags, so no React Aria context reaches its own disabled, pending, defaultValue, or multiple.
       ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
+      // HeaderNav.NavButton renders a plain anchor: current becomes its class and aria-current, and no React Aria component receives it.
+      ...expand(['header-nav.nav-button'], ['current']),
       // TextEditor renders its own contenteditable and buttons and sends React Aria no isDisabled, isReadOnly, isRequired, or isInvalid, so no React Aria context reaches its flags.
       ...expand(['text-editor'], ['disabled', 'readOnly', 'required', 'invalid']),
     ],

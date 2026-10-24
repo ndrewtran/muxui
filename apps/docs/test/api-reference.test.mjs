@@ -219,10 +219,9 @@ test('events list the catalog channels with the exact signatures the declaration
 });
 
 test('catalog props no part declares are listed, and a family whose parts declare them all lists none', () => {
-	assert.deepEqual(page('header-nav').catalogOnly, [{ owner: null, names: ['aria-label'] }]);
 	assert.equal(page('command-palette').catalogOnly[0].names.length, 11);
-	// Input and TextArea derive their blocks, which no longer list the natives their control parts carry.
-	for (const slug of ['icon-button', 'select', 'input', 'text-area']) assert.deepEqual(page(slug).catalogOnly, [], slug);
+	// Input, TextArea and HeaderNav derive their blocks, which no longer list the natives their parts carry (HeaderNav's aria-label).
+	for (const slug of ['icon-button', 'select', 'input', 'text-area', 'header-nav']) assert.deepEqual(page(slug).catalogOnly, [], slug);
 });
 
 test('parts and related exports list every export of the family with its exact import, and a hook, helper, flat part and value each have a kind', () => {

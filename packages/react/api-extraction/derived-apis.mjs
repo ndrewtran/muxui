@@ -118,6 +118,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'switch-field', name: 'SwitchField', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/switch-field.ts' },
   // Card's root is Card.Root; Button owns the same two props and more, and Header, Body and Footer own none.
   { slug: 'card', name: 'Card', part: 'Root', parts: { button: 'Button' }, source: 'packages/react/src/supplemental/card.ts' },
+  // HeaderNav's Root owns no props (it passes the header's native attributes on); Logo and NavButton own href and current, and MobileTrigger owns none.
+  { slug: 'header-nav', name: 'HeaderNav', part: 'Root', parts: { logo: 'Logo', 'nav-button': 'NavButton' }, source: 'packages/react/src/supplemental/header-nav.ts' },
   // Input and TextArea are compounds whose Root owns the props; their other parts own none.
   { slug: 'input', name: 'Input', part: 'Root', source: 'packages/react/src/supplemental/input.ts' },
   { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },

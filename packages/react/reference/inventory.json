@@ -537,18 +537,18 @@
         { "name": "GridListProps", "kind": "type", "owner": "grid-list", "module": "grid-list" },
         { "name": "Group", "kind": "value", "owner": "group", "module": "components" },
         { "name": "GroupProps", "kind": "type", "owner": "group", "module": "components" },
-        { "name": "HeaderNav", "kind": "value", "owner": "header-nav", "module": "supplemental" },
+        { "name": "HeaderNav", "kind": "value", "owner": "header-nav", "module": "header-nav" },
         {
           "name": "HeaderNavNavButtonProps",
           "kind": "type",
           "owner": "header-nav",
-          "module": "supplemental"
+          "module": "header-nav"
         },
         {
           "name": "HeaderNavRootProps",
           "kind": "type",
           "owner": "header-nav",
-          "module": "supplemental"
+          "module": "header-nav"
         },
         { "name": "IconButton", "kind": "value", "owner": "icon-button", "module": "icon-button" },
         {

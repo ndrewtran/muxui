@@ -84,9 +84,11 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
 // Menu's adapter renders its popup, list, and submenu from the root's args: the geometry and modality go to Menu.Popup, the items to
 // Menu.List, and the delay to Menu.Submenu. The trigger, item, and section are children the stories compose themselves.
 // Card's adapter routes selected, pending, disabled, and activation to the Card.Button it renders beside the static root.
+// HeaderNav's adapter routes href and current to the links it renders, so Logo's and NavButton's props join the root's, which owns none.
 export const STORY_API_PARTS = Object.freeze({
   Menu: Object.freeze(['popup', 'list', 'submenu']),
   Card: Object.freeze(['button']),
+  HeaderNav: Object.freeze(['logo', 'nav-button']),
 });
 
 /**

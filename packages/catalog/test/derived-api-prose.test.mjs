@@ -189,6 +189,8 @@ const GUIDES = {
   // rows, maxLength, placeholder, onKeyDown and name are the native attributes and handlers TextArea.TextArea takes; the root owns none of them.
   'text-area': { native: ['rows', 'maxLength', 'placeholder', 'onKeyDown', 'name'] },
   card: {},
+  // `display: none` is the CSS the guide tells an application to hide the MobileTrigger's wrapper with, not a prop.
+  'header-nav': { native: ['display: none'] },
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.

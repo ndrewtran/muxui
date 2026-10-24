@@ -27,13 +27,13 @@ import {
 import {
   AlertDialog,
   CommandPalette,
-  HeaderNav,
   MultiSelect,
   Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
 import { CheckboxField } from '../../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
+import { HeaderNav } from '../../src/supplemental/header-nav.ts';
 import { Input } from '../../src/supplemental/input.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
 import { PaymentInput } from '../../src/supplemental/payment-input.ts';

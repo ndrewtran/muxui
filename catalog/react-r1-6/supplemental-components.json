@@ -155,7 +155,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/header-nav.mjs",
+      "runtimeSource": "packages/react/src/supplemental/header-nav.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

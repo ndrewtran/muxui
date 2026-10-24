@@ -12,7 +12,6 @@ import { parseAst } from 'vite';
 import {
   AlertDialog,
   CommandPalette,
-  HeaderNav,
   MultiSelect,
   Sidebar,
   TagSelect,
@@ -20,6 +19,7 @@ import {
 } from '../src/supplemental/index.mjs';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
 import { Card } from '../src/supplemental/card.ts';
+import { HeaderNav } from '../src/supplemental/header-nav.ts';
 import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
 import { Input } from '../src/supplemental/input.ts';
