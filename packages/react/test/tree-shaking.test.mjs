@@ -256,7 +256,7 @@ test('a bundle that uses one control family keeps its own module and only the sh
 
 // supplemental.mjs re-exports one module per family. Before the split every export kept the whole barrel and the 14
 // modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
-// its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The four
+// its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The three
 // wrappers that are an immediately invoked function, the three field factories and the two modal wrappers carry the
 // pure annotation that lets a bundler drop what no export uses; the TypeScript families are checked by the bundle test below.
 test('the supplemental modules keep the pure annotation on each wrapper', () => {
@@ -266,7 +266,7 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
   };
   // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
   const pure = String.raw`\/\*\s*[#@]__PURE__\s*\*\/`;
-  for (const [module, name] of [['alert-dialog', 'AlertDialog'], ['command-palette', 'CommandPalette'], ['multi-select', 'MultiSelect'], ['tag-select', 'TagSelect']]) {
+  for (const [module, name] of [['command-palette', 'CommandPalette'], ['multi-select', 'MultiSelect'], ['tag-select', 'TagSelect']]) {
     assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} \\(\\(\\) => \\(\\{$`, 'mu'), `${module}: ${name}`);
   }
   for (const [module, name] of [['checkbox-field', 'CheckboxField'], ['radio-field', 'RadioField'], ['switch-field', 'SwitchField']]) {
@@ -283,7 +283,15 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
 // forwardRef call that survives is one a bundler must keep: an unmarked construction, or the Object.freeze that holds the parts.
 // Using the family instead keeps every constructor it builds, which shows the count reads the emitted spelling and that the family was
 // bundled at all, so a skipped or externalised module cannot pass the first check by being empty. The number is the family's forwardRef calls.
+// A family that imports a module still unmarked (Button) keeps that module's constructor too in this copy, so an optional
+// fourth entry names those imports, and their bare constructors are counted first and added to both expectations.
 const annotatedFamilies = [
+  ['card', 'Card', 5, ['button']],
+  ['header-nav', 'HeaderNav', 5, ['icon-button']],
+  // Nine parts, and the two modal-parts wrappers its Backdrop and Popup use, which are marked and so are kept only with them.
+  ['alert-dialog', 'AlertDialog', 11, ['button', 'icon-button']],
+  // Eleven parts, and the nine constructors of the Menu it draws and the one of the Tooltip, which are marked and so are kept only with them.
+  ['sidebar', 'Sidebar', 21, ['icon-button', 'menu', 'overlays']],
   ['button-group', 'ButtonGroup', 1],
   ['color-mode-toggle', 'ColorModeToggle', 1],
   ['progress-circle', 'ProgressCircle', 4],
@@ -312,9 +320,10 @@ test('a bundle that uses nothing from a TypeScript supplemental family keeps non
       const code = [bundle].flat().flatMap(({ output }) => output).filter(({ type }) => type === 'chunk').map((chunk) => chunk.code).join('\n');
       return code.match(/forwardRef\(/gu)?.length ?? 0;
     };
-    for (const [module, name, constructors] of annotatedFamilies) {
-      assert.equal(await retainedConstructors(`import './${module}.js';\nexport const sentinel = 1;\n`), 0, `${name} keeps a forwardRef call nothing uses`);
-      assert.equal(await retainedConstructors(`export { ${name} } from './${module}.js';\n`), constructors, `${name} keeps the forwardRef calls it uses`);
+    for (const [module, name, constructors, imports = []] of annotatedFamilies) {
+      const imported = await retainedConstructors(`${imports.map((file) => `import './${file}.js';\n`).join('')}export const sentinel = 1;\n`);
+      assert.equal(await retainedConstructors(`import './${module}.js';\nexport const sentinel = 1;\n`), imported, `${name} keeps a forwardRef call nothing uses`);
+      assert.equal(await retainedConstructors(`export { ${name} } from './${module}.js';\n`), imported + constructors, `${name} keeps the forwardRef calls it uses`);
     }
   } finally {
     rmSync(directory, { recursive: true, force: true });

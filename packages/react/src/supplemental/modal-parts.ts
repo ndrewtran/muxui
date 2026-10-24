@@ -1,30 +1,49 @@
 import React from 'react';
+import type { ForwardRefExoticComponent, ForwardedRef, HTMLAttributes, RefAttributes, RefObject } from 'react';
 import {
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
   OverlayTriggerStateContext,
   PopoverContext,
 } from 'react-aria-components';
+import type { ModalOverlayProps as AriaModalOverlayProps } from 'react-aria-components';
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
 import { h, useIsomorphicLayoutEffect } from './part-utils.ts';
 
 /* AlertDialog */
-const ModalMotionContext = React.createContext(null);
+type ModalMotion = {
+  isOpen: boolean;
+  isExiting: boolean;
+  triggerRef: RefObject<Element | null> | undefined;
+  onExitComplete: () => void;
+};
+const ModalMotionContext = React.createContext<ModalMotion | null>(null);
 const DIALOG_REDUCED_ATTRIBUTE = 'data-muxui-dialog-reduced';
 
-function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: providedTriggerRef, ...props }, ref) {
+export type MotionModalBackdropProps = HTMLAttributes<HTMLDivElement> & {
+  isOpen?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  isDismissable?: boolean;
+  triggerRef?: RefObject<Element | null>;
+};
+export type MotionModalPopupProps = HTMLAttributes<HTMLDivElement> & { isExiting?: boolean };
+
+// PopoverContext is slotted, and a popover's value carries its trigger: the only member read from it.
+type PopoverTrigger = { triggerRef?: RefObject<Element | null> } | null | undefined;
+
+function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: providedTriggerRef, ...props }: MotionModalBackdropProps, ref: ForwardedRef<HTMLDivElement>) {
   const state = React.useContext(OverlayTriggerStateContext);
-  const popoverContext = React.useContext(PopoverContext);
+  const popoverContext = React.useContext(PopoverContext) as PopoverTrigger;
   const triggerRef = providedTriggerRef ?? popoverContext?.triggerRef;
   const isOpen = props.isOpen ?? state?.isOpen ?? false;
-  const [backdropNode, setBackdropNode] = React.useState(null);
+  const [backdropNode, setBackdropNode] = React.useState<HTMLDivElement | null>(null);
   const [phase, setPhase] = React.useState({ open: Boolean(isOpen), exiting: false });
   if (phase.open !== Boolean(isOpen)) setPhase({ open: Boolean(isOpen), exiting: !isOpen });
   const releaseExit = React.useCallback(() => {
     setPhase((current) => current.open || !current.exiting ? current : { ...current, exiting: false });
   }, []);
-  const setBackdropRef = React.useCallback((node) => {
+  const setBackdropRef = React.useCallback((node: HTMLDivElement | null) => {
     setBackdropNode(node);
     if (typeof ref === 'function') ref(node);
     else if (ref) ref.current = node;
@@ -56,8 +75,9 @@ function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: pr
       restoreStyle();
     };
   }, [backdropNode, triggerRef]);
+  // The div's native attributes reach React Aria's overlay and modal, whose props type names only their own.
   return h(AriaModalOverlay, {
-    ...props,
+    ...(props as AriaModalOverlayProps),
     ref: setBackdropRef,
     onOpenChange,
     isExiting: !isOpen && phase.exiting,
@@ -65,14 +85,14 @@ function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: pr
   }, h(ModalMotionContext.Provider, { value: { isOpen: Boolean(isOpen), isExiting: !isOpen && phase.exiting, triggerRef, onExitComplete: releaseExit } }, children));
 }
 
-export const MotionModalBackdropForwardRef = /*#__PURE__*/ React.forwardRef(MotionModalBackdrop);
+export const MotionModalBackdropForwardRef: ForwardRefExoticComponent<MotionModalBackdropProps & RefAttributes<HTMLDivElement>> = /*#__PURE__*/ React.forwardRef(MotionModalBackdrop);
 
-function MotionModalPopup({ children, className, ...props }, ref) {
+function MotionModalPopup({ children, className, ...props }: MotionModalPopupProps, ref: ForwardedRef<HTMLDivElement>) {
   const state = React.useContext(OverlayTriggerStateContext);
   const motion = React.useContext(ModalMotionContext);
-  const popoverContext = React.useContext(PopoverContext);
+  const popoverContext = React.useContext(PopoverContext) as PopoverTrigger;
   const isOpen = motion?.isOpen ?? state?.isOpen ?? true;
-  const [popupNode, setPopupNode] = React.useState(null);
+  const [popupNode, setPopupNode] = React.useState<HTMLDivElement | null>(null);
   useModalMotion({
     node: popupNode,
     isOpen,
@@ -80,12 +100,12 @@ function MotionModalPopup({ children, className, ...props }, ref) {
     reducedAttribute: 'data-muxui-motion-reduced',
     onExitComplete: motion?.onExitComplete,
   });
-  const setRef = React.useCallback((node) => {
+  const setRef = React.useCallback((node: HTMLDivElement | null) => {
     setPopupNode(node);
     if (typeof ref === 'function') ref(node);
     else if (ref) ref.current = node;
   }, [ref]);
-  return h(AriaModal, { ...props, ref: setRef, isExiting: props.isExiting ?? motion?.isExiting, className }, children);
+  return h(AriaModal, { ...(props as AriaModalOverlayProps), ref: setRef, isExiting: props.isExiting ?? motion?.isExiting, className }, children);
 }
 
-export const MotionModalPopupForwardRef = /*#__PURE__*/ React.forwardRef(MotionModalPopup);
+export const MotionModalPopupForwardRef: ForwardRefExoticComponent<MotionModalPopupProps & RefAttributes<HTMLDivElement>> = /*#__PURE__*/ React.forwardRef(MotionModalPopup);

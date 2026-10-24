@@ -1,7 +1,8 @@
 import React from 'react';
 import { Disclosure, DisclosureGroup } from '../../src/components.ts';
 import { ToastProvider, useToast } from '../../src/overlays.ts';
-import { AlertDialog, CommandPalette, MultiSelect, TagSelect } from '../../src/supplemental/index.mjs';
+import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
+import { CommandPalette, MultiSelect, TagSelect } from '../../src/supplemental/index.mjs';
 
 const h = React.createElement;
 

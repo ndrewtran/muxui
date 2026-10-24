@@ -107,6 +107,11 @@ const audited = [
       ...expand(['progress-circle'], ['value', 'minValue', 'maxValue']),
       // InputTags sent isDisabled and isInvalid to React Aria's Group as its own values, false when omitted, before the move.
       ...expand(['input-tags'], ['disabled', 'invalid']),
+      // Card.Button sent isDisabled and isPending to React Aria's Button as its own booleans, false when omitted, before the move, so a ButtonContext never supplied them.
+      ...expand(['card.button'], ['disabled', 'pending']),
+      // AlertDialog.Root sent defaultOpen to React Aria's DialogTrigger as its own boolean, false when omitted, and AlertDialog.Trigger sent isDisabled to the Button the same way, before the move.
+      ...expand(['alert-dialog'], ['defaultOpen']),
+      ...expand(['alert-dialog.trigger'], ['disabled']),
     ],
   },
   {
@@ -143,6 +148,11 @@ const audited = [
       ...expand(['payment-input'], ['defaultValue']),
       // PromptComposer renders a native form, textarea, and buttons, and gives its model Select explicit flags, so no React Aria context reaches its own disabled, pending, defaultValue, or multiple.
       ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
+      // HeaderNav.NavButton renders a plain anchor: current becomes its class and aria-current, and no React Aria component receives it.
+      ...expand(['header-nav.nav-button'], ['current']),
+      // Sidebar.NavItem and NavButton render links and a details group of their own: current becomes a class and aria-current, defaultExpanded seeds the group's own state, and no React Aria context reaches either.
+      ...expand(['sidebar.nav-item'], ['current', 'defaultExpanded']),
+      ...expand(['sidebar.nav-button'], ['current']),
       // TextEditor renders its own contenteditable and buttons and sends React Aria no isDisabled, isReadOnly, isRequired, or isInvalid, so no React Aria context reaches its flags.
       ...expand(['text-editor'], ['disabled', 'readOnly', 'required', 'invalid']),
     ],

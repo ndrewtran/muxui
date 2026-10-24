@@ -26,7 +26,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/alert-dialog.mjs",
+      "runtimeSource": "packages/react/src/supplemental/alert-dialog.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -69,7 +69,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/card.mjs",
+      "runtimeSource": "packages/react/src/supplemental/card.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -155,7 +155,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/header-nav.mjs",
+      "runtimeSource": "packages/react/src/supplemental/header-nav.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -376,7 +376,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/sidebar.mjs",
+      "runtimeSource": "packages/react/src/supplemental/sidebar.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

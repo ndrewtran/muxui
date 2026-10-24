@@ -10,7 +10,7 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { HeaderNav } from '/src/supplemental/index.mjs';
+import { HeaderNav } from '/src/supplemental/header-nav.ts';
 
 const h = React.createElement;
 // WebKit on macOS skips plain buttons in sequential navigation; an explicit tabindex keeps them focusable.
@@ -32,7 +32,7 @@ const page = (url) => pageShell({
 for (const engine of browserEngines()) {
   test(`HeaderNav logo link keyboard focus matches the NavButton ring in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/header-nav.ts'],
       pages: { '/header-nav.html': page },
       modules: { '/header-nav-entry.mjs': entry },
     });
@@ -106,7 +106,7 @@ const drawerEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from '/src/button.ts';
-import { HeaderNav } from '/src/supplemental/index.mjs';
+import { HeaderNav } from '/src/supplemental/header-nav.ts';
 
 const h = React.createElement;
 const links = [['#docs', 'Docs'], ['#components', 'Components']];
@@ -137,7 +137,7 @@ const drawerPage = () => pageShell({
 for (const engine of browserEngines()) {
   test(`HeaderNav closes an open drawer when layout hides its trigger and keeps focus in the header in ${engine}`, { timeout: 180_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs', 'src/button.ts'],
+      entries: ['src/supplemental/header-nav.ts', 'src/button.ts'],
       pages: { '/header-nav-drawer.html': drawerPage },
       modules: { '/header-nav-drawer-entry.mjs': drawerEntry },
     });

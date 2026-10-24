@@ -5,7 +5,7 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { Sidebar } from '../src/supplemental/index.mjs';
+import { Sidebar } from '../src/supplemental/sidebar.ts';
 import { installDom } from './support/dom.mjs';
 
 const h = React.createElement;
@@ -149,15 +149,14 @@ test('Sidebar AccountCard shows its options button only while an AccountMenu is 
 });
 
 test('Sidebar AccountMenu declares only the props and event the catalog record lists, and ignores the rest', async () => {
-  const declaration = await readFile(new URL('../src/supplemental/index.d.ts', import.meta.url), 'utf8');
-  const declared = /SidebarAccountMenuProps = Pick<MenuListProps, ([^>]+)>/u.exec(declaration)?.[1].match(/\w+/gu);
-  assert.ok(declared, 'AccountMenu declares a narrowed Menu list type');
-  // children and className are on every part; the rest belong to this part and must be in the authored record.
-  const record = JSON.parse(await readFile(new URL('../../../catalog/components/sidebar/artifact.json', import.meta.url), 'utf8')).bindings['web.react'].api;
-  const own = declared.filter((name) => !['children', 'className'].includes(name));
-  assert.deepEqual([...own].sort(), ['items', 'onAction']);
-  for (const name of own) assert.ok(record.props.includes(name), `${name} is in the record's props`);
-  assert.ok(record.events.includes('action'), 'the record lists the action event');
+  const declaration = await readFile(new URL('../src/supplemental/sidebar.ts', import.meta.url), 'utf8');
+  const taken = /SidebarAccountMenuProps = SidebarAccountMenuOwnProps & Pick<MenuListProps, ([^>]+)>/u.exec(declaration)?.[1].match(/\w+/gu);
+  // children and className are on every part; the rest belong to this part and must be in the derived record.
+  assert.deepEqual(taken, ['children', 'className'], 'AccountMenu takes the two props every part has from Menu\'s list type, and states the rest');
+  const record = JSON.parse(await readFile(new URL('../api/sidebar.json', import.meta.url), 'utf8')).api.partApis['account-menu'];
+  assert.deepEqual(record.props, ['items']);
+  assert.deepEqual(record.events, ['action']);
+  assert.equal(record.eventDetails.action.prop, 'onAction');
   // At runtime the menu forwards only those props, so a caller cannot reach Menu props the record does not list.
   const chosen = [];
   const Menus = () => h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' },

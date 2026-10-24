@@ -23,7 +23,7 @@ The Responsive HeaderNav example moves the links and a Sign in action into the d
 
 ## Labels
 
-The drawer's open button, dialog, and close button use fixed English labels, and HeaderNav has no props to change them.
+The drawer's open button, dialog, and close button use fixed English labels, and HeaderNav offers no way to change them.
 
 ## Content
 

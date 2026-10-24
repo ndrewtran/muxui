@@ -83,7 +83,17 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
  */
 // Menu's adapter renders its popup, list, and submenu from the root's args: the geometry and modality go to Menu.Popup, the items to
 // Menu.List, and the delay to Menu.Submenu. The trigger, item, and section are children the stories compose themselves.
-export const STORY_API_PARTS = Object.freeze({ Menu: Object.freeze(['popup', 'list', 'submenu']) });
+// Card's adapter routes selected, pending, disabled, and activation to the Card.Button it renders beside the static root.
+// HeaderNav's adapter routes href and current to the links it renders, so Logo's and NavButton's props join the root's, which owns none.
+// AlertDialog's adapter routes disabled and activation to the trigger and the close control it renders, so their props join the root's.
+// Sidebar's adapter drives the provider, the search, and the nav, account, mobile and feature parts it renders from the root's one set of args.
+export const STORY_API_PARTS = Object.freeze({
+  Menu: Object.freeze(['popup', 'list', 'submenu']),
+  Card: Object.freeze(['button']),
+  HeaderNav: Object.freeze(['logo', 'nav-button']),
+  AlertDialog: Object.freeze(['trigger', 'close']),
+  Sidebar: Object.freeze(['provider', 'search', 'section', 'nav-item', 'nav-button', 'account-card', 'account-menu', 'mobile-trigger', 'feature-card']),
+});
 
 /**
  * The catalog blocks the stories read, root first: the binding's root API, then each part `parts` names for its
@@ -1179,16 +1189,19 @@ const SIDEBAR_SAMPLE_ITEMS = [{ href: '#now', label: 'Now' }, { href: '#next', l
 /**
  * The flat Sidebar props belong to different parts. Provider owns folding. Root owns hideBorder and density.
  * The first NavItem takes label, href, current, external, badge, and icon; the Roadmap group takes items and
- * its open state. Search, AccountCard, and FeatureCard take their own props, and onAction belongs to the
- * AccountMenu inside the card, whose own items stay its Menu.Item children here. One navigation fills the
- * column and the mobile drawer, and the consumer owns the FeatureCard, so dismissing it removes it here.
+ * its open state. Search takes placeholder, value, and onChange. AccountCard takes name, email, avatarSrc,
+ * avatarAlt, and status, FeatureCard takes title, description, and dismissLabel, and MobileTrigger takes logo.
+ * onAction belongs to the AccountMenu inside the card, whose own items stay its Menu.Item children here. One
+ * navigation fills the column and the mobile drawer, and the consumer owns the FeatureCard, so dismissing it
+ * removes it here. Whatever is left in `root` is the aside's own: no part-owned arg may stay in it.
  */
 function SidebarPreview({
   collapsed, defaultCollapsed, onCollapsedChange, shortcut,
   label, href, current, external, badge, icon,
   items, expanded, defaultExpanded, onExpandedChange,
   placeholder, value, onChange,
-  name, email, avatarSrc, status,
+  name, email, avatarSrc, avatarAlt, status,
+  title, description, dismissLabel, logo,
   onAction, onDismiss,
   ...root
 }) {
@@ -1208,14 +1221,14 @@ function SidebarPreview({
       e(MuxUI.Sidebar.Search, { placeholder: fallback(placeholder, 'Search'), value, onChange }),
       e(MuxUI.Sidebar.Divider),
       navigation,
-      e(MuxUI.Sidebar.AccountCard, { name: fallback(name, 'Sample user'), email: fallback(email, 'sample@example.com'), avatarSrc, status },
+      e(MuxUI.Sidebar.AccountCard, { name: fallback(name, 'Sample user'), email: fallback(email, 'sample@example.com'), avatarSrc, avatarAlt, status },
         e(MuxUI.Sidebar.AccountMenu, { onAction },
           e(MuxUI.Menu.Item, { id: 'profile' }, 'Profile'),
           e(MuxUI.Menu.Separator),
           e(MuxUI.Menu.Item, { id: 'sign-out' }, 'Sign out'))),
-      dismissed ? null : e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => { onDismiss?.(); setDismissed(true); } }),
+      dismissed ? null : e(MuxUI.Sidebar.FeatureCard, { title: fallback(title, 'Try Scale'), description: fallback(description, 'Explore tokens'), dismissLabel, onDismiss: () => { onDismiss?.(); setDismissed(true); } }),
     ),
-    e(MuxUI.Sidebar.MobileTrigger, { logo: 'Field team' }, navigation),
+    e(MuxUI.Sidebar.MobileTrigger, { logo: fallback(logo, 'Field team') }, navigation),
   );
 }
 

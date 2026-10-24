@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:34580a3c38a82c67427f8bc64717a680f67f81650cddd39a71c98917200dccbe -->
+<!-- @generated-content-sha256: sha256:0106bdbadf3662284b7cf85da41f59e336d4f39a6775de16b6d7d6fae15e1e42 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -103,14 +103,14 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Export | Lifecycle | Module | Selector | Public props |
 | --- | --- | --- | --- | --- |
 | Activity | experimental | . | .muxui-activity | label, items, status, expanded, defaultExpanded, actions |
-| AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
+| AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen; trigger: disabled; close: disabled |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
 | Avatar | experimental | . | .muxui-avatar | size |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, role |
 | Calendar | experimental | . | .muxui-calendar | label, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
-| Card | experimental | . | .muxui-card | variant, padding, selected, pending, disabled, onActivate |
+| Card | experimental | . | .muxui-card | variant, padding; button: variant, padding, selected, pending, disabled |
 | Checkbox | experimental | . | .muxui-checkbox | checked, defaultChecked, disabled, size, indeterminate, name, required, value, invalid |
 | CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, disabled, invalid, required, readOnly, size; button: disabled |
 | CheckboxGroup | experimental | . | .muxui-checkbox-group | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, name, orientation, size |
@@ -137,7 +137,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Form | experimental | . | .muxui-form | validationBehavior, validationErrors |
 | GridList | experimental | . | .muxui-grid-list | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; item: id, textValue, disabled |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role |
-| HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
+| HeaderNav | experimental | . | .muxui-header-nav | none; logo: href; nav-button: current |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
 | Input | experimental | . | .muxui-input | value, defaultValue, disabled, invalid, required, readOnly, size |
@@ -165,7 +165,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Select | experimental | . | .muxui-select | label, description, errorMessage, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, modal; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items; option: id, textValue, disabled |
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, disabled, required, invalid, size |
 | Separator | experimental | . | .muxui-separator | orientation |
-| Sidebar | experimental | . | .muxui-sidebar | collapsed, defaultCollapsed, onCollapsedChange, shortcut, hideBorder, density, label, href, current, external, items, expanded, defaultExpanded, onExpandedChange, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss, onAction |
+| Sidebar | experimental | . | .muxui-sidebar | hideBorder, density; provider: collapsed, defaultCollapsed, shortcut; search: placeholder, value; section: label; nav-item: href, icon, badge, current, items, external, expanded, defaultExpanded; nav-button: icon, label, current; account-card: name, email, avatarSrc, avatarAlt, status; account-menu: items; mobile-trigger: logo; feature-card: title, description, dismissLabel |
 | Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, disabled, invalid, required, readOnly, size; button: disabled |

@@ -10,23 +10,23 @@ import { Form as AriaForm } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
 import { parseAst } from 'vite';
 import {
-  AlertDialog,
-  Card,
   CommandPalette,
-  HeaderNav,
   MultiSelect,
-  Sidebar,
   TagSelect,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
+import { AlertDialog } from '../src/supplemental/alert-dialog.ts';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
+import { Card } from '../src/supplemental/card.ts';
 import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
+import { HeaderNav } from '../src/supplemental/header-nav.ts';
 import { Input } from '../src/supplemental/input.ts';
 import { InputTags } from '../src/supplemental/input-tags.ts';
 import { PaymentInput } from '../src/supplemental/payment-input.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { RadioField } from '../src/supplemental/radio-field.ts';
+import { Sidebar } from '../src/supplemental/sidebar.ts';
 import { SwitchField } from '../src/supplemental/switch-field.ts';
 import { TextArea } from '../src/supplemental/text-area.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';

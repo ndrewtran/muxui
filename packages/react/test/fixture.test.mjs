@@ -230,13 +230,29 @@ const markupFlags = {
   defaultOpen: '[data-open]',
   // ButtonGroup marks itself attached.
   attached: '[data-attached]',
+  // A link marks the current page with aria-current, and a link that carries no such attribute styles itself with a --current modifier.
+  current: '[aria-current="page"], [class*="--current"]',
+  // Sidebar.Root marks itself folded.
+  defaultCollapsed: '[data-collapsed]',
+  // A Sidebar nav group is a native details element, open once expanded.
+  defaultExpanded: 'details[open]',
+  // Sidebar's border is removed by a modifier, and an external nav link draws an icon that says so.
+  hideBorder: '.muxui-sidebar--no-border',
+  external: '.muxui-sidebar__nav-external',
 };
 // A progress circle's range shows as the ARIA values of its bar: the value is absent while it is indeterminate.
 const ariaNumber = (doc, attribute) => {
   const text = doc.querySelector(`[${attribute}]`)?.getAttribute(attribute);
   return text === undefined ? null : Number(text);
 };
+// Card names its variant and padding in the class modifiers of its surface, which a part's scope selects and the root's markup holds.
+const cardLook = (container, values) => {
+  const card = container.matches?.('.muxui-card') ? container : container.querySelector('.muxui-card');
+  return card === null ? undefined : values.find((value) => card.classList.contains(`muxui-card--${value}`));
+};
 const markupValues = {
+  // Sidebar marks only the compact density; the default one carries no attribute.
+  density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
     const circle = doc.querySelector('.muxui-progress-circle');
@@ -248,7 +264,8 @@ const markupValues = {
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
   tagPlacement: (doc) => (doc.querySelector('.muxui-input-tags--below') === null ? 'inline' : 'below'),
@@ -300,6 +317,12 @@ const minimalRenders = {
   Tree: () => treeOf(),
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
+  Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
+  AlertDialog: () => alertDialog(),
+  // Sidebar.Root's block is the column's own; the provider, search and nav parts are observed under 'Sidebar.<part>'.
+  Sidebar: () => sidebarRoot(),
+  // HeaderNav.Root owns no props, so the composition only has to render; the link's own default is observed under 'HeaderNav.nav-button'.
+  HeaderNav: () => h(generated.HeaderNav.Root, null, h(generated.HeaderNav.Logo, { href: '/' }, 'Mux'), h(generated.HeaderNav.Secondary, null, h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs'))),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
   InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),
   PaymentInput: () => h(generated.PaymentInput.Root, { 'aria-label': 'Card number' }, h(generated.PaymentInput.Group, null, h(generated.PaymentInput.Input), h(generated.PaymentInput.CardIcon))),
@@ -311,10 +334,22 @@ const minimalRenders = {
   RadioField: () => h(generated.RadioGroup, { 'aria-label': 'Plan' }, h(generated.RadioField.Root, { value: 'monthly' }, h(generated.RadioField.Button, null, h(generated.RadioField.Indicator, null, h(generated.RadioField.Dot)), 'Monthly'))),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
-const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot' };
+// Sidebar's root props are `SidebarProps`, a name the compound shares, which `undeclaredRootProps` reads without the compound.
+const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot', Card: 'CardRoot', HeaderNav: 'HeaderNavRoot', AlertDialog: 'AlertDialogRoot', Sidebar: 'Sidebar' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
+  // Card.Button is the card as one control: its own variant and padding show in its class, and its disabled and pending flags on the button.
+  'Card.button': { scope: 'button', render: () => h(generated.Card.Button, null, 'Select') },
+  // Sidebar.Provider renders no element: its folded default shows on Root. Search shows its placeholder by behaviour. The nav item is one leaf link and one group, so each flag has an element to show on, and the button is a plain link with a class.
+  'Sidebar.provider': { scope: '.muxui-sidebar', render: () => sidebarRoot() },
+  'Sidebar.search': { render: () => h(generated.Sidebar.Search) },
+  'Sidebar.nav-item': { scope: 'ul', render: () => h('ul', null, h(generated.Sidebar.NavItem, { href: '/leaf' }, 'Leaf'), h(generated.Sidebar.NavItem, { items: [{ href: '/child', label: 'Child' }] }, 'Group')) },
+  'Sidebar.nav-button': { scope: 'a', render: () => h(generated.Sidebar.NavButton, { href: '/docs', label: 'Docs' }) },
+  // AlertDialog.Trigger is the one button a closed dialog renders; Close sits in the popup and states no default.
+  'AlertDialog.trigger': { scope: 'button', render: () => alertDialog() },
+  // HeaderNav.NavButton is a plain link, which shows aria-current only when it is the current page.
+  'HeaderNav.nav-button': { scope: 'a', render: () => h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs') },
   'ListBox.item': { scope: '[role="option"]', render: () => h(generated.ListBox, { 'aria-label': 'Options' }, h(generated.ListBox.Item, { id: 'one' }, 'One')) },
   'Menu.trigger': { scope: 'button', render: () => menuRoot() },
   'Menu.list': { scope: '[role="menu"]', render: () => h(generated.Menu.List, { 'aria-label': 'Actions', items: ['One'] }) },
@@ -344,6 +379,16 @@ async function withMounted(element, run) {
     await act(async () => root.unmount());
     env.restore();
   }
+}
+
+/** A Sidebar.Provider holding a Root, which marks itself folded, unbordered or compact as the props of the two say. */
+function sidebarRoot(rootProps = null, providerProps = null) {
+  return h(generated.Sidebar.Provider, providerProps, h(generated.Sidebar.Root, { 'aria-label': 'Workspace', ...rootProps }));
+}
+
+/** AlertDialog.Root with a trigger and a popup holding a titled dialog with a Close, closed unless `rootProps` opens it. */
+function alertDialog(rootProps = null) {
+  return h(generated.AlertDialog.Root, rootProps, h(generated.AlertDialog.Trigger, null, 'Delete'), h(generated.AlertDialog.Backdrop, null, h(generated.AlertDialog.Popup, null, h(generated.AlertDialog.Content, null, h(generated.AlertDialog.Title, null, 'Delete?'), h(generated.AlertDialog.Close, null, 'Cancel')))));
 }
 
 /** Menu.Root with a trigger and a popup, closed unless `rootProps` opens it; `popupProps` go to the popup and `items` to its list. */
@@ -394,6 +439,14 @@ const selectPlaceholder = (props) => new JSDOM(renderToString(selectField(props)
 // Defaults only behaviour shows. Each observer renders the component (optionally
 // with the prop overridden) and returns what the renderer does.
 const behaviourObservers = {
+  // Search shows its placeholder in the input and gives it as the input's name.
+  'Sidebar.search': {
+    placeholder: (props) => new JSDOM(renderToString(h(generated.Sidebar.Search, props))).window.document.querySelector('input')?.getAttribute('placeholder'),
+  },
+  AlertDialog: {
+    // The dialog sits in a portal that stays empty until it opens, so the default shows only in whether it is open once mounted.
+    defaultOpen: (props) => withMounted(alertDialog(props), () => document.querySelector('[role="alertdialog"]') !== null),
+  },
   Button: {
     // A pending Button either keeps its label visible beside the spinner or hides it.
     showTextWhileLoading: (props) => {
@@ -572,11 +625,14 @@ async function behaviourMismatches(name, defaults) {
 const unobservedDefaults = (name, defaults) => Object.keys(defaults)
   .filter((key) => !(key in markupFlags) && !(key in markupValues) && !(key in (behaviourObservers[name] ?? {})));
 
-/** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. */
-function undeclaredProps(types, name, props) {
-  const surface = familyDeclarations(types, name);
+/** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. With `root`, the compound's other parts do not count. */
+function undeclaredProps(types, name, props, options) {
+  const surface = familyDeclarations(types, name, options);
   return props.filter((prop) => !new RegExp(`(?:\\b|['"])${prop}['"]?\\??\\s*:`, 'u').test(surface));
 }
+
+/** Catalog props the root's own declarations do not declare: a family listed in `rootDeclarations` is read against its root alone. */
+const undeclaredRootProps = (types, name, props) => undeclaredProps(types, rootDeclarations[name] ?? name, props, { root: name in rootDeclarations });
 
 /**
  * Everything a part's block gets wrong against the renderer, checked as the root's is: its defaults in its own element,
@@ -607,7 +663,7 @@ test('catalog defaults and props agree with the renderer for every generator-gua
     assert.deepEqual(defaultMismatches(markup, api.defaults), [], `${name} renders the catalog defaults`);
     assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
     assert.deepEqual(unobservedDefaults(name, api.defaults), [], `${name} defaults each have a markup or behaviour observer`);
-    assert.deepEqual(undeclaredProps(types, rootDeclarations[name] ?? name, api.props), [], `${name} generated declarations list the catalog props`);
+    assert.deepEqual(undeclaredRootProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
     // Each part that owns props is observed on its own, as the root is.
     for (const [part, block] of Object.entries(api.partApis ?? {})) {
       assert.deepEqual(await partProblems(types, name, part, block), [], `${name}.${part} agrees with the renderer`);
@@ -619,6 +675,13 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, size: 'lg' }), ['size: catalog "lg", rendered "md"']);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
   assert.deepEqual(undeclaredProps(types, 'ToggleButton', [...toggle.props, 'missingProp']), ['missingProp']);
+  // A root's props are its own declaration's. A prop another part of the compound declares is not the root's, though the compound names it:
+  // the compound-wide lookup finds each of these, and the root lookup refuses them. An alias beside a declaration is not part of it.
+  for (const [name, prop] of Object.entries({ Card: 'selected', HeaderNav: 'current', AlertDialog: 'disabled', Sidebar: 'shortcut' })) {
+    assert.deepEqual(undeclaredProps(types, name, [prop]), [], `${prop} is declared by a part of ${name}`);
+    assert.deepEqual(undeclaredRootProps(types, name, [...apis[name].props, prop]), [prop], `${name} root does not declare ${prop}`);
+  }
+  assert.deepEqual(undeclaredProps(types, 'HeaderNavNavButton', ['current', 'href']), ['href'], 'the logo\'s alias beside the link\'s declares href for the logo alone');
   // Observers outlive the defaults they check: a pending default, were Button to declare one, is still observed.
   assert.deepEqual(unobservedDefaults('Button', { ...apis.Button.defaults, pending: false }), []);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Button()), { pending: true }), ['pending: catalog true, rendered false']);
@@ -798,6 +861,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
     inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
+    defaultOpen: [false, true],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {

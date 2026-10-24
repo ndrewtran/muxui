@@ -40,25 +40,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "href",
-          "current",
-          "aria-label"
-        ],
-        "events": [],
-        "parts": [
-          "root",
-          "logo",
-          "nav-button",
-          "actions",
-          "secondary",
-          "mobile-trigger"
-        ],
-        "defaults": {
-          "current": false
-        }
-      },
       "behavior": [
         "Current links expose aria-current=page.",
         "Mobile navigation traps focus and returns it to the trigger on close.",

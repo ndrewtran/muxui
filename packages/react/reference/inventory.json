@@ -14,31 +14,31 @@
           "name": "AlertDialog",
           "kind": "value",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogActionsProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogCloseProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogRootProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         {
           "name": "AlertDialogTriggerProps",
           "kind": "type",
           "owner": "alert-dialog",
-          "module": "supplemental"
+          "module": "alert-dialog"
         },
         { "name": "Autocomplete", "kind": "value", "owner": "autocomplete", "module": "fields" },
         { "name": "AutocompleteItem", "kind": "type", "owner": "autocomplete", "module": "fields" },
@@ -87,14 +87,14 @@
         { "name": "ButtonProps", "kind": "type", "owner": "button", "module": "button" },
         { "name": "Calendar", "kind": "value", "owner": "calendar", "module": "calendar" },
         { "name": "CalendarProps", "kind": "type", "owner": "calendar", "module": "calendar" },
-        { "name": "Card", "kind": "value", "owner": "card", "module": "supplemental" },
-        { "name": "CardBodyProps", "kind": "type", "owner": "card", "module": "supplemental" },
-        { "name": "CardButtonProps", "kind": "type", "owner": "card", "module": "supplemental" },
-        { "name": "CardFooterProps", "kind": "type", "owner": "card", "module": "supplemental" },
-        { "name": "CardHeaderProps", "kind": "type", "owner": "card", "module": "supplemental" },
-        { "name": "CardPadding", "kind": "type", "owner": "card", "module": "supplemental" },
-        { "name": "CardRootProps", "kind": "type", "owner": "card", "module": "supplemental" },
-        { "name": "CardVariant", "kind": "type", "owner": "card", "module": "supplemental" },
+        { "name": "Card", "kind": "value", "owner": "card", "module": "card" },
+        { "name": "CardBodyProps", "kind": "type", "owner": "card", "module": "card" },
+        { "name": "CardButtonProps", "kind": "type", "owner": "card", "module": "card" },
+        { "name": "CardFooterProps", "kind": "type", "owner": "card", "module": "card" },
+        { "name": "CardHeaderProps", "kind": "type", "owner": "card", "module": "card" },
+        { "name": "CardPadding", "kind": "type", "owner": "card", "module": "card" },
+        { "name": "CardRootProps", "kind": "type", "owner": "card", "module": "card" },
+        { "name": "CardVariant", "kind": "type", "owner": "card", "module": "card" },
         { "name": "Checkbox", "kind": "value", "owner": "checkbox", "module": "components" },
         {
           "name": "CheckboxField",
@@ -537,18 +537,18 @@
         { "name": "GridListProps", "kind": "type", "owner": "grid-list", "module": "grid-list" },
         { "name": "Group", "kind": "value", "owner": "group", "module": "components" },
         { "name": "GroupProps", "kind": "type", "owner": "group", "module": "components" },
-        { "name": "HeaderNav", "kind": "value", "owner": "header-nav", "module": "supplemental" },
+        { "name": "HeaderNav", "kind": "value", "owner": "header-nav", "module": "header-nav" },
         {
           "name": "HeaderNavNavButtonProps",
           "kind": "type",
           "owner": "header-nav",
-          "module": "supplemental"
+          "module": "header-nav"
         },
         {
           "name": "HeaderNavRootProps",
           "kind": "type",
           "owner": "header-nav",
-          "module": "supplemental"
+          "module": "header-nav"
         },
         { "name": "IconButton", "kind": "value", "owner": "icon-button", "module": "icon-button" },
         {
@@ -1096,45 +1096,20 @@
         { "name": "SelectTriggerProps", "kind": "type", "owner": "select", "module": "select" },
         { "name": "Separator", "kind": "value", "owner": "separator", "module": "components" },
         { "name": "SeparatorProps", "kind": "type", "owner": "separator", "module": "components" },
-        { "name": "Sidebar", "kind": "value", "owner": "sidebar", "module": "supplemental" },
+        { "name": "Sidebar", "kind": "value", "owner": "sidebar", "module": "sidebar" },
         {
           "name": "SidebarAccountMenuProps",
           "kind": "type",
           "owner": "sidebar",
-          "module": "supplemental"
+          "module": "sidebar"
         },
-        {
-          "name": "SidebarExpandedProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        { "name": "SidebarNavEntry", "kind": "type", "owner": "sidebar", "module": "supplemental" },
-        {
-          "name": "SidebarNavItemProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        { "name": "SidebarProps", "kind": "type", "owner": "sidebar", "module": "supplemental" },
-        {
-          "name": "SidebarProviderProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        {
-          "name": "SidebarSectionProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        {
-          "name": "SidebarToggleProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
+        { "name": "SidebarExpandedProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarNavEntry", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarNavItemProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarProviderProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarSectionProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarToggleProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "Slider", "kind": "value", "owner": "slider", "module": "slider" },
         { "name": "SliderProps", "kind": "type", "owner": "slider", "module": "slider" },
         {

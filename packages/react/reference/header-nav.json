@@ -1,12 +1,12 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "header-nav",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": { "header-nav": "packages/react/src/supplemental/header-nav.ts" },
   "exports": [
     {
       "name": "HeaderNav",
       "entry": ".",
-      "module": "supplemental",
+      "module": "header-nav",
       "kind": "component",
       "parts": [
         {
@@ -23,7 +23,12 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "href", "optional": true, "type": "string" }
+            {
+              "name": "href",
+              "optional": true,
+              "type": "string",
+              "doc": "Wraps the logo's content in a link to this address."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -34,7 +39,12 @@
           "member": "NavButton",
           "form": "forwardRef",
           "members": [
-            { "name": "current", "optional": true, "type": "boolean" }
+            {
+              "name": "current",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the link as the current page: it is styled as such and carries aria-current."
+            }
           ],
           "ref": { "type": "HTMLAnchorElement" },
           "natives": [
@@ -76,24 +86,46 @@
   ],
   "types": [
     {
-      "id": "supplemental#HeaderNavNavButtonProps",
+      "id": "header-nav#HeaderNavNavButtonOwnProps",
+      "name": "HeaderNavNavButtonOwnProps",
+      "module": "header-nav",
+      "text": "type HeaderNavNavButtonOwnProps = {\n  current?: boolean;\n};",
+      "members": [
+        {
+          "name": "current",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the link as the current page: it is styled as such and carries aria-current."
+        }
+      ]
+    },
+    {
+      "id": "header-nav#HeaderNavNavButtonProps",
       "name": "HeaderNavNavButtonProps",
-      "module": "supplemental",
+      "module": "header-nav",
       "public": [
         { "entry": ".", "name": "HeaderNavNavButtonProps" }
       ],
       "owner": "header-nav",
-      "text": "type HeaderNavNavButtonProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {\n  current?: boolean;\n};"
+      "text": "type HeaderNavNavButtonProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & HeaderNavNavButtonOwnProps;",
+      "refs": ["header-nav#HeaderNavNavButtonOwnProps"]
     },
     {
-      "id": "supplemental#HeaderNavRootProps",
+      "id": "header-nav#HeaderNavOwnProps",
+      "name": "HeaderNavOwnProps",
+      "module": "header-nav",
+      "text": "type HeaderNavOwnProps = {};"
+    },
+    {
+      "id": "header-nav#HeaderNavRootProps",
       "name": "HeaderNavRootProps",
-      "module": "supplemental",
+      "module": "header-nav",
       "public": [
         { "entry": ".", "name": "HeaderNavRootProps" }
       ],
       "owner": "header-nav",
-      "text": "type HeaderNavRootProps = React.HTMLAttributes<HTMLElement>;"
+      "text": "type HeaderNavRootProps = React.HTMLAttributes<HTMLElement> & HeaderNavOwnProps;",
+      "refs": ["header-nav#HeaderNavOwnProps"]
     }
   ]
 }

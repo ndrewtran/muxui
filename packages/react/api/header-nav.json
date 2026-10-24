@@ -1,0 +1,57 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/header-nav.ts",
+  "component": "muxui:component:header-nav",
+  "binding": "web.react",
+  "export": "HeaderNav",
+  "api": {
+    "props": [],
+    "events": [],
+    "defaults": {},
+    "propDetails": {},
+    "eventDetails": {},
+    "types": {},
+    "partApis": {
+      "logo": {
+        "member": "Logo",
+        "props": [
+          "href"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "href": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "Wraps the logo's content in a link to this address."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "nav-button": {
+        "member": "NavButton",
+        "props": [
+          "current"
+        ],
+        "events": [],
+        "defaults": {
+          "current": false
+        },
+        "propDetails": {
+          "current": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the link as the current page: it is styled as such and carries aria-current."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

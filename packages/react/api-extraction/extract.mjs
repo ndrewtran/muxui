@@ -20,7 +20,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NodeFlags, SyntaxKind, getTextOfJSDocComment, isAssignmentOperator } from 'typescript/unstable/ast';
-import { API, SignatureKind, SymbolFlags } from 'typescript/unstable/sync';
+import { API, SignatureKind, SymbolFlags, isTypeReference } from 'typescript/unstable/sync';
 
 export class ApiExtractionError extends Error {
   constructor(chain, message) {
@@ -74,7 +74,9 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * and HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>, and the Omit of it that
  * PromptComposer's inputProps declares, Set<string> for the selected item ids of TagGroup, and
  * Record<string, React.ReactNode> for the cell values of a Table row, and AbortSignal with Promise<unknown>
- * for the signal and the result of TextEditor's selection request.
+ * for the signal and the result of TextEditor's selection request, EventTarget for the target
+ * of a supplemental part's activation, and React.ChangeEvent<HTMLInputElement> with React.ComponentType<SidebarIconProps>
+ * for the change event of Sidebar.Search and the icon of a Sidebar nav item or button.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -118,6 +120,12 @@ export const HOST_ALLOWLIST = Object.freeze([
   // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns, whose result the editor ignores. Promise<unknown> is read only as a callback's return.
   'AbortSignal',
   hostApplication('Promise', { kind: 'unknown' }),
+  // The target of the press a supplemental part's onActivate reports (SupplementalActivation), which is any event target to the type.
+  'EventTarget',
+  // Sidebar.Search's onChange: the change event of its input, which its React.ChangeEventHandler<HTMLInputElement> alias reads as.
+  hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }),
+  // The icon a Sidebar nav item or button draws: a component that takes the class name SidebarIconProps names.
+  hostApplication('React.ComponentType', { kind: 'reference', name: 'SidebarIconProps' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.
@@ -262,6 +270,46 @@ export function assertHostAllowlist(hostAllowlist) {
   return { names, applications };
 }
 
+/**
+ * The public members whose type is a host member intersected with the Mux UI-owned one. A part whose props extend the host
+ * attributes can inherit a member it also owns under another type, and the public type of that member is then both
+ * (`Sidebar.Search`'s `onChange` is the div's change handler and the input's). Changing it would change what a consumer may write,
+ * so it stays, and extraction reads it only here: an entry names the member by the chain extraction reports for it
+ * (`Sidebar.Search.onChange`), the interface in @types/react that declares the host member, and the type the owned member extracts to,
+ * so any other member, family, owned type, or public shape is still a redeclaration. `intersectsHostMember` is the check.
+ * The host's attributes are instantiated with one DOM element, which the entry names (`element`), because the host member is that
+ * element's event handler: the same public props over another element give an identical API record and a different type.
+ * @type {readonly { member: string, host: string, element: string, type: object }[]}
+ */
+export const HOST_OVERLAPS = Object.freeze([
+  deepFreeze({
+    member: 'Sidebar.Search.onChange',
+    host: 'DOMAttributes',
+    element: 'HTMLDivElement',
+    type: { kind: 'function', parameters: [{ name: 'event', type: hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }), required: true }], returns: { kind: 'void' } },
+  }),
+]);
+
+const OVERLAP_MEMBER = /^[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)?\.[a-z][A-Za-z0-9]*$/u;
+
+/** Validates the host overlaps: each entry is exactly `{ member, host, element, type }`, and a member has one entry. Returns them by member. */
+export function assertHostOverlaps(hostOverlaps) {
+  const overlaps = new Map();
+  for (const entry of hostOverlaps) {
+    const fail = (message) => {
+      throw new ApiExtractionError('host overlaps', `${JSON.stringify(entry)} ${message}`);
+    };
+    if (entry === null || typeof entry !== 'object' || Object.keys(entry).sort().join() !== 'element,host,member,type') fail('is not written as exactly member, host, element, type');
+    if (typeof entry.member !== 'string' || !OVERLAP_MEMBER.test(entry.member)) fail('does not name a member as the extraction reports it, such as Sidebar.Search.onChange');
+    if (typeof entry.host !== 'string' || !REFERENCE_NAME.test(entry.host)) fail('does not name the one interface in @types/react that declares the host member');
+    if (typeof entry.element !== 'string' || !REFERENCE_NAME.test(entry.element)) fail('does not name the one DOM element type the host\'s attributes are instantiated with, such as HTMLDivElement');
+    if (entry.type?.kind !== 'function') fail('does not give the owned member\'s extracted type, a function');
+    if (overlaps.has(entry.member)) fail('names a member twice');
+    overlaps.set(entry.member, entry);
+  }
+  return overlaps;
+}
+
 // One TypeScript 7 API session over a throwaway project: the declarations to read and,
 // for defaults, the sources to parse. Module resolution starts from each file, so the
 // project file itself can sit anywhere.
@@ -316,11 +364,12 @@ function referencedSymbol({ checker }, reference) {
   return found?.flags & SymbolFlags.Alias ? checker.getAliasedSymbol(found) : found;
 }
 
-/** The one type alias a symbol declares in @types/react, when it takes `typeParameters` type parameters. */
+/** The one type alias a symbol declares in @types/react, when it takes `typeParameters` type parameters (any number, when that is undefined). */
 function reactAlias(project, symbol, typeParameters) {
   if (!symbol || symbol.declarations.length !== 1 || !declaredInReact(symbol)) return null;
   const declaration = symbol.declarations[0].resolve(project);
-  return declaration.kind === SyntaxKind.TypeAliasDeclaration && declaration.typeParameters?.length === typeParameters ? declaration : null;
+  if (declaration.kind !== SyntaxKind.TypeAliasDeclaration) return null;
+  return typeParameters === undefined ? declaration : declaration.typeParameters?.length === typeParameters ? declaration : null;
 }
 
 /** Whether a node is a plain reference to the type parameter `parameter` declares. */
@@ -347,23 +396,47 @@ function bivarianceHackParameter(project, declaration) {
 }
 
 /**
+ * Whether two type parameters have the same default, which is one type of the default library: a plain reference, written
+ * without type arguments, to a symbol the default library declares (`Element`, which @types/react also augments). A default of any other kind (a
+ * keyword, a dependent default that names another parameter, a type declared in React) is not compared.
+ */
+function sameLibraryDefault(project, left, right) {
+  const types = [left.defaultType, right.defaultType];
+  if (types.some((type) => type?.kind !== SyntaxKind.TypeReference || type.typeArguments?.length)) return false;
+  const [one, other] = types.map((type) => referencedSymbol(project, type));
+  const library = (symbol) => symbol?.declarations.some(({ path }) => isDefaultLibrary(project.program, path));
+  return library(one) && library(other) && one.id === other.id;
+}
+
+/**
  * Whether `symbol` is one of React's bivariant event handler aliases, read from its declarations and never from
- * a name: a type alias in @types/react with one type parameter `T` whose body is a reference to a React alias (the
- * `EventHandler`, which `bivarianceHackParameter` recognises) applied to one argument, a React event type of `T`
- * (`UIEvent<T>`). A local alias of the same name, `React.EventHandler` itself, and an alias of another shape are not.
+ * a name: a type alias in @types/react whose type parameters begin with the element `T` and whose body is a reference
+ * to a React alias (the `EventHandler`, which `bivarianceHackParameter` recognises) applied to one argument, a React
+ * event type that takes the alias's parameters, in order (`UIEvent<T>`; `ChangeEvent<CurrentTarget, Target>`).
+ * Each parameter after the element has a default, because a use writes the element alone, and the serialized event
+ * is then the event written with its own defaults: the two defaults must be the same library type (`sameLibraryDefault`),
+ * or the handler would be a different event than the catalog states. A local alias of the same name,
+ * `React.EventHandler` itself, and an alias of another shape are not.
  * @returns {{ event: object, parameter: string } | null} the event type's symbol and the handler's parameter name
  */
 function eventHandlerAlias(project, symbol) {
-  const alias = reactAlias(project, symbol, 1);
+  const alias = reactAlias(project, symbol);
   const body = alias?.type;
-  if (body?.kind !== SyntaxKind.TypeReference || body.typeArguments?.length !== 1) return null;
+  if (!alias?.typeParameters?.length || body?.kind !== SyntaxKind.TypeReference || body.typeArguments?.length !== 1) return null;
   const base = referencedSymbol(project, body);
   const baseAlias = reactAlias(project, base, 1);
   const parameter = baseAlias === null ? null : bivarianceHackParameter(project, baseAlias);
   const [argument] = body.typeArguments;
-  if (parameter === null || argument.kind !== SyntaxKind.TypeReference || argument.typeArguments?.length !== 1) return null;
+  const parameters = alias.typeParameters;
+  if (parameter === null || argument.kind !== SyntaxKind.TypeReference || argument.typeArguments?.length !== parameters.length) return null;
   const event = referencedSymbol(project, argument);
-  if (!event || !declaredInReact(event) || !refersTo(project, argument.typeArguments[0], alias.typeParameters[0])) return null;
+  if (!event || !declaredInReact(event)) return null;
+  if (!parameters.every((typeParameter, index) => refersTo(project, argument.typeArguments[index], typeParameter))) return null;
+  if (parameters.length > 1) {
+    // The omitted parameters take the alias's defaults in the handler and the event's own in the serialized event.
+    const eventParameters = event.declarations.length === 1 ? event.declarations[0].resolve(project).typeParameters : undefined;
+    if (!eventParameters || !parameters.slice(1).every((typeParameter, index) => eventParameters[index + 1] && sameLibraryDefault(project, typeParameter, eventParameters[index + 1]))) return null;
+  }
   return { event, parameter };
 }
 
@@ -817,10 +890,54 @@ function ownPropsOf(checker, sourceFile, ownName, label) {
   return declaration.type.members;
 }
 
-// The props type the exported component accepts: the first parameter of its one call signature.
+/**
+ * The props of a part typed `React.ComponentType<P>`, which is a union of a function component and a class component and so
+ * has no one call signature. It is read as P, and only when the type is React's own alias, by its declarations and never by a
+ * name alone: the type's alias is the one `ComponentType` alias declared once in @types/react, a union of exactly two
+ * references to React's `ComponentClass` and `FunctionComponent` types, each applied to the alias's parameter. The arms of the
+ * type are then guarded fail-closed, since a stand-in with that name and another shape is no component: each has the one
+ * signature of its kind (a call, a construct) with no type parameters, takes P first and nothing else required, and the call
+ * returns what React can render (ReactNode, as the alias's module declares it, or a Promise of it) and the construct a
+ * `Component`. A part so typed carries no ref, which `P` already says. `FunctionComponent<P> | ComponentClass<P>` written by hand,
+ * a local alias of ComponentType, and `ComponentType<P> & {}` are not read. Returns undefined for any other type.
+ */
+function componentTypeProps(project, type) {
+  const { checker } = project;
+  const alias = type.getAliasSymbol();
+  const [argument] = type.getAliasTypeArguments();
+  if (alias?.name !== 'ComponentType' || alias.declarations.length !== 1 || !declaredInReact(alias)) return undefined;
+  const declaration = alias.declarations[0].resolve(project);
+  const body = declaration.kind === SyntaxKind.TypeAliasDeclaration && declaration.typeParameters?.length === 1 ? declaration.type : undefined;
+  if (body?.kind !== SyntaxKind.UnionType) return undefined;
+  // The references the alias is declared with, each to a React type applied to the alias's parameter: two, and no more.
+  const named = body.types.map((node) => (node.kind === SyntaxKind.TypeReference && node.typeArguments?.length === 1 && refersTo(project, node.typeArguments[0], declaration.typeParameters[0]) ? referencedSymbol(project, node) : undefined));
+  if (named.length !== 2 || named.some((symbol) => symbol === undefined || !declaredInReact(symbol))) return undefined;
+  const node = checker.resolveName('ReactNode', SymbolFlags.Type, declaration);
+  if (node === undefined) return undefined;
+  const arms = type.isUnionType() ? type.getTypes() : [];
+  const reactNode = checker.getDeclaredTypeOfSymbol(node);
+  const renders = (result) => (result.isUnionType() ? result.getTypes() : [result]).every((member) => checker.isTypeAssignableTo(member, reactNode)
+    || (member.isTypeReference() && member.getSymbol()?.name === 'Promise' && checker.getTypeArguments(member).length === 1 && checker.getTypeArguments(member)[0].id === reactNode.id));
+  // The first parameter is P and every other is optional (a rest parameter is not); a type parameter or a this parameter is another kind of signature.
+  const takesProps = (signature) => signature.getTypeParameters().length === 0 && signature.getThisParameter() === undefined
+    && signature.getParameters().length > 0
+    && checker.getTypeOfSymbol(signature.getParameters()[0])?.id === argument.id
+    && signature.getParameters().slice(1).every((parameter) => parameter.declarations[0]?.resolve(project)?.questionToken !== undefined);
+  const shaped = (kind, accepts) => {
+    const matching = arms.filter((arm) => checker.getSignaturesOfType(arm, kind).length === 1 && checker.getSignaturesOfType(arm, kind === SignatureKind.Call ? SignatureKind.Construct : SignatureKind.Call).length === 0);
+    if (matching.length !== 1) return false;
+    const [signature] = checker.getSignaturesOfType(matching[0], kind);
+    return takesProps(signature) && accepts(checker.getReturnTypeOfSignature(signature));
+  };
+  const instance = (result) => result.getSymbol()?.name === 'Component' && result.getSymbol().flags & SymbolFlags.Class && declaredInReact(result.getSymbol());
+  return shaped(SignatureKind.Call, renders) && shaped(SignatureKind.Construct, instance) ? argument : undefined;
+}
+
+// The props type the exported component accepts: the first parameter of its one call signature, or P of a part typed React.ComponentType<P>.
 // A compound export (Avatar) names the part whose props the binding's API is: its root. A
 // callable compound (ListBox) is its own root, and its other parts are members of the export.
-function publicPropsType(checker, sourceFile, name, part) {
+function publicPropsType(project, sourceFile, name, part) {
+  const { checker } = project;
   const exported = exportedNamed(sourceFile, name);
   if (!exported) throw new ApiExtractionError(name, `the declarations export no ${name}`);
   let type = checker.getTypeOfSymbol(checker.getSymbolAtLocation(exported.name));
@@ -831,14 +948,51 @@ function publicPropsType(checker, sourceFile, name, part) {
     type = checker.getTypeOfSymbol(property);
   }
   const signatures = checker.getSignaturesOfType(type, SignatureKind.Call);
+  if (signatures.length === 0) {
+    const props = componentTypeProps(project, type);
+    if (props !== undefined) return props;
+  }
   if (signatures.length !== 1 || signatures[0].getParameters().length === 0) {
-    throw new ApiExtractionError(name, `the exported ${component} must be a component with one call signature that takes props`);
+    throw new ApiExtractionError(name, `the exported ${component} must be a component with one call signature that takes props, or React's ComponentType<P>`);
   }
   return checker.getParameterType(signatures[0], 0);
 }
 
 const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(type).map((property) => [property.name, property]));
-const publicProps = (checker, sourceFile, name, part) => propertiesByName(checker, publicPropsType(checker, sourceFile, name, part));
+
+/**
+ * Whether a public member is exactly the host member intersected with the owned one, as its `HOST_OVERLAPS` entry says. TypeScript
+ * gives a member of an intersection the intersection of the member types the constituents that declare it give, so the public
+ * member is that when the public props are a plain intersection and exactly two constituents declare it: the owned type, whose
+ * member is the very symbol the family declares, and an instantiation of an interface that @types/react declares, whose member
+ * the entry's interface declares there and nowhere else (an augmentation outside React is a second declaration). A mapped type
+ * keeps the declarations of the members it copies and may rewrite their types, so a wrapper around the intersection, the host's
+ * attributes (Omit is one), the owned type, or a local interface that extends a mapped copy is no such constituent and fails, as
+ * does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry pins, and
+ * so is the DOM element the host's attributes are instantiated with: the same props over another element are another public type.
+ */
+function intersectsHostMember(project, { propsType, prop, own, type }, overlap) {
+  if (hostEntryKey(type) !== hostEntryKey(overlap.type) || !propsType.isIntersectionType()) return false;
+  const { checker } = project;
+  const carriers = propsType.getTypes().flatMap((constituent) => {
+    const member = checker.getPropertyOfType(constituent, prop);
+    return member === undefined ? [] : [{ constituent, member }];
+  });
+  const owned = carriers.filter(({ member }) => member.id === own.id);
+  const hosts = carriers.filter(({ member }) => member.id !== own.id);
+  if (owned.length !== 1 || hosts.length !== 1) return false;
+  const [{ constituent, member }] = hosts;
+  // An instantiation of an interface that React declares, and nothing else does: a local interface that extends one (of a mapped copy of
+  // it, say) keeps the member's declaration, not its type. An augmentation of the host interface is refused as well, though it adds
+  // only an unrelated member: the extraction runs on this repository's own sources, so that is a loud, named failure and not a silent
+  // mismatch, and accepting it would take a proof that the augmentation leaves the overlapping member alone.
+  if (!isTypeReference(constituent) || !declaredInReact(constituent.getTarget().getSymbol())) return false;
+  // The element the host's attributes are instantiated with, read from the resolved type and not from the text that wrote it, is the
+  // entry's DOM element: the host member is that element's event handler, so another element is another public type.
+  const elementSymbol = checker.getTypeArguments(constituent)[0]?.getSymbol();
+  if (elementSymbol?.name !== overlap.element || !elementSymbol.declarations.some(({ path }) => isDefaultLibrary(project.program, path))) return false;
+  return declaredInReact(member) && member.declarations.every((declaration) => declaration.resolve(project)?.parent?.name?.text === overlap.host);
+}
 
 /**
  * The typed block of one component, read from its emitted declarations: the members
@@ -855,12 +1009,14 @@ const publicProps = (checker, sourceFile, name, part) => propertiesByName(checke
  * Widening is checked on the arms: some arm of the signature's props, a union of arms, must accept
  * everything the owned type does, so an arm that narrows the member is not hidden by the others.
  */
-function readDeclaredApi(reader, checker, sourceFile, { exportName, ownName, member, label, also = [] }) {
+function readDeclaredApi(reader, project, sourceFile, { exportName, ownName, member, label, also = [], overlaps }) {
+  const { checker } = project;
   const members = ownPropsOf(checker, sourceFile, ownName, label);
+  const propsType = publicPropsType(project, sourceFile, exportName, member);
   const signatures = [
-    { name: label, widen: [], props: publicProps(checker, sourceFile, exportName, member), type: undefined },
+    { name: label, widen: [], props: propertiesByName(checker, propsType), type: propsType },
     ...also.map(({ member: alsoMember, widen = [] }) => {
-      const type = publicPropsType(checker, sourceFile, exportName, alsoMember);
+      const type = publicPropsType(project, sourceFile, exportName, alsoMember);
       return { name: `${exportName}.${alsoMember}`, widen, props: propertiesByName(checker, type), type };
     }),
   ];
@@ -887,7 +1043,9 @@ function readDeclaredApi(reader, checker, sourceFile, { exportName, ownName, mem
       const redeclared = (reason) => new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props ${reason} ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}`);
       const optionalityKept = Boolean(accepted.flags & SymbolFlags.Optional) === !required;
       if (!signature.widen.includes(prop)) {
-        if (acceptedType.id !== ownType.id || !optionalityKept) throw redeclared('redeclare');
+        const overlap = signature === signatures[0] ? overlaps?.get(`${label}.${prop}`) : undefined;
+        const overlapped = overlap !== undefined && optionalityKept && intersectsHostMember(project, { propsType: signature.type, prop, own, type }, overlap);
+        if ((acceptedType.id !== ownType.id || !optionalityKept) && !overlapped) throw redeclared('redeclare');
         continue;
       }
       if (!optionalityKept) throw redeclared('change the optionality of');
@@ -1789,10 +1947,11 @@ const ANATOMY_PART = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
  * `declarationRoot` are Mux UI-owned; any other reference must be an exact host type on
  * the allowlist. Returns a Map from export name to `{ props, events, defaults?,
  * propDetails, eventDetails, types, partApis? }`, with `types` sorted by name.
- * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string, callable?: string, also?: { member: string, widen?: string[] }[], parts?: Record<string, string> }[], hostAllowlist?: readonly string[] }} options
+ * @param {{ declarationRoot: string, components: { name: string, declarations: string, source?: string, part?: string, callable?: string, also?: { member: string, widen?: string[] }[], parts?: Record<string, string> }[], hostAllowlist?: readonly string[], hostOverlaps?: readonly object[] }} options
  */
-export function extractApis({ declarationRoot, components, hostAllowlist = HOST_ALLOWLIST }) {
+export function extractApis({ declarationRoot, components, hostAllowlist = HOST_ALLOWLIST, hostOverlaps = HOST_OVERLAPS }) {
   const allowed = assertHostAllowlist(hostAllowlist);
+  const overlaps = assertHostOverlaps(hostOverlaps);
   const root = resolve(declarationRoot);
   const files = components.flatMap(({ declarations, source }) => [resolve(declarations), ...(source ? [resolve(source)] : [])]);
   return withProject(files, (project) => new Map(components.map(({ name, declarations, source, part, callable, also = [], parts = {} }) => {
@@ -1801,7 +1960,7 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
     // One block: the API of the export's root, or of one part of it.
     const read = ({ ownName, member, label, also: rootAlso = [], part: isPart = false }) => {
       const reader = declarationReader({ project, declarationRoot: root, allowed });
-      const declared = readDeclaredApi(reader, project.checker, declarationFile, { exportName: name, ownName, member, label, also: rootAlso });
+      const declared = readDeclaredApi(reader, project, declarationFile, { exportName: name, ownName, member, label, also: rootAlso, overlaps });
       if (isPart && declared.props.length === 0 && declared.events.length === 0) {
         throw new ApiExtractionError(label, `${ownName}OwnProps declares no Mux UI-owned prop; a part without Mux UI-owned props has no partApis entry`);
       }
@@ -1847,7 +2006,7 @@ export function extractApis({ declarationRoot, components, hostAllowlist = HOST_
       const member = parts[callable];
       if (member === undefined) throw new ApiExtractionError(name, `callable names ${callable}, which is not one of the parts`);
       // The export itself must carry that part's props with the same types and requiredness.
-      readDeclaredApi(declarationReader({ project, declarationRoot: root, allowed }), project.checker, declarationFile, { exportName: name, ownName: `${name}${member}`, member: undefined, label: `${name} (callable)` });
+      readDeclaredApi(declarationReader({ project, declarationRoot: root, allowed }), project, declarationFile, { exportName: name, ownName: `${name}${member}`, member: undefined, label: `${name} (callable)` });
     }
     return [name, { ...api, ...(Object.keys(partApis).length === 0 ? {} : { partApis }) }];
   })));

@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { Dialog, Popover, Tooltip, PreviewTrigger } from '../../src/overlays.ts';
-import { AlertDialog } from '../../src/supplemental/index.mjs';
+import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function StatefulPopoverContent() {
@@ -75,7 +75,7 @@ async function withFixture(run, direction = 'ltr') {
   const entry = `import React from 'react';
     import { hydrateRoot } from 'react-dom/client';
     import { Dialog, Popover, Tooltip, PreviewTrigger } from '/packages/react/src/overlays.ts';
-    import { AlertDialog } from '/packages/react/src/supplemental/index.mjs';
+    import { AlertDialog } from '/packages/react/src/supplemental/alert-dialog.ts';
     import '/packages/react/generated/styles.css';
     ${StatefulPopoverContent.toString()}
     ${OverlayFixture.toString()}
@@ -88,7 +88,7 @@ async function withFixture(run, direction = 'ltr') {
   const { url, close } = await startServer({
     root: 'repository',
     aliasReact: true,
-    entries: ['packages/react/src/overlays.ts', 'packages/react/src/supplemental/index.mjs'],
+    entries: ['packages/react/src/overlays.ts', 'packages/react/src/supplemental/alert-dialog.ts'],
     pages: { '/overlay-fixture.html': html },
     modules: { '/overlay-fixture.mjs': entry },
   });
