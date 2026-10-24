@@ -1175,6 +1175,48 @@ test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in 
   }
 });
 
+// The typed reference is Storybook's own interface, painted with Mux semantic tokens. The manager audit reaches it only through
+// one Docs page and stops at the macOS manager failure first, so these pages are proved on their own, fully expanded.
+const typedReferenceFamilies = ['IconButton', 'Dialog', 'Resizable', 'Text', 'Virtualizer', 'SwitchField', 'TextArea', 'CommandPalette', 'Select'];
+
+test('Storybook typed API reference paints only canonical Mux colours in light and dark', { timeout: 240000, skip: storybookUiSkip }, async (t) => {
+  const server = await startStorybook(t.signal);
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const index = await fetchStorybookIndex(`${server.url}/index.json`);
+    const page = await browser.newPage({ viewport: { width: 1190, height: 900 } });
+    page.setDefaultTimeout(60000);
+    for (const family of typedReferenceFamilies) {
+      const entry = Object.values(index.entries).find((candidate) => candidate.type === 'docs' && candidate.title.endsWith(`/${family}`));
+      assert.ok(entry, `${family}: Storybook must expose its Docs page`);
+      for (const scheme of ['light', 'dark']) {
+        await page.goto(`${server.url}/iframe.html?viewMode=docs&id=${entry.id}&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
+        await page.locator('[data-typed-reference]').waitFor();
+        // Closed details hide their tables from the paint walk, so expand every part and type first.
+        // Storybook's stock Controls table keeps its own number-input fill on main too, so it stays out of this proof.
+        await page.evaluate(() => {
+          document.querySelectorAll('[data-typed-reference] details').forEach((details) => { details.open = true; });
+          document.querySelectorAll('.docblock-argstable').forEach((table) => { table.style.display = 'none'; });
+        });
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+          await new Promise((frame) => requestAnimationFrame(frame));
+        });
+        const result = await page.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'docs' });
+        const label = `${family}/${scheme}`;
+        assert.ok(result.elements > 0 && result.paintOccurrences > 0, `${label}: empty audit`);
+        assert.deepEqual(result.problems, [], `${label}: every paint must be resolvable`);
+        assert.deepEqual(result.media, [], `${label}: the reference carries no image`);
+        assert.deepEqual(result.nonToken, [], `${label}: the reference must paint only canonical Mux colours`);
+        t.diagnostic(`${label}: ${result.elements} elements, ${result.paintOccurrences} paints`);
+      }
+    }
+  } finally {
+    await browser.close();
+    await server.stop();
+  }
+});
+
 async function runColourWorker({ browser, schemes, workerId }) {
   const report = { storybookVersion: '10.5.10', tokenSource: 'catalog/tokens/default-theme.json', states: [] };
   let server;

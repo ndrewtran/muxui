@@ -858,6 +858,163 @@ test('NumberField sizing story computes fit-content, 12rem, and full container w
   }
 });
 
+// Every Docs page carries the typed API reference as Storybook's own interface. These are the pages where it is largest or hardest.
+const typedReferenceFamilies = ['IconButton', 'Dialog', 'Resizable', 'Text', 'Virtualizer', 'SwitchField', 'TextArea', 'CommandPalette', 'Select'];
+
+/** The typed-reference families this run proves: all of them for a full or chrome run, else the selected ones that are among them. */
+function typedReferenceSelection() {
+  if (process.env.MUXUI_STORYBOOK_UI_PROOF === 'skip') return { skip: 'Storybook own-interface proof is skipped by MUXUI_STORYBOOK_UI_PROOF=skip' };
+  const { proof } = resolveStorybookPageSelection();
+  if (proof === 'full' || proof === 'chrome') return { families: typedReferenceFamilies };
+  if (proof !== 'component') return { skip: `not part of ${proof} proof` };
+  const families = typedReferenceFamilies.filter((family) => (selectedStorybookFamilies() ?? []).includes(family));
+  return families.length > 0 ? { families } : { skip: 'no selected family is among the typed reference pages' };
+}
+
+test('Storybook typed API reference is axe-clean, keyboard-operable and reflows in light and dark', {
+  timeout: testTimeoutMs,
+  skip: typedReferenceSelection().skip ?? false,
+}, async (t) => {
+  const { families } = typedReferenceSelection();
+  const resources = createAuditResources(t.signal);
+  try {
+    throwIfAborted(t.signal);
+    const executablePath = await findBrowser();
+    throwIfAborted(t.signal);
+    assert.ok(executablePath, 'Chrome or Chromium is required for the typed reference proof (set MUXUI_CHROME_EXECUTABLE to override)');
+    let port;
+    try {
+      port = await reservePort(configuredPort());
+    } catch {
+      port = await reservePort(undefined);
+    }
+    const started = await startStorybook(port, t.signal);
+    await resources.trackStorybook(started.child);
+    const index = await fetch(`${started.baseUrl}/index.json`, {
+      signal: AbortSignal.any([AbortSignal.timeout(10_000), t.signal]),
+    }).then((response) => response.json());
+    const browser = await chromium.launch({ executablePath, headless: true });
+    await resources.trackBrowser(browser);
+    const page = await browser.newPage({ viewport: { width: 1_190, height: 900 } });
+    page.setDefaultNavigationTimeout(storyTimeoutMs * 4);
+    page.setDefaultTimeout(storyTimeoutMs * 4);
+    for (const family of families) {
+      const entry = Object.values(index.entries).find((candidate) => candidate.type === 'docs' && storyFamily(candidate) === family);
+      assert.ok(entry, `${family}: Storybook must expose its Docs page`);
+      for (const scheme of ['light', 'dark']) {
+        throwIfAborted(t.signal);
+        const label = `${family}/${scheme}`;
+        await page.setViewportSize({ width: 1_190, height: 900 });
+        await page.goto(`${started.baseUrl}/iframe.html?viewMode=docs&id=${encodeURIComponent(entry.id)}&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`, { waitUntil: 'domcontentloaded' });
+        await page.locator('[data-typed-reference]').waitFor();
+        await page.addScriptTag({ content: axe.source });
+        await waitForDocumentAnimations(page);
+        // Embedded stories and code blocks settle after the reference appears and move what is below them, so let the
+        // page stop growing before a link is followed to a target near its end.
+        await page.waitForFunction(() => new Promise((resolveStable) => {
+          let height = document.documentElement.scrollHeight;
+          let stableFrames = 0;
+          const frame = () => {
+            const next = document.documentElement.scrollHeight;
+            stableFrames = next === height ? stableFrames + 1 : 0;
+            height = next;
+            if (stableFrames >= 30) resolveStable(true);
+            else requestAnimationFrame(frame);
+          };
+          requestAnimationFrame(frame);
+        }));
+
+        // Keyboard: from the reference's first heading, Tab reaches a link of the exports index, then a collapsed summary,
+        // and Enter on each does what it names.
+        await page.evaluate(() => {
+          const start = document.querySelector('#api-exports');
+          start.tabIndex = -1;
+          start.focus();
+        });
+        const reached = [];
+        for (let presses = 0; presses < 600 && !reached.includes('summary'); presses += 1) {
+          await page.keyboard.press('Tab');
+          const where = await page.evaluate(() => {
+            const active = document.activeElement;
+            if (!active?.closest('[data-typed-reference]')) return 'outside';
+            if (active.matches('summary')) return 'summary';
+            if (active.matches('a[href]')) return 'link';
+            return active.localName;
+          });
+          assert.notEqual(where, 'outside', `${label}: Tab must reach a summary before leaving the reference`);
+          assert.ok(['link', 'summary'].includes(where), `${label}: only links and summaries take focus in the reference, got ${where}`);
+          if (!reached.includes(where)) reached.push(where);
+          if (where === 'summary' || presses === 0) {
+            const focus = await page.evaluate(() => {
+              const style = getComputedStyle(document.activeElement);
+              return { outline: style.outlineStyle, width: style.outlineWidth, shadow: style.boxShadow };
+            });
+            assert.ok(focus.outline !== 'none' || focus.shadow !== 'none', `${label}: the focused ${where} must show a focus indicator`);
+          }
+        }
+        assert.deepEqual(reached, ['link', 'summary'], `${label}: Tab reaches the index links, then a summary`);
+        const toggled = await page.evaluate(() => document.activeElement.parentElement.open);
+        assert.equal(toggled, false, `${label}: the first summary starts collapsed`);
+        await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement.parentElement.open), true, `${label}: Enter opens the summary`);
+        await page.keyboard.press('Enter');
+        assert.equal(await page.evaluate(() => document.activeElement.parentElement.open), false, `${label}: Enter closes it again`);
+
+        // Following a type link lands on its declaration, opened.
+        const target = await page.evaluate(() => {
+          const link = document.querySelector('[data-typed-reference] a[href^="#type-"]');
+          link.focus();
+          return link.getAttribute('href');
+        });
+        await page.keyboard.press('Enter');
+        const landed = await page.evaluate((href) => ({ hash: window.location.hash, open: document.getElementById(href.slice(1))?.open }), target);
+        assert.equal(landed.hash, target, `${label}: Enter follows the type link`);
+        assert.equal(landed.open, true, `${label}: the linked declaration opens`);
+        // The browser scrolls to the target, so its top lands at the viewport top (give or take a subpixel).
+        await page.waitForFunction((href) => {
+          const top = document.getElementById(href.slice(1)).getBoundingClientRect().top;
+          return top > -1 && top < innerHeight;
+        }, target, { timeout: 15_000 }).catch(async (error) => {
+          const where = await page.evaluate((href) => ({
+            top: document.getElementById(href.slice(1)).getBoundingClientRect().top, scrollY, height: document.documentElement.scrollHeight, hash: location.hash,
+          }), target);
+          throw new Error(`${label}: following ${target} did not scroll to it (${JSON.stringify(where)})`, { cause: error });
+        });
+
+        // Every part and type open, at the page width and at a phone width.
+        await page.evaluate(() => document.querySelectorAll('[data-typed-reference] details').forEach((details) => { details.open = true; }));
+        for (const width of [1_190, 390]) {
+          await page.setViewportSize({ width, height: 900 });
+          await waitForDocumentAnimations(page);
+          const overflow = await page.evaluate(() => {
+            const reference = document.querySelector('[data-typed-reference]');
+            const wide = [...reference.querySelectorAll('*')].filter((element) => {
+              const box = element.getBoundingClientRect();
+              return box.width > 0 && box.right > document.documentElement.clientWidth + 1
+                && !element.closest('pre');
+            }).slice(0, 5).map((element) => `${element.localName}.${element.className} ${element.textContent.slice(0, 40)}`);
+            // A cell squeezed into a sliver breaks its words letter by letter without overflowing, so measure it too.
+            const slivers = [...reference.querySelectorAll('tbody td, tbody th')].filter((cell) => {
+              const box = cell.getBoundingClientRect();
+              return cell.textContent.trim() !== '' && box.width > 0 && box.height > box.width * 2;
+            }).slice(0, 5).map((cell) => `${cell.localName}[${cell.dataset.cell ?? ''}] ${cell.getBoundingClientRect().width}x${cell.getBoundingClientRect().height} ${cell.textContent.slice(0, 30)}`);
+            return { reference: reference.scrollWidth - reference.clientWidth, wide, slivers };
+          });
+          // The page's own code blocks scroll sideways on a narrow viewport; only the reference has to fit.
+          assert.ok(overflow.reference <= 0, `${label}@${width}: the reference clips ${overflow.reference}px`);
+          assert.deepEqual(overflow.wide, [], `${label}@${width}: nothing in the reference runs past the viewport`);
+          assert.deepEqual(overflow.slivers, [], `${label}@${width}: no table cell is squeezed into a sliver`);
+          const result = await runAxe(page, '[data-typed-reference]');
+          assert.equal(result.violations.length, 0, `${label}@${width} has axe violations:\n${formatViolations(result.violations)}`);
+        }
+        t.diagnostic(`${label}: keyboard, overflow and axe pass`);
+      }
+    }
+  } finally {
+    await resources.close();
+  }
+});
+
 async function runA11yWorker({
   browser,
   baseUrl,
