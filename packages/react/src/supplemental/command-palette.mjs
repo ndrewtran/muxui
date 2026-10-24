@@ -20,7 +20,7 @@ import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { Button as MuxUIButton } from '../button.ts';
 import { IconButton } from './icon-button.ts';
 import { h, cx, dataState, nativePart, pressHandler } from './part-utils.ts';
-import { MotionModalBackdropForwardRef, MotionModalPopupForwardRef } from './modal-parts.mjs';
+import { MotionModalBackdropForwardRef, MotionModalPopupForwardRef } from './modal-parts.ts';
 
 /* CommandPalette */
 export function useCommandPalette({ commands, query: controlledQuery, defaultQuery = '', onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, close, closeOnSelect = true }) {

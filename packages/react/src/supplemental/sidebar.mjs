@@ -20,7 +20,7 @@ import { Menu } from '../collections.mjs';
 import { Tooltip } from '../overlays.ts';
 import { IconButton } from './icon-button.ts';
 import { h, useIsomorphicLayoutEffect, cx, dataState, nativePart } from './part-utils.ts';
-import { sidebarUnreachable, sidebarFocusFirst, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.mjs';
+import { sidebarUnreachable, sidebarFocusFirst, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.ts';
 
 /* Sidebar */
 // Folding state lives in Sidebar.Provider so Root, Toggle, and the shortcut share it. Without a Provider every part renders as before.

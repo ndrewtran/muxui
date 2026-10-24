@@ -9,7 +9,7 @@ import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import MenuIcon from 'lucide-react/dist/esm/icons/menu.mjs';
 import { IconButton } from './icon-button.ts';
 import { h, cx, nativePart } from './part-utils.ts';
-import { sidebarUnreachable, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.mjs';
+import { sidebarUnreachable, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.ts';
 
 /* Header navigation */
 export const HeaderNav = {

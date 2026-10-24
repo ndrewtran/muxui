@@ -12,3 +12,15 @@ export interface DialogMotionProps {
 
 /** Animates a modal's panel while React Aria owns the modal lifecycle and focus. */
 export declare function DialogMotion(props: DialogMotionProps): ReactElement;
+
+export interface ModalMotionOptions {
+  node: HTMLElement | null;
+  isOpen: boolean;
+  triggerRef?: RefObject<Element | null>;
+  reducedAttribute?: string;
+  onExitComplete?: () => void;
+  onReducedChange?: (reduced: boolean) => void;
+}
+
+/** Animates a modal's panel node while React Aria owns the modal lifecycle and focus. It renders nothing. */
+export declare function useModalMotion(options: ModalMotionOptions): null;
