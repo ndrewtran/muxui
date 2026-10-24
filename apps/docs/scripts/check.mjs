@@ -29,10 +29,12 @@ try {
 	runNode('Astro build', [astroCli, 'build', '--outDir', outputDirectory]);
 	runNode('Rendered source contract', [resolve(import.meta.dirname, 'check-rendered-source.mjs'), outputDirectory]);
 	runNode('Component reference contract', [resolve(import.meta.dirname, 'check-component-sections.mjs'), outputDirectory]);
+	runNode('Ledger record pins', [resolve(import.meta.dirname, 'check-reference-records.mjs'), outputDirectory]);
 	runNode('Shared guidance contract', [resolve(import.meta.dirname, 'check-shared-guidance.mjs'), outputDirectory]);
 	runNode('Blocks contract', [resolve(import.meta.dirname, 'check-blocks.mjs'), outputDirectory]);
 	runNode('Navigation contract', [resolve(import.meta.dirname, 'check-navigation.mjs'), outputDirectory]);
 	runNode('Token path contract', ['--experimental-strip-types', resolve(import.meta.dirname, 'check-token-path.mjs'), outputDirectory]);
+	runNode('Reference mutations fail the checks', [resolve(import.meta.dirname, 'check-reference-mutations.mjs')]);
 } catch (error) {
 	console.error(error instanceof Error ? error.message : error);
 	process.exitCode = 1;
