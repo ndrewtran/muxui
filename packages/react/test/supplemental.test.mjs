@@ -11,7 +11,6 @@ import { JSDOM } from 'jsdom';
 import { parseAst } from 'vite';
 import {
   CommandPalette,
-  MultiSelect,
   TagSelect,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
@@ -23,6 +22,7 @@ import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
 import { HeaderNav } from '../src/supplemental/header-nav.ts';
 import { Input } from '../src/supplemental/input.ts';
 import { InputTags } from '../src/supplemental/input-tags.ts';
+import { MultiSelect } from '../src/supplemental/multi-select.ts';
 import { PaymentInput } from '../src/supplemental/payment-input.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { RadioField } from '../src/supplemental/radio-field.ts';
@@ -406,9 +406,10 @@ test('supplemental CSS classifies foundation tokens separately from local compon
 
 test('the supplemental roots retain native string field props in their declarations', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
-  assert.match(declaration, /MultiSelectItemProps[\s\S]*?textValue\?: string/u);
+  const multiSelect = await readFile(resolve(packageRoot, 'src/supplemental/multi-select.ts'), 'utf8');
+  assert.match(multiSelect, /type MultiSelectItemOwnProps = \{[^}]*?textValue\?: string;/u);
   assert.match(declaration, /TagSelectItemProps[\s\S]*?textValue\?: string/u);
-  assert.match(declaration, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
+  assert.match(multiSelect, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
   assert.match(declaration, /interface TagSelectRootComponent[\s\S]*?<T extends TagSelectItem/u);
   assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
 });

@@ -651,37 +651,37 @@
           "name": "MultiSelect",
           "kind": "value",
           "owner": "multi-select",
-          "module": "supplemental"
+          "module": "multi-select"
         },
         {
           "name": "MultiSelectItem",
           "kind": "type",
           "owner": "multi-select",
-          "module": "supplemental"
+          "module": "multi-select"
         },
         {
           "name": "MultiSelectItemProps",
           "kind": "type",
           "owner": "multi-select",
-          "module": "supplemental"
+          "module": "multi-select"
         },
         {
           "name": "MultiSelectProps",
           "kind": "type",
           "owner": "multi-select",
-          "module": "supplemental"
+          "module": "multi-select"
         },
         {
           "name": "MultiSelectRootComponent",
           "kind": "type",
           "owner": "multi-select",
-          "module": "supplemental"
+          "module": "multi-select"
         },
         {
           "name": "MultiSelectRootProps",
           "kind": "type",
           "owner": "multi-select",
-          "module": "supplemental"
+          "module": "multi-select"
         },
         {
           "name": "MuxUIAccessibleName",

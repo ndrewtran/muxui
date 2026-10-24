@@ -238,7 +238,8 @@ const EXPLAINED_DIFFERENCES = [
     .map((key) => `own-props-comment ${key}`),
   // Select's arms re-declare errorMessage with a comment of their own, so the declaration and the catalog say different things.
   'arm-comment select.errorMessage',
-  // A type parameter is recorded at its constraint (D3): the catalog writes Text's `as` as TextElement, and the declaration as the parameter T.
+  // A type parameter is recorded at its constraint (D3): the catalog writes Text's `as` as TextElement and MultiSelect's items as Iterable<MultiSelectItem>, and the declaration through the parameter T.
+  'binder-constraint multi-select.items',
   'binder-constraint text.as',
   // The catalog spells the lib type without its namespace; the model names it as the declaration does.
   'lib-namespace meter.formatOptions',
@@ -261,10 +262,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 81 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 82 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 81, parts: 112, props: 706, events: 114, types: 148, references: 148 });
+  assert.deepEqual(result.counts, { families: 82, parts: 114, props: 725, events: 117, types: 149, references: 149 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -296,10 +297,10 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['command-palette', 'multi-select', 'tag-select'];
+const AUTHORED = ['command-palette', 'tag-select'];
 const hookOption = (type) => ({ hook: 'useCommandPalette', type });
 
-// The 3 families whose web.react API is still authored list prop names only. Each name is owned by the one part
+// The 2 families whose web.react API is still authored list prop names only. Each name is owned by the one part
 // that declares it; these 16 are not, and the table says why and where they are carried instead. The table is
 // transitional: a family that moves to a derived API leaves it, and a stale entry fails.
 const AUTHORED_OWNERS = {
@@ -317,31 +318,30 @@ const AUTHORED_OWNERS = {
   'command-palette.onAction': hookOption('UseCommandPaletteOptions'),
   'command-palette.close': hookOption('UseCommandPaletteOptions'),
   'command-palette.onError': hookOption('UseCommandPaletteOptions'),
-  'multi-select.disabled': { parts: ['Root', 'Item'] },
   'tag-select.disabled': { parts: ['Root', 'Item'] },
 };
 // The channels whose `on` handler the catalog does not list among the props, because the root declares it. The
 // families still authored list every one of theirs, so nothing is here; a family that needs it gets an entry.
 const UNLISTED_EVENTS = new Set();
 
-test('every prop of the 3 authored families has an owner in the declarations: one part, or a listed reason', () => {
+test('every prop of the 2 authored families has an owner in the declarations: one part, or a listed reason', () => {
   const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 3, props: 57, unique: 41, listed: 16, events: 8 });
+  assert.deepEqual(result.counts, { families: 2, props: 37, unique: 22, listed: 15, events: 5 });
   const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
   assert.equal(ownedElsewhere, result.counts.listed);
 });
 
 test('the authored owner table can fail: a wrong part list, a hook that does not declare it, a stale entry, an event wrongly or no longer unlisted', () => {
   const check = (table, unlisted = UNLISTED_EVENTS) => crossCheckAuthored({ files, table, authored: AUTHORED, unlistedEvents: unlisted }).problems;
-  assert.match(check({ ...AUTHORED_OWNERS, 'multi-select.disabled': { parts: ['Root'] } }).join('\n'), /multi-select\.disabled: declared by Root, Item, the table says Root/u);
+  assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.disabled': { parts: ['Trigger', 'Close', 'ClearButton'] } }).join('\n'), /command-palette\.disabled: declared by Trigger, Close, ClearButton, Item, the table says Trigger, Close, ClearButton/u);
   assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.commands': { hook: 'useCommandPalette', type: 'UseCommandPaletteReturn' } }).join('\n'), /command-palette\.commands: useCommandPalette \(UseCommandPaletteReturn\) does not declare it/u);
-  assert.match(check({ ...AUTHORED_OWNERS, 'multi-select.gone': { parts: ['Root'] } }).join('\n'), /multi-select\.gone: the table lists a prop the catalog no longer has/u);
+  assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.gone': { parts: ['Trigger'] } }).join('\n'), /command-palette\.gone: the table lists a prop the catalog no longer has/u);
   const without = { ...AUTHORED_OWNERS };
-  delete without['multi-select.disabled'];
-  assert.match(check(without).join('\n'), /multi-select\.disabled: declared by Root, Item and the table does not say why/u);
-  assert.match(check(AUTHORED_OWNERS, new Set(['multi-select.selectionChange'])).join('\n'), /multi-select\.selectionChange: the props list onSelectionChange, against/u);
-  assert.match(check(AUTHORED_OWNERS, new Set(['multi-select.gone'])).join('\n'), /multi-select\.gone: listed as an unlisted event the catalog no longer has/u);
+  delete without['command-palette.disabled'];
+  assert.match(check(without).join('\n'), /command-palette\.disabled: declared by Trigger, Close, ClearButton, Item and the table does not say why/u);
+  assert.match(check(AUTHORED_OWNERS, new Set(['command-palette.openChange'])).join('\n'), /command-palette\.openChange: the props list onOpenChange, against/u);
+  assert.match(check(AUTHORED_OWNERS, new Set(['command-palette.gone'])).join('\n'), /command-palette\.gone: listed as an unlisted event the catalog no longer has/u);
 });
 
 // ---- 5. the compiler ------------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 export { CommandPalette, useCommandPalette } from './command-palette.mjs';
-export { MultiSelect } from './multi-select.mjs';
 export { TagSelect } from './tag-select.mjs';
 
 export const supplementalFamilies = Object.freeze([

@@ -1,0 +1,344 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/multi-select.ts",
+  "component": "muxui:component:multi-select",
+  "binding": "web.react",
+  "export": "MultiSelect",
+  "api": {
+    "props": [
+      "size",
+      "label",
+      "placeholder",
+      "description",
+      "errorMessage",
+      "disabled",
+      "required",
+      "invalid",
+      "supportingText",
+      "emptyStateTitle",
+      "emptyStateDescription",
+      "items",
+      "selectedKeys",
+      "defaultSelectedKeys",
+      "showSearch",
+      "showFooter",
+      "selectedCountFormatter"
+    ],
+    "events": [
+      "selectionChange",
+      "reset",
+      "selectAll"
+    ],
+    "defaults": {
+      "size": "md",
+      "placeholder": "Select",
+      "disabled": false,
+      "required": false,
+      "invalid": false,
+      "emptyStateTitle": "No results found",
+      "emptyStateDescription": "Please try a different search term.",
+      "showSearch": true,
+      "showFooter": true
+    },
+    "propDetails": {
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size."
+      },
+      "label": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The visible label, which also names the list."
+      },
+      "placeholder": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The text shown while nothing is selected."
+      },
+      "description": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Supporting text shown below the control."
+      },
+      "errorMessage": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "The message shown, in place of the description, while the control is invalid."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the control disabled."
+      },
+      "required": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks a selection as required."
+      },
+      "invalid": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Marks the control invalid."
+      },
+      "supportingText": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "Text shown beside the count of selected items."
+      },
+      "emptyStateTitle": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The title shown when no item matches the search."
+      },
+      "emptyStateDescription": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The message shown when no item matches the search."
+      },
+      "items": {
+        "type": {
+          "kind": "host",
+          "name": "Iterable",
+          "typeArguments": [
+            {
+              "kind": "reference",
+              "name": "MultiSelectItem"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The items to choose from."
+      },
+      "selectedKeys": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "host",
+              "name": "Set",
+              "typeArguments": [
+                {
+                  "kind": "host",
+                  "name": "React.Key"
+                }
+              ]
+            },
+            {
+              "kind": "literal",
+              "value": "all"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The selected keys, when the caller controls them; `'all'` selects every item that is not disabled."
+      },
+      "defaultSelectedKeys": {
+        "type": {
+          "kind": "host",
+          "name": "Set",
+          "typeArguments": [
+            {
+              "kind": "host",
+              "name": "React.Key"
+            }
+          ]
+        },
+        "required": false,
+        "description": "The keys selected at first, when the control keeps its own selection."
+      },
+      "showSearch": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the search field in the list."
+      },
+      "showFooter": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the Reset and Select all buttons below the list."
+      },
+      "selectedCountFormatter": {
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "count",
+              "type": {
+                "kind": "number"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "host",
+            "name": "React.ReactNode"
+          }
+        },
+        "required": false,
+        "description": "Formats the count of selected items shown in the trigger."
+      }
+    },
+    "eventDetails": {
+      "selectionChange": {
+        "prop": "onSelectionChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "keys",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "host",
+                    "name": "Set",
+                    "typeArguments": [
+                      {
+                        "kind": "host",
+                        "name": "React.Key"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "all"
+                  }
+                ]
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new selection each time it changes."
+      },
+      "reset": {
+        "prop": "onReset",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called after Reset clears the selection."
+      },
+      "selectAll": {
+        "prop": "onSelectAll",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called after Select all selects every item."
+      }
+    },
+    "types": {
+      "MultiSelectItem": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "host",
+                "name": "React.Key"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ],
+          "additional": "unknown"
+        },
+        "description": "An item MultiSelect lists: a key, and whatever else the caller keeps on it."
+      }
+    },
+    "partApis": {
+      "item": {
+        "member": "Item",
+        "props": [
+          "disabled",
+          "textValue"
+        ],
+        "events": [],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the item disabled: it cannot be selected, and Select all skips it."
+          },
+          "textValue": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The text that search and typeahead match, when the item's content is not plain text."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

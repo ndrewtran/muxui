@@ -76,7 +76,8 @@ const FIELD_INPUT_OWNED_PROPS = Object.freeze([
  * Record<string, React.ReactNode> for the cell values of a Table row, and AbortSignal with Promise<unknown>
  * for the signal and the result of TextEditor's selection request, EventTarget for the target
  * of a supplemental part's activation, and React.ChangeEvent<HTMLInputElement> with React.ComponentType<SidebarIconProps>
- * for the change event of Sidebar.Search and the icon of a Sidebar nav item or button.
+ * for the change event of Sidebar.Search and the icon of a Sidebar nav item or button, and React.Key, Set<React.Key>, and
+ * Iterable<MultiSelectItem> for the keys of MultiSelect and TagSelect and the items of MultiSelect.
  */
 export const HOST_ALLOWLIST = Object.freeze([
   'HTMLButtonElement',
@@ -126,6 +127,11 @@ export const HOST_ALLOWLIST = Object.freeze([
   hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }),
   // The icon a Sidebar nav item or button draws: a component that takes the class name SidebarIconProps names.
   hostApplication('React.ComponentType', { kind: 'reference', name: 'SidebarIconProps' }),
+  // The keys of MultiSelect and TagSelect: an item's id is any React key, and a selection is a mutable Set of them.
+  'React.Key',
+  hostApplication('Set', { kind: 'host', name: 'React.Key' }),
+  // MultiSelect's items, recorded at the constraint of its item type parameter.
+  hostApplication('Iterable', { kind: 'reference', name: 'MultiSelectItem' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.
@@ -287,6 +293,14 @@ export const HOST_OVERLAPS = Object.freeze([
     host: 'DOMAttributes',
     element: 'HTMLDivElement',
     type: { kind: 'function', parameters: [{ name: 'event', type: hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }), required: true }], returns: { kind: 'void' } },
+  }),
+  // MultiSelect's onReset is the div's reset handler and the control's own callback, which Reset calls with no argument. Its public props
+  // omit the div's children, so the host's attributes reach it as that Omit.
+  deepFreeze({
+    member: 'MultiSelect.onReset',
+    host: 'DOMAttributes',
+    element: 'HTMLDivElement',
+    type: { kind: 'function', parameters: [], returns: { kind: 'void' } },
   }),
 ]);
 

@@ -182,15 +182,15 @@ test('a default shows only where it applies: executed for a derived family, auth
 });
 
 test('an authored family gives a catalog fact to the root that declares it, else to the only part that does, and borrows none across parts', () => {
-	const [root, item] = ['MultiSelect.Root', 'MultiSelect.Item'].map((heading) => partNamed(page('multi-select'), heading));
-	// disabled is declared by both Root and Item, and the catalog's default belongs to the root.
-	assert.deepEqual(rowNamed(root, 'disabled').default, { text: 'false', authored: true });
-	assert.equal('default' in rowNamed(item, 'disabled'), false);
-	// onSelectionChange is the root's, so the root's row names the catalog event and no other row does.
-	assert.equal(rowNamed(root, 'onSelectionChange').event, 'selectionChange');
-	assert.equal(rowNamed(root, 'disabled').event, undefined);
-	// dismissable is declared by Backdrop alone, so it takes the catalog's true.
 	const palette = page('command-palette');
+	const [root, item] = ['CommandPalette.Root', 'CommandPalette.Item'].map((heading) => partNamed(palette, heading));
+	// closeOnSelect is declared by both Root and Item, and the catalog's default belongs to the root.
+	assert.deepEqual(rowNamed(root, 'closeOnSelect').default, { text: 'true', authored: true });
+	assert.equal('default' in rowNamed(item, 'closeOnSelect'), false);
+	// onOpenChange is the root's, so the root's row names the catalog event and no other row does.
+	assert.equal(rowNamed(root, 'onOpenChange').event, 'openChange');
+	assert.equal(rowNamed(root, 'closeOnSelect').event, undefined);
+	// dismissable is declared by Backdrop alone, so it takes the catalog's true.
 	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Backdrop'), 'dismissable').default, { text: 'true', authored: true });
 	// disabled is declared by four parts and not by the root, so none of them borrows the catalog's false, nor its activate event.
 	const trigger = partNamed(palette, 'CommandPalette.Trigger');

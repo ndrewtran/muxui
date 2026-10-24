@@ -53,61 +53,6 @@
       "schemaVersion": "2.0.0",
       "lifecycle": "experimental",
       "strategy": "direct",
-      "api": {
-        "props": [
-          "items",
-          "size",
-          "selectedKeys",
-          "defaultSelectedKeys",
-          "onSelectionChange",
-          "label",
-          "placeholder",
-          "description",
-          "errorMessage",
-          "supportingText",
-          "showSearch",
-          "showFooter",
-          "emptyStateTitle",
-          "emptyStateDescription",
-          "onReset",
-          "onSelectAll",
-          "selectedCountFormatter",
-          "disabled",
-          "invalid",
-          "required"
-        ],
-        "events": [
-          "selectionChange",
-          "reset",
-          "selectAll"
-        ],
-        "parts": [
-          "root",
-          "label",
-          "trigger",
-          "value",
-          "icon",
-          "popup",
-          "dialog",
-          "search",
-          "search-input",
-          "listbox",
-          "item",
-          "empty",
-          "footer"
-        ],
-        "defaults": {
-          "size": "md",
-          "placeholder": "Select",
-          "showSearch": true,
-          "showFooter": true,
-          "emptyStateTitle": "No results found",
-          "emptyStateDescription": "Please try a different search term.",
-          "disabled": false,
-          "invalid": false,
-          "required": false
-        }
-      },
       "behavior": [
         "Items have serializable IDs, and the selection is a set of those IDs, or all of them.",
         "The selection is controlled with selectedKeys or left uncontrolled.",

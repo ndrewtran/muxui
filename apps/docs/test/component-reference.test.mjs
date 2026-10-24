@@ -218,10 +218,10 @@ test('a component\'s share keeps "not declared" apart from a declared never, and
   assert.equal(dialog.alternatives.length, 3);
   const iconButton = partOf(declared('muxui:component:icon-button'));
   for (const name of ['children', 'style']) assert.equal('doc' in memberOf(iconButton, name), false, `IconButton ${name}`);
-  // MultiSelect is still declared by hand in the supplemental declarations, which carry no member comments.
-  const multiSelect = declared('muxui:component:multi-select').export.parts;
-  assert.ok(multiSelect.every((part) => part.members.every((member) => !('doc' in member))));
-  assert.deepEqual(Object.fromEntries(multiSelect.map(({ member, ref }) => [member, ref.type])), { Root: 'HTMLDivElement', Item: 'HTMLDivElement' });
+  // CommandPalette is still declared by hand in the supplemental declarations, which carry no member comments.
+  const commandPalette = declared('muxui:component:command-palette').export.parts;
+  assert.ok(commandPalette.every((part) => part.members.every((member) => !('doc' in member))));
+  assert.deepEqual(Object.fromEntries(commandPalette.filter(({ member }) => ['Root', 'Trigger', 'Popup', 'Input'].includes(member)).map(({ member, ref }) => [member, ref.type])), { Root: 'HTMLDivElement', Trigger: 'HTMLButtonElement', Popup: 'HTMLElement', Input: 'HTMLInputElement' });
   // A generic part names its binder and the host element its ref follows.
   const text = partOf(declared('muxui:component:text'));
   assert.deepEqual([text.typeParameters[0].name, text.typeParameters[0].default, text.ref.type], ['T', "'span'", 'HTMLElementTagNameMap[T]']);

@@ -189,6 +189,7 @@ const GUIDES = {
   // rows, maxLength, placeholder, onKeyDown and name are the native attributes and handlers TextArea.TextArea takes; the root owns none of them.
   'text-area': { native: ['rows', 'maxLength', 'placeholder', 'onKeyDown', 'name'] },
   card: {},
+  'multi-select': {},
   // htmlFor is the native attribute of the label element Text renders when `as` is label.
   text: { native: ['htmlFor'] },
   // `display: none` is the CSS the guide tells an application to hide the MobileTrigger's wrapper with, not a prop.

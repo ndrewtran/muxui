@@ -129,6 +129,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },
   // Text is one component, generic over the element it renders: its API is the export's own, and the catalog records `as` at its constraint.
   { slug: 'text', name: 'Text', source: 'packages/react/src/supplemental/text.ts' },
+  // MultiSelect is generic over the item it lists; the root is Root, and Item owns disabled and textValue. Its other parts are rendered, not exported.
+  { slug: 'multi-select', name: 'MultiSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/multi-select.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

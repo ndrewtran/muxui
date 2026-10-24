@@ -1,12 +1,12 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "multi-select",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": { "multi-select": "packages/react/src/supplemental/multi-select.ts" },
   "exports": [
     {
       "name": "MultiSelect",
       "entry": ".",
-      "module": "supplemental",
+      "module": "multi-select",
       "kind": "component",
       "parts": [
         {
@@ -17,49 +17,137 @@
               "name": "T",
               "constraint": "MultiSelectItem",
               "default": "MultiSelectItem",
-              "refs": ["supplemental#MultiSelectItem"]
+              "refs": ["multi-select#MultiSelectItem"]
             }
           ],
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "invalid", "optional": true, "type": "boolean" },
-            { "name": "required", "optional": true, "type": "boolean" },
-            { "name": "readOnly", "optional": true, "type": "boolean" },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size."
             },
-            { "name": "label", "optional": true, "type": "React.ReactNode" },
-            { "name": "placeholder", "optional": true, "type": "string" },
-            { "name": "description", "optional": true, "type": "React.ReactNode" },
-            { "name": "errorMessage", "optional": true, "type": "React.ReactNode" },
-            { "name": "supportingText", "optional": true, "type": "React.ReactNode" },
-            { "name": "emptyStateTitle", "optional": true, "type": "string" },
-            { "name": "emptyStateDescription", "optional": true, "type": "string" },
-            { "name": "items", "optional": true, "type": "Iterable<T>" },
+            {
+              "name": "label",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The visible label, which also names the list."
+            },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "The text shown while nothing is selected."
+            },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Supporting text shown below the control."
+            },
+            {
+              "name": "errorMessage",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "The message shown, in place of the description, while the control is invalid."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the control disabled."
+            },
+            {
+              "name": "required",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks a selection as required."
+            },
+            {
+              "name": "invalid",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the control invalid."
+            },
+            {
+              "name": "supportingText",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "Text shown beside the count of selected items."
+            },
+            {
+              "name": "emptyStateTitle",
+              "optional": true,
+              "type": "string",
+              "doc": "The title shown when no item matches the search."
+            },
+            {
+              "name": "emptyStateDescription",
+              "optional": true,
+              "type": "string",
+              "doc": "The message shown when no item matches the search."
+            },
+            {
+              "name": "items",
+              "optional": true,
+              "type": "Iterable<T>",
+              "doc": "The items to choose from."
+            },
+            {
+              "name": "selectedKeys",
+              "optional": true,
+              "type": "Set<React.Key> | 'all'",
+              "doc": "The selected keys, when the caller controls them; `'all'` selects every item that is not disabled."
+            },
+            {
+              "name": "defaultSelectedKeys",
+              "optional": true,
+              "type": "Set<React.Key>",
+              "doc": "The keys selected at first, when the control keeps its own selection."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(keys: Set<React.Key> | 'all') => void",
+              "doc": "Called with the new selection each time it changes."
+            },
+            {
+              "name": "showSearch",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the search field in the list."
+            },
+            {
+              "name": "showFooter",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the Reset and Select all buttons below the list."
+            },
+            {
+              "name": "onReset",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called after Reset clears the selection."
+            },
+            {
+              "name": "onSelectAll",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called after Select all selects every item."
+            },
+            {
+              "name": "selectedCountFormatter",
+              "optional": true,
+              "type": "(count: number) => React.ReactNode",
+              "doc": "Formats the count of selected items shown in the trigger."
+            },
             {
               "name": "children",
               "optional": true,
               "type": "React.ReactNode | ((item: T) => React.ReactNode)"
             },
-            { "name": "selectedKeys", "optional": true, "type": "Set<React.Key> | 'all'" },
-            { "name": "defaultSelectedKeys", "optional": true, "type": "Set<React.Key>" },
-            {
-              "name": "onSelectionChange",
-              "optional": true,
-              "type": "(keys: Set<React.Key> | 'all') => void"
-            },
-            { "name": "showSearch", "optional": true, "type": "boolean" },
-            { "name": "showFooter", "optional": true, "type": "boolean" },
-            { "name": "onReset", "optional": true, "type": "() => void" },
-            { "name": "onSelectAll", "optional": true, "type": "() => void" },
-            {
-              "name": "selectedCountFormatter",
-              "optional": true,
-              "type": "(count: number) => React.ReactNode"
-            }
+            { "name": "readOnly", "optional": true, "type": "boolean" }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -73,8 +161,18 @@
           "member": "Item",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "textValue", "optional": true, "type": "string" }
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the item disabled: it cannot be selected, and Select all skips it."
+            },
+            {
+              "name": "textValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text that search and typeahead match, when the item's content is not plain text."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -86,9 +184,9 @@
   ],
   "types": [
     {
-      "id": "supplemental#MultiSelectItem",
+      "id": "multi-select#MultiSelectItem",
       "name": "MultiSelectItem",
-      "module": "supplemental",
+      "module": "multi-select",
       "public": [
         { "entry": ".", "name": "MultiSelectItem" }
       ],
@@ -99,19 +197,178 @@
       ]
     },
     {
-      "id": "supplemental#MultiSelectItemProps",
+      "id": "multi-select#MultiSelectItemOwnProps",
+      "name": "MultiSelectItemOwnProps",
+      "module": "multi-select",
+      "text": "type MultiSelectItemOwnProps = {\n  disabled?: boolean;\n  textValue?: string;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the item disabled: it cannot be selected, and Select all skips it."
+        },
+        {
+          "name": "textValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text that search and typeahead match, when the item's content is not plain text."
+        }
+      ]
+    },
+    {
+      "id": "multi-select#MultiSelectItemProps",
       "name": "MultiSelectItemProps",
-      "module": "supplemental",
+      "module": "multi-select",
       "public": [
         { "entry": ".", "name": "MultiSelectItemProps" }
       ],
       "owner": "multi-select",
-      "text": "type MultiSelectItemProps = React.HTMLAttributes<HTMLDivElement> & {\n  disabled?: boolean;\n  textValue?: string;\n};"
+      "text": "type MultiSelectItemProps = React.HTMLAttributes<HTMLDivElement> & MultiSelectItemOwnProps;",
+      "refs": ["multi-select#MultiSelectItemOwnProps"]
     },
     {
-      "id": "supplemental#MultiSelectProps",
+      "id": "multi-select#MultiSelectOwnProps",
+      "name": "MultiSelectOwnProps",
+      "module": "multi-select",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "MultiSelectItem",
+          "default": "MultiSelectItem",
+          "refs": ["multi-select#MultiSelectItem"]
+        }
+      ],
+      "text": "type MultiSelectOwnProps<T extends MultiSelectItem = MultiSelectItem> = {\n  size?: 'sm' | 'md' | 'lg';\n  label?: React.ReactNode;\n  placeholder?: string;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  supportingText?: React.ReactNode;\n  emptyStateTitle?: string;\n  emptyStateDescription?: string;\n  items?: Iterable<T>;\n  selectedKeys?: Set<React.Key> | 'all';\n  defaultSelectedKeys?: Set<React.Key>;\n  onSelectionChange?: (keys: Set<React.Key> | 'all') => void;\n  showSearch?: boolean;\n  showFooter?: boolean;\n  onReset?: () => void;\n  onSelectAll?: () => void;\n  selectedCountFormatter?: (count: number) => React.ReactNode;\n};",
+      "members": [
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The visible label, which also names the list."
+        },
+        {
+          "name": "placeholder",
+          "optional": true,
+          "type": "string",
+          "doc": "The text shown while nothing is selected."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Supporting text shown below the control."
+        },
+        {
+          "name": "errorMessage",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "The message shown, in place of the description, while the control is invalid."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the control disabled."
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks a selection as required."
+        },
+        {
+          "name": "invalid",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the control invalid."
+        },
+        {
+          "name": "supportingText",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "Text shown beside the count of selected items."
+        },
+        {
+          "name": "emptyStateTitle",
+          "optional": true,
+          "type": "string",
+          "doc": "The title shown when no item matches the search."
+        },
+        {
+          "name": "emptyStateDescription",
+          "optional": true,
+          "type": "string",
+          "doc": "The message shown when no item matches the search."
+        },
+        {
+          "name": "items",
+          "optional": true,
+          "type": "Iterable<T>",
+          "doc": "The items to choose from."
+        },
+        {
+          "name": "selectedKeys",
+          "optional": true,
+          "type": "Set<React.Key> | 'all'",
+          "doc": "The selected keys, when the caller controls them; `'all'` selects every item that is not disabled."
+        },
+        {
+          "name": "defaultSelectedKeys",
+          "optional": true,
+          "type": "Set<React.Key>",
+          "doc": "The keys selected at first, when the control keeps its own selection."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(keys: Set<React.Key> | 'all') => void",
+          "doc": "Called with the new selection each time it changes."
+        },
+        {
+          "name": "showSearch",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the search field in the list."
+        },
+        {
+          "name": "showFooter",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the Reset and Select all buttons below the list."
+        },
+        {
+          "name": "onReset",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Called after Reset clears the selection."
+        },
+        {
+          "name": "onSelectAll",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Called after Select all selects every item."
+        },
+        {
+          "name": "selectedCountFormatter",
+          "optional": true,
+          "type": "(count: number) => React.ReactNode",
+          "doc": "Formats the count of selected items shown in the trigger."
+        }
+      ],
+      "refs": ["multi-select#MultiSelectItem"]
+    },
+    {
+      "id": "multi-select#MultiSelectProps",
       "name": "MultiSelectProps",
-      "module": "supplemental",
+      "module": "multi-select",
       "public": [
         { "entry": ".", "name": "MultiSelectProps" }
       ],
@@ -121,27 +378,27 @@
           "name": "T",
           "constraint": "MultiSelectItem",
           "default": "MultiSelectItem",
-          "refs": ["supplemental#MultiSelectItem"]
+          "refs": ["multi-select#MultiSelectItem"]
         }
       ],
-      "text": "type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & {\n  label?: React.ReactNode;\n  placeholder?: string;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  supportingText?: React.ReactNode;\n  emptyStateTitle?: string;\n  emptyStateDescription?: string;\n  items?: Iterable<T>;\n  children?: React.ReactNode | ((item: T) => React.ReactNode);\n  selectedKeys?: Set<React.Key> | 'all';\n  defaultSelectedKeys?: Set<React.Key>;\n  onSelectionChange?: (keys: Set<React.Key> | 'all') => void;\n  showSearch?: boolean;\n  showFooter?: boolean;\n  onReset?: () => void;\n  onSelectAll?: () => void;\n  selectedCountFormatter?: (count: number) => React.ReactNode;\n};",
-      "refs": ["supplemental#SupplementalFieldProps", "supplemental#MultiSelectItem"]
+      "text": "type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & MultiSelectOwnProps<T> & {\n  children?: React.ReactNode | ((item: T) => React.ReactNode);\n  readOnly?: boolean;\n};",
+      "refs": ["multi-select#MultiSelectOwnProps", "multi-select#MultiSelectItem"]
     },
     {
-      "id": "supplemental#MultiSelectRootComponent",
+      "id": "multi-select#MultiSelectRootComponent",
       "name": "MultiSelectRootComponent",
-      "module": "supplemental",
+      "module": "multi-select",
       "public": [
         { "entry": ".", "name": "MultiSelectRootComponent" }
       ],
       "owner": "multi-select",
       "text": "interface MultiSelectRootComponent {\n  <T extends MultiSelectItem = MultiSelectItem>(props: MultiSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;\n}",
-      "refs": ["supplemental#MultiSelectItem", "supplemental#MultiSelectRootProps"]
+      "refs": ["multi-select#MultiSelectItem", "multi-select#MultiSelectRootProps"]
     },
     {
-      "id": "supplemental#MultiSelectRootProps",
+      "id": "multi-select#MultiSelectRootProps",
       "name": "MultiSelectRootProps",
-      "module": "supplemental",
+      "module": "multi-select",
       "public": [
         { "entry": ".", "name": "MultiSelectRootProps" }
       ],
@@ -151,33 +408,11 @@
           "name": "T",
           "constraint": "MultiSelectItem",
           "default": "MultiSelectItem",
-          "refs": ["supplemental#MultiSelectItem"]
+          "refs": ["multi-select#MultiSelectItem"]
         }
       ],
       "text": "type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;",
-      "refs": ["supplemental#MultiSelectProps", "supplemental#MultiSelectItem"]
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
-      "name": "SupplementalFieldProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SupplementalFieldProps" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalFieldProps = {\n  disabled?: boolean;\n  invalid?: boolean;\n  required?: boolean;\n  readOnly?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n};",
-      "members": [
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        { "name": "invalid", "optional": true, "type": "boolean" },
-        { "name": "required", "optional": true, "type": "boolean" },
-        { "name": "readOnly", "optional": true, "type": "boolean" },
-        {
-          "name": "size",
-          "optional": true,
-          "type": "'sm' | 'md' | 'lg'",
-          "values": ["sm", "md", "lg"]
-        }
-      ]
+      "refs": ["multi-select#MultiSelectProps", "multi-select#MultiSelectItem"]
     }
   ]
 }

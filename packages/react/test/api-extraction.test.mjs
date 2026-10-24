@@ -798,7 +798,7 @@ test('Sidebar.Search\'s onChange is read through the one shipped host overlap, a
     hostOverlaps,
     components: [extractionComponent(entry, { declarations: resolve(declarationRoot, 'sidebar.d.ts'), source: resolve(packageRoot, '../..', entry.source) })],
   }).get('Sidebar');
-  assert.deepEqual(HOST_OVERLAPS.map(({ member }) => member), ['Sidebar.Search.onChange']);
+  assert.deepEqual(HOST_OVERLAPS.map(({ member }) => member), ['Sidebar.Search.onChange', 'MultiSelect.onReset']);
   assert.deepEqual(read(HOST_OVERLAPS).partApis.search.events, ['change']);
   assert.throws(() => read([]), /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u);
 });
@@ -834,6 +834,66 @@ test('the real Sidebar.Search is not read through its host overlap once its onCh
   for (const element of ['HTMLTextAreaElement', 'HTMLInputElement']) {
     assert.throws(() => read([alias, alias.replace('HTMLDivElement', element)]), refused, element);
   }
+});
+
+test('MultiSelect.onReset is read through its host overlap, and the real family cannot be read without it', () => {
+  const entry = DERIVED_API_COMPONENTS.find(({ slug }) => slug === 'multi-select');
+  const declarationRoot = resolve(packageRoot, 'generated');
+  const read = (hostOverlaps) => extractApis({
+    declarationRoot,
+    hostOverlaps,
+    components: [extractionComponent(entry, { declarations: resolve(declarationRoot, 'multi-select.d.ts'), source: resolve(packageRoot, '../..', entry.source) })],
+  }).get('MultiSelect');
+  const api = read(HOST_OVERLAPS);
+  assert.ok(api.props.includes('showFooter'), 'the whole root is read, not only the member the entry covers');
+  assert.deepEqual(api.events, ['selectionChange', 'reset', 'selectAll']);
+  assert.deepEqual(api.eventDetails.reset, { prop: 'onReset', type: { kind: 'function', parameters: [], returns: keyword('void') }, required: false, description: 'Called after Reset clears the selection.' });
+  // The Sidebar entry covers another family and member, so MultiSelect alone cannot be read without its own.
+  const sidebarOnly = HOST_OVERLAPS.filter(({ member }) => member === 'Sidebar.Search.onChange');
+  assert.throws(() => read(sidebarOnly), /MultiSelect\.onReset: the exported MultiSelect's props redeclare onReset as optional/u);
+  assert.throws(() => read([]), /MultiSelect\.onReset: the exported MultiSelect's props redeclare onReset as optional/u);
+  // The same entry under another family's name, another member, another host interface or another element covers nothing here.
+  const entryOf = HOST_OVERLAPS.find(({ member }) => member === 'MultiSelect.onReset');
+  for (const changed of [{ member: 'TagSelect.onReset' }, { member: 'MultiSelect.onSelectAll' }, { host: 'HTMLAttributes' }, { element: 'HTMLElement' }, { type: { kind: 'function', parameters: [], returns: keyword('string') } }]) {
+    assert.throws(() => read([{ ...entryOf, ...changed }]), /MultiSelect\.onReset: the exported MultiSelect's props redeclare onReset as optional/u, JSON.stringify(changed));
+  }
+});
+
+test('the real MultiSelect is not read through its host overlap once its public onReset is wrapped, rewritten, or over another element', () => {
+  const entry = DERIVED_API_COMPONENTS.find(({ slug }) => slug === 'multi-select');
+  const emitted = readFileSync(resolve(packageRoot, 'generated', 'multi-select.d.ts'), 'utf8');
+  const props = "export type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & MultiSelectOwnProps<T> & {";
+  assert.ok(emitted.includes(props), 'the emitted public props are the ones the controls rewrite');
+  const read = (...edits) => {
+    mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
+    const base = mkdtempSync(join(packageRoot, 'build', 'api-extraction-multi-select-'));
+    try {
+      cpSync(resolve(packageRoot, 'generated'), base, { recursive: true, filter: (path) => !path.endsWith('.js') });
+      const rewritten = edits.reduce((text, [from, to]) => text.replace(from, to), emitted);
+      writeFileSync(join(base, 'multi-select.d.ts'), `${rewritten}\n${BROADEN.replace("'onChange'", "'onReset'")}${NARROW.replace("'onChange'", "'onReset'")}`);
+      return extractApis({
+        declarationRoot: base,
+        components: [extractionComponent(entry, { declarations: join(base, 'multi-select.d.ts'), source: resolve(packageRoot, '../..', entry.source) })],
+      }).get('MultiSelect');
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  };
+  const refused = /MultiSelect\.onReset: the exported MultiSelect's props redeclare onReset as optional/u;
+  assert.deepEqual(read().events, ['selectionChange', 'reset', 'selectAll'], 'the unrewritten copy reads as the real family does');
+  const host = "Omit<HTMLAttributes<HTMLDivElement>, 'children'>";
+  for (const wrapper of ['Broaden', 'Narrow']) {
+    assert.throws(() => read([`& MultiSelectOwnProps<T> & {`, `& ${wrapper}<MultiSelectOwnProps<T>> & {`]), refused, `${wrapper} around the owned type`);
+    assert.throws(() => read([host, `${wrapper}<${host}>`]), refused, `${wrapper} around the host's attributes`);
+    assert.throws(() => read([host, `Omit<${wrapper}<HTMLAttributes<HTMLDivElement>>, 'children'>`]), refused, `${wrapper} inside the Omit`);
+    assert.throws(() => read(['MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;', `MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = ${wrapper}<MultiSelectProps<T>>;`]), refused, `${wrapper} around the whole props`);
+  }
+  // Over another element the record is identical and the type is not.
+  for (const element of ['HTMLTextAreaElement', 'HTMLInputElement', 'HTMLElement']) {
+    assert.throws(() => read([host, `Omit<HTMLAttributes<${element}>, 'children'>`]), refused, element);
+  }
+  // A Pick keeps onReset and loses nothing else the control owns, and is no Omit.
+  assert.throws(() => read([host, "Pick<HTMLAttributes<HTMLDivElement>, 'onReset' | 'className'>"]), refused, 'a Pick');
 });
 
 // ---- D3: type parameters (Decision 0031 tranche 10b) ----------------------------------------------------------------------
@@ -1106,7 +1166,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'input-tags.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'sidebar.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'input-tags.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'multi-select.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'sidebar.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
@@ -1150,6 +1210,10 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual(reached.get(hostEntryKey(host('React.ComponentType', { kind: 'reference', name: 'SidebarIconProps' }))), ['sidebar.json'], 'the icon of a Sidebar nav item or button');
   // The target of a supplemental part's activation, which SupplementalActivation types as any event target.
   assert.deepEqual(reached.get('EventTarget'), ['alert-dialog.json', 'card.json'], 'the target of an AlertDialog or Card.Button activation');
+  // MultiSelect's keys and items: an item's id, the Set a selection is, and the items it lists, recorded at the item type's constraint.
+  assert.deepEqual(reached.get('React.Key'), ['multi-select.json'], 'the id of an item');
+  assert.deepEqual(reached.get(hostEntryKey(host('Set', host('React.Key')))), ['multi-select.json'], 'the selected keys');
+  assert.deepEqual(reached.get(hostEntryKey(host('Iterable', { kind: 'reference', name: 'MultiSelectItem' }))), ['multi-select.json'], 'the items of a MultiSelect');
 });
 
 const omitInputAttributes = (names, element = 'HTMLInputElement') => `Omit<React.InputHTMLAttributes<${element}>, ${names.map((name) => `'${name}'`).join(' | ')}>`;
