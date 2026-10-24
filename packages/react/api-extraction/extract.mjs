@@ -277,28 +277,32 @@ export function assertHostAllowlist(hostAllowlist) {
  * so it stays, and extraction reads it only here: an entry names the member by the chain extraction reports for it
  * (`Sidebar.Search.onChange`), the interface in @types/react that declares the host member, and the type the owned member extracts to,
  * so any other member, family, owned type, or public shape is still a redeclaration. `intersectsHostMember` is the check.
- * @type {readonly { member: string, host: string, type: object }[]}
+ * The host's attributes are instantiated with one DOM element, which the entry names (`element`), because the host member is that
+ * element's event handler: the same public props over another element give an identical API record and a different type.
+ * @type {readonly { member: string, host: string, element: string, type: object }[]}
  */
 export const HOST_OVERLAPS = Object.freeze([
   deepFreeze({
     member: 'Sidebar.Search.onChange',
     host: 'DOMAttributes',
+    element: 'HTMLDivElement',
     type: { kind: 'function', parameters: [{ name: 'event', type: hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }), required: true }], returns: { kind: 'void' } },
   }),
 ]);
 
 const OVERLAP_MEMBER = /^[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)?\.[a-z][A-Za-z0-9]*$/u;
 
-/** Validates the host overlaps: each entry is exactly `{ member, host, type }`, and a member has one entry. Returns them by member. */
+/** Validates the host overlaps: each entry is exactly `{ member, host, element, type }`, and a member has one entry. Returns them by member. */
 export function assertHostOverlaps(hostOverlaps) {
   const overlaps = new Map();
   for (const entry of hostOverlaps) {
     const fail = (message) => {
       throw new ApiExtractionError('host overlaps', `${JSON.stringify(entry)} ${message}`);
     };
-    if (entry === null || typeof entry !== 'object' || Object.keys(entry).sort().join() !== 'host,member,type') fail('is not written as exactly member, host, type');
+    if (entry === null || typeof entry !== 'object' || Object.keys(entry).sort().join() !== 'element,host,member,type') fail('is not written as exactly member, host, element, type');
     if (typeof entry.member !== 'string' || !OVERLAP_MEMBER.test(entry.member)) fail('does not name a member as the extraction reports it, such as Sidebar.Search.onChange');
     if (typeof entry.host !== 'string' || !REFERENCE_NAME.test(entry.host)) fail('does not name the one interface in @types/react that declares the host member');
+    if (typeof entry.element !== 'string' || !REFERENCE_NAME.test(entry.element)) fail('does not name the one DOM element type the host\'s attributes are instantiated with, such as HTMLDivElement');
     if (entry.type?.kind !== 'function') fail('does not give the owned member\'s extracted type, a function');
     if (overlaps.has(entry.member)) fail('names a member twice');
     overlaps.set(entry.member, entry);
@@ -964,7 +968,8 @@ const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(
  * the entry's interface declares there and nowhere else (an augmentation outside React is a second declaration). A mapped type
  * keeps the declarations of the members it copies and may rewrite their types, so a wrapper around the intersection, the host's
  * attributes (Omit is one), the owned type, or a local interface that extends a mapped copy is no such constituent and fails, as
- * does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry pins.
+ * does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry pins, and
+ * so is the DOM element the host's attributes are instantiated with: the same props over another element are another public type.
  */
 function intersectsHostMember(project, { propsType, prop, own, type }, overlap) {
   if (hostEntryKey(type) !== hostEntryKey(overlap.type) || !propsType.isIntersectionType()) return false;
@@ -977,8 +982,13 @@ function intersectsHostMember(project, { propsType, prop, own, type }, overlap) 
   const hosts = carriers.filter(({ member }) => member.id !== own.id);
   if (owned.length !== 1 || hosts.length !== 1) return false;
   const [{ constituent, member }] = hosts;
-  // An instantiation of an interface that React declares: a local interface that extends one (of a mapped copy of it, say) keeps the member's declaration, not its type.
+  // An instantiation of an interface that React declares: a local interface that extends one (of a mapped copy of it, say) keeps the
+  // member's declaration, not its type.
   if (!isTypeReference(constituent) || !declaredInReact(constituent.getTarget().getSymbol())) return false;
+  // The element the host's attributes are instantiated with, read from the resolved type and not from the text that wrote it, is the
+  // entry's DOM element: the host member is that element's event handler, so another element is another public type.
+  const elementSymbol = checker.getTypeArguments(constituent)[0]?.getSymbol();
+  if (elementSymbol?.name !== overlap.element || !elementSymbol.declarations.some(({ path }) => isDefaultLibrary(project.program, path))) return false;
   return declaredInReact(member) && member.declarations.every((declaration) => declaration.resolve(project)?.parent?.name?.text === overlap.host);
 }
 

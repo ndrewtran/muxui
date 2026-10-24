@@ -650,7 +650,7 @@ export declare const Thing: React.ForwardRefExoticComponent<${exported}>;
 // the other narrows it (it needs another property). Neither is the host's member intersected with the owned one.
 const BROADEN = "type Broaden<T> = { [K in keyof T]: K extends 'onChange' ? T[K] | number : T[K] };\n";
 const NARROW = "type Narrow<T> = { [K in keyof T]: K extends 'onChange' ? T[K] & { extra: string } : T[K] };\n";
-const OVERLAP = Object.freeze({ member: 'Thing.onChange', host: 'DOMAttributes', type: handlerFunction('event', changeEvent) });
+const OVERLAP = Object.freeze({ member: 'Thing.onChange', host: 'DOMAttributes', element: 'HTMLDivElement', type: handlerFunction('event', changeEvent) });
 
 test('a member that is the host\'s intersected with the owned one is read only as its exact host overlap entry says', () => {
   const read = (options = {}, hostOverlaps = [OVERLAP], hostAllowlist = CHANGE_ALLOWLIST) => extract({ declarations: overlapDeclarations(options), hostOverlaps, hostAllowlist });
@@ -700,6 +700,13 @@ test('a member that is the host\'s intersected with the owned one is read only a
   refuse({ extra: "declare module 'react' { interface DOMAttributes<T> { onChange?: React.FormEventHandler<T> | undefined } }\n" }, [OVERLAP]);
   refuse({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
   refuse({ publicType: "React.HTMLAttributes<HTMLDivElement> & Omit<ThingOwnProps, 'other'>" }, [OVERLAP]);
+  // The host's attributes are instantiated with the entry's element, read from the resolved type: the same props over another element
+  // give an identical API record and another public type, so a textarea's or a button's attributes, any other element's, and a local
+  // interface that only shares the name are refused, and so is an entry that names another element than the props use.
+  for (const element of ['HTMLTextAreaElement', 'HTMLButtonElement', 'HTMLElement']) refuse({ publicType: `React.HTMLAttributes<${element}> & ThingOwnProps` }, [OVERLAP]);
+  refuse({ extra: 'export interface HTMLDivElement extends HTMLElement {}\n' }, [OVERLAP]);
+  refuse({}, [{ ...OVERLAP, element: 'HTMLTextAreaElement' }]);
+  assert.deepEqual(read({ publicType: 'React.HTMLAttributes<HTMLTextAreaElement> & ThingOwnProps' }, [{ ...OVERLAP, element: 'HTMLTextAreaElement' }]).events, ['change'], 'the element is the entry\'s, not a fixed one');
   // A host member declared outside React is no React member.
   refuse({ publicType: 'LocalHost & ThingOwnProps', extra: 'export interface DOMAttributes { onChange?: React.ChangeEventHandler<HTMLDivElement>; }\nexport type LocalHost = DOMAttributes;\n' }, [OVERLAP]);
   // Only the family's own props are read against the entry: another member of the export that carries the same overlap is not covered by it.
@@ -707,9 +714,12 @@ test('a member that is the host\'s intersected with the owned one is read only a
     .replace('export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>>;', 'export declare const Thing: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> & { Root: React.ForwardRefExoticComponent<ThingProps & React.RefAttributes<HTMLDivElement>> };');
   assert.deepEqual(extract({ declarations: alsoDeclarations, hostOverlaps: [OVERLAP], hostAllowlist: CHANGE_ALLOWLIST }).events, ['change']);
   rejects(alsoDeclarations, /Thing\.onChange: the exported Thing\.Root's props redeclare onChange/u, { hostOverlaps: [OVERLAP], hostAllowlist: CHANGE_ALLOWLIST, also: [{ member: 'Root' }] });
-  // The entry is checked on its own: exactly member, host, type, and a member once.
+  // The entry is checked on its own: exactly member, host, element, type, and a member once.
   for (const entry of [
     { member: 'Thing.onChange', host: 'DOMAttributes' },
+    { member: 'Thing.onChange', host: 'DOMAttributes', type: OVERLAP.type },
+    { ...OVERLAP, element: 'htmlDivElement' },
+    { ...OVERLAP, element: undefined },
     { ...OVERLAP, extra: true },
     { ...OVERLAP, member: 'onChange' },
     { ...OVERLAP, member: 'thing.onChange' },
@@ -733,18 +743,20 @@ test('Sidebar.Search\'s onChange is read through the one shipped host overlap, a
   assert.throws(() => read([]), /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u);
 });
 
-test('the real Sidebar.Search is not read through its host overlap once a mapped type rewrites its onChange', () => {
+test('the real Sidebar.Search is not read through its host overlap once its onChange type is rewritten or its element changes', () => {
   const entry = DERIVED_API_COMPONENTS.find(({ slug }) => slug === 'sidebar');
   const search = 'Search: ForwardRefExoticComponent<SidebarSearchProps & RefAttributes<HTMLDivElement>>;';
+  const alias = 'type SidebarSearchProps = PartProps<HTMLDivElement> & SidebarSearchOwnProps;';
   const emitted = readFileSync(resolve(packageRoot, 'generated', 'sidebar.d.ts'), 'utf8');
-  assert.ok(emitted.includes(search), 'the emitted Search declaration is the one the controls rewrite');
-  // The emitted declarations beside a copy of sidebar.d.ts whose Search is `search`, with the mapped types it may use declared after it.
-  const read = (rewritten) => {
+  assert.ok(emitted.includes(search) && emitted.includes(alias), 'the emitted Search declarations are the ones the controls rewrite');
+  // The emitted declarations beside a copy of sidebar.d.ts with each [from, to] edit applied, and the mapped types it may use declared after it.
+  const read = (...edits) => {
     mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
     const base = mkdtempSync(join(packageRoot, 'build', 'api-extraction-sidebar-'));
     try {
       cpSync(resolve(packageRoot, 'generated'), base, { recursive: true, filter: (path) => !path.endsWith('.js') });
-      writeFileSync(join(base, 'sidebar.d.ts'), `${emitted.replace(search, rewritten)}\n${BROADEN}${NARROW}`);
+      const rewritten = edits.reduce((text, [from, to]) => text.replace(from, to), emitted);
+      writeFileSync(join(base, 'sidebar.d.ts'), `${rewritten}\n${BROADEN}${NARROW}`);
       return extractApis({
         declarationRoot: base,
         components: [extractionComponent(entry, { declarations: join(base, 'sidebar.d.ts'), source: resolve(packageRoot, '../..', entry.source) })],
@@ -753,9 +765,14 @@ test('the real Sidebar.Search is not read through its host overlap once a mapped
       rmSync(base, { recursive: true, force: true });
     }
   };
-  assert.deepEqual(read(search).partApis.search.events, ['change'], 'the unrewritten copy reads as the real family does');
+  const refused = /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u;
+  assert.deepEqual(read().partApis.search.events, ['change'], 'the unrewritten copy reads as the real family does');
   for (const wrapper of ['Broaden', 'Narrow']) {
-    assert.throws(() => read(`Search: ForwardRefExoticComponent<${wrapper}<SidebarSearchProps & RefAttributes<HTMLDivElement>>>;`), /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u, wrapper);
+    assert.throws(() => read([search, `Search: ForwardRefExoticComponent<${wrapper}<SidebarSearchProps & RefAttributes<HTMLDivElement>>>;`]), refused, wrapper);
+  }
+  // Over another element the record is identical and the type is not: a div event no longer fits the handler.
+  for (const element of ['HTMLTextAreaElement', 'HTMLInputElement']) {
+    assert.throws(() => read([alias, alias.replace('HTMLDivElement', element)]), refused, element);
   }
 });
 
