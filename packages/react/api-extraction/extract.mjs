@@ -960,9 +960,10 @@ const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(
  * Whether a public member is exactly the host member intersected with the owned one, as its `HOST_OVERLAPS` entry says. TypeScript
  * gives a member of an intersection the intersection of the member types the constituents that declare it give, so the public
  * member is that when the public props are a plain intersection and exactly two constituents declare it: the owned type, whose
- * member is the very symbol the family declares, and an instantiation of an interface in @types/react, whose member the entry's
- * interface declares once. A mapped type keeps the declarations of the members it copies and may rewrite their types, so a
- * wrapper around the intersection, the host's attributes (Omit is one) or the owned type is no such constituent and fails, as
+ * member is the very symbol the family declares, and an instantiation of an interface that @types/react declares, whose member
+ * the entry's interface declares there and nowhere else (an augmentation outside React is a second declaration). A mapped type
+ * keeps the declarations of the members it copies and may rewrite their types, so a wrapper around the intersection, the host's
+ * attributes (Omit is one), the owned type, or a local interface that extends a mapped copy is no such constituent and fails, as
  * does a union of arms and a constituent that declares the member a third time. The owned type is the one the entry pins.
  */
 function intersectsHostMember(project, { propsType, prop, own, type }, overlap) {
@@ -972,13 +973,13 @@ function intersectsHostMember(project, { propsType, prop, own, type }, overlap) 
     const member = checker.getPropertyOfType(constituent, prop);
     return member === undefined ? [] : [{ constituent, member }];
   });
-  if (carriers.length !== 2) return false;
-  const ownCarriers = carriers.filter(({ member }) => member.id === own.id);
-  const [hostCarrier] = carriers.filter(({ member }) => member.id !== own.id);
-  if (ownCarriers.length !== 1 || hostCarrier === undefined) return false;
-  const { constituent, member } = hostCarrier;
-  if (!isTypeReference(constituent) || !constituent.getTarget().isClassOrInterface() || !declaredInReact(constituent.getTarget().getSymbol())) return false;
-  return member.declarations.length === 1 && declaredInReact(member) && member.declarations[0].resolve(project)?.parent?.name?.text === overlap.host;
+  const owned = carriers.filter(({ member }) => member.id === own.id);
+  const hosts = carriers.filter(({ member }) => member.id !== own.id);
+  if (owned.length !== 1 || hosts.length !== 1) return false;
+  const [{ constituent, member }] = hosts;
+  // An instantiation of an interface that React declares: a local interface that extends one (of a mapped copy of it, say) keeps the member's declaration, not its type.
+  if (!isTypeReference(constituent) || !declaredInReact(constituent.getTarget().getSymbol())) return false;
+  return declaredInReact(member) && member.declarations.every((declaration) => declaration.resolve(project)?.parent?.name?.text === overlap.host);
 }
 
 /**

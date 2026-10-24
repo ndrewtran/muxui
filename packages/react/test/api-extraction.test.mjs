@@ -692,6 +692,12 @@ test('a member that is the host\'s intersected with the owned one is read only a
     refuse({ extra, publicType: `${wrapper}<React.HTMLAttributes<HTMLDivElement>> & ThingOwnProps` }, [OVERLAP]);
     refuse({ extra, publicType: `React.HTMLAttributes<HTMLDivElement> & ${wrapper}<ThingOwnProps>` }, [OVERLAP]);
   }
+  // A local interface keeps the declaration of what it extends, whether that is a mapped copy of the host's attributes or the attributes themselves.
+  refuse({ extra: `${BROADEN}export interface Wrapped extends Broaden<React.DOMAttributes<HTMLDivElement>> {}\n`, publicType: 'Wrapped & ThingOwnProps' }, [OVERLAP]);
+  refuse({ extra: `${NARROW}export interface Wrapped extends Narrow<React.DOMAttributes<HTMLDivElement>> {}\n`, publicType: 'Wrapped & ThingOwnProps' }, [OVERLAP]);
+  refuse({ extra: 'export interface Attributes<T> extends React.DOMAttributes<T> {}\n', publicType: 'Attributes<HTMLDivElement> & ThingOwnProps' }, [OVERLAP]);
+  // A declaration outside React is a second declaration of React's member, which the entry does not allow.
+  refuse({ extra: "declare module 'react' { interface DOMAttributes<T> { onChange?: React.FormEventHandler<T> | undefined } }\n" }, [OVERLAP]);
   refuse({ publicType: "Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ThingOwnProps" }, [OVERLAP]);
   refuse({ publicType: "React.HTMLAttributes<HTMLDivElement> & Omit<ThingOwnProps, 'other'>" }, [OVERLAP]);
   // A host member declared outside React is no React member.
