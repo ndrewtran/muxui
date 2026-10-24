@@ -148,16 +148,27 @@ const spanOf = (row) => cellsOf(row).reduce((total, cell) => total + columnSpan(
 /** The column a cell starts in, counting the colspans before it. */
 const startOf = (row, cell) => cellsOf(row).slice(0, cellsOf(row).indexOf(cell)).reduce((total, other) => total + columnSpan(other), 0);
 
+/** The key a body cell carries for the header word it answers to; the first column (Prop) holds the name in a row header. */
+const cellKeys = { 'Applies when': 'applies', Type: 'type', Required: 'required', Default: 'default', Description: 'description' };
+
 /**
  * The table a part shows, read the way a reader sees it: the words of its header, the label of each group, the words in each
- * cell, the order of the rows, and how many columns every row spans. A cell that is missing reads as null, so the page's
- * difference is reported and nothing here throws.
+ * cell, the order of the rows, and how many columns every row spans. Every cell is read from under the header it sits in
+ * (colspans counted), and must carry the key of that header, so a cell moved to another column is a difference. A cell that
+ * is missing reads as null, so the page's difference is reported and nothing here throws.
  */
 function renderedTable(partNode) {
   const table = partNode.querySelector('table.muxui-docs-table');
   const headRow = table?.querySelector('thead tr');
   const head = headRow === null || headRow === undefined ? null : { words: cellsOf(headRow).map((cell) => cell.textContent), span: spanOf(headRow) };
   const requiredAt = head === null ? -1 : head.words.indexOf('Required');
+  const starts = headRow === null || headRow === undefined ? [] : cellsOf(headRow).map((cell) => startOf(headRow, cell));
+  /** The cell of a row that starts in the column the header `word` names: what a reader finds under that header. */
+  const under = (tr, word) => {
+    const column = head === null ? -1 : head.words.indexOf(word);
+    return column < 0 ? undefined : cellsOf(tr).find((cell) => startOf(tr, cell) === starts[column]);
+  };
+  const keyOf = (cell) => cell === undefined ? 'nothing' : cell.getAttribute('data-cell') ?? (cell.localName === 'th' ? 'the name' : 'an unnamed cell');
   const layout = [];
   const groups = [...(table?.querySelectorAll('tbody') ?? [])].map((body) => {
     const trs = [...body.children].filter((child) => child.localName === 'tr');
@@ -167,25 +178,40 @@ function renderedTable(partNode) {
     for (const tr of trs) {
       const at = `${partNode.getAttribute('data-part')} ${kind(tr) === 'group' ? `group ${header?.querySelector('th')?.firstChild?.textContent}` : kind(tr) === 'closing' ? 'closing row' : `row ${tr.getAttribute('data-prop')}`}`;
       if (head !== null && spanOf(tr) !== head.span) layout.push(`${at} spans ${spanOf(tr)} columns, the table has ${head.span}`);
+      if (head === null) continue;
+      if (kind(tr) === 'row') {
+        // A row answers to every header: the name under Prop, then each cell under the word it carries the key of.
+        for (const word of head.words) {
+          const expectedKey = word === 'Prop' ? 'the name' : cellKeys[word];
+          if (keyOf(under(tr, word)) !== expectedKey) layout.push(`${at} has ${keyOf(under(tr, word))} under ${word}, expected ${expectedKey}`);
+        }
+      }
+      if (kind(tr) === 'group' && (cellsOf(tr).length !== 1 || cellsOf(tr)[0].localName !== 'th' || startOf(tr, cellsOf(tr)[0]) !== 0)) layout.push(`${at} is not one heading cell from the first column`);
       if (kind(tr) === 'closing') {
+        // The names fill the columns before Required, the state sits under Required, and Default and Description stay empty.
         const state = tr.querySelector('td[data-cell="required"]');
         if (state === null || startOf(tr, state) !== requiredAt) layout.push(`${at} puts its state in column ${state === null ? 'none' : startOf(tr, state)}, under ${requiredAt}`);
+        if (cellsOf(tr)[0] === undefined || startOf(tr, cellsOf(tr)[0]) !== 0 || keyOf(under(tr, 'Prop')) !== 'an unnamed cell') layout.push(`${at} does not start its names in the first column`);
+        for (const word of ['Default', 'Description']) {
+          const cell = under(tr, word);
+          if (keyOf(cell) !== 'an unnamed cell' || cell.textContent !== '') layout.push(`${at} has ${keyOf(cell)}${cell === undefined ? '' : ` "${cell.textContent}"`} under ${word}, expected an empty cell`);
+        }
       }
     }
     return {
       label: header === undefined ? null : header.querySelector('th')?.firstChild?.textContent ?? null,
       rows: trs.filter((tr) => kind(tr) === 'row').map((row) => ({
-        name: row.querySelector('th .muxui-docs-name')?.textContent ?? null,
-        applies: row.querySelector('[data-cell="applies"]')?.textContent ?? null,
-        state: row.querySelector('[data-cell="required"]')?.firstChild?.textContent ?? null,
-        type: row.querySelector('[data-cell="type"] > code')?.textContent ?? null,
-        values: row.querySelector('[data-cell="type"] .muxui-docs-values')?.textContent ?? null,
-        doc: row.querySelector('[data-cell="description"]')?.textContent ?? null,
+        name: under(row, 'Prop')?.querySelector('.muxui-docs-name')?.textContent ?? null,
+        applies: under(row, 'Applies when')?.textContent ?? null,
+        state: under(row, 'Required')?.firstChild?.textContent ?? null,
+        type: [...(under(row, 'Type')?.children ?? [])].find((child) => child.localName === 'code')?.textContent ?? null,
+        values: under(row, 'Type')?.querySelector('.muxui-docs-values')?.textContent ?? null,
+        doc: under(row, 'Description')?.textContent ?? null,
       })),
       closing: trs.filter((tr) => kind(tr) === 'closing').map((tr) => ({
         // The word a reader sees in the Required column, and the names in the first cell; the marker must say the same.
-        state: tr.querySelector('td[data-cell="required"]')?.textContent ?? null,
-        names: texts(tr.querySelectorAll('td:first-child code')),
+        state: under(tr, 'Required')?.textContent ?? null,
+        names: texts(under(tr, 'Prop')?.querySelectorAll('code') ?? []),
         marker: tr.hasAttribute('data-not-allowed') ? 'not allowed' : tr.hasAttribute('data-not-declared') ? 'not declared' : null,
       })),
       order: trs.map(kind),
@@ -472,6 +498,8 @@ test('a rendered page changed by hand fails the checker with a problem on the pa
   const rowsIn = (node) => [...node.querySelectorAll('tr[data-prop]')];
   const closingIn = (node) => [...node.querySelectorAll('tr.muxui-docs-closing')];
   const cell = (row, name) => row.querySelector(`[data-cell="${name}"]`);
+  /** Moves the cell `second` before the cell `first` in a row, so two neighbouring cells trade places and keep their keys. */
+  const swapped = (row, first, second) => cell(row, first).before(cell(row, second));
   const dataCells = (page, label) => [...part(page, label).querySelectorAll('tbody tr[data-prop]')];
   const mutations = [
     {
@@ -549,6 +577,38 @@ test('a rendered page changed by hand fails the checker with a problem on the pa
     {
       label: 'a column is added to the rows and not to the header (IconButton)', family: 'IconButton', expect: ['spans 7 columns, the table has 6'],
       change: (page) => { for (const row of part(page, 'IconButton').querySelectorAll('tbody tr[data-prop]')) row.append(page.createElement('td')); },
+    },
+    {
+      // The cells keep their keys and words and only change columns, so the words under each header are what differs.
+      label: 'the Type and Required cells swap places in every prop row (IconButton)', family: 'IconButton',
+      expect: ['IconButton row ', 'has required under Type, expected type', 'has type under Required, expected required', 'IconButton group Common differs'],
+      change: (page) => { for (const row of part(page, 'IconButton').querySelectorAll('tr[data-prop]')) swapped(row, 'type', 'required'); },
+    },
+    {
+      label: 'the Default and Description cells swap places in every prop row (Dialog)', family: 'Dialog',
+      expect: ['Dialog row ', 'has description under Default, expected default', 'has default under Description, expected description', 'Dialog group '],
+      change: (page) => { for (const row of part(page, 'Dialog').querySelectorAll('tr[data-prop]')) swapped(row, 'default', 'description'); },
+    },
+    {
+      label: 'an "Applies when" cell swaps places with the Type cell (Virtualizer)', family: 'Virtualizer',
+      expect: ["Virtualizer row ", 'has type under Applies when, expected applies', 'has applies under Type, expected type', "Virtualizer group layout = 'grid' differs"],
+      change: (page) => swapped(rowsIn(body(page, 'Virtualizer', "layout = 'grid'"))[0], 'applies', 'type'),
+    },
+    {
+      label: 'a group heading becomes two cells (Dialog)', family: 'Dialog', expect: ['is not one heading cell from the first column'],
+      change: (page) => {
+        const heading = body(page, 'Dialog', 'requires title').querySelector('tr.muxui-docs-group th');
+        heading.colSpan -= 1;
+        heading.after(page.createElement('td'));
+      },
+    },
+    {
+      label: 'a closing row puts its state before its names (Virtualizer)', family: 'Virtualizer', expect: ['closing row puts its state in column 0, under 3'],
+      change: (page) => { const closing = closingIn(body(page, 'Virtualizer', "layout = 'stack'"))[0]; closing.prepend(cell(closing, 'required')); },
+    },
+    {
+      label: 'a closing row writes under Default (Virtualizer)', family: 'Virtualizer', expect: ['closing row has an unnamed cell "left over" under Default, expected an empty cell'],
+      change: (page) => { closingIn(body(page, 'Virtualizer', "layout = 'stack'"))[0].children[2].textContent = 'left over'; },
     },
     {
       label: 'a "Applies when" cell is changed (Virtualizer)', family: 'Virtualizer', expect: ["Virtualizer group layout = 'grid' differs"],
