@@ -150,6 +150,9 @@ const audited = [
       ...expand(['prompt-composer'], ['disabled', 'pending', 'defaultValue', 'multiple']),
       // HeaderNav.NavButton renders a plain anchor: current becomes its class and aria-current, and no React Aria component receives it.
       ...expand(['header-nav.nav-button'], ['current']),
+      // Sidebar.NavItem and NavButton render links and a details group of their own: current becomes a class and aria-current, defaultExpanded seeds the group's own state, and no React Aria context reaches either.
+      ...expand(['sidebar.nav-item'], ['current', 'defaultExpanded']),
+      ...expand(['sidebar.nav-button'], ['current']),
       // TextEditor renders its own contenteditable and buttons and sends React Aria no isDisabled, isReadOnly, isRequired, or isInvalid, so no React Aria context reaches its flags.
       ...expand(['text-editor'], ['disabled', 'readOnly', 'required', 'invalid']),
     ],

@@ -86,11 +86,13 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
 // Card's adapter routes selected, pending, disabled, and activation to the Card.Button it renders beside the static root.
 // HeaderNav's adapter routes href and current to the links it renders, so Logo's and NavButton's props join the root's, which owns none.
 // AlertDialog's adapter routes disabled and activation to the trigger and the close control it renders, so their props join the root's.
+// Sidebar's adapter drives the provider, the search, and the nav, account, mobile and feature parts it renders from the root's one set of args.
 export const STORY_API_PARTS = Object.freeze({
   Menu: Object.freeze(['popup', 'list', 'submenu']),
   Card: Object.freeze(['button']),
   HeaderNav: Object.freeze(['logo', 'nav-button']),
   AlertDialog: Object.freeze(['trigger', 'close']),
+  Sidebar: Object.freeze(['provider', 'search', 'section', 'nav-item', 'nav-button', 'account-card', 'account-menu', 'mobile-trigger', 'feature-card']),
 });
 
 /**

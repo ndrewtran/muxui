@@ -1,5 +1,4 @@
 import type * as React from 'react';
-import type { IconButtonProps, MenuListProps } from '@muxui/react';
 import type { SupplementalActivation as PartUtilsActivation } from './part-utils.ts';
 
 export type SupplementalActivation = PartUtilsActivation;
@@ -146,68 +145,6 @@ export interface MultiSelectRootComponent {
 export declare const MultiSelect: {
   Root: MultiSelectRootComponent;
   Item: React.ForwardRefExoticComponent<MultiSelectItemProps & React.RefAttributes<HTMLDivElement>>;
-};
-
-export type SidebarProps = React.HTMLAttributes<HTMLElement> & {
-  hideBorder?: boolean;
-  /** `compact` tightens nav rows, gaps, section labels, and nesting; text sizes and focus rings are unchanged. */
-  density?: 'default' | 'compact';
-};
-export type SidebarProviderProps = {
-  /** Folded state; supply it with `onCollapsedChange` to control the rail. */
-  collapsed?: boolean;
-  defaultCollapsed?: boolean;
-  onCollapsedChange?: (collapsed: boolean) => void;
-  /** A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor. */
-  shortcut?: string;
-  children?: React.ReactNode;
-};
-/** Names the control "Toggle sidebar" unless `aria-label` or `aria-labelledby` says otherwise. */
-export type SidebarToggleProps = Omit<IconButtonProps, 'aria-label' | 'aria-labelledby'> & { 'aria-label'?: string; 'aria-labelledby'?: string };
-export type SidebarSectionProps = PartProps<HTMLLIElement> & { label: React.ReactNode };
-/** Open state shared by every nav group: supply `expanded` with `onExpandedChange` to control it, or `defaultExpanded` to start it open. */
-export type SidebarExpandedProps = {
-  expanded?: boolean;
-  defaultExpanded?: boolean;
-  onExpandedChange?: (expanded: boolean) => void;
-};
-/**
- * A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a
- * toggle button. `id` is a stable React key and defaults to `href`.
- */
-export type SidebarNavEntry = SidebarExpandedProps & { id?: string; label: React.ReactNode; current?: boolean } & (
-  | { href: string; items?: SidebarNavEntry[] }
-  | { href?: string; items: SidebarNavEntry[] }
-);
-export type SidebarNavItemProps = SidebarExpandedProps & {
-  href?: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  badge?: React.ReactNode;
-  /** Marks the item's page with `aria-current="page"`; on a group without `href` it only styles the header. */
-  current?: boolean;
-  children?: React.ReactNode;
-  items?: SidebarNavEntry[];
-  external?: boolean;
-};
-/** The part of Menu's list props that AccountMenu supports. The card's button names the menu and owns its open state. */
-export type SidebarAccountMenuProps = Pick<MenuListProps, 'items' | 'children' | 'onAction' | 'className'>;
-export declare const Sidebar: {
-  Provider: React.ComponentType<SidebarProviderProps>;
-  Root: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<HTMLElement>>;
-  Toggle: React.ForwardRefExoticComponent<SidebarToggleProps & React.RefAttributes<HTMLButtonElement>>;
-  Header: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
-  Search: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { placeholder?: string; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement> } & React.RefAttributes<HTMLDivElement>>;
-  Divider: React.ForwardRefExoticComponent<PartProps<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
-  NavList: React.ForwardRefExoticComponent<PartProps<HTMLUListElement> & React.RefAttributes<HTMLUListElement>>;
-  Section: React.ForwardRefExoticComponent<SidebarSectionProps & React.RefAttributes<HTMLLIElement>>;
-  NavItem: React.ComponentType<SidebarNavItemProps>;
-  NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
-  /** Shows the account. While an `AccountMenu` is mounted inside it, its Account options button opens that menu; without one the card has no button. */
-  AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;
-  /** The menu the card's Account options button opens: pass `Menu.Item`, `Menu.Section`, and `Menu.Separator` children, or `items`, and read the chosen item from `onAction`. Only valid inside `AccountCard`, one per card. */
-  AccountMenu: React.ForwardRefExoticComponent<SidebarAccountMenuProps & React.RefAttributes<HTMLDivElement>>;
-  MobileTrigger: React.ComponentType<{ children?: React.ReactNode; logo?: React.ReactNode }>;
-  FeatureCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { title?: string; description?: string; dismissLabel?: string; onDismiss?: () => void } & React.RefAttributes<HTMLDivElement>>;
 };
 
 export type TagSelectItem = { id: React.Key; [key: string]: unknown };

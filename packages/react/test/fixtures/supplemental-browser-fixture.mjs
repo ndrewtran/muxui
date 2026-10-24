@@ -2,7 +2,6 @@ import React from 'react';
 import {
   CommandPalette,
   MultiSelect,
-  Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
@@ -10,6 +9,7 @@ import { Card } from '../../src/supplemental/card.ts';
 import { HeaderNav } from '../../src/supplemental/header-nav.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
+import { Sidebar } from '../../src/supplemental/sidebar.ts';
 
 const h = React.createElement;
 const options = Object.freeze([

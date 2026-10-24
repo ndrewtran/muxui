@@ -230,8 +230,15 @@ const markupFlags = {
   defaultOpen: '[data-open]',
   // ButtonGroup marks itself attached.
   attached: '[data-attached]',
-  // A link marks the current page with aria-current.
-  current: '[aria-current="page"]',
+  // A link marks the current page with aria-current, and a link that carries no such attribute styles itself with a --current modifier.
+  current: '[aria-current="page"], [class*="--current"]',
+  // Sidebar.Root marks itself folded.
+  defaultCollapsed: '[data-collapsed]',
+  // A Sidebar nav group is a native details element, open once expanded.
+  defaultExpanded: 'details[open]',
+  // Sidebar's border is removed by a modifier, and an external nav link draws an icon that says so.
+  hideBorder: '.muxui-sidebar--no-border',
+  external: '.muxui-sidebar__nav-external',
 };
 // A progress circle's range shows as the ARIA values of its bar: the value is absent while it is indeterminate.
 const ariaNumber = (doc, attribute) => {
@@ -244,6 +251,8 @@ const cardLook = (container, values) => {
   return card === null ? undefined : values.find((value) => card.classList.contains(`muxui-card--${value}`));
 };
 const markupValues = {
+  // Sidebar marks only the compact density; the default one carries no attribute.
+  density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
     const circle = doc.querySelector('.muxui-progress-circle');
@@ -310,6 +319,8 @@ const minimalRenders = {
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
   Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
   AlertDialog: () => alertDialog(),
+  // Sidebar.Root's block is the column's own; the provider, search and nav parts are observed under 'Sidebar.<part>'.
+  Sidebar: () => sidebarRoot(),
   // HeaderNav.Root owns no props, so the composition only has to render; the link's own default is observed under 'HeaderNav.nav-button'.
   HeaderNav: () => h(generated.HeaderNav.Root, null, h(generated.HeaderNav.Logo, { href: '/' }, 'Mux'), h(generated.HeaderNav.Secondary, null, h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs'))),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
@@ -329,6 +340,11 @@ const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot
 const partRenders = {
   // Card.Button is the card as one control: its own variant and padding show in its class, and its disabled and pending flags on the button.
   'Card.button': { scope: 'button', render: () => h(generated.Card.Button, null, 'Select') },
+  // Sidebar.Provider renders no element: its folded default shows on Root. Search shows its placeholder by behaviour. The nav item is one leaf link and one group, so each flag has an element to show on, and the button is a plain link with a class.
+  'Sidebar.provider': { scope: '.muxui-sidebar', render: () => sidebarRoot() },
+  'Sidebar.search': { render: () => h(generated.Sidebar.Search) },
+  'Sidebar.nav-item': { scope: 'ul', render: () => h('ul', null, h(generated.Sidebar.NavItem, { href: '/leaf' }, 'Leaf'), h(generated.Sidebar.NavItem, { items: [{ href: '/child', label: 'Child' }] }, 'Group')) },
+  'Sidebar.nav-button': { scope: 'a', render: () => h(generated.Sidebar.NavButton, { href: '/docs', label: 'Docs' }) },
   // AlertDialog.Trigger is the one button a closed dialog renders; Close sits in the popup and states no default.
   'AlertDialog.trigger': { scope: 'button', render: () => alertDialog() },
   // HeaderNav.NavButton is a plain link, which shows aria-current only when it is the current page.
@@ -362,6 +378,11 @@ async function withMounted(element, run) {
     await act(async () => root.unmount());
     env.restore();
   }
+}
+
+/** A Sidebar.Provider holding a Root, which marks itself folded, unbordered or compact as the props of the two say. */
+function sidebarRoot(rootProps = null, providerProps = null) {
+  return h(generated.Sidebar.Provider, providerProps, h(generated.Sidebar.Root, { 'aria-label': 'Workspace', ...rootProps }));
 }
 
 /** AlertDialog.Root with a trigger and a popup holding a titled dialog with a Close, closed unless `rootProps` opens it. */
@@ -417,6 +438,10 @@ const selectPlaceholder = (props) => new JSDOM(renderToString(selectField(props)
 // Defaults only behaviour shows. Each observer renders the component (optionally
 // with the prop overridden) and returns what the renderer does.
 const behaviourObservers = {
+  // Search shows its placeholder in the input and gives it as the input's name.
+  'Sidebar.search': {
+    placeholder: (props) => new JSDOM(renderToString(h(generated.Sidebar.Search, props))).window.document.querySelector('input')?.getAttribute('placeholder'),
+  },
   AlertDialog: {
     // The dialog sits in a portal that stays empty until it opens, so the default shows only in whether it is open once mounted.
     defaultOpen: (props) => withMounted(alertDialog(props), () => document.querySelector('[role="alertdialog"]') !== null),

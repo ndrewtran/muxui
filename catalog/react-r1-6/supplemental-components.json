@@ -376,7 +376,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/sidebar.mjs",
+      "runtimeSource": "packages/react/src/supplemental/sidebar.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

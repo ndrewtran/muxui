@@ -1,6 +1,5 @@
 export { CommandPalette, useCommandPalette } from './command-palette.mjs';
 export { MultiSelect } from './multi-select.mjs';
-export { Sidebar } from './sidebar.mjs';
 export { TagSelect } from './tag-select.mjs';
 export { Text } from './text.mjs';
 

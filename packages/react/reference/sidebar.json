@@ -6,13 +6,14 @@
     "collection-items": "packages/react/src/collection-items.ts",
     "icon-button": "packages/react/src/supplemental/icon-button.ts",
     "menu": "packages/react/src/menu.ts",
-    "supplemental": "packages/react/src/supplemental/index.d.ts"
+    "part-utils": "packages/react/src/supplemental/part-utils.ts",
+    "sidebar": "packages/react/src/supplemental/sidebar.ts"
   },
   "exports": [
     {
       "name": "Sidebar",
       "entry": ".",
-      "module": "supplemental",
+      "module": "sidebar",
       "kind": "component",
       "parts": [
         {
@@ -25,11 +26,17 @@
               "type": "boolean",
               "doc": "Folded state; supply it with `onCollapsedChange` to control the rail."
             },
-            { "name": "defaultCollapsed", "optional": true, "type": "boolean" },
+            {
+              "name": "defaultCollapsed",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the rail starts folded, when it controls itself."
+            },
             {
               "name": "onCollapsedChange",
               "optional": true,
-              "type": "(collapsed: boolean) => void"
+              "type": "(collapsed: boolean) => void",
+              "doc": "Called with the new folded state each time the rail folds or unfolds."
             },
             {
               "name": "shortcut",
@@ -45,7 +52,12 @@
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "hideBorder", "optional": true, "type": "boolean" },
+            {
+              "name": "hideBorder",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Removes the border on the column's edge."
+            },
             {
               "name": "density",
               "optional": true,
@@ -141,12 +153,23 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "placeholder", "optional": true, "type": "string" },
-            { "name": "value", "optional": true, "type": "string" },
+            {
+              "name": "placeholder",
+              "optional": true,
+              "type": "string",
+              "doc": "The input's placeholder and accessible name; folded, it also names the button that unfolds the rail."
+            },
+            {
+              "name": "value",
+              "optional": true,
+              "type": "string",
+              "doc": "The input's value, when the caller controls it."
+            },
             {
               "name": "onChange",
               "optional": true,
-              "type": "React.ChangeEventHandler<HTMLInputElement>"
+              "type": "React.ChangeEventHandler<HTMLInputElement>",
+              "doc": "Called with the change event of the input each time its value changes."
             }
           ],
           "ref": { "type": "HTMLDivElement" },
@@ -181,7 +204,11 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "label", "type": "React.ReactNode" }
+            {
+              "name": "label",
+              "type": "React.ReactNode",
+              "doc": "The section's visible heading, which also names its list."
+            }
           ],
           "ref": { "type": "HTMLLIElement" },
           "natives": [
@@ -192,30 +219,63 @@
           "member": "NavItem",
           "form": "ComponentType",
           "members": [
-            { "name": "expanded", "optional": true, "type": "boolean" },
-            { "name": "defaultExpanded", "optional": true, "type": "boolean" },
-            { "name": "onExpandedChange", "optional": true, "type": "(expanded: boolean) => void" },
-            { "name": "href", "optional": true, "type": "string" },
+            {
+              "name": "href",
+              "optional": true,
+              "type": "string",
+              "doc": "The destination. Without it, `items` make a disclosure group."
+            },
             {
               "name": "icon",
               "optional": true,
-              "type": "React.ComponentType<{ className?: string }>"
+              "type": "React.ComponentType<SidebarIconProps>",
+              "refs": ["sidebar#SidebarIconProps"],
+              "doc": "An icon drawn before the label. Folded, an item without one keeps the first character of its label."
             },
-            { "name": "badge", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "badge",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A count or short mark shown after the label."
+            },
             {
               "name": "current",
               "optional": true,
               "type": "boolean",
               "doc": "Marks the item's page with `aria-current=\"page\"`; on a group without `href` it only styles the header."
             },
-            { "name": "children", "optional": true, "type": "React.ReactNode" },
             {
               "name": "items",
               "optional": true,
               "type": "SidebarNavEntry[]",
-              "refs": ["supplemental#SidebarNavEntry"]
+              "refs": ["sidebar#SidebarNavEntry"],
+              "doc": "The entries nested under the item."
             },
-            { "name": "external", "optional": true, "type": "boolean" }
+            {
+              "name": "external",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the link as leaving the application, with an icon that says so."
+            },
+            {
+              "name": "expanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the group is open, when the caller controls it."
+            },
+            {
+              "name": "defaultExpanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the group starts open, when it controls itself."
+            },
+            {
+              "name": "onExpandedChange",
+              "optional": true,
+              "type": "(expanded: boolean) => void",
+              "doc": "Called with the new open state each time the group opens or closes."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
           ],
           "ref": null
         },
@@ -226,10 +286,22 @@
             {
               "name": "icon",
               "optional": true,
-              "type": "React.ComponentType<{ className?: string }>"
+              "type": "React.ComponentType<SidebarIconProps>",
+              "refs": ["sidebar#SidebarIconProps"],
+              "doc": "An icon drawn inside the button."
             },
-            { "name": "label", "optional": true, "type": "string" },
-            { "name": "current", "optional": true, "type": "boolean" }
+            {
+              "name": "label",
+              "optional": true,
+              "type": "string",
+              "doc": "The button's accessible name."
+            },
+            {
+              "name": "current",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the link as the current page: it is styled as such."
+            }
           ],
           "ref": { "type": "HTMLAnchorElement" },
           "natives": [
@@ -241,15 +313,26 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "name", "type": "string" },
-            { "name": "email", "type": "string" },
-            { "name": "avatarSrc", "optional": true, "type": "string" },
-            { "name": "avatarAlt", "optional": true, "type": "string" },
+            { "name": "name", "type": "string", "doc": "The account's name." },
+            { "name": "email", "type": "string", "doc": "The account's email address." },
+            {
+              "name": "avatarSrc",
+              "optional": true,
+              "type": "string",
+              "doc": "The avatar image. Without it, the card shows the first letter of the name."
+            },
+            {
+              "name": "avatarAlt",
+              "optional": true,
+              "type": "string",
+              "doc": "The avatar image's text alternative; without it, the name."
+            },
             {
               "name": "status",
               "optional": true,
               "type": "'online' | 'offline'",
-              "values": ["online", "offline"]
+              "values": ["online", "offline"],
+              "doc": "Marks the account online or offline with a dot on the avatar."
             }
           ],
           "ref": { "type": "HTMLDivElement" },
@@ -266,14 +349,14 @@
               "optional": true,
               "type": "MuxUIItems",
               "refs": ["collection-items#MuxUIItems"],
-              "doc": "The options as data: strings, or items with an `id`, a `label`, a `textValue`, and `disabled`. Children take precedence: when both are supplied, the items are not rendered."
+              "doc": "The menu's options as data, as Menu.List takes them. Children take precedence."
             },
             {
               "name": "onAction",
               "optional": true,
               "type": "(item?: MuxUICollectionItem) => void",
               "refs": ["collection-items#MuxUICollectionItem"],
-              "doc": "Called when the user activates an item. A list built from `items` passes the item record; one built from children passes the identity fields `id`, `key`, and `value`. It is not called for a disabled item or while the list is disabled."
+              "doc": "Called when the user activates an option, with the item record for a list built from `items`."
             },
             { "name": "children", "optional": true, "type": "React.ReactNode" },
             { "name": "className", "optional": true, "type": "string" }
@@ -284,8 +367,13 @@
           "member": "MobileTrigger",
           "form": "ComponentType",
           "members": [
-            { "name": "children", "optional": true, "type": "React.ReactNode" },
-            { "name": "logo", "optional": true, "type": "React.ReactNode" }
+            {
+              "name": "logo",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A mark or name shown beside the button that opens the drawer."
+            },
+            { "name": "children", "optional": true, "type": "React.ReactNode" }
           ],
           "ref": null
         },
@@ -294,10 +382,25 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "title", "optional": true, "type": "string" },
-            { "name": "description", "optional": true, "type": "string" },
-            { "name": "dismissLabel", "optional": true, "type": "string" },
-            { "name": "onDismiss", "optional": true, "type": "() => void" }
+            { "name": "title", "optional": true, "type": "string", "doc": "The card's heading." },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "string",
+              "doc": "The card's supporting text."
+            },
+            {
+              "name": "dismissLabel",
+              "optional": true,
+              "type": "string",
+              "doc": "The dismiss button's label."
+            },
+            {
+              "name": "onDismiss",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called when the dismiss button is pressed; without it the card has no button."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -594,110 +697,219 @@
       "refs": ["menu#MenuListOwnProps"]
     },
     {
-      "id": "supplemental#PartProps",
+      "id": "part-utils#PartProps",
       "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
+      "module": "part-utils",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],
       "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
     },
     {
-      "id": "supplemental#SidebarAccountMenuProps",
+      "id": "sidebar#SidebarAccountMenuOwnProps",
+      "name": "SidebarAccountMenuOwnProps",
+      "module": "sidebar",
+      "text": "type SidebarAccountMenuOwnProps = {\n  items?: MuxUIItems;\n  onAction?: (item?: MuxUICollectionItem) => void;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The menu's options as data, as Menu.List takes them. Children take precedence."
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"],
+          "doc": "Called when the user activates an option, with the item record for a list built from `items`."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems", "collection-items#MuxUICollectionItem"]
+    },
+    {
+      "id": "sidebar#SidebarAccountMenuProps",
       "name": "SidebarAccountMenuProps",
-      "module": "supplemental",
+      "module": "sidebar",
       "public": [
         { "entry": ".", "name": "SidebarAccountMenuProps" }
       ],
       "owner": "sidebar",
-      "text": "type SidebarAccountMenuProps = Pick<MenuListProps, 'items' | 'children' | 'onAction' | 'className'>;",
-      "refs": ["menu#MenuListProps"]
+      "text": "type SidebarAccountMenuProps = SidebarAccountMenuOwnProps & Pick<MenuListProps, 'children' | 'className'>;",
+      "refs": ["sidebar#SidebarAccountMenuOwnProps", "menu#MenuListProps"]
     },
     {
-      "id": "supplemental#SidebarExpandedProps",
+      "id": "sidebar#SidebarExpandedProps",
       "name": "SidebarExpandedProps",
-      "module": "supplemental",
+      "module": "sidebar",
       "public": [
         { "entry": ".", "name": "SidebarExpandedProps" }
       ],
       "owner": "sidebar",
       "text": "type SidebarExpandedProps = {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n};",
       "members": [
-        { "name": "expanded", "optional": true, "type": "boolean" },
-        { "name": "defaultExpanded", "optional": true, "type": "boolean" },
-        { "name": "onExpandedChange", "optional": true, "type": "(expanded: boolean) => void" }
+        {
+          "name": "expanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the group is open, when the caller controls it."
+        },
+        {
+          "name": "defaultExpanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the group starts open, when it controls itself."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(expanded: boolean) => void",
+          "doc": "Called with the new open state each time the group opens or closes."
+        }
       ]
     },
     {
-      "id": "supplemental#SidebarNavEntry",
+      "id": "sidebar#SidebarIconProps",
+      "name": "SidebarIconProps",
+      "module": "sidebar",
+      "text": "type SidebarIconProps = {\n  className?: string;\n};",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" }
+      ]
+    },
+    {
+      "id": "sidebar#SidebarNavEntry",
       "name": "SidebarNavEntry",
-      "module": "supplemental",
+      "module": "sidebar",
       "public": [
         { "entry": ".", "name": "SidebarNavEntry" }
       ],
       "owner": "sidebar",
-      "text": "type SidebarNavEntry = SidebarExpandedProps & {\n  id?: string;\n  label: React.ReactNode;\n  current?: boolean;\n} & ({ href: string; items?: SidebarNavEntry[] } | { href?: string; items: SidebarNavEntry[] });",
-      "refs": ["supplemental#SidebarExpandedProps"]
+      "text": "type SidebarNavEntry = {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  id?: string;\n  label: React.ReactNode;\n  current?: boolean;\n  href: string;\n  items?: SidebarNavEntry[];\n} | {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  id?: string;\n  label: React.ReactNode;\n  current?: boolean;\n  href?: string;\n  items: SidebarNavEntry[];\n};"
     },
     {
-      "id": "supplemental#SidebarNavItemProps",
-      "name": "SidebarNavItemProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SidebarNavItemProps" }
-      ],
-      "owner": "sidebar",
-      "extends": [
-        {
-          "type": "SidebarExpandedProps",
-          "refs": ["supplemental#SidebarExpandedProps"]
-        }
-      ],
-      "text": "type SidebarNavItemProps = SidebarExpandedProps & {\n  href?: string;\n  icon?: React.ComponentType<{ className?: string }>;\n  badge?: React.ReactNode;\n  current?: boolean;\n  children?: React.ReactNode;\n  items?: SidebarNavEntry[];\n  external?: boolean;\n};",
+      "id": "sidebar#SidebarNavItemOwnProps",
+      "name": "SidebarNavItemOwnProps",
+      "module": "sidebar",
+      "text": "type SidebarNavItemOwnProps = {\n  href?: string;\n  icon?: React.ComponentType<SidebarIconProps>;\n  badge?: React.ReactNode;\n  current?: boolean;\n  items?: SidebarNavEntry[];\n  external?: boolean;\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n};",
       "members": [
-        { "name": "href", "optional": true, "type": "string" },
-        { "name": "icon", "optional": true, "type": "React.ComponentType<{ className?: string }>" },
-        { "name": "badge", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "href",
+          "optional": true,
+          "type": "string",
+          "doc": "The destination. Without it, `items` make a disclosure group."
+        },
+        {
+          "name": "icon",
+          "optional": true,
+          "type": "React.ComponentType<SidebarIconProps>",
+          "refs": ["sidebar#SidebarIconProps"],
+          "doc": "An icon drawn before the label. Folded, an item without one keeps the first character of its label."
+        },
+        {
+          "name": "badge",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "A count or short mark shown after the label."
+        },
         {
           "name": "current",
           "optional": true,
           "type": "boolean",
           "doc": "Marks the item's page with `aria-current=\"page\"`; on a group without `href` it only styles the header."
         },
-        { "name": "children", "optional": true, "type": "React.ReactNode" },
         {
           "name": "items",
           "optional": true,
           "type": "SidebarNavEntry[]",
-          "refs": ["supplemental#SidebarNavEntry"]
+          "refs": ["sidebar#SidebarNavEntry"],
+          "doc": "The entries nested under the item."
         },
-        { "name": "external", "optional": true, "type": "boolean" }
+        {
+          "name": "external",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the link as leaving the application, with an icon that says so."
+        },
+        {
+          "name": "expanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the group is open, when the caller controls it."
+        },
+        {
+          "name": "defaultExpanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the group starts open, when it controls itself."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(expanded: boolean) => void",
+          "doc": "Called with the new open state each time the group opens or closes."
+        }
       ],
-      "refs": ["supplemental#SidebarExpandedProps", "supplemental#SidebarNavEntry"]
+      "refs": ["sidebar#SidebarIconProps", "sidebar#SidebarNavEntry"]
     },
     {
-      "id": "supplemental#SidebarProps",
+      "id": "sidebar#SidebarNavItemProps",
+      "name": "SidebarNavItemProps",
+      "module": "sidebar",
+      "public": [
+        { "entry": ".", "name": "SidebarNavItemProps" }
+      ],
+      "owner": "sidebar",
+      "extends": [
+        {
+          "type": "SidebarNavItemOwnProps",
+          "refs": ["sidebar#SidebarNavItemOwnProps"]
+        }
+      ],
+      "text": "type SidebarNavItemProps = SidebarNavItemOwnProps & {\n  children?: React.ReactNode;\n};",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" }
+      ],
+      "refs": ["sidebar#SidebarNavItemOwnProps"]
+    },
+    {
+      "id": "sidebar#SidebarOwnProps",
+      "name": "SidebarOwnProps",
+      "module": "sidebar",
+      "text": "type SidebarOwnProps = {\n  hideBorder?: boolean;\n  density?: 'default' | 'compact';\n};",
+      "members": [
+        {
+          "name": "hideBorder",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Removes the border on the column's edge."
+        },
+        {
+          "name": "density",
+          "optional": true,
+          "type": "'default' | 'compact'",
+          "values": ["default", "compact"],
+          "doc": "`compact` tightens nav rows, gaps, section labels, and nesting; text sizes and focus rings are unchanged."
+        }
+      ]
+    },
+    {
+      "id": "sidebar#SidebarProps",
       "name": "SidebarProps",
-      "module": "supplemental",
+      "module": "sidebar",
       "public": [
         { "entry": ".", "name": "SidebarProps" }
       ],
       "owner": "sidebar",
-      "text": "type SidebarProps = React.HTMLAttributes<HTMLElement> & {\n  hideBorder?: boolean;\n  density?: 'default' | 'compact';\n};"
+      "text": "type SidebarProps = React.HTMLAttributes<HTMLElement> & SidebarOwnProps;",
+      "refs": ["sidebar#SidebarOwnProps"]
     },
     {
-      "id": "supplemental#SidebarProviderProps",
-      "name": "SidebarProviderProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "SidebarProviderProps" }
-      ],
-      "owner": "sidebar",
-      "text": "type SidebarProviderProps = {\n  collapsed?: boolean;\n  defaultCollapsed?: boolean;\n  onCollapsedChange?: (collapsed: boolean) => void;\n  shortcut?: string;\n  children?: React.ReactNode;\n};",
+      "id": "sidebar#SidebarProviderOwnProps",
+      "name": "SidebarProviderOwnProps",
+      "module": "sidebar",
+      "text": "type SidebarProviderOwnProps = {\n  collapsed?: boolean;\n  defaultCollapsed?: boolean;\n  onCollapsedChange?: (collapsed: boolean) => void;\n  shortcut?: string;\n};",
       "members": [
         {
           "name": "collapsed",
@@ -705,32 +917,74 @@
           "type": "boolean",
           "doc": "Folded state; supply it with `onCollapsedChange` to control the rail."
         },
-        { "name": "defaultCollapsed", "optional": true, "type": "boolean" },
-        { "name": "onCollapsedChange", "optional": true, "type": "(collapsed: boolean) => void" },
+        {
+          "name": "defaultCollapsed",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the rail starts folded, when it controls itself."
+        },
+        {
+          "name": "onCollapsedChange",
+          "optional": true,
+          "type": "(collapsed: boolean) => void",
+          "doc": "Called with the new folded state each time the rail folds or unfolds."
+        },
         {
           "name": "shortcut",
           "optional": true,
           "type": "string",
           "doc": "A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor."
-        },
-        { "name": "children", "optional": true, "type": "React.ReactNode" }
+        }
       ]
     },
     {
-      "id": "supplemental#SidebarSectionProps",
+      "id": "sidebar#SidebarProviderProps",
+      "name": "SidebarProviderProps",
+      "module": "sidebar",
+      "public": [
+        { "entry": ".", "name": "SidebarProviderProps" }
+      ],
+      "owner": "sidebar",
+      "extends": [
+        {
+          "type": "SidebarProviderOwnProps",
+          "refs": ["sidebar#SidebarProviderOwnProps"]
+        }
+      ],
+      "text": "type SidebarProviderProps = SidebarProviderOwnProps & {\n  children?: React.ReactNode;\n};",
+      "members": [
+        { "name": "children", "optional": true, "type": "React.ReactNode" }
+      ],
+      "refs": ["sidebar#SidebarProviderOwnProps"]
+    },
+    {
+      "id": "sidebar#SidebarSectionOwnProps",
+      "name": "SidebarSectionOwnProps",
+      "module": "sidebar",
+      "text": "type SidebarSectionOwnProps = {\n  label: React.ReactNode;\n};",
+      "members": [
+        {
+          "name": "label",
+          "type": "React.ReactNode",
+          "doc": "The section's visible heading, which also names its list."
+        }
+      ]
+    },
+    {
+      "id": "sidebar#SidebarSectionProps",
       "name": "SidebarSectionProps",
-      "module": "supplemental",
+      "module": "sidebar",
       "public": [
         { "entry": ".", "name": "SidebarSectionProps" }
       ],
       "owner": "sidebar",
-      "text": "type SidebarSectionProps = PartProps<HTMLLIElement> & {\n  label: React.ReactNode;\n};",
-      "refs": ["supplemental#PartProps"]
+      "text": "type SidebarSectionProps = PartProps<HTMLLIElement> & SidebarSectionOwnProps;",
+      "refs": ["part-utils#PartProps", "sidebar#SidebarSectionOwnProps"]
     },
     {
-      "id": "supplemental#SidebarToggleProps",
+      "id": "sidebar#SidebarToggleProps",
       "name": "SidebarToggleProps",
-      "module": "supplemental",
+      "module": "sidebar",
       "public": [
         { "entry": ".", "name": "SidebarToggleProps" }
       ],

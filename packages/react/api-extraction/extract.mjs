@@ -121,6 +121,10 @@ export const HOST_ALLOWLIST = Object.freeze([
   hostApplication('Promise', { kind: 'unknown' }),
   // The target of the press a supplemental part's onActivate reports (SupplementalActivation), which is any event target to the type.
   'EventTarget',
+  // Sidebar.Search's onChange: the change event of its input, which its React.ChangeEventHandler<HTMLInputElement> alias reads as.
+  hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }),
+  // The icon a Sidebar nav item or button draws: a component that takes the class name SidebarIconProps names.
+  hostApplication('React.ComponentType', { kind: 'reference', name: 'SidebarIconProps' }),
 ]);
 
 // A namespace or wildcard would admit every type under it.
@@ -274,7 +278,13 @@ export function assertHostAllowlist(hostAllowlist) {
  * so any other member, family, owned type, or public shape is still a redeclaration. `intersectsHostMember` is the check.
  * @type {readonly { member: string, host: string, type: object }[]}
  */
-export const HOST_OVERLAPS = Object.freeze([]);
+export const HOST_OVERLAPS = Object.freeze([
+  deepFreeze({
+    member: 'Sidebar.Search.onChange',
+    host: 'DOMAttributes',
+    type: { kind: 'function', parameters: [{ name: 'event', type: hostApplication('React.ChangeEvent', { kind: 'host', name: 'HTMLInputElement' }), required: true }], returns: { kind: 'void' } },
+  }),
+]);
 
 const OVERLAP_MEMBER = /^[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)?\.[a-z][A-Za-z0-9]*$/u;
 

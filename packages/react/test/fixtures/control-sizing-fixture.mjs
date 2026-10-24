@@ -27,7 +27,6 @@ import {
 import {
   CommandPalette,
   MultiSelect,
-  Sidebar,
   TagSelect,
 } from '../../src/supplemental/index.mjs';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
@@ -38,6 +37,7 @@ import { Input } from '../../src/supplemental/input.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
 import { PaymentInput } from '../../src/supplemental/payment-input.ts';
 import { RadioField } from '../../src/supplemental/radio-field.ts';
+import { Sidebar } from '../../src/supplemental/sidebar.ts';
 import { SwitchField } from '../../src/supplemental/switch-field.ts';
 
 const h = React.createElement;

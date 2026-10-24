@@ -13,7 +13,7 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Sidebar } from '/src/supplemental/index.mjs';
+import { Sidebar } from '/src/supplemental/sidebar.ts';
 import { Menu } from '/src/collections.mjs';
 
 const h = React.createElement;
@@ -234,7 +234,7 @@ async function sampleWidths(selector) {
 for (const engine of browserEngines()) {
   test(`Sidebar folds to an icon rail in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs', 'src/collections.mjs'],
+      entries: ['src/supplemental/sidebar.ts', 'src/collections.mjs'],
       pages: { '/sidebar.html': page },
       modules: { '/sidebar-entry.mjs': entry },
     });
@@ -767,7 +767,7 @@ const nestedEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { Sidebar } from '/src/supplemental/index.mjs';
+import { Sidebar } from '/src/supplemental/sidebar.ts';
 
 const h = React.createElement;
 const params = new URLSearchParams(location.search);
@@ -844,7 +844,7 @@ function nestedPaintOf(selector) {
 for (const engine of browserEngines()) {
   test(`Sidebar nested navigation works in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/sidebar.ts'],
       pages: { '/sidebar-nested.html': nestedPage },
       modules: { '/sidebar-nested-entry.mjs': nestedEntry },
     });
@@ -1013,7 +1013,7 @@ const groupsEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { Sidebar } from '/src/supplemental/index.mjs';
+import { Sidebar } from '/src/supplemental/sidebar.ts';
 
 const h = React.createElement;
 // Labels that are components, so no string copy of them exists to name a toggle.
@@ -1051,7 +1051,7 @@ const groupsPage = (url) => pageShell({
 for (const engine of browserEngines()) {
   test(`Sidebar groups are named by their labels in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/sidebar.ts'],
       pages: { '/sidebar-groups.html': groupsPage },
       modules: { '/sidebar-groups-entry.mjs': groupsEntry },
     });
@@ -1092,7 +1092,7 @@ for (const engine of browserEngines()) {
 for (const engine of browserEngines()) {
   test(`Sidebar hands focus to a group's control when the group closes in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/sidebar.ts'],
       pages: { '/sidebar-groups.html': groupsPage },
       modules: { '/sidebar-groups-entry.mjs': groupsEntry },
     });
@@ -1161,7 +1161,7 @@ for (const engine of browserEngines()) {
 for (const engine of browserEngines()) {
   test(`Sidebar nested indentation mirrors in right-to-left in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/sidebar.ts'],
       pages: { '/sidebar-groups.html': groupsPage },
       modules: { '/sidebar-groups-entry.mjs': groupsEntry },
     });
@@ -1213,7 +1213,7 @@ for (const engine of browserEngines()) {
 const densityEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Sidebar } from '/src/supplemental/index.mjs';
+import { Sidebar } from '/src/supplemental/sidebar.ts';
 
 const h = React.createElement;
 const Icon = ({ className }) => h('svg', { className, viewBox: '0 0 24 24', 'aria-hidden': true }, h('rect', { x: 4, y: 4, width: 16, height: 16 }));
@@ -1296,7 +1296,7 @@ const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected
 for (const engine of browserEngines()) {
   test(`Sidebar density compacts rows without touching the default in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/sidebar.ts'],
       pages: { '/sidebar-density.html': densityPage },
       modules: { '/sidebar-density-entry.mjs': densityEntry },
     });
@@ -1415,7 +1415,7 @@ async function ringSides({ png, clip, box, scale, ring }) {
 for (const engine of browserEngines()) {
   test(`Sidebar compact paints a focused control's whole ring over the next row in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/sidebar.ts'],
       pages: { '/sidebar-density.html': densityPage },
       modules: { '/sidebar-density-entry.mjs': densityEntry },
     });
@@ -1469,7 +1469,7 @@ for (const engine of browserEngines()) {
 for (const engine of browserEngines()) {
   test(`Sidebar AccountCard opens its AccountMenu by pointer and keyboard in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs', 'src/collections.mjs'],
+      entries: ['src/supplemental/sidebar.ts', 'src/collections.mjs'],
       pages: { '/sidebar.html': page },
       modules: { '/sidebar-entry.mjs': entry },
     });
@@ -1575,7 +1575,7 @@ for (const engine of browserEngines()) {
 for (const engine of browserEngines()) {
   test(`Sidebar AccountMenu closes on Tab and lets focus move on from its button in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs', 'src/collections.mjs'],
+      entries: ['src/supplemental/sidebar.ts', 'src/collections.mjs'],
       pages: { '/sidebar.html': page },
       modules: { '/sidebar-entry.mjs': entry },
     });

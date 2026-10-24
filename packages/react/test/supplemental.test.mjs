@@ -12,7 +12,6 @@ import { parseAst } from 'vite';
 import {
   CommandPalette,
   MultiSelect,
-  Sidebar,
   TagSelect,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
@@ -27,6 +26,7 @@ import { InputTags } from '../src/supplemental/input-tags.ts';
 import { PaymentInput } from '../src/supplemental/payment-input.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { RadioField } from '../src/supplemental/radio-field.ts';
+import { Sidebar } from '../src/supplemental/sidebar.ts';
 import { SwitchField } from '../src/supplemental/switch-field.ts';
 import { TextArea } from '../src/supplemental/text-area.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';

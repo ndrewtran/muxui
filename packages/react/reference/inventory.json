@@ -1096,45 +1096,20 @@
         { "name": "SelectTriggerProps", "kind": "type", "owner": "select", "module": "select" },
         { "name": "Separator", "kind": "value", "owner": "separator", "module": "components" },
         { "name": "SeparatorProps", "kind": "type", "owner": "separator", "module": "components" },
-        { "name": "Sidebar", "kind": "value", "owner": "sidebar", "module": "supplemental" },
+        { "name": "Sidebar", "kind": "value", "owner": "sidebar", "module": "sidebar" },
         {
           "name": "SidebarAccountMenuProps",
           "kind": "type",
           "owner": "sidebar",
-          "module": "supplemental"
+          "module": "sidebar"
         },
-        {
-          "name": "SidebarExpandedProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        { "name": "SidebarNavEntry", "kind": "type", "owner": "sidebar", "module": "supplemental" },
-        {
-          "name": "SidebarNavItemProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        { "name": "SidebarProps", "kind": "type", "owner": "sidebar", "module": "supplemental" },
-        {
-          "name": "SidebarProviderProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        {
-          "name": "SidebarSectionProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
-        {
-          "name": "SidebarToggleProps",
-          "kind": "type",
-          "owner": "sidebar",
-          "module": "supplemental"
-        },
+        { "name": "SidebarExpandedProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarNavEntry", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarNavItemProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarProviderProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarSectionProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarToggleProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "Slider", "kind": "value", "owner": "slider", "module": "slider" },
         { "name": "SliderProps", "kind": "type", "owner": "slider", "module": "slider" },
         {

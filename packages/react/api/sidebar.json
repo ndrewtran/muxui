@@ -1,0 +1,823 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/sidebar.ts",
+  "component": "muxui:component:sidebar",
+  "binding": "web.react",
+  "export": "Sidebar",
+  "api": {
+    "props": [
+      "hideBorder",
+      "density"
+    ],
+    "events": [],
+    "defaults": {
+      "hideBorder": false,
+      "density": "default"
+    },
+    "propDetails": {
+      "hideBorder": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Removes the border on the column's edge."
+      },
+      "density": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "default"
+            },
+            {
+              "kind": "literal",
+              "value": "compact"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "default",
+          "compact"
+        ],
+        "description": "`compact` tightens nav rows, gaps, section labels, and nesting; text sizes and focus rings are unchanged."
+      }
+    },
+    "eventDetails": {},
+    "types": {},
+    "partApis": {
+      "provider": {
+        "member": "Provider",
+        "props": [
+          "collapsed",
+          "defaultCollapsed",
+          "shortcut"
+        ],
+        "events": [
+          "collapsedChange"
+        ],
+        "defaults": {
+          "defaultCollapsed": false
+        },
+        "propDetails": {
+          "collapsed": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Folded state; supply it with `onCollapsedChange` to control the rail."
+          },
+          "defaultCollapsed": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the rail starts folded, when it controls itself."
+          },
+          "shortcut": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor."
+          }
+        },
+        "eventDetails": {
+          "collapsedChange": {
+            "prop": "onCollapsedChange",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "collapsed",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the new folded state each time the rail folds or unfolds."
+          }
+        },
+        "types": {}
+      },
+      "search": {
+        "member": "Search",
+        "props": [
+          "placeholder",
+          "value"
+        ],
+        "events": [
+          "change"
+        ],
+        "defaults": {
+          "placeholder": "Search"
+        },
+        "propDetails": {
+          "placeholder": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The input's placeholder and accessible name; folded, it also names the button that unfolds the rail."
+          },
+          "value": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The input's value, when the caller controls it."
+          }
+        },
+        "eventDetails": {
+          "change": {
+            "prop": "onChange",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "host",
+                    "name": "React.ChangeEvent",
+                    "typeArguments": [
+                      {
+                        "kind": "host",
+                        "name": "HTMLInputElement"
+                      }
+                    ]
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the change event of the input each time its value changes."
+          }
+        },
+        "types": {}
+      },
+      "section": {
+        "member": "Section",
+        "props": [
+          "label"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "label": {
+            "type": {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            "required": true,
+            "description": "The section's visible heading, which also names its list."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "nav-item": {
+        "member": "NavItem",
+        "props": [
+          "href",
+          "icon",
+          "badge",
+          "current",
+          "items",
+          "external",
+          "expanded",
+          "defaultExpanded"
+        ],
+        "events": [
+          "expandedChange"
+        ],
+        "defaults": {
+          "current": false,
+          "external": false,
+          "defaultExpanded": false
+        },
+        "propDetails": {
+          "href": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The destination. Without it, `items` make a disclosure group."
+          },
+          "icon": {
+            "type": {
+              "kind": "host",
+              "name": "React.ComponentType",
+              "typeArguments": [
+                {
+                  "kind": "reference",
+                  "name": "SidebarIconProps"
+                }
+              ]
+            },
+            "required": false,
+            "description": "An icon drawn before the label. Folded, an item without one keeps the first character of its label."
+          },
+          "badge": {
+            "type": {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            "required": false,
+            "description": "A count or short mark shown after the label."
+          },
+          "current": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the item's page with `aria-current=\"page\"`; on a group without `href` it only styles the header."
+          },
+          "items": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "reference",
+                "name": "SidebarNavEntry"
+              },
+              "readonly": false
+            },
+            "required": false,
+            "description": "The entries nested under the item."
+          },
+          "external": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the link as leaving the application, with an icon that says so."
+          },
+          "expanded": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the group is open, when the caller controls it."
+          },
+          "defaultExpanded": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the group starts open, when it controls itself."
+          }
+        },
+        "eventDetails": {
+          "expandedChange": {
+            "prop": "onExpandedChange",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "expanded",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the new open state each time the group opens or closes."
+          }
+        },
+        "types": {
+          "SidebarIconProps": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "className",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The icon a nav item or button draws: a component that takes a class name, such as one from an icon library."
+          },
+          "SidebarNavEntry": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "expanded",
+                      "type": {
+                        "kind": "boolean"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "defaultExpanded",
+                      "type": {
+                        "kind": "boolean"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "onExpandedChange",
+                      "type": {
+                        "kind": "function",
+                        "parameters": [
+                          {
+                            "name": "expanded",
+                            "type": {
+                              "kind": "boolean"
+                            },
+                            "required": true
+                          }
+                        ],
+                        "returns": {
+                          "kind": "void"
+                        }
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "id",
+                      "type": {
+                        "kind": "string"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "label",
+                      "type": {
+                        "kind": "host",
+                        "name": "React.ReactNode"
+                      },
+                      "required": true,
+                      "readonly": false
+                    },
+                    {
+                      "name": "current",
+                      "type": {
+                        "kind": "boolean"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "href",
+                      "type": {
+                        "kind": "string"
+                      },
+                      "required": true,
+                      "readonly": false
+                    },
+                    {
+                      "name": "items",
+                      "type": {
+                        "kind": "array",
+                        "element": {
+                          "kind": "reference",
+                          "name": "SidebarNavEntry"
+                        },
+                        "readonly": false
+                      },
+                      "required": false,
+                      "readonly": false
+                    }
+                  ]
+                },
+                {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "expanded",
+                      "type": {
+                        "kind": "boolean"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "defaultExpanded",
+                      "type": {
+                        "kind": "boolean"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "onExpandedChange",
+                      "type": {
+                        "kind": "function",
+                        "parameters": [
+                          {
+                            "name": "expanded",
+                            "type": {
+                              "kind": "boolean"
+                            },
+                            "required": true
+                          }
+                        ],
+                        "returns": {
+                          "kind": "void"
+                        }
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "id",
+                      "type": {
+                        "kind": "string"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "label",
+                      "type": {
+                        "kind": "host",
+                        "name": "React.ReactNode"
+                      },
+                      "required": true,
+                      "readonly": false
+                    },
+                    {
+                      "name": "current",
+                      "type": {
+                        "kind": "boolean"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "href",
+                      "type": {
+                        "kind": "string"
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
+                      "name": "items",
+                      "type": {
+                        "kind": "array",
+                        "element": {
+                          "kind": "reference",
+                          "name": "SidebarNavEntry"
+                        },
+                        "readonly": false
+                      },
+                      "required": true,
+                      "readonly": false
+                    }
+                  ]
+                }
+              ]
+            },
+            "description": "A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a\ntoggle button. `id` is a stable React key and defaults to `href`."
+          }
+        }
+      },
+      "nav-button": {
+        "member": "NavButton",
+        "props": [
+          "icon",
+          "label",
+          "current"
+        ],
+        "events": [],
+        "defaults": {
+          "current": false
+        },
+        "propDetails": {
+          "icon": {
+            "type": {
+              "kind": "host",
+              "name": "React.ComponentType",
+              "typeArguments": [
+                {
+                  "kind": "reference",
+                  "name": "SidebarIconProps"
+                }
+              ]
+            },
+            "required": false,
+            "description": "An icon drawn inside the button."
+          },
+          "label": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The button's accessible name."
+          },
+          "current": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the link as the current page: it is styled as such."
+          }
+        },
+        "eventDetails": {},
+        "types": {
+          "SidebarIconProps": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "className",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The icon a nav item or button draws: a component that takes a class name, such as one from an icon library."
+          }
+        }
+      },
+      "account-card": {
+        "member": "AccountCard",
+        "props": [
+          "name",
+          "email",
+          "avatarSrc",
+          "avatarAlt",
+          "status"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "name": {
+            "type": {
+              "kind": "string"
+            },
+            "required": true,
+            "description": "The account's name."
+          },
+          "email": {
+            "type": {
+              "kind": "string"
+            },
+            "required": true,
+            "description": "The account's email address."
+          },
+          "avatarSrc": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The avatar image. Without it, the card shows the first letter of the name."
+          },
+          "avatarAlt": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The avatar image's text alternative; without it, the name."
+          },
+          "status": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "online"
+                },
+                {
+                  "kind": "literal",
+                  "value": "offline"
+                }
+              ]
+            },
+            "required": false,
+            "enum": [
+              "online",
+              "offline"
+            ],
+            "description": "Marks the account online or offline with a dot on the avatar."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "account-menu": {
+        "member": "AccountMenu",
+        "props": [
+          "items"
+        ],
+        "events": [
+          "action"
+        ],
+        "defaults": {},
+        "propDetails": {
+          "items": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUIItems"
+            },
+            "required": false,
+            "description": "The menu's options as data, as Menu.List takes them. Children take precedence."
+          }
+        },
+        "eventDetails": {
+          "action": {
+            "prop": "onAction",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "item",
+                  "type": {
+                    "kind": "reference",
+                    "name": "MuxUICollectionItem"
+                  },
+                  "required": false
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the user activates an option, with the item record for a list built from `items`."
+          }
+        },
+        "types": {
+          "MuxUICollectionItem": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "key",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "label",
+                  "type": {
+                    "kind": "host",
+                    "name": "React.ReactNode"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "value",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false,
+                  "description": "Consumer data; named Select and ComboBox forms submit the item `id`, not `value`."
+                },
+                {
+                  "name": "textValue",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "disabled",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ],
+              "additional": "unknown"
+            },
+            "description": "An item a collection renders from data. Other string-keyed fields are consumer data."
+          },
+          "MuxUIItems": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "reference",
+                    "name": "MuxUICollectionItem"
+                  },
+                  {
+                    "kind": "string"
+                  }
+                ]
+              },
+              "readonly": false
+            }
+          }
+        }
+      },
+      "mobile-trigger": {
+        "member": "MobileTrigger",
+        "props": [
+          "logo"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "logo": {
+            "type": {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            "required": false,
+            "description": "A mark or name shown beside the button that opens the drawer."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "feature-card": {
+        "member": "FeatureCard",
+        "props": [
+          "title",
+          "description",
+          "dismissLabel"
+        ],
+        "events": [
+          "dismiss"
+        ],
+        "defaults": {},
+        "propDetails": {
+          "title": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The card's heading."
+          },
+          "description": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The card's supporting text."
+          },
+          "dismissLabel": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The dismiss button's label."
+          }
+        },
+        "eventDetails": {
+          "dismiss": {
+            "prop": "onDismiss",
+            "type": {
+              "kind": "function",
+              "parameters": [],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the dismiss button is pressed; without it the card has no button."
+          }
+        },
+        "types": {}
+      }
+    }
+  }
+}

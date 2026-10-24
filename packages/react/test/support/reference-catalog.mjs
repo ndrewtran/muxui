@@ -205,9 +205,9 @@ export function crossCheckDerived({ files, components = DERIVED_API_COMPONENTS }
         const catalogText = catalogTypeText(event.type);
         const texts = [...new Set(members.map((member) => member.type))];
         if (!(texts.length === 1 && texts[0] === catalogText)) {
-          // React's UIEventHandler<E> is the alias of (event: UIEvent<E>) => void; the compiler probes assert it.
-          const alias = /^\(event: React\.UIEvent<(\w+)>\) => void$/u.exec(catalogText);
-          if (alias && texts.length === 1 && texts[0] === `React.UIEventHandler<${alias[1]}>`) explain('event-alias', key);
+          // React's UIEventHandler<E> and ChangeEventHandler<E> are the aliases of (event: UIEvent<E>) => void and (event: ChangeEvent<E>) => void; the compiler probes assert them.
+          const alias = /^\(event: React\.(UI|Change)Event<(\w+)>\) => void$/u.exec(catalogText);
+          if (alias && texts.length === 1 && texts[0] === `React.${alias[1]}EventHandler<${alias[2]}>`) explain('event-alias', key);
           else problems.push(`${key}: catalog event type ${catalogText}, declared ${texts.join(' || ')}`);
         }
         if (members.some((member) => member.doc !== event.description)) problems.push(`${key}: catalog description differs from the declared comment`);

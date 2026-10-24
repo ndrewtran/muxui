@@ -702,6 +702,19 @@ test('a member that is the host\'s intersected with the owned one is read only a
   assert.equal(assertHostOverlaps(HOST_OVERLAPS).size, HOST_OVERLAPS.length);
 });
 
+test('Sidebar.Search\'s onChange is read through the one shipped host overlap, and the real family cannot be read without it', () => {
+  const entry = DERIVED_API_COMPONENTS.find(({ slug }) => slug === 'sidebar');
+  const declarationRoot = resolve(packageRoot, 'generated');
+  const read = (hostOverlaps) => extractApis({
+    declarationRoot,
+    hostOverlaps,
+    components: [extractionComponent(entry, { declarations: resolve(declarationRoot, 'sidebar.d.ts'), source: resolve(packageRoot, '../..', entry.source) })],
+  }).get('Sidebar');
+  assert.deepEqual(HOST_OVERLAPS.map(({ member }) => member), ['Sidebar.Search.onChange']);
+  assert.deepEqual(read(HOST_OVERLAPS).partApis.search.events, ['change']);
+  assert.throws(() => read([]), /Sidebar\.Search\.onChange: the exported Sidebar\.Search's props redeclare onChange as optional/u);
+});
+
 test('the shipped allowlist holds exactly the host types the committed derived APIs reach', () => {
   const reached = new Map();
   for (const file of readdirSync(resolve(packageRoot, 'api'))) {
@@ -712,14 +725,14 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual([...reached.keys()].sort(), HOST_ALLOWLIST.map(hostEntryKey).sort());
   // Each entry, and the components that need it.
   assert.deepEqual(reached.get('HTMLButtonElement'), ['button.json', 'icon-button.json', 'menu.json', 'select.json', 'toggle-button.json'], 'the activation event target');
-  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'input-tags.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
+  assert.deepEqual(reached.get('React.ReactNode'), ['activity.json', 'autocomplete.json', 'breadcrumbs.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'color-swatch-picker.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'disclosure.json', 'grid-list.json', 'input-tags.json', 'lightbox.json', 'list-box.json', 'markdown.json', 'menu.json', 'message.json', 'meter.json', 'number-field.json', 'progress-bar.json', 'prompt-composer.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select-native.json', 'select.json', 'sidebar.json', 'slider.json', 'switch.json', 'table.json', 'tabs.json', 'tag-group.json', 'text-editor.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json', 'tree.json', 'virtualizer.json'], 'caller-supplied content, and the node an Exclude starts from');
   assert.deepEqual(reached.get('React.ReactElement'), ['dialog.json', 'popover.json', 'preview-trigger.json', 'tooltip.json', 'virtualizer.json'], 'the element a trigger prop takes, and the GridList a grid Virtualizer lays out');
   assert.deepEqual(reached.get(hostEntryKey(host('Exclude', host('React.ReactNode'), { kind: 'union', members: [keyword('null'), keyword('undefined'), keyword('boolean')] }))), ['autocomplete.json', 'calendar.json', 'checkbox-group.json', 'color-area.json', 'color-field.json', 'color-slider.json', 'combo-box.json', 'date-field.json', 'date-picker.json', 'date-range-picker.json', 'dialog.json', 'number-field.json', 'radio-group.json', 'range-calendar.json', 'search-field.json', 'select.json', 'slider.json', 'switch.json', 'tag-group.json', 'text-field.json', 'time-field.json', 'toast.json', 'token-field.json', 'tooltip.json'], 'content that renders something');
   assert.deepEqual(reached.get('HTMLAnchorElement'), ['link.json'], 'the activation event target of Link');
   assert.deepEqual(reached.get('NumberFormatOptions'), ['meter.json', 'number-field.json'], 'the formatOptions of Meter and NumberField, written Intl.NumberFormatOptions');
   assert.deepEqual(reached.get('File'), ['drop-zone.json', 'file-trigger.json', 'prompt-composer.json'], 'the files FileTrigger selects, the File a DropZone item reads, and the files a PromptComposer attach picker reports');
   // The input attributes TextField's and SearchField's inputProps take, as FieldInputProps omits them: the element, its attributes, and the Omit of those.
-  assert.deepEqual(reached.get('HTMLInputElement'), ['search-field.json', 'text-field.json'], 'the element whose attributes inputProps takes');
+  assert.deepEqual(reached.get('HTMLInputElement'), ['search-field.json', 'sidebar.json', 'text-field.json'], 'the element whose attributes inputProps takes, and whose change Sidebar.Search reports');
   assert.deepEqual(reached.get(hostEntryKey(INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the attributes of the inner input');
   assert.deepEqual(reached.get(hostEntryKey(OMITTED_INPUT_ATTRIBUTES)), ['search-field.json', 'text-field.json'], 'the inner input\'s attributes less the 23 the field owns');
   // Virtualizer's onScroll reads as the function of React's UIEventHandler<HTMLDivElement>: a scroll of the viewport, which is a div.
@@ -751,6 +764,9 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   // TextEditor's selection request: the signal that cancels an action, and the promise a handler returns.
   assert.deepEqual(reached.get('AbortSignal'), ['text-editor.json'], 'the signal of a selection request');
   assert.deepEqual(reached.get(hostEntryKey(host('Promise', { kind: 'unknown' }))), ['text-editor.json'], 'the result of a selection request handler');
+  // Sidebar.Search's onChange reads as the function of the input's change event, and a nav item or button takes an icon component for a class name.
+  assert.deepEqual(reached.get(hostEntryKey(host('React.ChangeEvent', host('HTMLInputElement')))), ['sidebar.json'], 'the change event of the Sidebar.Search input');
+  assert.deepEqual(reached.get(hostEntryKey(host('React.ComponentType', { kind: 'reference', name: 'SidebarIconProps' }))), ['sidebar.json'], 'the icon of a Sidebar nav item or button');
   // The target of a supplemental part's activation, which SupplementalActivation types as any event target.
   assert.deepEqual(reached.get('EventTarget'), ['alert-dialog.json', 'card.json'], 'the target of an AlertDialog or Card.Button activation');
 });

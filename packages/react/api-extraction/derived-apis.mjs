@@ -122,6 +122,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'header-nav', name: 'HeaderNav', part: 'Root', parts: { logo: 'Logo', 'nav-button': 'NavButton' }, source: 'packages/react/src/supplemental/header-nav.ts' },
   // AlertDialog's Root owns the open state; Trigger and Close own disabled and onActivate, and the other parts own none.
   { slug: 'alert-dialog', name: 'AlertDialog', part: 'Root', parts: { trigger: 'Trigger', close: 'Close' }, source: 'packages/react/src/supplemental/alert-dialog.ts' },
+  // Sidebar's Root owns the column's border and density; Provider, Search, Section, NavItem, NavButton, AccountCard, AccountMenu, MobileTrigger and FeatureCard own the rest.
+  { slug: 'sidebar', name: 'Sidebar', part: 'Root', parts: { provider: 'Provider', search: 'Search', section: 'Section', 'nav-item': 'NavItem', 'nav-button': 'NavButton', 'account-card': 'AccountCard', 'account-menu': 'AccountMenu', 'mobile-trigger': 'MobileTrigger', 'feature-card': 'FeatureCard' }, source: 'packages/react/src/supplemental/sidebar.ts' },
   // Input and TextArea are compounds whose Root owns the props; their other parts own none.
   { slug: 'input', name: 'Input', part: 'Root', source: 'packages/react/src/supplemental/input.ts' },
   { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },

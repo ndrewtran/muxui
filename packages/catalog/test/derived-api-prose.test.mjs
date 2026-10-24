@@ -193,6 +193,7 @@ const GUIDES = {
   'header-nav': { native: ['display: none'] },
   // primary, danger and neutral are the variants of Button, which the guide says the dialog's actions use.
   'alert-dialog': { from: { button: ['primary', 'danger', 'neutral'] } },
+  sidebar: {},
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.
