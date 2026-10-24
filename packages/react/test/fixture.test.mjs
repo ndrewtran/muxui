@@ -334,7 +334,8 @@ const minimalRenders = {
   RadioField: () => h(generated.RadioGroup, { 'aria-label': 'Plan' }, h(generated.RadioField.Root, { value: 'monthly' }, h(generated.RadioField.Button, null, h(generated.RadioField.Indicator, null, h(generated.RadioField.Dot)), 'Monthly'))),
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
-const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot' };
+// Sidebar's root props are `SidebarProps`, a name the compound shares, which `undeclaredRootProps` reads without the compound.
+const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot', Card: 'CardRoot', HeaderNav: 'HeaderNavRoot', AlertDialog: 'AlertDialogRoot', Sidebar: 'Sidebar' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
@@ -624,11 +625,14 @@ async function behaviourMismatches(name, defaults) {
 const unobservedDefaults = (name, defaults) => Object.keys(defaults)
   .filter((key) => !(key in markupFlags) && !(key in markupValues) && !(key in (behaviourObservers[name] ?? {})));
 
-/** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. */
-function undeclaredProps(types, name, props) {
-  const surface = familyDeclarations(types, name);
+/** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. With `root`, the compound's other parts do not count. */
+function undeclaredProps(types, name, props, options) {
+  const surface = familyDeclarations(types, name, options);
   return props.filter((prop) => !new RegExp(`(?:\\b|['"])${prop}['"]?\\??\\s*:`, 'u').test(surface));
 }
+
+/** Catalog props the root's own declarations do not declare: a family listed in `rootDeclarations` is read against its root alone. */
+const undeclaredRootProps = (types, name, props) => undeclaredProps(types, rootDeclarations[name] ?? name, props, { root: name in rootDeclarations });
 
 /**
  * Everything a part's block gets wrong against the renderer, checked as the root's is: its defaults in its own element,
@@ -659,7 +663,7 @@ test('catalog defaults and props agree with the renderer for every generator-gua
     assert.deepEqual(defaultMismatches(markup, api.defaults), [], `${name} renders the catalog defaults`);
     assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
     assert.deepEqual(unobservedDefaults(name, api.defaults), [], `${name} defaults each have a markup or behaviour observer`);
-    assert.deepEqual(undeclaredProps(types, rootDeclarations[name] ?? name, api.props), [], `${name} generated declarations list the catalog props`);
+    assert.deepEqual(undeclaredRootProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
     // Each part that owns props is observed on its own, as the root is.
     for (const [part, block] of Object.entries(api.partApis ?? {})) {
       assert.deepEqual(await partProblems(types, name, part, block), [], `${name}.${part} agrees with the renderer`);
@@ -671,6 +675,13 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, size: 'lg' }), ['size: catalog "lg", rendered "md"']);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
   assert.deepEqual(undeclaredProps(types, 'ToggleButton', [...toggle.props, 'missingProp']), ['missingProp']);
+  // A root's props are its own declaration's. A prop another part of the compound declares is not the root's, though the compound names it:
+  // the compound-wide lookup finds each of these, and the root lookup refuses them. An alias beside a declaration is not part of it.
+  for (const [name, prop] of Object.entries({ Card: 'selected', HeaderNav: 'current', AlertDialog: 'disabled', Sidebar: 'shortcut' })) {
+    assert.deepEqual(undeclaredProps(types, name, [prop]), [], `${prop} is declared by a part of ${name}`);
+    assert.deepEqual(undeclaredRootProps(types, name, [...apis[name].props, prop]), [prop], `${name} root does not declare ${prop}`);
+  }
+  assert.deepEqual(undeclaredProps(types, 'HeaderNavNavButton', ['current', 'href']), ['href'], 'the logo\'s alias beside the link\'s declares href for the logo alone');
   // Observers outlive the defaults they check: a pending default, were Button to declare one, is still observed.
   assert.deepEqual(unobservedDefaults('Button', { ...apis.Button.defaults, pending: false }), []);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Button()), { pending: true }), ['pending: catalog true, rendered false']);

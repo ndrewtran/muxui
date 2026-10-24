@@ -38,12 +38,16 @@ export function upstreamImports(text, label = 'declaration') {
  * name, found in any of the `types` text. Comments are left out so that a member's description never
  * counts as the member. A name the text does not declare contributes nothing. A type the declaration file
  * keeps to itself (Menu's `MenuComponent`, which states the parts of the compound) is followed like an exported one.
+ * With `root`, the compound is left out: `<name>Props` is the props of one part, the root, and only the types it names count.
  */
-export function familyDeclarations(types, name) {
+export function familyDeclarations(types, name, { root = false } = {}) {
+  // A declaration ends where the next top-level statement or comment begins, which tsc writes at the start of a line.
+  // The aliases beside it, exported or not, are other declarations and count only when it names them.
   const declaration = (identifier, kinds) => {
     const start = types.search(new RegExp(`^(?:export )?(?:${kinds}) ${identifier}\\b`, 'mu'));
-    const end = types.indexOf('\nexport ', start + 1);
-    return start === -1 ? '' : types.slice(start, end === -1 ? undefined : end).replace(/\/\*[\s\S]*?\*\//gu, '');
+    if (start === -1) return '';
+    const next = types.slice(start + 1).search(/\n[A-Za-z/]/u);
+    return types.slice(start, next === -1 ? undefined : start + 1 + next).replace(/\/\*[\s\S]*?\*\//gu, '');
   };
   const references = (text) => [...text.matchAll(/\b[A-Z][A-Za-z]+\b/gu)].map(([reference]) => reference);
   const seen = new Set();
@@ -53,6 +57,6 @@ export function familyDeclarations(types, name) {
     const text = declaration(identifier, 'interface|type');
     return text + references(text).map(collect).join('\n');
   };
-  const component = declaration(name, 'declare const');
+  const component = root ? '' : declaration(name, 'declare const');
   return [collect(`${name}Props`), component, ...references(component).map(collect)].join('\n');
 }
