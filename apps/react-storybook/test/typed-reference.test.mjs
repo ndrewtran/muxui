@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { CommandPalette } from '@muxui/react';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
 import { STORY_API_PARTS, argTypesForBinding, storyApi } from '../src/storybook-factory.mjs';
@@ -446,4 +447,26 @@ test('a Controls row without a model has no description, and one with a model bu
   assert.equal(meta.argTypes.disabled.description, 'Applies the native disabled attribute: the IconButton is neither focusable nor activatable.');
   assert.equal(meta.argTypes.variant.table.type.summary, 'ButtonVariant');
   assert.equal(meta.argTypes.size.table.defaultValue.summary, 'md', 'the catalog still supplies the executed default');
+});
+
+test('the CommandPalette page states which parts need a Root ancestor, and the implementation agrees', async () => {
+  const fact = 'Trigger, Backdrop, Close, Input, ListBox, and Item throw outside Root, because they read its context; Root renders without any of them.';
+  const named = ['Trigger', 'Backdrop', 'Close', 'Input', 'ListBox', 'Item'];
+  // The canonical record says it, so both references do.
+  assert.ok(catalogOf('CommandPalette').artifact.bindings['web.react'].behavior.includes(fact));
+  const page = pageOf(await entryOf(manifest.families.find(({ family }) => family === 'CommandPalette')));
+  assert.ok(texts(page.querySelectorAll('#behavior [data-fact="binding.behavior"] li')).includes(fact));
+  // Every part rendered outside a Root: exactly the named ones throw for the missing Root.
+  const props = { ListBox: { 'aria-label': 'Results' }, Collection: { items: [], children: () => null }, Item: { id: 'a', title: 'A' } };
+  const needsRoot = Object.keys(CommandPalette).filter((part) => {
+    try {
+      renderToStaticMarkup(h(CommandPalette[part], props[part] ?? {}));
+      return false;
+    } catch (error) {
+      assert.match(error.message, /must be used inside CommandPalette\.Root/u, `${part} fails only for the missing Root`);
+      return true;
+    }
+  });
+  assert.deepEqual(needsRoot.sort(), [...named].sort());
+  assert.doesNotThrow(() => renderToStaticMarkup(h(CommandPalette.Root, null)), 'Root renders with none of its parts');
 });
