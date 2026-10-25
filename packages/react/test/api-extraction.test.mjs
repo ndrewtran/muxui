@@ -1130,6 +1130,51 @@ test('callbacks, unions and object literals that mention a parameter are matched
   rejects(callable('fn?: F | A'), /Thing\.fn: the exported Thing's props redeclare fn/u);
 });
 
+test('an object literal is matched by the modifiers the checker computes, so a mapped copy cannot change a nested readonly or optional flag', () => {
+  // A nested object that OwnProps writes plain, readonly, and with an optional property; the public type writes each again, through the
+  // mapped types a source can reach for (the library's, and the two that remove a modifier) and through an interface that is generic.
+  const declarations = `${ROW}export type Mutable<R> = { -readonly [K in keyof R]: R[K] };
+export type Required2<R> = { [K in keyof R]-?: R[K] };
+export interface Cell<V> { value: V }
+export interface Box<V> { readonly value: V }
+export interface Getter<V> { get value(): V }
+`;
+  const members = '  holder?: { value: T };\n  locked?: { readonly value: T };\n  loose?: { value?: T };';
+  const redeclared = (member, text) => genericThing({
+    declarations,
+    members,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
+  });
+  // The same modifiers, written another way, are the same object: a mapped copy that changes none, a generic interface, a get accessor
+  // with no set accessor (readonly), and a class whose instance has the property.
+  for (const [member, text] of [
+    ['holder', 'holder?: { value: T }'],
+    ['holder', 'holder?: Mutable<{ value: T }>'],
+    ['holder', "holder?: Pick<{ value: T; extra: string }, 'value'>"],
+    ['holder', 'holder?: Cell<T>'],
+    ['locked', 'locked?: { readonly value: T }'],
+    ['locked', 'locked?: Readonly<{ value: T }>'],
+    ['locked', "locked?: Pick<{ readonly value: T; extra: string }, 'value'>"],
+    ['locked', 'locked?: Box<T>'],
+    ['locked', 'locked?: Getter<T>'],
+    ['loose', 'loose?: { value?: T }'],
+    ['loose', 'loose?: Partial<{ value: T }>'],
+  ]) assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, ['holder', 'locked', 'loose'], text);
+  // A nested property that gains or loses readonly or its question mark through a mapped type, or whose declaration says so, is another
+  // object: TypeScript refuses to assign one to the other, in one direction or the other, whatever the property types say.
+  for (const [rule, member, text] of [
+    ['readonly added by Readonly', 'holder', 'holder?: Readonly<{ value: T }>'],
+    ['readonly added by a generic interface', 'holder', 'holder?: Box<T>'],
+    ['readonly added by a get accessor', 'holder', 'holder?: Getter<T>'],
+    ['readonly removed by a -readonly copy', 'locked', 'locked?: Mutable<{ readonly value: T }>'],
+    ['readonly removed by a -readonly copy of the literal', 'locked', "locked?: { -readonly [K in 'value']: T }"],
+    ['readonly removed by a generic interface', 'locked', 'locked?: Cell<T>'],
+    ['optional added by Partial', 'holder', 'holder?: Partial<{ value: T }>'],
+    ['optional removed by a -? copy', 'loose', 'loose?: Required2<{ value?: T }>'],
+    ['optional removed by Required', 'loose', 'loose?: Required<{ value?: T }>'],
+  ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
+});
+
 test('what an unconstrained, conditional, mapped, indexed, or callback-local parameter would add is outside the grammar', () => {
   const cases = [
     ['an unconstrained parameter used in a member', { own: '<T = unknown>', props: '<T = unknown>', signature: '<T = unknown>' }, /Thing\.items\[\] -> T: T has no constraint, so it would erase to unknown/u],

@@ -500,6 +500,23 @@ function signatureBinders(project, signature, chain, where) {
   }), chain, where);
 }
 
+// The TypeScript 7 API reports a symbol's check flags as a bare number and exports no enum for them. Readonly is the bit a mapped
+// property (`Readonly<T>`, `Pick<T, K>`, `-readonly`) carries when its modifiers make it readonly: `CheckFlags.Readonly`, 1 << 3 in the checker.
+// The controls that wrap a nested object in `Readonly` and unwrap it with `-readonly` fail if a compiler moves the bit.
+const CHECK_FLAGS_READONLY = 1 << 3;
+
+/**
+ * Whether a property is readonly as the checker sees it (`isReadonlySymbol`): a mapped property keeps the declaration it copies
+ * and no value declaration, so its modifiers are the check flag the mapped type computed, and only a declared or instantiated
+ * property is readonly by its own declaration. A get accessor without a set accessor is readonly too.
+ */
+function isReadonlyProperty(project, symbol) {
+  if ((symbol.checkFlags & CHECK_FLAGS_READONLY) !== 0) return true;
+  if ((symbol.flags & SymbolFlags.Accessor) === SymbolFlags.GetAccessor) return true;
+  const declaration = symbol.valueDeclaration?.resolve(project);
+  return declaration !== undefined && hasModifier(declaration, SyntaxKind.ReadonlyKeyword);
+}
+
 /**
  * Whether two types are the same type. TypeScript keys a union by how it was written (an alias, or the flattened members), so
  * equal unions can be two objects; they are the same type when their constituents are the same.
@@ -523,15 +540,17 @@ function sameType(left, right) {
  *  - a type reference (an array, `Set<K>`, `Iterable<T>`), with the same target and arguments that match in order;
  *  - a callback: one call signature each, with no type parameters or `this`, the same optional and rest parameters, matching
  *    parameter types and a matching return;
- *  - an object literal: the same properties, optional and readonly alike, with matching types.
- * An intersection, a conditional or mapped type, an indexed access and the like are not matched.
+ *  - an object literal: the same properties, optional and readonly alike, with matching types. The flags are the effective ones,
+ *    those the type checker uses, so a `Readonly`, `Partial`, `Required` or `-readonly` copy of a nested object is the object
+ *    with its modifiers changed and does not match the one OwnProps wrote.
+ * An intersection, a conditional type, an indexed access and the like are not matched; a mapped type is read as the object it resolves to.
  */
 function bindingMatcher(project, pairs) {
   const { checker } = project;
   // A parameter's optionality is on its declaration; a property's is on its symbol (its declaration holds the `?` as a postfix token).
   const optionalParameter = (symbol) => symbol.declarations.some((declaration) => declaration.resolve(project)?.questionToken !== undefined);
   const optionalProperty = (symbol) => (symbol.flags & SymbolFlags.Optional) !== 0;
-  const readonly = (symbol) => symbol.declarations.some((declaration) => hasModifier(declaration.resolve(project), SyntaxKind.ReadonlyKeyword));
+  const readonly = (symbol) => isReadonlyProperty(project, symbol);
   const call = (type) => {
     const calls = checker.getSignaturesOfType(type, SignatureKind.Call);
     return calls.length === 1 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getPropertiesOfType(type).length === 0 ? calls[0] : undefined;
