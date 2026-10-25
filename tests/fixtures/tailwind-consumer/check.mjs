@@ -22,7 +22,7 @@ const outputPath = join(tempRoot, 'output.css');
 // The consumer declares its own layer order first; Mux's stylesheet declares the same three layers itself.
 const layerOrder = '@layer theme, base, muxui.tokens, muxui.components, muxui.utilities, components, utilities;';
 // The consumer assigns a theme variable and reads it through Tailwind utilities. This proves the assignment and the
-// utilities compile; it does not prove a Mux component reads the variable.
+// utilities compile. That a Mux Button follows the Button component variables is proven by the React package's browser tests.
 const input = `${layerOrder}\n@import "tailwindcss";\n${compileTailwindConsumer(source, { muxuiCss: '@import "../../../../packages/react/generated/styles.css";' })}\n@layer components { .consumer-button { --muxui-component-button-background: #7c3aed; @apply bg-muxui-component-button-background text-muxui-component-button-foreground rounded-muxui-component-button-radius font-muxui-reference-typography-body-font leading-muxui-semantic-typography-body-line-height ease-muxui-reference-motion-easing-linear duration-muxui-reference-motion-duration-fast text-muxui-semantic-typography-body-size tracking-muxui-semantic-typography-display-letter-spacing font-muxui-semantic-typography-body-weight shadow-muxui-reference-effect-shadow-m; } }\n`;
 await writeFile(inputPath, input);
 await run('pnpm', ['exec', 'tailwindcss', '-i', inputPath, '-o', outputPath, '--minify'], { cwd: fixtureRoot });

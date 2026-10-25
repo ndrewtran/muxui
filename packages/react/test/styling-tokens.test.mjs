@@ -34,6 +34,55 @@ test('all authored component styles resolve design tokens through semantic or co
   assert.deepEqual(failures, []);
 });
 
+// A component token no authored rule reads is a recipe entry that does nothing. This is static reachability: a token is read
+// when an authored rule var()s one of the custom properties it compiles to (a structured token compiles to several) or a
+// token that depends on it is read. Comments are not reads. It does not show that a read reaches a painted property; the
+// browser tests of the families do.
+const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//gu, '');
+const dependents = new Map();
+for (const id of Object.keys(tokenGraph.tokens)) {
+  for (const dependency of tokenGraph.dependencies[id] ?? []) dependents.set(dependency, [...(dependents.get(dependency) ?? []), id]);
+}
+const declaredNames = (id) => [...cssDeclaration(tokenGraph.tokens[id], tokenGraph.dependencies).matchAll(/^\s+(--muxui-[\w-]+):/gmu)].map(([, name]) => name);
+
+function unreadComponentTokens(css) {
+  const reads = new Set([...stripComments(css).matchAll(/var\(\s*(--muxui-[\w-]+)/gu)].map(([, name]) => name));
+  const read = (id, seen = new Set()) => !seen.has(id) && (seen.add(id), declaredNames(id).some((name) => reads.has(name)) || (dependents.get(id) ?? []).some((next) => read(next, seen)));
+  return Object.keys(tokenGraph.tokens).filter((id) => id.startsWith('component.') && !read(id));
+}
+
+// The one token no rule reads. A grouped disclosure's icon and label have no Mux element to style, and wiring the gap
+// to the trigger would change its default from 14px to 8px, so the canonical example sets the label gap itself. The
+// example must carry the read as a style declaration, not in a comment.
+const exampleReads = {
+  'component.disclosuregroup.label-gap': {
+    file: '../../catalog/components/disclosure-group/examples/react/basic.tsx',
+    read: /\bgap:\s*'var\(--muxui-component-disclosuregroup-label-gap\)'/u,
+  },
+};
+const stripCodeComments = (code) => code.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gmu, '');
+
+test('every component token is read by an authored rule, by a token that is, or by the canonical example it names', async () => {
+  const authored = styles.map(({ css }) => css).join('\n');
+  const unread = unreadComponentTokens(authored);
+  assert.deepEqual(unread, Object.keys(exampleReads));
+  for (const [id, { file, read }] of Object.entries(exampleReads)) {
+    assert.match(stripCodeComments(await readFile(resolve(packageRoot, file), 'utf8')), read, `${id} is read by ${file}`);
+    const mention = "// gap: 'var(--muxui-component-disclosuregroup-label-gap)'\n/* gap: 'var(--muxui-component-disclosuregroup-label-gap)' */";
+    assert.doesNotMatch(stripCodeComments(mention), read, `a comment is not a read of ${id}`);
+  }
+  // The guard fails when reads go. It reports what a mutant newly leaves unread.
+  const newlyUnread = (css) => unreadComponentTokens(css).filter((id) => !unread.includes(id));
+  const buttonRoles = ['component.button.background', 'component.button.foreground', 'component.button.radius'];
+  assert.deepEqual(newlyUnread(authored.replaceAll(/var\(--muxui-component-button-(?:background|foreground|radius)\b/gu, 'var(--x')), buttonRoles, 'the Button reads removed');
+  assert.deepEqual(newlyUnread(authored.replaceAll(/var\(--muxui-component-disclosuregroup-transition-[\w-]+\)/gu, 'var(--x)')),
+    ['component.disclosuregroup.motion-duration', 'component.disclosuregroup.transition'], 'the transition part reads removed');
+  // A comment that names the properties restores nothing: the Button reads back to their fallbacks, plus the comment.
+  const fallbacksOnly = authored.replaceAll(/var\(--muxui-component-button-(?:background|foreground|radius), (var\(--muxui-[\w-]+\))\)/gu, '$1');
+  assert.notEqual(fallbacksOnly, authored, 'the Button reads exist to remove');
+  assert.deepEqual(newlyUnread(`${fallbacksOnly}\n/* var(--muxui-component-button-background) var(--muxui-component-button-foreground) var(--muxui-component-button-radius) */`), buttonRoles, 'the Button reads replaced by a comment');
+});
+
 test('component spacing declarations keep gaps separate from padding and geometry', () => {
   const failures = [];
   for (const { path, css } of styles) {
