@@ -21,7 +21,7 @@ async function testFiles(root, prefix = '') {
 const records = [
   { family: 'Button', export: 'Button', slug: 'button', source: 'packages/react/src/button.mjs' },
   { family: 'Tree', export: 'Tree', slug: 'tree', source: 'packages/react/src/tree.mjs' },
-  { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: 'packages/react/src/supplemental/index.mjs' },
+  { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: 'packages/react/src/supplemental/tag-select.ts' },
 ];
 const availableFiles = (await testFiles(resolve(packageRoot, 'test'))).map((file) => `test/${file}`);
 const buttonFixture = await readFile(resolve(packageRoot, 'test/fixture.test.mjs'), 'utf8');
@@ -60,8 +60,8 @@ test('any change to a collections module selects the collections guards, whateve
   }
 });
 
-// The 18 families the supplemental barrel re-exports and the helpers they share. These names outlive the move of each
-// family to TypeScript, so the list is not read from the barrel.
+// The 18 families the supplemental barrel re-exported when it was split, and the helpers they share. The names are listed here
+// because no barrel names them now.
 const supplementalFamilies = [
   'alert-dialog', 'button-group', 'card', 'checkbox-field', 'color-mode-toggle', 'command-palette', 'header-nav', 'input', 'input-tags',
   'multi-select', 'payment-input', 'progress-circle', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area',
@@ -76,30 +76,24 @@ test('any change to a supplemental module selects the supplemental guards, whate
   for (const name of ['index', ...supplementalFamilies, ...supplementalHelpers]) for (const extension of ['mjs', 'ts']) {
     assert.deepEqual(sourceGuardTests(`packages/react/src/supplemental/${name}.${extension}`), guards, name);
   }
-  // Every module the barrel re-exports is in that list.
-  const barrel = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8');
-  for (const [, name] of barrel.matchAll(/ from '\.\/([\w-]+)\.(?:mjs|js|ts)';/gu)) assert.ok(supplementalFamilies.includes(name), name);
+  // The barrel now holds the list of family names alone, so it re-exports no module.
+  const barrel = await readFile(resolve(packageRoot, 'src/supplemental/index.ts'), 'utf8');
+  assert.doesNotMatch(barrel, /^(?:import|export)\b[^\n]*\bfrom\b/mu);
   // The other supplemental sources, declarations and styles select none, and neither does a collections-style name outside supplemental/.
-  for (const path of ['supplemental/icon-button.ts', 'supplemental/avatar.ts', 'supplemental/candidate-motion.mjs', 'supplemental/index.d.ts', 'supplemental/styles.css', 'supplemental/scratch-widget.mjs', 'tag-select.mjs', 'supplemental-mapping.mjs']) {
+  for (const path of ['supplemental/icon-button.ts', 'supplemental/avatar.ts', 'supplemental/candidate-motion.mjs', 'supplemental/part-utils.d.ts', 'supplemental/styles.css', 'supplemental/scratch-widget.mjs', 'tag-select.mjs', 'supplemental-mapping.mjs']) {
     assert.deepEqual(sourceGuardTests(`packages/react/src/${path}`), [], path);
   }
 });
 
-test('every supplemental family module routes to the supplemental group as the barrel did', async () => {
+test('every supplemental family module routes to the supplemental group', async () => {
   const contract = JSON.parse((await readFile(resolve(packageRoot, 'generated/r1-6-contract.json'), 'utf8'))
     .split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
   const modules = contract.components.filter(({ source }) => supplementalFamilies.some((slug) => source.endsWith(`/supplemental/${slug}.mjs`) || source.endsWith(`/supplemental/${slug}.ts`)));
   assert.equal(modules.length, supplementalFamilies.length);
-  for (const record of modules) {
-    const barrel = { ...record, source: 'packages/react/src/supplemental/index.mjs' };
-    // A BrowserProof family skips the whole-group fallback, so only its explicit route can supply the group.
-    for (const behaviorProofFamilies of [[], [record.family]]) for (const includeSharedSource of [true, false]) {
-      assert.deepEqual(
-        componentTestSelection([record], availableFiles, { includeSharedSource, behaviorProofFamilies }),
-        componentTestSelection([barrel], availableFiles, { includeSharedSource, behaviorProofFamilies }),
-        `${record.family} includeSharedSource ${includeSharedSource} behaviorProofFamilies ${behaviorProofFamilies}`,
-      );
-    }
+  // The source route supplies the group whether or not the family has a BrowserProof, which skips only the whole-group fallback.
+  for (const record of modules) for (const behaviorProofFamilies of [[], [record.family]]) {
+    const selected = componentTestSelection([record], availableFiles, { includeSharedSource: true, behaviorProofFamilies }).files;
+    assert.ok(selected.includes('test/supplemental.test.mjs'), `${record.family} behaviorProofFamilies ${behaviorProofFamilies}`);
   }
 });
 
@@ -227,7 +221,7 @@ test('slug-named tests route by convention without a map entry', () => {
 
 test('real families gain the slug-named browser test their old map entry omitted', () => {
   for (const [family, slug] of [['Text', 'text'], ['SelectNative', 'select-native'], ['IconButton', 'icon-button'], ['ProgressCircle', 'progress-circle']]) {
-    const record = { family, slug, source: 'packages/react/src/supplemental/index.mjs' };
+    const record = { family, slug, source: `packages/react/src/supplemental/${slug}.ts` };
     const selected = selectComponentTestFiles([record], availableFiles, { includeSharedSource: false });
     assert.ok(selected.includes(`test/${slug}.test.mjs`), family);
     assert.ok(selected.includes(`test/browser/${slug}.test.mjs`), family);

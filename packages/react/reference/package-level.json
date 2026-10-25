@@ -3,7 +3,7 @@
   "owner": "package-level",
   "sources": {
     "index": "packages/react/src/generate.mjs",
-    "supplemental": "packages/react/src/supplemental/index.d.ts",
+    "supplemental": "packages/react/src/supplemental/index.ts",
     "themes": "packages/react/src/generate.mjs"
   },
   "exports": [

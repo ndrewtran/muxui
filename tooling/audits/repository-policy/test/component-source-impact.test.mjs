@@ -7,7 +7,7 @@ import {
   analyzeReactStyleChange,
 } from '../src/component-source-impact.mjs';
 
-const supplementalPath = 'packages/react/src/supplemental/index.mjs';
+const supplementalPath = 'packages/react/src/supplemental/multi-family.mjs';
 const collectionsPath = 'packages/react/src/collections.mjs';
 const helperPath = 'packages/react/src/shared/labels.mjs';
 const repositoryRoot = path.resolve(import.meta.dirname, '../../../..');

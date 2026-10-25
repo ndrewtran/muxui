@@ -58,7 +58,7 @@ import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
-const supplementalPath = 'packages/react/src/supplemental/index.mjs';
+const supplementalPath = 'packages/react/src/supplemental/multi-family.mjs';
 const multiSelectPath = 'packages/react/src/supplemental/multi-select.mjs';
 const tagSelectPath = 'packages/react/src/supplemental/tag-select.ts';
 const collectionsPath = 'packages/react/src/collections.mjs';
@@ -1492,7 +1492,7 @@ test('a TypeScript React source takes the runtime source route; a declaration fi
   assert.ok(result.reactTestFiles.includes('test/motion-package-boundary.test.mjs'));
   assert.ok(result.reasons.includes(`${treePath} is React runtime or compiler source; AST ownership determines the affected families`));
 
-  const declarations = await plan(['packages/react/src/supplemental/index.d.ts']);
+  const declarations = await plan(['packages/react/src/supplemental/candidate-motion.d.mts']);
   assert.equal(declarations.reactPackageFull, true);
   assert.ok(!declarations.reasons.some((reason) => reason.includes('AST ownership')));
 });
@@ -1697,7 +1697,7 @@ const DECLARATION_INPUTS = [
   ['the token compiler', () => plan(['packages/tokens/src/index.mjs'])],
   ['a module that becomes declarations', () => plan([collectionsPath], treeRuntimeChange)],
   ['the declarations beside a JavaScript module', () => plan(['packages/react/src/list-box.d.ts'])],
-  ['the supplemental declarations', () => plan(['packages/react/src/supplemental/index.d.ts'])],
+  ['the declarations beside a supplemental JavaScript module', () => plan(['packages/react/src/supplemental/candidate-motion.d.mts'])],
   ['the declaration build configuration', () => plan(['packages/react/tsconfig.build.json'])],
   ['the generator', () => plan(['packages/react/src/generate.mjs'], { moduleSources: { 'packages/react/src/generate.mjs': { before: 'export {};', after: 'export {}; // changed' } } })],
   ['the family closure', () => plan(['catalog/react-r1-5/closure.json'])],
@@ -3174,7 +3174,7 @@ const generatorModuleSources = {
 };
 
 test('deleting an unimported React module runs the React package check', async () => {
-  const stub = "export { Card } from './index.mjs';\n";
+  const stub = "export { Card } from './multi-family.mjs';\n";
   const result = await plan([cardStubPath], {
     textSnapshots: { [cardStubPath]: { before: stub, after: null } },
     moduleSources: { ...generatorModuleSources, [cardStubPath]: { before: stub, after: null } },
@@ -3187,8 +3187,8 @@ test('deleting an unimported React module runs the React package check', async (
 
   // A changed module that nothing imports is still unowned.
   await assert.rejects(plan([cardStubPath], {
-    textSnapshots: { [cardStubPath]: { before: stub, after: "export { TagSelect } from './index.mjs';\n" } },
-    moduleSources: { ...generatorModuleSources, [cardStubPath]: { before: stub, after: "export { TagSelect } from './index.mjs';\n" } },
+    textSnapshots: { [cardStubPath]: { before: stub, after: "export { TagSelect } from './multi-family.mjs';\n" } },
+    moduleSources: { ...generatorModuleSources, [cardStubPath]: { before: stub, after: "export { TagSelect } from './multi-family.mjs';\n" } },
   }), /MUXUI_CI_IMPACT_SOURCE_OWNERSHIP/u);
 });
 
@@ -3976,7 +3976,7 @@ test('the public-surface check is planned for every change that can alter the pu
   assert.ok(typeOnly.reactTestFiles.includes(surface) && runs(typeOnly));
 
   // A declaration-only edit, the generator, and the manifest exports plan the full React check.
-  for (const path of ['packages/react/src/supplemental/index.d.ts', 'packages/react/src/generate.mjs']) {
+  for (const path of ['packages/react/src/supplemental/candidate-motion.d.mts', 'packages/react/src/generate.mjs']) {
     const result = await plan([path]);
     assert.equal(result.reactPackageFull, true, path);
     assert.ok(runs(result), path);

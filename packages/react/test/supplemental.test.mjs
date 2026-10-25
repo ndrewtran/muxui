@@ -8,8 +8,7 @@ import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { RadioGroup as AriaRadioGroup } from 'react-aria-components';
 import { Form as AriaForm } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
-import { parseAst } from 'vite';
-import { supplementalFamilies } from '../src/supplemental/index.mjs';
+import { supplementalFamilies } from '../src/supplemental/index.ts';
 import { AlertDialog } from '../src/supplemental/alert-dialog.ts';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
 import { Card } from '../src/supplemental/card.ts';
@@ -40,7 +39,8 @@ function setInputValue(input, value) {
   input.dispatchEvent(new input.ownerDocument.defaultView.Event('change', { bubbles: true }));
 }
 
-test('supplemental index exposes the exact admitted 21-family surface', () => {
+test('supplemental index exposes the exact admitted 21-family surface, frozen', () => {
+  assert.ok(Object.isFrozen(supplementalFamilies));
   assert.deepEqual([...supplementalFamilies], [
     'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle',
     'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect',
@@ -351,11 +351,8 @@ test('compound overlays render stable Mux-owned parts in closed or static SSR st
   assert.match(html, /muxui-multi-select__trigger/u);
 });
 
-test('supplemental declarations and CSS do not leak external API names or selectors', async () => {
-  const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
+test('supplemental CSS does not leak external API names or selectors', async () => {
   const styles = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8');
-  assert.doesNotMatch(declaration, /\b(?:isDisabled|isInvalid|isSelected|isOpen|onPress)\b/u);
-  assert.doesNotMatch(declaration, /react-aria-components/u);
   // Custom properties only; BEM modifiers such as muxui-image--radius-md are class names.
   assert.doesNotMatch(styles, /(?<![\w-])--(?:neutral|color|red|success|space|radius|shadow)-/u);
   assert.match(styles, /--muxui-(?:semantic|reference)-/u);
@@ -369,23 +366,6 @@ test('supplemental declarations and CSS do not leak external API names or select
   assert.match(styles, /--muxui-semantic-typography-text-font-weight/u);
   assert.match(styles, /\.muxui-multi-select__value--placeholder\s*\{\s*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /\btransparent\b/u);
-});
-
-// A declaration file with any export clause stops exporting its unmarked declarations, which would silently drop
-// PartProps and ButtonPartProps from the package. `export type X = ...` is
-// a declaration with a modifier, so it is fine: this is how SupplementalActivation reaches the public surface.
-const exportClauses = (text) => parseAst(text, { lang: 'dts' }).body
-  .filter((node) => node.type === 'ExportAllDeclaration' || node.type === 'ExportDefaultDeclaration' || node.type === 'TSExportAssignment'
-    || node.type === 'TSNamespaceExportDeclaration' || (node.type === 'ExportNamedDeclaration' && node.declaration === null))
-  .map((node) => text.slice(node.start, node.end));
-
-test('the authored supplemental declarations use export modifiers, never an export clause or export *', async () => {
-  assert.deepEqual(exportClauses(await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8')), []);
-  const clean = "import type { A } from './a.ts';\nexport type B = A;\ntype C = string;\nexport interface E {}\n";
-  assert.deepEqual(exportClauses(clean), []);
-  for (const clause of ['export { C };', 'export type { C };', "export type { A } from './a.ts';", "export * from './a.ts';", "export * as ns from './a.ts';", 'export {};', 'export default C;', 'export = C;']) {
-    assert.equal(exportClauses(`${clean}${clause}\n`).length, 1, clause);
-  }
 });
 
 test('supplemental CSS classifies foundation tokens separately from local component hooks', async () => {

@@ -212,21 +212,16 @@ export function expectedComponent({ exportName, entry, packageName, reference, b
 	const inventoryTypeNames = [...new Set(exportedTypes.map(({ name }) => name))].sort();
 
 	const position = (part) => anatomy.indexOf(part);
-	const hookOptions = related.filter(({ kind }) => kind === 'function').map((fn) => ({
-		name: fn.name,
-		members: (fn.parameters ?? []).flatMap(({ refs }) => (refs ?? []).flatMap((id) => file.types.find((type) => type.id === id)?.members ?? [])),
-	}));
 	const events = [];
 	const eventsFor = (channels, scope, named) => channels.map((channel) => {
 		const handler = handlerOf(channel);
 		const declared = scope.flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)]
-			.filter((member) => member.name === handler && !member.never).map((member) => ({ type: member.type, by: heading(exportName, part), hook: false })));
-		const fromHooks = declared.length > 0 ? [] : hookOptions.flatMap(({ name, members }) => members.filter((member) => member.name === handler).map((member) => ({ type: member.type, by: name, hook: true })));
+			.filter((member) => member.name === handler && !member.never).map((member) => ({ type: member.type, by: heading(exportName, part) })));
 		const signatures = [];
-		for (const { type, by, hook } of [...declared, ...fromHooks]) {
+		for (const { type, by } of declared) {
 			let entry = signatures.find((candidate) => candidate.text === type);
 			if (entry === undefined) signatures.push(entry = { text: type, declaredBy: [] });
-			if ((named || hook) && !entry.declaredBy.includes(by)) entry.declaredBy.push(by);
+			if (named && !entry.declaredBy.includes(by)) entry.declaredBy.push(by);
 		}
 		return { channel, handler, signatures };
 	});

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import test from 'node:test';
@@ -254,16 +254,13 @@ test('a bundle that uses one control family keeps its own module and only the sh
   }
 });
 
-// supplemental.mjs re-exported one module per family. Before the split every export kept the whole barrel and the 14
+// The supplemental barrel once re-exported one module per family. Before the split every export kept the whole barrel and the 14
 // modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
 // its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The three
 // field factories and the two modal wrappers carry the pure annotation that lets a bundler drop what no export uses;
 // the other TypeScript families are checked by the bundle test below.
 test('the supplemental modules keep the pure annotation on each wrapper', () => {
-  const emitted = (module) => {
-    const mjs = resolve(generated, `${module}.mjs`);
-    return readFileSync(existsSync(mjs) ? mjs : resolve(generated, `${module}.js`), 'utf8');
-  };
+  const emitted = (module) => readFileSync(resolve(generated, `${module}.js`), 'utf8');
   // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
   const pure = String.raw`\/\*\s*[#@]__PURE__\s*\*\/`;
   for (const [module, name] of [['checkbox-field', 'CheckboxField'], ['radio-field', 'RadioField'], ['switch-field', 'SwitchField']]) {
@@ -364,8 +361,8 @@ test('a bundle that uses one supplemental family keeps its own module, only the 
   // A module keeps its name's stem when it moves from .mjs to .js.
   const stem = (id) => id.replace(/\.\w+$/u, '');
   for (const [name, { module, helpers: allowed, before }] of Object.entries(supplementalRetention)) {
-    // A family in TypeScript ships as its own module and is exported from the root index; the rest come from the supplemental barrel.
-    const kept = await bundledModuleSizes(name, existsSync(resolve(generated, `${module}.js`)) ? 'index.mjs' : 'supplemental.mjs');
+    // A family ships as its own module and is exported from the root index.
+    const kept = await bundledModuleSizes(name, 'index.mjs');
     const stems = kept.map(([id]) => stem(id));
     // No other family's code comes along, which is what one module per family buys over one file.
     assert.deepEqual(stems.filter((candidate) => families.has(candidate)), [module], name);

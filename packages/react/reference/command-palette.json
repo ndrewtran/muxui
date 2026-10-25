@@ -1287,6 +1287,10 @@
       "id": "part-utils#PartProps",
       "name": "PartProps",
       "module": "part-utils",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
       "typeParameters": [
         { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
       ],

@@ -418,14 +418,11 @@ const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nex
 // declarations of src/button.ts, src/components.ts, src/fields.ts, src/overlays.ts, and
 // src/color-context.ts (Decision 0031); the index names them, so the modules' other exports
 // (usePendingSubmitProps, the OwnProps types) stay private.
-const typesBody = `import type * as React from 'react';
-import type { ButtonPointerType } from './button.js';
-import type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
-import type { MuxUIColorValue } from './color-context.js';
-import type { ControlSize, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel } from './fields.js';
+const typesBody = `import type { ButtonPointerType } from './button.js';
 
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
+export type { ButtonPartProps, PartProps, SupplementalActivation, SupplementalFieldProps } from './part-utils.js';
 export type ComponentPointerType = ButtonPointerType;
 export { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';
 export type { BreadcrumbItem, BreadcrumbsProps, CheckboxProps, DisclosureGroupProps, DisclosureProps, GroupProps, LinkActivationEvent, LinkProps, MeterProps, ProgressBarProps, SeparatorProps, ToggleButtonActivationEvent, ToggleButtonProps } from './components.js';
@@ -466,7 +463,7 @@ export type { RadioGroupProps, RadioOption } from './radio-group.js';
 export { TokenField } from './token-field.js';
 export type { TokenFieldProps } from './token-field.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
-export type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
+export type { CollectionProps, MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 export { ListBox } from './list-box.js';
 export type { ListBoxItemProps, ListBoxProps, ListBoxSectionProps } from './list-box.js';
 export { GridList } from './grid-list.js';
@@ -483,10 +480,6 @@ export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastPro
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
-const collectionsTypes = `
-export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-`;
-const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${collectionsTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
 const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
@@ -745,11 +738,8 @@ const r15ClosureRecord = {
   performance: r15ClosureSource.performance,
   publication: r15ClosureSource.publication,
 };
-const supplementalSource = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8').catch(() => '');
-const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8').catch(() => '');
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
 const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(async (entry) => {
-  const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
   const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
   const artifact = allCatalogArtifactsBySlug.get(entry.slug);
   return {
@@ -760,15 +750,13 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
     module: entry.export.module,
     styleSource: entry.styleSource,
     artifact,
-    sourceText,
     style,
     subpath: entry.export.module !== '.',
   };
 }))).sort((left, right) => left.slug.localeCompare(right.slug));
 const currentSubpathRecords = currentMappedRecords.filter(({ subpath }) => subpath);
-// An eager record is a root family in its own TypeScript module, exported straight from the root index. A JavaScript
-// family ships beside the supplemental barrel instead, in the loop over the mapped records further down.
-const currentEagerRecords = currentMappedRecords.filter(({ subpath, source }) => !subpath && source.endsWith('.ts'));
+// An eager record is a root family in its own TypeScript module, exported straight from the root index.
+const currentEagerRecords = currentMappedRecords.filter(({ subpath }) => !subpath);
 const currentFamilyRecords = [
   ...r15Families.map((source) => {
     const artifact = artifactBySlug.get(source.slug);
@@ -875,16 +863,15 @@ const currentContractRecord = {
   })),
   evidence: { status: 'pending', ids: [] },
 };
-// A family moved to TypeScript ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031); a subpath
-// family's index.ts ships under its directory's name, which is its slug.
-const isTypeScriptFamily = ({ source }) => source.endsWith('.ts');
-for (const record of currentMappedRecords.filter(isTypeScriptFamily)) {
-  if (flatModuleName(record.source) !== `${record.slug}.js`) {
-    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a TypeScript family ships as a module named for its slug`);
+// A family ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031); a subpath family's index.ts ships under its
+// directory's name, which is its slug. A family in any other language has no shipping path, so it fails here.
+for (const record of currentMappedRecords) {
+  if (!record.source.endsWith('.ts') || flatModuleName(record.source) !== `${record.slug}.js`) {
+    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a family is a TypeScript module named for its slug`);
   }
 }
-const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map((record) => `export * from './${isTypeScriptFamily(record) ? `${record.slug}.js` : `${record.slug}.mjs`}';\n`).join('')}`;
-const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
+const currentIndexBody = `${indexBody}export * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
+const currentTypesBody = `${typesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 // The shared supplemental stylesheet is emitted once, right after IconButton's CSS, and skipped wherever a record names it
 // as its styleSource. Anchor it on that record, not on the first or last record that names it: the shared
 // `.muxui-icon-button.muxui-button[data-size='sm']` padding ties icon-button.css on specificity and only wins by
@@ -942,8 +929,6 @@ const outputs = new Map([
   ['release.json.provenance', provenance('release.json', release)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
-  ['supplemental.mjs', shippedModule('packages/react/src/supplemental/index.mjs', supplementalSource)],
-  ['supplemental.d.ts', shippedModule('packages/react/src/supplemental/index.d.ts', supplementalTypesSource)],
   ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', layeredSupplementalCss)],
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
@@ -982,10 +967,6 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // is not listed.
 for (const name of ['collections']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
-}
-// Each JavaScript family the mapping places in a module of its own ships beside the barrel it is re-exported from.
-for (const record of currentMappedRecords.filter((candidate) => !candidate.subpath && !isTypeScriptFamily(candidate) && candidate.source !== 'packages/react/src/supplemental/index.mjs')) {
-  outputs.set(flatModuleName(record.source), shippedModule(record.source, record.sourceText));
 }
 for (const source of typeScriptSources) {
   const emitted = typeScriptBuild?.emitted.get(source);

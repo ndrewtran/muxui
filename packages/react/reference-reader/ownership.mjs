@@ -31,7 +31,7 @@ export const OWNER_EXCEPTIONS = Object.freeze({
     ...group(SHARED, 'the colour families share these colour value types', 'MuxUIColorChannel', 'MuxUIColorSpace', 'MuxUIColorValue'),
     ...group(SHARED, 'the overlay families share these placement and accessible-name types', 'MuxUIPlacement', 'OverlayAccessibleName'),
     ...group(SHARED, 'a button-derived pointer type that other families re-export', 'ComponentPointerType'),
-    ...group(SHARED, 'helper types of the supplemental declarations that several supplemental families use', 'PartProps', 'SupplementalActivation', 'SupplementalFieldProps'),
+    ...group(SHARED, 'helper types that several supplemental families share', 'PartProps', 'SupplementalActivation', 'SupplementalFieldProps'),
     ...group('drop-zone', 'the drop item and event types are the DropZone API', 'MuxUIDirectoryDropItem', 'MuxUIDropActivateEvent', 'MuxUIDropEvent', 'MuxUIDropItem', 'MuxUIDropOperation', 'MuxUIFileDropItem', 'MuxUITextDropItem'),
     ...group('breadcrumbs', 'the item type of Breadcrumbs, whose name is the singular of the family name', 'BreadcrumbItem'),
     ...group('toast', 'the hook that reaches the toast manager of ToastProvider', 'useToast'),

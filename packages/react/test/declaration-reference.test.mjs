@@ -180,9 +180,8 @@ test('each family file holds its own family and the shared files hold what no fa
 });
 
 // The probes compile a file's types as one namespace, and a page lists them by name, so two types of one name in a
-// file would be one name for two declarations. `PartProps` is declared twice until T11 (the helper module and the
-// authored declarations) and is not a problem while no family reaches both; the check turns one that does into a
-// named failure instead of a compiler's "Duplicate identifier".
+// file would be one name for two declarations. The check turns one into a named failure instead of a compiler's
+// "Duplicate identifier".
 const duplicateNames = (map) => [...map].flatMap(([fileName, file]) => {
   const ids = new Map();
   for (const type of file.types ?? []) ids.set(type.name, [...(ids.get(type.name) ?? []), type.id]);
