@@ -208,7 +208,7 @@ for (const [label, tsc] of compilers) {
       assert.notDeepEqual(diagnostics, [], name);
       // The copy is a valid declaration, and a witness in the test file is what catches it: a diagnostic in a declaration file would mean
       // the copy was merely malformed.
-      assert.deepEqual(diagnostics.filter((diagnostic) => !diagnostic.includes(`/${project.testFile}(`)), [], `${name}: the copy fails in the test file only`);
+      assert.deepEqual(diagnostics.filter((diagnostic) => !diagnostic.startsWith(`${project.testFile}(`) && !diagnostic.includes(`/${project.testFile}(`)), [], `${name}: the copy fails in the test file only`);
     };
 
     test(`the ${project.label} types fail when the declarations lose the parameter in any of ${Object.keys(project.mutations).length} ways: ${label}`, () => {
