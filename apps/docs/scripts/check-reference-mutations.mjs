@@ -103,6 +103,9 @@ try {
 		{ label: 'delete the source of the module that declares the shared types (fields)', route: '/package-exports/', expect: ['ControlSize shows the source null, expected packages/react/src/fields.ts', 'MuxUIDateRange shows the source null'], apply: () => edit('shared', (file) => {
 			delete file.sources.fields;
 		}) },
+		{ label: 'delete the source of the module that declares a package-level value (supplemental)', route: '/package-exports/', expect: ['supplementalFamilies shows the source null, expected packages/react/src/supplemental/index.ts'], apply: () => edit('package-level', (file) => {
+			delete file.sources.supplemental;
+		}) },
 	];
 	const routeOf = ({ route, slug }) => route ?? `/components/${slug}/`;
 	for (const mutation of mutations) mutation.apply();
@@ -138,7 +141,7 @@ try {
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source and the source of every shared type's module) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source, the source of every shared type's module and a package-level value's) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }

@@ -65,8 +65,9 @@ const declarationLinks = (root) => {
 	const items = sourceItems(root);
 	return items.slice(items.findIndex((node) => node.tagName === 'dt' && node.childNodes[0].value === 'Declarations') + 1).map((dd) => elements(dd).find((node) => node.tagName === 'a'));
 };
-const typeEntry = (root, name) => elements(root).find((node) => node.tagName === 'details' && attributeValue(node, 'data-api-type-entry') === name);
-const typeSource = (root, name) => elements(typeEntry(root, name)).find((node) => attributeValue(node, 'data-api-source') !== undefined);
+// The Source note of a type or of a package-level value on the package exports page.
+const entryOf = (root, name) => elements(root).find((node) => (node.tagName === 'details' && attributeValue(node, 'data-api-type-entry') === name) || (node.tagName === 'div' && attributeValue(node, 'data-api-export') === name));
+const sourceNote = (root, name) => elements(entryOf(root, name)).find((node) => attributeValue(node, 'data-api-source') !== undefined);
 const setText = (node, value) => {
 	node.childNodes.find((child) => child.nodeName === '#text').value = value;
 };
@@ -196,13 +197,13 @@ const mutations = [
 	{
 		label: 'a shared type loses its source (ControlSize)',
 		expect: ['ControlSize shows the source null, expected packages/react/src/fields.ts'],
-		change: (root) => detach(typeSource(root, 'ControlSize')),
+		change: (root) => detach(sourceNote(root, 'ControlSize')),
 	},
 	{
 		label: 'a shared type shows the source of another module (MuxUIPlacement links fields.ts)',
 		expect: ['MuxUIPlacement shows the source {"path":"packages/react/src/fields.ts","text":"packages/react/src/overlays.ts"}, expected packages/react/src/overlays.ts'],
 		change: (root) => {
-			const link = elements(typeSource(root, 'MuxUIPlacement')).find((node) => node.tagName === 'a');
+			const link = elements(sourceNote(root, 'MuxUIPlacement')).find((node) => node.tagName === 'a');
 			setAttribute(link, 'href', attributeValue(link, 'href').replace('overlays.ts', 'fields.ts'));
 		},
 	},
@@ -212,9 +213,27 @@ const mutations = [
 		expectedFrom: withoutSource('shared', 'fields'),
 	},
 	{
+		label: 'a package-level value loses its source (reactCompatibility)',
+		expect: ['reactCompatibility shows the source null, expected packages/react/src/generate.mjs'],
+		change: (root) => detach(sourceNote(root, 'reactCompatibility')),
+	},
+	{
+		label: 'a package-level value shows the source of another module (supplementalFamilies links generate.mjs)',
+		expect: ['supplementalFamilies shows the source {"path":"packages/react/src/generate.mjs","text":"packages/react/src/supplemental/index.ts"}, expected packages/react/src/supplemental/index.ts'],
+		change: (root) => {
+			const link = elements(sourceNote(root, 'supplementalFamilies')).find((node) => node.tagName === 'a');
+			setAttribute(link, 'href', attributeValue(link, 'href').replace('supplemental/index.ts', 'generate.mjs'));
+		},
+	},
+	{
+		label: 'the reference lists no source for the module of a package-level value (supplemental)',
+		expect: ['supplementalFamilies has no source: the reference lists none for its module supplemental'],
+		expectedFrom: withoutSource('package-level', 'supplemental'),
+	},
+	{
 		label: 'a package-level type loses its source (MuxUIThemeId)',
 		expect: ['MuxUIThemeId shows the source null'],
-		change: (root) => detach(typeSource(root, 'MuxUIThemeId')),
+		change: (root) => detach(sourceNote(root, 'MuxUIThemeId')),
 	},
 ];
 
@@ -239,4 +258,4 @@ for (const { label, slug, expect, change, expectedFrom } of mutations) {
 	if (problems.some((line) => !line.startsWith(`${route} `))) failures.push(`${label}: a problem does not name the page ${route}.`);
 }
 if (failures.length > 0) throw new Error(`The typed reference checker missed a change to a built page, or failed to report it on the page:\n${failures.map((line) => `- ${line}`).join('\n')}`);
-console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type without its source or with another module's, a module the reference gives no source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
+console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type or value without its source or with another module's, a module the reference gives no source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);

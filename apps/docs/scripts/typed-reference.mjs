@@ -618,6 +618,7 @@ export function expectedPackageExports({ manifest, reference }) {
 	return {
 		entries,
 		inventoryKeys: reference.inventory.entries.map(({ key }) => key),
+		// A value or type shows the source of the module the inventory says declares it, whatever its own record says.
 		packageLevel: owned('package-level').filter(({ kind }) => kind === 'value').map((item) => {
 			const declared = packageFile.exports.find((candidate) => candidate.name === item.name && candidate.entry === item.entry);
 			return {
@@ -625,9 +626,10 @@ export function expectedPackageExports({ manifest, reference }) {
 				import: `import { ${item.name} } from '${specifier(item.entry)}';`,
 				signature: declared?.kind === 'function' ? declared.signature : `${item.name}: ${declared?.type}`,
 				reason: item.reason,
+				module: item.module,
+				source: packageFile.sources[item.module],
 			};
 		}),
-		// The source is the file of the module the inventory says declares the type, whatever the type's own record says.
 		packageTypes: owned('package-level').filter(({ kind }) => kind === 'type').map(({ name, entry, reason, module }) => ({ name, module, source: packageFile.sources[module], imports: [`import type { ${name} } from '${specifier(entry)}';`], text: packageFile.types.find((type) => type.name === name)?.text, reason })),
 		sharedTypes: owned('shared').filter(({ kind }) => kind === 'type').map(({ name, entry, reason, module }) => ({ name, module, source: reference.files.get('shared').sources[module], imports: [`import type { ${name} } from '${specifier(entry)}';`], text: reference.files.get('shared').types.find((type) => type.name === name)?.text, reason })),
 	};
@@ -637,6 +639,10 @@ export function expectedPackageExports({ manifest, reference }) {
 export function renderedPackageExports(root) {
 	const section = (id) => elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === id);
 	const entries = section('entry-points');
+	const sourceOf = (node) => {
+		const holder = elements(node).find((child) => attributeValue(child, 'data-api-source') !== undefined);
+		return sourceLink(holder === undefined ? undefined : elements(holder).find((child) => child.tagName === 'a'));
+	};
 	const types = (node) => elements(node).filter((child) => child.tagName === 'details' && classNames(child).has('api-type-entry')).map((entry) => ({
 		name: attributeValue(entry, 'data-api-type-entry'),
 		imports: elements(entry).filter((child) => child.tagName === 'code' && attributeValue(child, 'data-api-import') !== undefined).map((code) => text(code)),
@@ -645,10 +651,7 @@ export function renderedPackageExports(root) {
 			const reason = elements(entry).find((child) => attributeValue(child, 'data-api-reason') !== undefined);
 			return reason === undefined ? undefined : text(reason);
 		})(),
-		source: (() => {
-			const holder = elements(entry).find((child) => attributeValue(child, 'data-api-source') !== undefined);
-			return sourceLink(holder === undefined ? undefined : elements(holder).find((child) => child.tagName === 'a'));
-		})(),
+		source: sourceOf(entry),
 	}));
 	const packageLevel = section('package-level');
 	return {
@@ -665,6 +668,7 @@ export function renderedPackageExports(root) {
 				const reason = elements(node).find((child) => attributeValue(child, 'data-api-reason') !== undefined);
 				return reason === undefined ? undefined : text(reason);
 			})(),
+			source: sourceOf(node),
 		})),
 		packageTypes: types(packageLevel),
 		sharedTypes: types(section('shared-types')),
@@ -676,7 +680,16 @@ export function comparePackageExports(expected, rendered, manifestKeys) {
 	const report = (message) => problems.push(`/package-exports/ ${message}`);
 	if (!same([...manifestKeys].sort(), [...expected.inventoryKeys].sort())) report(`the inventory lists ${expected.inventoryKeys.join(', ')}, the package exports ${manifestKeys.join(', ')}.`);
 	if (!same(rendered.entries, expected.entries)) report(`entry points are ${JSON.stringify(rendered.entries)}, expected ${JSON.stringify(expected.entries)}.`);
-	if (!same(rendered.packageLevel, expected.packageLevel)) report(`package-level exports are ${JSON.stringify(rendered.packageLevel.map(({ name }) => name))}, expected ${JSON.stringify(expected.packageLevel.map(({ name }) => name))}, or an import or signature differs.`);
+	if (!same(rendered.packageLevel.map(({ source, ...shown }) => shown), expected.packageLevel.map(({ module, source, ...wanted }) => wanted))) report(`package-level exports are ${JSON.stringify(rendered.packageLevel.map(({ name }) => name))}, expected ${JSON.stringify(expected.packageLevel.map(({ name }) => name))}, or an import or signature differs.`);
+	// Every value and type shows the source of its declaration module: no family page's source list names it.
+	const checkSources = (wanted, shown) => {
+		for (const item of wanted) {
+			const got = shown.find(({ name }) => name === item.name);
+			if (item.source === undefined) report(`${item.name} has no source: the reference lists none for its module ${item.module}.`);
+			else if (got !== undefined && !same(got.source, { path: item.source, text: item.source })) report(`${item.name} shows the source ${JSON.stringify(got.source)}, expected ${item.source}.`);
+		}
+	};
+	checkSources(expected.packageLevel, rendered.packageLevel);
 	for (const kind of ['packageTypes', 'sharedTypes']) {
 		const shown = rendered[kind].map(({ name, imports, text: declaration, reason }) => ({ name, imports, text: declaration, ...(reason !== undefined && { reason }) }));
 		const wanted = expected[kind].map(({ name, imports, text: declaration, reason }) => ({ name, imports, text: declaration, ...(reason !== undefined && { reason }) }));
@@ -685,12 +698,7 @@ export function comparePackageExports(expected, rendered, manifestKeys) {
 			const got = shown.find(({ name }) => name === type.name);
 			if (got !== undefined && !same(got, type)) report(`${type.name} differs from the inventory and the model.`);
 		}
-		// Every type shows the source of its declaration module: these exports have no family page whose source list would name it.
-		for (const type of expected[kind]) {
-			const got = rendered[kind].find(({ name }) => name === type.name);
-			if (type.source === undefined) report(`${type.name} has no source: the reference lists none for its module ${type.module}.`);
-			else if (got !== undefined && !same(got.source, { path: type.source, text: type.source })) report(`${type.name} shows the source ${JSON.stringify(got.source)}, expected ${type.source}.`);
-		}
+		checkSources(expected[kind], rendered[kind]);
 	}
 	return problems;
 }

@@ -22,6 +22,7 @@ const { exports } = Astro.props;
 				{item.signature !== undefined && <TypeText segments={item.signature} class="api-signature" />}
 				{item.doc !== undefined && <p class="api-export-doc"><Doc text={item.doc} /></p>}
 				{item.reason !== undefined && <p class="api-export-doc" data-api-reason>{item.reason}</p>}
+				{item.source !== undefined && <p class="api-export-doc" data-api-source>Source: <a href={`https://github.com/ndrewtran/muxui/blob/main/${item.source}`} target="_blank" rel="noreferrer">{item.source}</a></p>}
 				{item.parts.length > 0 && (
 					<ul class="api-parts" data-api-parts>
 						{item.parts.map((part) => <li><a href={`#${part.anchor}`}><code>{part.heading}</code></a></li>)}

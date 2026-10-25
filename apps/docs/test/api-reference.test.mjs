@@ -279,8 +279,9 @@ test('the package exports page lists every entry of the export map, the package-
 	assert.equal(exported.packageTypes.length, 6);
 	assert.equal(exported.sharedTypes.length, 24);
 	assert.ok(exported.sharedTypes.every(({ reason }) => reason !== undefined));
-	// No family's source list names these, so each type carries the source of the module that declares it.
-	assert.ok([...exported.packageTypes, ...exported.sharedTypes].every(({ source }) => source !== undefined));
+	// No family's source list names these, so each value and type carries the source of the module that declares it.
+	assert.ok([...exported.packageLevel, ...exported.packageTypes, ...exported.sharedTypes].every(({ source }) => source !== undefined));
+	assert.equal(exported.packageLevel.find(({ name }) => name === 'supplementalFamilies').source, 'packages/react/src/supplemental/index.ts');
 	assert.equal(exported.sharedTypes.find(({ name }) => name === 'ControlSize').source, 'packages/react/src/fields.ts');
 	assert.equal(literal(null), 'null');
 });

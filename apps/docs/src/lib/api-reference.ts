@@ -91,6 +91,8 @@ export interface ApiExport {
 	doc?: string;
 	/** Why a package-level export belongs to the package and not to a component, from the inventory. */
 	reason?: string;
+	/** The source file of the module that declares a package-level value: no family's source list names it. */
+	source?: string;
 	/** The table of the export's own part, for a component without member parts. */
 	anchor?: string;
 	parts: readonly { heading: string; anchor: string }[];
@@ -593,7 +595,10 @@ export function buildPackageExports(reference: { inventory: DeclarationInventory
 	const packageContext = context(packageFile, 'package-level');
 	return {
 		entries,
-		packageLevel: (packageFile?.exports ?? []).map((item) => ({ ...exportView(item, packageName, [], packageContext, item.name), ...(reasons.has(item.name) && { reason: reasons.get(item.name) }) })),
+		packageLevel: (packageFile?.exports ?? []).map((item) => {
+			const source = packageFile?.sources[item.module];
+			return { ...exportView(item, packageName, [], packageContext, item.name), ...(reasons.has(item.name) && { reason: reasons.get(item.name) }), ...(source !== undefined && { source }) };
+		}),
 		packageTypes: typesView(packageFile?.types ?? [], 'package-level', packageName, reasons, packageContext, packageFile?.sources),
 		sharedTypes: typesView(sharedFile?.types ?? [], 'shared', packageName, reasons, context(sharedFile, 'shared'), sharedFile?.sources),
 	};
