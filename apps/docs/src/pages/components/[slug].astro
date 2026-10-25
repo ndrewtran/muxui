@@ -48,9 +48,11 @@ const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
 const usedInBlocks = resolveUsedIn(page.usedIn);
 // Every fact below is projected from the catalog record; this page authors none.
 const packageFacts = getReactPackageFacts();
-const { imports, usage, behavior, accessibility, styling, sources, declarations } = componentReference({ artifact, examples, packageFacts, declarations: getDeclarationReference() });
+const { imports, usage, behavior, accessibility, styling, sources: recordSources, declarations } = componentReference({ artifact, examples, packageFacts, declarations: getDeclarationReference() });
 // The types come from the declarations the package ships; the catalog adds each default and which prop reports which event.
 if (declarations === undefined) throw new Error(`The declaration reference has no share for ${summary.id}.`);
+// The declarations the tables were read from follow the other sources, as they do in Storybook.
+const sources = [...recordSources, { label: 'Declarations', paths: [declarations.source, ...Object.values(declarations.sources)] }];
 const legacyAnchorsByPage: Readonly<Record<string, Readonly<Record<string, string>>>> = legacyPartAnchors.anchors;
 const api = buildApiReference({
 	packageName: packageFacts.packageName,

@@ -547,6 +547,61 @@ export function compareComponent(expected, rendered, events, route, { collapseAb
 	return problems;
 }
 
+// ---- the sources a page links ----
+
+const repositoryUrl = 'https://github.com/ndrewtran/muxui/blob/main/';
+
+/** A source link as a reader gets it: the repository path its href reaches (the whole href when it reaches elsewhere) and the text it shows. */
+function sourceLink(link) {
+	if (link === undefined) return null;
+	const href = attributeValue(link, 'href') ?? '';
+	return { path: href.startsWith(repositoryUrl) ? href.slice(repositoryUrl.length) : href, text: text(link) };
+}
+
+/** The declarations a family's tables were read from: its reference file, then the source of each declaration module that file was generated from. */
+export function declarationSources(reference, owner) {
+	return [`packages/react/reference/${reference.inventory.owners[owner]}`, ...Object.values(reference.files.get(owner).sources)];
+}
+
+/** What a component page's Sources section must list, in order: the record, its examples, the runtime file, the manifest and the declarations. */
+export function expectedSources({ record, examples, runtime, reference, owner }) {
+	return [
+		{ label: 'Component record', paths: [record] },
+		{ label: 'Examples', paths: examples.map(({ source }) => source.content) },
+		{ label: 'Runtime', paths: [runtime] },
+		{ label: 'Package imports', paths: ['packages/react/package.json'] },
+		{ label: 'Declarations', paths: declarationSources(reference, owner) },
+	];
+}
+
+/** The Sources section of a built page: each label with every link under it, in order (an entry with no link reads as null). */
+export function renderedSources(section) {
+	const groups = [];
+	for (const node of elements(section)) {
+		if (node.tagName === 'dt') groups.push({ label: text(node), links: [] });
+		if (node.tagName === 'dd') {
+			const links = elements(node).filter((child) => child.tagName === 'a');
+			groups.at(-1)?.links.push(...(links.length === 0 ? [null] : links.map(sourceLink)));
+		}
+	}
+	return groups;
+}
+
+/** The differences between the sources a page must list and the ones it links. */
+export function compareSources(expected, rendered, route) {
+	const problems = [];
+	const report = (message) => problems.push(`${route} ${message}`);
+	if (!same(rendered.map(({ label }) => label), expected.map(({ label }) => label))) report(`source groups are ${rendered.map(({ label }) => label).join(', ')}, expected ${expected.map(({ label }) => label).join(', ')}.`);
+	for (const group of expected) {
+		const shown = rendered.find(({ label }) => label === group.label);
+		if (shown === undefined) continue;
+		const paths = shown.links.map((link) => link?.path ?? null);
+		if (!same(paths, group.paths)) report(`${group.label} sources are ${JSON.stringify(paths)}, expected ${JSON.stringify(group.paths)}.`);
+		else if (shown.links.some((link) => link.text !== link.path)) report(`${group.label} sources show text other than the path they link.`);
+	}
+	return problems;
+}
+
 // ---- the package exports page and the inventory ----
 
 /** The entries, package-level exports and shared types the package exports page must show, from the manifest and inventory. */
@@ -566,6 +621,7 @@ export function expectedPackageExports({ manifest, reference }) {
 	return {
 		entries,
 		inventoryKeys: reference.inventory.entries.map(({ key }) => key),
+		// A value or type shows the source of the module the inventory says declares it, whatever its own record says.
 		packageLevel: owned('package-level').filter(({ kind }) => kind === 'value').map((item) => {
 			const declared = packageFile.exports.find((candidate) => candidate.name === item.name && candidate.entry === item.entry);
 			return {
@@ -573,10 +629,12 @@ export function expectedPackageExports({ manifest, reference }) {
 				import: `import { ${item.name} } from '${specifier(item.entry)}';`,
 				signature: declared?.kind === 'function' ? declared.signature : `${item.name}: ${declared?.type}`,
 				reason: item.reason,
+				module: item.module,
+				source: packageFile.sources[item.module],
 			};
 		}),
-		packageTypes: owned('package-level').filter(({ kind }) => kind === 'type').map(({ name, entry, reason }) => ({ name, imports: [`import type { ${name} } from '${specifier(entry)}';`], text: packageFile.types.find((type) => type.name === name)?.text, reason })),
-		sharedTypes: owned('shared').filter(({ kind }) => kind === 'type').map(({ name, entry, reason }) => ({ name, imports: [`import type { ${name} } from '${specifier(entry)}';`], text: reference.files.get('shared').types.find((type) => type.name === name)?.text, reason })),
+		packageTypes: owned('package-level').filter(({ kind }) => kind === 'type').map(({ name, entry, reason, module }) => ({ name, module, source: packageFile.sources[module], imports: [`import type { ${name} } from '${specifier(entry)}';`], text: packageFile.types.find((type) => type.name === name)?.text, reason })),
+		sharedTypes: owned('shared').filter(({ kind }) => kind === 'type').map(({ name, entry, reason, module }) => ({ name, module, source: reference.files.get('shared').sources[module], imports: [`import type { ${name} } from '${specifier(entry)}';`], text: reference.files.get('shared').types.find((type) => type.name === name)?.text, reason })),
 	};
 }
 
@@ -584,6 +642,8 @@ export function expectedPackageExports({ manifest, reference }) {
 export function renderedPackageExports(root) {
 	const section = (id) => elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === id);
 	const entries = section('entry-points');
+	// Every source note under a node, each as the links it holds: a page must show exactly one note with one link.
+	const sourcesOf = (node) => elements(node).filter((child) => attributeValue(child, 'data-api-source') !== undefined).map((note) => elements(note).filter((child) => child.tagName === 'a').map(sourceLink));
 	const types = (node) => elements(node).filter((child) => child.tagName === 'details' && classNames(child).has('api-type-entry')).map((entry) => ({
 		name: attributeValue(entry, 'data-api-type-entry'),
 		imports: elements(entry).filter((child) => child.tagName === 'code' && attributeValue(child, 'data-api-import') !== undefined).map((code) => text(code)),
@@ -592,6 +652,7 @@ export function renderedPackageExports(root) {
 			const reason = elements(entry).find((child) => attributeValue(child, 'data-api-reason') !== undefined);
 			return reason === undefined ? undefined : text(reason);
 		})(),
+		sources: sourcesOf(entry),
 	}));
 	const packageLevel = section('package-level');
 	return {
@@ -608,6 +669,7 @@ export function renderedPackageExports(root) {
 				const reason = elements(node).find((child) => attributeValue(child, 'data-api-reason') !== undefined);
 				return reason === undefined ? undefined : text(reason);
 			})(),
+			sources: sourcesOf(node),
 		})),
 		packageTypes: types(packageLevel),
 		sharedTypes: types(section('shared-types')),
@@ -619,7 +681,16 @@ export function comparePackageExports(expected, rendered, manifestKeys) {
 	const report = (message) => problems.push(`/package-exports/ ${message}`);
 	if (!same([...manifestKeys].sort(), [...expected.inventoryKeys].sort())) report(`the inventory lists ${expected.inventoryKeys.join(', ')}, the package exports ${manifestKeys.join(', ')}.`);
 	if (!same(rendered.entries, expected.entries)) report(`entry points are ${JSON.stringify(rendered.entries)}, expected ${JSON.stringify(expected.entries)}.`);
-	if (!same(rendered.packageLevel, expected.packageLevel)) report(`package-level exports are ${JSON.stringify(rendered.packageLevel.map(({ name }) => name))}, expected ${JSON.stringify(expected.packageLevel.map(({ name }) => name))}, or an import or signature differs.`);
+	if (!same(rendered.packageLevel.map(({ sources, ...shown }) => shown), expected.packageLevel.map(({ module, source, ...wanted }) => wanted))) report(`package-level exports are ${JSON.stringify(rendered.packageLevel.map(({ name }) => name))}, expected ${JSON.stringify(expected.packageLevel.map(({ name }) => name))}, or an import or signature differs.`);
+	// Every value and type shows the source of its declaration module: no family page's source list names it.
+	const checkSources = (wanted, shown) => {
+		for (const item of wanted) {
+			const got = shown.find(({ name }) => name === item.name);
+			if (item.source === undefined) report(`${item.name} has no source: the reference lists none for its module ${item.module}.`);
+			else if (got !== undefined && !same(got.sources, [[{ path: item.source, text: item.source }]])) report(`${item.name} shows ${JSON.stringify(got.sources)} as its source notes, expected exactly one note with one link, to ${item.source}.`);
+		}
+	};
+	checkSources(expected.packageLevel, rendered.packageLevel);
 	for (const kind of ['packageTypes', 'sharedTypes']) {
 		const shown = rendered[kind].map(({ name, imports, text: declaration, reason }) => ({ name, imports, text: declaration, ...(reason !== undefined && { reason }) }));
 		const wanted = expected[kind].map(({ name, imports, text: declaration, reason }) => ({ name, imports, text: declaration, ...(reason !== undefined && { reason }) }));
@@ -628,6 +699,7 @@ export function comparePackageExports(expected, rendered, manifestKeys) {
 			const got = shown.find(({ name }) => name === type.name);
 			if (got !== undefined && !same(got, type)) report(`${type.name} differs from the inventory and the model.`);
 		}
+		checkSources(expected[kind], rendered[kind]);
 	}
 	return problems;
 }

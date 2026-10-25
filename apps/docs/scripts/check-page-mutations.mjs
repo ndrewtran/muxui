@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
 import { attributeValue, classNames, elements } from './html-tree.mjs';
-import { collapsePartsAbove, compareComponent, expectedComponent, loadReference, renderedComponent, renderedEvents, routeFile } from './typed-reference.mjs';
+import { collapsePartsAbove, compareComponent, comparePackageExports, compareSources, expectedComponent, expectedPackageExports, expectedSources, loadReference, renderedComponent, renderedEvents, renderedPackageExports, renderedSources, routeFile } from './typed-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const dist = process.argv[2] === undefined ? resolve(repositoryRoot, 'apps/docs/dist') : resolve(process.argv[2]);
@@ -19,6 +19,8 @@ const catalog = createRequire(import.meta.url)('@muxui/catalog');
 const readJson = (path) => JSON.parse(readFileSync(resolve(repositoryRoot, path), 'utf8'));
 const manifest = readJson('packages/react/package.json');
 const descriptor = readJson('packages/react/generated/descriptor.json');
+// The generated contract carries two marker comment lines ahead of its JSON; it names the runtime file of every family.
+const contract = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
 const reference = loadReference(resolve(repositoryRoot, 'packages/react/reference'));
 
 /** What the checker reports for a page, with the page parsed again each time so one change never reaches another. */
@@ -28,10 +30,28 @@ function problemsOf(slug, change) {
 	const binding = artifact.bindings['web.react'];
 	const exported = descriptor.bindings.find(({ binding: ref }) => ref === `${id}#web.react`);
 	const expected = expectedComponent({ exportName: exported.export, entry: exported.module, packageName: manifest.name, reference, binding, anatomy: artifact.anatomy });
+	const examples = catalog.getArtifact({ id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value;
+	const sources = expectedSources({ record: artifact.source.record, examples, runtime: contract.components.find((entry) => entry.slug === slug).source, reference, owner: expected.owner });
 	const root = parse(readFileSync(routeFile(dist, `/components/${slug}/`), 'utf8'));
 	change?.(root);
-	const events = elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === 'events');
-	return compareComponent(expected, renderedComponent(root), renderedEvents(events), `/components/${slug}/`, { collapseAbove: collapsePartsAbove });
+	const section = (name) => elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === name);
+	return [
+		...compareComponent(expected, renderedComponent(root), renderedEvents(section('events')), `/components/${slug}/`, { collapseAbove: collapsePartsAbove }),
+		...compareSources(sources, renderedSources(section('sources')), `/components/${slug}/`),
+	];
+}
+
+/** The same for the package exports page, which has no slug. `expectedFrom` is the reference the expectation is read from. */
+function packageProblemsOf(change, expectedFrom = reference) {
+	const root = parse(readFileSync(routeFile(dist, '/package-exports/'), 'utf8'));
+	change?.(root);
+	return comparePackageExports(expectedPackageExports({ manifest, reference: expectedFrom }), renderedPackageExports(root), Object.keys(manifest.exports));
+}
+
+/** The reference with one module's source taken from an owner's file. */
+function withoutSource(owner, module) {
+	const { [module]: _removed, ...sources } = reference.files.get(owner).sources;
+	return { ...reference, files: new Map([...reference.files, [owner, { ...reference.files.get(owner), sources }]]) };
 }
 
 const detach = (node) => node.parentNode.childNodes.splice(node.parentNode.childNodes.indexOf(node), 1);
@@ -40,6 +60,25 @@ const group = (root, heading, label) => elements(part(root, heading)).find((node
 const rowsOf = (node) => elements(node).filter((child) => child.tagName === 'tr' && classNames(child).has('api-row') && !classNames(child).has('api-closing'));
 const closingOf = (node) => elements(node).filter((child) => child.tagName === 'tr' && classNames(child).has('api-closing'));
 const cell = (row, name) => elements(row).find((child) => attributeValue(child, name) !== undefined);
+const sourceItems = (root) => elements(elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === 'sources')).filter((node) => node.tagName === 'dt' || node.tagName === 'dd');
+const declarationLinks = (root) => {
+	const items = sourceItems(root);
+	return items.slice(items.findIndex((node) => node.tagName === 'dt' && node.childNodes[0].value === 'Declarations') + 1).map((dd) => elements(dd).find((node) => node.tagName === 'a'));
+};
+// The Source note of a type or of a package-level value on the package exports page.
+const entryOf = (root, name) => elements(root).find((node) => (node.tagName === 'details' && attributeValue(node, 'data-api-type-entry') === name) || (node.tagName === 'div' && attributeValue(node, 'data-api-export') === name));
+const sourceNote = (root, name) => elements(entryOf(root, name)).find((node) => attributeValue(node, 'data-api-source') !== undefined);
+// Nodes for a link or a whole source note that the built page does not have.
+const sourceLinkNode = (path, parentNode) => {
+	const link = { nodeName: 'a', tagName: 'a', attrs: [{ name: 'href', value: `https://github.com/ndrewtran/muxui/blob/main/${path}` }], childNodes: [], parentNode };
+	link.childNodes.push({ nodeName: '#text', value: path, parentNode: link });
+	return link;
+};
+const insertSourceNote = (after, className, path) => {
+	const note = { nodeName: 'p', tagName: 'p', attrs: [{ name: 'class', value: className }, { name: 'data-api-source', value: '' }], childNodes: [], parentNode: after.parentNode };
+	note.childNodes.push({ nodeName: '#text', value: 'Source: ', parentNode: note }, sourceLinkNode(path, note));
+	after.parentNode.childNodes.splice(after.parentNode.childNodes.indexOf(after) + 1, 0, note);
+};
 const setText = (node, value) => {
 	node.childNodes.find((child) => child.nodeName === '#text').value = value;
 };
@@ -133,17 +172,111 @@ const mutations = [
 			ref.childNodes = [{ nodeName: '#text', value: 'none declared', parentNode: ref }];
 		},
 	},
+	{
+		label: 'the Declarations group is missing from the Sources section (SwitchField)',
+		slug: 'switch-field',
+		expect: ['source groups are Component record, Examples, Runtime, Package imports, expected'],
+		change: (root) => {
+			const items = sourceItems(root);
+			items.slice(items.findIndex((node) => node.tagName === 'dt' && node.childNodes[0].value === 'Declarations')).forEach(detach);
+		},
+	},
+	{
+		label: 'a declaration source is not linked (SwitchField part-utils.ts)',
+		slug: 'switch-field',
+		expect: ['Declarations sources are ["packages/react/reference/switch-field.json","packages/react/src/supplemental/switch-field.ts"]'],
+		change: (root) => {
+			const link = declarationLinks(root).find((node) => attributeValue(node, 'href').endsWith('/part-utils.ts'));
+			detach(link.parentNode);
+		},
+	},
+	{
+		label: 'the declaration reference links another family\'s file (TextArea shows switch-field.json)',
+		slug: 'text-area',
+		expect: ['Declarations sources are ["packages/react/reference/switch-field.json"'],
+		change: (root) => {
+			const [reference] = declarationLinks(root);
+			setAttribute(reference, 'href', attributeValue(reference, 'href').replace('text-area.json', 'switch-field.json'));
+		},
+	},
+	{
+		label: 'a declaration source shows other text than the path it links (TextEditor)',
+		slug: 'text-editor',
+		expect: ['Declarations sources show text other than the path they link'],
+		change: (root) => setText(declarationLinks(root)[0], 'packages/react/reference/text-editor'),
+	},
+	{
+		label: 'a wrong link follows the right one in a Sources entry (SwitchField part-utils.ts)',
+		slug: 'switch-field',
+		expect: ['Declarations sources are ["packages/react/reference/switch-field.json","packages/react/src/supplemental/part-utils.ts","packages/react/src/fields.ts","packages/react/src/supplemental/switch-field.ts"]'],
+		change: (root) => {
+			const entry = declarationLinks(root).find((node) => attributeValue(node, 'href').endsWith('/part-utils.ts')).parentNode;
+			entry.childNodes.push(sourceLinkNode('packages/react/src/fields.ts', entry));
+		},
+	},
+	{
+		label: 'a second, conflicting source note follows the right one under a shared type (ControlSize)',
+		expect: ['ControlSize shows [[{"path":"packages/react/src/fields.ts","text":"packages/react/src/fields.ts"}],[{"path":"packages/react/src/overlays.ts","text":"packages/react/src/overlays.ts"}]] as its source notes'],
+		change: (root) => insertSourceNote(sourceNote(root, 'ControlSize'), 'api-type-reason', 'packages/react/src/overlays.ts'),
+	},
+	{
+		label: 'a second, conflicting source note follows the right one under a package-level value (supplementalFamilies)',
+		expect: ['supplementalFamilies shows [[{"path":"packages/react/src/supplemental/index.ts","text":"packages/react/src/supplemental/index.ts"}],[{"path":"packages/react/src/generate.mjs","text":"packages/react/src/generate.mjs"}]] as its source notes'],
+		change: (root) => insertSourceNote(sourceNote(root, 'supplementalFamilies'), 'api-export-doc', 'packages/react/src/generate.mjs'),
+	},
+	{
+		label: 'a shared type loses its source (ControlSize)',
+		expect: ['ControlSize shows [] as its source notes, expected exactly one note with one link, to packages/react/src/fields.ts'],
+		change: (root) => detach(sourceNote(root, 'ControlSize')),
+	},
+	{
+		label: 'a shared type shows the source of another module (MuxUIPlacement links fields.ts)',
+		expect: ['MuxUIPlacement shows [[{"path":"packages/react/src/fields.ts","text":"packages/react/src/overlays.ts"}]] as its source notes, expected exactly one note with one link, to packages/react/src/overlays.ts'],
+		change: (root) => {
+			const link = elements(sourceNote(root, 'MuxUIPlacement')).find((node) => node.tagName === 'a');
+			setAttribute(link, 'href', attributeValue(link, 'href').replace('overlays.ts', 'fields.ts'));
+		},
+	},
+	{
+		label: 'the reference lists no source for the module of the shared types (fields)',
+		expect: ['ControlSize has no source: the reference lists none for its module fields', 'MuxUIDateRange has no source'],
+		expectedFrom: withoutSource('shared', 'fields'),
+	},
+	{
+		label: 'a package-level value loses its source (reactCompatibility)',
+		expect: ['reactCompatibility shows [] as its source notes, expected exactly one note with one link, to packages/react/src/generate.mjs'],
+		change: (root) => detach(sourceNote(root, 'reactCompatibility')),
+	},
+	{
+		label: 'a package-level value shows the source of another module (supplementalFamilies links generate.mjs)',
+		expect: ['supplementalFamilies shows [[{"path":"packages/react/src/generate.mjs","text":"packages/react/src/supplemental/index.ts"}]] as its source notes, expected exactly one note with one link, to packages/react/src/supplemental/index.ts'],
+		change: (root) => {
+			const link = elements(sourceNote(root, 'supplementalFamilies')).find((node) => node.tagName === 'a');
+			setAttribute(link, 'href', attributeValue(link, 'href').replace('supplemental/index.ts', 'generate.mjs'));
+		},
+	},
+	{
+		label: 'the reference lists no source for the module of a package-level value (supplemental)',
+		expect: ['supplementalFamilies has no source: the reference lists none for its module supplemental'],
+		expectedFrom: withoutSource('package-level', 'supplemental'),
+	},
+	{
+		label: 'a package-level type loses its source (MuxUIThemeId)',
+		expect: ['MuxUIThemeId shows [] as its source notes'],
+		change: (root) => detach(sourceNote(root, 'MuxUIThemeId')),
+	},
 ];
 
-const unchanged = ['virtualizer', 'icon-button', 'dialog', 'data-diff', 'text-editor'].flatMap((slug) => problemsOf(slug));
+const unchanged = [...['virtualizer', 'icon-button', 'dialog', 'data-diff', 'text-editor', 'switch-field', 'text-area'].flatMap((slug) => problemsOf(slug)), ...packageProblemsOf()];
 if (unchanged.length > 0) throw new Error(`The pages these changes start from do not pass the checker:\n${unchanged.map((line) => `- ${line}`).join('\n')}`);
 
 const failures = [];
 let reported = 0;
-for (const { label, slug, expect, change } of mutations) {
+for (const { label, slug, expect, change, expectedFrom } of mutations) {
+	const route = slug === undefined ? '/package-exports/' : `/components/${slug}/`;
 	let problems;
 	try {
-		problems = problemsOf(slug, change);
+		problems = slug === undefined ? packageProblemsOf(change, expectedFrom) : problemsOf(slug, change);
 	} catch (error) {
 		failures.push(`${label}: the checker crashed (${error instanceof Error ? error.message : error}) instead of naming the difference on its page.`);
 		continue;
@@ -152,7 +285,7 @@ for (const { label, slug, expect, change } of mutations) {
 	for (const fragment of expect) {
 		if (!problems.some((line) => line.includes(fragment))) failures.push(`${label}: no problem contains "${fragment}"; the checker reported ${problems.length === 0 ? 'nothing' : problems.map((line) => `"${line.slice(0, 160)}"`).join(', ')}.`);
 	}
-	if (problems.some((line) => !line.startsWith(`/components/${slug}/ `))) failures.push(`${label}: a problem does not name the page /components/${slug}/.`);
+	if (problems.some((line) => !line.startsWith(`${route} `))) failures.push(`${label}: a problem does not name the page ${route}.`);
 }
 if (failures.length > 0) throw new Error(`The typed reference checker missed a change to a built page, or failed to report it on the page:\n${failures.map((line) => `- ${line}`).join('\n')}`);
-console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
+console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type or value without its source, with another module's or with a second note, a wrong link after the right one, a module the reference gives no source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);

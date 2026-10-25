@@ -91,6 +91,8 @@ export interface ApiExport {
 	doc?: string;
 	/** Why a package-level export belongs to the package and not to a component, from the inventory. */
 	reason?: string;
+	/** The source file of the module that declares a package-level value: no family's source list names it. */
+	source?: string;
 	/** The table of the export's own part, for a component without member parts. */
 	anchor?: string;
 	parts: readonly { heading: string; anchor: string }[];
@@ -104,6 +106,8 @@ export interface ApiType {
 	segments: readonly Segment[];
 	/** Why a shared or package-level type belongs where it is, from the inventory. */
 	reason?: string;
+	/** The source file the type is declared in, for a shared or package-level type: no family's source list names it. */
+	source?: string;
 }
 
 export interface ApiEvent {
@@ -535,16 +539,23 @@ function exportView(item: DeclarationExport, packageName: string, parts: readonl
 	};
 }
 
-/** The types a file exports under one owner, with the import of each public name. */
-export function typesView(types: readonly DeclarationType[], owner: string, packageName: string, reasons: ReadonlyMap<string, string> | undefined, context: Context): readonly ApiType[] {
-	return types.filter((type) => type.public !== undefined && type.owner === owner).map((type) => ({
-		name: type.name,
-		anchor: typeAnchor(type.name),
-		imports: (type.public ?? []).map(({ entry, name }) => importLine(packageName, entry, name, true)),
-		text: type.text,
-		segments: segmentsFor(type.text, type.refs, context),
-		...(reasons?.has(type.name) && { reason: reasons.get(type.name) }),
-	}));
+/**
+ * The types a file exports under one owner, with the import of each public name. `sources`, the file's source of each
+ * declaration module, adds the file each type is declared in.
+ */
+export function typesView(types: readonly DeclarationType[], owner: string, packageName: string, reasons: ReadonlyMap<string, string> | undefined, context: Context, sources?: Readonly<Record<string, string>>): readonly ApiType[] {
+	return types.filter((type) => type.public !== undefined && type.owner === owner).map((type) => {
+		const source = sources?.[type.module];
+		return {
+			name: type.name,
+			anchor: typeAnchor(type.name),
+			imports: (type.public ?? []).map(({ entry, name }) => importLine(packageName, entry, name, true)),
+			text: type.text,
+			segments: segmentsFor(type.text, type.refs, context),
+			...(reasons?.has(type.name) && { reason: reasons.get(type.name) }),
+			...(source !== undefined && { source }),
+		};
+	});
 }
 
 export interface PackageExportEntry {
@@ -584,8 +595,11 @@ export function buildPackageExports(reference: { inventory: DeclarationInventory
 	const packageContext = context(packageFile, 'package-level');
 	return {
 		entries,
-		packageLevel: (packageFile?.exports ?? []).map((item) => ({ ...exportView(item, packageName, [], packageContext, item.name), ...(reasons.has(item.name) && { reason: reasons.get(item.name) }) })),
-		packageTypes: typesView(packageFile?.types ?? [], 'package-level', packageName, reasons, packageContext),
-		sharedTypes: typesView(sharedFile?.types ?? [], 'shared', packageName, reasons, context(sharedFile, 'shared')),
+		packageLevel: (packageFile?.exports ?? []).map((item) => {
+			const source = packageFile?.sources[item.module];
+			return { ...exportView(item, packageName, [], packageContext, item.name), ...(reasons.has(item.name) && { reason: reasons.get(item.name) }), ...(source !== undefined && { source }) };
+		}),
+		packageTypes: typesView(packageFile?.types ?? [], 'package-level', packageName, reasons, packageContext, packageFile?.sources),
+		sharedTypes: typesView(sharedFile?.types ?? [], 'shared', packageName, reasons, context(sharedFile, 'shared'), sharedFile?.sources),
 	};
 }
