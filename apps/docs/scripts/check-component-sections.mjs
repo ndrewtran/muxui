@@ -5,7 +5,7 @@ import { parse } from 'parse5';
 import { linkedFamilies } from '../../guide-links.mjs';
 import { renderedEventGroups, expectedEventGroups } from './event-groups.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
-import { collapsePartsAbove, compareComponent, comparePackageExports, expectedComponent, expectedPackageExports, loadReference, renderedComponent, renderedEvents, renderedPackageExports, routeExists, routeFile } from './typed-reference.mjs';
+import { collapsePartsAbove, compareComponent, comparePackageExports, compareSources, expectedComponent, expectedPackageExports, expectedSources as expectedSourcesOf, loadReference, renderedComponent, renderedEvents, renderedPackageExports, renderedSources, routeExists, routeFile } from './typed-reference.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
 // The catalog query API and the package files are read here directly, not through the docs loader or the shared projection.
@@ -245,24 +245,15 @@ for (const component of listComponents()) {
 	assert(JSON.stringify(groupLabels) === JSON.stringify(expectedGroups), `${route} token groups differ from the token prefixes.`);
 	assert(!/\.muxui-|data-muxui|\[data-/u.test(textContent(styling)), `${route} anatomy and styling shows a class name or selector.`);
 
-	// Sources: the record, the canonical examples, the family's runtime file, and the package manifest.
+	// Sources: the record, the canonical examples, the family's runtime file, the package manifest and the declarations the tables were read from.
 	const runtime = contract.components.find((entry) => entry.slug === slug)?.source;
 	assert(runtime !== undefined, `${route} has no runtime source in the renderer contract.`);
-	const expectedSources = [
-		artifact.source.record,
-		...examples.map((example) => example.source.content),
-		runtime,
-		'packages/react/package.json',
-	];
-	const links = elements(section('sources')).filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href'));
-	assert(
-		JSON.stringify(links) === JSON.stringify(expectedSources.map((path) => `https://github.com/ndrewtran/muxui/blob/main/${path}`)),
-		`${route} sources differ from the record, examples, runtime and manifest.`,
-	);
-	for (const path of expectedSources) assert(existsSync(resolve(repositoryRoot, path)), `${route} links a missing source: ${path}.`);
+	const expectedSources = expectedSourcesOf({ record: artifact.source.record, examples, runtime, reference, owner: expectedApi.owner });
+	problems.push(...compareSources(expectedSources, renderedSources(section('sources')), route));
+	for (const path of expectedSources.flatMap(({ paths }) => paths)) assert(existsSync(resolve(repositoryRoot, path)), `${route} links a missing source: ${path}.`);
 
 	projectedStrings += partApis.length + (artifact.intent?.useWhen?.length ?? 0) + (artifact.intent?.avoidWhen?.length ?? 0) + (binding.behavior?.length ?? 0)
-		+ binding.api.events.length + artifact.accessibility.obligations.length + bindingAccessibility.length + requirements.length + expectedSources.length;
+		+ binding.api.events.length + artifact.accessibility.obligations.length + bindingAccessibility.length + requirements.length + expectedSources.flatMap(({ paths }) => paths).length;
 	routes += 1;
 }
 

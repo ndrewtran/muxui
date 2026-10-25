@@ -547,6 +547,58 @@ export function compareComponent(expected, rendered, events, route, { collapseAb
 	return problems;
 }
 
+// ---- the sources a page links ----
+
+const repositoryUrl = 'https://github.com/ndrewtran/muxui/blob/main/';
+
+/** A source link as a reader gets it: the repository path its href reaches (the whole href when it reaches elsewhere) and the text it shows. */
+function sourceLink(link) {
+	if (link === undefined) return null;
+	const href = attributeValue(link, 'href') ?? '';
+	return { path: href.startsWith(repositoryUrl) ? href.slice(repositoryUrl.length) : href, text: text(link) };
+}
+
+/** The declarations a family's tables were read from: its reference file, then the source of each declaration module that file was generated from. */
+export function declarationSources(reference, owner) {
+	return [`packages/react/reference/${reference.inventory.owners[owner]}`, ...Object.values(reference.files.get(owner).sources)];
+}
+
+/** What a component page's Sources section must list, in order: the record, its examples, the runtime file, the manifest and the declarations. */
+export function expectedSources({ record, examples, runtime, reference, owner }) {
+	return [
+		{ label: 'Component record', paths: [record] },
+		{ label: 'Examples', paths: examples.map(({ source }) => source.content) },
+		{ label: 'Runtime', paths: [runtime] },
+		{ label: 'Package imports', paths: ['packages/react/package.json'] },
+		{ label: 'Declarations', paths: declarationSources(reference, owner) },
+	];
+}
+
+/** The Sources section of a built page: each label with the links under it. */
+export function renderedSources(section) {
+	const groups = [];
+	for (const node of elements(section)) {
+		if (node.tagName === 'dt') groups.push({ label: text(node), links: [] });
+		if (node.tagName === 'dd') groups.at(-1)?.links.push(sourceLink(elements(node).find((child) => child.tagName === 'a')));
+	}
+	return groups;
+}
+
+/** The differences between the sources a page must list and the ones it links. */
+export function compareSources(expected, rendered, route) {
+	const problems = [];
+	const report = (message) => problems.push(`${route} ${message}`);
+	if (!same(rendered.map(({ label }) => label), expected.map(({ label }) => label))) report(`source groups are ${rendered.map(({ label }) => label).join(', ')}, expected ${expected.map(({ label }) => label).join(', ')}.`);
+	for (const group of expected) {
+		const shown = rendered.find(({ label }) => label === group.label);
+		if (shown === undefined) continue;
+		const paths = shown.links.map((link) => link?.path ?? null);
+		if (!same(paths, group.paths)) report(`${group.label} sources are ${JSON.stringify(paths)}, expected ${JSON.stringify(group.paths)}.`);
+		else if (shown.links.some((link) => link.text !== link.path)) report(`${group.label} sources show text other than the path they link.`);
+	}
+	return problems;
+}
+
 // ---- the package exports page and the inventory ----
 
 /** The entries, package-level exports and shared types the package exports page must show, from the manifest and inventory. */

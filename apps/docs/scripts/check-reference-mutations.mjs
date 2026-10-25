@@ -1,4 +1,4 @@
-// A copy of the declaration reference with a part, a hook, a helper, a ref, an import, a type and a requirement taken away
+// A copy of the declaration reference with a part, a hook, a helper, a ref, an import, a type, a declaration source and a requirement taken away
 // or changed must fail the typed reference checks.
 //
 //   node scripts/check-reference-mutations.mjs [--show]
@@ -97,6 +97,9 @@ try {
 		{ label: 'change the ref of a part that has an alias (TextEditor to HTMLDivElement)', slug: 'text-editor', expect: ['TextEditor ref line is "HTMLDivElement", expected "TextEditorHandle"', 'TextEditor.Root ref line is "HTMLDivElement", expected "TextEditorHandle"'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditor.Root' }, apply: () => edit('text-editor', (file) => {
 			part(file, 'TextEditor', null).ref = { type: 'HTMLDivElement' };
 		}) },
+		{ label: 'delete the source of a declaration module (SwitchField part-utils)', slug: 'switch-field', expect: ['Declarations sources are'], apply: () => edit('switch-field', (file) => {
+			delete file.sources['part-utils'];
+		}) },
 	];
 	for (const mutation of mutations) mutation.apply();
 
@@ -131,7 +134,7 @@ try {
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type and a payload field) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field and a declaration module's source) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }
