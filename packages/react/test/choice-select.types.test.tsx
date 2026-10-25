@@ -89,17 +89,51 @@ void wrongSelection;
 const wrongCallback = <MultiSelect.Root items={fruits} onSelectionChange={(keys: string[]) => void keys} />;
 void wrongCallback;
 
-// With no type argument and no items the item is the constraint, which holds an id and whatever else.
+// With no type argument and no items the item is the constraint, which holds an id and whatever else. Each exported form that takes the
+// item has a witness of its own, a fresh literal (an item with a field the default lacks is refused as an excess property), so a default
+// changed in one form shows in that form and not only in the ones built from it: the props type, the root props type, and the generic
+// call signature of Root, where the render and label functions are what take the default.
 const defaulted: MultiSelectProps = { items: [{ id: 'a', name: 'Apple' }] };
 const defaultedTags: TagSelectProps = { items: [{ id: 'a', name: 'Apple' }] };
-const rootDefaulted: MultiSelectRootProps = defaulted;
-const rootDefaultedTags: TagSelectRootProps = defaultedTags;
+const rootDefaulted: MultiSelectRootProps = { items: [{ id: 'a', name: 'Apple' }] };
+const rootDefaultedTags: TagSelectRootProps = { items: [{ id: 'a', name: 'Apple' }] };
+const calledDefaulted = (
+  <>
+    <MultiSelect.Root>{(item) => String(item.anything)}</MultiSelect.Root>
+    <TagSelect.Root getItemLabel={(item) => String(item.anything)}>{(item) => String(item.anything)}</TagSelect.Root>
+  </>
+);
 const constraint: MultiSelectItem = { id: 1, anything: true };
 const tagConstraint: TagSelectItem = { id: 'a', anything: true };
-void [rootDefaulted, rootDefaultedTags, constraint, tagConstraint];
+void [defaulted, defaultedTags, rootDefaulted, rootDefaultedTags, calledDefaulted, constraint, tagConstraint];
 const typed: MultiSelectProps<Fruit> = { items: fruits, children: (item) => item.name };
 const typedTags: TagSelectProps<Fruit> = { items: fruits, getItemLabel: (item) => item.name, children: (item) => item.name };
-void [typed, typedTags];
+const typedRoot: MultiSelectRootProps<Fruit> = { items: fruits, children: (item) => item.name };
+const typedRootTags: TagSelectRootProps<Fruit> = { items: fruits, getItemLabel: (item) => item.name, children: (item) => item.name };
+void [typed, typedTags, typedRoot, typedRootTags];
+// Each form takes any item that has an id and nothing else: an item with no name is one, so a constraint narrowed in one form is refused.
+const idOnly = (
+  <>
+    <MultiSelect.Root items={[{ id: 1 }]} />
+    <TagSelect.Root items={[{ id: 1 }]} />
+  </>
+);
+const idOnlyProps: [MultiSelectProps<{ id: number }>, MultiSelectRootProps<{ id: number }>, TagSelectProps<{ id: number }>, TagSelectRootProps<{ id: number }>] = [{}, {}, {}, {}];
+void [idOnly, idOnlyProps];
+// And each form refuses an item with no id, so a constraint that is widened is refused too.
+// @ts-expect-error MultiSelectProps takes an item that has an id.
+type NoIdProps = MultiSelectProps<{ name: string }>;
+// @ts-expect-error MultiSelectRootProps takes an item that has an id.
+type NoIdRootProps = MultiSelectRootProps<{ name: string }>;
+// @ts-expect-error TagSelectProps takes an item that has an id.
+type NoIdTagProps = TagSelectProps<{ name: string }>;
+// @ts-expect-error TagSelectRootProps takes an item that has an id.
+type NoIdTagRootProps = TagSelectRootProps<{ name: string }>;
+// @ts-expect-error Root takes an item that has an id when the type argument is written.
+const noIdArgument = <MultiSelect.Root<{ name: string }> />;
+// @ts-expect-error TagSelect's Root takes an item that has an id when the type argument is written.
+const noIdTagArgument = <TagSelect.Root<{ name: string }> />;
+void [noIdArgument, noIdTagArgument];
 // @ts-expect-error Fruit's color is a literal, not any string.
 const typedWrong: MultiSelectProps<Fruit> = { items: [{ id: 1, name: 'Apple', color: 'blue' }] };
 void typedWrong;
