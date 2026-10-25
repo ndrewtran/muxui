@@ -11,8 +11,6 @@ import { JSDOM } from 'jsdom';
 import { parseAst } from 'vite';
 import {
   CommandPalette,
-  MultiSelect,
-  TagSelect,
   supplementalFamilies,
 } from '../src/supplemental/index.mjs';
 import { AlertDialog } from '../src/supplemental/alert-dialog.ts';
@@ -23,11 +21,13 @@ import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
 import { HeaderNav } from '../src/supplemental/header-nav.ts';
 import { Input } from '../src/supplemental/input.ts';
 import { InputTags } from '../src/supplemental/input-tags.ts';
+import { MultiSelect } from '../src/supplemental/multi-select.ts';
 import { PaymentInput } from '../src/supplemental/payment-input.ts';
 import { ProgressCircle } from '../src/supplemental/progress-circle.ts';
 import { RadioField } from '../src/supplemental/radio-field.ts';
 import { Sidebar } from '../src/supplemental/sidebar.ts';
 import { SwitchField } from '../src/supplemental/switch-field.ts';
+import { TagSelect } from '../src/supplemental/tag-select.ts';
 import { TextArea } from '../src/supplemental/text-area.ts';
 import { SupplementalBrowserFixture } from './fixtures/supplemental-browser-fixture.mjs';
 import { installDom } from './support/dom.mjs';
@@ -406,10 +406,12 @@ test('supplemental CSS classifies foundation tokens separately from local compon
 
 test('the supplemental roots retain native string field props in their declarations', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
-  assert.match(declaration, /MultiSelectItemProps[\s\S]*?textValue\?: string/u);
-  assert.match(declaration, /TagSelectItemProps[\s\S]*?textValue\?: string/u);
-  assert.match(declaration, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
-  assert.match(declaration, /interface TagSelectRootComponent[\s\S]*?<T extends TagSelectItem/u);
+  const multiSelect = await readFile(resolve(packageRoot, 'src/supplemental/multi-select.ts'), 'utf8');
+  assert.match(multiSelect, /type MultiSelectItemOwnProps = \{[^}]*?textValue\?: string;/u);
+  const tagSelect = await readFile(resolve(packageRoot, 'src/supplemental/tag-select.ts'), 'utf8');
+  assert.match(tagSelect, /type TagSelectItemOwnProps = \{[^}]*?textValue\?: string;/u);
+  assert.match(multiSelect, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
+  assert.match(tagSelect, /interface TagSelectRootComponent[\s\S]*?<T extends TagSelectItem/u);
   assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
 });
 

@@ -15,14 +15,12 @@ import {
   Select,
   TokenField,
 } from '../../src/collections.mjs';
-import {
-  MultiSelect,
-  TagSelect,
-} from '../../src/supplemental/index.mjs';
 import { Input } from '../../src/supplemental/input.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
+import { MultiSelect } from '../../src/supplemental/multi-select.ts';
 import { PaymentInput } from '../../src/supplemental/payment-input.ts';
 import { SelectNative } from '../../src/supplemental/select-native.ts';
+import { TagSelect } from '../../src/supplemental/tag-select.ts';
 import { TextArea } from '../../src/supplemental/text-area.ts';
 
 const h = React.createElement;

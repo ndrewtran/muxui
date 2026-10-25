@@ -157,6 +157,11 @@ export function crossCheckDerived({ files, components = DERIVED_API_COMPONENTS }
       counts.parts += 1;
       const arms = armsOf(model);
       const everyMember = (name) => arms.map((arm) => arm.get(name));
+      // A type parameter of the callable is recorded at its constraint (D3): the catalog's type is the declared one with each parameter
+      // replaced by its constraint, and a member that is exactly the parameter has the constraint's finite values.
+      const parameters = (model.typeParameters ?? []).filter(({ constraint }) => constraint !== undefined);
+      const atConstraint = (text) => parameters.reduce((read, { name, constraint }) => read.replace(new RegExp(`\\b${name}\\b`, 'gu'), constraint), text);
+      const valuesOf = (member) => member.values ?? byId.get(parameters.find(({ name }) => name === member.type)?.refs?.[0])?.values;
 
       for (const prop of part.props) {
         counts.props += 1;
@@ -172,8 +177,8 @@ export function crossCheckDerived({ files, components = DERIVED_API_COMPONENTS }
 
         // Enum: the finite values of the live alternatives.
         if (detail.enum) {
-          const values = [...new Set(live.flatMap((member) => member.values ?? []))];
-          if (live.some((member) => member.values === undefined) || values.length !== detail.enum.length || !detail.enum.every((value) => values.includes(value))) {
+          const values = [...new Set(live.flatMap((member) => valuesOf(member) ?? []))];
+          if (live.some((member) => valuesOf(member) === undefined) || values.length !== detail.enum.length || !detail.enum.every((value) => values.includes(value))) {
             problems.push(`${key}: catalog enum [${detail.enum}], declared [${values}]`);
           }
         }
@@ -181,7 +186,11 @@ export function crossCheckDerived({ files, components = DERIVED_API_COMPONENTS }
         // Type: the live alternatives declare the catalog's type, or one finite domain that equals its enum.
         const catalogText = catalogTypeText(detail.type);
         const declaredTexts = [...new Set(live.map((member) => member.type))];
-        if (!(declaredTexts.length === 1 && declaredTexts[0] === catalogText) && !(detail.enum && live.every((member) => member.values))) {
+        const projected = [...new Set(live.map((member) => atConstraint(member.type)))];
+        if (live.some((member) => atConstraint(member.type) !== member.type)) {
+          if (projected.length === 1 && projected[0] === catalogText) explain('binder-constraint', key);
+          else problems.push(`${key}: catalog type ${catalogText}, declared ${declaredTexts.join(' || ')}, at its constraint ${projected.join(' || ')}`);
+        } else if (!(declaredTexts.length === 1 && declaredTexts[0] === catalogText) && !(detail.enum && live.every((member) => member.values))) {
           if (declaredTexts.length === 1 && catalogText.replace(/\bNumberFormatOptions\b/u, 'Intl.NumberFormatOptions') === declaredTexts[0] && detail.type.kind === 'host') explain('lib-namespace', key);
           else problems.push(`${key}: catalog type ${catalogText}, declared ${declaredTexts.join(' || ')}`);
         }

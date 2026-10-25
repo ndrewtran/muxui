@@ -250,11 +250,21 @@ const cardLook = (container, values) => {
   const card = container.matches?.('.muxui-card') ? container : container.querySelector('.muxui-card');
   return card === null ? undefined : values.find((value) => card.classList.contains(`muxui-card--${value}`));
 };
+// Text names its variant and size in one class modifier of its element, its colour in another unless it is the default, and a third marks
+// it truncated; the element it renders is its tag.
+const textLook = (container) => {
+  const text = container.matches?.('.muxui-text') ? container : container.querySelector('.muxui-text');
+  if (text === null) return undefined;
+  const [, variant, size] = /muxui-text--([a-z]+)-([a-z]+)/u.exec(text.className) ?? [];
+  return { variant, size, color: text.classList.contains('muxui-text--muted') ? 'muted' : 'default', as: text.localName, truncate: text.classList.contains('muxui-text--truncate') };
+};
 const markupValues = {
   // Sidebar marks only the compact density; the default one carries no attribute.
   density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
+    const text = textLook(doc);
+    if (text !== undefined) return text.size;
     const circle = doc.querySelector('.muxui-progress-circle');
     if (circle !== null) return ['sm', 'lg'].find((size) => circle.classList.contains(`muxui-progress-circle--${size}`)) ?? 'md';
     return doc.querySelector('[data-size]')?.getAttribute('data-size');
@@ -264,7 +274,7 @@ const markupValues = {
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
@@ -287,7 +297,11 @@ const markupValues = {
   },
   layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
   // A tag carries its colour, which the group's default sets for a tag that names none.
-  color: (doc) => doc.querySelector('[data-color]')?.getAttribute('data-color'),
+  color: (doc) => textLook(doc)?.color ?? doc.querySelector('[data-color]')?.getAttribute('data-color'),
+  // TagSelect shows each selected item as a tag, and a selected key that names no item shows none: the items it was given, by their labels.
+  items: (doc) => [...doc.querySelectorAll('.muxui-tag-select__tag-text')].map((tag) => tag.textContent),
+  as: (doc) => textLook(doc)?.as,
+  truncate: (doc) => textLook(doc)?.truncate,
 };
 const h = React.createElement;
 const minimalRenders = {
@@ -317,6 +331,11 @@ const minimalRenders = {
   Tree: () => treeOf(),
   ButtonGroup: () => h(generated.ButtonGroup, { 'aria-label': 'Actions' }, h(generated.Button, null, 'One')),
   ColorModeToggle: () => h(generated.ColorModeToggle, { 'aria-label': 'Theme' }),
+  Text: () => h(generated.Text, null, 'Hello'),
+  // MultiSelect's block is the root's, which is also MultiSelect.Root's; its item is observed under 'MultiSelect.item'.
+  MultiSelect: () => multiSelectRoot(),
+  // TagSelect's block is the root's too; a selected key with no item to name it shows no tag, which is how the items default shows. Its item is observed under 'TagSelect.item'.
+  TagSelect: () => tagSelectRoot(),
   Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
   AlertDialog: () => alertDialog(),
   // Sidebar.Root's block is the column's own; the provider, search and nav parts are observed under 'Sidebar.<part>'.
@@ -335,7 +354,7 @@ const minimalRenders = {
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 // Sidebar's root props are `SidebarProps`, a name the compound shares, which `undeclaredRootProps` reads without the compound.
-const rootDeclarations = { Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot', Card: 'CardRoot', HeaderNav: 'HeaderNavRoot', AlertDialog: 'AlertDialogRoot', Sidebar: 'Sidebar' };
+const rootDeclarations = { MultiSelect: 'MultiSelectRoot', TagSelect: 'TagSelectRoot', Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot', Card: 'CardRoot', HeaderNav: 'HeaderNavRoot', AlertDialog: 'AlertDialogRoot', Sidebar: 'Sidebar' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
@@ -363,6 +382,9 @@ const partRenders = {
   'Select.popup': { render: () => selectRoot() },
   'Select.list': { render: () => selectRoot() },
   'Select.option': { render: () => selectRoot() },
+  // MultiSelect's options render in the open popup's portal, so its item default is read from a mounted control.
+  'MultiSelect.item': { render: () => multiSelectRoot() },
+  'TagSelect.item': { render: () => tagSelectRoot() },
 };
 const treeItems = [{ id: 'parent', label: 'Parent', children: [{ id: 'child', label: 'Child' }] }];
 const treeOf = (props) => h(generated.Tree, { 'aria-label': 'Files', items: treeItems, ...props });
@@ -394,6 +416,24 @@ function alertDialog(rootProps = null) {
 /** Menu.Root with a trigger and a popup, closed unless `rootProps` opens it; `popupProps` go to the popup and `items` to its list. */
 function menuRoot(rootProps = null, popupProps = null, ...items) {
   return h(generated.Menu.Root, rootProps, h(generated.Menu.Trigger, null, 'Actions'), h(generated.Menu.Popup, popupProps, h(generated.Menu.List, { 'aria-label': 'Actions' }, ...items)));
+}
+
+/** MultiSelect.Root with a label, closed; `children` are its items. */
+function multiSelectRoot(props = null, ...children) {
+  return h(generated.MultiSelect.Root, { label: 'Stack', ...props }, ...children);
+}
+
+/** TagSelect.Root with a label and one selected key, which names no item unless `props` list one. */
+function tagSelectRoot(props = null, ...children) {
+  return h(generated.TagSelect.Root, { label: 'Tags', defaultSelectedKeys: new Set(['a']), ...props }, ...children);
+}
+
+/** A MultiSelect opened by a press on its trigger, with `read` looking at the document its popup renders into. */
+function openedMultiSelect(props, children, read) {
+  return withMounted(multiSelectRoot(props, ...children), async (container) => {
+    await act(async () => container.querySelector('button').click());
+    return read();
+  });
 }
 
 /** The simple Select with a label and two items, closed unless `props` open it. */
@@ -532,6 +572,38 @@ const behaviourObservers = {
     containerPadding: async (props) => (await selectPopupSent(props)).containerPadding,
     // The popup is modal unless React Aria is told it is not.
     modal: async (props) => !(await selectPopupSent(props)).isNonModal,
+  },
+  // MultiSelect shows its placeholder while nothing is selected and a hidden status for a required one; its search, footer and empty state
+  // render in the popup's portal once a press has opened it, so those are read from a mounted control with no items.
+  MultiSelect: {
+    placeholder: (props) => new JSDOM(renderToString(multiSelectRoot(props))).window.document.querySelector('.muxui-multi-select__value--placeholder')?.textContent,
+    required: (props) => new JSDOM(renderToString(multiSelectRoot(props))).window.document.querySelector('[id^="muxui-multi-select-status"]')?.textContent.includes('Required') ?? false,
+    showSearch: (props) => openedMultiSelect(props, [], () => document.querySelector('.muxui-multi-select__search') !== null),
+    showFooter: (props) => openedMultiSelect(props, [], () => document.querySelector('.muxui-multi-select__footer') !== null),
+    emptyStateTitle: (props) => openedMultiSelect({ items: [], ...props }, [], () => document.querySelector('.muxui-multi-select__empty-title')?.textContent),
+    emptyStateDescription: (props) => openedMultiSelect({ items: [], ...props }, [], () => document.querySelector('.muxui-multi-select__empty-description')?.textContent),
+  },
+  // An item's disabled flag shows on the option, which renders in the open popup's portal, so it is read from a mounted, opened control.
+  'MultiSelect.item': {
+    disabled: (props) => openedMultiSelect(null, [h(generated.MultiSelect.Item, { id: 'one', ...props }, 'One')], () => {
+      const option = document.querySelector('[role="option"]');
+      return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
+    }),
+  },
+  // A required TagSelect marks its label with an asterisk; no attribute shows it in the closed markup.
+  TagSelect: {
+    required: (props) => new JSDOM(renderToString(tagSelectRoot(props))).window.document.querySelector('.muxui-tag-select__label [aria-hidden="true"]') !== null,
+  },
+  // A TagSelect item's disabled flag shows on its option, which renders in the open popup's portal, so it is read from a mounted control a focus has opened.
+  'TagSelect.item': {
+    disabled: (props) => withMounted(
+      h(generated.TagSelect.Root, { label: 'Tags', items: [{ id: 'one', label: 'One' }] }, (item) => h(generated.TagSelect.Item, { id: item.id, ...props }, item.label)),
+      async (container) => {
+        await act(async () => container.querySelector('input').focus());
+        const option = document.querySelector('[role="option"]');
+        return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
+      },
+    ),
   },
   // An option's disabled flag shows on the option, which renders in the open popup's portal, so it is read from a mounted Select.
   'Select.option': {
@@ -677,7 +749,7 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(undeclaredProps(types, 'ToggleButton', [...toggle.props, 'missingProp']), ['missingProp']);
   // A root's props are its own declaration's. A prop another part of the compound declares is not the root's, though the compound names it:
   // the compound-wide lookup finds each of these, and the root lookup refuses them. An alias beside a declaration is not part of it.
-  for (const [name, prop] of Object.entries({ Card: 'selected', HeaderNav: 'current', AlertDialog: 'disabled', Sidebar: 'shortcut' })) {
+  for (const [name, prop] of Object.entries({ Card: 'selected', HeaderNav: 'current', AlertDialog: 'disabled', Sidebar: 'shortcut', MultiSelect: 'textValue', TagSelect: 'textValue' })) {
     assert.deepEqual(undeclaredProps(types, name, [prop]), [], `${prop} is declared by a part of ${name}`);
     assert.deepEqual(undeclaredRootProps(types, name, [...apis[name].props, prop]), [prop], `${name} root does not declare ${prop}`);
   }
@@ -862,6 +934,8 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
     inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
     defaultOpen: [false, true],
+    showSearch: [true, false], showFooter: [true, false], required: [false, true],
+    emptyStateTitle: ['No results found', 'Nothing here'], emptyStateDescription: ['Please try a different search term.', 'Try again.'],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {
     for (const [key, observe] of Object.entries(observers)) {
@@ -882,6 +956,9 @@ test('every default a simple supplemental family states is compared with what th
   const different = {
     ButtonGroup: { orientation: 'vertical', attached: true, disabled: true, role: 'region' },
     ColorModeToggle: { disabled: true, storageKey: 'theme' },
+    Text: { variant: 'display', size: 'lg', color: 'muted', as: 'h1', truncate: true },
+    TagSelect: { size: 'lg', disabled: true, required: true, invalid: true, items: ['Alpha'] },
+    MultiSelect: { size: 'lg', placeholder: 'Pick', disabled: true, required: true, invalid: true, showSearch: false, showFooter: false, emptyStateTitle: 'None', emptyStateDescription: 'Nothing' },
     ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
     InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
     PaymentInput: { defaultValue: '4111', size: 'lg' },

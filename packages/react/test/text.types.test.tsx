@@ -12,6 +12,7 @@ const nativeHosts = (
       void host;
     }}>Body</Text>
     <Text as="h2" ref={headingRef} variant="heading" size="md" role="note">Heading</Text>
+    <Text as="h3" variant="title">Section</Text>
     <Text as="label" ref={labelRef} htmlFor="name" variant="label" size="sm">Name</Text>
     <Text as="p" title="Source paragraph" color="muted" truncate>Paragraph</Text>
   </>
@@ -27,6 +28,23 @@ const explicitProps: TextProps<'h3'> = {
   id: 'title',
 };
 void explicitProps;
+
+// Without a type argument, the props are a span's: the host is the default of TextProps and of the call signature, each its own form.
+const defaultProps: TextProps = { id: 'copy', onClick: (event) => { const host: HTMLSpanElement = event.currentTarget; void host; } };
+void defaultProps;
+// Compared exactly, too: the props with no argument are the span's, and the element a Text without `as` hands its handlers is a span's.
+type Identical<A, B> = (<X>() => X extends A ? 1 : 2) extends (<X>() => X extends B ? 1 : 2) ? true : false;
+const exactDefault: Identical<TextProps, TextProps<'span'>> = true;
+const exactElement = <Text onClick={(event) => { const exact: Identical<typeof event.currentTarget, EventTarget & HTMLSpanElement> = true; void exact; }}>Copy</Text>;
+void [exactDefault, exactElement];
+// @ts-expect-error TextProps without a type argument is a span's, which has no htmlFor.
+const defaultHtmlFor: TextProps = { htmlFor: 'name' };
+void defaultHtmlFor;
+// @ts-expect-error A Text with no as is a span, which has no htmlFor.
+const spanHtmlFor = <Text htmlFor="name">Name</Text>;
+void spanHtmlFor;
+// @ts-expect-error TextProps takes one of the semantic text elements.
+type ArticleProps = TextProps<'article'>;
 
 // Text keeps its own finite visual vocabulary.
 // @ts-expect-error Text variants do not accept arbitrary strings.

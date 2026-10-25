@@ -1,15 +1,13 @@
 import React from 'react';
-import {
-  CommandPalette,
-  MultiSelect,
-  TagSelect,
-} from '../../src/supplemental/index.mjs';
+import { CommandPalette } from '../../src/supplemental/index.mjs';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
 import { Card } from '../../src/supplemental/card.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 import { HeaderNav } from '../../src/supplemental/header-nav.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
+import { MultiSelect } from '../../src/supplemental/multi-select.ts';
 import { Sidebar } from '../../src/supplemental/sidebar.ts';
+import { TagSelect } from '../../src/supplemental/tag-select.ts';
 
 const h = React.createElement;
 const options = Object.freeze([

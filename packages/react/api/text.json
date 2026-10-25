@@ -1,0 +1,219 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/text.ts",
+  "component": "muxui:component:text",
+  "binding": "web.react",
+  "export": "Text",
+  "api": {
+    "props": [
+      "variant",
+      "size",
+      "color",
+      "as",
+      "truncate"
+    ],
+    "events": [],
+    "defaults": {
+      "variant": "body",
+      "size": "md",
+      "color": "default",
+      "as": "span",
+      "truncate": false
+    },
+    "propDetails": {
+      "variant": {
+        "type": {
+          "kind": "reference",
+          "name": "TextVariant"
+        },
+        "required": false,
+        "enum": [
+          "display",
+          "heading",
+          "title",
+          "label",
+          "body",
+          "expressive",
+          "mono"
+        ],
+        "description": "The typographic role: its size and weight."
+      },
+      "size": {
+        "type": {
+          "kind": "reference",
+          "name": "TextSize"
+        },
+        "required": false,
+        "enum": [
+          "xs",
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The size within the role. The display roles (display, heading, title) have no extra-small size."
+      },
+      "color": {
+        "type": {
+          "kind": "reference",
+          "name": "TextColor"
+        },
+        "required": false,
+        "enum": [
+          "default",
+          "muted"
+        ],
+        "description": "The text colour: the default, or the muted tone."
+      },
+      "as": {
+        "type": {
+          "kind": "reference",
+          "name": "TextElement"
+        },
+        "required": false,
+        "enum": [
+          "p",
+          "span",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "div",
+          "label"
+        ],
+        "description": "The element Text renders."
+      },
+      "truncate": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Cuts a line that does not fit short with an ellipsis."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "TextColor": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "default"
+            },
+            {
+              "kind": "literal",
+              "value": "muted"
+            }
+          ]
+        }
+      },
+      "TextElement": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "p"
+            },
+            {
+              "kind": "literal",
+              "value": "span"
+            },
+            {
+              "kind": "literal",
+              "value": "h1"
+            },
+            {
+              "kind": "literal",
+              "value": "h2"
+            },
+            {
+              "kind": "literal",
+              "value": "h3"
+            },
+            {
+              "kind": "literal",
+              "value": "h4"
+            },
+            {
+              "kind": "literal",
+              "value": "h5"
+            },
+            {
+              "kind": "literal",
+              "value": "h6"
+            },
+            {
+              "kind": "literal",
+              "value": "div"
+            },
+            {
+              "kind": "literal",
+              "value": "label"
+            }
+          ]
+        }
+      },
+      "TextSize": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "xs"
+            },
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        }
+      },
+      "TextVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "display"
+            },
+            {
+              "kind": "literal",
+              "value": "heading"
+            },
+            {
+              "kind": "literal",
+              "value": "title"
+            },
+            {
+              "kind": "literal",
+              "value": "label"
+            },
+            {
+              "kind": "literal",
+              "value": "body"
+            },
+            {
+              "kind": "literal",
+              "value": "expressive"
+            },
+            {
+              "kind": "literal",
+              "value": "mono"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

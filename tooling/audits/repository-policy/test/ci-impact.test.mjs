@@ -60,7 +60,7 @@ const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
 const supplementalPath = 'packages/react/src/supplemental/index.mjs';
 const multiSelectPath = 'packages/react/src/supplemental/multi-select.mjs';
-const tagSelectPath = 'packages/react/src/supplemental/tag-select.mjs';
+const tagSelectPath = 'packages/react/src/supplemental/tag-select.ts';
 const collectionsPath = 'packages/react/src/collections.mjs';
 const fieldsPath = 'packages/react/src/fields.ts';
 const sizingExamplePath = 'catalog/components/number-field/examples/react/sizing.tsx';
@@ -227,7 +227,7 @@ function lockfile(policyImporter, reactImporter = '') {
 
 test('TagSelect helper runtime changes route to TagSelect pages and its focused tests only', async () => {
   const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
-  const before = source.replace('    slot: null,\n', '');
+  const before = source.replace('    slot: null as unknown as undefined,\n', '');
   assert.notEqual(before, source, 'fixture must represent the pre-fix TagSelect helper');
 
   const result = await plan([tagSelectPath], {
@@ -974,8 +974,8 @@ test('scoped CI runner scripts stay bound to the exact React and Storybook entry
   const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
   const runtimePlan = await plan([tagSelectPath], {
     records: records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)),
-    textSnapshots: { [tagSelectPath]: { before: source.replace('    slot: null,\n', ''), after: source } },
-    moduleSources: { ...cssModuleSources, [tagSelectPath]: { before: source.replace('    slot: null,\n', ''), after: source } },
+    textSnapshots: { [tagSelectPath]: { before: source.replace('    slot: null as unknown as undefined,\n', ''), after: source } },
+    moduleSources: { ...cssModuleSources, [tagSelectPath]: { before: source.replace('    slot: null as unknown as undefined,\n', ''), after: source } },
   });
   const componentCommand = executionCommands(runtimePlan, { packages })
     .find(({ args }) => args.includes('check:component'));
@@ -1368,7 +1368,7 @@ test('Storybook audit tooling runs explicit focused test names and never launche
 
 test('mixed component and exact-page changes preserve each distinct proof scope', async () => {
   const source = await readFile(resolve(repositoryRoot, tagSelectPath), 'utf8');
-  const before = source.replace('    slot: null,\n', '');
+  const before = source.replace('    slot: null as unknown as undefined,\n', '');
   const result = await plan([tagSelectPath, sizingExamplePath], {
     records: records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)),
     textSnapshots: { [tagSelectPath]: { before, after: source } },

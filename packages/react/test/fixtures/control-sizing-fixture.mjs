@@ -24,21 +24,19 @@ import {
   TimeField,
   TextField,
 } from '../../src/fields.ts';
-import {
-  CommandPalette,
-  MultiSelect,
-  TagSelect,
-} from '../../src/supplemental/index.mjs';
+import { CommandPalette } from '../../src/supplemental/index.mjs';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
 import { CheckboxField } from '../../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
 import { HeaderNav } from '../../src/supplemental/header-nav.ts';
 import { Input } from '../../src/supplemental/input.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';
+import { MultiSelect } from '../../src/supplemental/multi-select.ts';
 import { PaymentInput } from '../../src/supplemental/payment-input.ts';
 import { RadioField } from '../../src/supplemental/radio-field.ts';
 import { Sidebar } from '../../src/supplemental/sidebar.ts';
 import { SwitchField } from '../../src/supplemental/switch-field.ts';
+import { TagSelect } from '../../src/supplemental/tag-select.ts';
 
 const h = React.createElement;
 

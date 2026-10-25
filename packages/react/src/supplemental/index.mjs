@@ -1,7 +1,4 @@
 export { CommandPalette, useCommandPalette } from './command-palette.mjs';
-export { MultiSelect } from './multi-select.mjs';
-export { TagSelect } from './tag-select.mjs';
-export { Text } from './text.mjs';
 
 export const supplementalFamilies = Object.freeze([
   'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text',

@@ -127,6 +127,12 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   // Input and TextArea are compounds whose Root owns the props; their other parts own none.
   { slug: 'input', name: 'Input', part: 'Root', source: 'packages/react/src/supplemental/input.ts' },
   { slug: 'text-area', name: 'TextArea', part: 'Root', source: 'packages/react/src/supplemental/text-area.ts' },
+  // Text is one component, generic over the element it renders: its API is the export's own, and the catalog records `as` at its constraint.
+  { slug: 'text', name: 'Text', source: 'packages/react/src/supplemental/text.ts' },
+  // MultiSelect is generic over the item it lists; the root is Root, and Item owns disabled and textValue. Its other parts are rendered, not exported.
+  { slug: 'multi-select', name: 'MultiSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/multi-select.ts' },
+  // TagSelect is generic over the item it lists in the same way; Item owns disabled and textValue.
+  { slug: 'tag-select', name: 'TagSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/tag-select.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

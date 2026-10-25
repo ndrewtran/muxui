@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
-import { TagSelect } from '../../src/supplemental/index.mjs';
+import { TagSelect } from '../../src/supplemental/tag-select.ts';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function TagSelectFocusFixture() {
@@ -27,7 +27,7 @@ function TagSelectFocusFixture() {
 
 const browserEntry = `import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { TagSelect } from '/src/supplemental/index.mjs';
+import { TagSelect } from '/src/supplemental/tag-select.ts';
 ${TagSelectFocusFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(TagSelectFocusFixture));
 document.documentElement.dataset.ready = 'true';
@@ -37,7 +37,7 @@ const html = pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui
 
 test('TagSelect chip removal keeps ComboBox focus and popup behavior independent', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({
-    entries: ['src/supplemental/index.mjs'],
+    entries: ['src/supplemental/tag-select.ts'],
     pages: { '/tag-select-focus.html': html },
     modules: { '/tag-select-focus-entry.mjs': browserEntry },
   });
@@ -91,7 +91,7 @@ function TagSelectPlainItemsFixture() {
 
 const plainEntry = `import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { TagSelect } from '/src/supplemental/index.mjs';
+import { TagSelect } from '/src/supplemental/tag-select.ts';
 ${TagSelectPlainItemsFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(TagSelectPlainItemsFixture));
 document.documentElement.dataset.ready = 'true';
@@ -101,7 +101,7 @@ const plainHtml = pageShell({ attributes: 'data-muxui-color-scheme="light" data-
 
 test('TagSelect hydrates server markup for plain-content, fragment, and static items', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({
-    entries: ['src/supplemental/index.mjs'],
+    entries: ['src/supplemental/tag-select.ts'],
     pages: { '/tag-select-plain.html': plainHtml },
     modules: { '/tag-select-plain-entry.mjs': plainEntry },
   });

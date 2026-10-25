@@ -1,12 +1,12 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "text",
-  "sources": { "supplemental": "packages/react/src/supplemental/index.d.ts" },
+  "sources": { "text": "packages/react/src/supplemental/text.ts" },
   "exports": [
     {
       "name": "Text",
       "entry": ".",
-      "module": "supplemental",
+      "module": "text",
       "kind": "component",
       "parts": [
         {
@@ -17,19 +17,25 @@
               "name": "T",
               "constraint": "TextElement",
               "default": "'span'",
-              "refs": ["supplemental#TextElement"]
+              "refs": ["text#TextElement"]
             }
           ],
           "members": [
-            { "name": "as", "optional": true, "type": "T" },
             {
               "name": "color",
               "optional": true,
               "type": "TextColor",
               "values": ["default", "muted"],
-              "refs": ["supplemental#TextColor"]
+              "refs": ["text#TextColor"],
+              "doc": "The text colour: the default, or the muted tone."
             },
-            { "name": "truncate", "optional": true, "type": "boolean" },
+            { "name": "as", "optional": true, "type": "T", "doc": "The element Text renders." },
+            {
+              "name": "truncate",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Cuts a line that does not fit short with an ellipsis."
+            },
             { "name": "className", "optional": true, "type": "string" }
           ],
           "ref": { "type": "HTMLElementTagNameMap[T]" },
@@ -53,7 +59,7 @@
                   "optional": true,
                   "type": "TextSize",
                   "values": ["xs", "sm", "md", "lg"],
-                  "refs": ["supplemental#TextSize"]
+                  "refs": ["text#TextSize"]
                 }
               ]
             },
@@ -69,7 +75,7 @@
                   "optional": true,
                   "type": "Exclude<TextSize, 'xs'>",
                   "values": ["sm", "md", "lg"],
-                  "refs": ["supplemental#TextSize"]
+                  "refs": ["text#TextSize"]
                 }
               ]
             },
@@ -85,7 +91,7 @@
                   "optional": true,
                   "type": "TextSize",
                   "values": ["xs", "sm", "md", "lg"],
-                  "refs": ["supplemental#TextSize"]
+                  "refs": ["text#TextSize"]
                 }
               ]
             }
@@ -96,9 +102,9 @@
   ],
   "types": [
     {
-      "id": "supplemental#TextColor",
+      "id": "text#TextColor",
       "name": "TextColor",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextColor" }
       ],
@@ -107,20 +113,20 @@
       "values": ["default", "muted"]
     },
     {
-      "id": "supplemental#TextComponent",
+      "id": "text#TextComponent",
       "name": "TextComponent",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextComponent" }
       ],
       "owner": "text",
       "text": "interface TextComponent {\n  <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;\n}",
-      "refs": ["supplemental#TextElement", "supplemental#TextProps"]
+      "refs": ["text#TextElement", "text#TextProps"]
     },
     {
-      "id": "supplemental#TextElement",
+      "id": "text#TextElement",
       "name": "TextElement",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextElement" }
       ],
@@ -129,9 +135,57 @@
       "values": ["p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "div", "label"]
     },
     {
-      "id": "supplemental#TextProps",
+      "id": "text#TextOwnProps",
+      "name": "TextOwnProps",
+      "module": "text",
+      "typeParameters": [
+        {
+          "name": "T",
+          "constraint": "TextElement",
+          "default": "'span'",
+          "refs": ["text#TextElement"]
+        }
+      ],
+      "text": "type TextOwnProps<T extends TextElement = 'span'> = {\n  variant?: TextVariant;\n  size?: TextSize;\n  color?: TextColor;\n  as?: T;\n  truncate?: boolean;\n};",
+      "members": [
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "TextVariant",
+          "values": ["display", "heading", "title", "label", "body", "expressive", "mono"],
+          "refs": ["text#TextVariant"],
+          "doc": "The typographic role: its size and weight."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "TextSize",
+          "values": ["xs", "sm", "md", "lg"],
+          "refs": ["text#TextSize"],
+          "doc": "The size within the role. The display roles (display, heading, title) have no extra-small size."
+        },
+        {
+          "name": "color",
+          "optional": true,
+          "type": "TextColor",
+          "values": ["default", "muted"],
+          "refs": ["text#TextColor"],
+          "doc": "The text colour: the default, or the muted tone."
+        },
+        { "name": "as", "optional": true, "type": "T", "doc": "The element Text renders." },
+        {
+          "name": "truncate",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Cuts a line that does not fit short with an ellipsis."
+        }
+      ],
+      "refs": ["text#TextVariant", "text#TextSize", "text#TextColor", "text#TextElement"]
+    },
+    {
+      "id": "text#TextProps",
       "name": "TextProps",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextProps" }
       ],
@@ -141,16 +195,16 @@
           "name": "T",
           "constraint": "TextElement",
           "default": "'span'",
-          "refs": ["supplemental#TextElement"]
+          "refs": ["text#TextElement"]
         }
       ],
-      "text": "type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & {\n  as?: T;\n  color?: TextColor;\n  truncate?: boolean;\n  className?: string;\n};",
-      "refs": ["supplemental#TextVisualProps", "supplemental#TextColor", "supplemental#TextElement"]
+      "text": "type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & Pick<TextOwnProps<T>, 'as' | 'color' | 'truncate'> & {\n  className?: string;\n};",
+      "refs": ["text#TextVisualProps", "text#TextOwnProps", "text#TextElement"]
     },
     {
-      "id": "supplemental#TextSize",
+      "id": "text#TextSize",
       "name": "TextSize",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextSize" }
       ],
@@ -159,9 +213,9 @@
       "values": ["xs", "sm", "md", "lg"]
     },
     {
-      "id": "supplemental#TextVariant",
+      "id": "text#TextVariant",
       "name": "TextVariant",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextVariant" }
       ],
@@ -170,15 +224,15 @@
       "values": ["display", "heading", "title", "label", "body", "expressive", "mono"]
     },
     {
-      "id": "supplemental#TextVisualProps",
+      "id": "text#TextVisualProps",
       "name": "TextVisualProps",
-      "module": "supplemental",
+      "module": "text",
       "public": [
         { "entry": ".", "name": "TextVisualProps" }
       ],
       "owner": "text",
       "text": "type TextVisualProps = {\n  variant?: 'body';\n  size?: TextSize;\n} | {\n  variant: 'display' | 'heading' | 'title';\n  size?: Exclude<TextSize, 'xs'>;\n} | {\n  variant: 'label' | 'expressive' | 'mono';\n  size?: TextSize;\n};",
-      "refs": ["supplemental#TextSize"]
+      "refs": ["text#TextSize"]
     }
   ]
 }

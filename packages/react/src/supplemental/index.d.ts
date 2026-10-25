@@ -135,49 +135,6 @@ export declare const CommandPalette: {
   ChipRemove: React.ForwardRefExoticComponent<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>>;
 };
 
-export type MultiSelectItem = { id: React.Key; [key: string]: unknown };
-export type MultiSelectProps<T extends MultiSelectItem = MultiSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; supportingText?: React.ReactNode; emptyStateTitle?: string; emptyStateDescription?: string; items?: Iterable<T>; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key> | 'all'; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key> | 'all') => void; showSearch?: boolean; showFooter?: boolean; onReset?: () => void; onSelectAll?: () => void; selectedCountFormatter?: (count: number) => React.ReactNode };
-export type MultiSelectRootProps<T extends MultiSelectItem = MultiSelectItem> = MultiSelectProps<T>;
-export type MultiSelectItemProps = React.HTMLAttributes<HTMLDivElement> & { disabled?: boolean; textValue?: string };
-export interface MultiSelectRootComponent {
-  <T extends MultiSelectItem = MultiSelectItem>(props: MultiSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
-}
-export declare const MultiSelect: {
-  Root: MultiSelectRootComponent;
-  Item: React.ForwardRefExoticComponent<MultiSelectItemProps & React.RefAttributes<HTMLDivElement>>;
-};
-
-export type TagSelectItem = { id: React.Key; [key: string]: unknown };
-export type TagSelectProps<T extends TagSelectItem = TagSelectItem> = Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & SupplementalFieldProps & { label?: React.ReactNode; placeholder?: string; description?: React.ReactNode; errorMessage?: React.ReactNode; items?: T[]; children?: React.ReactNode | ((item: T) => React.ReactNode); selectedKeys?: Set<React.Key>; defaultSelectedKeys?: Set<React.Key>; onSelectionChange?: (keys: Set<React.Key>) => void; getItemLabel?: (item: T) => string };
-export type TagSelectRootProps<T extends TagSelectItem = TagSelectItem> = TagSelectProps<T>;
-export type TagSelectItemProps = React.HTMLAttributes<HTMLDivElement> & { disabled?: boolean; textValue?: string };
-export interface TagSelectRootComponent {
-  <T extends TagSelectItem = TagSelectItem>(props: TagSelectRootProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;
-}
-export declare const TagSelect: {
-  Root: TagSelectRootComponent;
-  Item: React.ForwardRefExoticComponent<TagSelectItemProps & React.RefAttributes<HTMLDivElement>>;
-};
-
-export type TextVariant = 'display' | 'heading' | 'title' | 'label' | 'body' | 'expressive' | 'mono';
-export type TextSize = 'xs' | 'sm' | 'md' | 'lg';
-export type TextColor = 'default' | 'muted';
-export type TextElement = 'p' | 'span' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'div' | 'label';
-type TextVisualProps =
-  | { variant?: 'body'; size?: TextSize }
-  | { variant: 'display' | 'heading' | 'title'; size?: Exclude<TextSize, 'xs'> }
-  | { variant: 'label' | 'expressive' | 'mono'; size?: TextSize };
-export type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & {
-  as?: T;
-  color?: TextColor;
-  truncate?: boolean;
-  className?: string;
-};
-export interface TextComponent {
-  <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;
-}
-export declare const Text: TextComponent;
-
 export declare const supplementalFamilies: readonly [
   'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text'
 ];

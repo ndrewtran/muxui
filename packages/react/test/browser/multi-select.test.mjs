@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
-import { MultiSelect } from '../../src/supplemental/index.mjs';
+import { MultiSelect } from '../../src/supplemental/multi-select.ts';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function MultiSelectContractFixture() {
@@ -27,7 +27,7 @@ function MultiSelectContractFixture() {
 
 const browserEntry = `import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
-import { MultiSelect } from '/src/supplemental/index.mjs';
+import { MultiSelect } from '/src/supplemental/multi-select.ts';
 ${MultiSelectContractFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(MultiSelectContractFixture));
 document.documentElement.dataset.ready = 'true';
@@ -48,7 +48,7 @@ async function openPage(browser, url) {
 
 test('MultiSelect puts required, invalid, description, and error on the trigger in the accessibility tree', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({
-    entries: ['src/supplemental/index.mjs'],
+    entries: ['src/supplemental/multi-select.ts'],
     pages: { '/multi-select.html': html },
     modules: { '/multi-select-entry.mjs': browserEntry },
   });
@@ -81,7 +81,7 @@ test('MultiSelect puts required, invalid, description, and error on the trigger 
 
 test('MultiSelect Escape closes the popup and keeps the selection, and Reset and Select all change it', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({
-    entries: ['src/supplemental/index.mjs'],
+    entries: ['src/supplemental/multi-select.ts'],
     pages: { '/multi-select.html': html },
     modules: { '/multi-select-entry.mjs': browserEntry },
   });

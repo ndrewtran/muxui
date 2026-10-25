@@ -2,7 +2,9 @@ import React from 'react';
 import { Disclosure, DisclosureGroup } from '../../src/components.ts';
 import { ToastProvider, useToast } from '../../src/overlays.ts';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
-import { CommandPalette, MultiSelect, TagSelect } from '../../src/supplemental/index.mjs';
+import { CommandPalette } from '../../src/supplemental/index.mjs';
+import { MultiSelect } from '../../src/supplemental/multi-select.ts';
+import { TagSelect } from '../../src/supplemental/tag-select.ts';
 
 const h = React.createElement;
 

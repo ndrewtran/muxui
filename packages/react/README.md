@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:0106bdbadf3662284b7cf85da41f59e336d4f39a6775de16b6d7d6fae15e1e42 -->
+<!-- @generated-content-sha256: sha256:48fff551c2de11b4a841caa9d8f9de22a832f7ad202e90a193da51451b29b717 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -149,7 +149,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Menu | experimental | . | .muxui-menu | open, defaultOpen, disabled, shouldCloseOnSelect; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items, disabled, shouldCloseOnSelect; item: id, textValue, disabled, shouldCloseOnSelect; submenu: delay; section: title |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
-| MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
+| MultiSelect | experimental | . | .muxui-multi-select | size, label, placeholder, description, errorMessage, disabled, required, invalid, supportingText, emptyStateTitle, emptyStateDescription, items, selectedKeys, defaultSelectedKeys, showSearch, showFooter, selectedCountFormatter; item: disabled, textValue |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, invalid, required, readOnly, size; card-icon: cardType |
 | Popover | experimental | . | .muxui-popover | trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, modal |
@@ -172,7 +172,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Table | experimental | . | .muxui-table | columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
 | Tabs | experimental | . | .muxui-tabs | items, value, defaultValue, disabled, orientation, keyboardActivation, size, variant |
 | TagGroup | experimental | . | .muxui-tag-group | label, items, variant, color, selectionMode, selectedKeys, defaultSelectedKeys, disabled |
-| TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
+| TagSelect | experimental | . | .muxui-tag-select | size, label, placeholder, description, errorMessage, disabled, required, invalid, items, selectedKeys, defaultSelectedKeys, getItemLabel; item: disabled, textValue |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction |

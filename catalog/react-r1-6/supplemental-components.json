@@ -275,7 +275,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/multi-select.mjs",
+      "runtimeSource": "packages/react/src/supplemental/multi-select.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -404,7 +404,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/tag-select.mjs",
+      "runtimeSource": "packages/react/src/supplemental/tag-select.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -420,7 +420,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/text.mjs",
+      "runtimeSource": "packages/react/src/supplemental/text.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
