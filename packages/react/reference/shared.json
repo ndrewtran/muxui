@@ -24,6 +24,68 @@
       "text": "type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;"
     },
     {
+      "id": "collection-items#CollectionProps",
+      "name": "CollectionProps",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "CollectionProps" }
+      ],
+      "owner": "shared",
+      "extends": [
+        {
+          "type": "MuxUIAriaAccessibleName",
+          "refs": ["fields#MuxUIAriaAccessibleName"]
+        }
+      ],
+      "text": "type CollectionProps = MuxUIAriaAccessibleName & {\n  items?: MuxUIItems;\n  selectedIds?: MuxUISelection;\n  defaultSelectedIds?: MuxUISelection;\n  disabled?: boolean;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  onSelectionChange?: (ids: MuxUISelection) => void;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  className?: string;\n};",
+      "members": [
+        {
+          "name": "items",
+          "optional": true,
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"]
+        },
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"]
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"]
+        },
+        { "name": "disabled", "optional": true, "type": "boolean" },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'none' | 'single' | 'multiple'",
+          "values": ["none", "single", "multiple"]
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: MuxUISelection) => void",
+          "refs": ["collection-items#MuxUISelection"]
+        },
+        {
+          "name": "onAction",
+          "optional": true,
+          "type": "(item?: MuxUICollectionItem) => void",
+          "refs": ["collection-items#MuxUICollectionItem"]
+        },
+        { "name": "className", "optional": true, "type": "string" }
+      ],
+      "refs": [
+        "fields#MuxUIAriaAccessibleName",
+        "collection-items#MuxUIItems",
+        "collection-items#MuxUISelection",
+        "collection-items#MuxUICollectionItem"
+      ]
+    },
+    {
       "id": "collection-items#MuxUICollectionItem",
       "name": "MuxUICollectionItem",
       "module": "collection-items",
@@ -258,68 +320,6 @@
       ],
       "text": "type NamedFieldProps = FieldValidationProps & MuxUIAccessibleName;",
       "refs": ["fields#FieldValidationProps", "fields#MuxUIAccessibleName"]
-    },
-    {
-      "id": "index#CollectionProps",
-      "name": "CollectionProps",
-      "module": "index",
-      "public": [
-        { "entry": ".", "name": "CollectionProps" }
-      ],
-      "owner": "shared",
-      "extends": [
-        {
-          "type": "MuxUIAriaAccessibleName",
-          "refs": ["fields#MuxUIAriaAccessibleName"]
-        }
-      ],
-      "text": "type CollectionProps = MuxUIAriaAccessibleName & {\n  items?: MuxUIItems;\n  selectedIds?: MuxUISelection;\n  defaultSelectedIds?: MuxUISelection;\n  disabled?: boolean;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  onSelectionChange?: (ids: MuxUISelection) => void;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  className?: string;\n};",
-      "members": [
-        {
-          "name": "items",
-          "optional": true,
-          "type": "MuxUIItems",
-          "refs": ["collection-items#MuxUIItems"]
-        },
-        {
-          "name": "selectedIds",
-          "optional": true,
-          "type": "MuxUISelection",
-          "refs": ["collection-items#MuxUISelection"]
-        },
-        {
-          "name": "defaultSelectedIds",
-          "optional": true,
-          "type": "MuxUISelection",
-          "refs": ["collection-items#MuxUISelection"]
-        },
-        { "name": "disabled", "optional": true, "type": "boolean" },
-        {
-          "name": "selectionMode",
-          "optional": true,
-          "type": "'none' | 'single' | 'multiple'",
-          "values": ["none", "single", "multiple"]
-        },
-        {
-          "name": "onSelectionChange",
-          "optional": true,
-          "type": "(ids: MuxUISelection) => void",
-          "refs": ["collection-items#MuxUISelection"]
-        },
-        {
-          "name": "onAction",
-          "optional": true,
-          "type": "(item?: MuxUICollectionItem) => void",
-          "refs": ["collection-items#MuxUICollectionItem"]
-        },
-        { "name": "className", "optional": true, "type": "string" }
-      ],
-      "refs": [
-        "fields#MuxUIAriaAccessibleName",
-        "collection-items#MuxUIItems",
-        "collection-items#MuxUISelection",
-        "collection-items#MuxUICollectionItem"
-      ]
     },
     {
       "id": "index#ComponentPointerType",

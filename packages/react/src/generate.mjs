@@ -420,9 +420,8 @@ const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nex
 // (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type * as React from 'react';
 import type { ButtonPointerType } from './button.js';
-import type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 import type { MuxUIColorValue } from './color-context.js';
-import type { ControlSize, MuxUIAccessibleName, MuxUIAriaAccessibleName, MuxUIAriaLabel } from './fields.js';
+import type { ControlSize, MuxUIAccessibleName, MuxUIAriaLabel } from './fields.js';
 
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
@@ -466,7 +465,7 @@ export type { RadioGroupProps, RadioOption } from './radio-group.js';
 export { TokenField } from './token-field.js';
 export type { TokenFieldProps } from './token-field.js';
 export type { MuxUIColorChannel, MuxUIColorSpace, MuxUIColorValue } from './color-context.js';
-export type { MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
+export type { CollectionProps, MuxUICollectionItem, MuxUIItems, MuxUISelection } from './collection-items.js';
 export { ListBox } from './list-box.js';
 export type { ListBoxItemProps, ListBoxProps, ListBoxSectionProps } from './list-box.js';
 export { GridList } from './grid-list.js';
@@ -483,10 +482,6 @@ export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastPro
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
-const collectionsTypes = `
-export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-`;
-const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${collectionsTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
 const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
@@ -884,7 +879,7 @@ for (const record of currentMappedRecords.filter(isTypeScriptFamily)) {
   }
 }
 const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map((record) => `export * from './${isTypeScriptFamily(record) ? `${record.slug}.js` : `${record.slug}.mjs`}';\n`).join('')}`;
-const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
+const currentTypesBody = `${typesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 // The shared supplemental stylesheet is emitted once, right after IconButton's CSS, and skipped wherever a record names it
 // as its styleSource. Anchor it on that record, not on the first or last record that names it: the shared
 // `.muxui-icon-button.muxui-button[data-size='sm']` padding ties icon-button.css on specificity and only wins by

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ReactNode } from 'react';
+import type { MuxUIAriaAccessibleName } from './fields.ts';
 
 /** An item a collection renders from data. Other string-keyed fields are consumer data. */
 export interface MuxUICollectionItem {
@@ -14,6 +15,8 @@ export interface MuxUICollectionItem {
 }
 export type MuxUISelection = string[] | 'all';
 export type MuxUIItems = (MuxUICollectionItem | string)[];
+
+export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
 
 /** An item once `normalizeItems` has given it the fields the collection families read. */
 export interface NormalizedItem extends MuxUICollectionItem {
