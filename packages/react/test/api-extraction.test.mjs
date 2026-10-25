@@ -1237,18 +1237,21 @@ export interface Plain<V> { value: V }
 test('an explicit undefined on an optional member is another type, as a consumer with exactOptionalPropertyTypes sees it', () => {
   // `value?: T` and `value?: T | undefined` are one type with the option off, and two with it on, where `{ value: undefined }` is
   // accepted by the second only. The extraction reads the declarations as that consumer does, so each is the other's mismatch.
-  const members = '  loose?: { value?: T };\n  explicit?: { value?: T | undefined };';
+  const members = '  loose?: { value?: T };\n  explicit?: { value?: T | undefined };\n  present?: { value: T | undefined };';
   const redeclared = (member, text) => genericThing({
     members,
     body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
   });
-  const names = ['loose', 'explicit'];
-  for (const [member, text] of [['loose', 'loose?: { value?: T }'], ['explicit', 'explicit?: { value?: T | undefined }']]) {
+  const names = ['loose', 'explicit', 'present'];
+  for (const [member, text] of [['loose', 'loose?: { value?: T }'], ['explicit', 'explicit?: { value?: T | undefined }'], ['present', 'present?: { value: T | undefined }']]) {
     assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, names, text);
   }
   for (const [rule, member, text] of [
     ['an explicit undefined added', 'loose', 'loose?: { value?: T | undefined }'],
     ['an explicit undefined removed', 'explicit', 'explicit?: { value?: T }'],
+    // With the explicit undefined in both, the two types are one and the question mark is the whole difference.
+    ['the question mark removed', 'explicit', 'explicit?: { value: T | undefined }'],
+    ['the question mark added', 'present', 'present?: { value?: T | undefined }'],
   ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
   // The same holds for a member at the top of OwnProps, which has no parameter in it.
   const top = (text) => genericThing({

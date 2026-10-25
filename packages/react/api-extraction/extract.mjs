@@ -520,10 +520,10 @@ function isReadonlyProperty(project, symbol) {
 }
 
 // strictFunctionTypes compares the parameters of a function type or a call signature contravariantly and those of a method
-// bivariantly, by the kind of declaration that wrote the signature (a constructor is the third such kind, and no call signature):
-// a method keeps it through a mapped type and a property does not gain it, so the declaration, not the member, is what the matcher compares.
-const BIVARIANT_SIGNATURE_KINDS = new Set([SyntaxKind.MethodSignature, SyntaxKind.MethodDeclaration]);
-const isBivariantSignature = (signature) => BIVARIANT_SIGNATURE_KINDS.has(signature.declaration?.kind);
+// bivariantly, by the kind of declaration that wrote the signature (a class's method declaration is the other such kind, and the
+// matcher refuses a class): a method keeps it through a mapped type and a property does not gain it, so the declaration, not the
+// member, is what the matcher compares.
+const isBivariantSignature = (signature) => signature.declaration?.kind === SyntaxKind.MethodSignature;
 
 /**
  * Whether two types are the same type. TypeScript keys a union by how it was written (an alias, or the flattened members), so
@@ -557,7 +557,7 @@ function sameType(left, right) {
  * resolves to. Two constructs of an object are refused with a name, not compared: an accessor, whose write type the checker's type
  * of the symbol does not show, and a class instance, which may have protected or private members that no object literal has (and
  * is nominal for them), public members only or not. Everything else the grammar lacks fails as any mismatch does. `matches.outside()` is the name of the
- * construct that last made a call fail, or undefined, for the diagnostic.
+ * construct that made a call fail, or undefined, for the diagnostic.
  */
 function bindingMatcher(project, pairs) {
   const { checker } = project;
@@ -602,13 +602,14 @@ function bindingMatcher(project, pairs) {
   const objectMatches = (own, pub) => {
     const [ownProperties, pubProperties] = [checker.getPropertiesOfType(own), checker.getPropertiesOfType(pub)];
     if (![own, pub].every((type) => type.isObjectType())) return false;
-    if ([own, pub].some((type) => ((type.getSymbol()?.flags ?? 0) & SymbolFlags.Class) !== 0)) return refuse('a class instance is outside the grammar: it may have protected or private members, which no object literal has');
+    // OwnProps cannot name a class or write an accessor (the grammar has neither), so only the public side can have one.
+    if (((pub.getSymbol()?.flags ?? 0) & SymbolFlags.Class) !== 0) return refuse('a class instance is outside the grammar: it may have protected or private members, which no object literal has');
     return ownProperties.length === pubProperties.length
       && [own, pub].every((type) => checker.getSignaturesOfType(type, SignatureKind.Call).length === 0 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getIndexInfosOfType(type).length === 0)
       && ownProperties.every((property) => {
         const twin = pubProperties.find(({ name }) => name === property.name);
         if (twin === undefined) return false;
-        if ([property, twin].some((symbol) => (symbol.flags & SymbolFlags.Accessor) !== 0)) return refuse('an accessor is outside the grammar: its write type is not the type of the property');
+        if ((twin.flags & SymbolFlags.Accessor) !== 0) return refuse('an accessor is outside the grammar: its write type is not the type of the property');
         return optionalProperty(property) === optionalProperty(twin) && readonly(property) === readonly(twin)
           && matches(checker.getTypeOfSymbol(property), checker.getTypeOfSymbol(twin));
       });
@@ -628,12 +629,9 @@ function bindingMatcher(project, pairs) {
     if (ownCall !== undefined && pubCall !== undefined) return signatureMatches(ownCall, pubCall);
     return objectMatches(own, pub);
   }
-  const entry = (own, pub) => {
-    outside = undefined;
-    return matches(own, pub);
-  };
-  entry.outside = () => outside;
-  return entry;
+  // A refusal ends in a failure of the whole call (a union needs every arm paired), so the name is the reason the call failed.
+  matches.outside = () => outside;
+  return matches;
 }
 
 /**
