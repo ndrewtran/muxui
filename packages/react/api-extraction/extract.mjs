@@ -508,11 +508,10 @@ const CHECK_FLAGS_READONLY = 1 << 3;
 /**
  * Whether a property is readonly as the checker sees it (`isReadonlySymbol`): a mapped property keeps the declaration it copies
  * and no value declaration, so its modifiers are the check flag the mapped type computed, and only a declared or instantiated
- * property is readonly by its own declaration. A get accessor without a set accessor is readonly too.
+ * property is readonly by its own declaration. (An accessor is never asked: the matcher refuses it.)
  */
 function isReadonlyProperty(project, symbol) {
   if ((symbol.checkFlags & CHECK_FLAGS_READONLY) !== 0) return true;
-  if ((symbol.flags & SymbolFlags.Accessor) === SymbolFlags.GetAccessor) return true;
   const declaration = symbol.valueDeclaration?.resolve(project);
   return declaration !== undefined && hasModifier(declaration, SyntaxKind.ReadonlyKeyword);
 }
@@ -547,10 +546,13 @@ function sameType(left, right) {
  *  - a callback: one call signature each, with no type parameters or `this`, the same optional and rest parameters, matching
  *    parameter types and a matching return, and written the same way: a method's parameters are compared bivariantly and a
  *    function type's contravariantly, so one cannot stand for the other;
- *  - an object literal: the same properties, optional and readonly alike, with matching types. The flags are the effective ones,
- *    those the type checker uses, so a `Readonly`, `Partial`, `Required` or `-readonly` copy of a nested object is the object
- *    with its modifiers changed and does not match the one OwnProps wrote.
- * An intersection, a conditional type, an indexed access and the like are not matched; a mapped type is read as the object it resolves to.
+ *  - an object literal or an interface: the same properties, optional and readonly alike, with matching types. The flags are the
+ *    effective ones, those the type checker uses, so a `Readonly`, `Partial`, `Required` or `-readonly` copy of a nested object is
+ *    the object with its modifiers changed and does not match the one OwnProps wrote.
+ * An intersection, a conditional type, an indexed access and the like are not matched; a mapped type is read as the object it
+ * resolves to. An accessor is refused with a name, not compared: the checker's type of its symbol is the type it reads, and the
+ * type it writes is not shown. Everything else the grammar lacks fails as any mismatch does. `matches.outside()` is the name of the
+ * construct that last made a call fail, or undefined, for the diagnostic.
  */
 function bindingMatcher(project, pairs) {
   const { checker } = project;
@@ -558,6 +560,11 @@ function bindingMatcher(project, pairs) {
   const optionalParameter = (symbol) => symbol.declarations.some((declaration) => declaration.resolve(project)?.questionToken !== undefined);
   const optionalProperty = (symbol) => (symbol.flags & SymbolFlags.Optional) !== 0;
   const readonly = (symbol) => isReadonlyProperty(project, symbol);
+  let outside;
+  const refuse = (what) => {
+    outside ??= what;
+    return false;
+  };
   const call = (type) => {
     const calls = checker.getSignaturesOfType(type, SignatureKind.Call);
     return calls.length === 1 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getPropertiesOfType(type).length === 0 ? calls[0] : undefined;
@@ -593,7 +600,9 @@ function bindingMatcher(project, pairs) {
       && [own, pub].every((type) => checker.getSignaturesOfType(type, SignatureKind.Call).length === 0 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getIndexInfosOfType(type).length === 0)
       && ownProperties.every((property) => {
         const twin = pubProperties.find(({ name }) => name === property.name);
-        return twin !== undefined && optionalProperty(property) === optionalProperty(twin) && readonly(property) === readonly(twin)
+        if (twin === undefined) return false;
+        if ([property, twin].some((symbol) => (symbol.flags & SymbolFlags.Accessor) !== 0)) return refuse('an accessor is outside the grammar: its write type is not the type of the property');
+        return optionalProperty(property) === optionalProperty(twin) && readonly(property) === readonly(twin)
           && matches(checker.getTypeOfSymbol(property), checker.getTypeOfSymbol(twin));
       });
   };
@@ -612,7 +621,12 @@ function bindingMatcher(project, pairs) {
     if (ownCall !== undefined && pubCall !== undefined) return signatureMatches(ownCall, pubCall);
     return own.isObjectType() && pub.isObjectType() && objectMatches(own, pub);
   }
-  return matches;
+  const entry = (own, pub) => {
+    outside = undefined;
+    return matches(own, pub);
+  };
+  entry.outside = () => outside;
+  return entry;
 }
 
 /**
@@ -1302,7 +1316,7 @@ function readDeclaredApi(makeReader, project, sourceFile, { exportName, ownName,
       const accepted = signature.props.get(prop);
       if (!accepted) throw new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props do not include ${prop}`);
       const acceptedType = checker.getTypeOfSymbol(accepted);
-      const redeclared = (reason) => new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props ${reason} ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}${mentionsBinder ? ' (a member that mentions a type parameter is compared with each of OwnProps\'s replaced by the exported component\'s at the same position)' : ''}`);
+      const redeclared = (reason) => new ApiExtractionError(`${label}.${prop}`, `the exported ${signature.name}'s props ${reason} ${prop} as ${shown(accepted, acceptedType)}; ${ownName}OwnProps declares ${shown(own, ownType)}${mentionsBinder ? ' (a member that mentions a type parameter is compared with each of OwnProps\'s replaced by the exported component\'s at the same position)' : ''}${mentionsBinder && signature.matches.outside() !== undefined ? `; ${signature.matches.outside()}` : ''}`);
       // A member that mentions a type parameter is the same type once each parameter is replaced by the signature's, by position.
       const sameAsOwn = mentionsBinder ? signature.matches(ownType, acceptedType) : sameType(acceptedType, ownType);
       const optionalityKept = Boolean(accepted.flags & SymbolFlags.Optional) === !required;

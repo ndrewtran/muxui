@@ -1142,7 +1142,6 @@ test('an object literal is matched by the modifiers the checker computes, so a m
 export type Required2<R> = { [K in keyof R]-?: R[K] };
 export interface Cell<V> { value: V }
 export interface Box<V> { readonly value: V }
-export interface Getter<V> { get value(): V }
 `;
   const members = '  holder?: { value: T };\n  locked?: { readonly value: T };\n  loose?: { value?: T };';
   const redeclared = (member, text) => genericThing({
@@ -1150,8 +1149,7 @@ export interface Getter<V> { get value(): V }
     members,
     body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
   });
-  // The same modifiers, written another way, are the same object: a mapped copy that changes none, a generic interface, a get accessor
-  // with no set accessor (readonly), and a class whose instance has the property.
+  // The same modifiers, written another way, are the same object: a mapped copy that changes none, and a generic interface.
   for (const [member, text] of [
     ['holder', 'holder?: { value: T }'],
     ['holder', 'holder?: Mutable<{ value: T }>'],
@@ -1161,7 +1159,6 @@ export interface Getter<V> { get value(): V }
     ['locked', 'locked?: Readonly<{ value: T }>'],
     ['locked', "locked?: Pick<{ readonly value: T; extra: string }, 'value'>"],
     ['locked', 'locked?: Box<T>'],
-    ['locked', 'locked?: Getter<T>'],
     ['loose', 'loose?: { value?: T }'],
     ['loose', 'loose?: Partial<{ value: T }>'],
   ]) assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, ['holder', 'locked', 'loose'], text);
@@ -1170,7 +1167,6 @@ export interface Getter<V> { get value(): V }
   for (const [rule, member, text] of [
     ['readonly added by Readonly', 'holder', 'holder?: Readonly<{ value: T }>'],
     ['readonly added by a generic interface', 'holder', 'holder?: Box<T>'],
-    ['readonly added by a get accessor', 'holder', 'holder?: Getter<T>'],
     ['readonly removed by a -readonly copy', 'locked', 'locked?: Mutable<{ readonly value: T }>'],
     ['readonly removed by a -readonly copy of the literal', 'locked', "locked?: { -readonly [K in 'value']: T }"],
     ['readonly removed by a generic interface', 'locked', 'locked?: Cell<T>'],
@@ -1210,6 +1206,34 @@ export class Field<V> { run = (item: V): void => {}; }
     // A mapped copy keeps the declaration of the signature it copies: the method is still a method, and its readonly flag is another matter.
     ['a nested method behind a Readonly copy', 'holder', 'holder?: Readonly<{ run(item: T): void }>'],
   ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
+});
+
+test('an accessor is refused by name, whatever its types, because its write type is not shown', () => {
+  // `{ value: T }` against a getter of T and a setter of a string is another object (the setter takes strings), and the checker's type of
+  // the property is the getter's. The nested matcher serves the plain object literal and interface members the families write, so it
+  // refuses an accessor, in an object literal or an interface, instead of comparing what it cannot see.
+  const declarations = `${ROW}export interface Accessors<V> { get value(): V; set value(next: string) }
+export interface Matching<V> { get value(): V; set value(next: V) }
+export interface Getter<V> { get value(): V }
+export interface Setter<V> { set value(next: V) }
+export interface Plain<V> { value: V }
+`;
+  const members = '  holder?: { value: T };';
+  const redeclared = (text) => genericThing({
+    declarations,
+    members,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, 'holder'> & { ${text} }`,
+  });
+  // The same declarations still match, an interface among them.
+  for (const text of ['holder?: { value: T }', 'holder?: Plain<T>']) assert.deepEqual(extract({ declarations: redeclared(text) }).props, ['holder'], text);
+  const refused = (rule, text) => rejects(redeclared(text), /Thing\.holder: the exported Thing's props redeclare holder[^]*an accessor is outside the grammar/u, {}, rule);
+  refused('a setter of another type', 'holder?: Accessors<T>');
+  refused('a setter of the same type', 'holder?: Matching<T>');
+  refused('a getter alone', 'holder?: Getter<T>');
+  refused('a setter alone', 'holder?: Setter<T>');
+  refused('a getter and a setter written in an object literal', 'holder?: { get value(): T; set value(next: string) }');
+  // OwnProps cannot write one: the grammar has no accessor member, so the other direction is refused before any comparison.
+  rejects(genericThing({ members: '  holder?: { get value(): T };' }), /Thing\.holder/u, {}, 'an accessor in OwnProps');
 });
 
 test('what an unconstrained, conditional, mapped, indexed, or callback-local parameter would add is outside the grammar', () => {
