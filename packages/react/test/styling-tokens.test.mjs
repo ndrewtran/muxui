@@ -3,6 +3,10 @@ import { glob, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { compilePureTokenGraph, cssDeclaration } from '@muxui/tokens/core';
+import { catalogStateKinds, establishedClasses, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
+import {
+  booleanStates, enumeratedStates, mappedParts, noElementParts, partClass, pendingParts, publicSharedClasses, sharedParts, stateAttribute,
+} from './support/styling-contract.ts';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const source = JSON.parse(await readFile(resolve(packageRoot, '../../catalog/tokens/default-theme.json'), 'utf8'));
@@ -73,5 +77,81 @@ test('semantic styling roles compile across all declared mode combinations', () 
   for (const modes of combinations) {
     const graph = compilePureTokenGraph(source, { modes });
     assert.equal(Object.keys(graph.tokens).length, Object.keys(source.tokens).length);
+  }
+});
+
+// The styling contract inventory (CSS Stage 2). It proves the contract covers every catalog state and anatomy
+// entry, not that a class is emitted on the right element; that proof comes with the class scheme PR.
+const catalog = await readCatalog(resolve(packageRoot, '../..'));
+const { selected, isEstablished } = await establishedClasses(packageRoot, styles.map(({ css }) => css));
+const parts = { mapped: mappedParts, shared: sharedParts, noElement: noElementParts, pending: pendingParts };
+
+test('the closed state list is spelled once and every name is a substrate attribute the styles select today', () => {
+  const names = [...booleanStates, ...Object.keys(enumeratedStates)];
+  assert.equal(new Set(names).size, names.length);
+  assert.ok(!names.includes('readonly'), 'the catalog spells read-only');
+  const css = styles.map((style) => style.css).join('\n');
+  // React Aria spells read-only without the hyphen; the contract uses the catalog's spelling.
+  for (const name of names) assert.ok(css.includes(`[data-${name === 'read-only' ? 'readonly' : name}`), `${name} is selected by an authored style`);
+  assert.equal(stateAttribute('read-only'), 'data-muxui-state-read-only');
+  assert.equal(stateAttribute('orientation'), 'data-muxui-state-orientation');
+});
+
+test('every catalog state is classified by meaning and only unresolved ones are open work', () => {
+  assert.deepEqual(stateFailures(catalog.states), []);
+  const unresolved = Object.values(catalogStateKinds).filter(([kind]) => kind === 'unresolved');
+  assert.ok(unresolved.length <= 9, 'the unresolved allowlist only shrinks');
+});
+
+test('the state classification refuses an unclassified name, a stale entry and a target outside the closed list', () => {
+  assert.match(stateFailures(new Set([...catalog.states, 'glowing'])).join(), /unclassified state glowing/u);
+  assert.match(stateFailures(new Set([...catalog.states].filter((name) => name !== 'wrap'))).join(), /stale classification wrap/u);
+  assert.match(stateFailures(catalog.states, { ...catalogStateKinds, hovered: ['state', 'hover'] }).join(), /hovered names hover/u);
+  assert.match(stateFailures(catalog.states, { ...catalogStateKinds, vertical: ['enum', 'orientation', 'sideways'] }).join(), /vertical names orientation=sideways/u);
+  assert.match(stateFailures(catalog.states, { ...catalogStateKinds, error: ['unresolved'] }).join(), /error is unresolved without a reason and a PR/u);
+});
+
+test('every catalog anatomy entry is in the part map exactly once with an established class or a reason', () => {
+  assert.deepEqual(partFailures(catalog.anatomy, parts, isEstablished), []);
+  assert.equal(mappedParts.length + sharedParts.length + noElementParts.length + pendingParts.length, [...catalog.anatomy.values()].flat().length);
+  // The pending list only shrinks; an entry leaves it with a decision, never by being called no-element.
+  assert.ok(pendingParts.length <= 12);
+});
+
+test('the part map check refuses a bogus class, a duplicate, a missing entry and keys the catalog lacks', () => {
+  const failures = (changes) => partFailures(catalog.anatomy, { ...parts, ...changes }, isEstablished).join('\n');
+  const withValue = (rows, family, part, value) => rows.map((row) => row[0] === family && row[1] === part ? [family, part, value] : row);
+  const without = (rows, family, part) => rows.filter((row) => row[0] !== family || row[1] !== part);
+  // A mapping is not a hook because its key exists: the class must be selected by a rule or spelled in source.
+  assert.equal(isEstablished('muxui-button__bogus'), false);
+  assert.match(failures({ mapped: withValue(mappedParts, 'button', 'root', 'muxui-button__bogus') }), /button\.root: muxui-button__bogus is not an established class/u);
+  assert.match(failures({ shared: withValue(sharedParts, 'autocomplete', 'label', 'muxui-field-bogus') }), /autocomplete\.label: muxui-field-bogus is not an established class/u);
+  assert.match(failures({ pending: [...pendingParts, ['button', 'root', 'Both.']] }), /button\.root: listed as mapped and pending/u);
+  assert.match(failures({ mapped: without(mappedParts, 'activity', 'header') }), /activity\.header: not mapped/u);
+  assert.match(failures({ mapped: [...mappedParts, ['nope', 'root', 'muxui-button']] }), /nope\.root: unknown family/u);
+  assert.match(failures({ mapped: [...mappedParts, ['button', 'nope', 'muxui-button']] }), /button\.nope: unknown part/u);
+  assert.match(failures({ noElement: withValue(noElementParts, 'alert-dialog', 'root', '') }), /alert-dialog\.root: noElement without a reason/u);
+});
+
+test('every family root class is selected by a style rule except the recorded gaps', () => {
+  const roots = mappedParts.filter(([, part]) => part === 'root');
+  // AlertDialog.Root renders no element. Lightbox and Text emit the root class and no rule selects it.
+  assert.deepEqual(noElementParts.filter(([, part]) => part === 'root').map(([family]) => family), ['alert-dialog']);
+  assert.deepEqual(roots.filter(([, , name]) => !selected.has(name)).map(([family]) => family), ['lightbox', 'text']);
+  // Input and Menu roots differ from the class their control carries, which the root rule of the same name styles.
+  assert.deepEqual(roots.filter(([family, , name]) => name !== `muxui-${family}`).map(([family]) => family), ['input', 'menu']);
+});
+
+test('the class naming function agrees with every BEM part class that exists, and the public shared classes are in use', () => {
+  assert.equal(partClass('button', 'root'), 'muxui-button');
+  assert.equal(partClass('text-editor', 'color-popup'), 'muxui-text-editor__color-popup');
+  const mapped = new Map(mappedParts.map(([family, part, name]) => [`${family}.${part}`, name]));
+  for (const [family, list] of catalog.anatomy) {
+    for (const part of list.filter((name) => name !== 'root' && selected.has(partClass(family, name)))) {
+      assert.equal(mapped.get(`${family}.${part}`), partClass(family, part), `${family}.${part} is already the BEM class`);
+    }
+  }
+  for (const name of publicSharedClasses) {
+    assert.ok(selected.has(name) && sharedParts.some(([, , shared]) => shared === name), `${name} is styled and shared`);
   }
 });
