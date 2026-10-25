@@ -8,8 +8,7 @@
     "fields": "packages/react/src/fields.ts",
     "index": "packages/react/src/generate.mjs",
     "overlays": "packages/react/src/overlays.ts",
-    "part-utils": "packages/react/src/supplemental/part-utils.ts",
-    "supplemental": "packages/react/src/supplemental/index.d.ts"
+    "part-utils": "packages/react/src/supplemental/part-utils.ts"
   },
   "exports": [],
   "types": [
@@ -367,6 +366,19 @@
       "text": "type OverlayAccessibleName = {\n  'aria-label': string;\n  'aria-labelledby'?: never;\n} | {\n  'aria-label'?: never;\n  'aria-labelledby': string;\n};"
     },
     {
+      "id": "part-utils#PartProps",
+      "name": "PartProps",
+      "module": "part-utils",
+      "public": [
+        { "entry": ".", "name": "PartProps" }
+      ],
+      "owner": "shared",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
       "id": "part-utils#SupplementalActivation",
       "name": "SupplementalActivation",
       "module": "part-utils",
@@ -386,22 +398,9 @@
       ]
     },
     {
-      "id": "supplemental#PartProps",
-      "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
-      "typeParameters": [
-        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
-      ],
-      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
-    },
-    {
-      "id": "supplemental#SupplementalFieldProps",
+      "id": "part-utils#SupplementalFieldProps",
       "name": "SupplementalFieldProps",
-      "module": "supplemental",
+      "module": "part-utils",
       "public": [
         { "entry": ".", "name": "SupplementalFieldProps" }
       ],

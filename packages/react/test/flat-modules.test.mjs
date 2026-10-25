@@ -10,7 +10,7 @@ test('a subdirectory index ships under its directory, in every extension a sourc
   }
   // Two subpath modules stay distinct, and neither takes the barrel's name.
   assert.deepEqual(['markdown', 'text-editor'].map((directory) => flatModuleName(`${root}/${directory}/index.ts`)), ['markdown.js', 'text-editor.js']);
-  assert.equal(flatModuleName(`${root}/supplemental/index.mjs`), 'supplemental.mjs');
+  assert.equal(flatModuleName(`${root}/supplemental/index.ts`), 'supplemental.js');
   // Only a subdirectory's index is renamed: a module that merely sits in a directory, and a root index, keep their names.
   assert.equal(flatModuleName(`${root}/supplemental/lightbox.ts`), 'lightbox.js');
   assert.equal(flatModuleName(`${root}/index.ts`), 'index.js');
@@ -30,7 +30,7 @@ const listed = import(/* chunk */ './listbox-motion.mjs');
 const text = "import { Fake } from '../fake.mjs'";
 const template = \`export * from '../template.mjs' \${text}\`;
 `;
-  assert.equal(flattenImports('packages/react/src/supplemental/index.mjs', source), `import { Button } from /* the moved component */ './button.js';
+  assert.equal(flattenImports('packages/react/src/supplemental/candidate-motion.mjs', source), `import { Button } from /* the moved component */ './button.js';
 import './side-effect.mjs';
 export { Menu } from "./menu.mjs";
 export * from './candidate-motion.mjs';
@@ -43,7 +43,7 @@ const template = \`export * from '../template.mjs' \${text}\`;
 `);
   // Declarations parse as TypeScript, including type-only imports and import types.
   const declarations = "import type { ButtonProps } from '../button.js';\nexport type Lazy = typeof import('../menu/index.mjs');\nexport type { ButtonProps };\n";
-  assert.equal(flattenImports('packages/react/src/supplemental/index.d.ts', declarations),
+  assert.equal(flattenImports('packages/react/src/supplemental/candidate-motion.d.mts', declarations),
     "import type { ButtonProps } from './button.js';\nexport type Lazy = typeof import('./menu.mjs');\nexport type { ButtonProps };\n");
 });
 

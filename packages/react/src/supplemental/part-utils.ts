@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ForwardedRef, HTMLAttributes, ReactElement, ReactNode, createElement, useEffect } from 'react';
+import type { ButtonHTMLAttributes, ForwardedRef, HTMLAttributes, ReactElement, ReactNode, createElement, useEffect } from 'react';
 
 // Annotated, so the declaration names the React types by import and never the default import.
 export const h: typeof createElement = React.createElement;
@@ -28,6 +28,22 @@ export type SupplementalActivation = {
   type: 'activate';
   pointerType?: string;
   target?: EventTarget | null;
+};
+
+/** The native props of a button part: its attributes, a disabled flag, `onActivate`, and a className. */
+export type ButtonPartProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  disabled?: boolean;
+  onActivate?: (event: SupplementalActivation) => void;
+  className?: string;
+};
+
+/** The state and size props the field compounds share. */
+export type SupplementalFieldProps = {
+  disabled?: boolean;
+  invalid?: boolean;
+  required?: boolean;
+  readOnly?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 };
 
 export function pressHandler(onActivate?: (event: SupplementalActivation) => void) {

@@ -3,8 +3,7 @@
   "owner": "button",
   "sources": {
     "button": "packages/react/src/button.ts",
-    "part-utils": "packages/react/src/supplemental/part-utils.ts",
-    "supplemental": "packages/react/src/supplemental/index.d.ts"
+    "part-utils": "packages/react/src/supplemental/part-utils.ts"
   },
   "exports": [
     {
@@ -200,6 +199,17 @@
       "values": ["primary", "neutral", "ghost", "danger", "danger-neutral", "danger-ghost", "inverse"]
     },
     {
+      "id": "part-utils#ButtonPartProps",
+      "name": "ButtonPartProps",
+      "module": "part-utils",
+      "public": [
+        { "entry": ".", "name": "ButtonPartProps" }
+      ],
+      "owner": "button",
+      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
+      "refs": ["part-utils#SupplementalActivation"]
+    },
+    {
       "id": "part-utils#SupplementalActivation",
       "name": "SupplementalActivation",
       "module": "part-utils",
@@ -217,17 +227,6 @@
         { "name": "pointerType", "optional": true, "type": "string" },
         { "name": "target", "optional": true, "type": "EventTarget | null" }
       ]
-    },
-    {
-      "id": "supplemental#ButtonPartProps",
-      "name": "ButtonPartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "ButtonPartProps" }
-      ],
-      "owner": "button",
-      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
-      "refs": ["part-utils#SupplementalActivation"]
     }
   ]
 }

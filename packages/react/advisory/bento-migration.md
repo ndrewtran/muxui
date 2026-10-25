@@ -21,7 +21,7 @@ B21 is owned by the [ColorSwatch binding](../../../catalog/components/color-swat
 and [React implementation](../src/color-swatch.ts), with a
 [two-tone example](../../../catalog/components/color-swatch/examples/react/two-tone.tsx).
 B23 is owned by the [CommandPalette binding](../../../catalog/components/command-palette/artifact.json)
-and [React implementation](../src/supplemental/index.mjs), with a
+and [React implementation](../src/supplemental/command-palette.ts), with a
 [managed-commands example](../../../catalog/components/command-palette/examples/react/managed-commands.tsx).
 
 For B23, connect the hook's `query` and `setQuery` to the native Input's

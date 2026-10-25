@@ -82,7 +82,7 @@
           "owner": "button-group",
           "module": "button-group"
         },
-        { "name": "ButtonPartProps", "kind": "type", "owner": "button", "module": "supplemental" },
+        { "name": "ButtonPartProps", "kind": "type", "owner": "button", "module": "part-utils" },
         { "name": "ButtonPointerType", "kind": "type", "owner": "button", "module": "button" },
         { "name": "ButtonProps", "kind": "type", "owner": "button", "module": "button" },
         { "name": "Calendar", "kind": "value", "owner": "calendar", "module": "calendar" },
@@ -854,8 +854,8 @@
           "name": "PartProps",
           "kind": "type",
           "owner": "shared",
-          "module": "supplemental",
-          "reason": "helper types of the supplemental declarations that several supplemental families use"
+          "module": "part-utils",
+          "reason": "helper types that several supplemental families share"
         },
         {
           "name": "PaymentInput",
@@ -1117,14 +1117,14 @@
           "kind": "type",
           "owner": "shared",
           "module": "part-utils",
-          "reason": "helper types of the supplemental declarations that several supplemental families use"
+          "reason": "helper types that several supplemental families share"
         },
         {
           "name": "SupplementalFieldProps",
           "kind": "type",
           "owner": "shared",
-          "module": "supplemental",
-          "reason": "helper types of the supplemental declarations that several supplemental families use"
+          "module": "part-utils",
+          "reason": "helper types that several supplemental families share"
         },
         { "name": "Switch", "kind": "value", "owner": "switch", "module": "fields" },
         {

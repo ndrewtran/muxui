@@ -1,27 +1,21 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { parseAst } from 'vite';
-import * as barrel from '../src/supplemental/index.mjs';
+import * as barrel from '../src/supplemental/index.ts';
 import { readSupplementalMapping } from '../src/supplemental-mapping.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const supplementalRoot = resolve(import.meta.dirname, '../src/supplemental');
-const barrelSource = 'packages/react/src/supplemental/index.mjs';
 // The 18 families the barrel re-exported when it was split, and the modules they share. Each is a source file in
-// either language, so the list outlives the move of a module to TypeScript and a converted context stays checked.
+// either language, so the list outlives the move of a module between languages.
 const families = [
   'alert-dialog', 'button-group', 'card', 'checkbox-field', 'color-mode-toggle', 'command-palette', 'header-nav', 'input', 'input-tags',
   'multi-select', 'payment-input', 'progress-circle', 'radio-field', 'sidebar', 'switch-field', 'tag-select', 'text', 'text-area',
 ];
 const helpers = ['part-utils', 'field-utils', 'field-root', 'modal-parts', 'item-renderer', 'navigation-drawer'];
 const mapping = readSupplementalMapping(repositoryRoot);
-const rootRecords = mapping.filter(({ export: { module } }) => module === '.');
-// Families the mapping places in a JavaScript module of their own; a TypeScript family is an eager root export, not part of the barrel.
-// Every family has moved to TypeScript, so the barrel holds supplementalFamilies alone and the guards below stand ready for a JavaScript family.
-const javaScriptRecords = rootRecords.filter(({ runtimeSource }) => runtimeSource.startsWith('packages/react/src/supplemental/') && runtimeSource.endsWith('.mjs'));
 const sourceFiles = await readdir(supplementalRoot);
 const sourceFile = (name) => {
   const found = sourceFiles.filter((file) => file === `${name}.mjs` || file === `${name}.ts`);
@@ -33,26 +27,14 @@ const readModule = async (name) => {
   return { file, text: await readFile(resolve(supplementalRoot, file), 'utf8'), lang: file.endsWith('.ts') ? 'ts' : 'js' };
 };
 
-test('index.mjs exports exactly the mapped JavaScript families and supplementalFamilies', () => {
-  const expected = [...javaScriptRecords.map(({ export: { name } }) => name), 'supplementalFamilies'];
-  assert.deepEqual(Object.keys(barrel).sort(), expected.sort());
-  assert.ok(javaScriptRecords.every(({ slug }) => families.includes(slug)), 'every mapped JavaScript family is a split family module');
-});
-
-test('each barrel binding is the one its mapped owning module declares', async () => {
-  for (const { runtimeSource, export: { name } } of javaScriptRecords) {
-    assert.notEqual(runtimeSource, barrelSource, `${name} is declared outside the barrel`);
-    const owner = await import(pathToFileURL(resolve(repositoryRoot, runtimeSource)).href);
-    assert.ok(name in owner, `${name} is declared by ${runtimeSource}`);
-    assert.equal(barrel[name], owner[name], `${name} is the binding ${runtimeSource} declares`);
-  }
-});
-
-test('the barrel re-exports a JavaScript family and not one the mapping has moved to TypeScript', () => {
-  const supplemental = rootRecords.filter(({ runtimeSource }) => runtimeSource.startsWith('packages/react/src/supplemental/'));
-  assert.ok(supplemental.some(({ runtimeSource }) => runtimeSource.endsWith('.ts')));
-  for (const { family, runtimeSource } of supplemental) {
-    assert.equal(Object.hasOwn(barrel, family), runtimeSource.endsWith('.mjs'), `${family} (${runtimeSource})`);
+// The barrel is metadata: the list of family names and no family, because the generated root index exports each family from its own
+// TypeScript module.
+test('the barrel exports supplementalFamilies alone, frozen, and every mapped family is a module of its own', () => {
+  assert.deepEqual(Object.keys(barrel), ['supplementalFamilies']);
+  assert.ok(Object.isFrozen(barrel.supplementalFamilies));
+  for (const { slug, runtimeSource } of mapping) {
+    assert.ok(runtimeSource.endsWith('.ts'), `${slug} is declared in ${runtimeSource}`);
+    assert.ok(!runtimeSource.endsWith('/supplemental/index.ts'), `${slug} is declared outside the barrel`);
   }
 });
 
@@ -127,7 +109,7 @@ test('the sibling import guard fails a family that gains a dynamic import or an 
     'a dynamic import nested in a function': ["\nexport function later() {\n  if (true) return import('./sidebar.mjs');\n}\n", 'sidebar'],
     'a path that climbs out and back in': ["\nimport { Card } from '../supplemental/card.mjs';\n", 'card'],
     'a re-export by a longer equivalent path': ["\nexport { Card } from '../../src/supplemental/card.ts';\n", 'card'],
-    'the barrel by an equivalent path': ["\nimport { Card } from '../supplemental/index.mjs';\n", 'index'],
+    'the barrel by an equivalent path': ["\nimport { Card } from '../supplemental/index.ts';\n", 'index'],
   };
   for (const [name, [addition, sibling]] of Object.entries(mutations)) {
     assert.deepEqual(forbiddenSiblings(text + addition, lang), [sibling], `${name} is caught`);

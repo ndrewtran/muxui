@@ -493,7 +493,7 @@ test('capability-enrichment status is a deterministic, advisory-only traceabilit
 
   // Runtime proof names a .mjs or .ts module; a hand-written declaration file is not runtime.
   const declarationProof = structuredClone(matrix);
-  declarationProof.families[0].dimensions.requiredWorkflows.decisions[0].proofRefs = ['packages/react/src/supplemental/index.d.ts:1'];
+  declarationProof.families[0].dimensions.requiredWorkflows.decisions[0].proofRefs = ['packages/react/src/supplemental/part-utils.d.ts:1'];
   await assert.rejects(() => buildStatus(declarationProof), /PROOF_NAMESPACE/u);
 
   const changedDisposition = structuredClone(matrix);

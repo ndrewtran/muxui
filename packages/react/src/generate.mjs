@@ -425,6 +425,7 @@ import type { ControlSize, MuxUIAccessibleName, MuxUIAriaLabel } from './fields.
 
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
+export type { ButtonPartProps, PartProps, SupplementalActivation, SupplementalFieldProps } from './part-utils.js';
 export type ComponentPointerType = ButtonPointerType;
 export { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';
 export type { BreadcrumbItem, BreadcrumbsProps, CheckboxProps, DisclosureGroupProps, DisclosureProps, GroupProps, LinkActivationEvent, LinkProps, MeterProps, ProgressBarProps, SeparatorProps, ToggleButtonActivationEvent, ToggleButtonProps } from './components.js';
@@ -740,11 +741,8 @@ const r15ClosureRecord = {
   performance: r15ClosureSource.performance,
   publication: r15ClosureSource.publication,
 };
-const supplementalSource = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8').catch(() => '');
-const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8').catch(() => '');
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
 const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(async (entry) => {
-  const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
   const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
   const artifact = allCatalogArtifactsBySlug.get(entry.slug);
   return {
@@ -755,15 +753,13 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
     module: entry.export.module,
     styleSource: entry.styleSource,
     artifact,
-    sourceText,
     style,
     subpath: entry.export.module !== '.',
   };
 }))).sort((left, right) => left.slug.localeCompare(right.slug));
 const currentSubpathRecords = currentMappedRecords.filter(({ subpath }) => subpath);
-// An eager record is a root family in its own TypeScript module, exported straight from the root index. A JavaScript
-// family ships beside the supplemental barrel instead, in the loop over the mapped records further down.
-const currentEagerRecords = currentMappedRecords.filter(({ subpath, source }) => !subpath && source.endsWith('.ts'));
+// An eager record is a root family in its own TypeScript module, exported straight from the root index.
+const currentEagerRecords = currentMappedRecords.filter(({ subpath }) => !subpath);
 const currentFamilyRecords = [
   ...r15Families.map((source) => {
     const artifact = artifactBySlug.get(source.slug);
@@ -870,15 +866,14 @@ const currentContractRecord = {
   })),
   evidence: { status: 'pending', ids: [] },
 };
-// A family moved to TypeScript ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031); a subpath
-// family's index.ts ships under its directory's name, which is its slug.
-const isTypeScriptFamily = ({ source }) => source.endsWith('.ts');
-for (const record of currentMappedRecords.filter(isTypeScriptFamily)) {
-  if (flatModuleName(record.source) !== `${record.slug}.js`) {
-    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a TypeScript family ships as a module named for its slug`);
+// A family ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031); a subpath family's index.ts ships under its
+// directory's name, which is its slug. A family in any other language has no shipping path, so it fails here.
+for (const record of currentMappedRecords) {
+  if (!record.source.endsWith('.ts') || flatModuleName(record.source) !== `${record.slug}.js`) {
+    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${record.slug}: a family is a TypeScript module named for its slug`);
   }
 }
-const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map((record) => `export * from './${isTypeScriptFamily(record) ? `${record.slug}.js` : `${record.slug}.mjs`}';\n`).join('')}`;
+const currentIndexBody = `${indexBody}export * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 const currentTypesBody = `${typesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 // The shared supplemental stylesheet is emitted once, right after IconButton's CSS, and skipped wherever a record names it
 // as its styleSource. Anchor it on that record, not on the first or last record that names it: the shared
@@ -937,8 +932,6 @@ const outputs = new Map([
   ['release.json.provenance', provenance('release.json', release)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
-  ['supplemental.mjs', shippedModule('packages/react/src/supplemental/index.mjs', supplementalSource)],
-  ['supplemental.d.ts', shippedModule('packages/react/src/supplemental/index.d.ts', supplementalTypesSource)],
   ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', layeredSupplementalCss)],
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
@@ -977,10 +970,6 @@ for (const [path, text] of Object.entries(runtimeSources)) {
 // is not listed.
 for (const name of ['collections']) {
   outputs.set(`${name}.mjs`, shippedModule(`packages/react/src/${name}.mjs`, await readFile(resolve(packageRoot, `src/${name}.mjs`), 'utf8')));
-}
-// Each JavaScript family the mapping places in a module of its own ships beside the barrel it is re-exported from.
-for (const record of currentMappedRecords.filter((candidate) => !candidate.subpath && !isTypeScriptFamily(candidate) && candidate.source !== 'packages/react/src/supplemental/index.mjs')) {
-  outputs.set(flatModuleName(record.source), shippedModule(record.source, record.sourceText));
 }
 for (const source of typeScriptSources) {
   const emitted = typeScriptBuild?.emitted.get(source);
