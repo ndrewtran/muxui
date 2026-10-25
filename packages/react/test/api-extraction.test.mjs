@@ -755,9 +755,10 @@ test('a member that is the host\'s intersected with the owned one is read only a
   assert.equal(assertHostOverlaps(HOST_OVERLAPS).size, HOST_OVERLAPS.length);
 });
 
-test('a host overlap is read through an OwnProps that is generic only by the instantiation with the exported signature\'s own parameters', () => {
+// OwnProps is a type alias of an object literal or an interface; the instantiation is read the same way for both.
+for (const form of ['type', 'interface']) test(`a host overlap is read through an OwnProps that is generic only by the instantiation with the exported signature's own parameters: ${form}`, () => {
   const members = '  onChange?: React.ChangeEventHandler<HTMLInputElement>;\n  items?: T[];';
-  const thing = (body, extra = '') => genericThing({ declarations: `${ROW}${extra}`, members, body });
+  const thing = (body, extra = '') => genericThing({ declarations: `${ROW}${extra}`, members, body, form });
   const withHost = (wrapped) => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & ${wrapped}`;
   const read = (declarations, hostOverlaps = [OVERLAP]) => extract({ declarations, hostOverlaps, hostAllowlist: CHANGE_ALLOWLIST });
   assert.deepEqual(read(thing(() => withHost('ThingOwnProps<T>'))).events, ['change']);
@@ -773,11 +774,16 @@ test('a host overlap is read through an OwnProps that is generic only by the ins
     ['an instantiation with the constraint', () => withHost('ThingOwnProps<Row>')],
     ['an instantiation with another row', () => withHost('ThingOwnProps<SubRow>')],
     ['an Omit of the instantiation', (a) => withHost(`Omit<ThingOwnProps${a}, 'items'>`)],
+    // A declaration of the same shape and the same parameters is not the family's OwnProps.
+    ['a look-alike declaration with the signature\'s parameters', () => withHost('Twin<T>'), form === 'interface'
+      ? `export interface Twin<T extends Row = Row> {\n${members}\n}\n`
+      : `export type Twin<T extends Row = Row> = {\n${members}\n};\n`],
     // A local alias of the mapped copy that takes the signature's parameters in order carries those arguments, and is no instantiation of OwnProps.
     ['an alias of a mapped copy, taking the parameters', () => withHost('Copy<T>'), "type Copy<T extends Row = Row> = { [K in keyof ThingOwnProps<T>]: K extends 'onChange' ? ThingOwnProps<T>[K] | number : ThingOwnProps<T>[K] };\n"],
   ]) assert.throws(() => read(thing(body, extra)), refused, rule);
   // Two parameters: the arguments must be the signature's in its order.
   const pair = (args) => genericThing({
+    form,
     own: '<A extends Row = Row, B extends Row = Row>',
     members: '  onChange?: React.ChangeEventHandler<HTMLInputElement>;\n  a?: A;\n  b?: B;',
     props: '<A extends Row = Row, B extends Row = Row>',
@@ -912,10 +918,9 @@ const genericThing = ({
   args = '<T>',
   signature = '<T extends Row = Row>',
   call = '<T>',
+  form = 'type',
 } = {}) => `${header}${declarations}
-export type ThingOwnProps${own} = {
-${members}
-};
+${form === 'interface' ? `export interface ThingOwnProps${own} {\n${members}\n}` : `export type ThingOwnProps${own} = {\n${members}\n};`}
 export type ThingProps${props} = ${body(args)};
 export interface ThingComponent {
   ${signature}(props: ThingProps${call} & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;

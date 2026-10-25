@@ -1214,9 +1214,12 @@ const propertiesByName = (checker, type) => new Map(checker.getPropertiesOfType(
 function intersectsHostMember(project, { propsType, prop, own, type, ownProps, binders }, overlap) {
   if (hostEntryKey(type) !== hostEntryKey(overlap.type) || !propsType.isIntersectionType()) return false;
   const { checker, program } = project;
-  // OwnProps instantiated with the signature's parameters in order: the alias is the family's own and its arguments are those parameters.
-  const instantiated = ({ constituent }) => constituent.getAliasSymbol()?.id === ownProps.id
-    && constituent.getAliasTypeArguments().every(({ id }, index) => id === binders[index].type.id);
+  // OwnProps instantiated with the signature's parameters in order: the family's own declaration, with those parameters as its arguments.
+  // A type alias carries them as its alias arguments, an interface is a reference to itself with them as its type arguments.
+  const ownArguments = (args) => args.every(({ id }, index) => id === binders[index].type.id);
+  const instantiated = ({ constituent }) => (constituent.getAliasSymbol()?.id === ownProps.id
+    ? ownArguments(constituent.getAliasTypeArguments())
+    : isTypeReference(constituent) && constituent.getTarget().getSymbol()?.id === ownProps.id && ownArguments(checker.getTypeArguments(constituent)));
   const carriers = propsType.getTypes().flatMap((constituent) => {
     const member = checker.getPropertyOfType(constituent, prop);
     return member === undefined ? [] : [{ constituent, member }];
