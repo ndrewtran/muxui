@@ -181,47 +181,46 @@ test('a default shows only where it applies: executed for a derived family, auth
 	assert.equal('default' in rowNamed(virtualizer, 'layout', 2), false);
 });
 
-test('an authored family gives a catalog fact to the root that declares it, else to the only part that does, and borrows none across parts', () => {
+test('a derived family gives each part the defaults and events of its own partApis entry, and a part borrows none from the root', () => {
 	const palette = page('command-palette');
 	const [root, item] = ['CommandPalette.Root', 'CommandPalette.Item'].map((heading) => partNamed(palette, heading));
-	// closeOnSelect is declared by both Root and Item, and the catalog's default belongs to the root.
-	assert.deepEqual(rowNamed(root, 'closeOnSelect').default, { text: 'true', authored: true });
+	// closeOnSelect is declared by both Root and Item, and the catalog's default belongs to the root: the item follows it, so it has none of its own.
+	assert.deepEqual(rowNamed(root, 'closeOnSelect').default, { text: 'true', authored: false });
 	assert.equal('default' in rowNamed(item, 'closeOnSelect'), false);
 	// onOpenChange is the root's, so the root's row names the catalog event and no other row does.
 	assert.equal(rowNamed(root, 'onOpenChange').event, 'openChange');
 	assert.equal(rowNamed(root, 'closeOnSelect').event, undefined);
-	// dismissable is declared by Backdrop alone, so it takes the catalog's true.
-	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Backdrop'), 'dismissable').default, { text: 'true', authored: true });
-	// disabled is declared by four parts and not by the root, so none of them borrows the catalog's false, nor its activate event.
-	const trigger = partNamed(palette, 'CommandPalette.Trigger');
-	assert.equal('default' in rowNamed(trigger, 'disabled'), false);
-	assert.equal(rowNamed(trigger, 'onActivate').event, undefined);
-	// A derived family's part has the defaults of its own partApis entry.
+	// dismissable is declared by Backdrop alone, with its own default.
+	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Backdrop'), 'dismissable').default, { text: 'true', authored: false });
+	// disabled is declared by four parts and not by the root: each takes the default of its own entry, and the root's row is not the source of any.
+	for (const part of ['Trigger', 'Close', 'ClearButton', 'Item']) assert.deepEqual(rowNamed(partNamed(palette, `CommandPalette.${part}`), 'disabled').default, { text: 'false', authored: false }, part);
+	// onActivate names the activate event on the parts whose entries list it, and on ClearButton, which takes it in its type and defines none, it names nothing.
+	for (const part of ['Trigger', 'Close', 'Item']) assert.equal(rowNamed(partNamed(palette, `CommandPalette.${part}`), 'onActivate').event, 'activate', part);
+	assert.equal(rowNamed(partNamed(palette, 'CommandPalette.ClearButton'), 'onActivate').event, undefined);
+	// A part that owns no props has no default at all.
+	assert.ok(rowsOf(partNamed(palette, 'CommandPalette.Popup')).every((row) => !('default' in row)));
 	const select = page('select');
 	assert.ok(rowsOf(partNamed(select, 'Select.Root')).some((row) => row.default !== undefined && !row.default.authored));
 });
 
-test('events list the catalog channels with the exact signatures the declarations give, a hook\'s options when no part declares one', () => {
+test('events list the catalog channels with the exact signatures the declarations give, under the part that defines each', () => {
 	const palette = page('command-palette');
-	const root = palette.events.find(({ part }) => part === null);
-	const channels = Object.fromEntries(root.events.map((event) => [event.channel, event]));
-	assert.deepEqual(Object.keys(channels), ['openChange', 'activate', 'queryChange', 'action']);
-	// queryChange and action are options of useCommandPalette, which no part declares.
-	assert.deepEqual(channels.queryChange.signatures.map(({ text, declaredBy }) => [text, declaredBy]), [['(query: string) => void', ['useCommandPalette']]]);
-	assert.deepEqual(channels.action.signatures.map(({ declaredBy }) => declaredBy), [['useCommandPalette']]);
-	// activate is declared by several parts, with more than one signature: each is shown with who declares it.
-	assert.ok(channels.activate.signatures.length > 1);
-	assert.ok(channels.activate.signatures.every(({ declaredBy }) => declaredBy.length > 0));
+	const channels = (part) => palette.events.find((entry) => entry.part === part).events;
+	assert.deepEqual(channels(null).map((event) => event.channel), ['openChange']);
+	// activate is defined by Trigger, Close and Item, each with the signature of its own part: a press for the first two, the item's id for the last.
+	assert.deepEqual(palette.events.filter(({ part }) => part !== null).map(({ part, events }) => [part, events.map((event) => event.channel)]), [['trigger', ['activate']], ['close', ['activate']], ['item', ['activate']]]);
+	assert.deepEqual(channels('trigger')[0].signatures.map(({ text }) => text), ['(event: SupplementalActivation) => void']);
+	assert.deepEqual(channels('item')[0].signatures.map(({ text }) => text), ['(event: { id?: string }) => void']);
 	// A derived family's events need no names: the heading says whose they are.
+	assert.ok(palette.events.every(({ events }) => events.every(({ signatures }) => signatures.every(({ declaredBy }) => declaredBy.length === 0))));
 	const menu = page('menu');
 	assert.ok(menu.events.some(({ part }) => part !== null));
 	assert.ok(menu.events.every(({ events }) => events.every(({ signatures }) => signatures.every(({ declaredBy }) => declaredBy.length === 0))));
 });
 
-test('catalog props no part declares are listed, and a family whose parts declare them all lists none', () => {
-	assert.equal(page('command-palette').catalogOnly[0].names.length, 11);
-	// Input, TextArea and HeaderNav derive their blocks, which no longer list the natives their parts carry (HeaderNav's aria-label).
-	for (const slug of ['icon-button', 'select', 'input', 'text-area', 'header-nav']) assert.deepEqual(page(slug).catalogOnly, [], slug);
+test('a family whose parts declare every catalog prop lists none no part declares', () => {
+	// CommandPalette's hook options left the catalog with its authored block, and Input, TextArea and HeaderNav derive blocks that no longer list the natives their parts carry (HeaderNav's aria-label).
+	for (const slug of ['icon-button', 'select', 'input', 'text-area', 'header-nav', 'command-palette']) assert.deepEqual(page(slug).catalogOnly, [], slug);
 });
 
 test('parts and related exports list every export of the family with its exact import, and a hook, helper, flat part and value each have a kind', () => {

@@ -254,11 +254,11 @@ test('a bundle that uses one control family keeps its own module and only the sh
   }
 });
 
-// supplemental.mjs re-exports one module per family. Before the split every export kept the whole barrel and the 14
+// supplemental.mjs re-exported one module per family. Before the split every export kept the whole barrel and the 14
 // modules it reaches, about 112 KB, because a family that is an object literal or a forwardRef call is kept whenever
 // its module is. Now a family keeps its own module, the helpers it imports and what it already needed. The three
-// wrappers that are an immediately invoked function, the three field factories and the two modal wrappers carry the
-// pure annotation that lets a bundler drop what no export uses; the TypeScript families are checked by the bundle test below.
+// field factories and the two modal wrappers carry the pure annotation that lets a bundler drop what no export uses;
+// the other TypeScript families are checked by the bundle test below.
 test('the supplemental modules keep the pure annotation on each wrapper', () => {
   const emitted = (module) => {
     const mjs = resolve(generated, `${module}.mjs`);
@@ -266,9 +266,6 @@ test('the supplemental modules keep the pure annotation on each wrapper', () => 
   };
   // The source writes `/* @__PURE__ */` or `/*#__PURE__*/`, and tsc keeps it as written.
   const pure = String.raw`\/\*\s*[#@]__PURE__\s*\*\/`;
-  for (const [module, name] of [['command-palette', 'CommandPalette']]) {
-    assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} \\(\\(\\) => \\(\\{$`, 'mu'), `${module}: ${name}`);
-  }
   for (const [module, name] of [['checkbox-field', 'CheckboxField'], ['radio-field', 'RadioField'], ['switch-field', 'SwitchField']]) {
     assert.match(emitted(module), new RegExp(`^export const ${name} = ${pure} make${name}\\(\\);$`, 'mu'), `${module}: ${name}`);
   }
@@ -300,6 +297,8 @@ const annotatedFamilies = [
   ['multi-select', 'MultiSelect', 3],
   // The same two parts and the popover motion wrapper, and the unmarked constructor of the IconButton its tags remove with.
   ['tag-select', 'TagSelect', 3, ['icon-button']],
+  // Twenty-eight parts, and the two modal-parts wrappers its Backdrop and Popup use, which are marked and so are kept only with them. Collection is React Aria's own and builds nothing.
+  ['command-palette', 'CommandPalette', 30, ['button', 'icon-button']],
   ['payment-input', 'PaymentInput', 7],
   ['checkbox-field', 'CheckboxField', 5],
   ['switch-field', 'SwitchField', 5],

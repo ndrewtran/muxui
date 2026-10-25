@@ -3205,7 +3205,7 @@ test('a deleted React module still named outside React source routes to each ref
     },
   });
 
-  const commandPalette = await deleted('packages/react/src/supplemental/command-palette.mjs', [
+  const commandPalette = await deleted('packages/react/src/supplemental/command-palette.ts', [
     'packages/react/test/browser/bento-input-controls.test.mjs',
     'packages/react/test/command-palette-hook.test.mjs',
   ]);

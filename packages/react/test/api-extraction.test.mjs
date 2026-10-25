@@ -1362,7 +1362,7 @@ test('the shipped allowlist holds exactly the host types the committed derived A
   assert.deepEqual(reached.get(hostEntryKey(host('React.ChangeEvent', host('HTMLInputElement')))), ['sidebar.json'], 'the change event of the Sidebar.Search input');
   assert.deepEqual(reached.get(hostEntryKey(host('React.ComponentType', { kind: 'reference', name: 'SidebarIconProps' }))), ['sidebar.json'], 'the icon of a Sidebar nav item or button');
   // The target of a supplemental part's activation, which SupplementalActivation types as any event target.
-  assert.deepEqual(reached.get('EventTarget'), ['alert-dialog.json', 'card.json'], 'the target of an AlertDialog or Card.Button activation');
+  assert.deepEqual(reached.get('EventTarget'), ['alert-dialog.json', 'card.json', 'command-palette.json'], 'the target of an AlertDialog, Card.Button or CommandPalette Trigger or Close activation');
   // The keys and items of MultiSelect and TagSelect: an item's id, the Set a selection is, and the items MultiSelect lists, recorded at the item type's constraint.
   assert.deepEqual(reached.get('React.Key'), ['multi-select.json', 'tag-select.json'], 'the id of an item');
   assert.deepEqual(reached.get(hostEntryKey(host('Set', host('React.Key')))), ['multi-select.json', 'tag-select.json'], 'the selected keys');

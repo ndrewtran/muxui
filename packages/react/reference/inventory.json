@@ -237,217 +237,217 @@
           "name": "CommandPalette",
           "kind": "value",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteBackdropProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteChipProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteChipRemoveProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteChipsProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteClearButtonProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteCloseProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteCollectionComponent",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteCollectionProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteCommand",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteContentProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteDescriptionProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteEmptyProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteFooterProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteGroup",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteInputProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemContentProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemDescriptionProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemIconProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemMetaProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemTitleProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteItemsProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteListBoxComponent",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteListBoxProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteLoadMoreItemProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPalettePopupProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteRootProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteSearchFieldProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteSectionComponent",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteSectionHeaderProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteSectionProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteSeparatorProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteShortcutProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteTitleProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "CommandPaletteTriggerProps",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental"
+          "module": "command-palette"
         },
         {
           "name": "ComponentPointerType",
@@ -1280,15 +1280,13 @@
           "name": "UseCommandPaletteOptions",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental",
-          "reason": "the hook and its option and result types belong to CommandPalette"
+          "module": "command-palette"
         },
         {
           "name": "UseCommandPaletteReturn",
           "kind": "type",
           "owner": "command-palette",
-          "module": "supplemental",
-          "reason": "the hook and its option and result types belong to CommandPalette"
+          "module": "command-palette"
         },
         { "name": "Virtualizer", "kind": "value", "owner": "virtualizer", "module": "virtualizer" },
         {
@@ -1327,8 +1325,7 @@
           "name": "useCommandPalette",
           "kind": "value",
           "owner": "command-palette",
-          "module": "supplemental",
-          "reason": "the hook and its option and result types belong to CommandPalette"
+          "module": "command-palette"
         },
         {
           "name": "useToast",

@@ -24,10 +24,10 @@ import {
   TimeField,
   TextField,
 } from '../../src/fields.ts';
-import { CommandPalette } from '../../src/supplemental/index.mjs';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
 import { CheckboxField } from '../../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../../src/supplemental/color-mode-toggle.ts';
+import { CommandPalette } from '../../src/supplemental/command-palette.ts';
 import { HeaderNav } from '../../src/supplemental/header-nav.ts';
 import { Input } from '../../src/supplemental/input.ts';
 import { InputTags } from '../../src/supplemental/input-tags.ts';

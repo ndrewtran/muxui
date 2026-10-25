@@ -1,0 +1,483 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/command-palette.ts",
+  "component": "muxui:component:command-palette",
+  "binding": "web.react",
+  "export": "CommandPalette",
+  "api": {
+    "props": [
+      "open",
+      "defaultOpen",
+      "size",
+      "closeOnSelect"
+    ],
+    "events": [
+      "openChange"
+    ],
+    "defaults": {
+      "defaultOpen": false,
+      "size": "md",
+      "closeOnSelect": true
+    },
+    "propDetails": {
+      "open": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the palette is open, when the caller controls it."
+      },
+      "defaultOpen": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the palette starts open, when it controls itself."
+      },
+      "size": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "sm"
+            },
+            {
+              "kind": "literal",
+              "value": "md"
+            },
+            {
+              "kind": "literal",
+              "value": "lg"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "sm",
+          "md",
+          "lg"
+        ],
+        "description": "The control size, which the trigger, the search input and the results follow."
+      },
+      "closeOnSelect": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether activating an item closes the palette. An item can set its own."
+      }
+    },
+    "eventDetails": {
+      "openChange": {
+        "prop": "onOpenChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new open state each time the palette opens or closes."
+      }
+    },
+    "types": {},
+    "partApis": {
+      "trigger": {
+        "member": "Trigger",
+        "props": [
+          "disabled"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the trigger disabled."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "reference",
+                    "name": "SupplementalActivation"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the trigger is pressed, which opens the palette."
+          }
+        },
+        "types": {
+          "SupplementalActivation": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "activate"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "pointerType",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "target",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "host",
+                        "name": "EventTarget"
+                      },
+                      {
+                        "kind": "null"
+                      }
+                    ]
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The activation a press reports: the pointer and target of the event that caused it."
+          }
+        }
+      },
+      "backdrop": {
+        "member": "Backdrop",
+        "props": [
+          "dismissable"
+        ],
+        "events": [],
+        "defaults": {
+          "dismissable": true
+        },
+        "propDetails": {
+          "dismissable": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether pressing outside the popup closes the palette."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "close": {
+        "member": "Close",
+        "props": [
+          "disabled"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the close control disabled."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "reference",
+                    "name": "SupplementalActivation"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called when the control is pressed, which closes the palette."
+          }
+        },
+        "types": {
+          "SupplementalActivation": {
+            "type": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "type",
+                  "type": {
+                    "kind": "literal",
+                    "value": "activate"
+                  },
+                  "required": true,
+                  "readonly": false
+                },
+                {
+                  "name": "pointerType",
+                  "type": {
+                    "kind": "string"
+                  },
+                  "required": false,
+                  "readonly": false
+                },
+                {
+                  "name": "target",
+                  "type": {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "host",
+                        "name": "EventTarget"
+                      },
+                      {
+                        "kind": "null"
+                      }
+                    ]
+                  },
+                  "required": false,
+                  "readonly": false
+                }
+              ]
+            },
+            "description": "The activation a press reports: the pointer and target of the event that caused it."
+          }
+        }
+      },
+      "search-field": {
+        "member": "SearchField",
+        "props": [
+          "variant"
+        ],
+        "events": [],
+        "defaults": {
+          "variant": "inline"
+        },
+        "propDetails": {
+          "variant": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "default"
+                },
+                {
+                  "kind": "literal",
+                  "value": "inline"
+                }
+              ]
+            },
+            "required": false,
+            "enum": [
+              "default",
+              "inline"
+            ],
+            "description": "The look of the field's input: `default` draws its border, `inline` leaves it borderless so the input blends into the popup."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "clear-button": {
+        "member": "ClearButton",
+        "props": [
+          "disabled"
+        ],
+        "events": [],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the clear button disabled."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "item": {
+        "member": "Item",
+        "props": [
+          "id",
+          "title",
+          "description",
+          "textValue",
+          "href",
+          "target",
+          "disabled",
+          "closeOnSelect"
+        ],
+        "events": [
+          "activate"
+        ],
+        "defaults": {
+          "disabled": false
+        },
+        "propDetails": {
+          "id": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The item's key, which onActivate reports."
+          },
+          "title": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The visible title, which also names the item for typeahead."
+          },
+          "description": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "Supporting text shown under the title."
+          },
+          "textValue": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "The text typeahead matches when the item has no title."
+          },
+          "href": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "Makes the item a link to this address."
+          },
+          "target": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "Where the link opens, as the anchor's target attribute."
+          },
+          "disabled": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Marks the item disabled: it cannot be activated."
+          },
+          "closeOnSelect": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether activating this item closes the palette. It follows the root's closeOnSelect when unset."
+          }
+        },
+        "eventDetails": {
+          "activate": {
+            "prop": "onActivate",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "event",
+                  "type": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": "id",
+                        "type": {
+                          "kind": "string"
+                        },
+                        "required": false,
+                        "readonly": false
+                      }
+                    ]
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the item's id when the item is activated."
+          }
+        },
+        "types": {}
+      },
+      "shortcut": {
+        "member": "Shortcut",
+        "props": [
+          "keys"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "keys": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "string"
+              },
+              "readonly": true
+            },
+            "required": false,
+            "description": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}

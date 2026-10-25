@@ -118,12 +118,15 @@ const audited = [
       // TagSelect.Root sent isDisabled to its ComboBox and Group and isInvalid to the Group as its own booleans (false when omitted), and TagSelect.Item sent isDisabled to its ListBoxItem, before the move.
       ...expand(['tag-select'], ['disabled', 'invalid']),
       ...expand(['tag-select.item'], ['disabled']),
+      // CommandPalette's Trigger, Close and ClearButton sent isDisabled or disabled, its Item isDisabled and its Backdrop isDismissable, to the React Aria component they render, as their own values (false and true when omitted), before the move.
+      ...expand(['command-palette.trigger', 'command-palette.close', 'command-palette.clear-button', 'command-palette.item'], ['disabled']),
+      ...expand(['command-palette.backdrop'], ['dismissable']),
     ],
   },
   {
     reason: 'Mux-only, not forwarded',
     entries: [
-      ...expand(['dialog', 'popover', 'preview-trigger', 'tooltip', 'lightbox'], ['defaultOpen']),
+      ...expand(['dialog', 'popover', 'preview-trigger', 'tooltip', 'lightbox', 'command-palette'], ['defaultOpen']),
       ...expand(['preview-trigger', 'tooltip'], ['disabled']),
       ...expand(['data-diff'], ['disabled', 'pending']),
       ...expand(['resizable'], ['disabled', 'readOnly', 'orientation']),

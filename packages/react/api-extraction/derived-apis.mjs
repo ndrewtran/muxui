@@ -133,6 +133,9 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'multi-select', name: 'MultiSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/multi-select.ts' },
   // TagSelect is generic over the item it lists in the same way; Item owns disabled and textValue.
   { slug: 'tag-select', name: 'TagSelect', part: 'Root', parts: { item: 'Item' }, source: 'packages/react/src/supplemental/tag-select.ts' },
+  // CommandPalette's root is CommandPalette.Root; Trigger, Backdrop, Close, SearchField, ClearButton, Item and Shortcut own props beside it.
+  // ListBox, Section and Collection are generic over an unconstrained item and stay declaration-only, as does the useCommandPalette hook.
+  { slug: 'command-palette', name: 'CommandPalette', part: 'Root', parts: { trigger: 'Trigger', backdrop: 'Backdrop', close: 'Close', 'search-field': 'SearchField', 'clear-button': 'ClearButton', item: 'Item', shortcut: 'Shortcut' }, source: 'packages/react/src/supplemental/command-palette.ts' },
 ]);
 
 const SOURCE_ROOT = 'packages/react/src/';

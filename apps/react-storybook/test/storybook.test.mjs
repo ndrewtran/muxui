@@ -18,6 +18,7 @@ import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
 import { componentRecordCategory } from '../src/component-categories.mjs';
+import { typeScript7Tsc } from '../../../packages/react/test/support/declaration-surface.mjs';
 import { exactLockedProblems, readLockfile } from '../../../packages/react/test/support/locked-dependencies.mjs';
 import {
   argTypesForBinding,
@@ -43,10 +44,12 @@ import {
   renderStateCoverage,
   stateArgsForBinding,
   stateCoverageForBinding,
+  STORY_API_HOOKS,
   STORY_API_PARTS,
   STORY_APPLICABILITY,
   storyApi,
   storyArgsForBinding,
+  storyHookOptionNames,
 } from '../src/storybook-factory.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
@@ -333,12 +336,104 @@ test('storyApi folds the parts the adapter names into the root\'s API and leaves
   assert.deepEqual(merged.parts, ['root', 'popup', 'list', 'item']);
   // The binding it read from is untouched.
   assert.deepEqual(binding.api.props, ['open', 'placement']);
-  // Every part the shipped table names exists in that family's partApis, so a renamed part cannot leave a stale entry.
+  // An entry can take only the props and events it lists, with their defaults and details; the rest of the part stays out.
+  const chosen = storyApi(binding, { Thing: [{ part: 'popup', props: ['offset'] }, { part: 'list', events: ['action'] }] });
+  assert.deepEqual(chosen.props, ['open', 'placement', 'offset']);
+  assert.deepEqual(chosen.events, ['openChange', 'action']);
+  assert.deepEqual(chosen.defaults, { placement: 'bottom', offset: 4 });
+  assert.deepEqual(Object.keys(chosen.propDetails).sort(), ['offset', 'open', 'placement']);
+  assert.deepEqual(Object.keys(chosen.eventDetails).sort(), ['action', 'openChange']);
+  // A name the part does not declare throws, so a renamed prop cannot leave a stale entry.
+  assert.throws(() => storyApi(binding, { Thing: [{ part: 'popup', props: ['absent'] }] }), /Thing\.Popup declares no prop absent/u);
+  assert.throws(() => storyApi(binding, { Thing: [{ part: 'list', events: ['absent'] }] }), /Thing\.List declares no event absent/u);
+  // A hook's options come after the root's and the parts', each prop and event once.
+  const hooked = storyApi(binding, { Thing: ['popup'] }, { Thing: { hook: 'useThing', props: ['query', 'open'], events: ['action', 'openChange'], passed: [] } });
+  assert.deepEqual(hooked.props, ['open', 'placement', 'offset', 'modal', 'query']);
+  assert.deepEqual(hooked.events, ['openChange', 'action']);
+  assert.deepEqual(storyApi(binding, {}, {}), binding.api, 'with no hook either, the root API is read as it is');
+  // Every part and every prop and event of a part the shipped table names exists in that family's partApis.
   const byFamily = new Map(descriptorSource.bindings.map((entry) => [entry.export, entry]));
-  for (const [family, parts] of Object.entries(STORY_API_PARTS)) {
+  for (const [family, entries] of Object.entries(STORY_API_PARTS)) {
     assert.ok(byFamily.has(family), `${family} is a family`);
-    for (const part of parts) assert.ok(byFamily.get(family).api.partApis?.[part] !== undefined, `${family} has a ${part} part API`);
+    for (const entry of entries) {
+      const { part, props = [], events = [] } = typeof entry === 'string' ? { part: entry } : entry;
+      const partApi = byFamily.get(family).api.partApis?.[part];
+      assert.ok(partApi !== undefined, `${family} has a ${part} part API`);
+      for (const name of props) assert.ok(partApi.props.includes(name), `${family}.${partApi.member} declares the prop ${name}`);
+      for (const name of events) assert.ok(partApi.events.includes(name), `${family}.${partApi.member} declares the event ${name}`);
+    }
   }
+});
+
+// The hook's options are the members of a type the package declares, so the adapter's list of them is held to it by the compiler: one
+// object that must have each option of UseCommandPaletteOptions once, and no other. The package's own TypeScript compiles it against
+// the generated declarations (the temporary project maps @muxui/react to them, and nothing is written into the repository).
+async function hookOptionsCompile(names) {
+  const directory = await mkdtemp(join(tmpdir(), 'muxui-hook-options-'));
+  try {
+    await writeFile(join(directory, 'tsconfig.json'), `${JSON.stringify({
+      compilerOptions: {
+        target: 'ESNext', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, noEmit: true, skipLibCheck: true, types: [],
+        paths: { '@muxui/react': [join(repositoryRoot, 'packages/react/generated/index.d.ts')] },
+      },
+      files: ['check.ts'],
+    })}\n`);
+    await writeFile(join(directory, 'check.ts'), `import type { CommandPaletteCommand, UseCommandPaletteOptions } from '@muxui/react';
+export const options: { [Name in keyof UseCommandPaletteOptions<CommandPaletteCommand>]-?: true } = {
+${names.map((name) => `  ${JSON.stringify(name)}: true,`).join('\n')}
+};
+`);
+    const { status, stdout, stderr } = spawnSync(process.execPath, [typeScript7Tsc(), '-p', directory], { encoding: 'utf8' });
+    return { status, output: `${stdout}${stderr}` };
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+test('the options the CommandPalette adapter passes the hook are exactly the ones UseCommandPaletteOptions declares, checked by the compiler', async () => {
+  const names = storyHookOptionNames(STORY_API_HOOKS.CommandPalette);
+  assert.equal(new Set(names).size, names.length, 'each option is listed once');
+  const { status, output } = await hookOptionsCompile(names);
+  assert.equal(status, 0, output);
+  // Each way the list can drift fails the same compile: an option the hook gains, one it loses, and one renamed.
+  for (const [drift, edited, pattern] of [
+    ['an option the hook gains', names.filter((name) => name !== 'sort'), /Property 'sort' is missing/u],
+    ['an option the hook loses', [...names, 'extra'], /"extra"' does not exist/u],
+    ['an option renamed', names.map((name) => (name === 'onAction' ? 'onActon' : name)), /"onActon"' does not exist/u],
+  ]) {
+    const failed = await hookOptionsCompile(edited);
+    assert.notEqual(failed.status, 0, drift);
+    assert.match(failed.output, pattern, drift);
+  }
+});
+
+test('CommandPalette keeps the controls its parts and its hook own, each under its owner, and offers none the preview does not drive', async () => {
+  const record = currentRecord('CommandPalette');
+  const api = storyApi(record.binding);
+  // The root's inputs, then one input of each of three parts, then the hook's options.
+  assert.deepEqual(api.props, ['open', 'defaultOpen', 'size', 'closeOnSelect', 'disabled', 'dismissable', 'id', 'title', 'description', 'href', 'target', 'commands', 'query', 'defaultQuery', 'filter', 'sort', 'groupBy', 'getGroupTitle', 'close']);
+  assert.deepEqual(api.events, ['openChange', 'activate', 'queryChange', 'action']);
+  assert.deepEqual(api.defaults, { disabled: false, dismissable: true, defaultOpen: false, size: 'md', closeOnSelect: true });
+  // Activation is the Item's, which reports { id }; the Trigger's reports the press, and its disabled flag is the one the preview drives.
+  assert.equal(api.eventDetails.activate.type.parameters[0].type.kind, 'object');
+  assert.equal(api.propDetails.disabled.description, 'Marks the trigger disabled.');
+  // The Controls a Docs page shows are the generated story's, typed by the family's declarations.
+  const { default: meta } = await import('../.storybook/generated/r1-6-command-palette.stories.mjs');
+  const controls = meta.argTypes;
+  assert.deepEqual(Object.keys(controls), api.props);
+  const owner = (name) => controls[name].table.category;
+  assert.deepEqual(['open', 'defaultOpen', 'size', 'closeOnSelect'].map(owner), [undefined, undefined, undefined, undefined], 'the root owns its own');
+  assert.equal(owner('disabled'), 'CommandPalette.Trigger');
+  assert.equal(owner('dismissable'), 'CommandPalette.Backdrop');
+  for (const name of ['id', 'title', 'description', 'href', 'target']) assert.equal(owner(name), 'CommandPalette.Item', name);
+  for (const name of ['commands', 'query', 'defaultQuery', 'filter', 'sort', 'groupBy', 'getGroupTitle', 'close']) assert.equal(owner(name), undefined, name);
+  // A function's Control is off, and the hook's options carry no description or type of the catalog's: the typed reference does not hold their members.
+  for (const name of ['filter', 'sort', 'groupBy', 'getGroupTitle', 'close']) assert.equal(controls[name].control, false, name);
+  for (const name of ['commands', 'query', 'defaultQuery', 'filter', 'sort', 'groupBy', 'getGroupTitle', 'close']) assert.equal(controls[name].description, undefined, name);
+  // The Item's textValue, disabled and closeOnSelect, the callbacks, and the props of the parts the preview does not render are not offered.
+  for (const name of ['textValue', 'variant', 'keys', 'onActivate', 'onError', 'onQueryChange', 'onAction', 'onOpenChange']) assert.equal(name in controls, false, name);
+  // The query and its default are a controlled pair, as before the hook left the catalog.
+  assert.deepEqual(controlledDefaultPairsForBinding(record.binding).map(({ controlled }) => controlled), ['open', 'query']);
 });
 
 test('generated metadata exposes every canonical event, part, state, and controlled pair', async () => {

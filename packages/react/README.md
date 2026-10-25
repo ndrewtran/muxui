@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:48fff551c2de11b4a841caa9d8f9de22a832f7ad202e90a193da51451b29b717 -->
+<!-- @generated-content-sha256: sha256:fee0ffbf76e52ffaab61908a87ffc5c228bb6aa46f6f150245af5977b61a97a0 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -124,7 +124,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
-| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
+| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, size, closeOnSelect; trigger: disabled; backdrop: dismissable; close: disabled; search-field: variant; clear-button: disabled; item: id, title, description, textValue, href, target, disabled, closeOnSelect; shortcut: keys |
 | DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
