@@ -422,8 +422,8 @@ function declarationsOf(name: string, part: DeclarationPart): readonly Declarati
 
 /**
  * The events of one owner: each channel the catalog lists, the prop that reports it, and the exact signatures the parts in
- * `scope` declare for that prop. A prop no part declares is an option of a hook the family exports. `named` says whose
- * declaration each signature is, which a flat (authored) family needs because the catalog does not say which part owns an event.
+ * `scope` declare for that prop. `named` says whose declaration each signature is, which a flat (authored) family needs
+ * because the catalog does not say which part owns an event.
  */
 function eventGroup(
 	owner: string | null,
@@ -431,7 +431,6 @@ function eventGroup(
 	channels: readonly string[],
 	scope: readonly DeclarationPart[],
 	headings: (part: DeclarationPart) => string,
-	hooks: readonly { name: string; members: readonly DeclarationMember[] }[],
 	named: boolean,
 	context: Context,
 ): ApiEventGroup {
@@ -440,14 +439,13 @@ function eventGroup(
 		owner,
 		events: channels.map((channel) => {
 			const handler = handlerOf(channel);
-			const found = scope.flatMap((candidate) => declarationsOf(handler, candidate).map((member) => ({ member, by: headings(candidate), hook: false })));
-			const declared = found.length > 0 ? found : hooks.flatMap(({ name, members }) => members.filter((member) => member.name === handler).map((member) => ({ member, by: name, hook: true })));
+			const declared = scope.flatMap((candidate) => declarationsOf(handler, candidate).map((member) => ({ member, by: headings(candidate) })));
 			const signatures: { text: string; refs: readonly string[]; declaredBy: string[] }[] = [];
-			for (const { member, by, hook } of declared) {
+			for (const { member, by } of declared) {
 				const existing = signatures.find(({ text }) => text === member.type);
 				const entry = existing ?? { text: member.type, refs: member.refs ?? [], declaredBy: [] };
 				if (existing === undefined) signatures.push(entry);
-				if ((named || hook) && !entry.declaredBy.includes(by)) entry.declaredBy.push(by);
+				if (named && !entry.declaredBy.includes(by)) entry.declaredBy.push(by);
 			}
 			return {
 				channel,
@@ -493,20 +491,16 @@ export function buildApiReference({ packageName, exportName, anatomy, catalog, d
 
 	const position = (part: string) => anatomy.indexOf(part);
 	const partApis = Object.entries(catalog.partApis ?? {}).sort(([left], [right]) => position(left) - position(right));
-	const hooks = declarations.related.filter(({ kind }) => kind === 'function').map((item) => ({
-		name: item.name,
-		members: (item.parameters ?? []).flatMap(({ refs }) => (refs ?? []).flatMap((id) => context.types.get(id)?.members ?? [])),
-	}));
 	const rootParts = mainParts.filter(isRoot);
 	const headingOf = (part: DeclarationPart) => partHeading(exportName, part);
 	const events: ApiEventGroup[] = [];
 	const rootChannels = catalog.events;
 	if (rootChannels.length > 0) {
-		events.push(eventGroup(null, null, rootChannels, catalog.derived ? rootParts : mainParts, headingOf, hooks, !catalog.derived, context));
+		events.push(eventGroup(null, null, rootChannels, catalog.derived ? rootParts : mainParts, headingOf, !catalog.derived, context));
 	}
 	for (const [part, api] of partApis) {
 		if (api.events.length === 0) continue;
-		events.push(eventGroup(`${exportName}.${api.member}`, part, api.events, mainParts.filter(({ member }) => member === api.member), headingOf, hooks, false, context));
+		events.push(eventGroup(`${exportName}.${api.member}`, part, api.events, mainParts.filter(({ member }) => member === api.member), headingOf, false, context));
 	}
 
 	const rootNames = new Set(rootParts.flatMap((part) => [...declaredNames(part)]));

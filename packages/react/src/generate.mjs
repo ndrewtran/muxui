@@ -418,10 +418,7 @@ const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nex
 // declarations of src/button.ts, src/components.ts, src/fields.ts, src/overlays.ts, and
 // src/color-context.ts (Decision 0031); the index names them, so the modules' other exports
 // (usePendingSubmitProps, the OwnProps types) stay private.
-const typesBody = `import type * as React from 'react';
-import type { ButtonPointerType } from './button.js';
-import type { MuxUIColorValue } from './color-context.js';
-import type { ControlSize, MuxUIAccessibleName, MuxUIAriaLabel } from './fields.js';
+const typesBody = `import type { ButtonPointerType } from './button.js';
 
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
