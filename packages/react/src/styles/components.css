@@ -67,10 +67,10 @@
 
 /* MuxUI component source: button.css */
 .muxui-button {
-  --muxui-button-background: var(--muxui-semantic-selection-track);
+  --muxui-button-background: var(--muxui-component-button-background, var(--muxui-semantic-selection-track));
   --muxui-button-background-hover: var(--muxui-semantic-action-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-background-pressed);
-  --muxui-button-foreground: var(--muxui-semantic-action-foreground);
+  --muxui-button-foreground: var(--muxui-component-button-foreground, var(--muxui-semantic-action-foreground));
   --muxui-button-border: transparent;
   --muxui-button-shadow: var(--muxui-semantic-elevation-control);
   position: relative;
@@ -81,7 +81,7 @@
   border: 0;
   outline: 1px solid transparent;
   outline-offset: -1px;
-  border-radius: var(--muxui-semantic-control-radius);
+  border-radius: var(--muxui-component-button-radius, var(--muxui-semantic-control-radius));
   font-family: var(--muxui-semantic-typography-label-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -943,10 +943,10 @@
 }
 
 .muxui-button[data-variant='primary'] {
-  --muxui-button-background: var(--muxui-semantic-selection-track);
+  --muxui-button-background: var(--muxui-component-button-background, var(--muxui-semantic-selection-track));
   --muxui-button-background-hover: var(--muxui-semantic-action-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-background-pressed);
-  --muxui-button-foreground: var(--muxui-semantic-action-foreground);
+  --muxui-button-foreground: var(--muxui-component-button-foreground, var(--muxui-semantic-action-foreground));
   --muxui-button-border: transparent;
   --muxui-button-shadow: var(--muxui-semantic-elevation-control);
 }

@@ -18,7 +18,7 @@ test('Button measures mode-consistently in Chrome and applies idempotently', { s
   assert.deepEqual(modeInconsistencies(measurements), []);
   const rest = measurements[0].variants.find(({ key }) => key === 'variant=primary,size=md,state=rest');
   const fill = rest.parts.root.properties['background-color'];
-  assert.deepEqual(Object.values(fill).map(({ kind, token }) => `${kind}:${token}`), Array(4).fill('token:semantic.selection.track'));
+  assert.deepEqual(Object.values(fill).map(({ kind, token }) => `${kind}:${token}`), Array(4).fill('token:component.button.background'));
   assert.match(fill['dark+compact'].rule, /\.muxui-button.*\(packages\/react\/generated\/styles\.css:\d+\)$/u);
 
   const { source } = await loadTokenSource();
