@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:fee0ffbf76e52ffaab61908a87ffc5c228bb6aa46f6f150245af5977b61a97a0 -->
+<!-- @generated-content-sha256: sha256:3aedff66005a623261cbd4ddb024eaa33ed8cb65cc98d9b0c38e9d2e509229d3 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -60,7 +60,11 @@ pnpm add ./muxui-react-0.1.0-rc.1.tgz
 
 Every rule in `styles.css` and `themes.css` sits in one of the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens, theme presets, and direction rules are in `muxui.tokens`; component, field, collection, overlay, and supplemental styles are in `muxui.components`; `muxui.utilities` is declared and empty. Each file starts with the full order statement.
 
-For ordinary declarations, CSS outside a layer beats CSS inside one, whatever its specificity, so your own unlayered rules override Mux UI without `!important` or a higher-specificity selector. `!important` reverses that order: Mux UI's `!important` rules (forced colors and reduced motion) beat the `!important` declarations in your unlayered stylesheets, but an `!important` declaration in a layer you rank before Mux UI's layers, or in a `style` attribute, still wins over them. To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
+For ordinary declarations, CSS outside a layer beats CSS inside one, whatever its specificity, so your own unlayered rules override Mux UI without `!important` or a higher-specificity selector. A rule in a layer ranked after `muxui.components` beats it too, and `muxui.utilities` is the place in Mux UI's own order for rules of yours that should outrank component defaults. To restyle by token, assign the `--muxui-semantic-*` and `--muxui-component-*` variables a component's styles read on a theme scope element, not on one rendered component.
+
+`!important` reverses the layer order, and it works per property. Where Mux UI declares a property `!important` (forced colors and reduced motion), that declaration beats a competing declaration of the same property, normal or `!important`, in a later layer or in your unlayered CSS. It can lose to an `!important` declaration in a layer you rank before Mux UI's layers, or in a `style` attribute. It protects only the properties it names: where forced colors work through a component's own custom properties, a direct unlayered `background` declaration of yours is not blocked.
+
+To place a reset or framework below Mux UI, declare your layer order once, before importing the Mux UI stylesheets:
 
 ```css
 @layer reset, muxui.tokens, muxui.components, muxui.utilities, app;

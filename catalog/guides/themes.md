@@ -52,7 +52,7 @@ Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the p
 
 `@muxui/react/styles.css` and `@muxui/react/themes.css` put every rule in the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens and theme presets sit in `muxui.tokens`, component styles in `muxui.components`, and `muxui.utilities` is declared and empty.
 
-For ordinary declarations, CSS outside any layer beats Mux UI, whatever its specificity, so your own unlayered rules override a component without `!important`. Declare your layer order once, before importing Mux UI, so a reset or framework sits below it and your layers sit above:
+For ordinary declarations, CSS outside any layer beats Mux UI, whatever its specificity, so your own unlayered rules override a component without `!important`. A rule in a layer ranked after `muxui.components` beats it too, and `muxui.utilities` is the place in Mux UI's own order for rules of yours that should outrank component defaults. To restyle by token, assign the `--muxui-semantic-*` and `--muxui-component-*` variables a component's styles read on a theme scope element, not on one rendered component. Declare your layer order once, before importing Mux UI, so a reset or framework sits below it and your layers sit above:
 
 ```css
 @layer reset, muxui.tokens, muxui.components, muxui.utilities, app;
@@ -60,7 +60,7 @@ For ordinary declarations, CSS outside any layer beats Mux UI, whatever its spec
 @import '@muxui/react/themes.css';
 ```
 
-Mux UI's `!important` rules for forced colors and reduced motion stay in their layer, where they beat the `!important` declarations in your unlayered stylesheets. An `!important` declaration in a layer you rank before Mux UI's layers, or in a `style` attribute, still wins over them.
+`!important` reverses the layer order, and it works per property. Where Mux UI declares a property `!important` (forced colors and reduced motion), that declaration stays in its layer and beats a competing declaration of the same property, normal or `!important`, in a later layer or in your unlayered CSS. An `!important` declaration in a layer you rank before Mux UI's layers, or in a `style` attribute, can win over it. It protects only the properties it names: where forced colors work through a component's own custom properties, a direct unlayered `background` declaration of yours is not blocked.
 
 ## Semantic roles
 
