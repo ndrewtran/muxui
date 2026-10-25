@@ -554,8 +554,9 @@ function sameType(left, right) {
  *    the object with its modifiers changed and does not match the one OwnProps wrote. The project reads optional properties as a
  *    consumer with `exactOptionalPropertyTypes` does, so `value?: T` and `value?: T | undefined` are two types.
  * An intersection, a conditional type, an indexed access and the like are not matched; a mapped type is read as the object it
- * resolves to. An accessor is refused with a name, not compared: the checker's type of its symbol is the type it reads, and the
- * type it writes is not shown. Everything else the grammar lacks fails as any mismatch does. `matches.outside()` is the name of the
+ * resolves to. Two constructs of an object are refused with a name, not compared: an accessor, whose write type the checker's type
+ * of the symbol does not show, and a class instance, which may have protected or private members that no object literal has (and
+ * is nominal for them), public members only or not. Everything else the grammar lacks fails as any mismatch does. `matches.outside()` is the name of the
  * construct that last made a call fail, or undefined, for the diagnostic.
  */
 function bindingMatcher(project, pairs) {
@@ -600,7 +601,9 @@ function bindingMatcher(project, pairs) {
   };
   const objectMatches = (own, pub) => {
     const [ownProperties, pubProperties] = [checker.getPropertiesOfType(own), checker.getPropertiesOfType(pub)];
-    return ownProperties.length === pubProperties.length && own.isObjectType() && pub.isObjectType()
+    if (![own, pub].every((type) => type.isObjectType())) return false;
+    if ([own, pub].some((type) => ((type.getSymbol()?.flags ?? 0) & SymbolFlags.Class) !== 0)) return refuse('a class instance is outside the grammar: it may have protected or private members, which no object literal has');
+    return ownProperties.length === pubProperties.length
       && [own, pub].every((type) => checker.getSignaturesOfType(type, SignatureKind.Call).length === 0 && checker.getSignaturesOfType(type, SignatureKind.Construct).length === 0 && checker.getIndexInfosOfType(type).length === 0)
       && ownProperties.every((property) => {
         const twin = pubProperties.find(({ name }) => name === property.name);
@@ -623,7 +626,7 @@ function bindingMatcher(project, pairs) {
     }
     const [ownCall, pubCall] = [call(own), call(pub)];
     if (ownCall !== undefined && pubCall !== undefined) return signatureMatches(ownCall, pubCall);
-    return own.isObjectType() && pub.isObjectType() && objectMatches(own, pub);
+    return objectMatches(own, pub);
   }
   const entry = (own, pub) => {
     outside = undefined;

@@ -1180,30 +1180,28 @@ test('a callback is matched by how it is written: a method is compared bivariant
   // OwnProps writes a function property at the top and a method and a function property in nested objects (a method is in the grammar
   // nowhere else); strictFunctionTypes makes the method accept a narrower handler than the property does, so one cannot stand for the
   // other, in either direction, and the rule follows the signature through a mapped copy.
-  const declarations = `${ROW}export class Instance<V> { run(item: V): void {} }
-export class Field<V> { run = (item: V): void => {}; }
-`;
+  const declarations = ROW;
   const members = '  walk: (item: T) => void;\n  holder?: { run(item: T): void };\n  field?: { walk: (item: T) => void };';
   const redeclared = (member, text) => genericThing({
     declarations,
     members,
     body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
   });
-  // Each spelling of the same kind is the member: a method for a method (a class whose instance method is declared as one included), a
-  // function type or a call signature for a function property.
+  // Each spelling of the same kind is the member: a method for a method, a function type or a call signature for a function property.
   for (const [member, text] of [
     ['walk', 'walk: (item: T) => void'],
     ['walk', 'walk: { (item: T): void }'],
     ['holder', 'holder?: { run(item: T): void }'],
-    ['holder', 'holder?: Instance<T>'],
+    ['holder', "holder?: Pick<{ run(item: T): void; extra: 1 }, 'run'>"],
     ['field', 'field?: { walk: (item: T) => void }'],
   ]) assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, ['walk', 'holder', 'field'], text);
   for (const [rule, member, text] of [
     ['a function property written as a method', 'walk', 'walk(item: T): void'],
     ['a nested method written as a function property', 'holder', 'holder?: { run: (item: T) => void }'],
     ['a nested function property written as a method', 'field', 'field?: { walk(item: T): void }'],
-    ['a nested method written as a class property function', 'holder', 'holder?: Field<T>'],
-    // A mapped copy keeps the declaration of the signature it copies: the method is still a method, and its readonly flag is another matter.
+    // A mapped copy keeps the declaration of the signature it copies: a method is still a method, a function property still one, and the
+    // readonly flag of a copy is another matter.
+    ['a nested function property behind a Pick', 'holder', "holder?: Pick<{ run: (item: T) => void; extra: 1 }, 'run'>"],
     ['a nested method behind a Readonly copy', 'holder', 'holder?: Readonly<{ run(item: T): void }>'],
   ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
 });
@@ -1259,6 +1257,27 @@ test('an explicit undefined on an optional member is another type, as a consumer
   });
   assert.deepEqual(extract({ declarations: top("size?: 'sm' | 'md'") }).props, ['size']);
   rejects(top("size?: 'sm' | 'md' | undefined"), /Thing\.size: the exported Thing's props redeclare size/u, {}, 'an explicit undefined on a top-level member');
+});
+
+test('a class instance is refused by name, protected members or not, and the interface with the same method is the object', () => {
+  // A class may have protected or private members, which no object literal has and which make it nominal: `{ run(item: T): void }`
+  // against `declare class Protected<T> { protected run(item: T): void }` is another type. Only plain object literals and interfaces
+  // are nested shapes the matcher reads, so a class instance is refused whatever its members, instead of its members being filtered.
+  const declarations = `${ROW}export declare class Protected<V> { protected run(item: V): void }
+export declare class Private<V> { private run(item: V): void }
+export declare class Public<V> { run(item: V): void }
+export interface Plain<V> { run(item: V): void }
+`;
+  const redeclared = (text) => genericThing({
+    declarations,
+    members: '  plain?: { run(item: T): void };',
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, 'plain'> & { ${text} }`,
+  });
+  for (const text of ['plain?: { run(item: T): void }', 'plain?: Plain<T>']) assert.deepEqual(extract({ declarations: redeclared(text) }).props, ['plain'], text);
+  const refused = (rule, text) => rejects(redeclared(text), /Thing\.plain: the exported Thing's props redeclare plain[^]*a class instance is outside the grammar/u, {}, rule);
+  refused('a protected method', 'plain?: Protected<T>');
+  refused('a private method', 'plain?: Private<T>');
+  refused('a class with a public method only', 'plain?: Public<T>');
 });
 
 test('what an unconstrained, conditional, mapped, indexed, or callback-local parameter would add is outside the grammar', () => {
