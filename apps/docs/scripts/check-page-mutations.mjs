@@ -68,6 +68,17 @@ const declarationLinks = (root) => {
 // The Source note of a type or of a package-level value on the package exports page.
 const entryOf = (root, name) => elements(root).find((node) => (node.tagName === 'details' && attributeValue(node, 'data-api-type-entry') === name) || (node.tagName === 'div' && attributeValue(node, 'data-api-export') === name));
 const sourceNote = (root, name) => elements(entryOf(root, name)).find((node) => attributeValue(node, 'data-api-source') !== undefined);
+// Nodes for a link or a whole source note that the built page does not have.
+const sourceLinkNode = (path, parentNode) => {
+	const link = { nodeName: 'a', tagName: 'a', attrs: [{ name: 'href', value: `https://github.com/ndrewtran/muxui/blob/main/${path}` }], childNodes: [], parentNode };
+	link.childNodes.push({ nodeName: '#text', value: path, parentNode: link });
+	return link;
+};
+const insertSourceNote = (after, className, path) => {
+	const note = { nodeName: 'p', tagName: 'p', attrs: [{ name: 'class', value: className }, { name: 'data-api-source', value: '' }], childNodes: [], parentNode: after.parentNode };
+	note.childNodes.push({ nodeName: '#text', value: 'Source: ', parentNode: note }, sourceLinkNode(path, note));
+	after.parentNode.childNodes.splice(after.parentNode.childNodes.indexOf(after) + 1, 0, note);
+};
 const setText = (node, value) => {
 	node.childNodes.find((child) => child.nodeName === '#text').value = value;
 };
@@ -195,13 +206,32 @@ const mutations = [
 		change: (root) => setText(declarationLinks(root)[0], 'packages/react/reference/text-editor'),
 	},
 	{
+		label: 'a wrong link follows the right one in a Sources entry (SwitchField part-utils.ts)',
+		slug: 'switch-field',
+		expect: ['Declarations sources are ["packages/react/reference/switch-field.json","packages/react/src/supplemental/part-utils.ts","packages/react/src/fields.ts","packages/react/src/supplemental/switch-field.ts"]'],
+		change: (root) => {
+			const entry = declarationLinks(root).find((node) => attributeValue(node, 'href').endsWith('/part-utils.ts')).parentNode;
+			entry.childNodes.push(sourceLinkNode('packages/react/src/fields.ts', entry));
+		},
+	},
+	{
+		label: 'a second, conflicting source note follows the right one under a shared type (ControlSize)',
+		expect: ['ControlSize shows [[{"path":"packages/react/src/fields.ts","text":"packages/react/src/fields.ts"}],[{"path":"packages/react/src/overlays.ts","text":"packages/react/src/overlays.ts"}]] as its source notes'],
+		change: (root) => insertSourceNote(sourceNote(root, 'ControlSize'), 'api-type-reason', 'packages/react/src/overlays.ts'),
+	},
+	{
+		label: 'a second, conflicting source note follows the right one under a package-level value (supplementalFamilies)',
+		expect: ['supplementalFamilies shows [[{"path":"packages/react/src/supplemental/index.ts","text":"packages/react/src/supplemental/index.ts"}],[{"path":"packages/react/src/generate.mjs","text":"packages/react/src/generate.mjs"}]] as its source notes'],
+		change: (root) => insertSourceNote(sourceNote(root, 'supplementalFamilies'), 'api-export-doc', 'packages/react/src/generate.mjs'),
+	},
+	{
 		label: 'a shared type loses its source (ControlSize)',
-		expect: ['ControlSize shows the source null, expected packages/react/src/fields.ts'],
+		expect: ['ControlSize shows [] as its source notes, expected exactly one note with one link, to packages/react/src/fields.ts'],
 		change: (root) => detach(sourceNote(root, 'ControlSize')),
 	},
 	{
 		label: 'a shared type shows the source of another module (MuxUIPlacement links fields.ts)',
-		expect: ['MuxUIPlacement shows the source {"path":"packages/react/src/fields.ts","text":"packages/react/src/overlays.ts"}, expected packages/react/src/overlays.ts'],
+		expect: ['MuxUIPlacement shows [[{"path":"packages/react/src/fields.ts","text":"packages/react/src/overlays.ts"}]] as its source notes, expected exactly one note with one link, to packages/react/src/overlays.ts'],
 		change: (root) => {
 			const link = elements(sourceNote(root, 'MuxUIPlacement')).find((node) => node.tagName === 'a');
 			setAttribute(link, 'href', attributeValue(link, 'href').replace('overlays.ts', 'fields.ts'));
@@ -214,12 +244,12 @@ const mutations = [
 	},
 	{
 		label: 'a package-level value loses its source (reactCompatibility)',
-		expect: ['reactCompatibility shows the source null, expected packages/react/src/generate.mjs'],
+		expect: ['reactCompatibility shows [] as its source notes, expected exactly one note with one link, to packages/react/src/generate.mjs'],
 		change: (root) => detach(sourceNote(root, 'reactCompatibility')),
 	},
 	{
 		label: 'a package-level value shows the source of another module (supplementalFamilies links generate.mjs)',
-		expect: ['supplementalFamilies shows the source {"path":"packages/react/src/generate.mjs","text":"packages/react/src/supplemental/index.ts"}, expected packages/react/src/supplemental/index.ts'],
+		expect: ['supplementalFamilies shows [[{"path":"packages/react/src/generate.mjs","text":"packages/react/src/supplemental/index.ts"}]] as its source notes, expected exactly one note with one link, to packages/react/src/supplemental/index.ts'],
 		change: (root) => {
 			const link = elements(sourceNote(root, 'supplementalFamilies')).find((node) => node.tagName === 'a');
 			setAttribute(link, 'href', attributeValue(link, 'href').replace('supplemental/index.ts', 'generate.mjs'));
@@ -232,7 +262,7 @@ const mutations = [
 	},
 	{
 		label: 'a package-level type loses its source (MuxUIThemeId)',
-		expect: ['MuxUIThemeId shows the source null'],
+		expect: ['MuxUIThemeId shows [] as its source notes'],
 		change: (root) => detach(sourceNote(root, 'MuxUIThemeId')),
 	},
 ];
@@ -258,4 +288,4 @@ for (const { label, slug, expect, change, expectedFrom } of mutations) {
 	if (problems.some((line) => !line.startsWith(`${route} `))) failures.push(`${label}: a problem does not name the page ${route}.`);
 }
 if (failures.length > 0) throw new Error(`The typed reference checker missed a change to a built page, or failed to report it on the page:\n${failures.map((line) => `- ${line}`).join('\n')}`);
-console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type or value without its source or with another module's, a module the reference gives no source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
+console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type or value without its source, with another module's or with a second note, a wrong link after the right one, a module the reference gives no source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);

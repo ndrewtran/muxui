@@ -100,10 +100,10 @@ try {
 		{ label: 'delete the source of a declaration module (SwitchField part-utils)', slug: 'switch-field', expect: ['Declarations sources are'], apply: () => edit('switch-field', (file) => {
 			delete file.sources['part-utils'];
 		}) },
-		{ label: 'delete the source of the module that declares the shared types (fields)', route: '/package-exports/', expect: ['ControlSize shows the source null, expected packages/react/src/fields.ts', 'MuxUIDateRange shows the source null'], apply: () => edit('shared', (file) => {
+		{ label: 'delete the source of the module that declares the shared types (fields)', route: '/package-exports/', expect: ['ControlSize shows [] as its source notes, expected exactly one note with one link, to packages/react/src/fields.ts', 'MuxUIDateRange shows [] as its source notes'], apply: () => edit('shared', (file) => {
 			delete file.sources.fields;
 		}) },
-		{ label: 'delete the source of the module that declares a package-level value (supplemental)', route: '/package-exports/', expect: ['supplementalFamilies shows the source null, expected packages/react/src/supplemental/index.ts'], apply: () => edit('package-level', (file) => {
+		{ label: 'delete the source of the module that declares a package-level value (supplemental)', route: '/package-exports/', expect: ['supplementalFamilies shows [] as its source notes, expected exactly one note with one link, to packages/react/src/supplemental/index.ts'], apply: () => edit('package-level', (file) => {
 			delete file.sources.supplemental;
 		}) },
 	];
