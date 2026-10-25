@@ -627,8 +627,9 @@ export function expectedPackageExports({ manifest, reference }) {
 				reason: item.reason,
 			};
 		}),
-		packageTypes: owned('package-level').filter(({ kind }) => kind === 'type').map(({ name, entry, reason }) => ({ name, imports: [`import type { ${name} } from '${specifier(entry)}';`], text: packageFile.types.find((type) => type.name === name)?.text, reason })),
-		sharedTypes: owned('shared').filter(({ kind }) => kind === 'type').map(({ name, entry, reason }) => ({ name, imports: [`import type { ${name} } from '${specifier(entry)}';`], text: reference.files.get('shared').types.find((type) => type.name === name)?.text, reason })),
+		// The source is the file of the module the inventory says declares the type, whatever the type's own record says.
+		packageTypes: owned('package-level').filter(({ kind }) => kind === 'type').map(({ name, entry, reason, module }) => ({ name, module, source: packageFile.sources[module], imports: [`import type { ${name} } from '${specifier(entry)}';`], text: packageFile.types.find((type) => type.name === name)?.text, reason })),
+		sharedTypes: owned('shared').filter(({ kind }) => kind === 'type').map(({ name, entry, reason, module }) => ({ name, module, source: reference.files.get('shared').sources[module], imports: [`import type { ${name} } from '${specifier(entry)}';`], text: reference.files.get('shared').types.find((type) => type.name === name)?.text, reason })),
 	};
 }
 
@@ -643,6 +644,10 @@ export function renderedPackageExports(root) {
 		reason: (() => {
 			const reason = elements(entry).find((child) => attributeValue(child, 'data-api-reason') !== undefined);
 			return reason === undefined ? undefined : text(reason);
+		})(),
+		source: (() => {
+			const holder = elements(entry).find((child) => attributeValue(child, 'data-api-source') !== undefined);
+			return sourceLink(holder === undefined ? undefined : elements(holder).find((child) => child.tagName === 'a'));
 		})(),
 	}));
 	const packageLevel = section('package-level');
@@ -679,6 +684,12 @@ export function comparePackageExports(expected, rendered, manifestKeys) {
 		for (const type of wanted) {
 			const got = shown.find(({ name }) => name === type.name);
 			if (got !== undefined && !same(got, type)) report(`${type.name} differs from the inventory and the model.`);
+		}
+		// Every type shows the source of its declaration module: these exports have no family page whose source list would name it.
+		for (const type of expected[kind]) {
+			const got = rendered[kind].find(({ name }) => name === type.name);
+			if (type.source === undefined) report(`${type.name} has no source: the reference lists none for its module ${type.module}.`);
+			else if (got !== undefined && !same(got.source, { path: type.source, text: type.source })) report(`${type.name} shows the source ${JSON.stringify(got.source)}, expected ${type.source}.`);
 		}
 	}
 	return problems;

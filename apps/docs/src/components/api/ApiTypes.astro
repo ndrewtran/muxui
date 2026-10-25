@@ -17,6 +17,7 @@ const { types, open = false } = Astro.props;
 			<summary><code class="api-name">{type.name}</code></summary>
 			{type.imports.map((line) => <code class="api-import" data-api-import>{line}</code>)}
 			{type.reason !== undefined && <p class="api-type-reason" data-api-reason>{type.reason}</p>}
+			{type.source !== undefined && <p class="api-type-reason" data-api-source>Source: <a href={`https://github.com/ndrewtran/muxui/blob/main/${type.source}`} target="_blank" rel="noreferrer">{type.source}</a></p>}
 			<pre class="api-declaration"><TypeText segments={type.segments} class="api-declaration-text" /></pre>
 		</details>
 	))}

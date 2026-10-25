@@ -100,7 +100,11 @@ try {
 		{ label: 'delete the source of a declaration module (SwitchField part-utils)', slug: 'switch-field', expect: ['Declarations sources are'], apply: () => edit('switch-field', (file) => {
 			delete file.sources['part-utils'];
 		}) },
+		{ label: 'delete the source of the module that declares the shared types (fields)', route: '/package-exports/', expect: ['ControlSize shows the source null, expected packages/react/src/fields.ts', 'MuxUIDateRange shows the source null'], apply: () => edit('shared', (file) => {
+			delete file.sources.fields;
+		}) },
 	];
+	const routeOf = ({ route, slug }) => route ?? `/components/${slug}/`;
 	for (const mutation of mutations) mutation.apply();
 
 	const run = (label, args, env = {}) => {
@@ -117,10 +121,10 @@ try {
 	const reported = sections.output.split('\n').filter((line) => line.startsWith('- '));
 	const missed = [];
 	for (const mutation of mutations) {
-		const mine = reported.filter((line) => line.startsWith(`- /components/${mutation.slug}/`));
-		for (const fragment of mutation.expect) if (!mine.some((line) => line.includes(fragment))) missed.push(`${mutation.label}: the checker did not report "${fragment}" on /components/${mutation.slug}/`);
+		const mine = reported.filter((line) => line.startsWith(`- ${routeOf(mutation)}`));
+		for (const fragment of mutation.expect) if (!mine.some((line) => line.includes(fragment))) missed.push(`${mutation.label}: the checker did not report "${fragment}" on ${routeOf(mutation)}`);
 	}
-	const expectedRoutes = new Set(mutations.map(({ slug }) => `- /components/${slug}/`));
+	const expectedRoutes = new Set(mutations.map((mutation) => `- ${routeOf(mutation)}`));
 	const unrelated = reported.filter((line) => ![...expectedRoutes].some((prefix) => line.startsWith(prefix)));
 
 	const records = run('ledger record pins', [resolve(import.meta.dirname, 'check-reference-records.mjs'), dist]);
@@ -134,7 +138,7 @@ try {
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field and a declaration module's source) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source and the source of every shared type's module) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }

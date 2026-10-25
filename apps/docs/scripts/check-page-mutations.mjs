@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
 import { attributeValue, classNames, elements } from './html-tree.mjs';
-import { collapsePartsAbove, compareComponent, compareSources, expectedComponent, expectedSources, loadReference, renderedComponent, renderedEvents, renderedSources, routeFile } from './typed-reference.mjs';
+import { collapsePartsAbove, compareComponent, comparePackageExports, compareSources, expectedComponent, expectedPackageExports, expectedSources, loadReference, renderedComponent, renderedEvents, renderedPackageExports, renderedSources, routeFile } from './typed-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const dist = process.argv[2] === undefined ? resolve(repositoryRoot, 'apps/docs/dist') : resolve(process.argv[2]);
@@ -41,6 +41,19 @@ function problemsOf(slug, change) {
 	];
 }
 
+/** The same for the package exports page, which has no slug. `expectedFrom` is the reference the expectation is read from. */
+function packageProblemsOf(change, expectedFrom = reference) {
+	const root = parse(readFileSync(routeFile(dist, '/package-exports/'), 'utf8'));
+	change?.(root);
+	return comparePackageExports(expectedPackageExports({ manifest, reference: expectedFrom }), renderedPackageExports(root), Object.keys(manifest.exports));
+}
+
+/** The reference with one module's source taken from an owner's file. */
+function withoutSource(owner, module) {
+	const { [module]: _removed, ...sources } = reference.files.get(owner).sources;
+	return { ...reference, files: new Map([...reference.files, [owner, { ...reference.files.get(owner), sources }]]) };
+}
+
 const detach = (node) => node.parentNode.childNodes.splice(node.parentNode.childNodes.indexOf(node), 1);
 const part = (root, heading) => elements(root).find((node) => node.tagName === 'details' && attributeValue(node, 'data-api-part') === heading);
 const group = (root, heading, label) => elements(part(root, heading)).find((node) => node.tagName === 'tbody' && attributeValue(node, 'data-api-group') === label);
@@ -52,6 +65,8 @@ const declarationLinks = (root) => {
 	const items = sourceItems(root);
 	return items.slice(items.findIndex((node) => node.tagName === 'dt' && node.childNodes[0].value === 'Declarations') + 1).map((dd) => elements(dd).find((node) => node.tagName === 'a'));
 };
+const typeEntry = (root, name) => elements(root).find((node) => node.tagName === 'details' && attributeValue(node, 'data-api-type-entry') === name);
+const typeSource = (root, name) => elements(typeEntry(root, name)).find((node) => attributeValue(node, 'data-api-source') !== undefined);
 const setText = (node, value) => {
 	node.childNodes.find((child) => child.nodeName === '#text').value = value;
 };
@@ -178,17 +193,41 @@ const mutations = [
 		expect: ['Declarations sources show text other than the path they link'],
 		change: (root) => setText(declarationLinks(root)[0], 'packages/react/reference/text-editor'),
 	},
+	{
+		label: 'a shared type loses its source (ControlSize)',
+		expect: ['ControlSize shows the source null, expected packages/react/src/fields.ts'],
+		change: (root) => detach(typeSource(root, 'ControlSize')),
+	},
+	{
+		label: 'a shared type shows the source of another module (MuxUIPlacement links fields.ts)',
+		expect: ['MuxUIPlacement shows the source {"path":"packages/react/src/fields.ts","text":"packages/react/src/overlays.ts"}, expected packages/react/src/overlays.ts'],
+		change: (root) => {
+			const link = elements(typeSource(root, 'MuxUIPlacement')).find((node) => node.tagName === 'a');
+			setAttribute(link, 'href', attributeValue(link, 'href').replace('overlays.ts', 'fields.ts'));
+		},
+	},
+	{
+		label: 'the reference lists no source for the module of the shared types (fields)',
+		expect: ['ControlSize has no source: the reference lists none for its module fields', 'MuxUIDateRange has no source'],
+		expectedFrom: withoutSource('shared', 'fields'),
+	},
+	{
+		label: 'a package-level type loses its source (MuxUIThemeId)',
+		expect: ['MuxUIThemeId shows the source null'],
+		change: (root) => detach(typeSource(root, 'MuxUIThemeId')),
+	},
 ];
 
-const unchanged = ['virtualizer', 'icon-button', 'dialog', 'data-diff', 'text-editor', 'switch-field', 'text-area'].flatMap((slug) => problemsOf(slug));
+const unchanged = [...['virtualizer', 'icon-button', 'dialog', 'data-diff', 'text-editor', 'switch-field', 'text-area'].flatMap((slug) => problemsOf(slug)), ...packageProblemsOf()];
 if (unchanged.length > 0) throw new Error(`The pages these changes start from do not pass the checker:\n${unchanged.map((line) => `- ${line}`).join('\n')}`);
 
 const failures = [];
 let reported = 0;
-for (const { label, slug, expect, change } of mutations) {
+for (const { label, slug, expect, change, expectedFrom } of mutations) {
+	const route = slug === undefined ? '/package-exports/' : `/components/${slug}/`;
 	let problems;
 	try {
-		problems = problemsOf(slug, change);
+		problems = slug === undefined ? packageProblemsOf(change, expectedFrom) : problemsOf(slug, change);
 	} catch (error) {
 		failures.push(`${label}: the checker crashed (${error instanceof Error ? error.message : error}) instead of naming the difference on its page.`);
 		continue;
@@ -197,7 +236,7 @@ for (const { label, slug, expect, change } of mutations) {
 	for (const fragment of expect) {
 		if (!problems.some((line) => line.includes(fragment))) failures.push(`${label}: no problem contains "${fragment}"; the checker reported ${problems.length === 0 ? 'nothing' : problems.map((line) => `"${line.slice(0, 160)}"`).join(', ')}.`);
 	}
-	if (problems.some((line) => !line.startsWith(`/components/${slug}/ `))) failures.push(`${label}: a problem does not name the page /components/${slug}/.`);
+	if (problems.some((line) => !line.startsWith(`${route} `))) failures.push(`${label}: a problem does not name the page ${route}.`);
 }
 if (failures.length > 0) throw new Error(`The typed reference checker missed a change to a built page, or failed to report it on the page:\n${failures.map((line) => `- ${line}`).join('\n')}`);
-console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
+console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type without its source or with another module's, a module the reference gives no source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
