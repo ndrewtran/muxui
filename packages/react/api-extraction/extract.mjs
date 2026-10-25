@@ -338,6 +338,9 @@ function withProject(files, run) {
       lib: ['ESNext', 'DOM', 'DOM.Iterable'],
       types: [],
       strict: true,
+      // An optional property that says `| undefined` is another type from one that does not, as consumers with the option on see it:
+      // the checker keeps the two apart (the optional one carries its own missing type) only under this option.
+      exactOptionalPropertyTypes: true,
       noEmit: true,
       skipLibCheck: true,
       allowImportingTsExtensions: true,
@@ -548,7 +551,8 @@ function sameType(left, right) {
  *    function type's contravariantly, so one cannot stand for the other;
  *  - an object literal or an interface: the same properties, optional and readonly alike, with matching types. The flags are the
  *    effective ones, those the type checker uses, so a `Readonly`, `Partial`, `Required` or `-readonly` copy of a nested object is
- *    the object with its modifiers changed and does not match the one OwnProps wrote.
+ *    the object with its modifiers changed and does not match the one OwnProps wrote. The project reads optional properties as a
+ *    consumer with `exactOptionalPropertyTypes` does, so `value?: T` and `value?: T | undefined` are two types.
  * An intersection, a conditional type, an indexed access and the like are not matched; a mapped type is read as the object it
  * resolves to. An accessor is refused with a name, not compared: the checker's type of its symbol is the type it reads, and the
  * type it writes is not shown. Everything else the grammar lacks fails as any mismatch does. `matches.outside()` is the name of the

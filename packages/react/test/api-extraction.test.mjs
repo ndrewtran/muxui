@@ -1236,6 +1236,31 @@ export interface Plain<V> { value: V }
   rejects(genericThing({ members: '  holder?: { get value(): T };' }), /Thing\.holder/u, {}, 'an accessor in OwnProps');
 });
 
+test('an explicit undefined on an optional member is another type, as a consumer with exactOptionalPropertyTypes sees it', () => {
+  // `value?: T` and `value?: T | undefined` are one type with the option off, and two with it on, where `{ value: undefined }` is
+  // accepted by the second only. The extraction reads the declarations as that consumer does, so each is the other's mismatch.
+  const members = '  loose?: { value?: T };\n  explicit?: { value?: T | undefined };';
+  const redeclared = (member, text) => genericThing({
+    members,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
+  });
+  const names = ['loose', 'explicit'];
+  for (const [member, text] of [['loose', 'loose?: { value?: T }'], ['explicit', 'explicit?: { value?: T | undefined }']]) {
+    assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, names, text);
+  }
+  for (const [rule, member, text] of [
+    ['an explicit undefined added', 'loose', 'loose?: { value?: T | undefined }'],
+    ['an explicit undefined removed', 'explicit', 'explicit?: { value?: T }'],
+  ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
+  // The same holds for a member at the top of OwnProps, which has no parameter in it.
+  const top = (text) => genericThing({
+    members: "  size?: 'sm' | 'md';",
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, 'size'> & { ${text} }`,
+  });
+  assert.deepEqual(extract({ declarations: top("size?: 'sm' | 'md'") }).props, ['size']);
+  rejects(top("size?: 'sm' | 'md' | undefined"), /Thing\.size: the exported Thing's props redeclare size/u, {}, 'an explicit undefined on a top-level member');
+});
+
 test('what an unconstrained, conditional, mapped, indexed, or callback-local parameter would add is outside the grammar', () => {
   const cases = [
     ['an unconstrained parameter used in a member', { own: '<T = unknown>', props: '<T = unknown>', signature: '<T = unknown>' }, /Thing\.items\[\] -> T: T has no constraint, so it would erase to unknown/u],
