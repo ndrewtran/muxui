@@ -1175,6 +1175,38 @@ export interface Getter<V> { get value(): V }
   ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
 });
 
+test('a callback is matched by how it is written: a method is compared bivariantly and a function type contravariantly', () => {
+  // OwnProps writes a function property at the top and a method and a function property in nested objects (a method is in the grammar
+  // nowhere else); strictFunctionTypes makes the method accept a narrower handler than the property does, so one cannot stand for the
+  // other, in either direction, and the rule follows the signature through a mapped copy.
+  const declarations = `${ROW}export class Instance<V> { run(item: V): void {} }
+export class Field<V> { run = (item: V): void => {}; }
+`;
+  const members = '  walk: (item: T) => void;\n  holder?: { run(item: T): void };\n  field?: { walk: (item: T) => void };';
+  const redeclared = (member, text) => genericThing({
+    declarations,
+    members,
+    body: () => `Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> & Omit<ThingOwnProps<T>, '${member}'> & { ${text} }`,
+  });
+  // Each spelling of the same kind is the member: a method for a method (a class whose instance method is declared as one included), a
+  // function type or a call signature for a function property.
+  for (const [member, text] of [
+    ['walk', 'walk: (item: T) => void'],
+    ['walk', 'walk: { (item: T): void }'],
+    ['holder', 'holder?: { run(item: T): void }'],
+    ['holder', 'holder?: Instance<T>'],
+    ['field', 'field?: { walk: (item: T) => void }'],
+  ]) assert.deepEqual(extract({ declarations: redeclared(member, text) }).props, ['walk', 'holder', 'field'], text);
+  for (const [rule, member, text] of [
+    ['a function property written as a method', 'walk', 'walk(item: T): void'],
+    ['a nested method written as a function property', 'holder', 'holder?: { run: (item: T) => void }'],
+    ['a nested function property written as a method', 'field', 'field?: { walk(item: T): void }'],
+    ['a nested method written as a class property function', 'holder', 'holder?: Field<T>'],
+    // A mapped copy keeps the declaration of the signature it copies: the method is still a method, and its readonly flag is another matter.
+    ['a nested method behind a Readonly copy', 'holder', 'holder?: Readonly<{ run(item: T): void }>'],
+  ]) rejects(redeclared(member, text), new RegExp(`Thing\\.${member}: the exported Thing's props redeclare ${member}`, 'u'), {}, rule);
+});
+
 test('what an unconstrained, conditional, mapped, indexed, or callback-local parameter would add is outside the grammar', () => {
   const cases = [
     ['an unconstrained parameter used in a member', { own: '<T = unknown>', props: '<T = unknown>', signature: '<T = unknown>' }, /Thing\.items\[\] -> T: T has no constraint, so it would erase to unknown/u],

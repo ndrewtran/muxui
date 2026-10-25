@@ -517,6 +517,12 @@ function isReadonlyProperty(project, symbol) {
   return declaration !== undefined && hasModifier(declaration, SyntaxKind.ReadonlyKeyword);
 }
 
+// strictFunctionTypes compares the parameters of a function type or a call signature contravariantly and those of a method
+// bivariantly, by the kind of declaration that wrote the signature (a constructor is the third such kind, and no call signature):
+// a method keeps it through a mapped type and a property does not gain it, so the declaration, not the member, is what the matcher compares.
+const BIVARIANT_SIGNATURE_KINDS = new Set([SyntaxKind.MethodSignature, SyntaxKind.MethodDeclaration]);
+const isBivariantSignature = (signature) => BIVARIANT_SIGNATURE_KINDS.has(signature.declaration?.kind);
+
 /**
  * Whether two types are the same type. TypeScript keys a union by how it was written (an alias, or the flattened members), so
  * equal unions can be two objects; they are the same type when their constituents are the same.
@@ -539,7 +545,8 @@ function sameType(left, right) {
  *    swapped arm does;
  *  - a type reference (an array, `Set<K>`, `Iterable<T>`), with the same target and arguments that match in order;
  *  - a callback: one call signature each, with no type parameters or `this`, the same optional and rest parameters, matching
- *    parameter types and a matching return;
+ *    parameter types and a matching return, and written the same way: a method's parameters are compared bivariantly and a
+ *    function type's contravariantly, so one cannot stand for the other;
  *  - an object literal: the same properties, optional and readonly alike, with matching types. The flags are the effective ones,
  *    those the type checker uses, so a `Readonly`, `Partial`, `Required` or `-readonly` copy of a nested object is the object
  *    with its modifiers changed and does not match the one OwnProps wrote.
@@ -575,6 +582,7 @@ function bindingMatcher(project, pairs) {
     return own.getTypeParameters().length === 0 && pub.getTypeParameters().length === 0
       && own.getThisParameter() === undefined && pub.getThisParameter() === undefined
       && own.hasRestParameter === pub.hasRestParameter && ownParameters.length === pubParameters.length
+      && isBivariantSignature(own) === isBivariantSignature(pub)
       && ownParameters.every((parameter, index) => optionalParameter(parameter) === optionalParameter(pubParameters[index])
         && matches(checker.getTypeOfSymbol(parameter), checker.getTypeOfSymbol(pubParameters[index])))
       && matches(checker.getReturnTypeOfSignature(own), checker.getReturnTypeOfSignature(pub));
