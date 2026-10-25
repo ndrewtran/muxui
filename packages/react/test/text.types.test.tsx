@@ -32,6 +32,11 @@ void explicitProps;
 // Without a type argument, the props are a span's: the host is the default of TextProps and of the call signature, each its own form.
 const defaultProps: TextProps = { id: 'copy', onClick: (event) => { const host: HTMLSpanElement = event.currentTarget; void host; } };
 void defaultProps;
+// Compared exactly, too: the props with no argument are the span's, and the element a Text without `as` hands its handlers is a span's.
+type Identical<A, B> = (<X>() => X extends A ? 1 : 2) extends (<X>() => X extends B ? 1 : 2) ? true : false;
+const exactDefault: Identical<TextProps, TextProps<'span'>> = true;
+const exactElement = <Text onClick={(event) => { const exact: Identical<typeof event.currentTarget, EventTarget & HTMLSpanElement> = true; void exact; }}>Copy</Text>;
+void [exactDefault, exactElement];
 // @ts-expect-error TextProps without a type argument is a span's, which has no htmlFor.
 const defaultHtmlFor: TextProps = { htmlFor: 'name' };
 void defaultHtmlFor;

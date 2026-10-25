@@ -106,6 +106,23 @@ const calledDefaulted = (
 const constraint: MultiSelectItem = { id: 1, anything: true };
 const tagConstraint: TagSelectItem = { id: 'a', anything: true };
 void [defaulted, defaultedTags, rootDefaulted, rootDefaultedTags, calledDefaulted, constraint, tagConstraint];
+
+// Those witnesses break for some defaults and not for others (`Item & { special?: number }` is assignable both ways, and a fresh literal
+// with a field the default has but the item lacks still fits), so each default is also compared exactly: the type with no argument is the
+// type written with the item, for each props form, and the item a render or label function receives with nothing to infer it from is
+// the item. Identity, not mutual assignability, which an optional member does not break.
+type Identical<A, B> = (<X>() => X extends A ? 1 : 2) extends (<X>() => X extends B ? 1 : 2) ? true : false;
+const exactProps: Identical<MultiSelectProps, MultiSelectProps<MultiSelectItem>> = true;
+const exactRootProps: Identical<MultiSelectRootProps, MultiSelectProps<MultiSelectItem>> = true;
+const exactTagProps: Identical<TagSelectProps, TagSelectProps<TagSelectItem>> = true;
+const exactTagRootProps: Identical<TagSelectRootProps, TagSelectProps<TagSelectItem>> = true;
+const exactCalled = (
+  <>
+    <MultiSelect.Root>{(item) => { const exact: Identical<typeof item, MultiSelectItem> = true; return String(exact); }}</MultiSelect.Root>
+    <TagSelect.Root getItemLabel={(item) => { const exact: Identical<typeof item, TagSelectItem> = true; return String(exact); }} />
+  </>
+);
+void [exactProps, exactRootProps, exactTagProps, exactTagRootProps, exactCalled];
 const typed: MultiSelectProps<Fruit> = { items: fruits, children: (item) => item.name };
 const typedTags: TagSelectProps<Fruit> = { items: fruits, getItemLabel: (item) => item.name, children: (item) => item.name };
 const typedRoot: MultiSelectRootProps<Fruit> = { items: fruits, children: (item) => item.name };
