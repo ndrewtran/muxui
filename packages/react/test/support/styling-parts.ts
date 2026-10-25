@@ -1,26 +1,6 @@
-// The provisional Stage 2 styling contract (Decision 0031 item 16), as data only. Tests import it directly; it lives in
-// test/support, not src, so it ships nothing. CSS Stage 2 PR 2 moves it into src, where the adapter reads the state
-// list and the two generated files it adds are an intentional change. Keep it erasable (no enums, no namespaces).
-
-/** The Mux-owned presence states, each set as `data-muxui-state-<name>`. Spelled as the catalog spells them. */
-export const booleanStates = [
-  'disabled', 'read-only', 'required', 'invalid', 'pending', 'selected', 'indeterminate', 'expanded', 'open', 'current',
-  'placeholder', 'empty', 'hovered', 'pressed', 'focused', 'focus-visible', 'focus-within', 'dragging', 'drop-target',
-  'unavailable', 'today', 'outside-month', 'selection-start', 'selection-end', 'entering', 'exiting',
-] as const;
-
-/** The enumerated states and their values, as React Aria reports them today (`data-type` is the date segment type). */
-export const enumeratedStates = {
-  orientation: ['horizontal', 'vertical'],
-  placement: ['top', 'bottom', 'left', 'right'],
-  layout: ['stack', 'grid'],
-  'sort-direction': ['ascending', 'descending'],
-  type: ['era', 'year', 'month', 'day', 'hour', 'minute', 'second', 'dayPeriod', 'literal', 'timeZoneName'],
-} as const;
-
-export type StateName = (typeof booleanStates)[number] | keyof typeof enumeratedStates;
-
-export const stateAttribute = (state: StateName): string => `data-muxui-state-${state}`;
+// The class-scheme half of the provisional Stage 2 styling contract (Decision 0031 item 16), as data only. Tests import it
+// directly; it ships nothing. The state half lives in src/styling-contract.ts because the substrate adapter reads it.
+// Keep it erasable (no enums, no namespaces).
 
 /** The future class scheme: BEM elements on the family class. It does not describe today's roots, which `partMap` records. */
 export const partClass = (slug: string, part: string): string => part === 'root' ? `muxui-${slug}` : `muxui-${slug}__${part}`;

@@ -4,9 +4,9 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { compilePureTokenGraph, cssDeclaration } from '@muxui/tokens/core';
 import { catalogStateKinds, establishedClasses, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
-import {
-  booleanStates, enumeratedStates, mappedParts, noElementParts, partClass, pendingParts, publicSharedClasses, sharedParts, stateAttribute,
-} from './support/styling-contract.ts';
+import { booleanStates, enumeratedStates, stateAttribute, substrateStateAttributes } from '../src/styling-contract.ts';
+import { mappedParts, noElementParts, partClass, pendingParts, publicSharedClasses, sharedParts } from './support/styling-parts.ts';
+import { auditedReactAria, reactAriaVersionProblems, substrateWrappers } from './support/attribute-guard.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const source = JSON.parse(await readFile(resolve(packageRoot, '../../catalog/tokens/default-theme.json'), 'utf8'));
@@ -135,15 +135,24 @@ const catalog = await readCatalog(resolve(packageRoot, '../..'));
 const { selected, isEstablished } = await establishedClasses(packageRoot, styles.map(({ css }) => css));
 const parts = { mapped: mappedParts, shared: sharedParts, noElement: noElementParts, pending: pendingParts };
 
-test('the closed state list is spelled once and every name is a substrate attribute the styles select today', () => {
-  const names = [...booleanStates, ...Object.keys(enumeratedStates)];
-  assert.equal(new Set(names).size, names.length);
-  assert.ok(!names.includes('readonly'), 'the catalog spells read-only');
+// React Aria spells every state data-<name> except read-only (data-readonly); the Mux spelling replaces it.
+const reactAriaName = (state) => `data-${state === 'read-only' ? 'readonly' : state}`;
+const closedStates = [...booleanStates, ...Object.keys(enumeratedStates)];
+// States no authored rule selects, which the closed list keeps because consumers style them and the docs name them.
+const notSelectedByStyles = ['has-submenu'];
+
+test('the closed state list is spelled once and every name is selected by an authored style, in either spelling', () => {
+  assert.equal(new Set(closedStates).size, closedStates.length);
+  assert.ok(!closedStates.includes('readonly'), 'the catalog spells read-only');
   const css = styles.map((style) => style.css).join('\n');
-  // React Aria spells read-only without the hyphen; the contract uses the catalog's spelling.
-  for (const name of names) assert.ok(css.includes(`[data-${name === 'read-only' ? 'readonly' : name}`), `${name} is selected by an authored style`);
+  const selects = (state) => css.includes(`[${reactAriaName(state)}`) || css.includes(`[${stateAttribute(state)}`);
+  for (const state of closedStates) assert.equal(selects(state), !notSelectedByStyles.includes(state), `${state} is selected by an authored style`);
   assert.equal(stateAttribute('read-only'), 'data-muxui-state-read-only');
   assert.equal(stateAttribute('orientation'), 'data-muxui-state-orientation');
+});
+
+test('the substrate table maps each React Aria state spelling to its Mux spelling, once per state', () => {
+  assert.deepEqual(substrateStateAttributes, Object.fromEntries(closedStates.map((state) => [reactAriaName(state), stateAttribute(state)])));
 });
 
 test('every catalog state is classified by meaning and only unresolved ones are open work', () => {
@@ -203,4 +212,31 @@ test('the class naming function agrees with every BEM part class that exists, an
   for (const name of publicSharedClasses) {
     assert.ok(selected.has(name) && sharedParts.some(([, , shared]) => shared === name), `${name} is styled and shared`);
   }
+});
+
+// The substrate adapter (src/substrate.ts) is the one place React Aria components are wrapped. A component left raw
+// would render the React Aria state names, so the shape of every export is checked on the syntax tree.
+test('every substrate export is a pure-annotated internal wrapper of one React Aria component', async () => {
+  const text = await readFile(resolve(packageRoot, 'src/substrate.ts'), 'utf8');
+  const { problems, wrapped } = substrateWrappers(text);
+  assert.deepEqual(problems, []);
+  assert.ok(wrapped.length > 70 && wrapped.includes('Button') && wrapped.includes('DateInput') && wrapped.includes('ColorSwatchPicker'));
+
+  const problemsOf = (change) => substrateWrappers(change(text)).problems.join('\n');
+  assert.match(problemsOf((t) => t.replace('export const AriaDateInput = /*#__PURE__*/ withMuxState(RAC.DateInput, \'div\');', 'export const AriaDateInput = RAC.DateInput;')), /AriaDateInput: not built by withMuxState/u, 'a raw export');
+  assert.match(problemsOf((t) => `${t}\nexport { Button } from 'react-aria-components';`), /not a wrapper declaration/u, 'a re-export');
+  assert.match(problemsOf((t) => `${t}\nexport function helper() {}`), /only Aria wrappers are exported/u, 'another kind of export');
+  assert.match(problemsOf((t) => t.replace('withMuxState(RAC.Button,', 'withMuxState(RAC.ToggleButton,')), /AriaButton: wraps ToggleButton/u, 'the wrong component');
+  assert.match(problemsOf((t) => t.replace('/*#__PURE__*/ withMuxState(RAC.Button,', 'withMuxState(RAC.Button,')), /AriaButton: no \/\*#__PURE__\*\/ annotation/u, 'a wrapper without the tree-shaking annotation');
+  assert.match(problemsOf((t) => t.replace('withMuxState(RAC.Button, \'button\')', 'withMuxState(RAC.Button)')), /AriaButton: no element/u, 'a wrapper without an element');
+  assert.match(problemsOf((t) => `${t}\n/** @internal */\nexport const AriaButton2 = /*#__PURE__*/ withMuxState(RAC.Button, 'button');`), /Button is wrapped twice/u, 'a duplicate');
+});
+
+// A React Aria upgrade can add a reader of a state attribute the rename would break (today the only one is the date
+// segments' data-placeholder). Bumping a version fails here until the audit is repeated and the table is updated.
+test('the audited React Aria versions are the declared and installed ones', () => {
+  const manifestPath = resolve(packageRoot, 'package.json');
+  assert.deepEqual(reactAriaVersionProblems(manifestPath), []);
+  assert.match(reactAriaVersionProblems(manifestPath, { ...auditedReactAria, 'react-aria': '3.50.0' }).join(), /react-aria is declared as 3\.51\.0, audited at 3\.50\.0/u);
+  assert.match(reactAriaVersionProblems(manifestPath, { ...auditedReactAria, 'react-stately': '3.48.0' }).join(), /react-stately is installed at 3\.49\.0, audited at 3\.48\.0/u);
 });

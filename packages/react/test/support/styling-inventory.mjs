@@ -1,10 +1,10 @@
-// The inventory checks for the provisional styling contract in styling-contract.ts. They prove the contract
+// The inventory checks for the provisional styling contract (src/styling-contract.ts and styling-parts.ts). They prove the contract
 // covers every catalog state and anatomy entry. They do not prove a class is emitted on the right element;
 // that proof comes with the class scheme PR.
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { styleRuleClasses } from './scan-surface.mjs';
-import { booleanStates, enumeratedStates } from './styling-contract.ts';
+import { booleanStates, enumeratedStates } from '../../src/styling-contract.ts';
 
 const names = (list) => Object.fromEntries(list.map((name) => [name, ['state', name]]));
 const kinds = (kind, list) => Object.fromEntries(list.map((name) => [name, [kind]]));
@@ -68,7 +68,8 @@ export async function establishedClasses(packageRoot, stylesheets) {
   const selected = new Set(stylesheets.flatMap((css) => [...styleRuleClasses(css)]));
   const root = resolve(packageRoot, 'src');
   const files = (await readdir(root, { recursive: true }))
-    .filter((path) => /\.(?:ts|mjs)$/u.test(path) && !path.endsWith('.d.mts') && path !== 'generate.mjs');
+    // The contract is the inventory's subject, so it never counts as spelling an established class.
+    .filter((path) => /\.(?:ts|mjs)$/u.test(path) && !path.endsWith('.d.mts') && path !== 'generate.mjs' && path !== 'styling-contract.ts');
   const sources = (await Promise.all(files.map((path) => readFile(resolve(root, path), 'utf8')))).join('\n');
   const spelled = new Set(sources.match(/(?<![\w-])muxui-[a-z0-9]+(?:(?:__|--|-)[a-z0-9]+)*(?![\w-])/gu));
   return { selected, isEstablished: (name) => selected.has(name) || spelled.has(name) };
