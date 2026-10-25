@@ -8,6 +8,7 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
+import { ButtonContext } from 'react-aria-components';
 import { mergeDerivedApis } from '@muxui/schema';
 import { Button } from '../src/button.ts';
 import * as generated from '../generated/index.mjs';
@@ -258,6 +259,11 @@ const textLook = (container) => {
   const [, variant, size] = /muxui-text--([a-z]+)-([a-z]+)/u.exec(text.className) ?? [];
   return { variant, size, color: text.classList.contains('muxui-text--muted') ? 'muted' : 'default', as: text.localName, truncate: text.classList.contains('muxui-text--truncate') };
 };
+// CommandPalette.SearchField names its variant in a class modifier of its own element.
+const searchFieldVariant = (container) => {
+  const field = container.matches?.('.muxui-command-palette__search-field') ? container : container.querySelector('.muxui-command-palette__search-field');
+  return field === null ? undefined : ['default', 'inline'].find((value) => field.classList.contains(`muxui-command-palette__search-field--${value}`));
+};
 const markupValues = {
   // Sidebar marks only the compact density; the default one carries no attribute.
   density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
@@ -274,7 +280,7 @@ const markupValues = {
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
@@ -336,6 +342,8 @@ const minimalRenders = {
   MultiSelect: () => multiSelectRoot(),
   // TagSelect's block is the root's too; a selected key with no item to name it shows no tag, which is how the items default shows. Its item is observed under 'TagSelect.item'.
   TagSelect: () => tagSelectRoot(),
+  // CommandPalette's block is the root's, which is also CommandPalette.Root's; its modal renders in a portal, so the composition is the closed palette.
+  CommandPalette: () => commandPalette(),
   Card: () => h(generated.Card.Root, null, h(generated.Card.Body, null, 'Content')),
   AlertDialog: () => alertDialog(),
   // Sidebar.Root's block is the column's own; the provider, search and nav parts are observed under 'Sidebar.<part>'.
@@ -354,7 +362,7 @@ const minimalRenders = {
 };
 // The declarations a family's root block is read against, where the root is not the export itself: Menu's root is Menu.Root.
 // Sidebar's root props are `SidebarProps`, a name the compound shares, which `undeclaredRootProps` reads without the compound.
-const rootDeclarations = { MultiSelect: 'MultiSelectRoot', TagSelect: 'TagSelectRoot', Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot', Card: 'CardRoot', HeaderNav: 'HeaderNavRoot', AlertDialog: 'AlertDialogRoot', Sidebar: 'Sidebar' };
+const rootDeclarations = { MultiSelect: 'MultiSelectRoot', TagSelect: 'TagSelectRoot', Menu: 'MenuRoot', ProgressCircle: 'ProgressCircleRoot', InputTags: 'InputTagsRoot', CheckboxField: 'CheckboxFieldRoot', SwitchField: 'SwitchFieldRoot', RadioField: 'RadioFieldRoot', Card: 'CardRoot', HeaderNav: 'HeaderNavRoot', AlertDialog: 'AlertDialogRoot', Sidebar: 'Sidebar', CommandPalette: 'CommandPaletteRoot' };
 // The defaults of a part (partApis) render through the compound that holds it, qualified `Family.part`. `scope` picks the
 // part's own element from the markup, so the root's attributes cannot stand in for the part's.
 const partRenders = {
@@ -385,6 +393,15 @@ const partRenders = {
   // MultiSelect's options render in the open popup's portal, so its item default is read from a mounted control.
   'MultiSelect.item': { render: () => multiSelectRoot() },
   'TagSelect.item': { render: () => tagSelectRoot() },
+  // CommandPalette's modal renders in a portal, so the trigger is the one part its closed composition holds. The close control, search field,
+  // clear button and item need only the root (and a list or search field) to render, each read in its own element, so the root's attributes cannot stand in for them.
+  'CommandPalette.trigger': { scope: '.muxui-command-palette__trigger', render: () => commandPalette() },
+  'CommandPalette.close': { scope: '.muxui-command-palette__close', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.Close, null, 'Done')) },
+  'CommandPalette.search-field': { scope: '.muxui-command-palette__search-field', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.SearchField, null, h(generated.CommandPalette.Input))) },
+  'CommandPalette.clear-button': { scope: '.muxui-command-palette__clear', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.SearchField, null, h(generated.CommandPalette.Input), h(generated.CommandPalette.ClearButton))) },
+  'CommandPalette.item': { scope: '[role="option"]', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.ListBox, { 'aria-label': 'Commands' }, h(generated.CommandPalette.Item, { id: 'one', title: 'One' }))) },
+  // The backdrop renders no markup until the palette opens; its default is observed on the mounted modal.
+  'CommandPalette.backdrop': { render: () => commandPalette() },
 };
 const treeItems = [{ id: 'parent', label: 'Parent', children: [{ id: 'child', label: 'Child' }] }];
 const treeOf = (props) => h(generated.Tree, { 'aria-label': 'Files', items: treeItems, ...props });
@@ -439,6 +456,39 @@ function openedMultiSelect(props, children, read) {
 /** The simple Select with a label and two items, closed unless `props` open it. */
 function selectField(props = null) {
   return h(generated.Select, { label: 'Fruit', items: ['One', 'Two'], ...props });
+}
+
+/**
+ * CommandPalette.Root with a trigger and a modal holding a close control, a search field with its clear button, and one item. The modal
+ * renders in a portal, so the palette is closed unless `rootProps` opens it. Each part's own props go to that part.
+ */
+function commandPalette(rootProps = null, { trigger, backdrop, close, searchField, clearButton, item } = {}) {
+  const { CommandPalette } = generated;
+  return h(CommandPalette.Root, rootProps,
+    h(CommandPalette.Trigger, trigger, 'Commands'),
+    h(CommandPalette.Backdrop, backdrop,
+      h(CommandPalette.Popup, { 'aria-label': 'Commands' },
+        h(CommandPalette.Close, close, 'Done'),
+        h(CommandPalette.Content, null,
+          h(CommandPalette.SearchField, searchField, h(CommandPalette.Input, { 'aria-label': 'Search commands' }), h(CommandPalette.ClearButton, clearButton)),
+          h(CommandPalette.ListBox, { 'aria-label': 'Commands' }, h(CommandPalette.Item, { id: 'one', title: 'One', ...item }))))));
+}
+
+/** Whether activating the palette's item reports the palette closing: `rootProps` go to the Root, `item` to the Item. */
+function closesOnSelect(rootProps, item) {
+  const changes = [];
+  return withMounted(commandPalette({ defaultOpen: true, onOpenChange: (next) => changes.push(next), ...rootProps }, { item }), async () => {
+    await act(async () => document.querySelector('.muxui-command-palette__item').click());
+    return changes.includes(false);
+  });
+}
+
+/** The first value of prop `name` among the React props of `node`'s fiber and its ancestors: what a component was handed, read where it ran. */
+function fiberProp(node, name) {
+  for (let fiber = node[Object.keys(node).find((key) => key.startsWith('__reactFiber'))]; fiber; fiber = fiber.return) {
+    if (fiber.memoizedProps && name in fiber.memoizedProps) return fiber.memoizedProps[name];
+  }
+  return undefined;
 }
 
 /** A PromptComposer, with `props` over none. */
@@ -611,6 +661,17 @@ const behaviourObservers = {
       const option = document.querySelector('[role="option"]');
       return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
     }),
+  },
+  // The palette's dialog renders in a portal that stays empty until it opens, so defaultOpen shows in whether the dialog exists once mounted.
+  // Activating an item closes the palette unless its Root says otherwise, which the Root hears as onOpenChange(false); the item sets no value of its own.
+  CommandPalette: {
+    defaultOpen: (props) => withMounted(commandPalette(props), () => document.querySelector('.muxui-command-palette__dialog') !== null),
+    closeOnSelect: (props) => closesOnSelect(props, null),
+  },
+  // Whether a press outside dismisses the palette is the Backdrop's isDismissable, which a pointer cannot reach in jsdom, so it is read from the
+  // props the mounted modal was handed. The node must exist, so an unrendered backdrop cannot pass.
+  'CommandPalette.backdrop': {
+    dismissable: (props) => withMounted(commandPalette({ defaultOpen: true }, { backdrop: props }), () => fiberProp(document.querySelector('.muxui-command-palette__backdrop'), 'isDismissable')),
   },
   // The textarea's accessible name, when inputProps gives none, and whether the attach picker admits several files, which the hidden file input shows.
   PromptComposer: {
@@ -933,7 +994,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
     inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
-    defaultOpen: [false, true],
+    defaultOpen: [false, true], closeOnSelect: [true, false], dismissable: [true, false],
     showSearch: [true, false], showFooter: [true, false], required: [false, true],
     emptyStateTitle: ['No results found', 'Nothing here'], emptyStateDescription: ['Please try a different search term.', 'Try again.'],
   };
@@ -961,6 +1022,7 @@ test('every default a simple supplemental family states is compared with what th
     MultiSelect: { size: 'lg', placeholder: 'Pick', disabled: true, required: true, invalid: true, showSearch: false, showFooter: false, emptyStateTitle: 'None', emptyStateDescription: 'Nothing' },
     ProgressCircle: { value: 40, minValue: 10, maxValue: 90, size: 'lg' },
     InputTags: { tagPlacement: 'below', size: 'lg', defaultValue: ['x'], allowDuplicates: true, disabled: true, invalid: true, required: true },
+    CommandPalette: { defaultOpen: true, size: 'lg', closeOnSelect: false },
     PaymentInput: { defaultValue: '4111', size: 'lg' },
     Input: { size: 'lg' },
     TextArea: { size: 'lg' },
@@ -980,6 +1042,71 @@ test('every default a simple supplemental family states is compared with what th
       assert.ok(mismatches[0].startsWith(`${key}: catalog ${JSON.stringify(value)}, `), `${name}.${key} is the default that fails: ${mismatches[0]}`);
     }
   }
+});
+
+// CommandPalette states its defaults across its root and its parts. Each shows in its own element or on the mounted modal, and a catalog
+// value the palette does not run fails with that default's name: the scope of a part's render keeps the root's attributes from standing in for it.
+test('every default CommandPalette and its parts state is compared with what the palette runs', async () => {
+  const types = joinedDeclarations();
+  const api = await catalogApi('command-palette');
+  assert.deepEqual(Object.keys(api.defaults), ['defaultOpen', 'size', 'closeOnSelect']);
+  assert.deepEqual(Object.fromEntries(Object.entries(api.partApis).map(([part, block]) => [part, Object.keys(block.defaults)])), {
+    trigger: ['disabled'], backdrop: ['dismissable'], close: ['disabled'], 'search-field': ['variant'], 'clear-button': ['disabled'], item: ['disabled'], shortcut: [],
+  });
+  for (const [part, block] of Object.entries(api.partApis)) assert.deepEqual(await partProblems(types, 'CommandPalette', part, block), [], `CommandPalette.${part}`);
+  const changed = (part, defaults) => partProblems(types, 'CommandPalette', part, { ...api.partApis[part], defaults: { ...api.partApis[part].defaults, ...defaults } });
+  for (const part of ['trigger', 'close', 'clear-button', 'item']) assert.deepEqual(await changed(part, { disabled: true }), ['disabled: catalog true, rendered false'], `CommandPalette.${part}`);
+  assert.deepEqual(await changed('search-field', { variant: 'default' }), ['variant: catalog "default", rendered "inline"']);
+  assert.deepEqual(await changed('backdrop', { dismissable: false }), ['dismissable: catalog false, behaves true']);
+  assert.deepEqual(await changed('trigger', { tone: 'quiet' }), ['tone: no observer']);
+  assert.deepEqual(await behaviourMismatches('CommandPalette', { ...api.defaults, closeOnSelect: false }), ['closeOnSelect: catalog false, behaves true']);
+  assert.deepEqual(await behaviourMismatches('CommandPalette', { ...api.defaults, defaultOpen: true }), ['defaultOpen: catalog true, behaves false']);
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.CommandPalette()), { ...api.defaults, defaultOpen: true }), ['defaultOpen: catalog true, rendered false']);
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.CommandPalette()), { ...api.defaults, size: 'sm' }), ['size: catalog "sm", rendered "md"']);
+  // A part is read in its own element: a root marked disabled makes the close control look disabled unless the read is scoped to the control.
+  const markedRoot = renderToString(h(generated.CommandPalette.Root, { 'data-disabled': '' }, h(generated.CommandPalette.Close, null, 'Done')));
+  assert.deepEqual(defaultMismatches(markedRoot, { disabled: false }), ['disabled: catalog false, rendered true']);
+  assert.deepEqual(defaultMismatches(markedRoot, { disabled: false }, partRenders['CommandPalette.close'].scope), []);
+  // The mounted modal is read for real: the dialog and the backdrop exist there, and the observers fail where they do not.
+  await withMounted(commandPalette({ defaultOpen: true }), () => {
+    assert.ok(document.querySelector('.muxui-command-palette__dialog'));
+    assert.equal(fiberProp(document.querySelector('.muxui-command-palette__backdrop'), 'isDismissable'), true);
+  });
+});
+
+// React Aria merges a component's props over its contexts, so an explicit disabled default beats an inherited isDisabled and an omitted prop
+// must render as disabled: false does, whether or not a context says disabled. A default that stopped reaching React Aria would let the context win.
+test('a CommandPalette part left to its disabled default renders as one that says false, inside a disabled React Aria context', () => {
+  const { CommandPalette } = generated;
+  const disabledButtons = (child) => h(ButtonContext.Provider, { value: { isDisabled: true } }, child);
+  const parts = {
+    Trigger: (props) => h(CommandPalette.Root, null, h(CommandPalette.Trigger, props, 'Commands')),
+    Close: (props) => h(CommandPalette.Root, null, h(CommandPalette.Close, props, 'Done')),
+    'Close (icon)': (props) => h(CommandPalette.Root, null, h(CommandPalette.Close, props)),
+    ClearButton: (props) => h(CommandPalette.Root, null, h(CommandPalette.SearchField, null, h(CommandPalette.Input), h(CommandPalette.ClearButton, props))),
+    'ClearButton (disabled field)': (props) => h(CommandPalette.Root, null, h(CommandPalette.SearchField, { isDisabled: true }, h(CommandPalette.Input), h(CommandPalette.ClearButton, props))),
+  };
+  for (const [name, part] of Object.entries(parts)) {
+    for (const [context, wrap] of [['no context', (element) => element], ['a disabled ButtonContext', disabledButtons]]) {
+      const markup = (props) => renderToString(wrap(part(props)));
+      assert.equal(markup(null), markup({ disabled: false }), `${name} with no disabled, inside ${context}`);
+      assert.equal(markup(null), markup({ disabled: undefined }), `${name} with disabled undefined, inside ${context}`);
+      assert.notEqual(markup(null), markup({ disabled: true }), `${name} disabled differs from its default, inside ${context}`);
+    }
+  }
+});
+
+// An item closes the palette as its own closeOnSelect says, and when it says none (undefined or null) as its Root's does. Each case is read
+// from a mounted palette as the Root's onOpenChange(false), so neither the root's value nor the item's can stand in for the other.
+test('a CommandPalette item follows its Root\'s closeOnSelect unless it sets its own', async () => {
+  const cases = [
+    [undefined, undefined, true], [true, undefined, true], [false, undefined, false], [true, null, true], [false, null, false],
+    [false, true, true], [true, false, false], [true, true, true], [false, false, false],
+  ];
+  for (const [root, item, closes] of cases) {
+    assert.equal(await closesOnSelect({ closeOnSelect: root }, { closeOnSelect: item }), closes, `Root ${root}, item ${item}`);
+  }
+  assert.equal(await closesOnSelect(null, null), true, 'a Root left to its default closes');
 });
 
 // The popup's own fallback is no catalog default: a Select's popup reads its modal setting from the root's context, so the observers above,

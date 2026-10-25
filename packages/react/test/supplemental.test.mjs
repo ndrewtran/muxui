@@ -9,15 +9,13 @@ import { RadioGroup as AriaRadioGroup } from 'react-aria-components';
 import { Form as AriaForm } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
 import { parseAst } from 'vite';
-import {
-  CommandPalette,
-  supplementalFamilies,
-} from '../src/supplemental/index.mjs';
+import { supplementalFamilies } from '../src/supplemental/index.mjs';
 import { AlertDialog } from '../src/supplemental/alert-dialog.ts';
 import { ButtonGroup } from '../src/supplemental/button-group.ts';
 import { Card } from '../src/supplemental/card.ts';
 import { CheckboxField } from '../src/supplemental/checkbox-field.ts';
 import { ColorModeToggle } from '../src/supplemental/color-mode-toggle.ts';
+import { CommandPalette } from '../src/supplemental/command-palette.ts';
 import { HeaderNav } from '../src/supplemental/header-nav.ts';
 import { Input } from '../src/supplemental/input.ts';
 import { InputTags } from '../src/supplemental/input-tags.ts';
@@ -374,7 +372,7 @@ test('supplemental declarations and CSS do not leak external API names or select
 });
 
 // A declaration file with any export clause stops exporting its unmarked declarations, which would silently drop
-// PartProps, ButtonPartProps, CommandPaletteItemsProps and TextVisualProps from the package. `export type X = ...` is
+// PartProps and ButtonPartProps from the package. `export type X = ...` is
 // a declaration with a modifier, so it is fine: this is how SupplementalActivation reaches the public surface.
 const exportClauses = (text) => parseAst(text, { lang: 'dts' }).body
   .filter((node) => node.type === 'ExportAllDeclaration' || node.type === 'ExportDefaultDeclaration' || node.type === 'TSExportAssignment'
@@ -405,14 +403,14 @@ test('supplemental CSS classifies foundation tokens separately from local compon
 });
 
 test('the supplemental roots retain native string field props in their declarations', async () => {
-  const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
   const multiSelect = await readFile(resolve(packageRoot, 'src/supplemental/multi-select.ts'), 'utf8');
   assert.match(multiSelect, /type MultiSelectItemOwnProps = \{[^}]*?textValue\?: string;/u);
   const tagSelect = await readFile(resolve(packageRoot, 'src/supplemental/tag-select.ts'), 'utf8');
   assert.match(tagSelect, /type TagSelectItemOwnProps = \{[^}]*?textValue\?: string;/u);
   assert.match(multiSelect, /interface MultiSelectRootComponent[\s\S]*?<T extends MultiSelectItem/u);
   assert.match(tagSelect, /interface TagSelectRootComponent[\s\S]*?<T extends TagSelectItem/u);
-  assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
+  const commandPalette = await readFile(resolve(packageRoot, 'src/supplemental/command-palette.ts'), 'utf8');
+  assert.match(commandPalette, /type CommandPaletteItemOwnProps = \{[^}]*?textValue\?: string;/u);
 });
 
 // The field compounds own their root props in a type of their own, which the Root type intersects with the div's attributes.

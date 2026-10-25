@@ -2,30 +2,51 @@
   "schema": "muxui-declaration-reference-v1",
   "owner": "command-palette",
   "sources": {
-    "part-utils": "packages/react/src/supplemental/part-utils.ts",
-    "supplemental": "packages/react/src/supplemental/index.d.ts"
+    "command-palette": "packages/react/src/supplemental/command-palette.ts",
+    "part-utils": "packages/react/src/supplemental/part-utils.ts"
   },
   "exports": [
     {
       "name": "CommandPalette",
       "entry": ".",
-      "module": "supplemental",
+      "module": "command-palette",
       "kind": "component",
       "parts": [
         {
           "member": "Root",
           "form": "forwardRef",
           "members": [
-            { "name": "open", "optional": true, "type": "boolean" },
-            { "name": "defaultOpen", "optional": true, "type": "boolean" },
-            { "name": "onOpenChange", "optional": true, "type": "(open: boolean) => void" },
+            {
+              "name": "open",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the palette is open, when the caller controls it."
+            },
+            {
+              "name": "defaultOpen",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the palette starts open, when it controls itself."
+            },
+            {
+              "name": "onOpenChange",
+              "optional": true,
+              "type": "(open: boolean) => void",
+              "doc": "Called with the new open state each time the palette opens or closes."
+            },
             {
               "name": "size",
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
-              "values": ["sm", "md", "lg"]
+              "values": ["sm", "md", "lg"],
+              "doc": "The control size, which the trigger, the search input and the results follow."
             },
-            { "name": "closeOnSelect", "optional": true, "type": "boolean" }
+            {
+              "name": "closeOnSelect",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether activating an item closes the palette. An item can set its own."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -36,14 +57,20 @@
           "member": "Trigger",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the trigger disabled."
+            },
             {
               "name": "onActivate",
               "optional": true,
               "type": "(event: SupplementalActivation) => void",
-              "refs": ["part-utils#SupplementalActivation"]
-            },
-            { "name": "className", "optional": true, "type": "string" }
+              "refs": ["part-utils#SupplementalActivation"],
+              "doc": "Called when the trigger is pressed, which opens the palette."
+            }
           ],
           "ref": { "type": "HTMLButtonElement" },
           "natives": [
@@ -55,7 +82,12 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "dismissable", "optional": true, "type": "boolean" }
+            {
+              "name": "dismissable",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether pressing outside the popup closes the palette."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -99,14 +131,20 @@
           "member": "Close",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the close control disabled."
+            },
             {
               "name": "onActivate",
               "optional": true,
               "type": "(event: SupplementalActivation) => void",
-              "refs": ["part-utils#SupplementalActivation"]
-            },
-            { "name": "className", "optional": true, "type": "string" }
+              "refs": ["part-utils#SupplementalActivation"],
+              "doc": "Called when the control is pressed, which closes the palette."
+            }
           ],
           "ref": { "type": "HTMLButtonElement" },
           "natives": [
@@ -132,7 +170,8 @@
               "name": "variant",
               "optional": true,
               "type": "'default' | 'inline'",
-              "values": ["default", "inline"]
+              "values": ["default", "inline"],
+              "doc": "The look of the field's input: `default` draws its border, `inline` leaves it borderless so the input blends into the popup."
             }
           ],
           "ref": { "type": "HTMLDivElement" },
@@ -153,14 +192,19 @@
           "member": "ClearButton",
           "form": "forwardRef",
           "members": [
-            { "name": "disabled", "optional": true, "type": "boolean" },
+            { "name": "className", "optional": true, "type": "string" },
             {
               "name": "onActivate",
               "optional": true,
               "type": "(event: SupplementalActivation) => void",
               "refs": ["part-utils#SupplementalActivation"]
             },
-            { "name": "className", "optional": true, "type": "string" }
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the clear button disabled."
+            }
           ],
           "ref": { "type": "HTMLButtonElement" },
           "natives": [
@@ -268,15 +312,60 @@
           "member": "Item",
           "form": "forwardRef",
           "members": [
-            { "name": "id", "optional": true, "type": "string" },
-            { "name": "title", "optional": true, "type": "string" },
-            { "name": "description", "optional": true, "type": "string" },
-            { "name": "textValue", "optional": true, "type": "string" },
-            { "name": "href", "optional": true, "type": "string" },
-            { "name": "target", "optional": true, "type": "string" },
-            { "name": "disabled", "optional": true, "type": "boolean" },
-            { "name": "closeOnSelect", "optional": true, "type": "boolean" },
-            { "name": "onActivate", "optional": true, "type": "(event: { id?: string }) => void" }
+            {
+              "name": "id",
+              "optional": true,
+              "type": "string",
+              "doc": "The item's key, which onActivate reports."
+            },
+            {
+              "name": "title",
+              "optional": true,
+              "type": "string",
+              "doc": "The visible title, which also names the item for typeahead."
+            },
+            {
+              "name": "description",
+              "optional": true,
+              "type": "string",
+              "doc": "Supporting text shown under the title."
+            },
+            {
+              "name": "textValue",
+              "optional": true,
+              "type": "string",
+              "doc": "The text typeahead matches when the item has no title."
+            },
+            {
+              "name": "href",
+              "optional": true,
+              "type": "string",
+              "doc": "Makes the item a link to this address."
+            },
+            {
+              "name": "target",
+              "optional": true,
+              "type": "string",
+              "doc": "Where the link opens, as the anchor's target attribute."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Marks the item disabled: it cannot be activated."
+            },
+            {
+              "name": "closeOnSelect",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether activating this item closes the palette. It follows the root's closeOnSelect when unset."
+            },
+            {
+              "name": "onActivate",
+              "optional": true,
+              "type": "(event: { id?: string }) => void",
+              "doc": "Called with the item's id when the item is activated."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -389,7 +478,12 @@
           "form": "forwardRef",
           "members": [
             { "name": "className", "optional": true, "type": "string" },
-            { "name": "keys", "optional": true, "type": "readonly string[]" }
+            {
+              "name": "keys",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+            }
           ],
           "ref": { "type": "HTMLSpanElement" },
           "natives": [
@@ -465,86 +559,70 @@
     {
       "name": "useCommandPalette",
       "entry": ".",
-      "module": "supplemental",
+      "module": "command-palette",
       "kind": "function",
       "signature": "useCommandPalette<T extends CommandPaletteCommand>(options: UseCommandPaletteOptions<T>): UseCommandPaletteReturn<T>",
       "typeParameters": [
         {
           "name": "T",
           "constraint": "CommandPaletteCommand",
-          "refs": ["supplemental#CommandPaletteCommand"]
+          "refs": ["command-palette#CommandPaletteCommand"]
         }
       ],
       "parameters": [
         {
           "name": "options",
           "type": "UseCommandPaletteOptions<T>",
-          "refs": ["supplemental#UseCommandPaletteOptions"]
+          "refs": ["command-palette#UseCommandPaletteOptions"]
         }
       ],
       "returns": {
         "type": "UseCommandPaletteReturn<T>",
-        "refs": ["supplemental#UseCommandPaletteReturn"]
+        "refs": ["command-palette#UseCommandPaletteReturn"]
       }
     }
   ],
   "types": [
     {
-      "id": "part-utils#SupplementalActivation",
-      "name": "SupplementalActivation",
-      "module": "part-utils",
-      "public": [
-        { "entry": ".", "name": "SupplementalActivation" }
-      ],
-      "owner": "shared",
-      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "id": "command-palette#CommandPaletteBackdropOwnProps",
+      "name": "CommandPaletteBackdropOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteBackdropOwnProps = {\n  dismissable?: boolean;\n};",
       "members": [
         {
-          "name": "type",
-          "type": "'activate'",
-          "values": ["activate"]
-        },
-        { "name": "pointerType", "optional": true, "type": "string" },
-        { "name": "target", "optional": true, "type": "EventTarget | null" }
+          "name": "dismissable",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether pressing outside the popup closes the palette."
+        }
       ]
     },
     {
-      "id": "supplemental#ButtonPartProps",
-      "name": "ButtonPartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "ButtonPartProps" }
-      ],
-      "owner": "button",
-      "text": "type ButtonPartProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n  className?: string;\n};",
-      "refs": ["part-utils#SupplementalActivation"]
-    },
-    {
-      "id": "supplemental#CommandPaletteBackdropProps",
+      "id": "command-palette#CommandPaletteBackdropProps",
       "name": "CommandPaletteBackdropProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteBackdropProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteBackdropProps = PartProps<HTMLDivElement> & {\n  dismissable?: boolean;\n};",
-      "refs": ["supplemental#PartProps"]
+      "text": "type CommandPaletteBackdropProps = PartProps<HTMLDivElement> & CommandPaletteBackdropOwnProps;",
+      "refs": ["part-utils#PartProps", "command-palette#CommandPaletteBackdropOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteChipProps",
+      "id": "command-palette#CommandPaletteChipProps",
       "name": "CommandPaletteChipProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteChipProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteChipProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteChipRemoveProps",
+      "id": "command-palette#CommandPaletteChipRemoveProps",
       "name": "CommandPaletteChipRemoveProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteChipRemoveProps" }
       ],
@@ -552,53 +630,89 @@
       "text": "type CommandPaletteChipRemoveProps = React.ButtonHTMLAttributes<HTMLButtonElement>;"
     },
     {
-      "id": "supplemental#CommandPaletteChipsProps",
+      "id": "command-palette#CommandPaletteChipsProps",
       "name": "CommandPaletteChipsProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteChipsProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteChipsProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteClearButtonProps",
+      "id": "command-palette#CommandPaletteClearButtonOwnProps",
+      "name": "CommandPaletteClearButtonOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteClearButtonOwnProps = {\n  disabled?: boolean;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the clear button disabled."
+        }
+      ]
+    },
+    {
+      "id": "command-palette#CommandPaletteClearButtonProps",
       "name": "CommandPaletteClearButtonProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteClearButtonProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteClearButtonProps = ButtonPartProps;",
-      "refs": ["supplemental#ButtonPartProps"]
+      "text": "type CommandPaletteClearButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  className?: string;\n  onActivate?: (event: SupplementalActivation) => void;\n} & CommandPaletteClearButtonOwnProps;",
+      "refs": ["part-utils#SupplementalActivation", "command-palette#CommandPaletteClearButtonOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteCloseProps",
+      "id": "command-palette#CommandPaletteCloseOwnProps",
+      "name": "CommandPaletteCloseOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteCloseOwnProps = {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the close control disabled."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: SupplementalActivation) => void",
+          "refs": ["part-utils#SupplementalActivation"],
+          "doc": "Called when the control is pressed, which closes the palette."
+        }
+      ],
+      "refs": ["part-utils#SupplementalActivation"]
+    },
+    {
+      "id": "command-palette#CommandPaletteCloseProps",
       "name": "CommandPaletteCloseProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteCloseProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteCloseProps = ButtonPartProps;",
-      "refs": ["supplemental#ButtonPartProps"]
+      "text": "type CommandPaletteCloseProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  className?: string;\n} & CommandPaletteCloseOwnProps;",
+      "refs": ["command-palette#CommandPaletteCloseOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteCollectionComponent",
+      "id": "command-palette#CommandPaletteCollectionComponent",
       "name": "CommandPaletteCollectionComponent",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteCollectionComponent" }
       ],
       "owner": "command-palette",
       "text": "interface CommandPaletteCollectionComponent {\n  <T = unknown>(props: CommandPaletteCollectionProps<T>): React.ReactElement | null;\n}",
-      "refs": ["supplemental#CommandPaletteCollectionProps"]
+      "refs": ["command-palette#CommandPaletteCollectionProps"]
     },
     {
-      "id": "supplemental#CommandPaletteCollectionProps",
+      "id": "command-palette#CommandPaletteCollectionProps",
       "name": "CommandPaletteCollectionProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteCollectionProps" }
       ],
@@ -607,12 +721,12 @@
         { "name": "T", "default": "unknown" }
       ],
       "text": "type CommandPaletteCollectionProps<T = unknown> = CommandPaletteItemsProps<T>;",
-      "refs": ["supplemental#CommandPaletteItemsProps"]
+      "refs": ["command-palette#CommandPaletteItemsProps"]
     },
     {
-      "id": "supplemental#CommandPaletteCommand",
+      "id": "command-palette#CommandPaletteCommand",
       "name": "CommandPaletteCommand",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteCommand" }
       ],
@@ -634,53 +748,53 @@
       ]
     },
     {
-      "id": "supplemental#CommandPaletteContentProps",
+      "id": "command-palette#CommandPaletteContentProps",
       "name": "CommandPaletteContentProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteContentProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteContentProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteDescriptionProps",
+      "id": "command-palette#CommandPaletteDescriptionProps",
       "name": "CommandPaletteDescriptionProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteDescriptionProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteDescriptionProps = PartProps<HTMLParagraphElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteEmptyProps",
+      "id": "command-palette#CommandPaletteEmptyProps",
       "name": "CommandPaletteEmptyProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteEmptyProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteEmptyProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteFooterProps",
+      "id": "command-palette#CommandPaletteFooterProps",
       "name": "CommandPaletteFooterProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteFooterProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteFooterProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteGroup",
+      "id": "command-palette#CommandPaletteGroup",
       "name": "CommandPaletteGroup",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteGroup" }
       ],
@@ -690,7 +804,7 @@
           "name": "T",
           "constraint": "CommandPaletteCommand",
           "default": "CommandPaletteCommand",
-          "refs": ["supplemental#CommandPaletteCommand"]
+          "refs": ["command-palette#CommandPaletteCommand"]
         }
       ],
       "text": "interface CommandPaletteGroup<T extends CommandPaletteCommand = CommandPaletteCommand> {\n  id: string;\n  title: string;\n  commands: readonly T[];\n}",
@@ -699,12 +813,12 @@
         { "name": "title", "type": "string" },
         { "name": "commands", "type": "readonly T[]" }
       ],
-      "refs": ["supplemental#CommandPaletteCommand"]
+      "refs": ["command-palette#CommandPaletteCommand"]
     },
     {
-      "id": "supplemental#CommandPaletteInputProps",
+      "id": "command-palette#CommandPaletteInputProps",
       "name": "CommandPaletteInputProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteInputProps" }
       ],
@@ -712,74 +826,137 @@
       "text": "type CommandPaletteInputProps = React.InputHTMLAttributes<HTMLInputElement>;"
     },
     {
-      "id": "supplemental#CommandPaletteItemContentProps",
+      "id": "command-palette#CommandPaletteItemContentProps",
       "name": "CommandPaletteItemContentProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemContentProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteItemContentProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteItemDescriptionProps",
+      "id": "command-palette#CommandPaletteItemDescriptionProps",
       "name": "CommandPaletteItemDescriptionProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemDescriptionProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteItemDescriptionProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteItemIconProps",
+      "id": "command-palette#CommandPaletteItemIconProps",
       "name": "CommandPaletteItemIconProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemIconProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteItemIconProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteItemMetaProps",
+      "id": "command-palette#CommandPaletteItemMetaProps",
       "name": "CommandPaletteItemMetaProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemMetaProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteItemMetaProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteItemProps",
+      "id": "command-palette#CommandPaletteItemOwnProps",
+      "name": "CommandPaletteItemOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteItemOwnProps = {\n  id?: string;\n  title?: string;\n  description?: string;\n  textValue?: string;\n  href?: string;\n  target?: string;\n  disabled?: boolean;\n  closeOnSelect?: boolean;\n  onActivate?: (event: { id?: string }) => void;\n};",
+      "members": [
+        {
+          "name": "id",
+          "optional": true,
+          "type": "string",
+          "doc": "The item's key, which onActivate reports."
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "type": "string",
+          "doc": "The visible title, which also names the item for typeahead."
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "type": "string",
+          "doc": "Supporting text shown under the title."
+        },
+        {
+          "name": "textValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The text typeahead matches when the item has no title."
+        },
+        {
+          "name": "href",
+          "optional": true,
+          "type": "string",
+          "doc": "Makes the item a link to this address."
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "type": "string",
+          "doc": "Where the link opens, as the anchor's target attribute."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the item disabled: it cannot be activated."
+        },
+        {
+          "name": "closeOnSelect",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether activating this item closes the palette. It follows the root's closeOnSelect when unset."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: { id?: string }) => void",
+          "doc": "Called with the item's id when the item is activated."
+        }
+      ]
+    },
+    {
+      "id": "command-palette#CommandPaletteItemProps",
       "name": "CommandPaletteItemProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & {\n  id?: string;\n  title?: string;\n  description?: string;\n  textValue?: string;\n  href?: string;\n  target?: string;\n  disabled?: boolean;\n  closeOnSelect?: boolean;\n  onActivate?: (event: { id?: string }) => void;\n};"
+      "text": "type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & CommandPaletteItemOwnProps;",
+      "refs": ["command-palette#CommandPaletteItemOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteItemTitleProps",
+      "id": "command-palette#CommandPaletteItemTitleProps",
       "name": "CommandPaletteItemTitleProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemTitleProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteItemTitleProps = PartProps<HTMLSpanElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteItemsProps",
+      "id": "command-palette#CommandPaletteItemsProps",
       "name": "CommandPaletteItemsProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteItemsProps" }
       ],
@@ -790,20 +967,20 @@
       "text": "type CommandPaletteItemsProps<T> = {\n  items?: undefined;\n  dependencies?: undefined;\n  children?: React.ReactNode;\n} | {\n  items: Iterable<T>;\n  dependencies?: readonly unknown[];\n  children: (item: T) => React.ReactElement;\n};"
     },
     {
-      "id": "supplemental#CommandPaletteListBoxComponent",
+      "id": "command-palette#CommandPaletteListBoxComponent",
       "name": "CommandPaletteListBoxComponent",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteListBoxComponent" }
       ],
       "owner": "command-palette",
       "text": "interface CommandPaletteListBoxComponent {\n  <T = unknown>(props: CommandPaletteListBoxProps<T> & React.RefAttributes<HTMLDivElement>): React.ReactElement | null;\n}",
-      "refs": ["supplemental#CommandPaletteListBoxProps"]
+      "refs": ["command-palette#CommandPaletteListBoxProps"]
     },
     {
-      "id": "supplemental#CommandPaletteListBoxProps",
+      "id": "command-palette#CommandPaletteListBoxProps",
       "name": "CommandPaletteListBoxProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteListBoxProps" }
       ],
@@ -812,76 +989,132 @@
         { "name": "T", "default": "unknown" }
       ],
       "text": "type CommandPaletteListBoxProps<T = unknown> = Omit<PartProps<HTMLDivElement>, 'children'> & CommandPaletteItemsProps<T>;",
-      "refs": ["supplemental#PartProps", "supplemental#CommandPaletteItemsProps"]
+      "refs": ["part-utils#PartProps", "command-palette#CommandPaletteItemsProps"]
     },
     {
-      "id": "supplemental#CommandPaletteLoadMoreItemProps",
+      "id": "command-palette#CommandPaletteLoadMoreItemProps",
       "name": "CommandPaletteLoadMoreItemProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteLoadMoreItemProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteLoadMoreItemProps = PartProps<HTMLDivElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPalettePopupProps",
+      "id": "command-palette#CommandPaletteOwnProps",
+      "name": "CommandPaletteOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteOwnProps = {\n  open?: boolean;\n  defaultOpen?: boolean;\n  onOpenChange?: (open: boolean) => void;\n  size?: 'sm' | 'md' | 'lg';\n  closeOnSelect?: boolean;\n};",
+      "members": [
+        {
+          "name": "open",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the palette is open, when the caller controls it."
+        },
+        {
+          "name": "defaultOpen",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the palette starts open, when it controls itself."
+        },
+        {
+          "name": "onOpenChange",
+          "optional": true,
+          "type": "(open: boolean) => void",
+          "doc": "Called with the new open state each time the palette opens or closes."
+        },
+        {
+          "name": "size",
+          "optional": true,
+          "type": "'sm' | 'md' | 'lg'",
+          "values": ["sm", "md", "lg"],
+          "doc": "The control size, which the trigger, the search input and the results follow."
+        },
+        {
+          "name": "closeOnSelect",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether activating an item closes the palette. An item can set its own."
+        }
+      ]
+    },
+    {
+      "id": "command-palette#CommandPalettePopupProps",
       "name": "CommandPalettePopupProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPalettePopupProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPalettePopupProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteRootProps",
+      "id": "command-palette#CommandPaletteRootProps",
       "name": "CommandPaletteRootProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteRootProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & {\n  open?: boolean;\n  defaultOpen?: boolean;\n  onOpenChange?: (open: boolean) => void;\n  size?: 'sm' | 'md' | 'lg';\n  closeOnSelect?: boolean;\n};"
+      "text": "type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & CommandPaletteOwnProps;",
+      "refs": ["command-palette#CommandPaletteOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteSearchFieldProps",
+      "id": "command-palette#CommandPaletteSearchFieldOwnProps",
+      "name": "CommandPaletteSearchFieldOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteSearchFieldOwnProps = {\n  variant?: 'default' | 'inline';\n};",
+      "members": [
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "'default' | 'inline'",
+          "values": ["default", "inline"],
+          "doc": "The look of the field's input: `default` draws its border, `inline` leaves it borderless so the input blends into the popup."
+        }
+      ]
+    },
+    {
+      "id": "command-palette#CommandPaletteSearchFieldProps",
       "name": "CommandPaletteSearchFieldProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteSearchFieldProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteSearchFieldProps = React.HTMLAttributes<HTMLDivElement> & {\n  variant?: 'default' | 'inline';\n};"
+      "text": "type CommandPaletteSearchFieldProps = React.HTMLAttributes<HTMLDivElement> & CommandPaletteSearchFieldOwnProps;",
+      "refs": ["command-palette#CommandPaletteSearchFieldOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteSectionComponent",
+      "id": "command-palette#CommandPaletteSectionComponent",
       "name": "CommandPaletteSectionComponent",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteSectionComponent" }
       ],
       "owner": "command-palette",
       "text": "interface CommandPaletteSectionComponent {\n  <T = unknown>(props: CommandPaletteSectionProps<T> & React.RefAttributes<HTMLElement>): React.ReactElement | null;\n}",
-      "refs": ["supplemental#CommandPaletteSectionProps"]
+      "refs": ["command-palette#CommandPaletteSectionProps"]
     },
     {
-      "id": "supplemental#CommandPaletteSectionHeaderProps",
+      "id": "command-palette#CommandPaletteSectionHeaderProps",
       "name": "CommandPaletteSectionHeaderProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteSectionHeaderProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteSectionHeaderProps = PartProps<HTMLElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteSectionProps",
+      "id": "command-palette#CommandPaletteSectionProps",
       "name": "CommandPaletteSectionProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteSectionProps" }
       ],
@@ -890,69 +1123,92 @@
         { "name": "T", "default": "unknown" }
       ],
       "text": "type CommandPaletteSectionProps<T = unknown> = Omit<PartProps<HTMLElement>, 'children'> & CommandPaletteItemsProps<T>;",
-      "refs": ["supplemental#PartProps", "supplemental#CommandPaletteItemsProps"]
+      "refs": ["part-utils#PartProps", "command-palette#CommandPaletteItemsProps"]
     },
     {
-      "id": "supplemental#CommandPaletteSeparatorProps",
+      "id": "command-palette#CommandPaletteSeparatorProps",
       "name": "CommandPaletteSeparatorProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteSeparatorProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteSeparatorProps = PartProps<HTMLHRElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteShortcutProps",
+      "id": "command-palette#CommandPaletteShortcutOwnProps",
+      "name": "CommandPaletteShortcutOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteShortcutOwnProps = {\n  keys?: readonly string[];\n};",
+      "members": [
+        {
+          "name": "keys",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+        }
+      ]
+    },
+    {
+      "id": "command-palette#CommandPaletteShortcutProps",
       "name": "CommandPaletteShortcutProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteShortcutProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteShortcutProps = PartProps<HTMLSpanElement> & {\n  keys?: readonly string[];\n};",
-      "refs": ["supplemental#PartProps"]
+      "text": "type CommandPaletteShortcutProps = PartProps<HTMLSpanElement> & CommandPaletteShortcutOwnProps;",
+      "refs": ["part-utils#PartProps", "command-palette#CommandPaletteShortcutOwnProps"]
     },
     {
-      "id": "supplemental#CommandPaletteTitleProps",
+      "id": "command-palette#CommandPaletteTitleProps",
       "name": "CommandPaletteTitleProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteTitleProps" }
       ],
       "owner": "command-palette",
       "text": "type CommandPaletteTitleProps = PartProps<HTMLHeadingElement>;",
-      "refs": ["supplemental#PartProps"]
+      "refs": ["part-utils#PartProps"]
     },
     {
-      "id": "supplemental#CommandPaletteTriggerProps",
+      "id": "command-palette#CommandPaletteTriggerOwnProps",
+      "name": "CommandPaletteTriggerOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteTriggerOwnProps = {\n  disabled?: boolean;\n  onActivate?: (event: SupplementalActivation) => void;\n};",
+      "members": [
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Marks the trigger disabled."
+        },
+        {
+          "name": "onActivate",
+          "optional": true,
+          "type": "(event: SupplementalActivation) => void",
+          "refs": ["part-utils#SupplementalActivation"],
+          "doc": "Called when the trigger is pressed, which opens the palette."
+        }
+      ],
+      "refs": ["part-utils#SupplementalActivation"]
+    },
+    {
+      "id": "command-palette#CommandPaletteTriggerProps",
       "name": "CommandPaletteTriggerProps",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "CommandPaletteTriggerProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteTriggerProps = ButtonPartProps;",
-      "refs": ["supplemental#ButtonPartProps"]
+      "text": "type CommandPaletteTriggerProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {\n  className?: string;\n} & CommandPaletteTriggerOwnProps;",
+      "refs": ["command-palette#CommandPaletteTriggerOwnProps"]
     },
     {
-      "id": "supplemental#PartProps",
-      "name": "PartProps",
-      "module": "supplemental",
-      "public": [
-        { "entry": ".", "name": "PartProps" }
-      ],
-      "owner": "shared",
-      "typeParameters": [
-        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
-      ],
-      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
-    },
-    {
-      "id": "supplemental#UseCommandPaletteOptions",
+      "id": "command-palette#UseCommandPaletteOptions",
       "name": "UseCommandPaletteOptions",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "UseCommandPaletteOptions" }
       ],
@@ -961,7 +1217,7 @@
         {
           "name": "T",
           "constraint": "CommandPaletteCommand",
-          "refs": ["supplemental#CommandPaletteCommand"]
+          "refs": ["command-palette#CommandPaletteCommand"]
         }
       ],
       "text": "interface UseCommandPaletteOptions<T extends CommandPaletteCommand> {\n  commands: readonly T[];\n  query?: string;\n  defaultQuery?: string;\n  onQueryChange?: (query: string) => void;\n  filter?: false | ((command: T, query: string) => boolean);\n  sort?: false | ((a: T, b: T, query: string) => number);\n  groupBy?: (command: T) => string | null | undefined;\n  getGroupTitle?: (groupId: string) => string;\n  onAction?: (command: T) => void | Promise<void>;\n  onError?: (error: unknown, command: T) => void;\n  close?: () => void;\n  closeOnSelect?: boolean;\n}",
@@ -987,12 +1243,12 @@
         { "name": "close", "optional": true, "type": "() => void" },
         { "name": "closeOnSelect", "optional": true, "type": "boolean" }
       ],
-      "refs": ["supplemental#CommandPaletteCommand"]
+      "refs": ["command-palette#CommandPaletteCommand"]
     },
     {
-      "id": "supplemental#UseCommandPaletteReturn",
+      "id": "command-palette#UseCommandPaletteReturn",
       "name": "UseCommandPaletteReturn",
-      "module": "supplemental",
+      "module": "command-palette",
       "public": [
         { "entry": ".", "name": "UseCommandPaletteReturn" }
       ],
@@ -1001,7 +1257,7 @@
         {
           "name": "T",
           "constraint": "CommandPaletteCommand",
-          "refs": ["supplemental#CommandPaletteCommand"]
+          "refs": ["command-palette#CommandPaletteCommand"]
         }
       ],
       "text": "interface UseCommandPaletteReturn<T extends CommandPaletteCommand> {\n  query: string;\n  setQuery: (query: string) => void;\n  filteredCommands: readonly T[];\n  groupedCommands: readonly CommandPaletteGroup<T>[];\n  runCommand: (commandOrId: T | string) => Promise<void>;\n  getItemProps: (command: T) => CommandPaletteItemProps;\n}",
@@ -1012,19 +1268,47 @@
         {
           "name": "groupedCommands",
           "type": "readonly CommandPaletteGroup<T>[]",
-          "refs": ["supplemental#CommandPaletteGroup"]
+          "refs": ["command-palette#CommandPaletteGroup"]
         },
         { "name": "runCommand", "type": "(commandOrId: T | string) => Promise<void>" },
         {
           "name": "getItemProps",
           "type": "(command: T) => CommandPaletteItemProps",
-          "refs": ["supplemental#CommandPaletteItemProps"]
+          "refs": ["command-palette#CommandPaletteItemProps"]
         }
       ],
       "refs": [
-        "supplemental#CommandPaletteGroup",
-        "supplemental#CommandPaletteItemProps",
-        "supplemental#CommandPaletteCommand"
+        "command-palette#CommandPaletteGroup",
+        "command-palette#CommandPaletteItemProps",
+        "command-palette#CommandPaletteCommand"
+      ]
+    },
+    {
+      "id": "part-utils#PartProps",
+      "name": "PartProps",
+      "module": "part-utils",
+      "typeParameters": [
+        { "name": "T", "constraint": "HTMLElement", "default": "HTMLElement" }
+      ],
+      "text": "type PartProps<T extends HTMLElement = HTMLElement> = React.HTMLAttributes<T> & {\n  className?: string;\n};"
+    },
+    {
+      "id": "part-utils#SupplementalActivation",
+      "name": "SupplementalActivation",
+      "module": "part-utils",
+      "public": [
+        { "entry": ".", "name": "SupplementalActivation" }
+      ],
+      "owner": "shared",
+      "text": "type SupplementalActivation = {\n  type: 'activate';\n  pointerType?: string;\n  target?: EventTarget | null;\n};",
+      "members": [
+        {
+          "name": "type",
+          "type": "'activate'",
+          "values": ["activate"]
+        },
+        { "name": "pointerType", "optional": true, "type": "string" },
+        { "name": "target", "optional": true, "type": "EventTarget | null" }
       ]
     }
   ]

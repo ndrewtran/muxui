@@ -198,13 +198,15 @@ const GUIDES = {
   // primary, danger and neutral are the variants of Button, which the guide says the dialog's actions use.
   'alert-dialog': { from: { button: ['primary', 'danger', 'neutral'] } },
   sidebar: {},
+  // The hook's options and the command's fields (`close`, `onError`, `subtitle`, `keywords`) are declaration-only: the hook has no derived API, so no block owns them.
+  'command-palette': { declared: ['subtitle', 'keywords', 'onError', 'close'] },
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.
 const WITHOUT_GUIDE = ['color-mode-toggle'];
 
-// The guides whose declaration-only surface (ToastProvider and useToast) the check cannot read yet.
-const DECLARATION_ONLY_GUIDES = ['toast'];
+// The guides whose declaration-only surface (ToastProvider and useToast; useCommandPalette and its command fields) the check cannot read yet.
+const DECLARATION_ONLY_GUIDES = ['toast', 'command-palette'];
 /** The guides that list `declared` spans without being declaration-only. */
 const undeclaredOwners = (guides) => Object.entries(guides)
   .filter(([slug, entry]) => 'declared' in entry && !DECLARATION_ONLY_GUIDES.includes(slug))

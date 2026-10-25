@@ -11,7 +11,7 @@ import manifest from '../.storybook/generated/manifest.mjs';
 import { componentDeclarations, readDeclarationReference, readReactPackageFacts } from '../../component-reference.mjs';
 import { typedReference } from '../src/component-docs.mjs';
 import { sourceProblems, textEditorExports, textEditorFunctions, textEditorNative, textEditorProps, textEditorRef, textEditorTypes } from './text-editor-declarations.mjs';
-import { STORY_API_PARTS, argTypesForBinding, storyApi } from '../src/storybook-factory.mjs';
+import { STORY_API_PARTS, argTypesForBinding, storyApi, storyApiBlocks } from '../src/storybook-factory.mjs';
 
 // The typed reference on every family Docs page (Decision 0031). What the page should show is read here straight from
 // the committed declaration reference, the catalog and the package manifest, never from the projection under test, and
@@ -746,16 +746,15 @@ test('the Controls describe each prop with its member comment and its declared t
     const module = await moduleOf(record);
     const { api } = catalogOf(record.family);
     const component = ownerFile(ownerOf(record.family)).exports.find(({ name }) => name === record.family);
-    // The blocks the adapter reads, root first, as STORY_API_PARTS names them for the family.
-    const blocksOfFamily = [
-      { member: null, root: true, block: api },
-      ...(STORY_API_PARTS[record.family] ?? []).filter((key) => api.partApis?.[key]).map((key) => ({ member: api.partApis[key].member, root: false, block: api.partApis[key] })),
-    ];
+    // The blocks the adapter reads, root first, as STORY_API_PARTS and STORY_API_HOOKS name them for the family.
+    const blocksOfFamily = storyApiBlocks({ export: record.family, api }).map((block) => ({
+      member: block.member ?? null, root: block.part === 'root', hook: block.hook, block: block.api,
+    }));
     // Every non-never declaration of `name` in the owner's parts, and how a Control types it: the one declaration, or where
-    // alternatives declare it differently the union of what they accept, written here from the declarations alone.
-    const declarations = (owner, name) => component.parts
+    // alternatives declare it differently the union of what they accept, written here from the declarations alone. A hook is no part of the component, so it declares nothing here.
+    const declarations = (owner, name) => (owner.hook !== undefined ? [] : component.parts
       .filter(({ member }) => owner.root ? member === null || member === 'Root' : member === owner.member)
-      .flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)])
+      .flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)]))
       .filter((member) => member.name === name && member.never !== true);
     const declaration = (owner, name) => declarations(owner, name)[0];
     const controlType = (owner, name) => {
@@ -765,6 +764,8 @@ test('the Controls describe each prop with its member comment and its declared t
       if (all.every(({ values }) => values !== undefined)) return [...new Set(all.flatMap(({ values }) => values))].map(literal).join(' | ');
       return types.map((type) => type.includes('=>') ? `(${type})` : type).join(' | ');
     };
+    // The options of a hook the adapter calls: the catalog derives nothing for a hook, and the typed reference does not hold the members of its options type.
+    const hookRows = new Set(blocksOfFamily.filter(({ hook }) => hook !== undefined).flatMap(({ block }) => block.props));
     total += module.default.parameters.muxuiApi.props.length;
     for (const name of module.default.parameters.muxuiApi.props) {
       const owner = blocksOfFamily.find((candidate) => candidate.block.props.includes(name) && declaration(candidate, name) !== undefined);
@@ -785,7 +786,7 @@ test('the Controls describe each prop with its member comment and its declared t
       }
       if (owner === undefined) {
         undeclared += 1;
-        if (!isAuthored(api)) derivedButUndeclared.push(`${record.family}.${name}`);
+        if (!isAuthored(api) && !hookRows.has(name)) derivedButUndeclared.push(`${record.family}.${name}`);
         continue;
       }
       const member = declaration(owner, name);
@@ -795,14 +796,16 @@ test('the Controls describe each prop with its member comment and its declared t
     }
   }
   assert.ok(typed > total / 2 && described > typed / 2, `${typed} of ${total} Controls rows are typed, ${described} described`);
-  // Every Controls row is typed by the model or left alone (checked row by row above). Only a family whose API the catalog
-  // still lists by hand has rows no part declares; once it is derived, every one of its Controls is typed.
+  // Every Controls row is typed by the model or left alone (checked row by row above). Once a family's API is derived, every one
+  // of its Controls is typed by a part, bar the options of a hook the adapter calls, so a name the adapter keeps after its part drops it fails here.
   assert.deepEqual(derivedButUndeclared, [], 'no derived family has a Controls row that no part declares');
   assert.equal(typed + undeclared, total, 'every Controls row is typed or left alone');
   assert.ok(differing > 0, 'some props are declared differently by different alternatives, as Text\'s variant and size are');
   // Menu's popup (six props), list (items) and submenu (delay), which the adapter folds into the root's Controls.
   assert.equal(merged.get('Menu'), 8, 'merged-part rows name their owner');
   assert.ok([...merged.keys()].every((family) => family in STORY_API_PARTS), 'only a family the adapter folds parts into has merged-part rows');
+  // CommandPalette's trigger (1), backdrop (1) and item (5) props, which the adapter folds into the root's Controls.
+  assert.equal(merged.get('CommandPalette'), 7, 'merged-part rows name their owner');
 });
 
 test('a Control of a prop that alternatives declare differently offers the union, as Text\'s variant does', async () => {

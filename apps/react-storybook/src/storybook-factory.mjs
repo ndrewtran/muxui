@@ -87,39 +87,102 @@ const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
 // HeaderNav's adapter routes href and current to the links it renders, so Logo's and NavButton's props join the root's, which owns none.
 // AlertDialog's adapter routes disabled and activation to the trigger and the close control it renders, so their props join the root's.
 // Sidebar's adapter drives the provider, the search, and the nav, account, mobile and feature parts it renders from the root's one set of args.
+// CommandPalette's adapter drives one input of each of three parts, so they join the root's by name and not as whole parts: the Trigger's disabled,
+// the Backdrop's dismissable, and the id, title, description, href, target and activation of the Item the first command renders. The Item's textValue,
+// disabled and closeOnSelect are set by the hook or follow the root, and no other part's props are driven, so none of those is offered. An entry
+// that names a prop or event its part does not declare fails when the blocks are read.
 export const STORY_API_PARTS = Object.freeze({
   Menu: Object.freeze(['popup', 'list', 'submenu']),
   Card: Object.freeze(['button']),
   HeaderNav: Object.freeze(['logo', 'nav-button']),
   AlertDialog: Object.freeze(['trigger', 'close']),
   Sidebar: Object.freeze(['provider', 'search', 'section', 'nav-item', 'nav-button', 'account-card', 'account-menu', 'mobile-trigger', 'feature-card']),
+  CommandPalette: Object.freeze([
+    Object.freeze({ part: 'trigger', props: Object.freeze(['disabled']) }),
+    Object.freeze({ part: 'backdrop', props: Object.freeze(['dismissable']) }),
+    Object.freeze({ part: 'item', props: Object.freeze(['id', 'title', 'description', 'href', 'target']), events: Object.freeze(['activate']) }),
+  ]),
 });
 
 /**
- * The catalog blocks the stories read, root first: the binding's root API, then each part `parts` names for its
- * family, with the part's key and the export member that renders it.
- * @param {{ export: string, api: object }} binding
- * @param {Readonly<Record<string, readonly string[]>>} [parts]
+ * The options of a hook the adapter calls for a family, by family. The catalog derives no API for a hook (Decision 0031 keeps hooks out of
+ * `partApis`), so the adapter lists what it passes the hook and how the stories offer it, split the way a component's API is: `props` are the
+ * options a Controls row offers (a function's row is off), `events` the channels the stories log, named by the callback option they come
+ * from (`queryChange` is `onQueryChange`), and `passed` the options handed to the hook with no row or log of their own. The names are
+ * checked against the hook's declared options type by the compiler (storybook.test.mjs). The typed reference prints that type without its
+ * members, so a hook's rows carry no type or description.
  */
-export function storyApiBlocks(binding, parts = STORY_API_PARTS) {
+export const STORY_API_HOOKS = Object.freeze({
+  CommandPalette: Object.freeze({
+    hook: 'useCommandPalette',
+    props: Object.freeze(['commands', 'query', 'defaultQuery', 'filter', 'sort', 'groupBy', 'getGroupTitle', 'close']),
+    events: Object.freeze(['queryChange', 'action']),
+    // onError handles a failed action and is not logged, so the hook reports a failure as it does without a story; closeOnSelect is the root's prop.
+    passed: Object.freeze(['onError', 'closeOnSelect']),
+  }),
+});
+
+/** Every option of the hook the adapter drives, by its declared name: the props, the callback of each event, and the options passed through. */
+export function storyHookOptionNames({ props, events, passed }) {
+  return [...props, ...events.map(eventCallbackPropForChannel), ...passed];
+}
+
+const pickKeys = (record = {}, keys) => Object.fromEntries(keys.filter((key) => Object.hasOwn(record, key)).map((key) => [key, record[key]]));
+
+/**
+ * The catalog blocks the stories read, root first: the binding's root API, then each part `parts` names for its
+ * family, with the part's key and the export member that renders it, then the options of the family's hook (`hooks`),
+ * with the hook's name. An entry of `parts` is a part's key, to take all of its API, or `{ part, props, events }`, to take only the
+ * props and events it lists; a name the part does not declare throws.
+ * @param {{ export: string, api: object }} binding
+ * @param {Readonly<Record<string, readonly (string | { part: string, props?: readonly string[], events?: readonly string[] })[]>>} [parts]
+ * @param {Readonly<Record<string, { hook: string, props: readonly string[], events: readonly string[] }>>} [hooks]
+ */
+export function storyApiBlocks(binding, parts = STORY_API_PARTS, hooks = STORY_API_HOOKS) {
   const { api } = binding;
+  const hook = hooks[binding.export];
   return [
     { part: 'root', api },
-    ...(parts[binding.export] ?? []).filter((part) => api.partApis?.[part] !== undefined)
-      .map((part) => ({ part, member: api.partApis[part].member, api: api.partApis[part] })),
+    ...(parts[binding.export] ?? []).flatMap((entry) => {
+      const { part, props, events } = typeof entry === 'string' ? { part: entry } : entry;
+      const partApi = api.partApis?.[part];
+      if (partApi === undefined) return [];
+      if (props === undefined && events === undefined) return [{ part, member: partApi.member, api: partApi }];
+      for (const [kind, names, declared] of [['prop', props ?? [], partApi.props], ['event', events ?? [], partApi.events]]) {
+        for (const name of names) if (!declared.includes(name)) throw new Error(`${binding.export}.${partApi.member} declares no ${kind} ${name}, which the story adapter takes from it`);
+      }
+      return [{
+        part,
+        member: partApi.member,
+        api: {
+          ...partApi,
+          props: props ?? [],
+          events: events ?? [],
+          defaults: pickKeys(partApi.defaults, props ?? []),
+          propDetails: pickKeys(partApi.propDetails, props ?? []),
+          eventDetails: pickKeys(partApi.eventDetails, events ?? []),
+        },
+      }];
+    }),
+    ...(hook === undefined ? [] : [{
+      part: 'hook',
+      hook: hook.hook,
+      api: { props: hook.props, events: hook.events, defaults: {}, propDetails: {}, eventDetails: {} },
+    }]),
   ];
 }
 
 /**
  * The props, events, defaults and details the stories read: the binding's root API, with the parts
- * `parts` names for its family folded in. A prop the root and a part both own keeps the root's
+ * `parts` names for its family and the options of its hook folded in. A prop the root and a part both own keeps the root's
  * default and detail (the root comes first), and a prop or event listed by more than one is listed once.
  * @param {{ export: string, api: object }} binding
- * @param {Readonly<Record<string, readonly string[]>>} [parts]
+ * @param {Parameters<typeof storyApiBlocks>[1]} [parts]
+ * @param {Parameters<typeof storyApiBlocks>[2]} [hooks]
  */
-export function storyApi(binding, parts = STORY_API_PARTS) {
+export function storyApi(binding, parts = STORY_API_PARTS, hooks = STORY_API_HOOKS) {
   const { api } = binding;
-  const [, ...merged] = storyApiBlocks(binding, parts);
+  const [, ...merged] = storyApiBlocks(binding, parts, hooks);
   if (merged.length === 0) return api;
   const blocks = [api, ...merged.map(({ api: part }) => part)];
   return {
@@ -252,7 +315,8 @@ function declaredMember(parts, name) {
  */
 function declaredControls(binding, typed) {
   const component = typed.exports.find(({ name, kind }) => kind === 'component' && name === binding.export);
-  const owners = storyApiBlocks(binding).map((block) => ({
+  // A hook's options are no part of the component, and the typed reference prints the options type but does not hold its members, so a hook's rows are left alone.
+  const owners = storyApiBlocks(binding).filter(({ part }) => part !== 'hook').map((block) => ({
     block,
     parts: component.parts.filter(({ member }) => block.part === 'root' ? member === null || member === 'Root' : member === block.member),
   }));
@@ -1242,14 +1306,14 @@ const COMMAND_PALETTE_SAMPLE_COMMANDS = [
  * The flat CommandPalette props belong to different parts. Root owns open state, size, and closeOnSelect.
  * The Trigger owns disabled and the Backdrop owns dismissable. The useCommandPalette hook owns the commands,
  * the query, filtering, sorting, grouping, and the action and error callbacks. Each Item reports activation
- * through the hook's item props plus the caller's onActivate. The first command takes title, description,
- * href, and target when no command list is supplied.
+ * through the hook's item props plus the caller's onActivate. The first command takes id, title, description,
+ * href, and target when no command list is supplied. STORY_API_PARTS and STORY_API_HOOKS name these inputs.
  */
 function CommandPalettePreview({
-  open, defaultOpen = false, onOpenChange, size, closeOnSelect, id,
+  open, defaultOpen = false, onOpenChange, size, closeOnSelect,
   disabled, dismissable,
   commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, close,
-  title, description, href, target, onActivate,
+  id, title, description, href, target, onActivate,
 }) {
   const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
   const setOpen = (next) => {
@@ -1257,8 +1321,8 @@ function CommandPalettePreview({
     onOpenChange?.(next);
   };
   const specimenCommands = React.useMemo(() => commands ?? COMMAND_PALETTE_SAMPLE_COMMANDS.map((command, index) => (index === 0
-    ? { ...command, ...(title && { title }), ...(description && { subtitle: description }), ...(href && { href }), ...(target && { target }) }
-    : command)), [commands, title, description, href, target]);
+    ? { ...command, ...(id && { id }), ...(title && { title }), ...(description && { subtitle: description }), ...(href && { href }), ...(target && { target }) }
+    : command)), [commands, id, title, description, href, target]);
   const palette = MuxUI.useCommandPalette({
     commands: specimenCommands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, closeOnSelect,
     close: () => {
@@ -1266,7 +1330,7 @@ function CommandPalettePreview({
       close?.();
     },
   });
-  return e(MuxUI.CommandPalette.Root, { id, open: open ?? internalOpen, onOpenChange: setOpen, size, closeOnSelect },
+  return e(MuxUI.CommandPalette.Root, { open: open ?? internalOpen, onOpenChange: setOpen, size, closeOnSelect },
     e(MuxUI.CommandPalette.Trigger, { disabled }, 'Open command palette'),
     e(MuxUI.CommandPalette.Backdrop, { dismissable },
       e(MuxUI.CommandPalette.Popup, null,

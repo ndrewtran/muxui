@@ -21,7 +21,7 @@ import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
 import { consumerTsc, typeScript7Tsc } from './support/declaration-surface.mjs';
 import { typescript6Host } from './support/reference-host-typescript6.mjs';
 import { realInputs } from './support/reference-inputs.mjs';
-import { crossCheckAuthored, crossCheckDerived, loadReference, referenceDirectory, repositoryRoot } from './support/reference-catalog.mjs';
+import { crossCheckDerived, loadReference, referenceDirectory, repositoryRoot } from './support/reference-catalog.mjs';
 import { checkTypeParameters } from './support/reference-defaults.mjs';
 import { PROBE_HEADER, WITNESSES, buildProbe, runProbe } from './support/reference-probes.mjs';
 
@@ -264,10 +264,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 83 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 84 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 83, parts: 116, props: 739, events: 118, types: 150, references: 150 });
+  assert.deepEqual(result.counts, { families: 84, parts: 124, props: 757, events: 122, types: 151, references: 151 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });
@@ -299,63 +299,9 @@ for (const [change, mutate, expected] of CATALOG_CONTROLS) {
   });
 }
 
-const AUTHORED = ['command-palette'];
-const hookOption = (type) => ({ hook: 'useCommandPalette', type });
-
-// The 1 family whose web.react API is still authored lists prop names only. Each name is owned by the one part
-// that declares it; these 14 are not, and the table says why and where they are carried instead. The table is
-// transitional: a family that moves to a derived API leaves it, and a stale entry fails.
-const AUTHORED_OWNERS = {
-  'command-palette.closeOnSelect': { parts: ['Root', 'Item'] },
-  'command-palette.disabled': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
-  'command-palette.onActivate': { parts: ['Trigger', 'Close', 'ClearButton', 'Item'] },
-  'command-palette.commands': hookOption('UseCommandPaletteOptions'),
-  'command-palette.query': hookOption('UseCommandPaletteOptions'),
-  'command-palette.defaultQuery': hookOption('UseCommandPaletteOptions'),
-  'command-palette.onQueryChange': hookOption('UseCommandPaletteOptions'),
-  'command-palette.filter': hookOption('UseCommandPaletteOptions'),
-  'command-palette.sort': hookOption('UseCommandPaletteOptions'),
-  'command-palette.groupBy': hookOption('UseCommandPaletteOptions'),
-  'command-palette.getGroupTitle': hookOption('UseCommandPaletteOptions'),
-  'command-palette.onAction': hookOption('UseCommandPaletteOptions'),
-  'command-palette.close': hookOption('UseCommandPaletteOptions'),
-  'command-palette.onError': hookOption('UseCommandPaletteOptions'),
-};
-// The channels whose `on` handler the catalog does not list among the props, because the root declares it. The
-// families still authored list every one of theirs, so nothing is here; a family that needs it gets an entry.
-const UNLISTED_EVENTS = new Set();
-
-test('every prop of the authored family has an owner in the declarations: one part, or a listed reason', () => {
-  const result = crossCheckAuthored({ files, table: AUTHORED_OWNERS, authored: AUTHORED, unlistedEvents: UNLISTED_EVENTS });
-  assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 1, props: 24, unique: 10, listed: 14, events: 4 });
-  const ownedElsewhere = Object.keys(AUTHORED_OWNERS).length;
-  assert.equal(ownedElsewhere, result.counts.listed);
-});
-
-test('the authored owner table can fail: a wrong part list, a hook that does not declare it, a stale entry, an event wrongly or no longer unlisted', () => {
-  const check = (table, unlisted = UNLISTED_EVENTS) => crossCheckAuthored({ files, table, authored: AUTHORED, unlistedEvents: unlisted }).problems;
-  assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.disabled': { parts: ['Trigger', 'Close', 'ClearButton'] } }).join('\n'), /command-palette\.disabled: declared by Trigger, Close, ClearButton, Item, the table says Trigger, Close, ClearButton/u);
-  assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.commands': { hook: 'useCommandPalette', type: 'UseCommandPaletteReturn' } }).join('\n'), /command-palette\.commands: useCommandPalette \(UseCommandPaletteReturn\) does not declare it/u);
-  assert.match(check({ ...AUTHORED_OWNERS, 'command-palette.gone': { parts: ['Trigger'] } }).join('\n'), /command-palette\.gone: the table lists a prop the catalog no longer has/u);
-  const without = { ...AUTHORED_OWNERS };
-  delete without['command-palette.disabled'];
-  assert.match(check(without).join('\n'), /command-palette\.disabled: declared by Trigger, Close, ClearButton, Item and the table does not say why/u);
-  assert.match(check(AUTHORED_OWNERS, new Set(['command-palette.openChange'])).join('\n'), /command-palette\.openChange: the props list onOpenChange, against/u);
-  assert.match(check(AUTHORED_OWNERS, new Set(['command-palette.gone'])).join('\n'), /command-palette\.gone: listed as an unlisted event the catalog no longer has/u);
-});
-
 // ---- 5. the compiler ------------------------------------------------------------------------------
 
 const typedEntries = inventory.entries.filter(({ untyped }) => !untyped).map(({ key }) => key);
-// The claims the authored families make about the native attribute envelope of a part, checked by the compiler.
-const NATIVE_CLAIMS = Object.entries(AUTHORED_OWNERS).filter(([, listed]) => listed.native).map(([key, listed]) => {
-  const [slug, prop] = key.split(/\.(.+)/u);
-  const file = files.get(`${slug}.json`);
-  const entry = file.exports.find(({ kind }) => kind === 'component');
-  const part = entry.parts.find((candidate) => (candidate.member ?? entry.name) === listed.native);
-  return { file: `${slug}.json`, export: entry.name, member: part.member ?? null, key: prop };
-});
 
 const CONFIGURATIONS = [
   ['TypeScript 7', typeScript7Tsc(), false],
@@ -365,7 +311,7 @@ const CONFIGURATIONS = [
 ];
 
 let fullProbe;
-const probeOfEverything = () => (fullProbe ??= buildProbe({ files, entries: typedEntries, declares: NATIVE_CLAIMS }));
+const probeOfEverything = () => (fullProbe ??= buildProbe({ files, entries: typedEntries }));
 
 for (const [compiler, tsc, exact] of CONFIGURATIONS) {
   test(`the compiler agrees with the reference and with the hand-written witnesses: ${compiler}, exactOptionalPropertyTypes ${exact ? 'on' : 'off'}`, () => {

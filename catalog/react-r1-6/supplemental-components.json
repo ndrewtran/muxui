@@ -127,7 +127,7 @@
         "module": ".",
         "isolation": "root"
       },
-      "runtimeSource": "packages/react/src/supplemental/command-palette.mjs",
+      "runtimeSource": "packages/react/src/supplemental/command-palette.ts",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {

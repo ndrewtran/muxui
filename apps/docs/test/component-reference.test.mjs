@@ -218,9 +218,14 @@ test('a component\'s share keeps "not declared" apart from a declared never, and
   assert.equal(dialog.alternatives.length, 3);
   const iconButton = partOf(declared('muxui:component:icon-button'));
   for (const name of ['children', 'style']) assert.equal('doc' in memberOf(iconButton, name), false, `IconButton ${name}`);
-  // CommandPalette is still declared by hand in the supplemental declarations, which carry no member comments.
+  // CommandPalette's own props carry their comments, and the members its parts take from the host and the shared part type carry none.
   const commandPalette = declared('muxui:component:command-palette').export.parts;
-  assert.ok(commandPalette.every((part) => part.members.every((member) => !('doc' in member))));
+  const commented = commandPalette.flatMap((part) => part.members.filter((member) => 'doc' in member).map((member) => `${part.member}.${member.name}`));
+  assert.deepEqual(commented, [
+    'Root.open', 'Root.defaultOpen', 'Root.onOpenChange', 'Root.size', 'Root.closeOnSelect', 'Trigger.disabled', 'Trigger.onActivate', 'Backdrop.dismissable',
+    'Close.disabled', 'Close.onActivate', 'SearchField.variant', 'ClearButton.disabled', 'Item.id', 'Item.title', 'Item.description', 'Item.textValue', 'Item.href',
+    'Item.target', 'Item.disabled', 'Item.closeOnSelect', 'Item.onActivate', 'Shortcut.keys',
+  ]);
   assert.deepEqual(Object.fromEntries(commandPalette.filter(({ member }) => ['Root', 'Trigger', 'Popup', 'Input'].includes(member)).map(({ member, ref }) => [member, ref.type])), { Root: 'HTMLDivElement', Trigger: 'HTMLButtonElement', Popup: 'HTMLElement', Input: 'HTMLInputElement' });
   // A generic part names its binder and the host element its ref follows.
   const text = partOf(declared('muxui:component:text'));
