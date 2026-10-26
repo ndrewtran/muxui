@@ -55,7 +55,7 @@
         "The card type is detected from the leading digits only.",
         "Formatting and card detection do not validate payment credentials.",
         "CardIcon renders one generic card glyph marked aria-hidden, the same for every card type, and renders no card brand.",
-        "CardIcon records the card type as data-card-type metadata, taken from detection or from its cardType prop.",
+        "CardIcon records the card type as data-muxui-card-type metadata, taken from detection or from its cardType prop.",
         "PaymentInput processes no payment: sending the number to a payment provider and handling its response belong to the application.",
         "Error shows only while the field is invalid.",
         "Interactive control sizes use the shared sm, md, and lg targets; md is the default."

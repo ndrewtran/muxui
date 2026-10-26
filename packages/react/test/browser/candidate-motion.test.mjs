@@ -99,7 +99,7 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays fin
     assert.equal(await page.locator('.muxui-code-block-copy-icon .lucide-check').count(), 1);
     await page.evaluate(() => document.querySelector('.muxui-code-block-copy').click());
     await page.evaluate(() => window.rejectCopy(new Error('Unavailable')));
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'error');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'error');
     await settled(page);
     assert.match(await page.locator('.muxui-code-block [role=status]').textContent(), /Clipboard|copy code/u);
     const input = page.getByRole('textbox', { name: 'Message' });

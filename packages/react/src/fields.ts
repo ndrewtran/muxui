@@ -643,7 +643,7 @@ function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }
     className: 'muxui-switch-indicator',
     'aria-hidden': 'true',
     'data-muxui-state-selected': isSelected || undefined,
-    'data-motion-pressed': isPressed && !blocked && !reduced ? '' : undefined,
+    'data-muxui-motion-pressed': isPressed && !blocked && !reduced ? '' : undefined,
   });
 }
 
@@ -1031,7 +1031,7 @@ export const TextField: ForwardRefExoticComponent<TextFieldProps & RefAttributes
     onChange,
     name,
     className: classNames('muxui-text-field', className),
-    ...{ 'data-size': resolvedSize },
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -1088,7 +1088,7 @@ export const SearchField: ForwardRefExoticComponent<SearchFieldProps & RefAttrib
     onClear,
     name,
     className: classNames('muxui-search-field', className),
-    ...{ 'data-size': resolvedSize },
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -1146,7 +1146,7 @@ export const NumberField: ForwardRefExoticComponent<NumberFieldProps & RefAttrib
     step,
     formatOptions,
     className: classNames('muxui-number-field', className),
-    ...{ 'data-size': resolvedSize },
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -1201,7 +1201,7 @@ export const CheckboxGroup: ForwardRefExoticComponent<CheckboxGroupProps & RefAt
     // checkbox, including fragments and wrapper components.
     name,
     className: classNames('muxui-checkbox-group', className),
-    ...{ 'data-muxui-state-orientation': orientation, 'data-size': resolvedSize },
+    ...{ 'data-muxui-state-orientation': orientation, 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     // The visible label sits outside the options' flex layout, so name the
     // group by id rather than through RAC's label slot.
@@ -1251,7 +1251,7 @@ export const Switch: ForwardRefExoticComponent<SwitchProps & RefAttributes<HTMLD
       name,
       value,
       className: classNames('muxui-switch-field', className),
-      ...{ 'data-size': resolvedSize },
+      ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
       onChange,
@@ -1336,7 +1336,7 @@ export const DateField: ForwardRefExoticComponent<DateFieldProps & RefAttributes
     onChange: (next) => onChange?.(serializeDateValue(next)),
     name,
     className: classNames('muxui-date-field', className),
-    ...{ 'data-size': resolvedSize },
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({ label, description, errorMessage, input: dateInput() }));
@@ -1402,7 +1402,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
     // stays stable and cannot duplicate an upstream field input.
     name: undefined,
     className: classNames('muxui-time-field', className),
-    ...{ 'data-size': resolvedSize },
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -1466,7 +1466,7 @@ export const DatePicker: ForwardRefExoticComponent<DatePickerProps & RefAttribut
       onOpenChange,
       name,
       className: classNames('muxui-date-picker', className),
-      ...{ 'data-size': resolvedSize },
+      ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
     }, fieldChildren({
@@ -1552,7 +1552,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
       // React Aria's range picker takes startName and endName, not a name.
       ...{ name: undefined },
       className: classNames('muxui-date-range-picker', className),
-      ...{ 'data-size': resolvedSize },
+      ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
     }, fieldChildren({
@@ -1797,8 +1797,8 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
     return React.createElement('div', {
       ref,
       className: classNames('muxui-autocomplete', className),
-      'data-size': resolvedSize,
-      'data-part': 'root',
+      'data-muxui-size': resolvedSize,
+      'data-muxui-part': 'root',
       onBlurCapture: (event: FocusEvent<HTMLDivElement>) => {
         const relatedTarget = event.relatedTarget;
         const outside = !relatedTarget || (!event.currentTarget.contains(relatedTarget) && !popoverRef.current?.contains(relatedTarget));
@@ -1837,7 +1837,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
       // Keep RAC's name private: the hidden input below submits the value.
       name: undefined,
       className: 'muxui-autocomplete-search',
-      ...{ 'data-part': 'search-field' },
+      ...{ 'data-muxui-part': 'search-field' },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
     }, fieldChildren({
@@ -1847,7 +1847,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
       input: React.createElement(FieldInput, {
         ref: setInputRef,
         className: 'muxui-field-input',
-        ...{ 'data-part': 'input' },
+        ...{ 'data-muxui-part': 'input' },
         // WAI-ARIA combobox: RAC supplies aria-autocomplete, aria-controls,
         // and aria-activedescendant; the popup state is Mux-owned.
         role: 'combobox',
@@ -1901,14 +1901,14 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
       // direction, and other inherited custom properties remain available.
       UNSTABLE_portalContainer: portalContainer,
       className: 'muxui-autocomplete-popover',
-      ...{ 'data-part': 'popover' },
+      ...{ 'data-muxui-part': 'popover' },
     }, React.createElement(AriaListBox<NormalizedAutocompleteItem>, {
       items: filteredItems,
       className: classNames('muxui-autocomplete-list', resolvedSize === 'md' ? undefined : `muxui-autocomplete-list--${resolvedSize}`),
-      ...{ 'data-part': 'list', 'data-size': resolvedSize },
+      ...{ 'data-muxui-part': 'list', 'data-muxui-size': resolvedSize },
       selectionMode: readOnly ? 'none' : 'single',
       onAction: handleSelect,
-      children: (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'data-part': 'option' }, className: 'muxui-autocomplete-option' }, item.label),
+      children: (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'data-muxui-part': 'option' }, className: 'muxui-autocomplete-option' }, item.label),
     }))));
   });
 

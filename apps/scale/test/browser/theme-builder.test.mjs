@@ -41,7 +41,7 @@ async function verifyPreviewColours(page, url) {
           return colour;
         };
         const checks = [
-          ['.muxui-button[data-variant="primary"]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-button[data-muxui-variant="primary"]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
           ['.muxui-checkbox-indicator[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
           ['.muxui-switch[data-muxui-state-selected]', '::before', 'backgroundColor', '--muxui-semantic-selection-track'],
           ['.muxui-grid-list-item[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],

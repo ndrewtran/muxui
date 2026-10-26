@@ -39,10 +39,10 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
 
     const payment = page.locator('.muxui-payment-input__input');
     assert.equal(await payment.inputValue(), '4111 1111 1111 1111');
-    assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-card-type'), 'visa');
+    assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-muxui-card-type'), 'visa');
     await page.locator('#set-payment-mastercard').click();
     assert.equal(await payment.inputValue(), '5555 5555 5555 4444');
-    assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-card-type'), 'mastercard');
+    assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-muxui-card-type'), 'mastercard');
     await page.locator('#reject-payment').click();
     await payment.fill('4000000000000002');
     await page.waitForFunction(() => document.querySelector('[data-testid="payment-last-change"]')?.textContent === '4000 0000 0000 0002');
@@ -51,7 +51,7 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     await payment.fill('4000000000000002');
     await page.waitForFunction(() => document.querySelector('[data-testid="payment-value"]')?.textContent === '4000 0000 0000 0002');
     assert.equal(await payment.inputValue(), '4000 0000 0000 0002');
-    assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-card-type'), 'visa');
+    assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-muxui-card-type'), 'visa');
 
     const light = await page.locator('.muxui-resizable-handle').evaluate((node) => getComputedStyle(node).backgroundColor);
     await page.locator('#dark-toggle').click();
@@ -141,7 +141,7 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     await page.waitForFunction(() => !document.querySelector('#document-editor')?.textContent?.includes('composing'));
     assert.doesNotMatch(await editor.textContent(), /composing/u);
 
-    const handle = page.locator('[data-handle-id="split"]');
+    const handle = page.locator('[data-muxui-handle-id="split"]');
     await handle.focus();
     await page.keyboard.press('Shift+ArrowRight');
     assert.equal(await page.locator('[data-testid="sizes"]').textContent(), '55/45');
@@ -158,10 +158,10 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     };
     // A cancelled drag, and one that loses pointer capture, put back the sizes from before it and never commit.
     for (const cancelDrag of [
-      () => page.evaluate(() => document.querySelector('[data-handle-id="split"]').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }))),
+      () => page.evaluate(() => document.querySelector('[data-muxui-handle-id="split"]').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }))),
       // Chromium fires lostpointercapture with the next pointer event, so move the pointer after releasing it.
       async () => {
-        await page.evaluate(() => document.querySelector('[data-handle-id="split"]').releasePointerCapture(1));
+        await page.evaluate(() => document.querySelector('[data-muxui-handle-id="split"]').releasePointerCapture(1));
         await page.mouse.move(grip.x - 81, grip.y);
       },
     ]) {

@@ -35,7 +35,7 @@ const ProgressCircleRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, Progre
   const percentage = normalizedValue == null ? null : Math.max(0, Math.min(100, ((normalizedValue - minValue) / (maxValue - minValue || 1)) * 100));
   const hasExplicitName = props['aria-label'] != null || props['aria-labelledby'] != null;
   const nameFallback = !hasExplicitName && label != null ? { 'aria-label': label } : {};
-  return h(ProgressCircleContext.Provider, { value: { percentage, size } }, h(AriaProgressBar, { ...props, ...nameFallback, ref, value: normalizedValue == null ? undefined : normalizedValue, isIndeterminate: normalizedValue == null, minValue, maxValue, ...{ label, 'data-muxui-state-indeterminate': percentage == null ? '' : undefined, 'data-complete': percentage === 100 ? '' : undefined }, className: cx('muxui-progress-circle', size !== 'md' && `muxui-progress-circle--${size}`, className) }, children));
+  return h(ProgressCircleContext.Provider, { value: { percentage, size } }, h(AriaProgressBar, { ...props, ...nameFallback, ref, value: normalizedValue == null ? undefined : normalizedValue, isIndeterminate: normalizedValue == null, minValue, maxValue, ...{ label, 'data-muxui-state-indeterminate': percentage == null ? '' : undefined, 'data-muxui-complete': percentage === 100 ? '' : undefined }, className: cx('muxui-progress-circle', size !== 'md' && `muxui-progress-circle--${size}`, className) }, children));
 });
 const ProgressCircleTrack = /*#__PURE__*/ React.forwardRef<SVGSVGElement, ProgressCircleTrackProps>(function ProgressCircleTrack({ className, ...props }, ref) {
   const { percentage, size } = React.useContext(ProgressCircleContext);

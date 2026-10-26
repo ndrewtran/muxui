@@ -666,7 +666,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     shouldFlip: geometry.shouldFlip,
     containerPadding: geometry.containerPadding,
     isNonModal: !modal,
-    'data-modal': modal,
+    'data-muxui-modal': modal,
     className: 'muxui-popover-positioner',
     isKeyboardDismissDisabled: !dismissable,
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
@@ -1217,7 +1217,7 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, ori
     nodeRef.current = node;
     lifecycleRef(node);
   }, [lifecycleRef]);
-  return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
+  return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-muxui-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
     React.createElement(AriaToastContent, { className: 'muxui-toast-content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast-title', hasTitle ? undefined : 'muxui-toast-title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast-message' }, value.message)),

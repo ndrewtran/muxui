@@ -396,7 +396,7 @@ const SidebarRoot = /*#__PURE__*/ React.forwardRef<HTMLElement, SidebarProps>(fu
       root.removeEventListener('focusout', track);
     };
   }, [menuButtons, roots]);
-  return h('aside', { ...props, ref: node, id: props.id ?? sidebar?.rootId, 'data-foldable': dataState(sidebar), 'data-collapsed': dataState(sidebar?.collapsed), 'data-density': density === 'compact' ? 'compact' : undefined, className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) });
+  return h('aside', { ...props, ref: node, id: props.id ?? sidebar?.rootId, 'data-muxui-foldable': dataState(sidebar), 'data-muxui-collapsed': dataState(sidebar?.collapsed), 'data-muxui-sidebar-density': density === 'compact' ? 'compact' : undefined, className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) });
 });
 const SidebarToggle = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, SidebarToggleProps>(function SidebarToggle({ onActivate, className, children, ...props }, ref) {
   const sidebar = useSidebarPart('Toggle');

@@ -33,14 +33,14 @@
 .muxui-data-diff-column { color: var(--muxui-semantic-content-default); font-weight: normal; white-space: nowrap; background: var(--muxui-semantic-surface-subtle); }
 .muxui-data-diff-cell { max-inline-size: 28ch; min-inline-size: 8ch; overflow-wrap: anywhere; font-weight: normal; vertical-align: top; }
 .muxui-data-diff-row + .muxui-data-diff-row { border-block-start: 1px solid var(--muxui-semantic-border-default); }
-.muxui-data-diff-row[data-selectable] { cursor: pointer; }
+.muxui-data-diff-row[data-muxui-selectable] { cursor: pointer; }
 .muxui-data-diff-row { --muxui-data-diff-row-background: transparent; }
-.muxui-data-diff-row[data-change='added'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-added-background); background: var(--muxui-data-diff-row-background); }
-.muxui-data-diff-row[data-change='removed'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-removed-background); background: var(--muxui-data-diff-row-background); }
+.muxui-data-diff-row[data-muxui-change='added'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-added-background); background: var(--muxui-data-diff-row-background); }
+.muxui-data-diff-row[data-muxui-change='removed'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-removed-background); background: var(--muxui-data-diff-row-background); }
 .muxui-data-diff-change { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; inline-size: 1rem; margin-inline-end: var(--muxui-semantic-layout-tight-gap); font-weight: var(--muxui-semantic-typography-label-weight); }
-.muxui-data-diff-row[data-change='unchanged'] .muxui-data-diff-change { display: none; }
-.muxui-data-diff-row[data-change='added'] .muxui-data-diff-change { color: var(--muxui-semantic-status-success); }
-.muxui-data-diff-row[data-change='removed'] .muxui-data-diff-change { color: var(--muxui-semantic-feedback-invalid); }
+.muxui-data-diff-row[data-muxui-change='unchanged'] .muxui-data-diff-change { display: none; }
+.muxui-data-diff-row[data-muxui-change='added'] .muxui-data-diff-change { color: var(--muxui-semantic-status-success); }
+.muxui-data-diff-row[data-muxui-change='removed'] .muxui-data-diff-change { color: var(--muxui-semantic-feedback-invalid); }
 .muxui-data-diff-values { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--muxui-semantic-layout-tight-gap); }
 .muxui-data-diff-before { background: var(--muxui-component-datadiff-removed-background); }
 .muxui-data-diff-after { background: var(--muxui-component-datadiff-added-background); }
@@ -58,8 +58,8 @@
 .muxui-data-diff-selection .muxui-checkbox:hover:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator { border-color: var(--muxui-component-checkbox-indicator-border-hover); background-color: var(--muxui-semantic-surface-hover); }
 .muxui-data-diff-selection .muxui-checkbox[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) .muxui-checkbox-indicator { border-color: var(--muxui-semantic-color-color-50); background-color: var(--muxui-semantic-color-color-50); }
 .muxui-data-diff-selection .muxui-checkbox[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) .muxui-checkbox-indicator svg { color: var(--muxui-component-checkbox-selected-foreground-hover); }
-.muxui-data-diff-row[data-selectable]:hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent); }
-.muxui-data-diff-row[data-selectable]:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent); }
+.muxui-data-diff-row[data-muxui-selectable]:hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent); }
+.muxui-data-diff-row[data-muxui-selectable]:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent); }
 .muxui-data-diff-empty { padding: var(--muxui-semantic-layout-inset-medium); text-align: center; color: var(--muxui-semantic-content-default); }
 .muxui-data-diff-apply { flex: none; margin-inline-start: auto; }
 .muxui-data-diff-apply:disabled { pointer-events: auto; }
@@ -68,7 +68,7 @@
 
 @media (forced-colors: active) {
   .muxui-data-diff { border-color: CanvasText; }
-  .muxui-data-diff-row[data-change],
+  .muxui-data-diff-row[data-muxui-change],
   .muxui-data-diff-before,
   .muxui-data-diff-after { background: Canvas; color: CanvasText; }
   .muxui-data-diff-row .muxui-data-diff-change { color: CanvasText; }

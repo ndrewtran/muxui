@@ -57,7 +57,7 @@ function measureContrast({ colours: measured, states }) {
   const stateAttributes = { rest: [], hover: ['data-muxui-state-hovered'], pressed: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] };
   const results = [];
   for (const tag of document.querySelectorAll('.muxui-tag')) {
-    const colour = tag.getAttribute('data-color');
+    const colour = tag.getAttribute('data-muxui-color');
     if (!measured.includes(colour)) continue;
     const surface = tag.closest('[data-surface]');
     const backdrop = parse(getComputedStyle(surface).backgroundColor);
@@ -72,7 +72,7 @@ function measureContrast({ colours: measured, states }) {
       const text = parse(style.color);
       for (const name of stateAttributes[state]) tag.removeAttribute(name);
       results.push({
-        label: `${surface.getAttribute('data-surface')} ${tag.hasAttribute('data-muxui-state-selected') ? 'selected ' : ''}${tag.getAttribute('data-variant')} ${colour} ${state}`,
+        label: `${surface.getAttribute('data-surface')} ${tag.hasAttribute('data-muxui-state-selected') ? 'selected ' : ''}${tag.getAttribute('data-muxui-variant')} ${colour} ${state}`,
         ratio: ratio(text, fill),
       });
     }
@@ -126,7 +126,7 @@ test('TagGroup tags focus with an offset outline, keep the outline edge off the 
   try {
     const page = await browser.newPage();
     await page.setContent(`<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="reduced"><head><style>${css}</style></head><body>${renderToString(h('main', null, ...variants.map(group)))}</body></html>`);
-    const tag = (variant, name) => page.locator(`.muxui-tag[data-variant="${variant}"]`, { hasText: name });
+    const tag = (variant, name) => page.locator(`.muxui-tag[data-muxui-variant="${variant}"]`, { hasText: name });
     const read = (locator, property) => locator.evaluate((element, name) => getComputedStyle(element)[name], property);
     const probe = (property, value) => page.evaluate(([name, next]) => {
       const element = document.createElement('span');
@@ -190,7 +190,7 @@ test('TagGroup fills and outline edges use the specified weights in each scheme'
       const states = { rest: [], hover: ['data-muxui-state-hovered'], pressed: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] };
       const found = {};
       for (const tag of document.querySelectorAll('.muxui-tag')) {
-        const key = `${tag.dataset.color} ${tag.dataset.variant}`;
+        const key = `${tag.dataset.muxuiColor} ${tag.dataset.muxuiVariant}`;
         found[key] = {};
         for (const [state, attributes] of Object.entries(states)) {
           for (const name of attributes) tag.setAttribute(name, '');

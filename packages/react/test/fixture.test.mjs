@@ -138,8 +138,8 @@ test('Button exposes seven variants with stable root hooks', async () => {
   const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
   const sizes = ['sm', 'md', 'lg'];
   const defaults = renderToString(React.createElement(Button, null, 'Save'));
-  assert.match(defaults, /data-variant="primary"/u);
-  assert.match(defaults, /data-size="md"/u);
+  assert.match(defaults, /data-muxui-variant="primary"/u);
+  assert.match(defaults, /data-muxui-size="md"/u);
 
   for (const variant of variants) {
     for (const size of sizes) {
@@ -150,8 +150,8 @@ test('Button exposes seven variants with stable root hooks', async () => {
         style: { minWidth: '5rem' },
         'data-consumer-hook': 'preserved',
       }, 'Action'));
-      assert.match(markup, new RegExp(`data-variant="${variant}"`, 'u'));
-      assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+      assert.match(markup, new RegExp(`data-muxui-variant="${variant}"`, 'u'));
+      assert.match(markup, new RegExp(`data-muxui-size="${size}"`, 'u'));
       assert.match(markup, /class="muxui-button consumer-button"/u);
       assert.match(markup, /style="min-width:5rem"/u);
       assert.match(markup, /data-consumer-hook="preserved"/u);
@@ -176,14 +176,14 @@ test('Button exposes seven variants with stable root hooks', async () => {
   }
 
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]`, 'u'));
-  for (const size of sizes) assert.match(css, new RegExp(`\\.muxui-button\\[data-size='${size}'\\]`, 'u'));
+  for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-muxui-variant='${variant}'\\]`, 'u'));
+  for (const size of sizes) assert.match(css, new RegExp(`\\.muxui-button\\[data-muxui-size='${size}'\\]`, 'u'));
   assert.match(css, /\.muxui-button\s*\{[^}]*--muxui-button-background:/u);
-  const destructivePrimaryRule = css.match(/\.muxui-button\[data-variant='danger'\]\s*\{[^}]*\}/u)?.[0] ?? '';
+  const destructivePrimaryRule = css.match(/\.muxui-button\[data-muxui-variant='danger'\]\s*\{[^}]*\}/u)?.[0] ?? '';
   assert.ok(destructivePrimaryRule);
   assert.doesNotMatch(destructivePrimaryRule, /\bblack\b/u);
   assert.match(destructivePrimaryRule, /--muxui-button-foreground:\s*var\(--muxui-semantic-color-error-60-fg\)/u);
-  assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
+  assert.match(css, /\.muxui-button\[data-muxui-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
 
   const pendingWithText = renderToString(React.createElement(Button, { pending: true, showTextWhileLoading: true }, 'Saving'));
   assert.match(pendingWithText, /muxui-button-content--with-spinner/u);
@@ -204,8 +204,8 @@ test('Button generator guard binds the canonical finite API contract', async () 
   assert.deepEqual(descriptor.bindings.find(({ export: name }) => name === 'Button').api, api);
   // The renderer applies the catalog defaults when no props are given.
   const markup = renderToString(React.createElement(Button, null, 'Save'));
-  assert.match(markup, new RegExp(`data-variant="${api.defaults.variant}"`, 'u'));
-  assert.match(markup, new RegExp(`data-size="${api.defaults.size}"`, 'u'));
+  assert.match(markup, new RegExp(`data-muxui-variant="${api.defaults.variant}"`, 'u'));
+  assert.match(markup, new RegExp(`data-muxui-size="${api.defaults.size}"`, 'u'));
   const result = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
     cwd: resolve(import.meta.dirname, '..'),
     encoding: 'utf8',
@@ -230,11 +230,11 @@ const markupFlags = {
   // Menu.Root marks itself open.
   defaultOpen: '[data-muxui-state-open]',
   // ButtonGroup marks itself attached.
-  attached: '[data-attached]',
+  attached: '[data-muxui-attached]',
   // A link marks the current page with aria-current, and a link that carries no such attribute styles itself with a --current modifier.
   current: '[aria-current="page"], [class*="--current"]',
   // Sidebar.Root marks itself folded.
-  defaultCollapsed: '[data-collapsed]',
+  defaultCollapsed: '[data-muxui-collapsed]',
   // A Sidebar nav group is a native details element, open once expanded.
   defaultExpanded: 'details[open]',
   // Sidebar's border is removed by a modifier, and an external nav link draws an icon that says so.
@@ -266,21 +266,21 @@ const searchFieldVariant = (container) => {
 };
 const markupValues = {
   // Sidebar marks only the compact density; the default one carries no attribute.
-  density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
+  density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-muxui-sidebar-density') ?? 'default',
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
     const text = textLook(doc);
     if (text !== undefined) return text.size;
     const circle = doc.querySelector('.muxui-progress-circle');
     if (circle !== null) return ['sm', 'lg'].find((size) => circle.classList.contains(`muxui-progress-circle--${size}`)) ?? 'md';
-    return doc.querySelector('[data-size]')?.getAttribute('data-size');
+    return doc.querySelector('[data-muxui-size]')?.getAttribute('data-muxui-size');
   },
   // ButtonGroup's resolved role, which is presentation unless it carries a name.
   role: (doc) => doc.querySelector('[role]')?.getAttribute('role'),
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-muxui-variant]')?.getAttribute('data-muxui-variant'),
   padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-muxui-state-orientation]')?.getAttribute('data-muxui-state-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
@@ -303,7 +303,7 @@ const markupValues = {
   },
   layout: (doc) => doc.querySelector('[data-muxui-state-layout]')?.getAttribute('data-muxui-state-layout'),
   // A tag carries its colour, which the group's default sets for a tag that names none.
-  color: (doc) => textLook(doc)?.color ?? doc.querySelector('[data-color]')?.getAttribute('data-color'),
+  color: (doc) => textLook(doc)?.color ?? doc.querySelector('[data-muxui-color]')?.getAttribute('data-muxui-color'),
   // TagSelect shows each selected item as a tag, and a selected key that names no item shows none: the items it was given, by their labels.
   items: (doc) => [...doc.querySelectorAll('.muxui-tag-select__tag-text')].map((tag) => tag.textContent),
   as: (doc) => textLook(doc)?.as,

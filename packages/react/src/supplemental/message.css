@@ -3,7 +3,7 @@
 .muxui-message-content > :first-child { margin-block-start: 0; }
 .muxui-message-content > :last-child { margin-block-end: 0; }
 .muxui-message-content { min-inline-size: 0; }
-.muxui-message[data-sender='user'] .muxui-message-content { display: inline-block; padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium); border-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-surface-subtle); }
+.muxui-message[data-muxui-sender='user'] .muxui-message-content { display: inline-block; padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium); border-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-surface-subtle); }
 .muxui-message-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--muxui-semantic-layout-action-gap); margin-block-start: var(--muxui-semantic-layout-content-gap); }
 .muxui-message-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--muxui-semantic-layout-action-gap); }
 .muxui-message :is(.muxui-message-action, .muxui-message-sources-trigger, .muxui-message-follow-ups button) { display: inline-flex; align-items: center; gap: var(--muxui-semantic-layout-tight-gap); }

@@ -482,7 +482,7 @@
 }
 
 /* The field state keeps one width, so typing never resizes the bar. */
-.muxui-text-editor__selection-bar[data-instruction] {
+.muxui-text-editor__selection-bar[data-muxui-instruction] {
   inline-size: min(22rem, calc(100vw - 1rem));
 }
 
@@ -542,7 +542,7 @@
   color: var(--muxui-semantic-color-neutral-90);
 }
 
-.muxui-text-editor__selection-bar[data-phase='error'] {
+.muxui-text-editor__selection-bar[data-muxui-phase='error'] {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
@@ -603,7 +603,7 @@
     background-color: var(--muxui-semantic-color-neutral-18);
   }
 
-  :scope .muxui-text-editor__selection-bar:not([data-phase='error']) {
+  :scope .muxui-text-editor__selection-bar:not([data-muxui-phase='error']) {
     border-color: var(--muxui-semantic-color-neutral-26);
   }
 }

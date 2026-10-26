@@ -100,7 +100,7 @@ export const RadioGroup: ForwardRefExoticComponent<RadioGroupProps & RefAttribut
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby ?? generatedLabelledby,
       // The data-* hooks the styles read are not props React Aria types, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-muxui-state-orientation': orientation, 'data-size': resolvedSize },
+      ...{ 'data-muxui-state-orientation': orientation, 'data-muxui-size': resolvedSize },
       className: classNames('muxui-radio-group', className),
     }, radioContent,
     // Inside the group, so RAC wires it into the group's aria-describedby and shows it only while the group is invalid.

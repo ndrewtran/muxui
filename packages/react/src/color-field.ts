@@ -77,8 +77,8 @@ export const ColorField: ForwardRefExoticComponent<ColorFieldProps & RefAttribut
     ...props, ref, name, value: valueColor, defaultValue: defaultColor,
     onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toFormat(space).toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
     isInvalid: invalid ? invalid : undefined, className: classNames('muxui-color-field', className),
-    // React Aria's props do not name the data-size hook the styles read, and TypeScript accepts such a key in a call only from a spread.
-    ...{ 'data-size': resolvedSize },
+    // React Aria's props do not name the data-muxui-size hook the styles read, and TypeScript accepts such a key in a call only from a spread.
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(ColorFieldInput),

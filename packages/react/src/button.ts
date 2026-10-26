@@ -162,8 +162,8 @@ export const Button: ForwardRefExoticComponent<ButtonProps & RefAttributes<HTMLB
       ...(labelPendingContent && !callerNamesButton
         ? { 'aria-labelledby': pendingContentLabelId }
         : {}),
-      'data-variant': variant,
-      'data-size': size,
+      'data-muxui-variant': variant,
+      'data-muxui-size': size,
       ...pendingAriaProps,
       ...pendingSubmitProps,
     }),

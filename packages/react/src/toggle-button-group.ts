@@ -74,7 +74,7 @@ export const ToggleButtonGroup: ForwardRefExoticComponent<ToggleButtonGroupProps
       orientation,
       isDisabled: disabled,
       // The data-* hook the styles read is not a prop React Aria types, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-size': resolvedSize },
+      ...{ 'data-muxui-size': resolvedSize },
       className: classNames('muxui-toggle-button-group', className),
     }, children);
     return React.createElement(ToggleButtonSizeContext.Provider, { value: resolvedSize },

@@ -132,8 +132,8 @@ export const Image: ForwardRefExoticComponent<ImageProps & RefAttributes<HTMLIma
       failed && 'muxui-image--error',
       className,
     ),
-    'data-fallback': usingFallback ? '' : undefined,
-    'data-error': failed ? '' : undefined,
+    'data-muxui-fallback': usingFallback ? '' : undefined,
+    'data-muxui-error': failed ? '' : undefined,
   });
 });
 

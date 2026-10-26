@@ -322,7 +322,7 @@ assert.match(markup.text, /class="muxui-text muxui-text--mono-sm"/);
 assert.match(markup.image, /<img[^>]*class="muxui-image muxui-image--radius-md muxui-image--fit-cover"/);
 assert.match(markup.image, /style="--muxui-image-ratio:320 \\/ 180"/);
 assert.match(markup.avatar, /<span[^>]*class="muxui-avatar__fallback"[^>]*>AB<\\/span>/);
-assert.match(markup.avatar, /<span role="img" aria-label="Andrew"[^>]*data-image-state="loading">/);
+assert.match(markup.avatar, /<span role="img" aria-label="Andrew"[^>]*data-muxui-image-state="loading">/);
 assert.doesNotMatch(markup.avatar, /<span[^>]*hidden=""[^>]*>AB</);
 assert.match(markup['select-native'], /<label[^>]*for="([^"]+)"[^>]*>Saved panel<\\/label><select[^>]*id="\\1"/);
 `);
@@ -363,8 +363,8 @@ function PackedCommands() {
   return React.createElement(MuxUI.ColorSwatch, { color: '#ff0000', secondaryColor: '#0000ff', shape: 'circle' });
 }
 const markup = renderToStaticMarkup(React.createElement(PackedCommands));
-assert.match(markup, /data-shape="circle"/);
-assert.match(markup, /data-two-tone/);
+assert.match(markup, /data-muxui-shape="circle"/);
+assert.match(markup, /data-muxui-two-tone/);
 assert.match(markup, /--muxui-color-swatch-secondary/);
 `);
     assert.equal(rootProbe.status, 0, `${rootProbe.stdout}\n${rootProbe.stderr}`);

@@ -101,7 +101,7 @@ test('ToggleButton exposes size variants and groups can keep an active selection
   for (const size of ['sm', 'md', 'lg']) {
     const markup = renderToString(React.createElement(ToggleButton, { size }, 'Bold'));
     assert.match(markup, new RegExp(`muxui-toggle-button--${size}`, 'u'));
-    assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+    assert.match(markup, new RegExp(`data-muxui-size="${size}"`, 'u'));
   }
   assert.match(renderToString(React.createElement(ToggleButton, null, 'Bold')), /muxui-toggle-button--md/u);
   assert.throws(() => renderToString(React.createElement(ToggleButton, { size: 'xl' }, 'Bold')), /ToggleButton size must be one of/u);
@@ -120,7 +120,7 @@ test('ToggleButton exposes size variants and groups can keep an active selection
     },
     React.createElement(ToggleButton, { id: 'bold' }, 'Bold'),
     React.createElement(ToggleButton, { id: 'italic' }, 'Italic'))));
-    assert.equal(root.querySelector('.muxui-toggle-button-group').getAttribute('data-size'), 'sm');
+    assert.equal(root.querySelector('.muxui-toggle-button-group').getAttribute('data-muxui-size'), 'sm');
     const bold = root.querySelector('.muxui-toggle-button');
     assert.ok(bold);
     assert.equal(bold.classList.contains('muxui-toggle-button--sm'), true);
@@ -136,7 +136,7 @@ test('ToggleButton exposes size variants and groups can keep an active selection
 test('choice controls expose compact size variants through direct and group APIs', () => {
   const checkbox = renderToString(React.createElement(Checkbox, { size: 'sm' }, 'Compact'));
   assert.match(checkbox, /muxui-checkbox--sm/u);
-  assert.match(checkbox, /data-size="sm"/u);
+  assert.match(checkbox, /data-muxui-size="sm"/u);
   const largeCheckbox = renderToString(React.createElement(Checkbox, { size: 'lg' }, 'Large'));
   assert.match(largeCheckbox, /muxui-checkbox--lg/u);
   assert.throws(() => renderToString(React.createElement(Checkbox, { size: 'xl' }, 'Invalid')), /Checkbox size must be one of/u);
@@ -156,7 +156,7 @@ test('choice controls expose compact size variants through direct and group APIs
   }));
   assert.match(radioGroup, /muxui-radio--sm/u);
   const largeRadioGroup = renderToString(React.createElement(RadioGroup, { 'aria-label': 'Choice', size: 'lg', options: [{ value: 'one', label: 'One' }] }));
-  assert.match(largeRadioGroup, /data-size="lg"/u);
+  assert.match(largeRadioGroup, /data-muxui-size="lg"/u);
   assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Choice', size: 'xl' })), /RadioGroup size must be one of/u);
 
   const radioField = renderToString(React.createElement(RadioGroup, { label: 'Plan' },
@@ -398,13 +398,13 @@ test('R1.1 Breadcrumbs disabled items and ProgressBar completion stay within the
 
     const progressBars = [...root.querySelectorAll('.muxui-progress-bar')];
     assert.equal(progressBars.length, 7);
-    assert.equal(progressBars[0].getAttribute('data-complete'), 'true');
-    assert.equal(progressBars[1].getAttribute('data-complete'), 'true');
-    assert.equal(progressBars[2].getAttribute('data-complete'), 'true');
-    assert.equal(progressBars[3].hasAttribute('data-complete'), false);
-    assert.equal(progressBars[4].hasAttribute('data-complete'), false);
-    assert.equal(progressBars[5].hasAttribute('data-complete'), false);
-    assert.equal(progressBars[6].hasAttribute('data-complete'), false);
+    assert.equal(progressBars[0].getAttribute('data-muxui-complete'), 'true');
+    assert.equal(progressBars[1].getAttribute('data-muxui-complete'), 'true');
+    assert.equal(progressBars[2].getAttribute('data-muxui-complete'), 'true');
+    assert.equal(progressBars[3].hasAttribute('data-muxui-complete'), false);
+    assert.equal(progressBars[4].hasAttribute('data-muxui-complete'), false);
+    assert.equal(progressBars[5].hasAttribute('data-muxui-complete'), false);
+    assert.equal(progressBars[6].hasAttribute('data-muxui-complete'), false);
   } finally {
     restore();
     dom.window.close();

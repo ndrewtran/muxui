@@ -315,19 +315,19 @@
   transition: none;
 }
 
-.muxui-toast[data-variant='neutral'] {
+.muxui-toast[data-muxui-variant='neutral'] {
   border-inline-start-color: var(--muxui-semantic-color-neutral-60);
 }
 
-.muxui-toast[data-variant='success'] {
+.muxui-toast[data-muxui-variant='success'] {
   border-inline-start-color: var(--muxui-semantic-status-success);
 }
 
-.muxui-toast[data-variant='warning'] {
+.muxui-toast[data-muxui-variant='warning'] {
   border-inline-start-color: var(--muxui-semantic-status-warning);
 }
 
-.muxui-toast[data-variant='danger'] {
+.muxui-toast[data-muxui-variant='danger'] {
   border-inline-start-color: var(--muxui-semantic-feedback-invalid);
 }
 
@@ -562,25 +562,25 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='neutral'] {
+  :scope .muxui-toast[data-muxui-variant='neutral'] {
     border-inline-start-color: var(--muxui-semantic-color-neutral-60);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='success'] {
+  :scope .muxui-toast[data-muxui-variant='success'] {
     border-inline-start-color: var(--muxui-semantic-status-success);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='warning'] {
+  :scope .muxui-toast[data-muxui-variant='warning'] {
     border-inline-start-color: var(--muxui-semantic-status-warning);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='danger'] {
+  :scope .muxui-toast[data-muxui-variant='danger'] {
     border-inline-start-color: var(--muxui-semantic-feedback-invalid);
   }
 }

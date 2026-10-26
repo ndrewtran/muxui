@@ -61,7 +61,7 @@ type CheckboxProps = { checked: boolean; indeterminate?: boolean; disabled?: boo
 
 // Native inputs preserve host event bubbling; the visible indicator follows Mux Checkbox.
 function checkbox({ checked, indeterminate = false, disabled, ...props }: CheckboxProps) {
-  return React.createElement('label', { className: 'muxui-checkbox muxui-checkbox--sm', 'data-size': 'sm', 'data-muxui-state-selected': checked || undefined, 'data-muxui-state-indeterminate': indeterminate || undefined, 'data-muxui-state-disabled': disabled || undefined },
+  return React.createElement('label', { className: 'muxui-checkbox muxui-checkbox--sm', 'data-muxui-size': 'sm', 'data-muxui-state-selected': checked || undefined, 'data-muxui-state-indeterminate': indeterminate || undefined, 'data-muxui-state-disabled': disabled || undefined },
     React.createElement('input', { ...props, type: 'checkbox', checked, disabled, 'aria-checked': indeterminate ? 'mixed' : checked }),
     React.createElement('span', { className: 'muxui-checkbox-indicator', 'aria-hidden': true, 'data-muxui-state-selected': checked || undefined, 'data-muxui-state-indeterminate': indeterminate || undefined },
       (indeterminate || checked) && React.createElement(indeterminate ? Minus : Check, { size: 12, 'aria-hidden': true, focusable: 'false' })));
@@ -239,9 +239,9 @@ export const DataDiff: ForwardRefExoticComponent<DataDiffProps & RefAttributes<H
           columns.map((column) => React.createElement('th', { key: column.id, scope: 'col', className: 'muxui-data-diff-column' }, column.label)))),
       React.createElement('tbody', { className: 'muxui-data-diff-body' },
         rows.length ? rows.map((row) => React.createElement('tr', {
-          key: row.id, className: 'muxui-data-diff-row', 'data-row-id': row.id,
-          'data-change': row.kind, 'data-muxui-state-selected': selectedSet.has(row.id) || undefined,
-          'data-selectable': row.kind !== 'unchanged' && !row.disabled && !gated || undefined,
+          key: row.id, className: 'muxui-data-diff-row', 'data-muxui-row-id': row.id,
+          'data-muxui-change': row.kind, 'data-muxui-state-selected': selectedSet.has(row.id) || undefined,
+          'data-muxui-selectable': row.kind !== 'unchanged' && !row.disabled && !gated || undefined,
           'data-muxui-state-disabled': row.disabled || undefined,
           onClick: (event: MouseEvent<HTMLTableRowElement>) => { if (!(event.target as Element).closest('.muxui-data-diff-selection')) toggleRow(row); },
         },
@@ -256,7 +256,7 @@ export const DataDiff: ForwardRefExoticComponent<DataDiffProps & RefAttributes<H
           React.createElement('span', { className: 'muxui-data-diff-sr-only' }, `${changeLabels[row.kind]} row, ${row.label}: `)), cellValue(row, column))))) : React.createElement('tr', null, React.createElement('td', { colSpan: columns.length + 1, className: 'muxui-data-diff-empty' }, emptyMessage))))),
   React.createElement('div', { className: 'muxui-data-diff-footer' },
     React.createElement('span', { ref: totalsRef, className: 'muxui-data-diff-totals', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, totals),
-    React.createElement('button', { 'data-size': 'sm', 'data-variant': 'primary', type: 'button', className: 'muxui-button muxui-data-diff-apply', disabled: gated || !selected.length || !onApply, 'data-muxui-state-disabled': gated || !selected.length || !onApply || undefined, 'data-muxui-state-pending': pending ? true : undefined,
+    React.createElement('button', { 'data-muxui-size': 'sm', 'data-muxui-variant': 'primary', type: 'button', className: 'muxui-button muxui-data-diff-apply', disabled: gated || !selected.length || !onApply, 'data-muxui-state-disabled': gated || !selected.length || !onApply || undefined, 'data-muxui-state-pending': pending ? true : undefined,
       onClick: () => { if (!gated && selected.length) onApply?.([...selected]); },
     // Without applyLabel the label counts the selection, with the same conditional in place of ??.
     }, React.createElement('span', { ref: applyCountRef, className: 'muxui-data-diff-apply-label' }, pending ? 'Applying…' : applyLabel == null ? `Apply ${selected.length} ${selected.length === 1 ? 'change' : 'changes'}` : applyLabel))));

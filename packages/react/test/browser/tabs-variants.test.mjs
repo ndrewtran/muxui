@@ -88,7 +88,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       const canvas = `#tabs-preview-${scheme}`;
       for (const variant of ['underline', 'pill', 'overflow', 'segment']) {
         const root = `${canvas} #${scheme}-${variant}-tabs`;
-        assert.equal(await page.locator(root).getAttribute('data-variant'), variant);
+        assert.equal(await page.locator(root).getAttribute('data-muxui-variant'), variant);
         assert.equal(await page.locator(`${root} .muxui-tabs-motion`).getAttribute('data-muxui-tabs-variant'), variant);
       }
 
@@ -431,7 +431,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const segmentRoot = '#tabs-preview-light #light-segment-tabs';
     await page.locator(`${segmentRoot} [role="tab"]`).last().click();
     await page.waitForFunction((selector) => document.querySelector(`${selector} [role="tab"][aria-selected="true"]`)?.textContent?.trim() === 'Month', segmentRoot);
-    assert.equal(await page.locator(`${segmentRoot} .muxui-tab-panel:not([data-hidden])`).textContent(), 'Month');
+    assert.equal(await page.locator(`${segmentRoot} .muxui-tab-panel:not([data-muxui-hidden])`).textContent(), 'Month');
 
     const pillTabs = page.locator(`${motionPill} [role="tab"]`);
     await pillTabs.first().focus();

@@ -50,7 +50,7 @@
     "styles/components.css | @media (prefers-reduced-motion: reduce) { :where(.muxui-button-spinner, .muxui-button-spinner-arc) { animation: none",
     "styles/overlays.css | @media (prefers-reduced-motion: reduce) { .muxui-dialog-backdrop { transition-duration: 0s",
     "styles/overlays.css | @media (prefers-reduced-motion: reduce) { .muxui-tooltip { transition-duration: 0s",
-    "supplemental/styles.css | @media (prefers-reduced-motion: reduce) { .muxui-sidebar[data-foldable], .muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) { transition-duration: 0s"
+    "supplemental/styles.css | @media (prefers-reduced-motion: reduce) { .muxui-sidebar[data-muxui-foldable], .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) { transition-duration: 0s"
   ],
   "reduced-motion-attribute": [
     "styles/base.css | :where( .muxui-alert-dialog__backdrop[data-muxui-dialog-reduced], .muxui-command-palette__backdrop[data-muxui-dialog-reduced] ) { opacity: 1",
@@ -79,7 +79,7 @@
     "styles/overlays.css | :where([data-muxui-motion='reduced']) :where(.muxui-dialog, .muxui-popover, .muxui-preview-trigger, .muxui-toast, .muxui-tooltip, .muxui-drop-zone) { transition-duration: 0s",
     "supplemental/lightbox.css | :where([data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { animation: none",
     "supplemental/lightbox.css | :where([data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { transition-duration: 0s",
-    "supplemental/styles.css | :where([data-muxui-motion='reduced']) .muxui-sidebar[data-foldable], :where([data-muxui-motion='reduced']) .muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) { transition-duration: 0s"
+    "supplemental/styles.css | :where([data-muxui-motion='reduced']) .muxui-sidebar[data-muxui-foldable], :where([data-muxui-motion='reduced']) .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) { transition-duration: 0s"
   ],
   "structural": [
     "styles/components.css | .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar-fill, .muxui-progress-bar-fill[data-muxui-state-indeterminate] { width: 40%",

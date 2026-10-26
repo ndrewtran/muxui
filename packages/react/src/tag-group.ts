@@ -126,8 +126,8 @@ export const TagGroup: ForwardRefExoticComponent<TagGroupProps & RefAttributes<H
       textValue: item.textValue,
       isDisabled: disabled ? disabled : item.disabled,
       className: 'muxui-tag',
-      // React Aria's Tag props name neither data-color nor data-variant, the hooks the styles read.
-      ...{ 'data-color': tagColor(item), 'data-variant': resolvedVariant },
+      // React Aria's Tag props name neither data-muxui-color nor data-muxui-variant, the hooks the styles read.
+      ...{ 'data-muxui-color': tagColor(item), 'data-muxui-variant': resolvedVariant },
     }, item.label, onRemove ? React.createElement(IconButton, {
       slot: 'remove',
       disabled: disabled ? disabled : item.disabled,

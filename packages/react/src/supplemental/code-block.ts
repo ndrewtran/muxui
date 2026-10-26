@@ -195,11 +195,11 @@ export const CodeBlock: ForwardRefExoticComponent<CodeBlockProps & RefAttributes
   return React.createElement('div', {
     ...props, ref,
     className: ['muxui-code-block', className].filter(Boolean).join(' '),
-    'data-mode': mode,
-    'data-wrap': wrap ? wrap : undefined,
-    'data-line-numbers': lineNumbers || undefined,
-    'data-copy-state': status,
-    'data-diff-strategy': mode === 'diff' ? listing.coarse ? 'replacement' : 'minimal' : undefined,
+    'data-muxui-mode': mode,
+    'data-muxui-wrap': wrap ? wrap : undefined,
+    'data-muxui-line-numbers': lineNumbers || undefined,
+    'data-muxui-copy-state': status,
+    'data-muxui-diff-strategy': mode === 'diff' ? listing.coarse ? 'replacement' : 'minimal' : undefined,
   },
   // Conditionals, not ||: extraction reads a fallback on an owned prop as an executed default.
   (filename ? filename : language ? language : copyable ? copyable : mode === 'diff') && React.createElement('div', { className: 'muxui-code-block-header' },
@@ -229,11 +229,11 @@ export const CodeBlock: ForwardRefExoticComponent<CodeBlockProps & RefAttributes
   listing.coarse && React.createElement('p', { className: 'muxui-code-block-notice' }, 'Large change shown as removed and added lines.'),
   mode === 'diff' && lineNumbers && React.createElement('span', { id: legendId, className: 'muxui-code-block-sr-only' }, 'Original line numbers are in the first column. Updated line numbers are in the second.'),
   React.createElement('pre', { className: 'muxui-code-block-pre', style: { '--muxui-code-block-gutter-width': `${String(listing.rows.length).length}ch` }, tabIndex: 0, 'aria-label': mode === 'diff' ? 'Code changes' : 'Code', 'aria-describedby': mode === 'diff' && lineNumbers ? legendId : undefined },
-    React.createElement('code', { className: 'muxui-code-block-code', 'data-language': language }, listing.rows.map((row, index) =>
-      React.createElement('span', { className: 'muxui-code-block-line', key: index, 'data-change': row.kind },
-        lineNumbers && mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-number', 'aria-hidden': true, 'data-line-number': row.old ?? '' }),
-        lineNumbers && React.createElement('span', { className: 'muxui-code-block-number', 'aria-hidden': true, 'data-line-number': row.next ?? '' }),
-        mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-marker', 'aria-hidden': true, 'data-marker': row.kind === 'added' ? '+' : row.kind === 'removed' ? '−' : ' ' }),
+    React.createElement('code', { className: 'muxui-code-block-code', 'data-muxui-language': language }, listing.rows.map((row, index) =>
+      React.createElement('span', { className: 'muxui-code-block-line', key: index, 'data-muxui-change': row.kind },
+        lineNumbers && mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-number', 'aria-hidden': true, 'data-muxui-line-number': row.old ?? '' }),
+        lineNumbers && React.createElement('span', { className: 'muxui-code-block-number', 'aria-hidden': true, 'data-muxui-line-number': row.next ?? '' }),
+        mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-marker', 'aria-hidden': true, 'data-muxui-marker': row.kind === 'added' ? '+' : row.kind === 'removed' ? '−' : ' ' }),
         row.kind !== 'context' && React.createElement('span', { className: 'muxui-code-block-sr-only' }, `${row.kind === 'added' ? 'Added' : 'Removed'} line: `),
         React.createElement('span', { className: 'muxui-code-block-text' },
           highlighted

@@ -47,7 +47,7 @@ test('single-line field families expose the shared sm/md/lg size axis', () => {
       const props = { label: 'Value', size };
       if (Control === DateRangePicker) props['aria-label'] = 'Range';
       const markup = renderToString(React.createElement(Control, props));
-      assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+      assert.match(markup, new RegExp(`data-muxui-size="${size}"`, 'u'));
     }
   }
   assert.throws(() => renderToString(React.createElement(TextField, { label: 'Value', size: 'xl' })), /TextField size must be one of/u);
@@ -1250,8 +1250,8 @@ test('Autocomplete preserves the compact size axis and part hooks', async () => 
     size: 'sm',
     items: ['Melbourne'],
   }));
-  assert.match(server, /data-size="sm"/u);
-  assert.match(server, /data-part="root"/u);
+  assert.match(server, /data-muxui-size="sm"/u);
+  assert.match(server, /data-muxui-part="root"/u);
   assert.throws(
     () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'xl' })),
     /Autocomplete size must be one of: sm, md, lg/u,
@@ -1272,9 +1272,9 @@ test('Autocomplete preserves the compact size axis and part hooks', async () => 
     const list = document.querySelector('.muxui-autocomplete-list');
     assert.ok(list);
     assert.match(list.className, /muxui-autocomplete-list--sm/u);
-    assert.equal(list.getAttribute('data-size'), 'sm');
-    assert.equal(list.getAttribute('data-part'), 'list');
-    assert.equal(document.querySelector('.muxui-autocomplete-option')?.getAttribute('data-part'), 'option');
+    assert.equal(list.getAttribute('data-muxui-size'), 'sm');
+    assert.equal(list.getAttribute('data-muxui-part'), 'list');
+    assert.equal(document.querySelector('.muxui-autocomplete-option')?.getAttribute('data-muxui-part'), 'option');
     await act(async () => root.unmount());
   } finally {
     restore();
@@ -1522,8 +1522,8 @@ test('CheckboxGroup names its group from a visible label of any node type', asyn
   assert.equal(nameOf(rich), 'Toppings');
   assert.equal(nameOf(plain), 'Alerts');
   assert.equal(nameOf(unlabelled), 'Hidden alerts');
-  assert.equal(rich.getAttribute('data-size'), 'sm');
-  assert.equal(plain.getAttribute('data-size'), 'md');
+  assert.equal(rich.getAttribute('data-muxui-size'), 'sm');
+  assert.equal(plain.getAttribute('data-muxui-size'), 'md');
   dom.window.close();
 });
 

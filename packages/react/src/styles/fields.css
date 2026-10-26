@@ -81,11 +81,11 @@
   --muxui-control-target-size: var(--muxui-control-size-md);
 }
 
-.muxui-autocomplete-list[data-size='sm'] {
+.muxui-autocomplete-list[data-muxui-size='sm'] {
   --muxui-control-target-size: var(--muxui-control-size-sm);
 }
 
-.muxui-autocomplete-list[data-size='lg'] {
+.muxui-autocomplete-list[data-muxui-size='lg'] {
   --muxui-control-target-size: var(--muxui-control-size-lg);
 }
 
@@ -104,11 +104,11 @@
   --muxui-item-font-size: var(--muxui-semantic-typography-text-s-font-size);
 }
 
-.muxui-autocomplete-list--sm [data-part='header'] {
+.muxui-autocomplete-list--sm [data-muxui-part='header'] {
   padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small);
 }
 
-.muxui-autocomplete-list--sm [data-part='separator'] {
+.muxui-autocomplete-list--sm [data-muxui-part='separator'] {
   margin: 2px 0;
 }
 
@@ -541,7 +541,7 @@
   background-color: var(--muxui-component-switch-selected-thumb);
 }
 
-.muxui-switch-indicator[data-motion-pressed] {
+.muxui-switch-indicator[data-muxui-motion-pressed] {
   --muxui-switch-indicator-scale-x: 1.08;
   --muxui-switch-indicator-scale-y: 0.92;
 }
@@ -557,7 +557,7 @@
     transition: none;
   }
   .muxui-switch-indicator,
-  .muxui-switch-indicator[data-motion-pressed] {
+  .muxui-switch-indicator[data-muxui-motion-pressed] {
     --muxui-switch-indicator-scale-x: 1;
     --muxui-switch-indicator-scale-y: 1;
   }
@@ -565,12 +565,12 @@
 
 :where([data-muxui-motion='reduced']) .muxui-switch::before,
 :where([data-muxui-motion='reduced']) .muxui-switch-indicator,
-:where([data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
+:where([data-muxui-motion='reduced']) .muxui-switch-indicator[data-muxui-motion-pressed] {
   transition: none;
 }
 
 :where([data-muxui-motion='reduced']) .muxui-switch-indicator,
-:where([data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
+:where([data-muxui-motion='reduced']) .muxui-switch-indicator[data-muxui-motion-pressed] {
   --muxui-switch-indicator-scale-x: 1;
   --muxui-switch-indicator-scale-y: 1;
 }

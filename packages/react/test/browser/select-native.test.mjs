@@ -31,7 +31,7 @@ test('SelectNative hydrates as a native form control and preserves browser focus
     const select = page.locator('#panel');
     assert.equal(await select.getAttribute('title'), 'Saved panel URL');
     assert.equal(await select.getAttribute('size'), null);
-    assert.equal(await select.getAttribute('data-size'), 'sm');
+    assert.equal(await select.getAttribute('data-muxui-size'), 'sm');
     assert.equal(await select.evaluate((node) => getComputedStyle(node).appearance), 'auto');
     assert.equal(await select.locator('option').count(), 3);
     assert.equal(await select.locator('optgroup').getAttribute('label'), 'Workspaces');

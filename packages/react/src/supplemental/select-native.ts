@@ -123,14 +123,14 @@ export const SelectNative: ForwardRefExoticComponent<SelectNativeProps & RefAttr
     'aria-describedby': describedBy,
     'aria-invalid': isInvalid ? true : ariaInvalid,
     className: classNames('muxui-select-native', `muxui-select-native--${resolvedSize.visual}`, className),
-    'data-size': resolvedSize.visual,
+    'data-muxui-size': resolvedSize.visual,
     'data-muxui-state-disabled': disabled ? '' : undefined,
     'data-muxui-state-required': required ? '' : undefined,
     'data-muxui-state-invalid': isInvalid ? '' : undefined,
   }, children);
   return h('div', {
     className: classNames('muxui-select-native-field', isInvalid && 'muxui-select-native-field--invalid'),
-    'data-size': resolvedSize.visual,
+    'data-muxui-size': resolvedSize.visual,
     'data-muxui-state-disabled': disabled ? '' : undefined,
     'data-muxui-state-required': required ? '' : undefined,
     'data-muxui-state-invalid': isInvalid ? '' : undefined,

@@ -219,7 +219,7 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
         // React Aria's props do not name the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
         ...{ 'data-muxui-state-read-only': readOnly ? readOnly : undefined },
         className: classNames('muxui-select', className),
-        ...{ 'data-size': resolvedSize },
+        ...{ 'data-muxui-size': resolvedSize },
         'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
       },
       label !== undefined ? React.createElement(Select.Label, null, label) : null,
@@ -247,14 +247,14 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
     const defaults: Required<OverlayGeometryInput> = { ...SELECT_GEOMETRY, ...context.geometry };
     defaults.placement = defaults.placement.replace(' ', '-');
     const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, defaults, 'Select.Popup');
-    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, ref, triggerRef: anchorRef ?? context.anchorRef, isNonModal: !normalizeBoolean(modal, context.modal ?? true, 'Select.Popup modal'), className: classNames('muxui-select-popover', className), ...{ 'data-size': context.resolvedSize } }, children);
+    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, ref, triggerRef: anchorRef ?? context.anchorRef, isNonModal: !normalizeBoolean(modal, context.modal ?? true, 'Select.Popup modal'), className: classNames('muxui-select-popover', className), ...{ 'data-muxui-size': context.resolvedSize } }, children);
   });
   Select.List = React.forwardRef<HTMLDivElement, SelectListProps>(function SelectList({ children, items, className, ...props }, ref) {
     const context = React.useContext(SelectContext);
     // normalizeItems takes no items as an empty list, so an omitted list has no default here to state.
     const normalized = normalizeItems(items);
     const hasChildren = children !== undefined && children !== null;
-    return React.createElement(AriaListBox<NormalizedItem>, { ...(props as AriaListBoxProps<NormalizedItem>), ref, items: hasChildren ? undefined : normalized, className: classNames('muxui-select-list', className), ...{ 'data-size': context.resolvedSize }, children: hasChildren ? children : (item: NormalizedItem) => React.createElement(Select.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label) });
+    return React.createElement(AriaListBox<NormalizedItem>, { ...(props as AriaListBoxProps<NormalizedItem>), ref, items: hasChildren ? undefined : normalized, className: classNames('muxui-select-list', className), ...{ 'data-muxui-size': context.resolvedSize }, children: hasChildren ? children : (item: NormalizedItem) => React.createElement(Select.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label) });
   });
   Select.Item = React.forwardRef<HTMLDivElement, SelectItemProps>(function SelectItem({ children, id, textValue, disabled = false, className, ...props }, ref) {
     const context = React.useContext(SelectContext);

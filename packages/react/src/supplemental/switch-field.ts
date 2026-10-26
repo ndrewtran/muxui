@@ -52,7 +52,7 @@ function makeSwitchField() {
   const Root = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SwitchFieldRootProps>(function SwitchFieldRoot({ checked, defaultChecked, onChange, name, value, disabled, invalid, required, readOnly, size = 'md', className, ...props }, ref) {
     const resolvedSize = normalizeChoiceControlSize(size, 'SwitchField');
     // React Aria's props type the handlers on Element, and these on the div; the rest is the div's native attributes.
-    return h(AriaSwitchField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...(props as AriaSwitchFieldProps) }), ref, isSelected: checked, defaultSelected: defaultChecked, onChange, name, value, ...{ 'data-size': resolvedSize }, className: cx('muxui-switch-field', className) });
+    return h(AriaSwitchField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...(props as AriaSwitchFieldProps) }), ref, isSelected: checked, defaultSelected: defaultChecked, onChange, name, value, ...{ 'data-muxui-size': resolvedSize }, className: cx('muxui-switch-field', className) });
   });
   const Button = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, SwitchFieldButtonProps>(function SwitchFieldButton({ disabled, className, ...props }, ref) {
     return h(AriaSwitchButton, { ...(props as AriaSwitchButtonProps), ref, ...{ isDisabled: disabled }, className: cx('muxui-switch-field__button', className) });

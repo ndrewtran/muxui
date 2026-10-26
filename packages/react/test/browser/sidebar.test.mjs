@@ -165,7 +165,7 @@ function readSidebar() {
     .filter((node) => node.getClientRects().length > 0 && node.getBoundingClientRect().right > root.getBoundingClientRect().right + 0.5)
     .map((node) => node.className);
   return {
-    collapsed: root.hasAttribute('data-collapsed'),
+    collapsed: root.hasAttribute('data-muxui-collapsed'),
     width: root.getBoundingClientRect().width,
     railWidth: railContent + border,
     id: root.id,
@@ -261,7 +261,7 @@ for (const engine of browserEngines()) {
         const rail = probe.getBoundingClientRect().width + parseFloat(getComputedStyle(root).borderRightWidth);
         probe.remove();
         const width = root.getBoundingClientRect().width;
-        return root.hasAttribute('data-collapsed') === collapsed && (collapsed ? Math.abs(width - rail) < 0.5 : width > 200);
+        return root.hasAttribute('data-muxui-collapsed') === collapsed && (collapsed ? Math.abs(width - rail) < 0.5 : width > 200);
       }, { collapsed }, { message, report: () => document.querySelector('aside').getBoundingClientRect().width });
       // A key press makes RAC treat the next focus as keyboard focus, which is what shows tooltips.
       const focusByKeyboard = async (tab, selector) => { await tab.keyboard.press('Escape'); await tab.locator(selector).focus(); };
@@ -608,7 +608,7 @@ for (const engine of browserEngines()) {
         const { tab, context } = await open('?providers=2');
         try {
           const chord = await chordOf(tab);
-          const folds = () => tab.evaluate(() => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-collapsed')));
+          const folds = () => tab.evaluate(() => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-muxui-collapsed')));
           await tab.evaluate(() => { window.__prevented = []; window.addEventListener('keydown', (event) => { if (event.key.toLowerCase() === 'b') window.__prevented.push(event.defaultPrevented); }); });
           // Changing the first Provider's shortcut away and back must not move it ahead of the later one.
           for (const key of ['c', 'b']) {
@@ -616,12 +616,12 @@ for (const engine of browserEngines()) {
             await tab.waitForTimeout(100);
           }
           await tab.keyboard.press(chord);
-          await pollUntil(tab, () => document.querySelectorAll('aside')[1].hasAttribute('data-collapsed'), undefined, { message: `${engine}: the latest Provider handles a chord from outside both`, report: () => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-collapsed')) });
+          await pollUntil(tab, () => document.querySelectorAll('aside')[1].hasAttribute('data-muxui-collapsed'), undefined, { message: `${engine}: the latest Provider handles a chord from outside both`, report: () => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-muxui-collapsed')) });
           assert.deepEqual(await folds(), [false, true], `${engine}: only the latest Provider folded`);
           assert.deepEqual(await tab.evaluate(() => window.__prevented), [true], `${engine}: one handler prevented the default`);
           await focusByKeyboard(tab, 'a[href="#home"]');
           await tab.keyboard.press(chord);
-          await pollUntil(tab, () => document.querySelectorAll('aside')[0].hasAttribute('data-collapsed'), undefined, { message: `${engine}: the Provider holding focus handles the chord` });
+          await pollUntil(tab, () => document.querySelectorAll('aside')[0].hasAttribute('data-muxui-collapsed'), undefined, { message: `${engine}: the Provider holding focus handles the chord` });
           assert.deepEqual(await folds(), [true, true], `${engine}: the first Provider folded and the second kept its state`);
 
           await tab.locator('#shadow-host input').focus();
@@ -988,10 +988,10 @@ for (const engine of browserEngines()) {
           await fold.tab.keyboard.press('Escape');
           await fold.tab.locator(`a[href="${nested}"]`).focus();
           await fold.tab.keyboard.press(chord);
-          await fold.tab.waitForFunction(() => document.querySelector('aside').hasAttribute('data-collapsed'));
+          await fold.tab.waitForFunction(() => document.querySelector('aside').hasAttribute('data-muxui-collapsed'));
           assert.equal(await fold.tab.evaluate(nestedFocusedControl), header, `${engine}: folding moves focus from ${nested} to the outermost group header`);
           await fold.tab.keyboard.press(chord);
-          await fold.tab.waitForFunction(() => !document.querySelector('aside').hasAttribute('data-collapsed'));
+          await fold.tab.waitForFunction(() => !document.querySelector('aside').hasAttribute('data-muxui-collapsed'));
         }
         assert.deepEqual(fold.errors, [], `${engine}: folding logs no errors`);
       } finally {
@@ -1261,7 +1261,7 @@ function densityMetrics(name) {
   const toggle = style('.muxui-sidebar__nav-toggle');
   const rows = [...root.querySelectorAll('a[href], summary, button')].filter((node) => node.getClientRects().length > 0).map((node) => node.getBoundingClientRect().height);
   return {
-    density: root.getAttribute('data-density'),
+    density: root.getAttribute('data-muxui-sidebar-density'),
     tokens: {
       insetTiny: token('semantic-layout-inset-tiny'), insetTight: token('semantic-layout-inset-tight'), insetSmall: token('semantic-layout-inset-small'),
       insetMedium: token('semantic-layout-inset-medium'), insetLarge: token('semantic-layout-inset-large'), insetXlarge: token('semantic-layout-inset-xlarge'),
@@ -1313,8 +1313,8 @@ for (const engine of browserEngines()) {
         await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
         const [implicit, explicit, compact] = await Promise.all(['implicit', 'default', 'compact'].map((name) => tab.evaluate(densityMetrics, name)));
 
-        assert.equal(implicit.density, null, `${engine}: a Root without density has no data-density`);
-        assert.equal(explicit.density, null, `${engine}: density="default" has no data-density`);
+        assert.equal(implicit.density, null, `${engine}: a Root without density has no data-muxui-sidebar-density`);
+        assert.equal(explicit.density, null, `${engine}: density="default" has no data-muxui-sidebar-density`);
         assert.equal(compact.density, 'compact', `${engine}: a compact Root says so`);
         assert.deepEqual(explicit.spacing, implicit.spacing, `${engine}: density="default" computes the spacing of no density`);
         assert.deepEqual(explicit.kept, implicit.kept, `${engine}: density="default" keeps the sizes of no density`);
@@ -1553,7 +1553,7 @@ for (const engine of browserEngines()) {
           await menu.waitFor({ timeout: 5000 });
           await tab.keyboard.press(await tab.evaluate(() => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform) ? 'Meta+b' : 'Control+b')));
           await menu.waitFor({ state: 'detached', timeout: 5000 });
-          assert.equal(await tab.locator('aside[data-collapsed]').count(), 1, label('the chord folded the sidebar'));
+          assert.equal(await tab.locator('aside[data-muxui-collapsed]').count(), 1, label('the chord folded the sidebar'));
           await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-sidebar__toggle'), null, { message: label('focus moves to Toggle, not the page body'), report: () => document.activeElement?.outerHTML.slice(0, 120) });
           // A card whose children are not an AccountMenu has no button to see or tab to, and nothing to open.
           await tab.goto(`${url}/sidebar.html?layout=account&menu=none&scheme=${scheme}`, { waitUntil: 'networkidle' });

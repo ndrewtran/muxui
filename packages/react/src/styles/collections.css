@@ -308,11 +308,11 @@
   overflow: hidden;
 }
 
-.muxui-color-swatch[data-shape='circle'] {
+.muxui-color-swatch[data-muxui-shape='circle'] {
   border-radius: 50%;
 }
 
-.muxui-color-swatch[data-two-tone] {
+.muxui-color-swatch[data-muxui-two-tone] {
   background-image: linear-gradient(135deg, var(--muxui-color-swatch-primary) 50%, var(--muxui-color-swatch-secondary) 50%);
 }
 
@@ -400,17 +400,17 @@
 }
 
 :where(
-  .muxui-combo-box-popover[data-size='sm'],
-  .muxui-combo-box-list[data-size='sm'],
-  .muxui-select-popover[data-size='sm'],
-  .muxui-select-list[data-size='sm']
+  .muxui-combo-box-popover[data-muxui-size='sm'],
+  .muxui-combo-box-list[data-muxui-size='sm'],
+  .muxui-select-popover[data-muxui-size='sm'],
+  .muxui-select-list[data-muxui-size='sm']
 ) { --muxui-control-target-size: var(--muxui-control-size-sm); }
 
 :where(
-  .muxui-combo-box-popover[data-size='lg'],
-  .muxui-combo-box-list[data-size='lg'],
-  .muxui-select-popover[data-size='lg'],
-  .muxui-select-list[data-size='lg']
+  .muxui-combo-box-popover[data-muxui-size='lg'],
+  .muxui-combo-box-list[data-muxui-size='lg'],
+  .muxui-select-popover[data-muxui-size='lg'],
+  .muxui-select-list[data-muxui-size='lg']
 ) { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-combo-box-list {
@@ -650,7 +650,7 @@
   transition: opacity var(--muxui-grid-list-ripple-fade-duration, var(--muxui-semantic-motion-state-transition-duration)) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-grid-list-ripple[data-static] {
+.muxui-grid-list-ripple[data-muxui-static] {
   inset: 0;
   border-radius: inherit;
   transform: none;
@@ -1589,7 +1589,7 @@
   min-block-size: max-content;
 }
 /* MuxUI component source: select.css */
-:where(.muxui-select[data-size='sm']) {
+:where(.muxui-select[data-muxui-size='sm']) {
   --muxui-field-font-size: var(--muxui-semantic-typography-text-s-font-size);
 }
 
@@ -2086,7 +2086,7 @@
   padding: 0 calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
 }
 
-.muxui-tab-panel[data-hidden] {
+.muxui-tab-panel[data-muxui-hidden] {
   display: none;
 }
 
@@ -2147,7 +2147,7 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tag[data-color='brand'] {
+.muxui-tag[data-muxui-color='brand'] {
   --muxui-tag-text: var(--muxui-component-taggroup-brand-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-brand-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-brand-dot);
@@ -2158,7 +2158,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='success'] {
+.muxui-tag[data-muxui-color='success'] {
   --muxui-tag-text: var(--muxui-component-taggroup-success-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-success-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-success-dot);
@@ -2169,7 +2169,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='warning'] {
+.muxui-tag[data-muxui-color='warning'] {
   --muxui-tag-text: var(--muxui-component-taggroup-warning-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-warning-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-warning-dot);
@@ -2180,7 +2180,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='error'] {
+.muxui-tag[data-muxui-color='error'] {
   --muxui-tag-text: var(--muxui-component-taggroup-error-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-error-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-error-dot);
@@ -2191,7 +2191,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='red'] {
+.muxui-tag[data-muxui-color='red'] {
   --muxui-tag-text: var(--muxui-component-taggroup-red-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-red-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-red-dot);
@@ -2202,7 +2202,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='orange'] {
+.muxui-tag[data-muxui-color='orange'] {
   --muxui-tag-text: var(--muxui-component-taggroup-orange-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-orange-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-orange-dot);
@@ -2213,7 +2213,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='amber'] {
+.muxui-tag[data-muxui-color='amber'] {
   --muxui-tag-text: var(--muxui-component-taggroup-amber-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-amber-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-amber-dot);
@@ -2224,7 +2224,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='yellow'] {
+.muxui-tag[data-muxui-color='yellow'] {
   --muxui-tag-text: var(--muxui-component-taggroup-yellow-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-yellow-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-yellow-dot);
@@ -2235,7 +2235,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='lime'] {
+.muxui-tag[data-muxui-color='lime'] {
   --muxui-tag-text: var(--muxui-component-taggroup-lime-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-lime-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-lime-dot);
@@ -2246,7 +2246,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='green'] {
+.muxui-tag[data-muxui-color='green'] {
   --muxui-tag-text: var(--muxui-component-taggroup-green-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-green-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-green-dot);
@@ -2257,7 +2257,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='emerald'] {
+.muxui-tag[data-muxui-color='emerald'] {
   --muxui-tag-text: var(--muxui-component-taggroup-emerald-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-emerald-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-emerald-dot);
@@ -2268,7 +2268,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='teal'] {
+.muxui-tag[data-muxui-color='teal'] {
   --muxui-tag-text: var(--muxui-component-taggroup-teal-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-teal-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-teal-dot);
@@ -2279,7 +2279,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='bluegreen'] {
+.muxui-tag[data-muxui-color='bluegreen'] {
   --muxui-tag-text: var(--muxui-component-taggroup-bluegreen-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-bluegreen-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-bluegreen-dot);
@@ -2290,7 +2290,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='cyan'] {
+.muxui-tag[data-muxui-color='cyan'] {
   --muxui-tag-text: var(--muxui-component-taggroup-cyan-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-cyan-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-cyan-dot);
@@ -2301,7 +2301,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='sky'] {
+.muxui-tag[data-muxui-color='sky'] {
   --muxui-tag-text: var(--muxui-component-taggroup-sky-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-sky-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-sky-dot);
@@ -2312,7 +2312,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-color='indigo'] {
+.muxui-tag[data-muxui-color='indigo'] {
   --muxui-tag-text: var(--muxui-component-taggroup-indigo-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-indigo-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-indigo-dot);
@@ -2323,7 +2323,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='violet'] {
+.muxui-tag[data-muxui-color='violet'] {
   --muxui-tag-text: var(--muxui-component-taggroup-violet-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-violet-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-violet-dot);
@@ -2334,7 +2334,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='purple'] {
+.muxui-tag[data-muxui-color='purple'] {
   --muxui-tag-text: var(--muxui-component-taggroup-purple-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-purple-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-purple-dot);
@@ -2345,7 +2345,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='fuchsia'] {
+.muxui-tag[data-muxui-color='fuchsia'] {
   --muxui-tag-text: var(--muxui-component-taggroup-fuchsia-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-fuchsia-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-fuchsia-dot);
@@ -2356,7 +2356,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='pink'] {
+.muxui-tag[data-muxui-color='pink'] {
   --muxui-tag-text: var(--muxui-component-taggroup-pink-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-pink-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-pink-dot);
@@ -2367,7 +2367,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-color='rose'] {
+.muxui-tag[data-muxui-color='rose'] {
   --muxui-tag-text: var(--muxui-component-taggroup-rose-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-rose-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-rose-dot);
@@ -2387,44 +2387,44 @@
  * Hover adds 6 points and pressed 12, except strong pressed in dark, which adds 11 so its
  * label keeps 4.5:1 on the lightest hues under theme presets.
  */
-.muxui-tag[data-color]:not([data-color='neutral']) {
+.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral']) {
   --muxui-tag-edge: color-mix(in srgb, var(--muxui-tag-weak) 0%, var(--muxui-tag-heavy) 80%);
 }
 
-.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='soft'] {
+.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='soft'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 40%, var(--muxui-tag-heavy) 20%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 28%, var(--muxui-tag-heavy) 38%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 16%, var(--muxui-tag-heavy) 56%);
 }
 
-.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='outline'] {
+.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='outline'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 32%, var(--muxui-tag-heavy) 12%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 20%, var(--muxui-tag-heavy) 30%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 8%, var(--muxui-tag-heavy) 48%);
 }
 
-.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='dot'] {
+.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='dot'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 28%, var(--muxui-tag-heavy) 18%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 16%, var(--muxui-tag-heavy) 36%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 4%, var(--muxui-tag-heavy) 54%);
 }
 
-.muxui-tag[data-color]:not([data-color='neutral'])[data-variant='strong'] {
+.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='strong'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 32%, var(--muxui-tag-heavy) 52%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 20%, var(--muxui-tag-heavy) 70%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 0%, var(--muxui-tag-heavy) 90%);
 }
 
-.muxui-tag[data-variant='outline'] {
+.muxui-tag[data-muxui-variant='outline'] {
   /* An inset shadow, so the outline stays free for focus. */
   box-shadow: inset 0 0 0 1px var(--muxui-tag-edge);
 }
 
-.muxui-tag[data-variant='dot'] {
+.muxui-tag[data-muxui-variant='dot'] {
   color: var(--muxui-component-taggroup-tag-foreground);
 }
 
-.muxui-tag[data-variant='dot']::before {
+.muxui-tag[data-muxui-variant='dot']::before {
   content: '';
   flex: none;
   inline-size: 0.375rem;
@@ -2433,12 +2433,12 @@
   background-color: var(--muxui-tag-dot);
 }
 
-.muxui-tag[data-variant='strong'] {
+.muxui-tag[data-muxui-variant='strong'] {
   color: var(--muxui-tag-text-strong);
 }
 
 /* Neutral steps its strong fill up one weight from the neutral action background. */
-.muxui-tag[data-color='neutral'][data-variant='strong'] {
+.muxui-tag[data-muxui-color='neutral'][data-muxui-variant='strong'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 20%, transparent);
@@ -2898,12 +2898,12 @@
     box-shadow: none;
   }
 
-  .muxui-tag[data-variant='outline'] {
+  .muxui-tag[data-muxui-variant='outline'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
   }
 
-  .muxui-tag[data-variant='dot']::before {
+  .muxui-tag[data-muxui-variant='dot']::before {
     background-color: CanvasText;
     forced-color-adjust: none;
   }
@@ -2913,7 +2913,7 @@
     color: HighlightText !important;
   }
 
-  .muxui-tag[data-muxui-state-selected][data-variant='dot']::before {
+  .muxui-tag[data-muxui-state-selected][data-muxui-variant='dot']::before {
     background-color: HighlightText;
   }
 

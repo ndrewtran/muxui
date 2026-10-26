@@ -209,7 +209,7 @@ test('nonmodal Popover preserves outside interaction and respects dismissal poli
     await page.locator('#trigger').click();
     const popup = page.locator('.muxui-popover-positioner');
     await popup.waitFor();
-    assert.equal(await popup.getAttribute('data-modal'), 'false');
+    assert.equal(await popup.getAttribute('data-muxui-modal'), 'false');
     assert.equal(await page.locator('#root').getAttribute('inert'), null);
     assert.equal(await page.locator('#root').getAttribute('aria-hidden'), null);
     assert.equal(await page.locator('#trigger').evaluate((node) => document.activeElement === node), true);
@@ -235,7 +235,7 @@ test('nonmodal Popover preserves outside interaction and respects dismissal poli
     await page.locator('#trigger').click();
     await popup.waitFor();
     await page.evaluate(() => window.setOverlayModal(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'false');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'false');
     await page.locator('#inside').focus();
     await page.locator('#outside').focus();
     assert.equal(await page.locator('#outside').evaluate((node) => document.activeElement === node), true, 'switching to non-modal releases the prior focus scope');
@@ -314,14 +314,14 @@ test('Popover modality changes preserve consumer state and DOM identity while co
       })), { sameDraft: true, sameSurface: true, mounts: 1, unmounts: 0 });
     };
     await page.evaluate(() => window.setOverlayModal(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'false');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'false');
     await assertPreserved();
     await page.locator('#outside').focus();
     assert.equal(await page.locator('#outside').evaluate((node) => document.activeElement === node), true);
     assert.equal(await page.locator('#root').evaluate((node) => node.inert || node.getAttribute('aria-hidden') === 'true'), false);
 
     await page.evaluate(() => window.setOverlayModal(true));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'true');
     await assertPreserved();
     assert.equal(await surface.evaluate((node) => document.activeElement === node), true, 'reentering modal mode brings outside focus into the existing surface');
     assert.equal(await page.locator('#root').evaluate((node) => node.inert || node.getAttribute('aria-hidden') === 'true'), true);
@@ -331,7 +331,7 @@ test('Popover modality changes preserve consumer state and DOM identity while co
     await page.keyboard.press('Shift+Tab');
     assert.equal(await page.locator('#inside').evaluate((node) => document.activeElement === node), true);
     await page.evaluate(() => window.setOverlayModal(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'false');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'false');
     await assertPreserved();
     assert.equal(await page.locator('#inside').evaluate((node) => document.activeElement === node), true, 'releasing containment preserves focus within the existing content');
     await page.evaluate(() => window.setOverlayDismissable(true));

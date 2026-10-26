@@ -14,15 +14,15 @@ function swatch(props, locale = 'en-US') {
 
 test('ColorSwatch preserves the default preview and describes both colours in a split preview', () => {
   const single = swatch({ color: '#ff0000' });
-  assert.equal(single.dataset.shape, 'square');
-  assert.equal(single.hasAttribute('data-two-tone'), false);
+  assert.equal(single.dataset.muxuiShape, 'square');
+  assert.equal(single.hasAttribute('data-muxui-two-tone'), false);
   assert.equal(single.style.backgroundColor, 'rgb(255, 0, 0)');
   assert.match(single.getAttribute('aria-label'), /red/i);
 
   const split = swatch({ color: '#ff000080', secondaryColor: '#0000ff80', shape: 'circle', id: 'theme', 'aria-label': 'Workspace' });
   assert.equal(split.id, 'theme');
-  assert.equal(split.dataset.shape, 'circle');
-  assert.equal(split.hasAttribute('data-two-tone'), true);
+  assert.equal(split.dataset.muxuiShape, 'circle');
+  assert.equal(split.hasAttribute('data-muxui-two-tone'), true);
   assert.equal(split.style.backgroundColor, 'transparent');
   assert.match(split.style.getPropertyValue('--muxui-color-swatch-primary'), /rgba\(255, 0, 0, 0\.5/);
   assert.match(split.style.getPropertyValue('--muxui-color-swatch-secondary'), /rgba\(0, 0, 255, 0\.5/);

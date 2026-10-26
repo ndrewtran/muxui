@@ -244,7 +244,7 @@ for (const engine of browserEngines()) {
           // Calls the latest request controller the way a caller's handler would.
           tools: (method, content) => tab.evaluate(({ method, content }) => window.__tools[method](content), { method, content }),
           aborted: () => tab.evaluate(() => window.__tools.signal.aborted),
-          phase: (name) => tab.locator(`${barSelector}[data-phase="${name}"]`),
+          phase: (name) => tab.locator(`${barSelector}[data-muxui-phase="${name}"]`),
         };
         return api;
       };

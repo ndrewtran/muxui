@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ff9645982145d197b37f80b731fe542574689a660eece1f1fe3b4ef047fb3cc1 -->
+<!-- @generated-content-sha256: sha256:f45c489a30e812d40cc4678989687bdb0b1218b0c880368c57083899be3ff6f0 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -399,7 +399,7 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 - Changing modal while open keeps the existing content, uncontrolled values, and child state.
 - Entering modal mode focuses the dialog surface when focus is outside it.
 - Keep the muxui-popover-positioner and muxui-popover selectors, and the data-muxui-state-placement and transition state attributes.
-- data-modal on the positioner exposes the modal setting for consumer styling.
+- data-muxui-modal on the positioner exposes the modal setting for consumer styling.
 - A dismissable non-modal Popover also closes on an outside press, and on Escape while focus is on the trigger.
 - With dismissable set to false, Escape, an outside press, and the trigger do not close the Popover, in modal and non-modal mode.
 - A button with slot="close" in the content still closes it.

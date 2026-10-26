@@ -1027,15 +1027,15 @@ function ImagePreview({ onLoad, ...args }) {
   const read = React.useCallback((loaded = false) => {
     const image = imageRef.current;
     if (!image) return;
-    setOutcome(image.hasAttribute('data-error') ? 'error'
-      : image.hasAttribute('data-fallback') ? 'fallback'
+    setOutcome(image.hasAttribute('data-muxui-error') ? 'error'
+      : image.hasAttribute('data-muxui-fallback') ? 'fallback'
       : loaded || image.complete && image.naturalWidth > 0 ? 'primary' : 'loading');
   }, []);
   React.useEffect(() => {
     const image = imageRef.current;
     if (!image) return undefined;
     const observer = new MutationObserver(() => read());
-    observer.observe(image, { attributes: true, attributeFilter: ['data-fallback', 'data-error'] });
+    observer.observe(image, { attributes: true, attributeFilter: ['data-muxui-fallback', 'data-muxui-error'] });
     return () => observer.disconnect();
   }, [read]);
   React.useEffect(() => read(), [read, src, args.srcSet, args.fallbackSrc, args.fallbackSrcSet]);
@@ -1048,7 +1048,7 @@ function ImagePreview({ onLoad, ...args }) {
       width: args.width ?? 160,
       height: args.height ?? 96,
       // A failed image would draw the browser's alt text and broken-image icon in colours the audit cannot verify,
-      // so only its box stays; the caption and the data-error attribute carry the outcome.
+      // so only its box stays; the caption and the data-muxui-error attribute carry the outcome.
       style: outcome === 'error' ? { ...args.style, visibility: 'hidden' } : args.style,
       onLoad: (event) => {
         onLoad?.(event);
@@ -2646,7 +2646,7 @@ const BROWSER_PROOF_PLANS = {
     const root = browserProofElement(canvasElement, '.muxui-color-swatch', 'ColorSwatch');
     const bounds = root.getBoundingClientRect();
     assertBrowser(bounds.width > 0 && bounds.height > 0, 'color swatch has measurable geometry');
-    assertBrowser(root.getAttribute('data-color') || getComputedStyle(root).backgroundColor !== '', 'color swatch exposes a color presentation');
+    assertBrowser(root.getAttribute('data-muxui-color') || getComputedStyle(root).backgroundColor !== '', 'color swatch exposes a color presentation');
   },
   ColorSwatchPicker: activationPlan('ColorSwatchPicker', '.muxui-color-swatch-picker-item', 'change'),
   ColorWheel: async ({ canvasElement }) => {

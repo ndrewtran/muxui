@@ -39,7 +39,7 @@ test('SelectNative renders native options, field associations, and visual/native
   assert.equal(select.name, 'panel');
   assert.equal(select.required, true);
   assert.equal(select.getAttribute('size'), '4');
-  assert.equal(select.dataset.size, 'md', 'numeric size uses native list rows with md visual styling');
+  assert.equal(select.dataset.muxuiSize, 'md', 'numeric size uses native list rows with md visual styling');
   assert.equal(select.getAttribute('aria-invalid'), 'true');
   assert.equal(label.htmlFor, 'panel');
   assert.match(select.getAttribute('aria-labelledby') ?? '', new RegExp(label.id, 'u'));
@@ -52,7 +52,7 @@ test('SelectNative renders native options, field associations, and visual/native
 
   for (const size of ['sm', 'md', 'lg']) {
     const sized = new JSDOM(renderToStaticMarkup(React.createElement(SelectNative, { 'aria-label': 'Panel', size }, optionTree()))).window.document.querySelector('select');
-    assert.equal(sized?.dataset.size, size);
+    assert.equal(sized?.dataset.muxuiSize, size);
     assert.equal(sized?.hasAttribute('size'), false, `${size} is a Mux visual size, not native list size`);
   }
   for (const size of [0, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
@@ -211,7 +211,7 @@ test('SelectNative multiple keeps native multi-selection, form data, and reset',
     const select = document.querySelector('select');
     assert.equal(select.multiple, true);
     assert.equal(select.getAttribute('size'), '3');
-    assert.equal(select.dataset.size, 'md');
+    assert.equal(select.dataset.muxuiSize, 'md');
     assert.deepEqual(new FormData(form).getAll('panels'), ['inbox']);
 
     select.querySelector('option[value="research"]').selected = true;

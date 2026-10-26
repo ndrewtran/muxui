@@ -78,7 +78,7 @@ for (const engine of browserEngines()) {
             name: card.querySelector('h3').firstChild.textContent,
             flagged: card.textContent.includes('Recommended'),
             rule: parseFloat(getComputedStyle(card).borderTopWidth),
-            variant: card.querySelector('button').getAttribute('data-variant'),
+            variant: card.querySelector('button').getAttribute('data-muxui-variant'),
           })));
           assert.deepEqual(plans, [
             { name: 'Starter', flagged: false, rule: 1, variant: 'neutral' },

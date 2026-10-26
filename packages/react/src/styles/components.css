@@ -286,9 +286,9 @@
 }
 
 /* Explicit md keeps a checkbox at md inside a sized CheckboxGroup. */
-.muxui-checkbox[data-size='md'] { --muxui-control-target-size: var(--muxui-control-size-md); }
-.muxui-checkbox[data-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
-.muxui-checkbox[data-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
+.muxui-checkbox[data-muxui-size='md'] { --muxui-control-target-size: var(--muxui-control-size-md); }
+.muxui-checkbox[data-muxui-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
+.muxui-checkbox[data-muxui-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-checkbox-indicator,
 .muxui-checkbox-field__indicator {
@@ -405,7 +405,7 @@
   width: 100%;
 }
 
-.muxui-disclosure[data-align='end'] {
+.muxui-disclosure[data-muxui-align='end'] {
   align-items: flex-end;
 }
 
@@ -442,7 +442,7 @@
   width: fit-content;
 }
 
-.muxui-disclosure[data-align='end'] .muxui-disclosure-trigger {
+.muxui-disclosure[data-muxui-align='end'] .muxui-disclosure-trigger {
   align-self: flex-end;
 }
 
@@ -942,7 +942,7 @@
   background-color: var(--muxui-button-background-pressed);
 }
 
-.muxui-button[data-variant='primary'] {
+.muxui-button[data-muxui-variant='primary'] {
   --muxui-button-background: var(--muxui-component-button-background, var(--muxui-semantic-selection-track));
   --muxui-button-background-hover: var(--muxui-semantic-action-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-background-pressed);
@@ -952,7 +952,7 @@
 }
 
 /* The seven variants are represented directly on the Mux root. */
-.muxui-button[data-variant='neutral'] {
+.muxui-button[data-muxui-variant='neutral'] {
   --muxui-button-background: var(--muxui-semantic-action-neutral-background);
   --muxui-button-background-hover: var(--muxui-semantic-action-neutral-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-neutral-background-pressed);
@@ -961,7 +961,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='ghost'] {
+.muxui-button[data-muxui-variant='ghost'] {
   --muxui-button-background: transparent;
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent);
   --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent);
@@ -970,7 +970,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='danger'] {
+.muxui-button[data-muxui-variant='danger'] {
   --muxui-button-background: var(--muxui-semantic-action-danger-background);
   --muxui-button-background-hover: var(--muxui-semantic-action-danger-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-danger-background-pressed);
@@ -979,7 +979,7 @@
   --muxui-button-shadow: var(--muxui-semantic-elevation-control);
 }
 
-.muxui-button[data-variant='danger-neutral'] {
+.muxui-button[data-muxui-variant='danger-neutral'] {
   --muxui-button-background: var(--muxui-semantic-action-danger-background-subtle);
   --muxui-button-background-hover: var(--muxui-semantic-action-danger-background-muted);
   --muxui-button-background-pressed: var(--muxui-semantic-action-danger-background-muted);
@@ -988,7 +988,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='danger-ghost'] {
+.muxui-button[data-muxui-variant='danger-ghost'] {
   --muxui-button-background: transparent;
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-action-danger-background) 10%, transparent);
   --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-action-danger-background) 5%, transparent);
@@ -997,7 +997,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='inverse'] {
+.muxui-button[data-muxui-variant='inverse'] {
   --muxui-button-background: var(--muxui-semantic-surface-strong);
   --muxui-button-background-hover: var(--muxui-semantic-surface-emphasis);
   /* One neutral step past hover; the semantic scale mirrors it in dark. */
@@ -1007,7 +1007,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-size='sm'] {
+.muxui-button[data-muxui-size='sm'] {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-small);
   padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1em) / 2));
@@ -1016,14 +1016,14 @@
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
-.muxui-button[data-size='md'] {
+.muxui-button[data-muxui-size='md'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding-inline: var(--muxui-component-button-padding-inline, var(--muxui-semantic-control-padding-inline));
   padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
   min-block-size: var(--muxui-component-button-min-height, var(--muxui-control-size-md));
 }
 
-.muxui-button[data-size='lg'] {
+.muxui-button[data-muxui-size='lg'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-large);
   padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1em) / 2));

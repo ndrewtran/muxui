@@ -408,7 +408,7 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   assert.equal(result.violations.length, 0, `${scheme} Button Matrix has axe violations:\n${formatViolations(result.violations)}`);
 
   const geometry = await page.evaluate(() => Object.fromEntries(['sm', 'md', 'lg'].map((size) => {
-    const button = document.querySelector(`.muxui-button[data-variant="primary"][data-size="${size}"]`);
+    const button = document.querySelector(`.muxui-button[data-muxui-variant="primary"][data-muxui-size="${size}"]`);
     if (!button) throw new Error(`missing primary ${size} button`);
     const rect = button.getBoundingClientRect();
     return [size, { width: rect.width, height: rect.height }];
@@ -416,7 +416,7 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   assert.ok(geometry.sm.height < geometry.md.height && geometry.md.height < geometry.lg.height, `${scheme} Button Matrix heights must increase sm < md < lg: ${JSON.stringify(geometry)}`);
   assert.ok(geometry.sm.width < geometry.md.width && geometry.md.width < geometry.lg.width, `${scheme} Button Matrix widths must increase sm < md < lg: ${JSON.stringify(geometry)}`);
 
-  const destructive = await page.locator('.muxui-button[data-variant="danger"][data-size="md"]').evaluate((button) => {
+  const destructive = await page.locator('.muxui-button[data-muxui-variant="danger"][data-muxui-size="md"]').evaluate((button) => {
     const style = getComputedStyle(button);
     return { color: style.color, backgroundColor: style.backgroundColor };
   });
@@ -426,7 +426,7 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   if (scheme === 'dark') {
     const pressedBackgrounds = [];
     for (const variant of ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse']) {
-      const selector = `.muxui-button[data-variant="${variant}"][data-size="md"]`;
+      const selector = `.muxui-button[data-muxui-variant="${variant}"][data-muxui-size="md"]`;
       const button = page.locator(selector);
       const box = await button.boundingBox();
       assert.ok(box, `missing ${variant} button bounds`);

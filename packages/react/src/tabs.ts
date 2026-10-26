@@ -76,7 +76,7 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
       className: classNames('muxui-tabs', className),
-      ...{ 'data-size': resolvedSize, 'data-variant': resolvedVariant },
+      ...{ 'data-muxui-size': resolvedSize, 'data-muxui-variant': resolvedVariant },
     },
     React.createElement(TabsMotion, { orientation, variant: resolvedVariant, disabled }, React.createElement(AriaTabList<NormalizedItem>, {
       items: normalized,

@@ -337,7 +337,7 @@ function observeGridListRipple(root) {
     const minimumVisibleMs = perceivedMs;
     const fadeDurationMs = motion ? motion.duration * 1000 : (reduced ? 80 : 0);
     if (isStatic) {
-      ripple.setAttribute('data-static', 'true');
+      ripple.setAttribute('data-muxui-static', 'true');
     } else {
       const x = Number.isFinite(clientX) ? Math.max(0, Math.min(rect.width, clientX - rect.left)) : rect.width / 2;
       const y = Number.isFinite(clientY) ? Math.max(0, Math.min(rect.height, clientY - rect.top)) : rect.height / 2;

@@ -8,13 +8,14 @@ import { booleanStates, enumeratedStates } from '../../src/styling-contract.ts';
 
 const names = (list) => Object.fromEntries(list.map((name) => [name, ['state', name]]));
 const kinds = (kind, list) => Object.fromEntries(list.map((name) => [name, [kind]]));
-const undecided = (reason) => ['unresolved', reason, 'CSS Stage 2 PR 2'];
 
 /**
  * How each catalog state name relates to the contract: `state` is a boolean state, `enum` an enumerated state
- * and value, `prop` a reflected prop, `environment` a scheme or viewport, `derived` a state computed from others
- * (a missing state, a value range, a lifecycle phase). Only `unresolved` entries are open work, each with its
- * reason and the PR that settles it. A name used for two meanings (`collapsed`) takes the one with an attribute today.
+ * and value, `prop` a reflected prop, `status` a status a family writes for its own lifecycle (data-muxui-<name>, not
+ * a state React Aria drives), `environment` a scheme or viewport, `derived` a state computed from others (a missing
+ * state, a value range, a lifecycle phase, with no attribute of its own). A name used for two meanings (`collapsed`)
+ * takes the one with an attribute today. Every name is settled: `unresolved` remains a kind only so a new catalog
+ * state cannot pass without a reason and the PR that settles it.
  */
 export const catalogStateKinds = {
   ...names([
@@ -35,15 +36,15 @@ export const catalogStateKinds = {
     'checked', 'unchecked', 'unselected', 'mixed', 'closed', 'dismissed', 'visible', 'idle', 'default', 'complete',
     'partial', 'zero', 'progress', 'filled', 'filtered', 'submitting', 'tag-focused', 'color-open',
   ]),
-  loading: undecided('Avatar and Image set a Mux load status that is not on the closed list.'),
-  loaded: undecided('Avatar and Image set a Mux load status that is not on the closed list.'),
-  fallback: undecided('Avatar and Image set a Mux load status that is not on the closed list.'),
-  error: undecided('Avatar and Image set data-error for a failed load; PromptComposer means something else.'),
-  selection: undecided('TextEditor owns its selection and selection request flow.'),
-  'selection-collapsed': undecided('TextEditor owns its selection and selection request flow.'),
-  'selection-request-error': undecided('TextEditor owns its selection and selection request flow.'),
-  'selection-request-pending': undecided('TextEditor owns its selection and selection request flow.'),
-  'selection-request-review': undecided('TextEditor owns its selection and selection request flow.'),
+  // Avatar and Image write these about their image: data-muxui-loaded, data-muxui-fallback and data-muxui-error, and
+  // Avatar's data-muxui-image-state holds loading, loaded, fallback or error. PromptComposer reflects its error prop as data-muxui-error.
+  loaded: ['status', 'loaded'],
+  fallback: ['status', 'fallback'],
+  error: ['status', 'error'],
+  // The phase before an image settles has no attribute of its own: it is image-state "loading", or none of the three above.
+  loading: ['derived'],
+  // TextEditor derives these from its selection and its selection request flow and shows them as which control renders.
+  ...kinds('derived', ['selection', 'selection-collapsed', 'selection-request-error', 'selection-request-pending', 'selection-request-review']),
 };
 
 /** The anatomy parts and state names of every component in the catalog. */
@@ -83,8 +84,9 @@ export function stateFailures(catalogStates, classification = catalogStateKinds)
     if (!catalogStates.has(name)) failures.push(`stale classification ${name}`);
     if (kind === 'state' && !booleanStates.includes(target[0])) failures.push(`${name} names ${target[0]}, which is not a boolean state`);
     if (kind === 'enum' && !enumeratedStates[target[0]]?.includes(target[1])) failures.push(`${name} names ${target.join('=')}, which is not an enumerated state value`);
+    if (kind === 'status' && !target[0]) failures.push(`${name} is a status without the attribute it names`);
     if (kind === 'unresolved' && !(target[0] && target[1])) failures.push(`${name} is unresolved without a reason and a PR`);
-    if (!['state', 'enum', 'prop', 'environment', 'derived', 'unresolved'].includes(kind)) failures.push(`${name} has unknown kind ${kind}`);
+    if (!['state', 'enum', 'prop', 'status', 'environment', 'derived', 'unresolved'].includes(kind)) failures.push(`${name} has unknown kind ${kind}`);
   }
   return failures;
 }

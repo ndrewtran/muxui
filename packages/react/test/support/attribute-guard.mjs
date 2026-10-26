@@ -302,3 +302,102 @@ export function racStateWriters(manifestPath, attributes) {
   }
   return writers;
 }
+
+/**
+ * The reflected props and family statuses Mux writes, with the name each had before CSS Stage 2: `data-<name>` became
+ * `data-muxui-<name>`, except Sidebar's `data-density`, which would collide with the theme scope `data-muxui-density`.
+ */
+export const renamedPropAttributes = Object.freeze({
+  'data-size': 'data-muxui-size',
+  'data-variant': 'data-muxui-variant',
+  'data-color': 'data-muxui-color',
+  'data-collapsed': 'data-muxui-collapsed',
+  'data-foldable': 'data-muxui-foldable',
+  'data-change': 'data-muxui-change',
+  'data-status': 'data-muxui-status',
+  'data-complete': 'data-muxui-complete',
+  'data-phase': 'data-muxui-phase',
+  'data-instruction': 'data-muxui-instruction',
+  'data-wrap': 'data-muxui-wrap',
+  'data-shape': 'data-muxui-shape',
+  'data-two-tone': 'data-muxui-two-tone',
+  'data-static': 'data-muxui-static',
+  'data-hidden': 'data-muxui-hidden',
+  'data-sender': 'data-muxui-sender',
+  'data-selectable': 'data-muxui-selectable',
+  'data-align': 'data-muxui-align',
+  'data-part': 'data-muxui-part',
+  'data-motion-pressed': 'data-muxui-motion-pressed',
+  'data-attached': 'data-muxui-attached',
+  'data-card-type': 'data-muxui-card-type',
+  'data-mode': 'data-muxui-mode',
+  'data-language': 'data-muxui-language',
+  'data-line-number': 'data-muxui-line-number',
+  'data-line-numbers': 'data-muxui-line-numbers',
+  'data-copy-state': 'data-muxui-copy-state',
+  'data-diff-strategy': 'data-muxui-diff-strategy',
+  'data-marker': 'data-muxui-marker',
+  'data-row-id': 'data-muxui-row-id',
+  'data-streaming': 'data-muxui-streaming',
+  'data-panel-id': 'data-muxui-panel-id',
+  'data-handle-id': 'data-muxui-handle-id',
+  'data-modal': 'data-muxui-modal',
+  'data-selection-traveling': 'data-muxui-selection-traveling',
+  'data-error': 'data-muxui-error',
+  'data-loaded': 'data-muxui-loaded',
+  'data-image-state': 'data-muxui-image-state',
+  'data-fallback': 'data-muxui-fallback',
+  'data-markdown-error': 'data-muxui-markdown-error',
+  'data-density': 'data-muxui-sidebar-density',
+});
+
+/**
+ * Text no longer to be read as current: records of what was decided or measured then, and design mockups that carry their
+ * own markup and styles and never load the shipped stylesheet. They keep the names they were written with.
+ */
+export const historicalPaths = Object.freeze({
+  'decisions/': 'decision records state what the attributes were when they were decided',
+  'tests/evidence/': 'review evidence records what was reviewed',
+  'packages/react/advisory/': 'advisory mockups are self-contained pages with their own styles',
+});
+
+/**
+ * The renamed names that are not Mux's in a path: another product's attribute that happens to share a name. Each entry
+ * must still occur in its path, so a stale exemption fails.
+ */
+export const foreignAttributes = Object.freeze([
+  { path: 'apps/docs/', names: ['data-dragging', 'data-mode'], reason: 'the docs block viewer owns them' },
+  { path: 'apps/react-storybook/.storybook/theme.mjs', names: ['data-selected', 'data-hovered'], reason: "Storybook's manager UI sets them on its own elements" },
+  { path: 'apps/react-storybook/.storybook/component-docs-page.mjs', names: ['data-part', 'data-type', 'data-${...}'], reason: "the component docs page marks its own parts, type declarations and closing rows" },
+  { path: 'apps/react-storybook/.storybook/preview.css', names: ['data-part'], reason: "the component docs page marks its own parts" },
+  { path: 'apps/react-storybook/test/typed-reference.test.mjs', names: ['data-part', 'data-type', 'data-${...}'], reason: "reads the docs page's own markers" },
+  { path: 'apps/react-storybook/test/storybook-a11y.test.mjs', names: ['data-part', 'data-type'], reason: "reads the docs page's own markers" },
+  { path: 'apps/react-storybook/test/storybook-colors.test.mjs', names: ['data-status', 'data-hovered', 'data-selected'], reason: "draws and reads Storybook's manager UI" },
+  { path: 'apps/scale/test/browser/docs-blocks.test.mjs', names: ['data-mode'], reason: 'reads the docs block viewer' },
+  { path: 'packages/react/test/browser/data-diff.test.mjs', names: ['data-${...}'], reason: 'the template builds screenshot file names that start with data-diff-' },
+  { path: 'catalog/patterns/agent-trace/', names: ['data-open'], reason: "the pattern's own element marks its disclosure" },
+  { path: 'packages/react/test/browser/pattern-agent-trace.test.mjs', names: ['data-open'], reason: "reads the pattern's own element" },
+  { path: 'packages/react/README.md', names: ['data-placeholder', 'data-disabled'], reason: 'the README names the two attributes React Aria keeps, the date segments\' data-placeholder and the hidden picker input\'s data-disabled' },
+  { path: 'packages/react/src/generate.mjs', names: ['data-placeholder', 'data-disabled'], reason: 'the README text it generates names them' },
+  { path: 'packages/react/src/text-editor/text-editor.css', names: ['data-placeholder'], reason: "Tiptap's Placeholder extension writes it and the stylesheet reads it with attr()" },
+  { path: 'tooling/audits/repository-policy/test/component-source-impact.test.mjs', names: ['data-hovered', 'data-disabled', 'data-selected', 'data-indeterminate', 'data-focused'], reason: 'selector text handed to the planner as an example' },
+]);
+
+/** Files that define or probe the old names on purpose. */
+export const probePaths = Object.freeze([
+  'packages/react/src/substrate.ts', 'packages/react/src/styling-contract.ts',
+  'packages/react/test/support/attribute-guard.mjs', 'packages/react/test/support/state-matrix.mjs',
+  'packages/react/test/styling-tokens.test.mjs', 'packages/react/test/substrate.test.mjs',
+  // Asserts on the wording of the retained advisory text, which keeps the names it was written with.
+  'packages/react/test/capability-enrichment.test.mjs',
+]);
+
+/** Every use of a name in `forbidden` in one file, by what kind of file it is: stylesheet, script or other text. */
+export function attributeFindingsIn(path, text, forbidden) {
+  const banned = [...forbidden];
+  if (!text.includes('data-') && !text.includes('dataset')) return [];
+  if (/\.css$/u.test(path)) return styleAttributeFindings(text, banned).map(({ attribute, via }) => ({ attribute, via }));
+  if (/\.(?:mjs|cjs|js|jsx|ts|tsx|mts|cts)$/u.test(path)) return scriptAttributeFindings(text, path, banned).map(({ attribute, via, line }) => ({ attribute, via, line }));
+  const set = new Set(banned);
+  return [...text.matchAll(ATTRIBUTE)].map(([attribute]) => attribute).filter((attribute) => set.has(attribute)).map((attribute) => ({ attribute, via: 'text' }));
+}

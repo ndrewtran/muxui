@@ -647,9 +647,9 @@ test('IconButton offers only runtime-admitted variants and keeps its ghost defau
   assert.equal(control.options.includes('warning'), false);
   for (const variant of control.options) {
     const html = renderToStaticMarkup(renderFamily('IconButton', { variant }));
-    assert.match(html, new RegExp(`data-variant="${variant}"`, 'u'));
+    assert.match(html, new RegExp(`data-muxui-variant="${variant}"`, 'u'));
   }
-  assert.match(renderToStaticMarkup(renderFamily('IconButton', {})), /data-variant="ghost"/u);
+  assert.match(renderToStaticMarkup(renderFamily('IconButton', {})), /data-muxui-variant="ghost"/u);
 });
 
 test('native select stock mode seeds decode values and forward the original change event', async () => {
@@ -831,7 +831,7 @@ test('color mode stories update controlled values and restore an independent unc
     await act(async () => root.render(themed(controlled, controlled.args, 'dark')));
     assert.equal(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).mode, 'dark');
     await act(async () => root.render(themed(controlled, { ...controlled.args, storageKey: 'controlled-explicit-mode', mode: 'light', onModeChange: (value) => changes.push(value) }, 'dark')));
-    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'light');
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), 'light');
     await act(async () => host.querySelector('input').click());
     assert.deepEqual(changes, ['dark']);
     assert.equal(JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent).mode, 'dark');
@@ -840,27 +840,27 @@ test('color mode stories update controlled values and restore an independent unc
     const restoreKey = 'muxui-storybook-restore-probe';
     window.localStorage.setItem(restoreKey, 'light');
     await act(async () => root.render(themed(uncontrolled, { ...uncontrolled.args, storageKey: restoreKey, onModeChange: (value) => changes.push(value) }, 'dark')));
-    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'light');
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), 'light');
     assert.equal(JSON.parse(host.querySelector('[data-muxui-uncontrolled-values]').textContent).defaultMode, 'dark');
     const storageKey = 'muxui-storybook-uncontrolled-interaction';
     await act(async () => root.render(themed(uncontrolled, { ...uncontrolled.args, storageKey, defaultMode: 'light', onModeChange: (value) => changes.push(value) }, 'dark')));
-    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'light');
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), 'light');
     const defaults = host.querySelector('[data-muxui-uncontrolled-values]').textContent;
     await act(async () => host.querySelector('input').click());
-    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'dark');
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), 'dark');
     assert.equal(host.querySelector('[data-muxui-uncontrolled-values]').textContent, defaults);
     assert.equal(window.localStorage.getItem(storageKey), 'dark');
     assert.deepEqual(toolbarUpdates, []);
     const existingKeys = new Set(Object.keys(window.localStorage));
     for (const scheme of ['light', 'dark']) {
       await act(async () => root.render(themed(uncontrolled, uncontrolled.args, scheme, `seed-${scheme}`)));
-      assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), scheme);
+      assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), scheme);
     }
     const specimenKeys = Object.keys(window.localStorage).filter((key) => !existingKeys.has(key));
     assert.equal(specimenKeys.length, 2);
     assert.deepEqual(new Set(specimenKeys.map((key) => window.localStorage.getItem(key))), new Set(['light', 'dark']));
     await act(async () => root.render(themed(uncontrolled, uncontrolled.args, 'light', 'seed-dark')));
-    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), 'dark');
+    assert.equal(host.querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), 'dark');
     assert.equal(JSON.parse(host.querySelector('[data-muxui-uncontrolled-values]').textContent).defaultMode, 'dark');
   } finally {
     await act(async () => root.unmount());
@@ -880,7 +880,7 @@ test('resize controlled and event harnesses preserve size records and change met
   try {
     for (const story of [createControlledStory(record), createEventsStory(record)]) {
       await act(async () => root.render(story.render({ ...story.args, ...args })));
-      const handle = host.querySelector('[data-handle-id="main-side"]');
+      const handle = host.querySelector('[data-muxui-handle-id="main-side"]');
       await act(async () => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })));
       assert.deepEqual(changes.at(-1), [{ main: 61, side: 39 }, { handleId: 'main-side', source: 'keyboard' }]);
       assert.deepEqual(commits.at(-1), changes.at(-1));
@@ -1001,7 +1001,7 @@ test('named adapter state specimens render actual items, progress values, and or
   const separator = stateDocument('Separator');
   assert.equal(section(separator, 'vertical').querySelector('[role="separator"]').getAttribute('aria-orientation'), 'vertical');
   const mode = stateDocument('ColorModeToggle');
-  for (const state of ['light', 'dark']) assert.equal(section(mode, state).querySelector('.muxui-color-mode-toggle').getAttribute('data-mode'), state);
+  for (const state of ['light', 'dark']) assert.equal(section(mode, state).querySelector('.muxui-color-mode-toggle').getAttribute('data-muxui-mode'), state);
 });
 
 test('controls offer only what the public types admit and match their value kinds', () => {
@@ -1038,7 +1038,7 @@ test('controls offer only what the public types admit and match their value kind
   assert.deepEqual(controls('Avatar').size.options, ['sm', 'md', 'lg']);
   const nativeList = new JSDOM(renderToStaticMarkup(renderFamily('SelectNative', { size: rowCount }))).window.document.querySelector('select');
   assert.equal(nativeList.getAttribute('size'), String(rowCount));
-  assert.equal(nativeList.getAttribute('data-size'), 'md', 'a native row count keeps the medium visual size');
+  assert.equal(nativeList.getAttribute('data-muxui-size'), 'md', 'a native row count keeps the medium visual size');
   // A control cannot edit a function, so those props stay off.
   for (const [family, name] of [['CommandPalette', 'filter'], ['CommandPalette', 'close'], ['TagSelect', 'getItemLabel'], ['Lightbox', 'renderContent'], ['InputTags', 'validate']]) {
     assert.equal(controls(family)[name].control, false, `${family}.${name}`);
@@ -1053,13 +1053,13 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
   assert.equal(image.getAttribute('srcset'), '/ada.png 1x');
   assert.equal(image.getAttribute('alt'), 'Ada');
   const root = routed.querySelector('.muxui-avatar');
-  assert.equal(root.getAttribute('data-size'), 'lg');
+  assert.equal(root.getAttribute('data-muxui-size'), 'lg');
   assert.equal(root.hasAttribute('alt'), false);
   assert.equal(root.hasAttribute('src'), false);
   assert.equal(routed.querySelector('.muxui-avatar__fallback').textContent, 'AL');
   // With no source the initials show, instead of an invisible loaded pixel.
   const bare = doc({});
-  assert.equal(bare.querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
+  assert.equal(bare.querySelector('.muxui-avatar').getAttribute('data-muxui-image-state'), 'fallback');
   assert.equal(bare.querySelector('.muxui-avatar__fallback').hidden, false);
   assert.equal(bare.querySelector('.muxui-avatar__fallback').textContent, 'WS');
 
@@ -1072,24 +1072,24 @@ test('Avatar routes image inputs to Image and shows its lifecycle and size state
   // The loaded row carries a real picture, so a load shows an image over the initials instead of an invisible pixel.
   assert.equal(sections.get('loaded').querySelector('.muxui-avatar__image').getAttribute('src'), AVATAR_LOADED_SRC);
   assert.match(AVATAR_LOADED_SRC, /^data:image\/png;base64,/u);
-  for (const size of ['sm', 'md', 'lg']) assert.equal(sections.get(size).querySelector('.muxui-avatar').getAttribute('data-size'), size);
-  assert.equal(sections.get('fallback').querySelector('.muxui-avatar').getAttribute('data-image-state'), 'fallback');
+  for (const size of ['sm', 'md', 'lg']) assert.equal(sections.get(size).querySelector('.muxui-avatar').getAttribute('data-muxui-size'), size);
+  assert.equal(sections.get('fallback').querySelector('.muxui-avatar').getAttribute('data-muxui-image-state'), 'fallback');
   assert.match(sections.get('error').querySelector('img').getAttribute('src'), /^data:image\/png/u);
   // A supplied value wins in every row, including one that equals the row's own default.
-  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'lg' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'lg');
-  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'md' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-size'), 'md');
+  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'lg' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-muxui-size'), 'lg');
+  assert.equal(stateSections('Avatar', { ...storyArgs, size: 'md' }).sections.get('sm').querySelector('.muxui-avatar').getAttribute('data-muxui-size'), 'md');
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const events = [];
     await act(async () => reactRoot.render(renderFamily('Avatar', { src: '/ada.png', onLoad: () => events.push('load'), onError: () => events.push('error') })));
     const avatar = host.querySelector('.muxui-avatar');
     await act(async () => host.querySelector('img').dispatchEvent(new Event('load')));
-    assert.equal(avatar.getAttribute('data-image-state'), 'loaded');
+    assert.equal(avatar.getAttribute('data-muxui-image-state'), 'loaded');
     assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, true);
     await act(async () => reactRoot.render(renderFamily('Avatar', { src: AVATAR_FAILING_SRC, onLoad: () => events.push('load'), onError: () => events.push('error') })));
     await act(async () => host.querySelector('img').dispatchEvent(new Event('error')));
     assert.deepEqual(events, ['load', 'error']);
-    assert.equal(avatar.getAttribute('data-image-state'), 'error');
+    assert.equal(avatar.getAttribute('data-muxui-image-state'), 'error');
     assert.equal(host.querySelector('.muxui-avatar__fallback').hidden, false);
   });
   // load and error are Avatar.Image's native events, outside Avatar's derived API, so Avatar has no Events story.
@@ -1315,7 +1315,7 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
   });
   const root = routed.querySelector('.muxui-sidebar');
   assert.ok(root.classList.contains('muxui-sidebar--no-border'));
-  assert.equal(root.getAttribute('data-density'), 'compact');
+  assert.equal(root.getAttribute('data-muxui-sidebar-density'), 'compact');
   // The flat table is not spread onto the aside.
   for (const name of ['current', 'external', 'href', 'items', 'badge', 'status', 'email']) assert.equal(root.hasAttribute(name), false, name);
   const first = root.querySelector('.muxui-sidebar__nav-link');
@@ -1336,14 +1336,14 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
   assert.equal(sections.get('expanded').querySelector('details').open, true);
   // collapsed folds the rail through Provider, not the Roadmap group.
   const rail = sections.get('collapsed');
-  assert.equal(rail.querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), true);
+  assert.equal(rail.querySelector('.muxui-sidebar').hasAttribute('data-muxui-collapsed'), true);
   assert.equal(rail.querySelector('.muxui-sidebar__toggle').getAttribute('aria-expanded'), 'false');
-  assert.equal(sections.get('expanded').querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), false);
+  assert.equal(sections.get('expanded').querySelector('.muxui-sidebar').hasAttribute('data-muxui-collapsed'), false);
   assert.equal(sections.get('expanded').querySelector('.muxui-sidebar__toggle').getAttribute('aria-expanded'), 'true');
   const sidebarStoryArgs = createStory(currentRecord('Sidebar'), 'states').args;
   for (const name of ['current', 'defaultCollapsed', 'defaultExpanded', 'external']) assert.equal(Object.hasOwn(sidebarStoryArgs, name), false, name);
   // A supplied defaultCollapsed wins over the row, even when it is the default value.
-  assert.equal(stateSections('Sidebar', { ...sidebarStoryArgs, defaultCollapsed: false }).sections.get('collapsed').querySelector('.muxui-sidebar').hasAttribute('data-collapsed'), false);
+  assert.equal(stateSections('Sidebar', { ...sidebarStoryArgs, defaultCollapsed: false }).sections.get('collapsed').querySelector('.muxui-sidebar').hasAttribute('data-muxui-collapsed'), false);
 
   await withRuntime(async ({ host, root: reactRoot }) => {
     const story = createEventsStory(currentRecord('Sidebar'));
@@ -1552,7 +1552,7 @@ test('TextArea sends native attributes to the textarea and keeps field state on 
   const root = doc.querySelector('.muxui-text-area');
   for (const name of ['rows', 'maxlength', 'placeholder']) assert.equal(root.hasAttribute(name), false, name);
   assert.equal(root.hasAttribute('data-muxui-state-invalid'), true);
-  assert.equal(root.getAttribute('data-size'), 'sm');
+  assert.equal(root.getAttribute('data-muxui-size'), 'sm');
   assert.equal(new JSDOM(renderToStaticMarkup(renderFamily('TextArea', {}))).window.document.querySelector('textarea').getAttribute('placeholder'), 'Add notes');
   const controlled = createControlledStory(currentRecord('TextArea'));
   assert.equal(new JSDOM(renderToStaticMarkup(controlled.render(controlled.args))).window.document.querySelector('textarea').value, '');
@@ -1818,14 +1818,14 @@ test('Image shows fallback recovery and final failure, and names the source it e
 
     assert.equal(caption('fallback'), 'Loading the primary source.');
     await fail('fallback');
-    assert.equal(row('fallback').querySelector('img').hasAttribute('data-fallback'), true);
+    assert.equal(row('fallback').querySelector('img').hasAttribute('data-muxui-fallback'), true);
     assert.match(row('fallback').querySelector('img').getAttribute('src'), /^data:image\/png/u, 'the working fallback is the verified transparent pixel');
     await settleRuntime(20);
     assert.equal(caption('fallback'), 'Primary source failed; using fallbackSrc.');
 
     await fail('error');
     await fail('error');
-    assert.equal(row('error').querySelector('img').hasAttribute('data-error'), true);
+    assert.equal(row('error').querySelector('img').hasAttribute('data-muxui-error'), true);
     await settleRuntime(20);
     assert.equal(caption('error'), 'Primary and fallback sources failed.');
     assert.equal(row('error').querySelector('img').style.visibility, 'hidden', 'a failed image is not painted in the page');
@@ -1839,8 +1839,8 @@ test('Image shows fallback recovery and final failure, and names the source it e
     await act(async () => reactRoot.render(React.cloneElement(renderFamily('Image', { src: AVATAR_FAILING_SRC }), { key: 'primary-only' })));
     await act(async () => image().dispatchEvent(new Event('error')));
     await settleRuntime(20);
-    assert.equal(image().hasAttribute('data-error'), true);
-    assert.equal(image().hasAttribute('data-fallback'), false, 'no fallback was attempted');
+    assert.equal(image().hasAttribute('data-muxui-error'), true);
+    assert.equal(image().hasAttribute('data-muxui-fallback'), false, 'no fallback was attempted');
     assert.equal(caption(), 'Primary source failed; no fallback source was supplied.');
 
     // A loaded source replaced by a pending one starts the caption over.
@@ -1901,17 +1901,17 @@ test('named states render their public state in sampled families, and a supplied
 
 test('a value the user sets wins over a named state at render time, even false, empty, or the default', () => {
   const rows = (family, args) => stateSections(family, { ...createStory(currentRecord(family), 'states').args, ...args }).sections;
-  const streaming = (sections) => sections.get('streaming').querySelector('.muxui-message').hasAttribute('data-streaming');
+  const streaming = (sections) => sections.get('streaming').querySelector('.muxui-message').hasAttribute('data-muxui-streaming');
   assert.equal(streaming(rows('Message', {})), true);
   assert.equal(streaming(rows('Message', { streaming: false })), false);
 
   const codeBlock = (sections, row) => sections.get(row).querySelector('.muxui-code-block');
   const codeStock = rows('CodeBlock', {});
-  assert.equal(codeBlock(codeStock, 'wrap').getAttribute('data-wrap'), 'true');
-  assert.equal(codeBlock(codeStock, 'diff').getAttribute('data-mode'), 'diff');
+  assert.equal(codeBlock(codeStock, 'wrap').getAttribute('data-muxui-wrap'), 'true');
+  assert.equal(codeBlock(codeStock, 'diff').getAttribute('data-muxui-mode'), 'diff');
   const codeOverridden = rows('CodeBlock', { wrap: false, mode: 'code' });
-  assert.equal(codeBlock(codeOverridden, 'wrap').hasAttribute('data-wrap'), false, 'wrap: false wins in the wrap row');
-  assert.equal(codeBlock(codeOverridden, 'diff').getAttribute('data-mode'), 'code', 'a mode equal to the default wins in the diff row');
+  assert.equal(codeBlock(codeOverridden, 'wrap').hasAttribute('data-muxui-wrap'), false, 'wrap: false wins in the wrap row');
+  assert.equal(codeBlock(codeOverridden, 'diff').getAttribute('data-muxui-mode'), 'code', 'a mode equal to the default wins in the diff row');
 
   const composerError = (sections) => sections.get('error').querySelector('.muxui-prompt-composer-error');
   assert.equal(composerError(rows('PromptComposer', {})).textContent, 'Unable to send. Try again.');
@@ -2071,8 +2071,8 @@ test('Button Matrix statically covers every finite visual tuple and States keeps
   const matrixDom = new JSDOM(matrixMarkup).window.document;
   const buttons = [...matrixDom.querySelectorAll('.muxui-button')];
   const tuples = buttons.map((button) => [
-    button.getAttribute('data-variant'),
-    button.getAttribute('data-size'),
+    button.getAttribute('data-muxui-variant'),
+    button.getAttribute('data-muxui-size'),
   ].join('/'));
   assert.equal(buttons.length, 21, 'Button Matrix renders all finite variants and sizes');
   assert.equal(new Set(tuples).size, 21, 'Button Matrix tuples are unique');
@@ -2138,7 +2138,7 @@ test('Activity stories use its single layout and caller-owned finite statuses', 
   const binding = descriptorSource.bindings.find(({ export: name }) => name === 'Activity');
   assert.equal(Object.hasOwn(argTypesForBinding(binding), 'variant'), false);
   const root = new JSDOM(renderToStaticMarkup(renderFamily('Activity', {}))).window.document.querySelector('.muxui-activity');
-  assert.equal(root.hasAttribute('data-variant'), false);
+  assert.equal(root.hasAttribute('data-muxui-variant'), false);
   for (const status of ['running', 'failed']) {
     assert.equal(stateArgsForBinding(binding, status, 'Activity').status, status);
   }

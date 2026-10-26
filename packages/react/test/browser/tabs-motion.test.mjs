@@ -83,7 +83,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     const settledLong = await readIndicator(page, '#primary-tabs');
     assert.ok(settledLong.label && settledLong.indicator);
     assert.ok(Math.abs(settledLong.indicator.width - settledLong.label.width) < 1);
-    assert.equal(await page.locator('#primary-tabs .muxui-tab-panel:not([data-hidden])').textContent(), 'Long panel');
+    assert.equal(await page.locator('#primary-tabs .muxui-tab-panel:not([data-muxui-hidden])').textContent(), 'Long panel');
 
     const verticalBefore = await readIndicator(page, '#vertical-tabs');
     assert.equal(verticalBefore.listDirection, 'rtl');

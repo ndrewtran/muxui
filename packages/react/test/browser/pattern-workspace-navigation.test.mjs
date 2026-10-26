@@ -59,7 +59,7 @@ function readFold() {
   const rail = probe.getBoundingClientRect().width + parseFloat(getComputedStyle(root).borderRightWidth);
   probe.remove();
   return {
-    collapsed: root.hasAttribute('data-collapsed'),
+    collapsed: root.hasAttribute('data-muxui-collapsed'),
     width: root.getBoundingClientRect().width,
     rail,
     id: root.id,
@@ -88,8 +88,8 @@ const expectFolded = (tab, collapsed, message) => pollUntil(tab, ({ collapsed })
   const rail = probe.getBoundingClientRect().width + parseFloat(getComputedStyle(root).borderRightWidth);
   probe.remove();
   const width = root.getBoundingClientRect().width;
-  return root.hasAttribute('data-collapsed') === collapsed && (collapsed ? Math.abs(width - rail) < 0.5 : width > 200);
-}, { collapsed }, { message, report: () => ({ collapsed: document.querySelector('aside').hasAttribute('data-collapsed'), width: document.querySelector('aside').getBoundingClientRect().width }) });
+  return root.hasAttribute('data-muxui-collapsed') === collapsed && (collapsed ? Math.abs(width - rail) < 0.5 : width > 200);
+}, { collapsed }, { message, report: () => ({ collapsed: document.querySelector('aside').hasAttribute('data-muxui-collapsed'), width: document.querySelector('aside').getBoundingClientRect().width }) });
 
 const expectFocusIn = (tab, selector, message) => pollUntil(tab, (selector) => document.querySelector(selector)?.contains(document.activeElement) === true, selector, { message, report: () => document.activeElement?.outerHTML.slice(0, 160) });
 const expectFocusLabel = (tab, label, message) => pollUntil(tab, (label) => document.activeElement?.getAttribute('aria-label') === label, label, { message, report: () => document.activeElement?.outerHTML.slice(0, 160) });
@@ -379,7 +379,7 @@ for (const engine of browserEngines()) {
           const dialog = tab.getByRole('dialog', { name: 'Navigation' });
           await dialog.waitFor();
           assert.ok(await dialog.getByRole('textbox', { name: 'Search' }).isVisible(), 'the drawer shows the unfolded Search field');
-          assert.equal(await dialog.locator('[data-collapsed]').count(), 0, 'the drawer is not folded');
+          assert.equal(await dialog.locator('[data-muxui-collapsed]').count(), 0, 'the drawer is not folded');
           assert.deepEqual(await dialog.getByRole('link').allTextContents(), ['Inbox3', 'Updates', 'Saved', 'Overview', 'Reviews12', 'Files', 'Settings'], 'the drawer lists the same links');
           assert.equal(await dialog.getByRole('button', { name: 'Close navigation' }).count(), 1);
           const links = dialog.getByRole('navigation', { name: 'Workspace links' });

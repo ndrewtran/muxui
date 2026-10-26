@@ -260,7 +260,7 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     await page.mouse.move(pointOnOne.x + 70, pointOnOne.y + 20);
     await page.mouse.down();
     await ripple.waitFor({ state: 'attached' });
-    assert.equal(await ripple.getAttribute('data-static'), 'true');
+    assert.equal(await ripple.getAttribute('data-muxui-static'), 'true');
     assert.equal(await ripple.evaluate((node) => getComputedStyle(node).transform), 'none');
     await page.mouse.up();
     await page.waitForFunction((selector) => document.querySelectorAll(`${selector} .muxui-grid-list-ripple`).length === 0, primary);
@@ -275,7 +275,7 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     await page.mouse.move(pointOnOne.x + 70, pointOnOne.y + 20);
     await page.mouse.down();
     await ripple.waitFor({ state: 'attached' });
-    assert.equal(await ripple.getAttribute('data-static'), 'true');
+    assert.equal(await ripple.getAttribute('data-muxui-static'), 'true');
     await page.mouse.up();
     await page.waitForFunction((selector) => document.querySelectorAll(`${selector} .muxui-grid-list-ripple`).length === 0, primary);
     await page.evaluate((selector) => {

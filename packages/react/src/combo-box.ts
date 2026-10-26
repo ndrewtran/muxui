@@ -92,7 +92,7 @@ export const ComboBox: ForwardRefExoticComponent<ComboBoxProps & RefAttributes<H
       if (bothControlled && next === '' && selectedId !== null) onSelect?.(undefined);
     };
     // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
-    return React.createElement(AriaComboBox<NormalizedItem>, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: handleInput, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid ? invalid : undefined, name, className: classNames('muxui-combo-box', className), ...{ 'data-size': resolvedSize }, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+    return React.createElement(AriaComboBox<NormalizedItem>, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: handleInput, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid ? invalid : undefined, name, className: classNames('muxui-combo-box', className), ...{ 'data-muxui-size': resolvedSize }, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
@@ -100,7 +100,7 @@ export const ComboBox: ForwardRefExoticComponent<ComboBoxProps & RefAttributes<H
           React.createElement(ChevronDownIcon, { className: 'muxui-combo-box-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
       description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
       errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', ...{ 'data-size': resolvedSize } }, React.createElement(AriaListBox<NormalizedItem>, { items: normalized, className: 'muxui-combo-box-list', ...{ 'data-size': resolvedSize }, children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined }, className: 'muxui-combo-box-option' }, item.label) })),
+      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', ...{ 'data-muxui-size': resolvedSize } }, React.createElement(AriaListBox<NormalizedItem>, { items: normalized, className: 'muxui-combo-box-list', ...{ 'data-muxui-size': resolvedSize }, children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined }, className: 'muxui-combo-box-option' }, item.label) })),
     );
   });
   component.displayName = 'ComboBox';

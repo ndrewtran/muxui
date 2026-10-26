@@ -236,7 +236,7 @@ async function measureAlertDialogCloseCases(page) {
 
 async function measureAutocompleteOptions(page, size) {
   return page.evaluate((targetSize) => {
-    const list = document.querySelector(`.muxui-autocomplete-list[data-size="${targetSize}"]`);
+    const list = document.querySelector(`.muxui-autocomplete-list[data-muxui-size="${targetSize}"]`);
     const nodes = list ? [...list.querySelectorAll('.muxui-autocomplete-option')] : [];
     return {
       count: nodes.length,
@@ -247,7 +247,7 @@ async function measureAutocompleteOptions(page, size) {
           ariaHidden: candidate.getAttribute('aria-hidden'),
           dataEntering: candidate.getAttribute('data-muxui-state-entering'),
           dataExiting: candidate.getAttribute('data-muxui-state-exiting'),
-          dataSize: candidate.getAttribute('data-size'),
+          dataSize: candidate.getAttribute('data-muxui-size'),
           display: style.display,
           hidden: candidate.hidden,
           height: rect.height,
@@ -270,7 +270,7 @@ async function measureAutocompleteOptions(page, size) {
           rootDataFocusVisible: root.getAttribute('data-muxui-state-focus-visible'),
           rootDataFocused: root.getAttribute('data-muxui-state-focused'),
           rootDataFocusWithin: root.getAttribute('data-muxui-state-focus-within'),
-          dataSize: root.getAttribute('data-size'),
+          dataSize: root.getAttribute('data-muxui-size'),
           height: rect.height,
           inputValue: input?.value,
           width: rect.width,
@@ -543,7 +543,7 @@ function collectAutocompleteFailures(measurements, expectedHeight, size, failure
 async function waitForAutocompleteOptions(page, size, expectedHeight) {
   try {
     await page.waitForFunction(({ targetSize, targetHeight }) => {
-      const list = document.querySelector(`.muxui-autocomplete-list[data-size="${targetSize}"]`);
+      const list = document.querySelector(`.muxui-autocomplete-list[data-muxui-size="${targetSize}"]`);
       const option = list?.querySelector('.muxui-autocomplete-option');
       if (!list || !option) return false;
       const listStyle = getComputedStyle(list);

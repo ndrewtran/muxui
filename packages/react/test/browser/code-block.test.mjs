@@ -45,7 +45,7 @@ test('CodeBlock copied feedback expires from fulfillment and follows actual-butt
     const copy = page.getByRole('button', { name: 'Copy code', exact: true });
     const tooltip = page.getByRole('tooltip');
     const reset = async () => {
-      assert.equal(await block.getAttribute('data-copy-state'), 'idle');
+      assert.equal(await block.getAttribute('data-muxui-copy-state'), 'idle');
       assert.equal(await copy.locator('.lucide-copy').count(), 1);
       await tooltip.waitFor({ state: 'hidden' });
     };
@@ -53,14 +53,14 @@ test('CodeBlock copied feedback expires from fulfillment and follows actual-butt
     await page.evaluate(() => { window.pendingCopy = true; });
     await copy.click();
     await page.waitForTimeout(3100);
-    assert.equal(await block.getAttribute('data-copy-state'), 'pending');
+    assert.equal(await block.getAttribute('data-muxui-copy-state'), 'pending');
     assert.equal(await tooltip.count(), 0);
     await page.evaluate(() => { window.pendingCopy = false; window.finishCopy(); });
     await tooltip.waitFor();
     assert.equal(await tooltip.textContent(), 'Copied');
     await page.waitForTimeout(2000);
-    assert.equal(await block.getAttribute('data-copy-state'), 'copied');
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'idle');
+    assert.equal(await block.getAttribute('data-muxui-copy-state'), 'copied');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'idle');
     await reset();
     assert.equal(await block.getByRole('status').textContent(), 'Code copied.');
 
@@ -70,8 +70,8 @@ test('CodeBlock copied feedback expires from fulfillment and follows actual-butt
     await copy.click();
     await tooltip.waitFor();
     await page.waitForTimeout(1500);
-    assert.equal(await block.getAttribute('data-copy-state'), 'copied', 'the previous deadline cannot dismiss a new success');
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'idle');
+    assert.equal(await block.getAttribute('data-muxui-copy-state'), 'copied', 'the previous deadline cannot dismiss a new success');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'idle');
     await reset();
 
     await copy.click();
@@ -95,10 +95,10 @@ test('CodeBlock copied feedback expires from fulfillment and follows actual-butt
     await copy.tap();
     await tooltip.waitFor();
     await copy.evaluate((node) => node.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, pointerType: 'touch', relatedTarget: document.body })));
-    assert.equal(await block.getAttribute('data-copy-state'), 'copied');
+    assert.equal(await block.getAttribute('data-muxui-copy-state'), 'copied');
     assert.equal(await copy.locator('.lucide-check').count(), 1);
     assert.equal(await tooltip.textContent(), 'Copied');
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'idle');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'idle');
     await reset();
     await copy.click();
     await tooltip.waitFor();
@@ -156,20 +156,20 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
     await copy.focus();
     assert.equal(await copy.evaluate((node) => getComputedStyle(node).outlineStyle), 'solid');
     await page.keyboard.press('Enter');
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'copied');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'copied');
     assert.deepEqual(await page.evaluate(() => window.copyWrites), [source]);
     assert.equal(await copy.locator('.lucide-check').count(), 1);
     assert.equal(await copy.getAttribute('aria-label'), 'Copy code');
     assert.equal(await page.getByRole('tooltip').textContent(), 'Copied');
     await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'idle');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'idle');
     assert.equal(await copy.locator('.lucide-copy').count(), 1);
     await page.getByRole('tooltip').waitFor({ state: 'hidden' });
     await copy.focus();
     await page.keyboard.press('Enter');
     await page.getByRole('tooltip').waitFor();
     await page.getByRole('button', { name: 'Copy updated code' }).focus();
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'idle');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'idle');
     await page.getByRole('tooltip').waitFor({ state: 'hidden' });
     await page.keyboard.press('Space');
     await page.waitForFunction(() => window.copyWrites.length === 3);
@@ -178,27 +178,27 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
 
     const exact = '\t<x>\r\n  trailing  \n';
     await page.evaluate((value) => window.mountCodeBlock({ source: value }), exact);
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'idle');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'idle');
     await copy.focus();
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => window.copyWrites.length === 4);
     assert.equal((await page.evaluate(() => window.copyWrites)).at(-1), exact);
     await page.evaluate(() => { window.rejectCopy = true; });
     await copy.click();
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'error');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'error');
     assert.match(await page.locator('.muxui-code-block').first().getByRole('status').textContent(), /Could not copy/u);
     assert.equal(await copy.locator('.lucide-copy').count(), 1);
     await page.evaluate(() => { window.rejectCopy = false; window.pendingCopy = true; });
     await copy.focus();
     await page.keyboard.press('Enter');
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'pending');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'pending');
     assert.equal(await copy.isDisabled(), true);
     assert.equal(await copy.getAttribute('aria-busy'), 'true');
     assert.equal(await copy.locator('.muxui-button-spinner').count(), 1);
     await page.keyboard.press('Space');
     assert.equal(await page.evaluate(() => window.copyWrites.length), 6);
     await page.evaluate(() => { window.pendingCopy = false; window.finishCopy(); });
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'copied');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'copied');
     assert.equal(await copy.locator('.lucide-check').count(), 1);
     assert.equal(await page.evaluate(() => window.formSubmissions), 0);
     await copy.focus();
@@ -218,12 +218,12 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
     const directory = process.env.MUXUI_CODE_BLOCK_SCREENSHOTS;
     if (directory) await page.screenshot({ path: join(directory, 'code-block-dark-390.png') });
     await page.evaluate(() => window.mountCodeBlock({ wrap: true }));
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').hasAttribute('data-wrap'));
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').hasAttribute('data-muxui-wrap'));
     assert.equal(await pre.evaluate((node) => node.scrollWidth <= node.clientWidth + 1), true);
     if (directory) await page.screenshot({ path: join(directory, 'code-block-dark-390-wrap.png') });
 
     await page.emulateMedia({ forcedColors: 'active' });
-    const changes = await page.locator('[data-mode="diff"] .muxui-code-block-line:not([data-change="context"])').evaluateAll((rows) => rows.map((row) => ({
+    const changes = await page.locator('[data-muxui-mode="diff"] .muxui-code-block-line:not([data-muxui-change="context"])').evaluateAll((rows) => rows.map((row) => ({
       text: row.querySelector('.muxui-code-block-sr-only').textContent,
       marker: getComputedStyle(row.querySelector('.muxui-code-block-marker'), '::before').content,
       foreground: getComputedStyle(row).color, background: getComputedStyle(row).backgroundColor,

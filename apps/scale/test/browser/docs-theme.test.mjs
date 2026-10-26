@@ -359,8 +359,8 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await screenshot(page, 'theme-b-dark');
 
     await page.goto(`${url}/components/button/`);
-    await page.locator('.muxui-button[data-variant="primary"]').first().waitFor();
-    const inlineButton = page.locator('.muxui-button[data-variant="primary"]').first();
+    await page.locator('.muxui-button[data-muxui-variant="primary"]').first().waitFor();
+    const inlineButton = page.locator('.muxui-button[data-muxui-variant="primary"]').first();
     const inlineButtonStyles = await inlineButton.evaluate((node) => {
       const styles = getComputedStyle(node);
       return { background: styles.backgroundColor, radius: styles.borderTopLeftRadius, font: styles.fontFamily };
@@ -399,7 +399,7 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     assert.equal(lightSearch.backdropBackground, lightSearch.mux.scrim);
     await page.setViewportSize({ width: 360, height: 780 });
     await page.goto(`${url}/components/button/`);
-    await page.locator('.muxui-button[data-variant="primary"]').first().waitFor();
+    await page.locator('.muxui-button[data-muxui-variant="primary"]').first().waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const mobileMenu = page.locator('.sl-menu-button');
     const mobileTocSummary = page.locator('#starlight__on-this-page--mobile');

@@ -168,7 +168,7 @@ test('immediate action labels and selection marks retain contrast in every inter
     React.createElement(CheckboxField.Root, { defaultChecked: true },
       React.createElement(CheckboxField.Button, null,
         React.createElement(CheckboxField.Indicator), 'Selected field choice')),
-    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-color': 'brand', 'data-muxui-state-selected': true }, 'Selected tag')));
+    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-muxui-color': 'brand', 'data-muxui-state-selected': true }, 'Selected tag')));
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 600 } });

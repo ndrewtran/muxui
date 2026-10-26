@@ -38,10 +38,10 @@
   appearance: auto;
 }
 
-.muxui-select-native-field[data-size='sm'],
-.muxui-select-native[data-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
-.muxui-select-native-field[data-size='lg'],
-.muxui-select-native[data-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
+.muxui-select-native-field[data-muxui-size='sm'],
+.muxui-select-native[data-muxui-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
+.muxui-select-native-field[data-muxui-size='lg'],
+.muxui-select-native[data-muxui-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-select-native:focus-visible {
   outline-color: var(--muxui-field-focus-border);

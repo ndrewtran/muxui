@@ -42,8 +42,8 @@ export const ColorSwatch: ForwardRefExoticComponent<ColorSwatchProps & RefAttrib
       'data-muxui-state-disabled': effectiveDisabled || undefined,
       'data-muxui-state-read-only': pickerState.readOnly || undefined,
       'data-muxui-color-paint': 'sample',
-      'data-shape': shape,
-      'data-two-tone': secondary ? '' : undefined,
+      'data-muxui-shape': shape,
+      'data-muxui-two-tone': secondary ? '' : undefined,
     },
     className: classNames('muxui-color-swatch', className),
     style: secondary && primary ? {

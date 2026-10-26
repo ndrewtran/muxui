@@ -101,7 +101,7 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
 
     // Loading: the stacked image is unpainted, so the fallback shows; the root carries the alt name.
     const slowAvatar = page.locator('#slow-avatar');
-    assert.equal(await slowAvatar.getAttribute('data-image-state'), 'loading');
+    assert.equal(await slowAvatar.getAttribute('data-muxui-image-state'), 'loading');
     assert.deepEqual(await avatarPaint(page, '#slow-avatar', teal), { image: 'block', fallback: 'grid', drawn: 'surface' });
     assert.equal(await slowAvatar.getAttribute('role'), 'img');
     assert.equal(await slowAvatar.getAttribute('aria-label'), 'Sam avatar');
@@ -124,30 +124,30 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
       return { width, height };
     }), { width: 320, height: 320 });
 
-    await page.waitForFunction(() => document.querySelector('#slow-avatar')?.getAttribute('data-image-state') === 'loaded');
+    await page.waitForFunction(() => document.querySelector('#slow-avatar')?.getAttribute('data-muxui-image-state') === 'loaded');
     assert.deepEqual(await avatarPaint(page, '#slow-avatar', teal), { image: 'block', fallback: 'none', drawn: 'image' });
     assert.equal(await slowAvatar.getAttribute('role'), null);
     assert.equal(await slowAvatar.locator('img').getAttribute('aria-hidden'), null);
 
     // A source change after load returns to the fallback until the new source loads.
     await page.evaluate(() => window.__muxuiSlowAvatarSwitch('/slow-avatar-next.svg'));
-    await page.waitForFunction(() => document.querySelector('#slow-avatar')?.getAttribute('data-image-state') === 'loading');
+    await page.waitForFunction(() => document.querySelector('#slow-avatar')?.getAttribute('data-muxui-image-state') === 'loading');
     assert.deepEqual(await avatarPaint(page, '#slow-avatar', teal), { image: 'block', fallback: 'grid', drawn: 'surface' });
     assert.equal(await slowAvatar.getAttribute('aria-label'), 'Sam avatar');
     releaseSlowSources();
-    await page.waitForFunction(() => document.querySelector('#slow-avatar')?.getAttribute('data-image-state') === 'loaded');
+    await page.waitForFunction(() => document.querySelector('#slow-avatar')?.getAttribute('data-muxui-image-state') === 'loaded');
     assert.deepEqual(await avatarPaint(page, '#slow-avatar', teal), { image: 'block', fallback: 'none', drawn: 'image' });
 
     const image = page.locator('#image-case .muxui-image').first();
     const avatar = page.locator('#avatar-case .muxui-avatar').first();
-    await page.waitForFunction(() => document.querySelector('#image-case .muxui-image')?.hasAttribute('data-fallback'));
-    await page.waitForFunction(() => document.querySelector('#avatar-case .muxui-avatar')?.getAttribute('data-image-state') === 'error');
+    await page.waitForFunction(() => document.querySelector('#image-case .muxui-image')?.hasAttribute('data-muxui-fallback'));
+    await page.waitForFunction(() => document.querySelector('#avatar-case .muxui-avatar')?.getAttribute('data-muxui-image-state') === 'error');
     assert.equal(await image.getAttribute('alt'), 'Workspace logo');
-    assert.equal(await image.getAttribute('data-fallback'), '');
+    assert.equal(await image.getAttribute('data-muxui-fallback'), '');
     assert.equal(await image.getAttribute('src'), 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3Crect width="8" height="8" fill="black"/%3E%3C/svg%3E');
     assert.equal(await page.locator('#image-errors').textContent(), '0');
     assert.equal(await page.locator('#image-loads').textContent(), '1');
-    assert.equal(await avatar.getAttribute('data-image-state'), 'error');
+    assert.equal(await avatar.getAttribute('data-muxui-image-state'), 'error');
     assert.equal(await avatar.locator('.muxui-avatar__image').getAttribute('hidden'), '');
     assert.equal(await avatar.locator('.muxui-avatar__fallback').getAttribute('hidden'), null);
     // Failed: only the fallback is drawn.
@@ -174,16 +174,16 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
     assert.notEqual(schemeColors.dark.background, schemeColors.light.background, 'the dark pass paints the dark surface');
     await page.evaluate(() => { delete document.documentElement.dataset.muxuiColorScheme; });
     const cachedImage = page.locator('#cached-image');
-    await page.waitForFunction(() => document.querySelector('#cached-avatar')?.getAttribute('data-image-state') === 'loaded');
+    await page.waitForFunction(() => document.querySelector('#cached-avatar')?.getAttribute('data-muxui-image-state') === 'loaded');
     assert.equal(await cachedImage.getAttribute('alt'), 'Cached workspace logo');
     assert.equal(await cachedImage.evaluate((node) => node.complete && node.naturalWidth > 0), true);
-    assert.equal(await page.locator('#cached-avatar').getAttribute('data-image-state'), 'loaded');
+    assert.equal(await page.locator('#cached-avatar').getAttribute('data-muxui-image-state'), 'loaded');
     // Loaded: the image is drawn and the hidden fallback is not painted over it.
     assert.deepEqual(await avatarPaint(page, '#cached-avatar', black), { image: 'block', fallback: 'none', drawn: 'image' });
 
     await page.evaluate(() => window.__muxuiImageAvatarSwitch());
-    await page.waitForFunction(() => document.querySelector('#image-case .muxui-image')?.getAttribute('data-fallback') === null);
-    await page.waitForFunction(() => document.querySelector('#avatar-case .muxui-avatar')?.getAttribute('data-image-state') === 'loaded');
+    await page.waitForFunction(() => document.querySelector('#image-case .muxui-image')?.getAttribute('data-muxui-fallback') === null);
+    await page.waitForFunction(() => document.querySelector('#avatar-case .muxui-avatar')?.getAttribute('data-muxui-image-state') === 'loaded');
     assert.equal(await avatar.getAttribute('role'), null);
     assert.equal(await avatar.getAttribute('aria-label'), null);
     assert.equal((await avatarPaint(page, '#avatar-case .muxui-avatar', 'rgb(255, 255, 255)')).drawn, 'image');
@@ -199,7 +199,7 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
     const staticPage = await noScript.newPage();
     await staticPage.goto(`${url}/image-avatar.html`, { waitUntil: 'domcontentloaded' });
     await staticPage.waitForFunction(() => document.querySelector('#cached-avatar img')?.complete);
-    assert.equal(await staticPage.locator('#cached-avatar').getAttribute('data-image-state'), 'loading');
+    assert.equal(await staticPage.locator('#cached-avatar').getAttribute('data-muxui-image-state'), 'loading');
     assert.deepEqual(await avatarPaint(staticPage, '#cached-avatar', black), { image: 'block', fallback: 'grid', drawn: 'image' });
     await noScript.close();
   } finally {

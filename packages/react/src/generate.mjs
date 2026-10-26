@@ -884,7 +884,7 @@ const currentIndexBody = `${indexBody}export * from './supplemental.js';\n${curr
 const currentTypesBody = `${typesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 // The shared supplemental stylesheet is emitted once, right after IconButton's CSS, and skipped wherever a record names it
 // as its styleSource. Anchor it on that record, not on the first or last record that names it: the shared
-// `.muxui-icon-button.muxui-button[data-size='sm']` padding ties icon-button.css on specificity and only wins by
+// `.muxui-icon-button.muxui-button[data-muxui-size='sm']` padding ties icon-button.css on specificity and only wins by
 // following it, and converting a family to TypeScript must not move the block.
 const sharedStyleSource = 'packages/react/src/supplemental/styles.css';
 const sharedStyleAnchorSlug = 'icon-button';

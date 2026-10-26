@@ -35,7 +35,7 @@ type PaymentInputOwnProps = {
 
 /** The props Mux UI defines for PaymentInput.CardIcon; its API is the card-icon entry in the catalog's partApis. */
 type PaymentInputCardIconOwnProps = {
-  /** The card type the icon records as its `data-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type. */
+  /** The card type the icon records as its `data-muxui-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type. */
   cardType?: 'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown';
 };
 
@@ -75,7 +75,7 @@ const PaymentInputRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PaymentI
   const controlledDigits = value === undefined ? digits : String(value).replace(/\D/gu, '');
   const setValue = (next: string) => { if (value === undefined) setDigits(next); onChange?.(formatCard(next, cardType(next))); };
   // React Aria's props type the handlers on Element, and these on the div; the rest is the div's native attributes.
-  return h(PaymentInputContext.Provider, { value: cardType(controlledDigits) }, h(AriaTextField, { ...(mappedFieldProps({ disabled, invalid, required, readOnly, ...props }) as AriaTextFieldProps), ref, value: formatCard(controlledDigits, cardType(controlledDigits)), onChange: (next) => setValue(String(next).replace(/\D/gu, '')), ...{ 'data-size': resolvedSize }, className: cx('muxui-payment-input', resolvedSize !== 'md' && `muxui-payment-input--${resolvedSize}`, className) }, children));
+  return h(PaymentInputContext.Provider, { value: cardType(controlledDigits) }, h(AriaTextField, { ...(mappedFieldProps({ disabled, invalid, required, readOnly, ...props }) as AriaTextFieldProps), ref, value: formatCard(controlledDigits, cardType(controlledDigits)), onChange: (next) => setValue(String(next).replace(/\D/gu, '')), ...{ 'data-muxui-size': resolvedSize }, className: cx('muxui-payment-input', resolvedSize !== 'md' && `muxui-payment-input--${resolvedSize}`, className) }, children));
 });
 const PaymentInputGroup = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PaymentInputGroupProps>(function PaymentInputGroup(props, ref) { return nativePart('div', 'muxui-payment-input__group', props, ref); });
 const PaymentInputInput = /*#__PURE__*/ React.forwardRef<HTMLInputElement, PaymentInputInputProps>(function PaymentInputInput({ disabled, className, ...props }, ref) { return h(AriaInput, { ...(props as AriaInputProps), ref, disabled, inputMode: 'numeric', className: cx('muxui-payment-input__input', className) }); });
@@ -83,7 +83,7 @@ const PaymentInputLabel = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, Payme
 const PaymentInputDescription = /*#__PURE__*/ React.forwardRef<HTMLElement, PaymentInputDescriptionProps>(function PaymentInputDescription(props, ref) { return fieldText('description', 'muxui-payment-input__description', props, ref); });
 const PaymentInputError = /*#__PURE__*/ React.forwardRef<HTMLElement, PaymentInputErrorProps>(function PaymentInputError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-payment-input__error', props.className) }); });
 // The aria-label is taken out of the public type, and the render function still discards it by destructuring.
-const PaymentInputCardIcon = /*#__PURE__*/ React.forwardRef<HTMLSpanElement, PaymentInputCardIconProps & { 'aria-label'?: unknown }>(function PaymentInputCardIcon({ cardType: suppliedType, className, 'aria-label': _ariaLabel, ...props }, ref) { const contextType = React.useContext(PaymentInputContext); const type = suppliedType === undefined || suppliedType === null ? contextType : suppliedType; return h('span', { ...props, ref, className: cx('muxui-payment-input__card-icon', className), 'data-card-type': type, 'aria-hidden': true }, h(CreditCardIcon, { size: 16, 'aria-hidden': true, focusable: 'false' })); });
+const PaymentInputCardIcon = /*#__PURE__*/ React.forwardRef<HTMLSpanElement, PaymentInputCardIconProps & { 'aria-label'?: unknown }>(function PaymentInputCardIcon({ cardType: suppliedType, className, 'aria-label': _ariaLabel, ...props }, ref) { const contextType = React.useContext(PaymentInputContext); const type = suppliedType === undefined || suppliedType === null ? contextType : suppliedType; return h('span', { ...props, ref, className: cx('muxui-payment-input__card-icon', className), 'data-muxui-card-type': type, 'aria-hidden': true }, h(CreditCardIcon, { size: 16, 'aria-hidden': true, focusable: 'false' })); });
 export const PaymentInput: {
   Root: ForwardRefExoticComponent<PaymentInputProps & RefAttributes<HTMLDivElement>>;
   Group: ForwardRefExoticComponent<PaymentInputGroupProps & RefAttributes<HTMLDivElement>>;

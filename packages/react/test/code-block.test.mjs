@@ -28,7 +28,7 @@ test('CodeBlock escapes text, retains whitespace and trailing lines, and preserv
   assert.match(markup({ source }), /\r\n/u);
   assert.equal(document.querySelector('code').textContent, source.replaceAll('\r\n', '\n'));
   assert.equal(document.querySelectorAll('.muxui-code-block-line').length, 3);
-  assert.deepEqual([...document.querySelectorAll('.muxui-code-block-number')].map((node) => node.dataset.lineNumber), ['1', '2', '3']);
+  assert.deepEqual([...document.querySelectorAll('.muxui-code-block-number')].map((node) => node.dataset.muxuiLineNumber), ['1', '2', '3']);
   assert.ok([...document.querySelectorAll('.muxui-code-block-number')].every((node) => node.getAttribute('aria-hidden') === 'true' && node.textContent === ''));
   assert.equal(document.querySelector('pre').tabIndex, 0);
   assert.equal(document.querySelector('button').type, 'button');
@@ -51,13 +51,13 @@ test('CodeBlock diff reconstructs both inputs and numbers empty, mixed, repeated
   ]) {
     const document = documentOf({ mode: 'diff', before, after });
     const rows = [...document.querySelectorAll('.muxui-code-block-line')];
-    const original = rows.filter((row) => row.dataset.change !== 'added');
-    const updated = rows.filter((row) => row.dataset.change !== 'removed');
+    const original = rows.filter((row) => row.dataset.muxuiChange !== 'added');
+    const updated = rows.filter((row) => row.dataset.muxuiChange !== 'removed');
     assert.equal(original.map((row) => row.querySelector('.muxui-code-block-text').textContent.replace(/\n$/u, '')).join('\n'), before.replaceAll('\r\n', '\n'));
     assert.equal(updated.map((row) => row.querySelector('.muxui-code-block-text').textContent.replace(/\n$/u, '')).join('\n'), after.replaceAll('\r\n', '\n'));
-    assert.deepEqual(original.map((row) => row.querySelectorAll('.muxui-code-block-number')[0].dataset.lineNumber), original.map((_, i) => String(i + 1)));
-    assert.deepEqual(updated.map((row) => row.querySelectorAll('.muxui-code-block-number')[1].dataset.lineNumber), updated.map((_, i) => String(i + 1)));
-    for (const row of rows.filter((row) => row.dataset.change !== 'context')) {
+    assert.deepEqual(original.map((row) => row.querySelectorAll('.muxui-code-block-number')[0].dataset.muxuiLineNumber), original.map((_, i) => String(i + 1)));
+    assert.deepEqual(updated.map((row) => row.querySelectorAll('.muxui-code-block-number')[1].dataset.muxuiLineNumber), updated.map((_, i) => String(i + 1)));
+    for (const row of rows.filter((row) => row.dataset.muxuiChange !== 'context')) {
       assert.match(row.querySelector('.muxui-code-block-sr-only').textContent, /^(Added|Removed) line: /u);
       assert.equal(row.querySelector('.muxui-code-block-marker').getAttribute('aria-hidden'), 'true');
     }
@@ -66,17 +66,17 @@ test('CodeBlock diff reconstructs both inputs and numbers empty, mixed, repeated
     assert.equal(document.querySelector('button').getAttribute('aria-label'), 'Copy updated code');
   }
   const mixed = documentOf({ mode: 'diff', before: 'a\nb\nc', after: 'a\nx\nc\ny' });
-  assert.deepEqual([...mixed.querySelectorAll('.muxui-code-block-line')].map((row) => row.dataset.change), ['context', 'removed', 'added', 'context', 'added']);
+  assert.deepEqual([...mixed.querySelectorAll('.muxui-code-block-line')].map((row) => row.dataset.muxuiChange), ['context', 'removed', 'added', 'context', 'added']);
 });
 
 test('CodeBlock work and input bounds are exact with an honest replacement fallback', () => {
   const input = (prefix, length) => Array.from({ length }, (_, i) => `${prefix}${i}`).join('\n');
   const precise = markup({ mode: 'diff', before: input('old', 499), after: input('new', 499) });
-  assert.match(precise, /data-diff-strategy="minimal"/u);
+  assert.match(precise, /data-muxui-diff-strategy="minimal"/u);
   const fallback = markup({ mode: 'diff', before: `same\n${input('old', 500)}\nend`, after: `same\n${input('new', 499)}\nend` });
-  assert.match(fallback, /data-diff-strategy="replacement"/u);
+  assert.match(fallback, /data-muxui-diff-strategy="replacement"/u);
   assert.match(fallback, /Large change shown as removed and added lines/u);
-  assert.equal((fallback.match(/data-change="context"/gu) ?? []).length, 2);
+  assert.equal((fallback.match(/data-muxui-change="context"/gu) ?? []).length, 2);
   assert.doesNotThrow(() => markup({ source: 'x'.repeat(1_000_000) }));
   assert.throws(() => markup({ source: 'x'.repeat(1_000_001) }), RangeError);
   assert.doesNotThrow(() => markup({ source: '\n'.repeat(9_999) }));
@@ -104,7 +104,7 @@ test('CodeBlock SSR hydrates without clipboard access and keeps exact client tex
     await act(async () => { ref.current.dispatchEvent(new Event('copy', { bubbles: true })); });
     assert.deepEqual(nativeEvents, ['DIV']);
     await act(async () => { root.render(e({ source, ref, wrap: true })); });
-    assert.equal(document.querySelector('.muxui-code-block').dataset.wrap, 'true');
+    assert.equal(document.querySelector('.muxui-code-block').dataset.muxuiWrap, 'true');
     assert.equal(document.querySelector('code').textContent, source.replaceAll('\r\n', '\n'));
     await act(async () => root.unmount());
   } finally { restore(); }
@@ -152,7 +152,7 @@ test('CodeBlock copies exact input and announces only fulfillment; rejects unava
     for (const clipboard of [undefined, { writeText: async () => { throw new Error('Denied'); } }]) {
       setClipboard(clipboard);
       await act(async () => document.querySelector('button').click());
-      assert.equal(document.querySelector('.muxui-code-block').dataset.copyState, 'error');
+      assert.equal(document.querySelector('.muxui-code-block').dataset.muxuiCopyState, 'error');
       assert.match(document.querySelector('[role="status"]').textContent, /Could not copy code/u);
       assert.ok(document.querySelector('button .lucide-copy'));
       assert.equal(document.querySelector('button').disabled, false);
@@ -190,7 +190,7 @@ test('CodeBlock replaces and cleans up its three-second feedback timer without r
   let finish;
   let root;
   Object.defineProperty(dom.window.navigator, 'clipboard', { value: { writeText: () => new Promise((resolve) => { finish = resolve; }) } });
-  const status = () => document.querySelector('.muxui-code-block').dataset.copyState;
+  const status = () => document.querySelector('.muxui-code-block').dataset.muxuiCopyState;
   const activate = async () => act(async () => document.querySelector('button').click());
   try {
     await act(async () => { root = createRoot(document.querySelector('#root')); root.render(e({ source: 'exact' })); });
@@ -245,7 +245,7 @@ test('CodeBlock replaces and cleans up its three-second feedback timer without r
 
 test('CodeBlock CSS keeps metadata out of selection, token-derived wrapping, forced colors, and visible focus', async () => {
   const css = await readFile(new URL('../src/supplemental/code-block.css', import.meta.url), 'utf8');
-  assert.match(css, /\.muxui-code-block-number::before \{ content: attr\(data-line-number\)/u);
+  assert.match(css, /\.muxui-code-block-number::before \{ content: attr\(data-muxui-line-number\)/u);
   assert.match(css, /user-select: none/u);
   assert.match(css, /white-space: pre-wrap; overflow-wrap: anywhere/u);
   assert.match(css, /forced-colors: active/u);
@@ -272,12 +272,12 @@ test('warm-engine SSR stays plain, hydrates safely, and diff tokens retain each 
       await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
     }
     assert.deepEqual(errors, []);
-    assert.equal(document.querySelector('code').dataset.language, ' TS ');
+    assert.equal(document.querySelector('code').dataset.muxuiLanguage, ' TS ');
     assert.ok(document.querySelector('.muxui-code-block-token-link'));
     for (const row of document.querySelectorAll('.muxui-code-block-line')) {
-      const removed = row.dataset.change === 'removed';
+      const removed = row.dataset.muxuiChange === 'removed';
       const numbers = row.querySelectorAll('.muxui-code-block-number');
-      const number = Number(numbers[removed ? 0 : 1].dataset.lineNumber);
+      const number = Number(numbers[removed ? 0 : 1].dataset.muxuiLineNumber);
       const expected = documents[removed ? 0 : 1][number - 1];
       const tokens = [...row.querySelector('.muxui-code-block-text').children];
       assert.deepEqual(tokens.map((token) => ({ text: token.textContent, role: token.classList.contains('muxui-code-block-token-link') ? 'link' : token.classList.contains('muxui-code-block-token-strong') ? 'strong' : undefined })), expected);

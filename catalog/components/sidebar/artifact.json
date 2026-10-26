@@ -62,7 +62,7 @@
         "Activating the link of a link group navigates; its toggle button opens or closes the nested list, which is hidden while closed. The toggle is named by the link's rendered label, so a label that is a component names it too.",
         "current marks an item's page with aria-current=\"page\" and the sidebar's current style; on a group without a link it only styles the header.",
         "A folded rail shows only top-level items: a link group keeps its link, and its toggle and nested list are hidden.",
-        "density on Root is default or compact. Compact sets data-density=\"compact\" and tightens nav rows to the small control height, the gaps between rows, section label spacing, and nested indentation from the same spacing tokens; text sizes, icon sizes, and focus rings do not change, and a Root without density renders as it always has.",
+        "density on Root is default or compact. Compact sets data-muxui-sidebar-density=\"compact\" and tightens nav rows to the small control height, the gaps between rows, section label spacing, and nested indentation from the same spacing tokens; text sizes, icon sizes, and focus rings do not change, and a Root without density renders as it always has.",
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "Root is the persistent column. MobileTrigger is a separate part: a header with a menu button that opens a navigation drawer.",
         "Sidebar has no breakpoint of its own, so Root and the MobileTrigger header both show at every width.",

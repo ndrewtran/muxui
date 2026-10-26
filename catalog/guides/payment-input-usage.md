@@ -24,7 +24,7 @@ The application checks the number, marks the field invalid, and renders the erro
 
 ## Card icon
 
-CardIcon is decoration: one generic card glyph, marked `aria-hidden`, that looks the same for every card type. The card type is detected from the leading digits and recorded as `data-card-type` metadata, or set with `cardType`, but PaymentInput renders no card brand. Sending the number to a payment provider and handling its response belong to the application.
+CardIcon is decoration: one generic card glyph, marked `aria-hidden`, that looks the same for every card type. The card type is detected from the leading digits and recorded as `data-muxui-card-type` metadata, or set with `cardType`, but PaymentInput renders no card brand. Sending the number to a payment provider and handling its response belong to the application.
 
 ## Content
 

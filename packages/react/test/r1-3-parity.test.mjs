@@ -1175,7 +1175,7 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
 });
 
 test('R1.3 TagGroup resolves colours and variants, and rejects unknown ones', () => {
-  const tags = (props) => [...renderToString(React.createElement(TagGroup, { label: 'Tags', ...props })).matchAll(/data-color="(\w+)" data-variant="(\w+)"/gu)].map(([, color, variant]) => `${color} ${variant}`);
+  const tags = (props) => [...renderToString(React.createElement(TagGroup, { label: 'Tags', ...props })).matchAll(/data-muxui-color="(\w+)" data-muxui-variant="(\w+)"/gu)].map(([, color, variant]) => `${color} ${variant}`);
   assert.deepEqual(tags({ items: ['One'] }), ['neutral soft']);
   assert.deepEqual(tags({ items: ['One', { id: 'two', label: 'Two', color: 'red' }], color: 'brand', variant: 'dot' }), ['brand dot', 'red dot'], 'an item colour wins over the group colour');
   assert.throws(() => tags({ items: ['One'], color: 'crimson' }), /TagGroup color must be one of/u);

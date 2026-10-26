@@ -416,45 +416,45 @@
 }
 
 :where(
-  .muxui-select[data-size='sm'],
-  .muxui-text-field[data-size='sm'],
-  .muxui-search-field[data-size='sm'],
-  .muxui-number-field[data-size='sm'],
-  .muxui-date-field[data-size='sm'],
-  .muxui-time-field[data-size='sm'],
-  .muxui-date-picker[data-size='sm'],
-  .muxui-date-range-picker[data-size='sm'],
-  .muxui-autocomplete[data-size='sm'],
-  .muxui-input-tags[data-size='sm'],
-  .muxui-multi-select[data-size='sm'],
-  .muxui-tag-select[data-size='sm'],
-  .muxui-payment-input[data-size='sm'],
-  .muxui-color-field[data-size='sm'],
-  .muxui-combo-box[data-size='sm'],
-  .muxui-checkbox-group[data-size='sm'],
-  .muxui-radio-group[data-size='sm'],
-  .muxui-tabs[data-size='sm']
+  .muxui-select[data-muxui-size='sm'],
+  .muxui-text-field[data-muxui-size='sm'],
+  .muxui-search-field[data-muxui-size='sm'],
+  .muxui-number-field[data-muxui-size='sm'],
+  .muxui-date-field[data-muxui-size='sm'],
+  .muxui-time-field[data-muxui-size='sm'],
+  .muxui-date-picker[data-muxui-size='sm'],
+  .muxui-date-range-picker[data-muxui-size='sm'],
+  .muxui-autocomplete[data-muxui-size='sm'],
+  .muxui-input-tags[data-muxui-size='sm'],
+  .muxui-multi-select[data-muxui-size='sm'],
+  .muxui-tag-select[data-muxui-size='sm'],
+  .muxui-payment-input[data-muxui-size='sm'],
+  .muxui-color-field[data-muxui-size='sm'],
+  .muxui-combo-box[data-muxui-size='sm'],
+  .muxui-checkbox-group[data-muxui-size='sm'],
+  .muxui-radio-group[data-muxui-size='sm'],
+  .muxui-tabs[data-muxui-size='sm']
 ) { --muxui-control-target-size: var(--muxui-control-size-sm); }
 
 :where(
-  .muxui-select[data-size='lg'],
-  .muxui-text-field[data-size='lg'],
-  .muxui-search-field[data-size='lg'],
-  .muxui-number-field[data-size='lg'],
-  .muxui-date-field[data-size='lg'],
-  .muxui-time-field[data-size='lg'],
-  .muxui-date-picker[data-size='lg'],
-  .muxui-date-range-picker[data-size='lg'],
-  .muxui-autocomplete[data-size='lg'],
-  .muxui-input-tags[data-size='lg'],
-  .muxui-multi-select[data-size='lg'],
-  .muxui-tag-select[data-size='lg'],
-  .muxui-payment-input[data-size='lg'],
-  .muxui-color-field[data-size='lg'],
-  .muxui-combo-box[data-size='lg'],
-  .muxui-checkbox-group[data-size='lg'],
-  .muxui-radio-group[data-size='lg'],
-  .muxui-tabs[data-size='lg']
+  .muxui-select[data-muxui-size='lg'],
+  .muxui-text-field[data-muxui-size='lg'],
+  .muxui-search-field[data-muxui-size='lg'],
+  .muxui-number-field[data-muxui-size='lg'],
+  .muxui-date-field[data-muxui-size='lg'],
+  .muxui-time-field[data-muxui-size='lg'],
+  .muxui-date-picker[data-muxui-size='lg'],
+  .muxui-date-range-picker[data-muxui-size='lg'],
+  .muxui-autocomplete[data-muxui-size='lg'],
+  .muxui-input-tags[data-muxui-size='lg'],
+  .muxui-multi-select[data-muxui-size='lg'],
+  .muxui-tag-select[data-muxui-size='lg'],
+  .muxui-payment-input[data-muxui-size='lg'],
+  .muxui-color-field[data-muxui-size='lg'],
+  .muxui-combo-box[data-muxui-size='lg'],
+  .muxui-checkbox-group[data-muxui-size='lg'],
+  .muxui-radio-group[data-muxui-size='lg'],
+  .muxui-tabs[data-muxui-size='lg']
 ) { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 :where(
@@ -728,11 +728,11 @@
 /* Shared group headers use the list/menu primitive. The
    component-specific header classes remain available for consumer overrides. */
 :where(
-  .muxui-select [data-part='header'],
-  .muxui-combo-box [data-part='header'],
-  .muxui-autocomplete-list [data-part='header'],
-  .muxui-list-box [data-part='header'],
-  .muxui-menu [data-part='header'],
+  .muxui-select [data-muxui-part='header'],
+  .muxui-combo-box [data-muxui-part='header'],
+  .muxui-autocomplete-list [data-muxui-part='header'],
+  .muxui-list-box [data-muxui-part='header'],
+  .muxui-menu [data-muxui-part='header'],
   .muxui-command-palette__section-header
 ) {
   padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small) 0;

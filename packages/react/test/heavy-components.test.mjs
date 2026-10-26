@@ -36,11 +36,11 @@ test('Markdown returns its fallback for source, line count, and line length boun
   const lines = (count, separator) => Array.from({ length: count }, () => 'x').join(separator);
   const rejected = (source, code) => {
     const html = render(source);
-    assert.match(html, new RegExp(`data-markdown-error="${code}"`, 'u')); assert.match(html, />Blocked</u);
+    assert.match(html, new RegExp(`data-muxui-markdown-error="${code}"`, 'u')); assert.match(html, />Blocked</u);
   };
   const accepted = (source) => {
     const html = render(source);
-    assert.doesNotMatch(html, /data-markdown-error/u); assert.doesNotMatch(html, /Blocked/u);
+    assert.doesNotMatch(html, /data-muxui-markdown-error/u); assert.doesNotMatch(html, /Blocked/u);
   };
 
   rejected('x'.repeat(MARKDOWN_SOURCE_LIMIT + 1), 'MARKDOWN_SOURCE_LIMIT_EXCEEDED');
@@ -62,7 +62,7 @@ test('Markdown returns its fallback for source, line count, and line length boun
 test('Markdown preserves indented code as paragraph content while fencing creates code blocks', () => {
   const html = renderToStaticMarkup(React.createElement(Markdown, { source: '    indented code\n\n```js\nfenced code\n```' }));
   assert.match(html, /<p>indented code<\/p>/u);
-  assert.match(html, /<pre class="muxui-markdown-code-block" data-language="js"><code>fenced code<\/code><\/pre>/u);
+  assert.match(html, /<pre class="muxui-markdown-code-block" data-muxui-language="js"><code>fenced code<\/code><\/pre>/u);
 });
 test('TextEditor only accepts the finite owned document grammar', () => {
   const input = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi', marks: [{ type: 'link', attrs: { href: 'javascript:bad' } }] }] }, { type: 'script', content: [] }] };
@@ -523,7 +523,7 @@ test('TextEditor selection actions follow a nonempty selection without taking fo
     await t.select(7, 12);
     assert.ok(t.bar());
     assert.ok(document.activeElement === t.pm, 'the bar never takes focus');
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle');
     assert.deepEqual(t.names(), ['Describe edits', 'Improve', 'Explain', 'More actions']);
     assert.ok(document.querySelector('.muxui-text-editor__selection-range') === null, 'the editor paints its own selection while focused');
     for (const svg of t.bar().querySelectorAll('svg')) {
@@ -608,7 +608,7 @@ test('TextEditor selection review keeps, discards, and retries an applied edit',
     await t.flush();
     assert.equal(t.text(), 'Hello plucky new world');
     assert.deepEqual(t.blocks()[0].content[1], { type: 'text', text: 'plucky', marks: [{ type: 'bold' }] }, 'a string takes the marks at the start of the selection');
-    assert.equal(t.bar().getAttribute('data-phase'), 'review');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'review');
     assert.deepEqual(t.names(), ['Keep', 'Discard', 'Try again']);
     assert.equal(document.querySelector('.muxui-text-editor__selection-range')?.textContent, 'plucky', 'the new content stays highlighted');
     assert.equal(t.status(), 'Edit ready to review');
@@ -689,7 +689,7 @@ test('TextEditor selection edits replace or insert strings and documents', async
     await start();
     for (const invalid of [42, null, undefined, { type: 'paragraph' }]) assert.equal(await t.apply('replace', invalid), false);
     assert.equal(t.json(), original);
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle');
   } finally {
     await t.close();
   }
@@ -706,7 +706,7 @@ test('TextEditor selection edits are refused once stale, aborted, over the limit
     assert.equal(await t.apply('replace', 'x'.repeat(10)), false, 'an edit over the limit is refused');
     assert.equal(t.json(), original);
     assert.equal(changes, baseline, 'a refused edit is never applied and reverted');
-    assert.equal(t.bar().getAttribute('data-phase'), 'pending', 'no review state is entered');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'pending', 'no review state is entered');
 
     await act(async () => t.editor.commands.insertContentAt(1, '>>'));
     assert.equal(t.session.actions.signal.aborted, false, 'an edit outside the range keeps the request');
@@ -721,7 +721,7 @@ test('TextEditor selection edits are refused once stale, aborted, over the limit
     assert.equal(t.session.actions.signal.aborted, true, 'an edit inside the range makes the request stale');
     assert.equal(await t.apply('replace', 'Q'), false);
     await t.select(9, 14);
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'a stale request leaves no pending bar');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle', 'a stale request leaves no pending bar');
 
     await t.click('Improve');
     await t.render({ readOnly: true });
@@ -769,7 +769,7 @@ test('TextEditor selection requests show pending, cancel through the signal, and
   try {
     await t.select(7, 12);
     await t.click('Improve');
-    assert.equal(t.bar().getAttribute('data-phase'), 'pending');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'pending');
     assert.equal(t.bar().getAttribute('aria-busy'), 'true');
     assert.equal(t.bar().textContent, 'Improving…Cancel', 'an action can name its pending text');
     assert.equal(t.status(), 'Improving…', 'a polite live region announces the pending state');
@@ -777,17 +777,17 @@ test('TextEditor selection requests show pending, cancel through the signal, and
 
     await t.click('Cancel');
     assert.equal(pending[0].actions.signal.aborted, true);
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle');
     assert.ok(document.activeElement === t.pm, 'cancel returns focus to the editor');
     pending[0].reject(new Error('late'));
     await t.flush();
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'an aborted request reports no failure');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle', 'an aborted request reports no failure');
 
     await t.click('Explain');
     assert.equal(t.bar().textContent, 'Editing…Cancel', 'the default pending text');
     pending[1].reject(new Error('offline'));
     await t.flush();
-    assert.equal(t.bar().getAttribute('data-phase'), 'error');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'error');
     assert.deepEqual(t.names(), ['Try again', 'Dismiss']);
     assert.match(t.bar().textContent, /Couldn't complete the edit/u);
     assert.equal(t.status(), "Couldn't complete the edit");
@@ -796,13 +796,13 @@ test('TextEditor selection requests show pending, cancel through the signal, and
     assert.equal(pending[2].actions.selection.text, 'brave');
     pending[2].resolve();
     await t.flush();
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'a request that applies nothing returns to the bar');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle', 'a request that applies nothing returns to the bar');
 
     await t.click('Explain');
     pending[3].reject(new Error('offline'));
     await t.flush();
     await t.click('Dismiss');
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle');
     assert.equal(pending[3].actions.signal.aborted, true);
     assert.equal(t.status(), '');
   } finally {
@@ -920,7 +920,7 @@ test('TextEditor selection edits refuse an invalid document without touching the
       assert.equal(await t.apply(mode, { type: 'doc', content: [] }), false, `${mode} refuses an empty document`);
     }
     assert.equal(t.json(), original, 'the selection is not erased');
-    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'idle');
     assert.equal(await t.apply('replace', t.session.actions.selection.document), true, 'the snapshot document is valid content');
     assert.equal(t.text(), 'Hello brave new world');
   } finally {
@@ -1048,7 +1048,7 @@ test('TextEditor selection close keeps an applied edit and ignores a finished re
     assert.equal(requests.length, 3);
     await act(async () => requests[1].close());
     assert.equal(requests[2].signal.aborted, false, 'closing a finished request leaves the current one running');
-    assert.equal(t.bar().getAttribute('data-phase'), 'pending');
+    assert.equal(t.bar().getAttribute('data-muxui-phase'), 'pending');
   } finally {
     await t.close();
   }
@@ -1108,7 +1108,7 @@ test('Resizable maintains pair totals, RTL keyboard direction, and cancels point
     await act(async () => root.render(React.createElement(Resizable, { defaultSizes: { left: 50, right: 50 }, onSizesChange: (next) => changes.push(next), onSizesCommit: (next) => commits.push(next) }, React.createElement(ResizablePanel, { id: 'left', minSize: 10, maxSize: 55 }, 'Left'), React.createElement(ResizableHandle, { id: 'split', before: 'left', after: 'right', 'aria-label': 'Resize' }), React.createElement(ResizablePanel, { id: 'right', minSize: 10, maxSize: 90 }, 'Right'))));
     const container = document.querySelector('.muxui-resizable');
     container.getBoundingClientRect = () => ({ width: 1_000, height: 200, top: 0, left: 0, right: 1_000, bottom: 200 });
-    const handle = document.querySelector('[data-handle-id="split"]');
+    const handle = document.querySelector('[data-muxui-handle-id="split"]');
     const props = reactProps(handle);
     await act(async () => {
       props.onPointerDown({ button: 0, pointerId: 1, clientX: 500, currentTarget: handle });
@@ -1119,11 +1119,11 @@ test('Resizable maintains pair totals, RTL keyboard direction, and cancels point
     assert.equal(changes.at(-1).left, 55);
     assert.equal(commits.length, 1);
     document.documentElement.dir = 'rtl';
-    await act(async () => reactProps(document.querySelector('[data-handle-id="split"]')).onKeyDown({ key: 'ArrowRight', shiftKey: false, preventDefault() {}, defaultPrevented: false }));
+    await act(async () => reactProps(document.querySelector('[data-muxui-handle-id="split"]')).onKeyDown({ key: 'ArrowRight', shiftKey: false, preventDefault() {}, defaultPrevented: false }));
     assert.equal(changes.at(-1).left, 54);
     const commitCount = commits.length;
     await act(async () => {
-      const fresh = document.querySelector('[data-handle-id="split"]');
+      const fresh = document.querySelector('[data-muxui-handle-id="split"]');
       const freshProps = reactProps(fresh);
       freshProps.onPointerDown({ button: 0, pointerId: 2, clientX: 500, currentTarget: fresh });
       freshProps.onPointerMove({ pointerId: 2, clientX: 600, currentTarget: fresh });
@@ -1166,7 +1166,7 @@ async function mountResizable({ orientation = 'horizontal', dir = 'ltr', control
   const render = () => act(async () => root.render(React.createElement(Harness, settings)));
   await render();
   document.querySelector('.muxui-resizable').getBoundingClientRect = () => ({ width: 1_000, height: 1_000, top: 0, left: 0, right: 1_000, bottom: 1_000 });
-  const handle = () => document.querySelector('[data-handle-id="split"]');
+  const handle = () => document.querySelector('[data-muxui-handle-id="split"]');
   return {
     changes,
     commits,

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { glob, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
@@ -9,12 +10,17 @@ import { catalogStateKinds, establishedClasses, partFailures, readCatalog, state
 import { booleanStates, enumeratedStates, stateAttribute, substrateStateAttributes } from '../src/styling-contract.ts';
 import { mappedParts, noElementParts, partClass, pendingParts, publicSharedClasses, sharedParts } from './support/styling-parts.ts';
 import {
-  auditedReactAria, booleanValueSelectors, listSources, racStateWriters, reactAriaImportProblems, reactAriaVersionProblems, reviewedRacImports, reviewedRacWriters,
+  attributeFindingsIn, auditedReactAria, booleanValueSelectors, foreignAttributes, historicalPaths, listSources, probePaths, renamedPropAttributes, racStateWriters, reactAriaImportProblems, reactAriaVersionProblems, reviewedRacImports, reviewedRacWriters,
   scriptAttributeFindings, styleAttributeFindings, substrateWrappers,
 } from './support/attribute-guard.mjs';
 import { leakedStateAttributes, leakProblems, mountedCases, renderMounted, renderServer, serverCases, shownStates } from './support/state-matrix.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
+const manifestPath = resolve(packageRoot, 'package.json');
+const sourceRoot = resolve(packageRoot, 'src');
+const reactAriaNames = Object.keys(substrateStateAttributes);
+const { wrapped } = substrateWrappers(await readFile(resolve(sourceRoot, 'substrate.ts'), 'utf8'));
+
 const source = JSON.parse(await readFile(resolve(packageRoot, '../../catalog/tokens/default-theme.json'), 'utf8'));
 const tokenGraph = compilePureTokenGraph(source);
 const tokenNames = new Set(Object.values(tokenGraph.tokens).flatMap((token) => [
@@ -171,10 +177,13 @@ test('the substrate table maps each React Aria state spelling to its Mux spellin
   assert.deepEqual(substrateStateAttributes, Object.fromEntries(closedStates.map((state) => [reactAriaName(state), stateAttribute(state)])));
 });
 
-test('every catalog state is classified by meaning and only unresolved ones are open work', () => {
+test('every catalog state is classified by meaning, none is left open, and a status names an attribute a family writes', async () => {
   assert.deepEqual(stateFailures(catalog.states), []);
-  const unresolved = Object.values(catalogStateKinds).filter(([kind]) => kind === 'unresolved');
-  assert.ok(unresolved.length <= 9, 'the unresolved allowlist only shrinks');
+  assert.deepEqual(Object.entries(catalogStateKinds).filter(([, [kind]]) => kind === 'unresolved').map(([name]) => name), [], 'no state is left unresolved');
+  const sources = (await Promise.all((await listSources(sourceRoot, ['.ts', '.mjs'])).map((file) => readFile(resolve(sourceRoot, file), 'utf8')))).join('\n');
+  const statuses = Object.entries(catalogStateKinds).filter(([, [kind]]) => kind === 'status');
+  assert.deepEqual(statuses.map(([name]) => name), ['loaded', 'fallback', 'error']);
+  for (const [name, [, status]] of statuses) assert.ok(sources.includes(`'data-muxui-${status}'`), `${name} is written as data-muxui-${status}`);
 });
 
 test('the state classification refuses an unclassified name, a stale entry and a target outside the closed list', () => {
@@ -183,6 +192,7 @@ test('the state classification refuses an unclassified name, a stale entry and a
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, hovered: ['state', 'hover'] }).join(), /hovered names hover/u);
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, vertical: ['enum', 'orientation', 'sideways'] }).join(), /vertical names orientation=sideways/u);
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, error: ['unresolved'] }).join(), /error is unresolved without a reason and a PR/u);
+  assert.match(stateFailures(catalog.states, { ...catalogStateKinds, error: ['status'] }).join(), /error is a status without the attribute it names/u);
 });
 
 test('every catalog anatomy entry is in the part map exactly once with an established class or a reason', () => {
@@ -256,11 +266,6 @@ test('the audited React Aria versions are the declared and installed ones', () =
   assert.match(reactAriaVersionProblems(manifestPath, { ...auditedReactAria, 'react-aria': '3.50.0' }).join(), /react-aria is declared as 3\.51\.0, audited at 3\.50\.0/u);
   assert.match(reactAriaVersionProblems(manifestPath, { ...auditedReactAria, 'react-stately': '3.48.0' }).join(), /react-stately is installed at 3\.49\.0, audited at 3\.48\.0/u);
 });
-
-const manifestPath = resolve(packageRoot, 'package.json');
-const sourceRoot = resolve(packageRoot, 'src');
-const reactAriaNames = Object.keys(substrateStateAttributes);
-const { wrapped } = substrateWrappers(await readFile(resolve(sourceRoot, 'substrate.ts'), 'utf8'));
 
 // A family that imports a wrapped component straight from React Aria Components renders the React Aria state names.
 test('every React Aria import outside the substrate is a wrapper import or a reviewed name', async () => {
@@ -390,4 +395,48 @@ test('no family renders a React Aria state attribute and each renders the states
   assert.deepEqual(problemsOf(picker.filter((element) => !(element.tag === 'input' && element.attributes.includes('data-disabled')))), pickerAllowed.map((leak) => `DatePicker (server) no longer renders ${leak}, so its exception is stale`), 'the exception when it no longer occurs');
   assert.deepEqual(problemsOf(picker, []), pickerAllowed.map((leak) => `DatePicker (server) renders ${leak}`), 'the exception when it is not granted');
   assert.deepEqual(problemsOf([...picker, { tag: 'div', isDateSegment: false, attributes: ['data-disabled'] }]), ['DatePicker (server) renders data-disabled@div'], 'another element');
+});
+
+// The shipped names are the whole contract, so after the rename every tracked file speaks them. This is the lasting
+// backstop for what the targeted scans cannot see (docs prose, catalog JSON, consumers, tests): a React Aria state or a
+// reflected prop under its old name fails here unless the name is another product's, listed with whose.
+test('no tracked file names an attribute under its name before the rename, except where the name is not Mux\'s', async () => {
+  const repositoryRoot = resolve(packageRoot, '../..');
+  const files = execFileSync('git', ['ls-files', '-z'], { cwd: repositoryRoot, encoding: 'utf8', maxBuffer: 1 << 28 }).split('\0').filter(Boolean)
+    .filter((file) => !/\.(?:png|jpe?g|gif|webp|avif|woff2?|ico|pdf|zip|gz|lock)$/u.test(file) && !file.endsWith('pnpm-lock.yaml'));
+  const forbidden = [...reactAriaNames, ...Object.keys(renamedPropAttributes)];
+  const foreignFor = (file) => foreignAttributes.filter(({ path }) => file === path || (path.endsWith('/') && file.startsWith(path)));
+  const findings = [];
+  const seenForeign = new Map();
+  for (const file of files) {
+    if (probePaths.includes(file) || Object.keys(historicalPaths).some((path) => file.startsWith(path))) continue;
+    const text = await readFile(resolve(repositoryRoot, file), 'utf8').catch(() => undefined);
+    if (text === undefined) continue;
+    const allowed = foreignFor(file);
+    for (const { attribute, via, line } of attributeFindingsIn(file, text, forbidden)) {
+      const entry = allowed.find(({ names }) => names.includes(attribute));
+      if (entry) seenForeign.set(`${entry.path} ${attribute}`, true);
+      else findings.push(`${file}${line ? `:${line}` : ''} ${attribute} (${via})`);
+    }
+  }
+  assert.deepEqual(findings, []);
+  assert.deepEqual(foreignAttributes.flatMap(({ path, names }) => names.map((name) => `${path} ${name}`)).filter((key) => !seenForeign.has(key)), [], 'an exemption that no longer applies');
+
+  // Every renamed prop is still written somewhere under its new name, so the table cannot drift from the code.
+  const written = (await Promise.all((await listSources(sourceRoot, ['.ts', '.mjs', '.css'])).map((file) => readFile(resolve(sourceRoot, file), 'utf8')))).join('\n');
+  assert.deepEqual(Object.values(renamedPropAttributes).filter((name) => !written.includes(name)), [], 'a renamed prop that no source writes or styles');
+  assert.equal(Object.keys(renamedPropAttributes).length, 41);
+  assert.deepEqual(Object.entries(renamedPropAttributes).filter(([old, next]) => next !== old.replace('data-', 'data-muxui-')).map(([old]) => old), ['data-density'], 'the one prop that does not take the plain prefix');
+  assert.equal(Object.keys(substrateStateAttributes).length + Object.keys(renamedPropAttributes).length, 75);
+
+  // Controls: each kind of file reports an old name, and a new name or an unrelated one passes.
+  const found = (file, text) => attributeFindingsIn(file, text, forbidden).map(({ attribute }) => attribute);
+  assert.deepEqual(found('a.css', '.a[data-size="lg"] { color: red; }'), ['data-size']);
+  assert.deepEqual(found('a.mjs', "el.getAttribute('data-variant')"), ['data-variant']);
+  assert.deepEqual(found('a.tsx', 'const a = <div data-card-type="visa" />;'), ['data-card-type']);
+  assert.deepEqual(found('a.md', 'Style it with `[data-collapsed]` and data-density.'), ['data-collapsed', 'data-density']);
+  assert.deepEqual(found('a.json', '{"note": "carries data-image-state"}'), ['data-image-state']);
+  assert.deepEqual(found('a.mjs', "el.hasAttribute('data-muxui-size') && el.dataset.muxuiSize"), []);
+  assert.deepEqual(found('a.md', 'data-sizes and my-data-size are other names'), []);
+  assert.deepEqual(found('a.mjs', 'el.dataset.cardType'), ['data-card-type']);
 });

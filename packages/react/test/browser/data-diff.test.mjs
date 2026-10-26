@@ -72,7 +72,7 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
     await page.keyboard.press('Space');
     await page.waitForFunction(() => window.dataDiffChanges.length === 3);
     assert.equal(await page.getByRole('button', { name: 'Apply 0 changes' }).isDisabled(), true);
-    await page.locator('[data-row-id="outline"] .muxui-data-diff-cell').first().click();
+    await page.locator('[data-muxui-row-id="outline"] .muxui-data-diff-cell').first().click();
     const apply = page.getByRole('button', { name: 'Apply 1 change', exact: true });
     await apply.focus();
     await page.keyboard.press('Enter');
@@ -83,7 +83,7 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
     await gutter.click();
     assert.equal(await page.evaluate(() => window.dataDiffChanges.length), 5);
     assert.deepEqual(await page.evaluate(() => window.dataDiffChanges.at(-1)), ['gutter', 'outline']);
-    await page.locator('[data-row-id="gutter"] .muxui-data-diff-cell').first().click();
+    await page.locator('[data-muxui-row-id="gutter"] .muxui-data-diff-cell').first().click();
     assert.equal(await page.evaluate(() => window.dataDiffChanges.length), 6);
     assert.deepEqual(await page.evaluate(() => window.dataDiffChanges.at(-1)), ['outline']);
 
@@ -91,13 +91,13 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
     await page.getByRole('button', { name: 'Applying…' }).waitFor();
     assert.ok((await page.getByRole('checkbox').evaluateAll((inputs) => inputs.map((input) => input.disabled))).every(Boolean));
     assert.equal(await page.locator('.muxui-data-diff').getAttribute('aria-busy'), 'true');
-    await page.locator('[data-row-id="gutter"] .muxui-data-diff-cell').first().click();
+    await page.locator('[data-muxui-row-id="gutter"] .muxui-data-diff-cell').first().click();
     assert.equal(await page.evaluate(() => window.dataDiffChanges.length), 6);
     await capture('data-diff-dark-pending.png');
     await page.evaluate(() => window.mountDataDiff({ disabled: true }));
     await page.getByRole('button', { name: 'Apply 1 change', exact: true }).waitFor();
     assert.ok((await page.getByRole('checkbox').evaluateAll((inputs) => inputs.map((input) => input.disabled))).every(Boolean));
-    await page.locator('[data-row-id="gutter"] .muxui-data-diff-cell').first().click();
+    await page.locator('[data-muxui-row-id="gutter"] .muxui-data-diff-cell').first().click();
     assert.equal(await page.evaluate(() => window.dataDiffChanges.length), 6);
     await capture('data-diff-dark-disabled.png');
 
@@ -107,7 +107,7 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.equal(await page.locator('.muxui-data-diff-viewport').evaluate((node) => node.scrollWidth > node.clientWidth), true);
     const viewport = page.getByRole('region', { name: 'Proposed token cleanup' });
-    const selection = page.locator('[data-row-id="outline"] > .muxui-data-diff-selection');
+    const selection = page.locator('[data-muxui-row-id="outline"] > .muxui-data-diff-selection');
     const edge = () => selection.evaluate((node) => {
       const style = getComputedStyle(node, '::before');
       return { width: style.borderInlineStartWidth, color: style.borderInlineStartColor, content: style.content };
@@ -145,7 +145,7 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
         const selectedEdge = await edge();
         assert.equal(selectedEdge.width, '2px');
         assert.equal(selectedEdge.color, await selection.locator('.muxui-checkbox-indicator').evaluate((node) => getComputedStyle(node).backgroundColor));
-        assert.equal(await page.locator('[data-row-id="gutter"] > .muxui-data-diff-selection').evaluate((node) => getComputedStyle(node, '::before').content), 'none');
+        assert.equal(await page.locator('[data-muxui-row-id="gutter"] > .muxui-data-diff-selection').evaluate((node) => getComputedStyle(node, '::before').content), 'none');
         const changesBefore = await page.evaluate(() => window.dataDiffChanges.length);
         await page.getByRole('checkbox', { name: 'Select Outline (added)' }).click();
         assert.equal(await page.evaluate(() => window.dataDiffChanges.length), changesBefore + 1);
@@ -172,20 +172,20 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
     await viewport.focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await viewport.evaluate((node) => node === document.activeElement), true);
-    assert.match(await page.locator('[data-row-id="changed"]').textContent(), /Before: falseAfter: true/u);
-    assert.match(await page.locator('[data-row-id="changed"]').textContent(), /Before: nullAfter:/u);
-    assert.match(await page.locator('[data-row-id="escaped"]').textContent(), /<script>window.bad=true<\/script>/u);
+    assert.match(await page.locator('[data-muxui-row-id="changed"]').textContent(), /Before: falseAfter: true/u);
+    assert.match(await page.locator('[data-muxui-row-id="changed"]').textContent(), /Before: nullAfter:/u);
+    assert.match(await page.locator('[data-muxui-row-id="escaped"]').textContent(), /<script>window.bad=true<\/script>/u);
     await capture('data-diff-dark-360-updated.png');
 
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
-    const changes = await page.locator('[data-change]').evaluateAll((nodes) => nodes.map((node) => ({
+    const changes = await page.locator('[data-muxui-change]').evaluateAll((nodes) => nodes.map((node) => ({
       text: node.textContent, marker: node.querySelector('.muxui-data-diff-change').textContent, updatedIcon: Boolean(node.querySelector('.lucide-refresh-cw')),
       color: getComputedStyle(node).color, background: getComputedStyle(node).backgroundColor,
     })));
     assert.ok(changes.some((row) => row.updatedIcon && row.text.includes('Before:')));
     assert.ok(changes.some((row) => row.marker === '+' && row.text.includes('Added row')));
     assert.ok(changes.every((row) => row.color !== row.background));
-    const forcedSelection = page.locator('[data-row-id="changed"] > .muxui-data-diff-selection');
+    const forcedSelection = page.locator('[data-muxui-row-id="changed"] > .muxui-data-diff-selection');
     assert.equal(await forcedSelection.evaluate((node) => getComputedStyle(node, '::before').borderInlineStartWidth), '2px');
     assert.notEqual(await forcedSelection.evaluate((node) => getComputedStyle(node, '::before').borderInlineStartColor), await forcedSelection.evaluate((node) => getComputedStyle(node).backgroundColor));
     assert.equal(await forcedSelection.locator('.lucide-check').count(), 1);

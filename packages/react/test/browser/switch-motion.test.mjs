@@ -104,7 +104,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     await page.waitForFunction(() => document.querySelector('#primary-switch .muxui-switch')?.hasAttribute('data-muxui-state-pressed'));
     await page.waitForFunction(() => {
       const node = document.querySelector('#primary-switch .muxui-switch-indicator');
-      return node?.hasAttribute('data-motion-pressed')
+      return node?.hasAttribute('data-muxui-motion-pressed')
         && node.getAnimations().some((animation) => animation.playState === 'running'
           && animation.effect?.getKeyframes().some((frame) => frame.transform !== undefined));
     });
@@ -133,7 +133,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
       }
       const initialMatrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
       const ready = node.closest('.muxui-switch')?.hasAttribute('data-muxui-state-pressed')
-        && !node.hasAttribute('data-motion-pressed') && !node.style.transform
+        && !node.hasAttribute('data-muxui-motion-pressed') && !node.style.transform
         && Math.abs(Math.hypot(initialMatrix.m11, initialMatrix.m12) - 1) < 0.001
         && Math.abs(Math.hypot(initialMatrix.m21, initialMatrix.m22) - 1) < 0.001
         && node.getAnimations().length === 0
@@ -144,14 +144,14 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
       }
       window.__switchReducedStableFrames += 1;
       if (window.__switchReducedStableFrames < 2) return false;
-      node.setAttribute('data-motion-pressed', '');
+      node.setAttribute('data-muxui-motion-pressed', '');
       const style = getComputedStyle(node);
       const matrix = new DOMMatrixReadOnly(style.transform);
       const result = {
         scaleX: Math.hypot(matrix.m11, matrix.m12),
         scaleY: Math.hypot(matrix.m21, matrix.m22),
       };
-      node.removeAttribute('data-motion-pressed');
+      node.removeAttribute('data-muxui-motion-pressed');
       return result;
     }, undefined, { timeout: 3000 });
     const systemReducedPress = await systemReducedPressHandle.jsonValue();
@@ -185,13 +185,13 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     });
     await page.evaluate(() => document.getElementById('switch-motion-fixture').setAttribute('data-muxui-motion', 'reduced'));
     const explicitReducedPress = await page.locator('#primary-switch .muxui-switch-indicator').evaluate((node) => {
-      node.setAttribute('data-motion-pressed', '');
+      node.setAttribute('data-muxui-motion-pressed', '');
       const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
       const result = {
         scaleX: Math.hypot(matrix.m11, matrix.m12),
         scaleY: Math.hypot(matrix.m21, matrix.m22),
       };
-      node.removeAttribute('data-motion-pressed');
+      node.removeAttribute('data-muxui-motion-pressed');
       return result;
     });
     assert.ok(Math.abs(explicitReducedPress.scaleX - 1) < 0.001 && Math.abs(explicitReducedPress.scaleY - 1) < 0.001,
