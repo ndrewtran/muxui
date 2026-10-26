@@ -568,6 +568,14 @@ export const partMapConsumers = Object.freeze({
   packageChecks: Object.freeze(['@muxui/figma', '@muxui/react']),
 });
 
+// The styling projection (X-006): this module derives it, apps/component-reference.mjs exposes it, and the docs build and Storybook's
+// generator call that. A change to it or to the part map it reads runs the docs check, the Docs page test (addComponentDocsProof) and
+// the Anatomy factory test. A literal-path route: see the policy test for what it does not see.
+export const stylingReferencePath = 'packages/react/test/support/styling-reference.mjs';
+export const stylingConsumers = Object.freeze({
+  storybookUnitTests: Object.freeze([{ file: 'test/storybook.test.mjs' }]),
+});
+
 // Tracked files outside packages/react/src whose text names `needle`.
 async function trackedReferences(needle) {
   const result = git(['grep', '-l', '-z', '-F', '-e', needle, '--', '.', ':!packages/react/src'], { allowFailure: true });
@@ -1417,6 +1425,19 @@ export async function buildPullRequestImpact({
         plan.reasons.push(`${path} is React type-test input; run the React package check that typechecks it`);
       } else {
         const testFiles = [...new Set([...reactTestFilesReferencing(testPath, reactTestReferenceSources), ...publicSurfaceTestsFor(path)])].sort();
+        // Both explicit routes come before the zero-reference fallback below, whose `continue` would otherwise swallow them.
+        if (path === partMapPath) {
+          plan.storyTooling = true;
+          for (const route of partMapConsumers.storybookUnitTests) addStoryUnitTest(plan, route);
+          for (const name of partMapConsumers.packageChecks) plan.packageChecks.add(name);
+          plan.reasons.push(`${path} is the part map that Storybook's anatomy proof and the Figma anatomy specs read; run both, and the React package check that typechecks it`);
+        }
+        if (path === partMapPath || path === stylingReferencePath) {
+          plan.docs = true;
+          addComponentDocsProof(plan);
+          for (const route of stylingConsumers.storybookUnitTests) addStoryUnitTest(plan, route);
+          plan.reasons.push(`${path} feeds the styling projection that the docs and the Storybook Anatomy stories show; run the docs check, the Docs page test and the Anatomy factory test`);
+        }
         if (testFiles.length === 0 && await readHeadText(path) !== null) {
           plan.reactPackageFull = true;
           widen(`${path} is not referenced by any React test file; running the full React proof (reference it from a test or remove it to narrow this)`);
@@ -1424,12 +1445,6 @@ export async function buildPullRequestImpact({
         }
         testFiles.forEach((file) => plan.reactTestFiles.add(file));
         plan.reasons.push(`${path} is a shared React test helper; run the test files that reference it`);
-        if (path === partMapPath) {
-          plan.storyTooling = true;
-          for (const route of partMapConsumers.storybookUnitTests) addStoryUnitTest(plan, route);
-          for (const name of partMapConsumers.packageChecks) plan.packageChecks.add(name);
-          plan.reasons.push(`${path} is the part map that Storybook's anatomy proof and the Figma anatomy specs read; run both, and the React package check that typechecks it`);
-        }
       }
       continue;
     }

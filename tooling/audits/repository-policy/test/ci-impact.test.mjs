@@ -37,6 +37,7 @@ import {
   shardStoryRun,
   storybookSelection,
   storyShardPageBudget,
+  stylingReferencePath,
   validateScopedEntrypoints,
   workspaceDependentRoutes,
 } from '../src/ci-impact.mjs';
@@ -4566,9 +4567,18 @@ function supportFilesNamedBy(text) {
   return [...new Set([...text.matchAll(/packages\/react\/test\/support\/([\w-]+(?:\.[\w-]+)*)/gu)].map(([, file]) => `packages/react/test/support/${file}`))];
 }
 
-// The filled part map is imported by relative path by Storybook's anatomy proof and the Figma anatomy specs. The React tests that
-// reference it are found by text, those consumers are not, and only the React package check typechecks it.
-test('a change to the part map runs the Storybook anatomy proof, the Figma checks and the React typecheck', async () => {
+// The support files that sources (path to text) name and the planner does not route to them: any but the part map and the styling
+// reference.
+function unroutedImports(sources) {
+  return Object.entries(sources).flatMap(([file, text]) => supportFilesNamedBy(text)
+    .filter((imported) => imported !== partMapPath && imported !== stylingReferencePath)
+    .map((imported) => `${file} imports ${imported}`));
+}
+
+// The filled part map is imported by relative path by Storybook's anatomy proof and the Figma anatomy specs, and it feeds the styling
+// projection that the docs and the Anatomy stories show. The React tests that reference it are found by text, those consumers are not,
+// and only the React package check typechecks it.
+test('a change to the part map runs the Storybook anatomy proof, the docs, the Figma checks and the React typecheck', async () => {
   const reactTestReferenceSources = await reactTestTexts();
   const result = await plan([partMapPath], { ...edited(partMapPath), reactTestReferenceSources });
   // Only the tests that read it by name: the shared styling test, the emission test and the hookOnly browser test. types.test.tsx
@@ -4576,44 +4586,109 @@ test('a change to the part map runs the Storybook anatomy proof, the Figma check
   // mention one.
   assert.deepEqual(result.reactTestFiles, ['test/browser/hook-only-reach.test.mjs', 'test/styling-emission.test.mjs', 'test/styling-tokens.test.mjs']);
   assert.equal(result.storyTooling, true);
-  assert.deepEqual(result.storyUnitTests, [{ file: 'test/storybook.test.mjs' }]);
+  // The Docs page test comes from addComponentDocsProof; the list is sorted.
+  assert.deepEqual(result.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }, { file: 'test/storybook.test.mjs' }]);
+  assert.equal(result.docs, true);
   assert.ok(result.packageChecks.includes('@muxui/figma'));
   assert.ok(result.packageChecks.includes('@muxui/react'));
   assert.equal(result.reactPackageFull, false);
   const commands = executionCommands(result, { packages }).map(({ args }) => args.join(' '));
   for (const expected of [
+    '--filter @muxui/docs run check',
     '--filter @muxui/figma run check',
     '--filter @muxui/react run check',
+    '--filter @muxui/react-storybook exec node --test test/component-docs.test.mjs',
     '--filter @muxui/react-storybook exec node --test test/storybook.test.mjs',
   ]) assert.ok(commands.includes(expected), expected);
   assert.deepEqual(result.notices, []);
 
-  // Narrow: another support helper that the same test imports plans neither consumer.
+  // Narrow: another support helper that the same test imports plans none of the consumers.
   const sibling = 'packages/react/test/support/styling-inventory.mjs';
   const other = await plan([sibling], { ...edited(sibling), reactTestReferenceSources });
   assert.ok(other.reactTestFiles.includes('test/styling-tokens.test.mjs'));
+  assert.equal(other.docs, false);
   assert.equal(other.storyTooling, false);
   assert.deepEqual(other.storyUnitTests, []);
   assert.ok(!other.packageChecks.includes('@muxui/figma'));
+});
 
-  // Drift: a Storybook or Figma source that imports another React test support file reaches that file with no route, because the
-  // planner routes only the part map to those consumers. A literal-path text scan of three directories, nothing more. It runs when
-  // the policy suite runs (a policy or planner change), not on an edit of a consumer alone; a reader outside these directories (the
-  // docs reader PR 4 plans) must be added to the list when it lands; a path assembled from pieces or an alias escapes it. The
-  // protection that holds on a consumer-only edit is that the consumers' own tests read the part map and fail when it breaks.
-  const consumers = spawnSync('git', ['ls-files', '-z', 'apps/react-storybook/src', 'apps/react-storybook/.storybook', 'tooling/generators/figma'], { cwd: repositoryRoot, encoding: 'utf8' })
-    .stdout.split('\0').filter((file) => /\.[cm]?[jt]sx?$/u.test(file));
-  // The scan must keep reaching the sources that read the part map, or it would pass vacuously.
-  assert.ok(consumers.includes('apps/react-storybook/src/storybook-factory.mjs'));
-  assert.ok(consumers.includes('tooling/generators/figma/test/support.mjs'));
-  for (const file of consumers) {
-    for (const imported of supportFilesNamedBy(readFileSync(resolve(repositoryRoot, file), 'utf8'))) {
-      assert.equal(imported, partMapPath, `${file} imports ${imported}, which no route plans for it`);
-    }
+// The styling reference derives the projection that apps/component-reference.mjs exposes to the docs and Storybook's generator. The
+// importing test here is a stand-in, so this holds before and after the module and its own test exist.
+test('a change to the styling reference runs the docs check, the Docs page test and the Anatomy factory test', async () => {
+  const importer = 'test/styling-reference.test.mjs';
+  const reactTestReferenceSources = { ...(await reactTestTexts()), [importer]: "import { stylingFor } from './support/styling-reference.mjs';" };
+  const result = await plan([stylingReferencePath], { ...edited(stylingReferencePath), reactTestReferenceSources });
+  assert.equal(result.docs, true);
+  assert.equal(result.storyTooling, true);
+  assert.deepEqual(result.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }, { file: 'test/storybook.test.mjs' }]);
+  assert.ok(!result.packageChecks.includes('@muxui/figma'));
+  assert.ok(result.reactTestFiles.includes(importer));
+  assert.equal(result.reactPackageFull, false);
+  assert.deepEqual(result.notices, []);
+
+  // No test names it: the zero-reference fallback widens to the full React proof and must not swallow the route.
+  const unreferenced = await plan([stylingReferencePath], { ...edited(stylingReferencePath), reactTestReferenceSources: {} });
+  assert.equal(unreferenced.reactPackageFull, true);
+  assert.equal(unreferenced.docs, true);
+  assert.deepEqual(unreferenced.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }, { file: 'test/storybook.test.mjs' }]);
+  const commands = executionCommands(unreferenced, { packages }).map(({ args }) => args.join(' '));
+  for (const expected of [
+    '--filter @muxui/docs run check',
+    '--filter @muxui/react-storybook exec node --test test/component-docs.test.mjs',
+    '--filter @muxui/react-storybook exec node --test test/storybook.test.mjs',
+  ]) assert.ok(commands.includes(expected), expected);
+});
+
+// The inputs of the styling projection and what each plans today. The README is the exception: it is generated, so the generator that
+// writes it is the route, and a README edit alone plans no docs.
+test('the styling inputs route as measured, and the README boundary is pinned', async () => {
+  const reactTestReferenceSources = await reactTestTexts();
+  const cssPath = 'packages/react/src/styles/components.css';
+  const inputs = [
+    [partMapPath, edited(partMapPath)],
+    [stylingReferencePath, edited(stylingReferencePath)],
+    [cssPath, { textSnapshots: { [cssPath]: { before: '.muxui-tree { color: black; }', after: '.muxui-tree { color: white; }' } }, moduleSources: cssModuleSources }],
+    ['packages/tokens/src/core.mjs', edited('packages/tokens/src/core.mjs')],
+    ['catalog/tokens/default-theme.json', {}],
+    ['catalog/components/tree/artifact.json', {}],
+  ];
+  for (const [path, options] of inputs) {
+    assert.equal((await plan([path], { packages: workspacePackages, reactTestReferenceSources, ...options })).docs, true, path);
   }
+  const readme = 'packages/react/README.md';
+  assert.equal((await plan([readme], { packages: workspacePackages, ...edited(readme) })).docs, false);
+});
+
+// Drift: a docs, Storybook or Figma source that imports a React test support file other than the part map and the styling reference
+// reaches it with no route, because the planner routes only those two to the consumers. A literal-path text scan of the files below,
+// nothing more, and not a dependency graph: it runs only when the policy suite runs (a policy or planner change), not on an edit of a
+// reader alone; it reads JavaScript and TypeScript files, not .astro or Markdown; a path assembled from pieces or an alias escapes it;
+// test directories are outside it; and it does not enforce that a reader of the part map or the reference is routed, only that no
+// reader names another support file. A reader elsewhere must be added to the list when it lands.
+test('no docs, Storybook or Figma source imports a React test support file the planner does not route', () => {
+  const scanned = spawnSync('git', [
+    'ls-files', '-z', 'apps/component-reference.mjs', 'apps/docs/src', 'apps/docs/scripts', 'apps/react-storybook/src', 'apps/react-storybook/.storybook',
+    'tooling/generators/figma',
+  ], { cwd: repositoryRoot, encoding: 'utf8' }).stdout.split('\0').filter((file) => /\.[cm]?[jt]sx?$/u.test(file));
+  // The scan must keep reaching the readers, or it would pass vacuously.
+  for (const reader of [
+    'apps/component-reference.mjs',
+    'apps/docs/scripts/check-component-sections.mjs',
+    'apps/react-storybook/src/storybook-factory.mjs',
+    'tooling/generators/figma/test/support.mjs',
+  ]) assert.ok(scanned.includes(reader), reader);
+  assert.deepEqual(unroutedImports(Object.fromEntries(scanned.map((file) => [file, readFileSync(resolve(repositoryRoot, file), 'utf8')]))), []);
+
+  // The control: a reader of another support file is reported, readers of the two routed files are not.
+  assert.deepEqual(unroutedImports({
+    'apps/docs/scripts/fake-reader.mjs': "import { x } from '../../../packages/react/test/support/dom.mjs';",
+    'apps/docs/scripts/part-map-reader.mjs': `import '../../../${partMapPath}';`,
+    'apps/docs/scripts/reference-reader.mjs': `import '../../../${stylingReferencePath}';`,
+  }), ['apps/docs/scripts/fake-reader.mjs imports packages/react/test/support/dom.mjs']);
   assert.deepEqual(supportFilesNamedBy([
     "import { x } from '../../../packages/react/test/support/dom.mjs';",
     "new URL('../../../../packages/react/test/support/state-matrix.mjs', import.meta.url)",
     '// see packages/react/test/support/attribute-guard.mjs.',
-  ].join('\n')), ['dom.mjs', 'state-matrix.mjs', 'attribute-guard.mjs'].map((file) => `packages/react/test/support/${file}`));
+    "import '../../../packages/react/test/support/styling-reference.mjs';",
+  ].join('\n')), ['dom.mjs', 'state-matrix.mjs', 'attribute-guard.mjs', 'styling-reference.mjs'].map((file) => `packages/react/test/support/${file}`));
 });
