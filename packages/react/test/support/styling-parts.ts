@@ -549,3 +549,53 @@ export function partSelector(family: string, part: string): string {
   if (selector === undefined) throw new Error(`${family}.${part} renders no element`);
   return selector;
 }
+
+/** How a catalog state name relates to the state contract (see `catalogStateKinds`). */
+export type StateKind = 'state' | 'enum' | 'prop' | 'status' | 'environment' | 'derived' | 'unresolved';
+
+/** A kind and its target: `['state', name]`, `['enum', name, value]`, `['status', attribute]`, or the kind alone. */
+export type StateClassification = readonly [kind: StateKind, ...target: string[]];
+
+const names = (list: readonly string[]): Record<string, StateClassification> => Object.fromEntries(list.map((name) => [name, ['state', name]]));
+const kinds = (kind: StateKind, list: readonly string[]): Record<string, StateClassification> => Object.fromEntries(list.map((name) => [name, [kind]]));
+
+/**
+ * How each catalog state name relates to the contract: `state` is a boolean state, `enum` an enumerated state
+ * and value, `prop` a reflected prop, `status` a status a family writes for its own lifecycle (data-muxui-<name>, not
+ * a state React Aria drives), `environment` a scheme or viewport, `derived` a state computed from others (a missing
+ * state, a value range, a lifecycle phase, with no attribute of its own). A name used for two meanings (`collapsed`)
+ * takes the one with an attribute today. Every name is settled: `unresolved` remains a kind only so a new catalog
+ * state cannot pass without a reason and the PR that settles it.
+ *
+ * It lives beside the part map because the styling reference derives each family's state rows from both, and a change to
+ * either is a change to what the docs and Storybook print (the planner routes both to the same consumers).
+ */
+export const catalogStateKinds: Readonly<Record<string, StateClassification>> = {
+  ...names([
+    'disabled', 'focused', 'focus-visible', 'hovered', 'pressed', 'invalid', 'read-only', 'required', 'pending',
+    'selected', 'indeterminate', 'expanded', 'open', 'current', 'empty', 'drop-target',
+  ]),
+  opening: ['state', 'entering'],
+  closing: ['state', 'exiting'],
+  horizontal: ['enum', 'orientation', 'horizontal'],
+  vertical: ['enum', 'orientation', 'vertical'],
+  ...kinds('prop', [
+    'sm', 'md', 'lg', 'radius-full', 'radius-lg', 'radius-md', 'radius-sm', 'elevated', 'outlined', 'attached',
+    'below', 'inline', 'wrap', 'diff', 'truncated', 'external', 'collapsed', 'streaming', 'running', 'failed',
+    'timed', 'visa', 'mastercard', 'amex', 'discover', 'unknown',
+  ]),
+  ...kinds('environment', ['dark', 'light', 'desktop', 'mobile']),
+  ...kinds('derived', [
+    'checked', 'unchecked', 'unselected', 'mixed', 'closed', 'dismissed', 'visible', 'idle', 'default', 'complete',
+    'partial', 'zero', 'progress', 'filled', 'filtered', 'submitting', 'tag-focused', 'color-open',
+  ]),
+  // Avatar and Image write these about their image: data-muxui-loaded, data-muxui-fallback and data-muxui-error, and
+  // Avatar's data-muxui-image-state holds loading, loaded, fallback or error. PromptComposer reflects its error prop as data-muxui-error.
+  loaded: ['status', 'loaded'],
+  fallback: ['status', 'fallback'],
+  error: ['status', 'error'],
+  // The phase before an image settles has no attribute of its own: it is image-state "loading", or none of the three above.
+  loading: ['derived'],
+  // TextEditor derives these from its selection and its selection request flow and shows them as which control renders.
+  ...kinds('derived', ['selection', 'selection-collapsed', 'selection-request-error', 'selection-request-pending', 'selection-request-review']),
+};

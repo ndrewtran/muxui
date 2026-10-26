@@ -7,47 +7,6 @@ import { resolve } from 'node:path';
 import { styleRuleClasses } from './scan-surface.mjs';
 import { booleanStates, enumeratedStates } from '../../src/styling-contract.ts';
 
-const names = (list) => Object.fromEntries(list.map((name) => [name, ['state', name]]));
-const kinds = (kind, list) => Object.fromEntries(list.map((name) => [name, [kind]]));
-
-/**
- * How each catalog state name relates to the contract: `state` is a boolean state, `enum` an enumerated state
- * and value, `prop` a reflected prop, `status` a status a family writes for its own lifecycle (data-muxui-<name>, not
- * a state React Aria drives), `environment` a scheme or viewport, `derived` a state computed from others (a missing
- * state, a value range, a lifecycle phase, with no attribute of its own). A name used for two meanings (`collapsed`)
- * takes the one with an attribute today. Every name is settled: `unresolved` remains a kind only so a new catalog
- * state cannot pass without a reason and the PR that settles it.
- */
-export const catalogStateKinds = {
-  ...names([
-    'disabled', 'focused', 'focus-visible', 'hovered', 'pressed', 'invalid', 'read-only', 'required', 'pending',
-    'selected', 'indeterminate', 'expanded', 'open', 'current', 'empty', 'drop-target',
-  ]),
-  opening: ['state', 'entering'],
-  closing: ['state', 'exiting'],
-  horizontal: ['enum', 'orientation', 'horizontal'],
-  vertical: ['enum', 'orientation', 'vertical'],
-  ...kinds('prop', [
-    'sm', 'md', 'lg', 'radius-full', 'radius-lg', 'radius-md', 'radius-sm', 'elevated', 'outlined', 'attached',
-    'below', 'inline', 'wrap', 'diff', 'truncated', 'external', 'collapsed', 'streaming', 'running', 'failed',
-    'timed', 'visa', 'mastercard', 'amex', 'discover', 'unknown',
-  ]),
-  ...kinds('environment', ['dark', 'light', 'desktop', 'mobile']),
-  ...kinds('derived', [
-    'checked', 'unchecked', 'unselected', 'mixed', 'closed', 'dismissed', 'visible', 'idle', 'default', 'complete',
-    'partial', 'zero', 'progress', 'filled', 'filtered', 'submitting', 'tag-focused', 'color-open',
-  ]),
-  // Avatar and Image write these about their image: data-muxui-loaded, data-muxui-fallback and data-muxui-error, and
-  // Avatar's data-muxui-image-state holds loading, loaded, fallback or error. PromptComposer reflects its error prop as data-muxui-error.
-  loaded: ['status', 'loaded'],
-  fallback: ['status', 'fallback'],
-  error: ['status', 'error'],
-  // The phase before an image settles has no attribute of its own: it is image-state "loading", or none of the three above.
-  loading: ['derived'],
-  // TextEditor derives these from its selection and its selection request flow and shows them as which control renders.
-  ...kinds('derived', ['selection', 'selection-collapsed', 'selection-request-error', 'selection-request-pending', 'selection-request-review']),
-};
-
 /**
  * Class names that tests assert are absent, or that a guard keys on. A guard on a prefix nothing spells passes vacuously, as the
  * muxui-code-block-token- guards did after the part classes became BEM, so the class vocabulary test requires each of these to
@@ -89,8 +48,11 @@ export async function establishedClasses(packageRoot, stylesheets) {
   return { selected, isEstablished: (name) => selected.has(name) || spelled.has(name) };
 }
 
-/** What is wrong with a state classification: an unclassified name, a stale entry, or a target outside the closed list. */
-export function stateFailures(catalogStates, classification = catalogStateKinds) {
+/**
+ * What is wrong with a state classification: an unclassified name, a stale entry, or a target outside the closed list. The
+ * classification is the caller's, so a test can pass a changed one.
+ */
+export function stateFailures(catalogStates, classification) {
   const failures = [];
   for (const name of catalogStates) if (!Object.hasOwn(classification, name)) failures.push(`unclassified state ${name}`);
   for (const [name, [kind, ...target]] of Object.entries(classification)) {

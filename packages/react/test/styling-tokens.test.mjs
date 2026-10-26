@@ -9,9 +9,9 @@ import { compilePureTokenGraph, cssDeclaration } from '@muxui/tokens/core';
 import { classGrammar, cssClassNames, emittedFindings, vocabularyFindings } from './support/class-vocabulary.mjs';
 import { classTokens, hasClassToken } from './support/class-tokens.mjs';
 import { topLevelConstructs } from './support/scan-surface.mjs';
-import { catalogStateKinds, establishedClasses, guardedPrefixes, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
+import { establishedClasses, guardedPrefixes, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
 import { booleanStates, enumeratedStates, stateAttribute, substrateStateAttributes } from '../src/styling-contract.ts';
-import { dispositions, elementQualifiers, noElementReasons, partClass, partRow, partRows, partSelector, publicSharedClasses, scopeClasses, selectorOf } from './support/styling-parts.ts';
+import { catalogStateKinds, dispositions, elementQualifiers, noElementReasons, partClass, partRow, partRows, partSelector, publicSharedClasses, scopeClasses, selectorOf } from './support/styling-parts.ts';
 import {
   attributeFindingsIn, auditedReactAria, booleanValueSelectors, foreignAttributes, historicalPaths, listSources, probePaths, renamedPropAttributes, racStateWriters, reactAriaImportProblems, reactAriaVersionProblems, reviewedRacImports, reviewedRacWriters,
   scriptAttributeFindings, styleAttributeFindings, substrateWrappers,
@@ -183,7 +183,7 @@ test('the substrate table maps each React Aria state spelling to its Mux spellin
 });
 
 test('every catalog state is classified by meaning, none is left open, and a status names an attribute a family writes', async () => {
-  assert.deepEqual(stateFailures(catalog.states), []);
+  assert.deepEqual(stateFailures(catalog.states, catalogStateKinds), []);
   assert.deepEqual(Object.entries(catalogStateKinds).filter(([, [kind]]) => kind === 'unresolved').map(([name]) => name), [], 'no state is left unresolved');
   const sources = (await Promise.all((await listSources(sourceRoot, ['.ts', '.mjs'])).map((file) => readFile(resolve(sourceRoot, file), 'utf8')))).join('\n');
   const statuses = Object.entries(catalogStateKinds).filter(([, [kind]]) => kind === 'status');
@@ -192,8 +192,8 @@ test('every catalog state is classified by meaning, none is left open, and a sta
 });
 
 test('the state classification refuses an unclassified name, a stale entry and a target outside the closed list', () => {
-  assert.match(stateFailures(new Set([...catalog.states, 'glowing'])).join(), /unclassified state glowing/u);
-  assert.match(stateFailures(new Set([...catalog.states].filter((name) => name !== 'wrap'))).join(), /stale classification wrap/u);
+  assert.match(stateFailures(new Set([...catalog.states, 'glowing']), catalogStateKinds).join(), /unclassified state glowing/u);
+  assert.match(stateFailures(new Set([...catalog.states].filter((name) => name !== 'wrap')), catalogStateKinds).join(), /stale classification wrap/u);
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, hovered: ['state', 'hover'] }).join(), /hovered names hover/u);
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, vertical: ['enum', 'orientation', 'sideways'] }).join(), /vertical names orientation=sideways/u);
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, error: ['unresolved'] }).join(), /error is unresolved without a reason and a PR/u);
