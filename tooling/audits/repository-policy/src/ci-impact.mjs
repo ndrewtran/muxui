@@ -559,6 +559,15 @@ export function publicSurfaceTestsFor(path) {
   return [];
 }
 
+// The filled part map is data, not a React test: Storybook's anatomy proof and the Figma anatomy specs import it by relative
+// path, which `reactTestFilesReferencing` cannot see, and only the React package check typechecks it (types.test.tsx imports it
+// into the `tsc --noEmit -p test/tsconfig.json` program). A change to it therefore runs both consumers and that check.
+export const partMapPath = 'packages/react/test/support/styling-parts.ts';
+export const partMapConsumers = Object.freeze({
+  storybookUnitTests: Object.freeze([{ file: 'test/storybook.test.mjs' }]),
+  packageChecks: Object.freeze(['@muxui/figma', '@muxui/react']),
+});
+
 // Tracked files outside packages/react/src whose text names `needle`.
 async function trackedReferences(needle) {
   const result = git(['grep', '-l', '-z', '-F', '-e', needle, '--', '.', ':!packages/react/src'], { allowFailure: true });
@@ -1415,6 +1424,12 @@ export async function buildPullRequestImpact({
         }
         testFiles.forEach((file) => plan.reactTestFiles.add(file));
         plan.reasons.push(`${path} is a shared React test helper; run the test files that reference it`);
+        if (path === partMapPath) {
+          plan.storyTooling = true;
+          for (const route of partMapConsumers.storybookUnitTests) addStoryUnitTest(plan, route);
+          for (const name of partMapConsumers.packageChecks) plan.packageChecks.add(name);
+          plan.reasons.push(`${path} is the part map that Storybook's anatomy proof and the Figma anatomy specs read; run both, and the React package check that typechecks it`);
+        }
       }
       continue;
     }
