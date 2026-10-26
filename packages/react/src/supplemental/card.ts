@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ButtonHTMLAttributes, ForwardRefExoticComponent, HTMLAttributes, RefAttributes } from 'react';
-import { Button as AriaButton } from 'react-aria-components';
+import { AriaButton } from '../substrate.ts';
 import type { ButtonProps as AriaButtonProps } from 'react-aria-components';
 import { usePendingSubmitProps } from '../button.ts';
 import { h, cx, dataState, nativePart, pressHandler } from './part-utils.ts';
@@ -63,7 +63,7 @@ const CardButton = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, CardButtonP
     isDisabled: disabled,
     isPending: pending,
     'aria-pressed': selected,
-    ...{ 'data-selected': dataState(selected), 'data-pending': dataState(pending) },
+    ...{ 'data-muxui-state-selected': dataState(selected), 'data-muxui-state-pending': dataState(pending) },
     onPress: pressHandler(onActivate),
     render: (domProps) => h('button', { ...domProps, ...pendingSubmitProps }),
   });

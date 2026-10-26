@@ -131,8 +131,8 @@ const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(functio
     onLoad: handleLoad,
     onError: handleError,
     className: classNames('muxui-avatar__image', className),
-    'data-error': failed ? '' : undefined,
-    'data-loaded': loaded ? '' : undefined,
+    'data-muxui-error': failed ? '' : undefined,
+    'data-muxui-loaded': loaded ? '' : undefined,
   });
 });
 
@@ -223,8 +223,8 @@ const AvatarRoot = React.forwardRef<HTMLSpanElement, AvatarRootProps>(function A
     'aria-labelledby': ariaLabelledby,
     'aria-hidden': ariaHidden,
     className: classNames('muxui-avatar', `muxui-avatar--${resolvedSize}`, className),
-    'data-size': resolvedSize,
-    'data-image-state': !hasImage || !imageAvailable ? 'fallback' : imageFailed ? 'error' : imageStatus === 'loaded' ? 'loaded' : 'loading',
+    'data-muxui-size': resolvedSize,
+    'data-muxui-image-state': !hasImage || !imageAvailable ? 'fallback' : imageFailed ? 'error' : imageStatus === 'loaded' ? 'loaded' : 'loading',
   }, children));
 });
 

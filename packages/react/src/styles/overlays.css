@@ -18,23 +18,23 @@
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
-.muxui-drop-zone[data-focus-visible] {
+.muxui-drop-zone[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-drop-zone[data-drop-target] {
+.muxui-drop-zone[data-muxui-state-drop-target] {
   border-color: var(--muxui-semantic-selection-track);
   background-color: var(--muxui-component-dropzone-drop-target-background);
   color: var(--muxui-semantic-selection-track);
 }
 
-.muxui-drop-zone:not([data-disabled], [data-drop-target]) {
+.muxui-drop-zone:not([data-muxui-state-disabled], [data-muxui-state-drop-target]) {
   color: var(--muxui-semantic-content-muted);
 }
 
-.muxui-drop-zone[data-disabled] {
+.muxui-drop-zone[data-muxui-state-disabled] {
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -47,7 +47,7 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-drop-zone[data-drop-target] {
+  :scope .muxui-drop-zone[data-muxui-state-drop-target] {
     border-color: var(--muxui-semantic-action-selection-background);
     color: var(--muxui-semantic-action-selection-background);
   }
@@ -160,7 +160,7 @@
 }
 
 /* RAC positions bottom popovers one pixel lower than the base popup recipe. */
-.muxui-popover-positioner[data-placement='bottom'] .muxui-popover {
+.muxui-popover-positioner[data-muxui-state-placement='bottom'] .muxui-popover {
   margin-block-start: -1px;
 }
 
@@ -224,12 +224,12 @@
     transform var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-preview-trigger[data-placement='bottom'] {
+.muxui-preview-trigger[data-muxui-state-placement='bottom'] {
   margin-block-start: -1px;
 }
 
-.muxui-preview-trigger[data-entering],
-.muxui-preview-trigger[data-exiting] {
+.muxui-preview-trigger[data-muxui-state-entering],
+.muxui-preview-trigger[data-muxui-state-exiting] {
   opacity: 0;
   transform: scale(0.97);
 }
@@ -274,21 +274,21 @@
   border: 0;
 }
 
-.muxui-toast-region[data-placement^='top'] {
+.muxui-toast-region[data-muxui-placement^='top'] {
   top: var(--muxui-semantic-layout-viewport-inset);
   flex-direction: column;
 }
 
-.muxui-toast-region[data-placement^='bottom'] {
+.muxui-toast-region[data-muxui-placement^='bottom'] {
   bottom: var(--muxui-semantic-layout-viewport-inset);
   flex-direction: column-reverse;
 }
 
-.muxui-toast-region[data-placement$='start'] {
+.muxui-toast-region[data-muxui-placement$='start'] {
   inset-inline-start: var(--muxui-semantic-layout-viewport-inset);
 }
 
-.muxui-toast-region[data-placement$='end'] {
+.muxui-toast-region[data-muxui-placement$='end'] {
   inset-inline-end: var(--muxui-semantic-layout-viewport-inset);
 }
 
@@ -315,19 +315,19 @@
   transition: none;
 }
 
-.muxui-toast[data-variant='neutral'] {
+.muxui-toast[data-muxui-variant='neutral'] {
   border-inline-start-color: var(--muxui-semantic-color-neutral-60);
 }
 
-.muxui-toast[data-variant='success'] {
+.muxui-toast[data-muxui-variant='success'] {
   border-inline-start-color: var(--muxui-semantic-status-success);
 }
 
-.muxui-toast[data-variant='warning'] {
+.muxui-toast[data-muxui-variant='warning'] {
   border-inline-start-color: var(--muxui-semantic-status-warning);
 }
 
-.muxui-toast[data-variant='danger'] {
+.muxui-toast[data-muxui-variant='danger'] {
   border-inline-start-color: var(--muxui-semantic-feedback-invalid);
 }
 
@@ -424,69 +424,69 @@
   pointer-events: none;
 }
 
-.muxui-tooltip[data-entering] {
+.muxui-tooltip[data-muxui-state-entering] {
   opacity: 0;
   scale: 0.9;
   filter: blur(5px);
   translate: 0 8px;
 }
 
-.muxui-tooltip[data-exiting] {
+.muxui-tooltip[data-muxui-state-exiting] {
   opacity: 0;
   scale: 0.94;
   filter: blur(3px);
   translate: 0 4.8px;
 }
 
-.muxui-tooltip[data-placement^='top'][data-entering] {
+.muxui-tooltip[data-muxui-state-placement^='top'][data-muxui-state-entering] {
   translate: 0 8px;
 }
 
-.muxui-tooltip[data-placement^='top'] {
+.muxui-tooltip[data-muxui-state-placement^='top'] {
   transform-origin: 50% 100%;
 }
 
-.muxui-tooltip[data-placement^='bottom'][data-entering] {
+.muxui-tooltip[data-muxui-state-placement^='bottom'][data-muxui-state-entering] {
   translate: 0 -8px;
 }
 
-.muxui-tooltip[data-placement^='bottom'] {
+.muxui-tooltip[data-muxui-state-placement^='bottom'] {
   transform-origin: 50% 0;
 }
 
-.muxui-tooltip[data-placement^='left'][data-entering] {
+.muxui-tooltip[data-muxui-state-placement^='left'][data-muxui-state-entering] {
   translate: 8px 0;
 }
 
-.muxui-tooltip[data-placement^='left'] {
+.muxui-tooltip[data-muxui-state-placement^='left'] {
   transform-origin: 100% 50%;
 }
 
-.muxui-tooltip[data-placement^='right'][data-entering] {
+.muxui-tooltip[data-muxui-state-placement^='right'][data-muxui-state-entering] {
   translate: -8px 0;
 }
 
-.muxui-tooltip[data-placement^='right'] {
+.muxui-tooltip[data-muxui-state-placement^='right'] {
   transform-origin: 0 50%;
 }
 
-.muxui-tooltip[data-placement^='top'][data-exiting] {
+.muxui-tooltip[data-muxui-state-placement^='top'][data-muxui-state-exiting] {
   translate: 0 4.8px;
 }
 
-.muxui-tooltip[data-placement^='bottom'][data-exiting] {
+.muxui-tooltip[data-muxui-state-placement^='bottom'][data-muxui-state-exiting] {
   translate: 0 -4.8px;
 }
 
-.muxui-tooltip[data-placement^='left'][data-exiting] {
+.muxui-tooltip[data-muxui-state-placement^='left'][data-muxui-state-exiting] {
   translate: 4.8px 0;
 }
 
-.muxui-tooltip[data-placement^='right'][data-exiting] {
+.muxui-tooltip[data-muxui-state-placement^='right'][data-muxui-state-exiting] {
   translate: -4.8px 0;
 }
 
-.muxui-tooltip[data-exiting] {
+.muxui-tooltip[data-muxui-state-exiting] {
   transition:
     opacity var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing),
     translate var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing),
@@ -507,18 +507,18 @@
   filter: none !important;
 }
 
-.muxui-tooltip[data-muxui-motion-reduced]:not([data-exiting]) {
+.muxui-tooltip[data-muxui-motion-reduced]:not([data-muxui-state-exiting]) {
   opacity: 1 !important;
 }
 
-.muxui-tooltip[data-muxui-motion-reduced][data-exiting] {
+.muxui-tooltip[data-muxui-motion-reduced][data-muxui-state-exiting] {
   opacity: 0 !important;
 }
 
 .muxui-dialog-trigger:focus-visible,
-.muxui-dialog-trigger[data-focus-visible],
+.muxui-dialog-trigger[data-muxui-state-focus-visible],
 .muxui-overlay-pop-trigger:focus-visible,
-.muxui-overlay-pop-trigger[data-focus-visible] {
+.muxui-overlay-pop-trigger[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
@@ -530,7 +530,7 @@
   justify-content: center;
 }
 
-.muxui-file-trigger[data-focus-visible],
+.muxui-file-trigger[data-muxui-state-focus-visible],
 .muxui-file-trigger:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
@@ -539,9 +539,9 @@
 
 /* FileTrigger delegates its visible paint to the caller's trigger. Mirror
    root-disabled dimming for both MuxUI and native trigger elements. */
-.muxui-file-trigger[data-disabled],
+.muxui-file-trigger[data-muxui-state-disabled],
 .muxui-file-trigger[disabled],
-.muxui-drop-zone[data-disabled] {
+.muxui-drop-zone[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 
@@ -562,25 +562,25 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='neutral'] {
+  :scope .muxui-toast[data-muxui-variant='neutral'] {
     border-inline-start-color: var(--muxui-semantic-color-neutral-60);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='success'] {
+  :scope .muxui-toast[data-muxui-variant='success'] {
     border-inline-start-color: var(--muxui-semantic-status-success);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='warning'] {
+  :scope .muxui-toast[data-muxui-variant='warning'] {
     border-inline-start-color: var(--muxui-semantic-status-warning);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toast[data-variant='danger'] {
+  :scope .muxui-toast[data-muxui-variant='danger'] {
     border-inline-start-color: var(--muxui-semantic-feedback-invalid);
   }
 }
@@ -656,24 +656,24 @@
   }
 
   /* Opacity would hide the system disabled/GrayText contrast treatment. */
-  :is(.muxui-button, .muxui-toggle-button, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
-  .muxui-disclosure[data-disabled] .muxui-disclosure-trigger,
-  .muxui-disclosure-trigger[data-disabled],
-  .muxui-file-trigger[data-disabled],
+  :is(.muxui-button, .muxui-toggle-button, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-muxui-state-disabled],
+  .muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure-trigger,
+  .muxui-disclosure-trigger[data-muxui-state-disabled],
+  .muxui-file-trigger[data-muxui-state-disabled],
   .muxui-file-trigger[disabled],
-  .muxui-drop-zone[data-disabled] {
+  .muxui-drop-zone[data-muxui-state-disabled] {
     opacity: 1;
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-dialog, .muxui-popover, .muxui-preview-trigger, .muxui-toast, .muxui-tooltip, .muxui-drop-zone) {
+:where([data-muxui-motion='reduced']) :where(.muxui-dialog, .muxui-popover, .muxui-preview-trigger, .muxui-toast, .muxui-tooltip, .muxui-drop-zone) {
   animation: none !important;
   transition-duration: 0s !important;
 }
 
 /* Match the reduced-motion contract: animations are settled immediately
    while retaining its measurable 1ms duration and transition reset. */
-:where([data-reduced-motion], [data-muxui-motion='reduced']) * {
+:where([data-muxui-motion='reduced']) * {
   animation-delay: -1ms !important;
   animation-duration: 1ms !important;
   animation-iteration-count: 1 !important;

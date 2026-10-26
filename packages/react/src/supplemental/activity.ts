@@ -57,7 +57,7 @@ function statusOf(items: readonly ActivityItem[]) {
   return (['failed', 'running', 'queued', 'cancelled'] as const).find((status) => items.some((item) => item.status === status)) ?? (items.length ? 'completed' : undefined);
 }
 function actionsOf(actions: readonly ActivityAction[] | undefined, key: string) {
-  return actions != null && actions.length > 0 && e('div', { className: 'muxui-activity-actions', key, role: 'group', 'aria-label': 'Activity actions' }, actions.map((action) => e('button', { key: action.id, 'data-size': 'sm', 'data-variant': 'neutral', className: 'muxui-button', type: 'button', disabled: action.disabled, 'data-disabled': action.disabled || undefined, onClick: action.onAction }, action.label)));
+  return actions != null && actions.length > 0 && e('div', { className: 'muxui-activity-actions', key, role: 'group', 'aria-label': 'Activity actions' }, actions.map((action) => e('button', { key: action.id, 'data-muxui-size': 'sm', 'data-muxui-variant': 'neutral', className: 'muxui-button', type: 'button', disabled: action.disabled, 'data-muxui-state-disabled': action.disabled || undefined, onClick: action.onAction }, action.label)));
 }
 // Retain native details during exit; the requested state owns accessibility. defaultExpanded seeds both states at mount only.
 function ActivityDetails({ item, summary }: { item: ActivityItem; summary: ReactNode[] }) {
@@ -99,7 +99,7 @@ const ActivityItemRow = function ActivityItem({ item, visible }: { item: Activit
   const summary = [e('span', { key: 'mark', ref: mark, className: 'muxui-activity-mark', 'aria-hidden': true }, e(marks[item.status], { size: 20, 'aria-hidden': true, focusable: 'false' })), e('span', { key: 'label', className: 'muxui-activity-item-label' }, item.label),
     e('span', { key: 'metadata', className: 'muxui-activity-item-metadata' }, item.meta && e('span', { className: 'muxui-activity-meta' }, item.meta), e('span', { className: 'muxui-activity-status-time' }, e('span', { ref: statusLabel, className: 'muxui-activity-status' }, labels[item.status]), item.time && e('span', { className: 'muxui-activity-time' }, ' in ', item.time)))];
   const hasDetails = item.details || item.context || item.actions?.length;
-  return e('li', { className: 'muxui-activity-item', 'data-status': item.status }, hasDetails
+  return e('li', { className: 'muxui-activity-item', 'data-muxui-status': item.status }, hasDetails
     ? e(ActivityDetails, { item, summary })
     : e('div', { className: 'muxui-activity-row' }, ...summary));
 };
@@ -125,8 +125,8 @@ export const Activity: ForwardRefExoticComponent<ActivityProps & RefAttributes<H
   useDisclosureIconMotion(chevron, open, true);
   useCandidateMotion(statusLabel, groupStatus);
   function toggle() { const next = !open; if (expanded === undefined) setLocalExpanded(next); onExpandedChange?.(next); }
-  return e('div', { ...props, ref, className: ['muxui-activity', className].filter(Boolean).join(' '), 'data-status': groupStatus },
-    e('div', { className: 'muxui-activity-header' }, e('button', { ref: triggerRef, 'data-size': 'sm', 'data-variant': 'ghost', type: 'button', className: 'muxui-button muxui-activity-trigger', 'aria-expanded': open, 'aria-controls': `${id}-items`, onClick: toggle },
+  return e('div', { ...props, ref, className: ['muxui-activity', className].filter(Boolean).join(' '), 'data-muxui-status': groupStatus },
+    e('div', { className: 'muxui-activity-header' }, e('button', { ref: triggerRef, 'data-muxui-size': 'sm', 'data-muxui-variant': 'ghost', type: 'button', className: 'muxui-button muxui-activity-trigger', 'aria-expanded': open, 'aria-controls': `${id}-items`, onClick: toggle },
       e(ChevronDown, { ref: chevron, className: 'muxui-activity-chevron', size: 16, 'aria-hidden': true, focusable: 'false' }), e('span', { className: 'muxui-activity-label' }, label), groupStatus && e('span', { ref: statusLabel, className: 'muxui-activity-status' }, labels[groupStatus]), e('span', { className: 'muxui-activity-count' }, `${items.length} ${items.length === 1 ? 'item' : 'items'}`)), actionsOf(actions, 'aggregate')),
     e('div', { ref: itemsHost, className: 'muxui-activity-items-host', hidden: !open ? 'until-found' : undefined },
       e(MotionHeight, { isOpen: open, triggerRef, hostRef: itemsHost, className: 'muxui-activity-motion-panel', contentClassName: 'muxui-activity-motion-content', grouped: true },

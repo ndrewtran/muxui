@@ -1,22 +1,7 @@
 import React from 'react';
 import type { ButtonHTMLAttributes, ChangeEvent, ContextType, ForwardRefExoticComponent, HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode, RefAttributes, RefObject } from 'react';
-import {
-  Autocomplete as AriaAutocomplete,
-  Button as AriaButton,
-  Collection as AriaCollection,
-  Dialog as AriaDialog,
-  FieldInputContext as AriaFieldInputContext,
-  Header as AriaHeader,
-  Heading as AriaHeading,
-  Input as AriaInput,
-  InputContext as AriaInputContext,
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  ListBoxSection as AriaListBoxSection,
-  SearchField as AriaSearchField,
-  useFilter,
-  useLocale,
-} from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, Collection as AriaCollection, Dialog as AriaDialog, FieldInputContext as AriaFieldInputContext, Header as AriaHeader, Heading as AriaHeading, InputContext as AriaInputContext, ListBoxSection as AriaListBoxSection, useFilter, useLocale } from 'react-aria-components';
+import { AriaButton, AriaInput, AriaListBox, AriaListBoxItem, AriaSearchField } from '../substrate.ts';
 import type {
   ButtonProps as AriaButtonProps,
   DialogProps as AriaDialogProps,
@@ -301,12 +286,12 @@ const CommandPaletteRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, Comman
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const currentOpen = controlled ? open : internalOpen;
   const setOpen = (next: boolean) => { if (!controlled) setInternalOpen(next); onOpenChange?.(next); };
-  return h(CommandPaletteContext.Provider, { value: { open: currentOpen, setOpen, size: resolvedSize, closeOnSelect, triggerRef } }, h('div', { ...props, ref, className: cx('muxui-command-palette', resolvedSize !== 'md' && `muxui-command-palette--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-open': dataState(currentOpen) }, children));
+  return h(CommandPaletteContext.Provider, { value: { open: currentOpen, setOpen, size: resolvedSize, closeOnSelect, triggerRef } }, h('div', { ...props, ref, className: cx('muxui-command-palette', resolvedSize !== 'md' && `muxui-command-palette--${resolvedSize}`, className), 'data-muxui-size': resolvedSize, 'data-muxui-state-open': dataState(currentOpen) }, children));
 });
 const CommandPaletteTrigger = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, CommandPaletteTriggerProps>(function CommandPaletteTrigger({ disabled = false, onActivate, className, ...props }, ref) {
   const { setOpen, size, triggerRef } = useCommandPart('Trigger');
   const setRef = React.useCallback((node: HTMLButtonElement | null) => { triggerRef.current = node; if (typeof ref === 'function') ref(node); else if (ref) ref.current = node; }, [ref, triggerRef]);
-  return h(AriaButton, { ...(props as AriaButtonProps), ref: setRef, isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(true); }, ...{ 'data-size': size }, className: cx('muxui-command-palette__trigger', className) });
+  return h(AriaButton, { ...(props as AriaButtonProps), ref: setRef, isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(true); }, ...{ 'data-muxui-size': size }, className: cx('muxui-command-palette__trigger', className) });
 });
 const CommandPaletteBackdrop = /*#__PURE__*/ React.forwardRef<HTMLDivElement, CommandPaletteBackdropProps>(function CommandPaletteBackdrop({ dismissable = true, className, ...props }, ref) {
   const { open, setOpen, triggerRef } = useCommandPart('Backdrop');
@@ -337,7 +322,7 @@ const CommandPaletteInput = /*#__PURE__*/ React.forwardRef<HTMLInputElement, Com
   const { size } = useCommandPart('Input');
   const { onKeyDown: navigate, ...inputContext } = React.useContext(AriaInputContext) as AriaInputProps;
   return h(AriaInputContext.Provider, { value: inputContext }, h(AriaInput, {
-    ...(props as AriaInputProps), ref, disabled, autoFocus: props.autoFocus ?? true, ...{ 'data-size': size },
+    ...(props as AriaInputProps), ref, disabled, autoFocus: props.autoFocus ?? true, ...{ 'data-muxui-size': size },
     className: cx('muxui-command-palette__input', className),
     onKeyDown(event) {
       onKeyDown?.(event);
@@ -346,12 +331,12 @@ const CommandPaletteInput = /*#__PURE__*/ React.forwardRef<HTMLInputElement, Com
   }));
 });
 const CommandPaletteClearButton = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, CommandPaletteClearButtonProps>(function CommandPaletteClearButton({ disabled = false, className, children, ...props }, ref) {
-  return h(AriaButton, { ...(props as AriaButtonProps), ref, isDisabled: disabled, ...{ 'data-variant': 'ghost', 'data-size': 'sm' }, className: cx('muxui-button', 'muxui-command-palette__clear', className) }, children ?? 'Clear');
+  return h(AriaButton, { ...(props as AriaButtonProps), ref, isDisabled: disabled, ...{ 'data-muxui-variant': 'ghost', 'data-muxui-size': 'sm' }, className: cx('muxui-button', 'muxui-command-palette__clear', className) }, children ?? 'Clear');
 });
 // ListBox, Section and Collection are generic over the item they list, which the public component types say and a forwardRef component does not.
 const CommandPaletteListBox = /*#__PURE__*/ React.forwardRef<HTMLDivElement, CommandPaletteListBoxProps>(function CommandPaletteListBox({ className, ...props }, ref) {
   const { size } = useCommandPart('ListBox');
-  return h(AriaListBox<object>, { ...(props as AriaListBoxProps<object>), ref, 'aria-label': props['aria-label'] ?? 'Command results', ...{ 'data-size': size }, className: cx('muxui-command-palette__listbox', size !== 'md' && `muxui-command-palette__listbox--${size}`, className) });
+  return h(AriaListBox<object>, { ...(props as AriaListBoxProps<object>), ref, 'aria-label': props['aria-label'] ?? 'Command results', ...{ 'data-muxui-size': size }, className: cx('muxui-command-palette__listbox', size !== 'md' && `muxui-command-palette__listbox--${size}`, className) });
 }) as unknown as CommandPaletteListBoxComponent;
 const CommandPaletteSection = /*#__PURE__*/ React.forwardRef<HTMLElement, CommandPaletteSectionProps>(function CommandPaletteSection({ className, ...props }, ref) {
   return h(AriaListBoxSection<object>, { ...(props as AriaListBoxSectionProps<object>), ref, className: cx('muxui-command-palette__section', className) });

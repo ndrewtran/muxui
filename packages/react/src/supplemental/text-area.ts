@@ -1,10 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, RefAttributes, TextareaHTMLAttributes } from 'react';
-import {
-  FieldError as AriaFieldError,
-  Label as AriaLabel,
-  TextArea as AriaTextArea,
-} from 'react-aria-components';
+import { FieldError as AriaFieldError, Label as AriaLabel } from 'react-aria-components';
+import { AriaTextArea } from '../substrate.ts';
 import type { TextAreaProps as AriaTextAreaProps } from 'react-aria-components';
 import { h, cx } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';

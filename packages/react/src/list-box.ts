@@ -1,12 +1,8 @@
 import React from 'react';
 import type { CSSProperties, ForwardRefExoticComponent, HTMLAttributes, ReactNode, RefAttributes } from 'react';
 import { ListBoxMotion } from './listbox-motion.mjs';
-import {
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  ListBoxSection as AriaListBoxSection,
-  Header as AriaHeader,
-} from 'react-aria-components';
+import { ListBoxSection as AriaListBoxSection, Header as AriaHeader } from 'react-aria-components';
+import { AriaListBox, AriaListBoxItem } from './substrate.ts';
 import type {
   Key,
   ListBoxItemProps as AriaListBoxItemProps,
@@ -101,7 +97,7 @@ export const ListBox: ListBoxComponent = /*#__PURE__*/ (() => {
       onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); },
       ...actionProps,
       // React Aria's props do not name aria-disabled or the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-disabled': disabled ? disabled : undefined, 'aria-disabled': disabled ? disabled : undefined },
+      ...{ 'data-muxui-state-disabled': disabled ? disabled : undefined, 'aria-disabled': disabled ? disabled : undefined },
       layout, orientation, style, className: classNames('muxui-list-box', className),
       children: hasChildren ? children : (item: NormalizedItem) => React.createElement(ListBox.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label),
     });
@@ -125,7 +121,7 @@ export const ListBox: ListBoxComponent = /*#__PURE__*/ (() => {
       // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and the item's own text is none.
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
-      ...{ 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
+      ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-list-box-item', className),
     }, children);
   });

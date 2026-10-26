@@ -20,9 +20,9 @@ async function readMotion(page, expectedOffset) {
       translate: style.translate,
       scale: style.scale,
       filter: style.filter,
-      placement: node.getAttribute('data-placement'),
-      entering: node.hasAttribute('data-entering'),
-      exiting: node.hasAttribute('data-exiting'),
+      placement: node.getAttribute('data-muxui-state-placement'),
+      entering: node.hasAttribute('data-muxui-state-entering'),
+      exiting: node.hasAttribute('data-muxui-state-exiting'),
     };
     if (offset) {
       const translation = style.translate.split(/\s+/u);
@@ -43,8 +43,8 @@ async function readEnteringMotionTargets(page) {
     const probe = node.cloneNode(false);
     probe.removeAttribute('id');
     probe.setAttribute('aria-hidden', 'true');
-    probe.setAttribute('data-entering', '');
-    probe.removeAttribute('data-exiting');
+    probe.setAttribute('data-muxui-state-entering', '');
+    probe.removeAttribute('data-muxui-state-exiting');
     probe.style.setProperty('transition', 'none', 'important');
     probe.style.setProperty('visibility', 'hidden');
     probe.style.setProperty('pointer-events', 'none');
@@ -122,7 +122,7 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     assert.ok((await readMotion(page)).opacity >= 0.999);
 
     await configure(page, false);
-    await page.waitForFunction(() => document.querySelector('.muxui-tooltip')?.hasAttribute('data-exiting') || Number(getComputedStyle(document.querySelector('.muxui-tooltip')).opacity) < 0.99);
+    await page.waitForFunction(() => document.querySelector('.muxui-tooltip')?.hasAttribute('data-muxui-state-exiting') || Number(getComputedStyle(document.querySelector('.muxui-tooltip')).opacity) < 0.99);
     await tooltip.waitFor({ state: 'detached' });
     assert.equal(await page.locator('#tooltip-trigger').getAttribute('aria-describedby'), null);
     assert.equal((await readRefs(page)).objectAttached, false, 'object refs clear after tooltip detach');

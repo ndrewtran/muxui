@@ -65,7 +65,7 @@ function OverlayFixture() {
 const fixtureCss = `
   body { margin: 0; }
   .muxui-popover, .muxui-tooltip, .muxui-preview-trigger { box-sizing: border-box; width: 180px; height: 80px; }
-  .muxui-popover-positioner[data-placement='bottom'] .muxui-popover { margin-block-start: 0; }
+  .muxui-popover-positioner[data-muxui-state-placement='bottom'] .muxui-popover { margin-block-start: 0; }
   .muxui-dialog, .muxui-dialog-backdrop, .muxui-alert-dialog__popup, .muxui-tooltip, .muxui-preview-trigger { transition: none; }
   .consumer-frameless { background: transparent; border: 0; box-shadow: none; padding: 0; }
 `;
@@ -154,7 +154,7 @@ test('anchored overlays position on every logical alignment, use independent anc
         await page.locator('#trigger').click();
         const popup = page.locator('.muxui-popover-positioner');
         await popup.waitFor();
-        await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.hasAttribute('data-placement'));
+        await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.hasAttribute('data-muxui-state-placement'));
         await waitForOverlayMotionSettled(page, '.muxui-popover-positioner');
         assertPlacement(await popup.boundingBox(), await page.locator('#trigger').boundingBox(), placement, 11, 3, direction === 'rtl');
         await page.keyboard.press('Escape');
@@ -171,7 +171,7 @@ test('anchored overlays position on every logical alignment, use independent anc
       }
       const selector = kind === 'popover' ? '.muxui-popover-positioner' : '.muxui-tooltip';
       await page.locator(selector).waitFor();
-      await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-placement'), selector);
+      await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-muxui-state-placement'), selector);
       if (kind === 'popover') await waitForOverlayMotionSettled(page, selector);
       assertPlacement(await page.locator(selector).boundingBox(), await page.locator('#anchor').boundingBox(), 'bottom-end', 6, 0, false);
       if (kind === 'tooltip') {
@@ -183,7 +183,7 @@ test('anchored overlays position on every logical alignment, use independent anc
     }
     await configure(page, { kind: 'popover', placement: 'bottom-start', shouldFlip: true, nearEdge: true, containerPadding: 20 });
     await page.locator('#trigger').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.placement === 'top');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiStatePlacement === 'top');
     await waitForOverlayMotionSettled(page, '.muxui-popover-positioner');
     const box = await page.locator('.muxui-popover-positioner').boundingBox();
     const anchor = await page.locator('#trigger').boundingBox();
@@ -192,7 +192,7 @@ test('anchored overlays position on every logical alignment, use independent anc
     await page.keyboard.press('Escape');
     await configure(page, { kind: 'popover', placement: 'bottom-start', shouldFlip: false, nearEdge: true });
     await page.locator('#trigger').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.placement === 'bottom');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiStatePlacement === 'bottom');
     await waitForOverlayMotionSettled(page, '.muxui-popover-positioner');
     await page.keyboard.press('Escape');
     await configure(page, { kind: 'preview', placement: 'end-bottom' });
@@ -209,7 +209,7 @@ test('nonmodal Popover preserves outside interaction and respects dismissal poli
     await page.locator('#trigger').click();
     const popup = page.locator('.muxui-popover-positioner');
     await popup.waitFor();
-    assert.equal(await popup.getAttribute('data-modal'), 'false');
+    assert.equal(await popup.getAttribute('data-muxui-modal'), 'false');
     assert.equal(await page.locator('#root').getAttribute('inert'), null);
     assert.equal(await page.locator('#root').getAttribute('aria-hidden'), null);
     assert.equal(await page.locator('#trigger').evaluate((node) => document.activeElement === node), true);
@@ -235,7 +235,7 @@ test('nonmodal Popover preserves outside interaction and respects dismissal poli
     await page.locator('#trigger').click();
     await popup.waitFor();
     await page.evaluate(() => window.setOverlayModal(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'false');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'false');
     await page.locator('#inside').focus();
     await page.locator('#outside').focus();
     assert.equal(await page.locator('#outside').evaluate((node) => document.activeElement === node), true, 'switching to non-modal releases the prior focus scope');
@@ -314,14 +314,14 @@ test('Popover modality changes preserve consumer state and DOM identity while co
       })), { sameDraft: true, sameSurface: true, mounts: 1, unmounts: 0 });
     };
     await page.evaluate(() => window.setOverlayModal(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'false');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'false');
     await assertPreserved();
     await page.locator('#outside').focus();
     assert.equal(await page.locator('#outside').evaluate((node) => document.activeElement === node), true);
     assert.equal(await page.locator('#root').evaluate((node) => node.inert || node.getAttribute('aria-hidden') === 'true'), false);
 
     await page.evaluate(() => window.setOverlayModal(true));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'true');
     await assertPreserved();
     assert.equal(await surface.evaluate((node) => document.activeElement === node), true, 'reentering modal mode brings outside focus into the existing surface');
     assert.equal(await page.locator('#root').evaluate((node) => node.inert || node.getAttribute('aria-hidden') === 'true'), true);
@@ -331,7 +331,7 @@ test('Popover modality changes preserve consumer state and DOM identity while co
     await page.keyboard.press('Shift+Tab');
     assert.equal(await page.locator('#inside').evaluate((node) => document.activeElement === node), true);
     await page.evaluate(() => window.setOverlayModal(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.modal === 'false');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiModal === 'false');
     await assertPreserved();
     assert.equal(await page.locator('#inside').evaluate((node) => document.activeElement === node), true, 'releasing containment preserves focus within the existing content');
     await page.evaluate(() => window.setOverlayDismissable(true));

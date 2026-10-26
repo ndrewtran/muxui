@@ -543,6 +543,12 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
+## State attributes
+
+Components mark their state with \`data-muxui-state-<name>\` attributes (\`data-muxui-state-disabled\`, \`data-muxui-state-selected\`, \`data-muxui-state-focus-visible\`, ...). Boolean states are presence-only, so select \`[data-muxui-state-disabled]\` and never compare its value; enumerated states carry theirs (\`data-muxui-state-orientation="vertical"\`). React Aria's unprefixed state names are not emitted, apart from the two below, and there is no alias.
+
+Two attributes are React Aria's own and are not part of this contract. Date and time field segments keep \`data-placeholder\` beside \`data-muxui-state-placeholder\`, because React Aria reads it to decide which segment a press in the padding of the field focuses. The hidden form input inside DatePicker and DateRangePicker keeps \`data-disabled\`, which React Aria sets below anything Mux UI can wrap. No Mux UI style selects either one, and neither should be relied on.
+
 ## Local tarball usage
 
 To develop against an unpublished build, install the versioned local candidate from the package directory instead:
@@ -878,7 +884,7 @@ const currentIndexBody = `${indexBody}export * from './supplemental.js';\n${curr
 const currentTypesBody = `${typesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 // The shared supplemental stylesheet is emitted once, right after IconButton's CSS, and skipped wherever a record names it
 // as its styleSource. Anchor it on that record, not on the first or last record that names it: the shared
-// `.muxui-icon-button.muxui-button[data-size='sm']` padding ties icon-button.css on specificity and only wins by
+// `.muxui-icon-button.muxui-button[data-muxui-size='sm']` padding ties icon-button.css on specificity and only wins by
 // following it, and converting a family to TypeScript must not move the block.
 const sharedStyleSource = 'packages/react/src/supplemental/styles.css';
 const sharedStyleAnchorSlug = 'icon-button';

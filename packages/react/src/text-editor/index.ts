@@ -32,16 +32,8 @@ import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs';
 import Type from 'lucide-react/dist/esm/icons/type.mjs';
 import Underline from 'lucide-react/dist/esm/icons/underline.mjs';
 import X from 'lucide-react/dist/esm/icons/x.mjs';
-import {
-  ColorField as AriaColorField,
-  Dialog as AriaDialog,
-  DialogTrigger,
-  Input as AriaInput,
-  Label as AriaLabel,
-  Popover as AriaPopover,
-  VisuallyHidden,
-  parseColor,
-} from 'react-aria-components';
+import { Dialog as AriaDialog, DialogTrigger, Label as AriaLabel, VisuallyHidden, parseColor } from 'react-aria-components';
+import { AriaColorField, AriaInput, AriaPopover } from '../substrate.ts';
 import type { Color, DialogTriggerProps } from 'react-aria-components';
 import { Button } from '../button.ts';
 import type { ButtonProps } from '../button.ts';
@@ -485,7 +477,7 @@ function Action({ editor, disabled, action, label, icon: Icon, callbacks }: Acti
         : editor?.isActive(action.type);
   const buttonProps = {
     className: cx('muxui-text-editor__btn', active && 'muxui-text-editor__btn--active'),
-    'data-disabled': disabled ? 'true' : undefined,
+    'data-muxui-state-disabled': disabled ? 'true' : undefined,
     disabled,
     'aria-label': label,
     'aria-pressed': Boolean(active),
@@ -536,7 +528,7 @@ function ImagePicker({ editor, disabled, callbacks }: PickerProps) {
     return insert(src);
   };
   // TypeScript accepts a data-* key in a call only from a spread.
-  return React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
+  return React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
     if (callbacks.onImageRequest) callbacks.onImageRequest({ insertImage: (src, alt) => insert(src, alt) });
     else promptImage();
   } }, React.createElement(ImageIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }));
@@ -554,7 +546,7 @@ function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProp
     const buttonProps = {
       className: 'muxui-text-editor__btn',
       disabled,
-      'data-disabled': disabled ? 'true' : undefined,
+      'data-muxui-state-disabled': disabled ? 'true' : undefined,
       'aria-label': label,
       onActivate: () => callback ? callback(actions) : fallback(),
     };
@@ -623,7 +615,7 @@ function BubbleMenu({ editor, disabled, callbacks }: PickerProps & { editor: Edi
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'italic' }, label: 'Italic', icon: Italic }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
-    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert link', onActivate: requestLink }, React.createElement(LinkIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert link', onActivate: requestLink }, React.createElement(LinkIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
   );
 }
 
@@ -1363,8 +1355,8 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
       'aria-orientation': 'horizontal',
       'aria-busy': phase === 'pending' ? 'true' : undefined,
       className: 'muxui-text-editor__selection-bar',
-      'data-phase': phase,
-      'data-instruction': instruction && !expanded && phase === 'idle' ? '' : undefined,
+      'data-muxui-phase': phase,
+      'data-muxui-instruction': instruction && !expanded && phase === 'idle' ? '' : undefined,
       onKeyDown: onBarKeyDown,
       // Pressing the bar must not move focus out of the editor, except into the field.
       onMouseDown: (event) => { if (!(event.target instanceof HTMLInputElement)) event.preventDefault(); },
@@ -1532,7 +1524,7 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   const variant = toolbar === 'floating' ? 'simple' : toolbar;
   const isFloating = floating ? floating : toolbar === 'floating';
   return React.createElement('div', {
-    ...props, className: cx('muxui-text-editor', className), 'data-disabled': disabled ? disabled : undefined, 'data-readonly': readOnly ? readOnly : undefined, 'data-required': required ? required : undefined, 'data-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
+    ...props, className: cx('muxui-text-editor', className), 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-required': required ? required : undefined, 'data-muxui-state-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
   }, label !== undefined ? React.createElement('label', { id: labelId, htmlFor: contentId, className: 'muxui-text-editor__label' }, label) : null,
   toolbar ? React.createElement(Toolbar, { editor, disabled: disabled ? disabled : readOnly, variant, floating: isFloating, callbacks }) : null,
   editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled ? disabled : readOnly, callbacks }) : null,

@@ -77,7 +77,7 @@
           "kind": "boolean"
         },
         "required": false,
-        "description": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-disabled`."
+        "description": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-muxui-state-disabled`."
       },
       "selectionMode": {
         "type": {

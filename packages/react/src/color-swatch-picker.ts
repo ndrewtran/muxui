@@ -1,11 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, RefAttributes, SyntheticEvent } from 'react';
-import {
-  ColorSwatch as AriaColorSwatch,
-  ColorSwatchPicker as AriaColorSwatchPicker,
-  ColorSwatchPickerItem as AriaColorSwatchPickerItem,
-  parseColor,
-} from 'react-aria-components';
+import { ColorSwatch as AriaColorSwatch, parseColor } from 'react-aria-components';
+import { AriaColorSwatchPicker, AriaColorSwatchPickerItem } from './substrate.ts';
 import type { Color } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.ts';
@@ -89,7 +85,7 @@ export const ColorSwatchPicker: ForwardRefExoticComponent<ColorSwatchPickerProps
     {
       'aria-disabled': effectiveDisabled || undefined,
       // The styles read these data attributes, which React's props do not name, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined },
+      ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'data-muxui-state-read-only': effectiveReadOnly || undefined },
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
       onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly, READ_ONLY_SELECTION_KEYS),
@@ -104,8 +100,8 @@ export const ColorSwatchPicker: ForwardRefExoticComponent<ColorSwatchPickerProps
         value: value === null ? unusedSwatchColor(normalized) : colorValue(value, 'ColorSwatchPicker'),
         defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'),
         onChange: (next: Color) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
-        // React Aria's props name neither isDisabled nor the data-readonly hook the styles read.
-        ...{ isDisabled: effectiveDisabled, 'data-readonly': effectiveReadOnly || undefined },
+        // React Aria's props name neither isDisabled nor the data-muxui-state-read-only hook the styles read.
+        ...{ isDisabled: effectiveDisabled, 'data-muxui-state-read-only': effectiveReadOnly || undefined },
         'aria-label': ariaLabel,
         'aria-labelledby': ariaLabelledby,
         className: classNames('muxui-color-swatch-picker', className),
@@ -117,7 +113,7 @@ export const ColorSwatchPicker: ForwardRefExoticComponent<ColorSwatchPickerProps
           // An empty colour string parses to no colour. React Aria's item type requires one, and it is handed over as before.
           color: item.color!,
           // React Aria's item props name none of these, and TypeScript accepts such a key in a call only from a spread.
-          ...{ id: item.id, isDisabled: effectiveDisabled || item.disabled, 'data-readonly': effectiveReadOnly || undefined },
+          ...{ id: item.id, isDisabled: effectiveDisabled || item.disabled, 'data-muxui-state-read-only': effectiveReadOnly || undefined },
           className: 'muxui-color-swatch-picker-item',
         },
         React.createElement(AriaColorSwatch, {
@@ -125,7 +121,7 @@ export const ColorSwatchPicker: ForwardRefExoticComponent<ColorSwatchPickerProps
           colorName: item.colorName,
           ...{
             isDisabled: effectiveDisabled || item.disabled,
-            'data-disabled': effectiveDisabled || item.disabled || undefined,
+            'data-muxui-state-disabled': effectiveDisabled || item.disabled || undefined,
             'data-muxui-color-paint': 'sample',
           },
           className: 'muxui-color-swatch',

@@ -125,8 +125,8 @@ test('MuxUI affordances render the Lucide glyph mapping as decorative SVGs', () 
   ));
   const dom = new JSDOM(`<!doctype html>${markup}`);
   const iconCases = [
-    ['.muxui-checkbox-indicator[data-selected] svg', 'lucide-check', null],
-    ['.muxui-checkbox-indicator[data-indeterminate] svg', 'lucide-minus', null],
+    ['.muxui-checkbox-indicator[data-muxui-state-selected] svg', 'lucide-check', null],
+    ['.muxui-checkbox-indicator[data-muxui-state-indeterminate] svg', 'lucide-minus', null],
     ['.muxui-search-clear svg', 'lucide-x', 'Clear search'],
     ['.muxui-number-stepper-decrement svg', 'lucide-minus', 'Decrease'],
     ['.muxui-number-stepper-increment svg', 'lucide-plus', 'Increase'],
@@ -162,7 +162,7 @@ test('MuxUI affordances render the Lucide glyph mapping as decorative SVGs', () 
   assert.equal(disclosureTrigger?.textContent, 'Details');
   // CheckboxField's input is named by its wrapping label text, not an aria-label.
   for (const [state, className, label] of [['selected', 'lucide-check', 'Accept'], ['indeterminate', 'lucide-minus', 'Mixed']]) {
-    const icon = dom.window.document.querySelector(`.muxui-checkbox-field[data-${state}] .muxui-checkbox-field__indicator svg`);
+    const icon = dom.window.document.querySelector(`.muxui-checkbox-field[data-muxui-state-${state}] .muxui-checkbox-field__indicator svg`);
     assert.ok(icon, `missing icon ${className}`);
     assert.equal(icon.classList.contains(className), true);
     assert.equal(icon.getAttribute('aria-hidden'), 'true');

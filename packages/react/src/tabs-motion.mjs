@@ -408,7 +408,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
       childList: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['aria-selected', 'data-selected', 'data-disabled', 'disabled', 'dir'],
+      attributeFilter: ['aria-selected', 'data-muxui-state-selected', 'data-muxui-state-disabled', 'disabled', 'dir'],
     });
     for (let ancestor = root; ancestor; ancestor = ancestor.parentElement) {
       mutationObserver?.observe(ancestor, { attributes: true, attributeFilter: ['dir'] });
@@ -494,7 +494,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
   return React.createElement('div', {
     ref: setRoot,
     className: 'muxui-tabs-motion',
-    'data-orientation': orientation,
+    'data-muxui-state-orientation': orientation,
     'data-muxui-tabs-variant': variant,
     'data-muxui-tabs-overflow': edges.overflow || undefined,
     'data-muxui-tabs-direction': direction,

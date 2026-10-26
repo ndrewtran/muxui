@@ -2,11 +2,8 @@ import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, ReactNode, RefAttributes } from 'react';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
-import {
-  CheckboxField as AriaCheckboxField,
-  CheckboxButton as AriaCheckboxButton,
-  FieldError as AriaFieldError,
-} from 'react-aria-components';
+import { FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaCheckboxField, AriaCheckboxButton } from '../substrate.ts';
 import type { CheckboxButtonProps as AriaCheckboxButtonProps, CheckboxButtonRenderProps, CheckboxFieldProps as AriaCheckboxFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx, nativePart } from './part-utils.ts';
@@ -62,7 +59,7 @@ function makeCheckboxField() {
   const Root = /*#__PURE__*/ React.forwardRef<HTMLDivElement, CheckboxFieldRootProps>(function CheckboxFieldRoot({ checked, defaultChecked, indeterminate, onChange, name, value, disabled, invalid, required, readOnly, size = 'md', className, ...props }, ref) {
     const resolvedSize = normalizeChoiceControlSize(size, 'CheckboxField');
     // React Aria's props type the handlers on Element, and these on the div; the rest is the div's native attributes.
-    return h(AriaCheckboxField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...(props as AriaCheckboxFieldProps) }), ref, isSelected: checked, defaultSelected: defaultChecked, isIndeterminate: indeterminate, onChange, name, value, ...{ 'data-size': resolvedSize }, className: cx('muxui-checkbox-field', resolvedSize !== 'md' && `muxui-checkbox-field--${resolvedSize}`, className) });
+    return h(AriaCheckboxField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...(props as AriaCheckboxFieldProps) }), ref, isSelected: checked, defaultSelected: defaultChecked, isIndeterminate: indeterminate, onChange, name, value, ...{ 'data-muxui-size': resolvedSize }, className: cx('muxui-checkbox-field', resolvedSize !== 'md' && `muxui-checkbox-field--${resolvedSize}`, className) });
   });
   const Button = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, CheckboxFieldButtonProps>(function CheckboxFieldButton({ disabled, className, children, ...props }, ref) {
     return h(AriaCheckboxButton, { ...(props as AriaCheckboxButtonProps), ref, ...{ isDisabled: disabled }, className: cx('muxui-checkbox-field__button', className),

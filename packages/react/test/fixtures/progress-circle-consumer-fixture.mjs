@@ -24,7 +24,7 @@ export function ProgressCircleConsumerFixture() {
       }
 
       /* A decorative Track-only icon owns its compact, static pending treatment. */
-      .consumer-progress-circle__track .muxui-progress-circle__indicator[data-indeterminate] {
+      .consumer-progress-circle__track .muxui-progress-circle__indicator[data-muxui-state-indeterminate] {
         stroke-dasharray: 28 72;
         animation: none;
       }

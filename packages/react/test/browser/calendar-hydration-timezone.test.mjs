@@ -40,7 +40,7 @@ function serverMarkup(fixedTime) {
 
 async function hydrateAcrossTimezones(fixedTime, { today, todayLabel, heading }) {
   const markup = serverMarkup(fixedTime);
-  assert.doesNotMatch(markup, /data-today|Today,/u, 'the server renders no today marker');
+  assert.doesNotMatch(markup, /data-muxui-state-today|Today,/u, 'the server renders no today marker');
   assert.doesNotMatch(markup, /role="button"[^>]*aria-label/u, 'the server renders no day cells');
   assert.doesNotMatch(markup, /20\d\d</u, 'the server renders no month heading');
   // Hydration waits for the test so the server frame can be measured first.
@@ -72,10 +72,10 @@ async function hydrateAcrossTimezones(fixedTime, { today, todayLabel, heading })
     const heights = () => page.evaluate(() => ['single', 'range'].map((id) => document.querySelector(`#${id} > div`).getBoundingClientRect().height));
     const before = await heights();
     await page.evaluate(() => window.__hydrate());
-    await page.locator('#range [data-today]').waitFor();
+    await page.locator('#range [data-muxui-state-today]').waitFor();
 
     for (const id of ['single', 'range']) {
-      const todayCell = page.locator(`#${id} [data-today]`);
+      const todayCell = page.locator(`#${id} [data-muxui-state-today]`);
       assert.equal(await todayCell.count(), 1);
       assert.equal(await todayCell.textContent(), today, `${id} marks the browser's today`);
       assert.match(await todayCell.getAttribute('aria-label'), todayLabel);
@@ -95,7 +95,7 @@ async function hydrateAcrossTimezones(fixedTime, { today, todayLabel, heading })
 
     // After the first month change the reserve is released, matching client-mounted calendars.
     await page.evaluate(() => window.__mountClient());
-    await page.locator('#client-range .muxui-range-calendar-cell[data-today]').waitFor();
+    await page.locator('#client-range .muxui-range-calendar-cell[data-muxui-state-today]').waitFor();
     for (const id of ['single', 'range', 'client-single', 'client-range']) await page.locator(`#${id} .muxui-calendar-next`).click();
     await page.waitForFunction(() => ['single', 'range'].every((id) => {
       const height = (key) => document.querySelector(`#${key} > div`).getBoundingClientRect().height;

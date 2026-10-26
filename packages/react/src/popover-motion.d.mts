@@ -4,5 +4,5 @@
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
 import type { PopoverProps } from 'react-aria-components';
 
-/** A React Aria Popover that animates its open and close cycle; `data-modal` reaches the DOM. */
-export declare const PopoverMotion: ForwardRefExoticComponent<PopoverProps & { 'data-modal'?: boolean } & RefAttributes<HTMLElement>>;
+/** A React Aria Popover that animates its open and close cycle; `data-muxui-modal` reaches the DOM. */
+export declare const PopoverMotion: ForwardRefExoticComponent<PopoverProps & { 'data-muxui-modal'?: boolean } & RefAttributes<HTMLElement>>;

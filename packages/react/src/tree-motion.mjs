@@ -57,10 +57,10 @@ function sanitizeSnapshot(row, height, paddingInlineStart) {
   clone.removeAttribute('data-key');
   if (key) clone.setAttribute('data-muxui-tree-ghost-key', key);
   clone.removeAttribute('data-muxui-tree-revealing');
-  clone.removeAttribute('data-hovered');
-  clone.removeAttribute('data-focused');
-  clone.removeAttribute('data-focus-visible');
-  clone.removeAttribute('data-pressed');
+  clone.removeAttribute('data-muxui-state-hovered');
+  clone.removeAttribute('data-muxui-state-focused');
+  clone.removeAttribute('data-muxui-state-focus-visible');
+  clone.removeAttribute('data-muxui-state-pressed');
   clone.setAttribute('aria-hidden', 'true');
   clone.inert = true;
   Object.assign(clone.style, {
@@ -112,8 +112,8 @@ function makeExitPlaceholder(root, parent, rows, entries, nestedRuns, totalHeigh
 }
 
 function directHoveredRow(root, rows) {
-  return rows.find((row) => row.hasAttribute('data-hovered')
-    && !row.hasAttribute('data-disabled')
+  return rows.find((row) => row.hasAttribute('data-muxui-state-hovered')
+    && !row.hasAttribute('data-muxui-state-disabled')
     && row.getAttribute('aria-disabled') !== 'true') ?? null;
 }
 
@@ -414,7 +414,7 @@ function observeTreeMotion(root) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['aria-expanded', 'aria-disabled', 'data-hovered', 'data-disabled', 'data-key'],
+    attributeFilter: ['aria-expanded', 'aria-disabled', 'data-muxui-state-hovered', 'data-muxui-state-disabled', 'data-key'],
   });
 
   const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleSync);

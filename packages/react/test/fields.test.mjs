@@ -47,7 +47,7 @@ test('single-line field families expose the shared sm/md/lg size axis', () => {
       const props = { label: 'Value', size };
       if (Control === DateRangePicker) props['aria-label'] = 'Range';
       const markup = renderToString(React.createElement(Control, props));
-      assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+      assert.match(markup, new RegExp(`data-muxui-size="${size}"`, 'u'));
     }
   }
   assert.throws(() => renderToString(React.createElement(TextField, { label: 'Value', size: 'xl' })), /TextField size must be one of/u);
@@ -82,9 +82,9 @@ test('R1.2 fields preserve MuxUI labels, errors, SSR, hydration, and state callb
   try {
     await act(async () => { root = hydrateRoot(document.querySelector('#root'), fields()); });
     assert.equal(document.querySelectorAll('label').length >= 7, true);
-    assert.equal(document.querySelector('[data-invalid]') !== null, true);
+    assert.equal(document.querySelector('[data-muxui-state-invalid]') !== null, true);
     assert.equal(document.querySelector('.muxui-switch input')?.checked, false);
-    assert.equal(document.querySelector('.muxui-switch-field')?.getAttribute('data-invalid'), 'true');
+    assert.equal(document.querySelector('.muxui-switch-field')?.getAttribute('data-muxui-state-invalid'), 'true');
     assert.match(document.querySelector('.muxui-switch-field')?.textContent ?? '', /Apply changes.*Choose a setting/u);
     assert.equal(document.querySelector('.muxui-search-clear svg')?.getAttribute('aria-hidden'), 'true');
     assert.equal(document.querySelector('.muxui-search-clear svg')?.getAttribute('focusable'), 'false');
@@ -120,14 +120,14 @@ test('Form renders name-keyed external validation errors through field error par
   assert.ok(quantityInput);
   assert.ok(validInput);
   assert.equal(usernameInput.getAttribute('aria-invalid'), 'true');
-  assert.equal(quantityInput.closest('.muxui-number-field')?.getAttribute('data-invalid'), 'true');
+  assert.equal(quantityInput.closest('.muxui-number-field')?.getAttribute('data-muxui-state-invalid'), 'true');
   assert.equal(quantityInput.getAttribute('aria-invalid'), 'true');
   const usernameDescriptions = usernameInput.getAttribute('aria-describedby')?.split(' ') ?? [];
   assert.equal(usernameDescriptions.some((id) => root.ownerDocument.getElementById(id)?.textContent.includes('Username is already taken')), true);
   const validField = validInput.closest('.muxui-text-field');
   assert.ok(validField);
   assert.equal(validField.querySelector('.muxui-field-error'), null);
-  const invalidFields = [...root.querySelectorAll('[data-invalid]')];
+  const invalidFields = [...root.querySelectorAll('[data-muxui-state-invalid]')];
   assert.equal(invalidFields.length >= 2, true);
   dom.window.close();
 });
@@ -169,14 +169,14 @@ test('Form validation errors cover Mux-owned temporal names without duplicate Fo
     const localTime = host.querySelectorAll('.muxui-time-field')[1];
     const range = host.querySelector('.muxui-date-range-picker');
     assert.equal(form?.noValidate, true);
-    assert.equal(time?.getAttribute('data-invalid'), 'true');
-    assert.equal(time?.querySelector('[data-type="hour"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(time?.getAttribute('data-muxui-state-invalid'), 'true');
+    assert.equal(time?.querySelector('[data-muxui-state-type="hour"]')?.getAttribute('aria-invalid'), 'true');
     assert.match(time?.querySelector('.muxui-field-error')?.textContent ?? '', /Start time is required Start time must be in business hours/u);
-    assert.equal(localTime?.getAttribute('data-invalid'), 'true');
+    assert.equal(localTime?.getAttribute('data-muxui-state-invalid'), 'true');
     assert.match(localTime?.querySelector('.muxui-field-error')?.textContent ?? '', /Local error/u);
     assert.doesNotMatch(localTime?.textContent ?? '', /Server error is hidden by the local message/u);
-    assert.equal(range?.getAttribute('data-invalid'), 'true');
-    assert.equal(range?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(range?.getAttribute('data-muxui-state-invalid'), 'true');
+    assert.equal(range?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), 'true');
     assert.match(range?.querySelector('.muxui-field-error')?.textContent ?? '', /Trip must start on an available date Trip must end after it starts/u);
 
     const formData = new dom.window.FormData(form);
@@ -186,10 +186,10 @@ test('Form validation errors cover Mux-owned temporal names without duplicate Fo
     assert.deepEqual(formData.getAll('tripEnd'), ['2026-09-01']);
 
     await act(async () => root.render(renderFields({})));
-    assert.equal(time?.getAttribute('data-invalid'), null);
+    assert.equal(time?.getAttribute('data-muxui-state-invalid'), null);
     assert.equal(time?.querySelector('.muxui-field-error'), null);
-    assert.equal(time?.querySelector('[data-type="hour"]')?.getAttribute('aria-invalid'), null);
-    assert.equal(range?.getAttribute('data-invalid'), null);
+    assert.equal(time?.querySelector('[data-muxui-state-type="hour"]')?.getAttribute('aria-invalid'), null);
+    assert.equal(range?.getAttribute('data-muxui-state-invalid'), null);
     assert.equal(range?.querySelector('.muxui-field-error'), null);
   } finally {
     await act(async () => root?.unmount());
@@ -236,12 +236,12 @@ test('SearchField clear control keeps RAC clearing and the MuxUI callback', asyn
     })));
     const input = host.querySelector('.muxui-search-field input');
     const clear = host.querySelector('.muxui-search-clear');
-    assert.equal(host.querySelector('.muxui-search-field').hasAttribute('data-empty'), false);
+    assert.equal(host.querySelector('.muxui-search-field').hasAttribute('data-muxui-state-empty'), false);
     assert.equal(input.value, 'MuxUI');
     await act(async () => clear.click());
     assert.equal(input.value, '');
     assert.equal(clears, 1);
-    assert.equal(host.querySelector('.muxui-search-field').getAttribute('data-empty'), 'true');
+    assert.equal(host.querySelector('.muxui-search-field').getAttribute('data-muxui-state-empty'), 'true');
   } finally {
     await act(async () => root.unmount());
     env();
@@ -315,8 +315,8 @@ test('Switch exposes required and invalid states alongside its description and e
   }));
   const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
   const root = dom.window.document.querySelector('.muxui-switch-field');
-  assert.equal(root?.getAttribute('data-required'), 'true');
-  assert.equal(root?.getAttribute('data-invalid'), 'true');
+  assert.equal(root?.getAttribute('data-muxui-state-required'), 'true');
+  assert.equal(root?.getAttribute('data-muxui-state-invalid'), 'true');
   assert.match(root?.textContent ?? '', /Apply changes.*Choose a setting/u);
   dom.window.close();
 });
@@ -677,24 +677,24 @@ test('temporal bounds and reversed ranges stay visible and use built-in Form val
     assert.equal(serializedInput(dateField)?.value, '2026-01-01');
     assert.equal(serializedInput(datePicker)?.value, '2026-04-01');
     assert.equal(serializedInput(timeField)?.value, '09:00:00');
-    assert.equal(dateField?.getAttribute('data-invalid'), 'true');
-    assert.equal(datePicker?.getAttribute('data-invalid'), 'true');
-    assert.equal(timeField?.getAttribute('data-invalid'), 'true');
-    assert.equal(dateField?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
-    assert.equal(datePicker?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
-    assert.equal(timeField?.querySelector('[data-type="hour"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(dateField?.getAttribute('data-muxui-state-invalid'), 'true');
+    assert.equal(datePicker?.getAttribute('data-muxui-state-invalid'), 'true');
+    assert.equal(timeField?.getAttribute('data-muxui-state-invalid'), 'true');
+    assert.equal(dateField?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(datePicker?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(timeField?.querySelector('[data-muxui-state-type="hour"]')?.getAttribute('aria-invalid'), 'true');
     for (const field of [dateField, datePicker, timeField, ranges[0], ranges[1]]) {
       assert.ok(field?.querySelector('.muxui-field-error')?.textContent.trim());
     }
     for (const range of [ranges[0], ranges[1]]) {
-      assert.equal(range?.getAttribute('data-invalid'), 'true');
-      assert.equal(range?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
+      assert.equal(range?.getAttribute('data-muxui-state-invalid'), 'true');
+      assert.equal(range?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), 'true');
     }
     assert.deepEqual([...ranges[0].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form-reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
     assert.deepEqual([...ranges[1].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form-reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
-    assert.equal(ranges[2]?.getAttribute('data-invalid'), null);
+    assert.equal(ranges[2]?.getAttribute('data-muxui-state-invalid'), null);
     assert.equal(ranges[2]?.querySelector('.muxui-field-error'), null);
-    assert.equal(ranges[2]?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), null);
+    assert.equal(ranges[2]?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), null);
   } finally {
     await act(async () => root?.unmount());
     restore();
@@ -719,14 +719,14 @@ test('temporal picker open ownership is independent and honors disabled/read-onl
     const controlled = host.querySelector('.muxui-date-picker');
     const defaultOpen = host.querySelector('.muxui-date-range-picker');
     const pickers = host.querySelectorAll('.muxui-date-picker');
-    assert.equal(controlled?.getAttribute('data-open'), null);
-    assert.equal(defaultOpen?.getAttribute('data-open'), 'true');
+    assert.equal(controlled?.getAttribute('data-muxui-state-open'), null);
+    assert.equal(defaultOpen?.getAttribute('data-muxui-state-open'), 'true');
     await act(async () => controlled.querySelector('.muxui-date-trigger').click());
     assert.deepEqual(openChanges, [['controlled', true]]);
-    assert.equal(controlled.getAttribute('data-open'), null);
+    assert.equal(controlled.getAttribute('data-muxui-state-open'), null);
     assert.equal(pickers[1]?.querySelector('.muxui-date-trigger')?.disabled, true);
     assert.equal(pickers[2]?.querySelector('.muxui-date-trigger')?.disabled, true);
-    assert.equal(host.querySelector('.muxui-date-field .muxui-date-segment')?.getAttribute('data-readonly'), 'true');
+    assert.equal(host.querySelector('.muxui-date-field .muxui-date-segment')?.getAttribute('data-muxui-state-read-only'), 'true');
   } finally {
     await act(async () => root?.unmount());
     restore();
@@ -764,7 +764,7 @@ async function assertPickerDefaultOpen({ Picker, Context, selector, props }) {
       const picker = React.createElement(Picker, { ...props, ...extraProps });
       await act(async () => root.render(context ? React.createElement(Context.Provider, { value: context }, picker) : picker));
       const trigger = host.querySelector(`${selector} .muxui-date-trigger`);
-      const isOpen = () => host.querySelector(selector).getAttribute('data-open') === 'true';
+      const isOpen = () => host.querySelector(selector).getAttribute('data-muxui-state-open') === 'true';
       assert.equal(isOpen(), openAtMount, `${scenario}: open at mount`);
       assert.equal(trigger.getAttribute('aria-expanded'), String(openAtMount), `${scenario}: aria-expanded at mount`);
       await pressElement(trigger);
@@ -793,8 +793,8 @@ test('DateRangePicker takes defaultOpen from DateRangePickerContext', () => asse
 
 test('read-only date segments retain accessible semantic contrast', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
-  assert.match(styles, /@scope \(\[data-muxui-color-scheme='dark'\]\) to \(\[data-muxui-color-scheme\]\) \{\s*:scope \.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
+  assert.match(styles, /\.muxui-date-segment\[data-muxui-state-read-only\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
+  assert.match(styles, /@scope \(\[data-muxui-color-scheme='dark'\]\) to \(\[data-muxui-color-scheme\]\) \{\s*:scope \.muxui-date-segment\[data-muxui-state-read-only\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /--muxui-reference-color-neutral-60:\s*#79716b;/u);
   assert.match(styles, /--muxui-reference-color-neutral-50:\s*#918b86;/u);
   assert.match(styles, /--muxui-semantic-content-default:\s*var\(--muxui-semantic-color-neutral-90\);/u);
@@ -860,11 +860,11 @@ test('R1.2 date ranges own paired FormData names and reset to their default', as
         segment.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: nextValue }));
       });
     };
-    const firstRangeDay = form.querySelector('.muxui-date-range-picker [data-type="day"]');
-    const firstTimeHour = form.querySelector('.muxui-time-field [data-type="hour"]');
-    const secondRangeDay = secondForm.querySelector('.muxui-date-range-picker [data-type="day"]');
-    const unnamedRangeDay = unnamedForm.querySelector('.muxui-date-range-picker [data-type="day"]');
-    const unnamedTimeHour = unnamedForm.querySelector('.muxui-time-field [data-type="hour"]');
+    const firstRangeDay = form.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]');
+    const firstTimeHour = form.querySelector('.muxui-time-field [data-muxui-state-type="hour"]');
+    const secondRangeDay = secondForm.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]');
+    const unnamedRangeDay = unnamedForm.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]');
+    const unnamedTimeHour = unnamedForm.querySelector('.muxui-time-field [data-muxui-state-type="hour"]');
     await editSegment(firstRangeDay, '27');
     await editSegment(firstTimeHour, '10');
     await editSegment(secondRangeDay, '2');
@@ -894,7 +894,7 @@ test('R1.2 date ranges own paired FormData names and reset to their default', as
     await act(async () => root.render(React.createElement(Form, null,
       React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', value: { start: '2026-10-01', end: '2026-10-05' } }))));
     const controlledForm = host.querySelector('form');
-    const controlledStartDay = controlledForm.querySelector('.muxui-date-range-picker [data-type="day"]');
+    const controlledStartDay = controlledForm.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]');
     await editSegment(controlledStartDay, '2');
     await act(async () => controlledForm.reset());
     const controlled = new dom.window.FormData(controlledForm);
@@ -937,8 +937,8 @@ test('R1.2 temporal fields honor cancelled form resets and reset normally', asyn
         segment.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: nextValue }));
       });
     };
-    const cancelledRangeDay = cancelledForm.querySelector('.muxui-date-range-picker [data-type="day"]');
-    const cancelledTimeHour = cancelledForm.querySelector('.muxui-time-field [data-type="hour"]');
+    const cancelledRangeDay = cancelledForm.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]');
+    const cancelledTimeHour = cancelledForm.querySelector('.muxui-time-field [data-muxui-state-type="hour"]');
     await editSegment(cancelledRangeDay, '27');
     await editSegment(cancelledTimeHour, '10');
     assert.equal(new dom.window.FormData(cancelledForm).get('cancelStart'), '2026-08-27');
@@ -951,8 +951,8 @@ test('R1.2 temporal fields honor cancelled form resets and reset normally', asyn
     assert.equal(cancelledRangeDay.textContent, '27');
     assert.equal(cancelledTimeHour.textContent, '10');
 
-    const normalRangeDay = normalForm.querySelector('.muxui-date-range-picker [data-type="day"]');
-    const normalTimeHour = normalForm.querySelector('.muxui-time-field [data-type="hour"]');
+    const normalRangeDay = normalForm.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]');
+    const normalTimeHour = normalForm.querySelector('.muxui-time-field [data-muxui-state-type="hour"]');
     await editSegment(normalRangeDay, '27');
     await editSegment(normalTimeHour, '10');
     await act(async () => normalForm.reset());
@@ -1006,7 +1006,7 @@ test('Autocomplete keeps outside dismissal closed through trigger focus restorat
   const restore = installDom(dom);
   let root;
   const assertClosed = () => {
-    assert.equal(document.querySelector('.muxui-autocomplete-popover:not([data-exiting="true"])'), null);
+    assert.equal(document.querySelector('.muxui-autocomplete-popover:not([data-muxui-state-exiting="true"])'), null);
   };
   try {
     const host = document.querySelector('#root');
@@ -1125,7 +1125,7 @@ test('Autocomplete disabled items map to inert options and suppress callbacks', 
     await act(async () => input.focus());
     const options = [...document.querySelectorAll('.muxui-autocomplete-option')];
     assert.equal(options.length, 3);
-    assert.deepEqual(options.map((option) => option.getAttribute('data-disabled')), ['true', null, 'true']);
+    assert.deepEqual(options.map((option) => option.getAttribute('data-muxui-state-disabled')), ['true', null, 'true']);
     assert.deepEqual(options.map((option) => option.getAttribute('aria-disabled')), ['true', null, 'true']);
 
     await act(async () => options[0].click());
@@ -1250,8 +1250,8 @@ test('Autocomplete preserves the compact size axis and part hooks', async () => 
     size: 'sm',
     items: ['Melbourne'],
   }));
-  assert.match(server, /data-size="sm"/u);
-  assert.match(server, /data-part="root"/u);
+  assert.match(server, /data-muxui-size="sm"/u);
+  assert.match(server, /data-muxui-part="root"/u);
   assert.throws(
     () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'xl' })),
     /Autocomplete size must be one of: sm, md, lg/u,
@@ -1272,9 +1272,9 @@ test('Autocomplete preserves the compact size axis and part hooks', async () => 
     const list = document.querySelector('.muxui-autocomplete-list');
     assert.ok(list);
     assert.match(list.className, /muxui-autocomplete-list--sm/u);
-    assert.equal(list.getAttribute('data-size'), 'sm');
-    assert.equal(list.getAttribute('data-part'), 'list');
-    assert.equal(document.querySelector('.muxui-autocomplete-option')?.getAttribute('data-part'), 'option');
+    assert.equal(list.getAttribute('data-muxui-size'), 'sm');
+    assert.equal(list.getAttribute('data-muxui-part'), 'list');
+    assert.equal(document.querySelector('.muxui-autocomplete-option')?.getAttribute('data-muxui-part'), 'option');
     await act(async () => root.unmount());
   } finally {
     restore();
@@ -1302,7 +1302,7 @@ test('R1.2 fields do not forward unsupported validation props', () => {
   ];
   for (const field of fieldsWithUnsupportedValidation) {
     const markup = renderToString(React.cloneElement(field, { validationBehavior: 'native' }));
-    assert.doesNotMatch(markup, /data-required|data-invalid|validationBehavior/u);
+    assert.doesNotMatch(markup, /data-muxui-state-required|data-muxui-state-invalid|validationBehavior/u);
   }
 });
 
@@ -1325,7 +1325,7 @@ test('R1.2 CheckboxGroup owns option names and enforces required FormData submis
     const formData = new dom.window.FormData(form);
     assert.deepEqual(formData.getAll('alerts'), ['email']);
     assert.deepEqual(formData.getAll('nestedAlerts'), ['push', 'sms']);
-    assert.equal(host.querySelector('[role="group"]').getAttribute('data-required'), 'true');
+    assert.equal(host.querySelector('[role="group"]').getAttribute('data-muxui-state-required'), 'true');
     assert.equal(form.checkValidity(), true);
     const email = host.querySelector('input[value="email"]');
     await act(async () => email.click());
@@ -1353,14 +1353,14 @@ test('CheckboxGroup keeps invalid error content inside its validation context', 
     await act(async () => root.render(renderGroup({ invalid: true, errorMessage: 'A value is required' })));
     const group = host.querySelector('.muxui-checkbox-group');
     const input = host.querySelector('input[type="checkbox"]');
-    assert.equal(group?.getAttribute('data-invalid'), 'true');
+    assert.equal(group?.getAttribute('data-muxui-state-invalid'), 'true');
     assert.match(host.querySelector('.muxui-field-error')?.textContent ?? '', /A value is required/u);
     const describedBy = input?.getAttribute('aria-describedby')?.split(' ') ?? [];
     assert.equal(describedBy.some((id) => host.ownerDocument.getElementById(id)?.textContent.includes('A value is required')), true);
 
     await act(async () => root.render(renderGroup({ invalid: false })));
     assert.equal(host.querySelector('.muxui-field-error'), null);
-    assert.equal(group?.getAttribute('data-invalid'), null);
+    assert.equal(group?.getAttribute('data-muxui-state-invalid'), null);
     const remainingDescriptions = input?.getAttribute('aria-describedby')?.split(' ') ?? [];
     assert.equal(remainingDescriptions.some((id) => host.ownerDocument.getElementById(id)?.textContent.includes('A value is required')), false);
   } finally {
@@ -1388,8 +1388,8 @@ async function editDateSegment(segment, nextValue) {
 
 // Empties every editable segment; RAC emits null once the whole field is clear.
 async function clearDateSegments(field) {
-  for (const segment of field.querySelectorAll('.muxui-date-segment:not([data-type="literal"])')) {
-    for (let attempt = 0; attempt < 5 && !segment.hasAttribute('data-placeholder'); attempt += 1) {
+  for (const segment of field.querySelectorAll('.muxui-date-segment:not([data-muxui-state-type="literal"])')) {
+    for (let attempt = 0; attempt < 5 && !segment.hasAttribute('data-muxui-state-placeholder'); attempt += 1) {
       await act(async () => {
         segment.focus();
         segment.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
@@ -1412,7 +1412,7 @@ test('controlled temporal fields update, clear to null, and submit the controlle
       React.createElement(DatePicker, { label: 'Due', name: 'due', value: date, onChange: (value) => changes.push(['due', value]) }),
       React.createElement(TimeField, { label: 'Time', name: 'time', value: time, onChange: (value) => changes.push(['time', value]) }),
       React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', value: range, onChange: (value) => changes.push(['range', value]) })));
-    const segments = (selector, type) => [...host.querySelectorAll(`${selector} [data-type="${type}"]`)];
+    const segments = (selector, type) => [...host.querySelectorAll(`${selector} [data-muxui-state-type="${type}"]`)];
     const formData = () => Object.fromEntries(new dom.window.FormData(host.querySelector('form')));
 
     await act(async () => renderControlled({ date: '2026-01-02', time: '10:15', range: { start: '2026-01-02', end: '2026-01-05' } }));
@@ -1427,8 +1427,8 @@ test('controlled temporal fields update, clear to null, and submit the controlle
       await act(async () => renderControlled({ date: '2026-03-04', time: '11:45', range: { start: '2026-03-04', end: '2026-03-08' } }));
       await act(async () => renderControlled(cleared));
       for (const selector of ['.muxui-date-field', '.muxui-date-picker', '.muxui-time-field', '.muxui-date-range-picker']) {
-        for (const segment of host.querySelectorAll(`${selector} .muxui-date-segment:not([data-type="literal"])`)) {
-          assert.equal(segment.hasAttribute('data-placeholder'), true, `${selector} kept a stale ${segment.dataset.type} segment`);
+        for (const segment of host.querySelectorAll(`${selector} .muxui-date-segment:not([data-muxui-state-type="literal"])`)) {
+          assert.equal(segment.hasAttribute('data-muxui-state-placeholder'), true, `${selector} kept a stale ${segment.dataset.muxuiStateType} segment`);
         }
       }
       assert.deepEqual(formData(), { date: '', due: '', time: '', tripStart: '', tripEnd: '' });
@@ -1481,7 +1481,7 @@ test('Form server errors clear after an edit until new validationErrors arrive',
     const serverErrors = { name: 'Name taken', date: 'Date taken', time: 'Time taken', tripStart: 'Trip taken' };
     await act(async () => renderForm(serverErrors));
     const selectors = ['.muxui-text-field', '.muxui-date-field', '.muxui-time-field', '.muxui-date-range-picker'];
-    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows its server error`);
+    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-muxui-state-invalid'), 'true', `${selector} shows its server error`);
 
     const text = host.querySelector('.muxui-text-field input');
     // RAC clears server errors from the native change event that commits an edit.
@@ -1489,17 +1489,17 @@ test('Form server errors clear after an edit until new validationErrors arrive',
       text.value = 'Andy';
       text.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    await editDateSegment(host.querySelector('.muxui-date-field [data-type="day"]'), '5');
-    await editDateSegment(host.querySelector('.muxui-time-field [data-type="hour"]'), '10');
-    await editDateSegment(host.querySelector('.muxui-date-range-picker [data-type="day"]'), '5');
+    await editDateSegment(host.querySelector('.muxui-date-field [data-muxui-state-type="day"]'), '5');
+    await editDateSegment(host.querySelector('.muxui-time-field [data-muxui-state-type="hour"]'), '10');
+    await editDateSegment(host.querySelector('.muxui-date-range-picker [data-muxui-state-type="day"]'), '5');
     await act(async () => document.activeElement?.blur());
     for (const selector of selectors) {
-      assert.equal(host.querySelector(selector).getAttribute('data-invalid'), null, `${selector} kept a dismissed server error`);
+      assert.equal(host.querySelector(selector).getAttribute('data-muxui-state-invalid'), null, `${selector} kept a dismissed server error`);
       assert.equal(host.querySelector(`${selector} .muxui-field-error`), null);
     }
 
     await act(async () => renderForm({ ...serverErrors }));
-    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows new server errors`);
+    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-muxui-state-invalid'), 'true', `${selector} shows new server errors`);
   } finally {
     await act(async () => root?.unmount());
     restore();
@@ -1522,8 +1522,8 @@ test('CheckboxGroup names its group from a visible label of any node type', asyn
   assert.equal(nameOf(rich), 'Toppings');
   assert.equal(nameOf(plain), 'Alerts');
   assert.equal(nameOf(unlabelled), 'Hidden alerts');
-  assert.equal(rich.getAttribute('data-size'), 'sm');
-  assert.equal(plain.getAttribute('data-size'), 'md');
+  assert.equal(rich.getAttribute('data-muxui-size'), 'sm');
+  assert.equal(plain.getAttribute('data-muxui-size'), 'md');
   dom.window.close();
 });
 
@@ -1571,9 +1571,9 @@ test('errorMessage alone leaves fields valid and only replaces the shown validat
   ];
   for (const [Control, props] of controls) {
     const valid = renderToString(React.createElement(Control, { ...props, errorMessage: 'Custom error' }));
-    assert.doesNotMatch(valid, /data-invalid|Custom error/u, `${Control.displayName} became invalid from errorMessage alone`);
+    assert.doesNotMatch(valid, /data-muxui-state-invalid|Custom error/u, `${Control.displayName} became invalid from errorMessage alone`);
     const invalid = renderToString(React.createElement(Control, { ...props, errorMessage: 'Custom error', invalid: true }));
-    assert.match(invalid, /data-invalid="true"/u);
+    assert.match(invalid, /data-muxui-state-invalid="true"/u);
     assert.match(invalid, /Custom error/u);
   }
 });
@@ -1632,11 +1632,11 @@ test('Autocomplete shows name-keyed server errors until a selection', async () =
     await act(async () => root.render(React.createElement(Form, { validationBehavior: 'aria', validationErrors: { city: 'City is unavailable' } },
       React.createElement(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'] }))));
     const field = host.querySelector('.muxui-autocomplete-search');
-    assert.equal(field.getAttribute('data-invalid'), 'true');
+    assert.equal(field.getAttribute('data-muxui-state-invalid'), 'true');
     assert.match(field.querySelector('.muxui-field-error')?.textContent ?? '', /City is unavailable/u);
     await act(async () => host.querySelector('input[role="combobox"]').focus());
     await act(async () => document.querySelector('.muxui-autocomplete-option').click());
-    assert.equal(field.getAttribute('data-invalid'), null);
+    assert.equal(field.getAttribute('data-muxui-state-invalid'), null);
     assert.deepEqual(new dom.window.FormData(host.querySelector('form')).getAll('city'), ['Melbourne']);
   } finally {
     await act(async () => root?.unmount());
@@ -1660,10 +1660,10 @@ test('TimeField compares, displays, and submits HH:mm:ss values and bounds at mi
       React.createElement(TimeField, { label: 'Late', name: 'late', defaultValue: '17:01', maxValue: '17:00:59' }))));
     const form = host.querySelector('form');
     const [closing, opening, controlled, late] = host.querySelectorAll('.muxui-time-field');
-    assert.equal(late.getAttribute('data-invalid'), 'true', 'bounds still apply at minute precision');
-    for (const field of [closing, opening, controlled]) assert.equal(field.getAttribute('data-invalid'), null, `${field.textContent} is out of range`);
-    assert.equal(controlled.querySelector('[data-type="minute"]').textContent, '30');
-    assert.equal(controlled.querySelector('[data-type="second"]'), null);
+    assert.equal(late.getAttribute('data-muxui-state-invalid'), 'true', 'bounds still apply at minute precision');
+    for (const field of [closing, opening, controlled]) assert.equal(field.getAttribute('data-muxui-state-invalid'), null, `${field.textContent} is out of range`);
+    assert.equal(controlled.querySelector('[data-muxui-state-type="minute"]').textContent, '30');
+    assert.equal(controlled.querySelector('[data-muxui-state-type="second"]'), null);
     assert.deepEqual(Object.fromEntries(new dom.window.FormData(form)), { closing: '17:00', opening: '09:30', controlled: '09:30', late: '17:01' });
   } finally {
     await act(async () => root?.unmount());

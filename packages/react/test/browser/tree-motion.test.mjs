@@ -177,7 +177,7 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector(':scope > [data-muxui-tree-exit]'));
     assert.equal(await row(primary, 'child-a').count(), 0, 'controlled collapse also exits visually after collection removal');
 
-    await primary.evaluate((node) => node.setAttribute('data-reduced-motion', 'true'));
+    await primary.evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.hasAttribute('data-muxui-tree-motion-reduced'));
     await page.evaluate(() => window.setFirstTreeExpanded(['parent']));
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-a"]'));
@@ -185,13 +185,13 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     await page.evaluate(() => window.setFirstTreeExpanded([]));
     await page.waitForFunction(() => !document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-a"]'));
     assert.equal(await primary.locator(':scope > [data-muxui-tree-exit]').count(), 0, 'reduced-motion collapse does not retain visual ghosts');
-    await primary.evaluate((node) => node.removeAttribute('data-reduced-motion'));
+    await primary.evaluate((node) => node.removeAttribute('data-muxui-motion'));
     await page.waitForFunction(() => !document.querySelectorAll('.muxui-tree').item(0)?.hasAttribute('data-muxui-tree-motion-reduced'));
 
     const selectedBackground = await parent.evaluate((node) => getComputedStyle(node).backgroundColor);
     const primaryParentBox = await parent.boundingBox();
     await page.mouse.move(primaryParentBox.x + primaryParentBox.width / 2, primaryParentBox.y + primaryParentBox.height / 2);
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="parent"][data-hovered]'));
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="parent"][data-muxui-state-hovered]'));
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('.muxui-tree-hover:not([hidden])'));
     assert.equal(await parent.evaluate((node) => getComputedStyle(node).backgroundColor), selectedBackground,
       'hovering a selected row preserves its selection fill');
@@ -205,7 +205,7 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     const start = await bounds(hover);
     const childBox = await row(primary, 'child-b').boundingBox();
     await page.mouse.move(childBox.x + 48, childBox.y + childBox.height / 2);
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-b"][data-hovered]'));
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-b"][data-muxui-state-hovered]'));
     const motionSampleHandle = await page.waitForFunction((startTop) => {
       const root = document.querySelectorAll('.muxui-tree')[0];
       const shape = root?.querySelector('.muxui-tree-hover');

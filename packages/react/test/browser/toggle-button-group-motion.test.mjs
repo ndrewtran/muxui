@@ -26,7 +26,7 @@ function assertRectsClose(actual, expected, message = 'rectangles should align')
 async function readGroup(page, selector) {
   return page.locator(selector).evaluate((root) => {
     const buttons = [...root.querySelectorAll(':scope > .muxui-toggle-button')];
-    const selected = buttons.filter((button) => button.hasAttribute('data-selected')
+    const selected = buttons.filter((button) => button.hasAttribute('data-muxui-state-selected')
       || button.getAttribute('aria-checked') === 'true'
       || button.getAttribute('aria-pressed') === 'true');
     const indicator = root.querySelector('.muxui-toggle-button-group-motion-indicator');
@@ -58,7 +58,7 @@ async function readGroup(page, selector) {
 function sampleTravel(selector) {
   const root = document.querySelector(selector);
   const buttons = [...root.querySelectorAll(':scope > .muxui-toggle-button')];
-  const selected = buttons.filter((button) => button.hasAttribute('data-selected')
+  const selected = buttons.filter((button) => button.hasAttribute('data-muxui-state-selected')
     || button.getAttribute('aria-checked') === 'true'
     || button.getAttribute('aria-pressed') === 'true');
   const indicator = root.querySelector('.muxui-toggle-button-group-motion-indicator');
@@ -79,7 +79,7 @@ async function waitForSelected(page, selector, text) {
   await page.waitForFunction(({ rootSelector, expected }) => {
     const root = document.querySelector(rootSelector);
     return [...(root?.querySelectorAll(':scope > .muxui-toggle-button') ?? [])]
-      .some((button) => (button.hasAttribute('data-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true')
+      .some((button) => (button.hasAttribute('data-muxui-state-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true')
         && button.textContent.trim() === expected);
   }, { rootSelector: selector, expected: text });
 }
@@ -88,7 +88,7 @@ async function waitForAlignment(page, selector) {
   await page.waitForFunction((rootSelector) => {
     const root = document.querySelector(rootSelector);
     const selected = [...(root?.querySelectorAll(':scope > .muxui-toggle-button') ?? [])]
-      .find((button) => button.hasAttribute('data-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true');
+      .find((button) => button.hasAttribute('data-muxui-state-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true');
     const indicator = root?.querySelector('.muxui-toggle-button-group-motion-indicator');
     if (!selected || !indicator || getComputedStyle(indicator).opacity === '0') return false;
     const a = selected.getBoundingClientRect();
@@ -155,7 +155,7 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
       const rect = root.querySelector('.muxui-toggle-button-group-motion-indicator')?.getBoundingClientRect();
       const indicator = rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null;
       const selected = [...root.querySelectorAll(':scope > .muxui-toggle-button')]
-        .find((button) => button.hasAttribute('data-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true')
+        .find((button) => button.hasAttribute('data-muxui-state-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true')
         ?.textContent.trim();
       if (!state.started) {
         state.started = true;
@@ -186,7 +186,7 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
 
     await page.evaluate(() => window.__toggleClearPrimary());
     await page.waitForFunction(() => ![...document.querySelectorAll('#primary-toggle > .muxui-toggle-button')]
-      .some((button) => button.hasAttribute('data-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true'));
+      .some((button) => button.hasAttribute('data-muxui-state-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true'));
     await page.waitForFunction(() => !document.querySelector('#primary-toggle[data-muxui-toggle-motion-ready]'));
     const cleared = await readGroup(page, primary);
     assert.equal(cleared.indicatorOpacity, '0');
@@ -213,7 +213,7 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     assert.equal(multipleInitial.internalCount, 0);
     assert.equal(multipleInitial.foregroundCount, 0);
     await page.evaluate(() => window.__toggleSetMultiple(['long']));
-    await page.waitForFunction(() => document.querySelectorAll('#multiple-toggle > .muxui-toggle-button[data-selected]').length === 1);
+    await page.waitForFunction(() => document.querySelectorAll('#multiple-toggle > .muxui-toggle-button[data-muxui-state-selected]').length === 1);
     const multipleNext = await readGroup(page, multiple);
     assert.deepEqual(multipleNext.selected, ['Longer selection']);
     assert.equal(multipleNext.indicator, null);

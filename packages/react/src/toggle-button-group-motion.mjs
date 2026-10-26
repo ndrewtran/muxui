@@ -4,7 +4,7 @@ import { sameGeometry, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const BUTTON_SELECTOR = '.muxui-toggle-button';
-const SELECTED_SELECTOR = '[data-selected], [aria-checked="true"], [aria-pressed="true"]';
+const SELECTED_SELECTOR = '[data-muxui-state-selected], [aria-checked="true"], [aria-pressed="true"]';
 const READY_ATTRIBUTE = 'data-muxui-toggle-motion-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-toggle-motion-reduced';
 const INTERNAL_ATTRIBUTE = 'data-muxui-toggle-motion-internal';
@@ -106,12 +106,12 @@ function refreshForeground(foreground, root) {
     removeIds(copy);
     copy.removeAttribute('role');
     copy.removeAttribute('tabindex');
-    copy.removeAttribute('data-selected');
+    copy.removeAttribute('data-muxui-state-selected');
     copy.removeAttribute('aria-checked');
     copy.removeAttribute('aria-pressed');
-    copy.removeAttribute('data-focused');
-    copy.removeAttribute('data-hovered');
-    copy.removeAttribute('data-pressed');
+    copy.removeAttribute('data-muxui-state-focused');
+    copy.removeAttribute('data-muxui-state-hovered');
+    copy.removeAttribute('data-muxui-state-pressed');
     copy.removeAttribute('disabled');
     copy.removeAttribute('aria-disabled');
     copy.classList.add('muxui-toggle-button-group-motion-label');
@@ -161,7 +161,7 @@ function observeToggleButtonSelection(root, selectionMode) {
   const observedButtons = new Set();
 
   const vertical = () => root.getAttribute('aria-orientation') === 'vertical'
-    || root.getAttribute('data-orientation') === 'vertical';
+    || root.getAttribute('data-muxui-state-orientation') === 'vertical';
 
   const stop = () => {
     const previousControls = controls;
@@ -217,7 +217,7 @@ function observeToggleButtonSelection(root, selectionMode) {
     const button = selectedButton(root);
     const nextKey = buttonKey(button);
     const target = geometry(root, button);
-    const selectedIsDisabled = button?.matches('[data-disabled], [aria-disabled="true"], [disabled]');
+    const selectedIsDisabled = button?.matches('[data-muxui-state-disabled], [aria-disabled="true"], [disabled]');
     if (selectedIsDisabled) {
       currentKey = nextKey;
       settle(null);
@@ -320,7 +320,7 @@ function observeToggleButtonSelection(root, selectionMode) {
     childList: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['aria-checked', 'aria-pressed', 'data-selected', 'data-disabled', 'disabled', 'aria-disabled', 'dir'],
+    attributeFilter: ['aria-checked', 'aria-pressed', 'data-muxui-state-selected', 'data-muxui-state-disabled', 'disabled', 'aria-disabled', 'dir'],
   });
   resizeObserver?.observe(root);
   updateObservedButtons();

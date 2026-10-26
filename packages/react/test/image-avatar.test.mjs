@@ -89,32 +89,32 @@ test('Image recovers once, forwards errors and refs, and resets recovery for a n
     const image = imageElement(document);
     assert.equal(ref.current, image);
     assert.equal(image.getAttribute('src'), '/primary.svg');
-    assert.equal(image.hasAttribute('data-fallback'), false);
-    assert.equal(image.hasAttribute('data-error'), false);
+    assert.equal(image.hasAttribute('data-muxui-fallback'), false);
+    assert.equal(image.hasAttribute('data-muxui-error'), false);
 
     await act(async () => { image.dispatchEvent(new Event('error', { bubbles: false })); });
     assert.equal(errorCount, 1);
     assert.equal(imageElement(document).getAttribute('src'), '/fallback.svg');
-    assert.equal(imageElement(document).getAttribute('data-fallback'), '');
-    assert.equal(imageElement(document).hasAttribute('data-error'), false);
+    assert.equal(imageElement(document).getAttribute('data-muxui-fallback'), '');
+    assert.equal(imageElement(document).hasAttribute('data-muxui-error'), false);
 
     await act(async () => { imageElement(document).dispatchEvent(new Event('load', { bubbles: false })); });
     assert.equal(loadCount, 1);
     await act(async () => { imageElement(document).dispatchEvent(new Event('error', { bubbles: false })); });
     assert.equal(errorCount, 2);
-    assert.equal(imageElement(document).getAttribute('data-error'), '');
+    assert.equal(imageElement(document).getAttribute('data-muxui-error'), '');
     assert.equal(imageElement(document).getAttribute('src'), '/fallback.svg');
 
     await act(async () => { root.render(render({ src: '/next.svg', fallbackSrc: '/next-fallback.svg' })); });
     assert.equal(imageElement(document).getAttribute('src'), '/next.svg');
-    assert.equal(imageElement(document).hasAttribute('data-fallback'), false);
-    assert.equal(imageElement(document).hasAttribute('data-error'), false);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-fallback'), false);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-error'), false);
     assert.equal(ref.current, imageElement(document));
 
     await act(async () => { root.render(render()); });
     assert.equal(imageElement(document).getAttribute('src'), '/primary.svg');
-    assert.equal(imageElement(document).hasAttribute('data-fallback'), false);
-    assert.equal(imageElement(document).hasAttribute('data-error'), false);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-fallback'), false);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-error'), false);
 
     await act(async () => {
       root.render(render({
@@ -126,7 +126,7 @@ test('Image recovers once, forwards errors and refs, and resets recovery for a n
     });
     await act(async () => { imageElement(document).dispatchEvent(new Event('error', { bubbles: false })); });
     assert.equal(imageElement(document).getAttribute('srcset'), '/responsive-fallback.svg 1x');
-    assert.equal(imageElement(document).hasAttribute('data-fallback'), true);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-fallback'), true);
     await act(async () => {
       root.render(render({
         src: '/responsive.svg',
@@ -136,8 +136,8 @@ test('Image recovers once, forwards errors and refs, and resets recovery for a n
       }));
     });
     assert.equal(imageElement(document).getAttribute('srcset'), '/responsive-next.svg 1x');
-    assert.equal(imageElement(document).hasAttribute('data-fallback'), false);
-    assert.equal(imageElement(document).hasAttribute('data-error'), false);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-fallback'), false);
+    assert.equal(imageElement(document).hasAttribute('data-muxui-error'), false);
   } finally {
     await act(async () => root?.unmount());
     restore();
@@ -151,7 +151,7 @@ test('Avatar supports fallback-only content and avoids duplicate accessible name
     React.createElement(Avatar.Fallback, null, React.createElement('strong', null, 'WS')),
   ))).window.document;
   const fallback = avatarRoot(fallbackOnly).querySelector('.muxui-avatar__fallback');
-  assert.equal(avatarRoot(fallbackOnly).dataset.imageState, 'fallback');
+  assert.equal(avatarRoot(fallbackOnly).dataset.muxuiImageState, 'fallback');
   assert.equal(fallback.hidden, false);
   assert.equal(fallback.textContent, 'WS');
   assert.equal(fallback.getAttribute('aria-hidden'), null);
@@ -181,7 +181,7 @@ test('Avatar accepts fragments, treats unavailable sources as fallback, and reje
   ))).window.document;
   // Server markup shows the fallback while the image loads; the root carries the alt name.
   const fragmentedRoot = avatarRoot(fragmented);
-  assert.equal(fragmentedRoot.dataset.imageState, 'loading');
+  assert.equal(fragmentedRoot.dataset.muxuiImageState, 'loading');
   assert.equal(fragmentedRoot.querySelector('.muxui-avatar__image').hidden, false);
   assert.equal(fragmentedRoot.querySelector('.muxui-avatar__image').getAttribute('aria-hidden'), 'true');
   assert.equal(fragmentedRoot.querySelector('.muxui-avatar__fallback').hidden, false);
@@ -201,7 +201,7 @@ test('Avatar accepts fragments, treats unavailable sources as fallback, and reje
     React.createElement(Avatar.Fallback, null, 'AX'),
   ))).window.document;
   const unavailableRoot = avatarRoot(unavailable);
-  assert.equal(unavailableRoot.dataset.imageState, 'fallback');
+  assert.equal(unavailableRoot.dataset.muxuiImageState, 'fallback');
   assert.equal(unavailableRoot.getAttribute('role'), 'img');
   assert.equal(unavailableRoot.getAttribute('aria-label'), 'Alex avatar');
   assert.equal(unavailableRoot.querySelector('.muxui-avatar__image').hidden, true);
@@ -251,7 +251,7 @@ test('Avatar keeps a decorative fallback out of the accessibility tree after an 
     const image = avatarRoot(document).querySelector('.muxui-avatar__image');
     await act(async () => { image.dispatchEvent(new Event('error', { bubbles: false })); });
     const avatar = avatarRoot(document);
-    assert.equal(avatar.dataset.imageState, 'error');
+    assert.equal(avatar.dataset.muxuiImageState, 'error');
     assert.equal(image.hidden, true);
     assert.equal(avatar.querySelector('.muxui-avatar__fallback').hidden, false);
     assert.equal(avatar.querySelector('.muxui-avatar__fallback').getAttribute('aria-hidden'), 'true');
@@ -295,7 +295,7 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
     const avatar = avatarRoot(document);
     assert.equal(rootRef.current, avatar);
     assert.equal(imageRef.current, avatar.querySelector('.muxui-avatar__image'));
-    assert.equal(avatar.dataset.imageState, 'loading');
+    assert.equal(avatar.dataset.muxuiImageState, 'loading');
     assert.equal(imageRef.current.hidden, false);
     assert.equal(avatar.querySelector('.muxui-avatar__fallback').hidden, false);
     assert.equal(avatar.getAttribute('role'), 'img');
@@ -303,7 +303,7 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
 
     await act(async () => { imageRef.current.dispatchEvent(new Event('error', { bubbles: false })); });
     assert.equal(errorCount, 1);
-    assert.equal(avatarRoot(document).dataset.imageState, 'error');
+    assert.equal(avatarRoot(document).dataset.muxuiImageState, 'error');
     assert.equal(imageRef.current.hidden, true);
     assert.equal(avatarRoot(document).getAttribute('role'), 'img');
     assert.equal(avatarRoot(document).getAttribute('aria-label'), 'Alex avatar');
@@ -311,7 +311,7 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
     assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').getAttribute('aria-hidden'), 'true');
 
     await act(async () => { root.render(render('/new-avatar.svg')); });
-    assert.equal(avatarRoot(document).dataset.imageState, 'loading');
+    assert.equal(avatarRoot(document).dataset.muxuiImageState, 'loading');
     assert.equal(imageRef.current.getAttribute('src'), '/new-avatar.svg');
     assert.equal(imageRef.current.hidden, false);
     assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, false);
@@ -319,19 +319,19 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
     assert.equal(avatarRoot(document).getAttribute('aria-label'), 'Alex avatar');
 
     await act(async () => { root.render(render('/avatar.svg')); });
-    assert.equal(avatarRoot(document).dataset.imageState, 'loading');
+    assert.equal(avatarRoot(document).dataset.muxuiImageState, 'loading');
     assert.equal(imageRef.current.getAttribute('src'), '/avatar.svg');
     assert.equal(imageRef.current.hidden, false);
     assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, false);
 
     await act(async () => { root.render(render('/new-avatar.svg')); });
-    assert.equal(avatarRoot(document).dataset.imageState, 'loading');
+    assert.equal(avatarRoot(document).dataset.muxuiImageState, 'loading');
     assert.equal(imageRef.current.getAttribute('src'), '/new-avatar.svg');
     assert.equal(imageRef.current.hidden, false);
 
     await act(async () => { imageRef.current.dispatchEvent(new Event('load', { bubbles: false })); });
     assert.equal(loadCount, 1);
-    assert.equal(avatarRoot(document).dataset.imageState, 'loaded');
+    assert.equal(avatarRoot(document).dataset.muxuiImageState, 'loaded');
     // Once loaded, the image replaces the fallback and names itself.
     assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, true);
     assert.equal(imageRef.current.getAttribute('aria-hidden'), null);
@@ -373,8 +373,8 @@ test('native image errors before hydration recover without replaying callbacks',
       }));
     });
     assert.equal(image.getAttribute('src'), '/fallback.svg');
-    assert.equal(image.hasAttribute('data-fallback'), true);
-    assert.equal(image.hasAttribute('data-error'), false);
+    assert.equal(image.hasAttribute('data-muxui-fallback'), true);
+    assert.equal(image.hasAttribute('data-muxui-error'), false);
     assert.equal(errorCount, 0);
     assert.equal(loadCount, 0);
   } finally {

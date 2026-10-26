@@ -11,11 +11,11 @@
   padding: 0;
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button][data-size='sm'] {
+.muxui-button.muxui-icon-button[data-muxui-icon-button][data-muxui-size='sm'] {
   --muxui-icon-button-size: var(--muxui-control-size-sm);
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button][data-size='lg'] {
+.muxui-button.muxui-icon-button[data-muxui-icon-button][data-muxui-size='lg'] {
   --muxui-icon-button-size: var(--muxui-control-size-lg);
 }
 
@@ -27,7 +27,7 @@
   height: 1.25rem;
 }
 
-.muxui-icon-button[data-muxui-icon-button][data-size='sm'] .muxui-icon-button-icon {
+.muxui-icon-button[data-muxui-icon-button][data-muxui-size='sm'] .muxui-icon-button-icon {
   width: 1rem;
   height: 1rem;
 }

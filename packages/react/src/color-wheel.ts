@@ -1,7 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, RefAttributes, SyntheticEvent } from 'react';
 import { ColorWheelMotionTrack } from './color-wheel-motion.mjs';
-import { ColorPickerStateContext, ColorWheel as AriaColorWheel } from 'react-aria-components';
+import { ColorPickerStateContext } from 'react-aria-components';
+import { AriaColorWheel } from './substrate.ts';
 import { classNames } from './control-utils.ts';
 import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
 import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.ts';
@@ -74,8 +75,8 @@ export const ColorWheel: ForwardRefExoticComponent<ColorWheelProps & RefAttribut
       // and TypeScript accepts such a key in a call only from a spread.
       ...{
         'aria-disabled': effectiveDisabled || undefined,
-        'data-disabled': effectiveDisabled || undefined,
-        'data-readonly': effectiveReadOnly || undefined,
+        'data-muxui-state-disabled': effectiveDisabled || undefined,
+        'data-muxui-state-read-only': effectiveReadOnly || undefined,
         onPointerDownCapture: preventReadOnlyInteraction,
         onMouseDownCapture: preventReadOnlyInteraction,
         onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),

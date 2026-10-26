@@ -94,7 +94,7 @@ test('supplemental field and collection modules preserve accessible state hooks 
   assert.match(html, /role="alert" class="muxui-radio-field__error"/u);
   assert.match(html, /muxui-switch-field/u);
   assert.match(html, /muxui-input-tags__tag/u);
-  assert.match(html, /data-card-type="visa"/u);
+  assert.match(html, /data-muxui-card-type="visa"/u);
   assert.match(html, /muxui-tag-select__input/u);
 });
 
@@ -525,7 +525,7 @@ test('ProgressCircle delegates accessible range semantics to React Aria', () => 
   assert.match(under, /aria-valuenow="0"/u);
   assert.match(over, /aria-valuenow="100"/u);
   for (const indeterminate of [nullValue, undefinedValue, nan]) {
-    assert.match(indeterminate, /data-indeterminate=""/u);
+    assert.match(indeterminate, /data-muxui-state-indeterminate=""/u);
     assert.doesNotMatch(indeterminate, /aria-valuenow=/u);
     assert.doesNotMatch(indeterminate, /aria-valuetext=/u);
   }
@@ -567,10 +567,10 @@ test('PaymentInput applies the exact Mastercard 2221-2720 range', () => {
     { defaultValue: digits, 'aria-label': `Card ${digits}` },
     React.createElement(PaymentInput.CardIcon),
   ));
-  assert.match(render('2220'), /data-card-type="unknown"/u);
-  assert.match(render('2221'), /data-card-type="mastercard"/u);
-  assert.match(render('2720'), /data-card-type="mastercard"/u);
-  assert.match(render('2721'), /data-card-type="unknown"/u);
+  assert.match(render('2220'), /data-muxui-card-type="unknown"/u);
+  assert.match(render('2221'), /data-muxui-card-type="mastercard"/u);
+  assert.match(render('2720'), /data-muxui-card-type="mastercard"/u);
+  assert.match(render('2721'), /data-muxui-card-type="unknown"/u);
 });
 
 test('InputTags supports keyboard add and remove while preserving the field contract', async () => {
@@ -663,7 +663,7 @@ test('ColorModeToggle hydrates deterministically before restoring a persisted mo
   try {
     root = hydrateRoot(document.querySelector('#root'), React.createElement(ColorModeToggle, props));
     await act(async () => {});
-    assert.equal(document.querySelector('.muxui-color-mode-toggle')?.getAttribute('data-mode'), 'dark');
+    assert.equal(document.querySelector('.muxui-color-mode-toggle')?.getAttribute('data-muxui-mode'), 'dark');
     assert.equal(document.documentElement.getAttribute('data-muxui-color-scheme'), 'dark');
     assert.equal(document.querySelector('.muxui-color-mode-toggle input, .muxui-color-mode-toggle button')?.getAttribute('aria-label'), 'Toggle dark mode');
     assert.deepEqual(errors, []);
@@ -1061,8 +1061,8 @@ test('payment formatting and field errors remain accessible in the rendered Mux 
   ));
   assert.match(html, /value="4111 1111 1111 1111"/u);
   assert.match(html, /value="3782 822463 10005"/u);
-  assert.match(html, /data-card-type="visa"/u);
-  assert.match(html, /data-card-type="amex"/u);
+  assert.match(html, /data-muxui-card-type="visa"/u);
+  assert.match(html, /data-muxui-card-type="amex"/u);
   assert.match(html, /name-error/u);
   assert.match(html, /Name is required/u);
 });
@@ -1093,13 +1093,13 @@ test('PaymentInput preserves controlled formatting while uncontrolled typing upd
     let input = document.querySelector('.muxui-payment-input__input');
     let icon = document.querySelector('.muxui-payment-input__card-icon');
     assert.equal(input?.value, '4111 1111 1111 1111');
-    assert.equal(icon?.getAttribute('data-card-type'), 'visa');
+    assert.equal(icon?.getAttribute('data-muxui-card-type'), 'visa');
 
     await act(async () => setControlledValue('5555555555554444'));
     input = document.querySelector('.muxui-payment-input__input');
     icon = document.querySelector('.muxui-payment-input__card-icon');
     assert.equal(input?.value, '5555 5555 5555 4444');
-    assert.equal(icon?.getAttribute('data-card-type'), 'mastercard');
+    assert.equal(icon?.getAttribute('data-muxui-card-type'), 'mastercard');
 
     const inputPropsKey = Object.keys(input).find((key) => key.startsWith('__reactProps'));
     await act(async () => input?.[inputPropsKey]?.onChange?.({ target: { value: '4000 0000 0000 0002' } }));
@@ -1128,7 +1128,7 @@ test('PaymentInput preserves controlled formatting while uncontrolled typing upd
     const inputPropsKey = Object.keys(input).find((key) => key.startsWith('__reactProps'));
     await act(async () => input?.[inputPropsKey]?.onChange?.({ target: { value: '4242424242424242' } }));
     assert.equal(input?.value, '4242 4242 4242 4242');
-    assert.equal(document.querySelector('.muxui-payment-input__card-icon')?.getAttribute('data-card-type'), 'visa');
+    assert.equal(document.querySelector('.muxui-payment-input__card-icon')?.getAttribute('data-muxui-card-type'), 'visa');
   } finally {
     await act(async () => uncontrolledRoot?.unmount());
     restoreUncontrolled();
@@ -1141,7 +1141,7 @@ test('Input retains its supplied error-message slot outside validation state', (
     React.createElement(Input.Root, { 'aria-label': 'Name' }, React.createElement(Input.Input), React.createElement(Input.Error, null, 'Name guidance')),
   ));
   assert.match(html, /Name guidance/u);
-  assert.doesNotMatch(html, /data-invalid/u);
+  assert.doesNotMatch(html, /data-muxui-state-invalid/u);
 });
 
 test('Input links mounted description and error IDs without caller references', async () => {

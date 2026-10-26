@@ -1,10 +1,7 @@
 import React from 'react';
 import type { Dispatch, ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, RefObject, RefAttributes, SetStateAction } from 'react';
-import {
-  RadioField as AriaRadioField,
-  RadioButton as AriaRadioButton,
-  RadioGroupStateContext as AriaRadioGroupStateContext,
-} from 'react-aria-components';
+import { RadioGroupStateContext as AriaRadioGroupStateContext } from 'react-aria-components';
+import { AriaRadioField, AriaRadioButton } from '../substrate.ts';
 import type { RadioButtonProps as AriaRadioButtonProps, RadioFieldProps as AriaRadioFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
 import { h, cx, nativePart } from './part-utils.ts';
@@ -75,7 +72,7 @@ function makeRadioField() {
     const effectiveInvalid = Boolean(invalid ? invalid : radioGroupState.isInvalid);
     const context = React.useMemo(() => ({ effectiveInvalid, errorId, fallbackErrorId, inputRef, setErrorId }), [effectiveInvalid, errorId, fallbackErrorId]);
     // React Aria's props type the handlers on Element, and these on the div; the rest is the div's native attributes.
-    return h(RadioFieldContext.Provider, { value: context }, h(AriaRadioField, { ...mappedFieldProps({ disabled, invalid, required, ...(props as Omit<AriaRadioFieldProps, 'value'>) }), value, ref, inputRef, ...{ 'data-size': size }, className: cx('muxui-radio-field', size !== 'md' && `muxui-radio-field--${size}`, className) }));
+    return h(RadioFieldContext.Provider, { value: context }, h(AriaRadioField, { ...mappedFieldProps({ disabled, invalid, required, ...(props as Omit<AriaRadioFieldProps, 'value'>) }), value, ref, inputRef, ...{ 'data-muxui-size': size }, className: cx('muxui-radio-field', size !== 'md' && `muxui-radio-field--${size}`, className) }));
   });
   const Button = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, RadioFieldButtonProps>(function RadioFieldButton({ disabled, className, 'aria-describedby': ariaDescribedBy, 'aria-errormessage': ariaErrorMessage, ...props }, ref) {
     const field = React.useContext(RadioFieldContext);

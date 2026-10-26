@@ -46,7 +46,7 @@
         "attached joins only direct Button, IconButton, and ToggleButton children; a Button inside a wrapping element keeps its own rounded corners.",
         "ButtonGroup does not manage selection.",
         "ButtonGroup adds no arrow-key navigation: each child is a separate Tab stop.",
-        "disabled sets data-disabled on the group and does not disable its children.",
+        "disabled sets data-muxui-state-disabled on the group and does not disable its children.",
         "A child is disabled only by its own disabled prop."
       ],
       "accessibility": [

@@ -240,7 +240,7 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     await page.getByRole('option', { name: 'Alpha', exact: true }).focus();
     const focused = await page.getByRole('option', { name: 'Alpha', exact: true }).evaluate((node) => {
       const style = getComputedStyle(node);
-      return { active: document.activeElement === node, focused: node.hasAttribute('data-focused'), background: style.backgroundColor, outline: style.outlineWidth };
+      return { active: document.activeElement === node, focused: node.hasAttribute('data-muxui-state-focused'), background: style.backgroundColor, outline: style.outlineWidth };
     });
     assert.equal(focused.active, true);
     assert.equal(focused.focused, true);

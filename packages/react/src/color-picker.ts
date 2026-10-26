@@ -50,7 +50,7 @@ export const ColorPicker: ForwardRefExoticComponent<ColorPickerProps & RefAttrib
   return React.createElement('div', {
     ...props, ref, role: labelled ? 'group' : undefined, 'aria-disabled': (labelled && disabled) || undefined,
     // The data-* hooks the styles read are not attributes of a div, and TypeScript accepts such a key in a call only from a spread.
-    ...{ 'data-disabled': disabled ? disabled : undefined, 'data-readonly': readOnly ? readOnly : undefined },
+    ...{ 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined },
     className: classNames('muxui-color-picker', className),
   }, React.createElement(AriaColorPicker, { value: pickerColor, onChange: onPickerChange, children: React.createElement(ColorPickerContext.Provider, { value: { disabled, readOnly, space } }, children) }));
 });

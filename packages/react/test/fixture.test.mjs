@@ -33,7 +33,7 @@ test('component selectors stay Mux UI-owned', async () => {
   }
   assert.match(await readFile(resolve(import.meta.dirname, '../generated/overlays.js'), 'utf8'), /muxui-file-trigger/u);
   assert.match(css, /\.muxui-checkbox-indicator/);
-  assert.match(css, /data-indeterminate/);
+  assert.match(css, /data-muxui-state-indeterminate/);
   assert.match(css, /semantic-feedback-invalid/);
   assert.doesNotMatch(css, /--color-60/u);
 });
@@ -60,7 +60,7 @@ test('R1.1 MuxUI Button proves SSR, hydration, disabled and pending state', asyn
   assert.match(server, /data-muxui-state="pending"/);
   assert.doesNotMatch(server, / disabled=""/);
   assert.match(disabledServer, / disabled=""/);
-  assert.match(disabledServer, /data-disabled="true"/);
+  assert.match(disabledServer, /data-muxui-state-disabled="true"/);
   const dom = new JSDOM(`<!doctype html><div id="root">${server}</div>`);
   const keys = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'SVGElement', 'Node', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent', 'MutationObserver'];
   const previous = Object.fromEntries(keys.map((key) => [key, globalThis[key]]));
@@ -138,8 +138,8 @@ test('Button exposes seven variants with stable root hooks', async () => {
   const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
   const sizes = ['sm', 'md', 'lg'];
   const defaults = renderToString(React.createElement(Button, null, 'Save'));
-  assert.match(defaults, /data-variant="primary"/u);
-  assert.match(defaults, /data-size="md"/u);
+  assert.match(defaults, /data-muxui-variant="primary"/u);
+  assert.match(defaults, /data-muxui-size="md"/u);
 
   for (const variant of variants) {
     for (const size of sizes) {
@@ -150,8 +150,8 @@ test('Button exposes seven variants with stable root hooks', async () => {
         style: { minWidth: '5rem' },
         'data-consumer-hook': 'preserved',
       }, 'Action'));
-      assert.match(markup, new RegExp(`data-variant="${variant}"`, 'u'));
-      assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+      assert.match(markup, new RegExp(`data-muxui-variant="${variant}"`, 'u'));
+      assert.match(markup, new RegExp(`data-muxui-size="${size}"`, 'u'));
       assert.match(markup, /class="muxui-button consumer-button"/u);
       assert.match(markup, /style="min-width:5rem"/u);
       assert.match(markup, /data-consumer-hook="preserved"/u);
@@ -176,14 +176,14 @@ test('Button exposes seven variants with stable root hooks', async () => {
   }
 
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]`, 'u'));
-  for (const size of sizes) assert.match(css, new RegExp(`\\.muxui-button\\[data-size='${size}'\\]`, 'u'));
+  for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-muxui-variant='${variant}'\\]`, 'u'));
+  for (const size of sizes) assert.match(css, new RegExp(`\\.muxui-button\\[data-muxui-size='${size}'\\]`, 'u'));
   assert.match(css, /\.muxui-button\s*\{[^}]*--muxui-button-background:/u);
-  const destructivePrimaryRule = css.match(/\.muxui-button\[data-variant='danger'\]\s*\{[^}]*\}/u)?.[0] ?? '';
+  const destructivePrimaryRule = css.match(/\.muxui-button\[data-muxui-variant='danger'\]\s*\{[^}]*\}/u)?.[0] ?? '';
   assert.ok(destructivePrimaryRule);
   assert.doesNotMatch(destructivePrimaryRule, /\bblack\b/u);
   assert.match(destructivePrimaryRule, /--muxui-button-foreground:\s*var\(--muxui-semantic-color-error-60-fg\)/u);
-  assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
+  assert.match(css, /\.muxui-button\[data-muxui-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
 
   const pendingWithText = renderToString(React.createElement(Button, { pending: true, showTextWhileLoading: true }, 'Saving'));
   assert.match(pendingWithText, /muxui-button-content--with-spinner/u);
@@ -204,8 +204,8 @@ test('Button generator guard binds the canonical finite API contract', async () 
   assert.deepEqual(descriptor.bindings.find(({ export: name }) => name === 'Button').api, api);
   // The renderer applies the catalog defaults when no props are given.
   const markup = renderToString(React.createElement(Button, null, 'Save'));
-  assert.match(markup, new RegExp(`data-variant="${api.defaults.variant}"`, 'u'));
-  assert.match(markup, new RegExp(`data-size="${api.defaults.size}"`, 'u'));
+  assert.match(markup, new RegExp(`data-muxui-variant="${api.defaults.variant}"`, 'u'));
+  assert.match(markup, new RegExp(`data-muxui-size="${api.defaults.size}"`, 'u'));
   const result = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
     cwd: resolve(import.meta.dirname, '..'),
     encoding: 'utf8',
@@ -217,24 +217,24 @@ test('Button generator guard binds the canonical finite API contract', async () 
 // How a catalog default shows in server-rendered markup. Expected values come
 // from the catalog artifact; only the markup each renderer exposes is named here.
 const markupFlags = {
-  disabled: '[disabled], [data-disabled], [aria-disabled="true"]',
-  readOnly: '[readonly], [data-readonly], [aria-readonly="true"]',
-  required: '[required], [data-required], [aria-required="true"]',
-  invalid: '[data-invalid], [aria-invalid="true"]',
+  disabled: '[disabled], [data-muxui-state-disabled], [aria-disabled="true"]',
+  readOnly: '[readonly], [data-muxui-state-read-only], [aria-readonly="true"]',
+  required: '[required], [data-muxui-state-required], [aria-required="true"]',
+  invalid: '[data-muxui-state-invalid], [aria-invalid="true"]',
   // Dormant while no guarded component has a pending default; kept so one is observed if it returns.
-  pending: '[data-pending], [aria-busy="true"]',
-  indeterminate: '[data-indeterminate], [aria-checked="mixed"]',
-  selected: '[aria-pressed="true"], [data-selected]',
-  defaultSelected: '[aria-pressed="true"], [data-selected]',
-  defaultChecked: '[checked], [data-selected]',
+  pending: '[data-muxui-state-pending], [aria-busy="true"]',
+  indeterminate: '[data-muxui-state-indeterminate], [aria-checked="mixed"]',
+  selected: '[aria-pressed="true"], [data-muxui-state-selected]',
+  defaultSelected: '[aria-pressed="true"], [data-muxui-state-selected]',
+  defaultChecked: '[checked], [data-muxui-state-selected]',
   // Menu.Root marks itself open.
-  defaultOpen: '[data-open]',
+  defaultOpen: '[data-muxui-state-open]',
   // ButtonGroup marks itself attached.
-  attached: '[data-attached]',
+  attached: '[data-muxui-attached]',
   // A link marks the current page with aria-current, and a link that carries no such attribute styles itself with a --current modifier.
   current: '[aria-current="page"], [class*="--current"]',
   // Sidebar.Root marks itself folded.
-  defaultCollapsed: '[data-collapsed]',
+  defaultCollapsed: '[data-muxui-collapsed]',
   // A Sidebar nav group is a native details element, open once expanded.
   defaultExpanded: 'details[open]',
   // Sidebar's border is removed by a modifier, and an external nav link draws an icon that says so.
@@ -266,23 +266,23 @@ const searchFieldVariant = (container) => {
 };
 const markupValues = {
   // Sidebar marks only the compact density; the default one carries no attribute.
-  density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-density') ?? 'default',
+  density: (doc) => doc.querySelector('.muxui-sidebar')?.getAttribute('data-muxui-sidebar-density') ?? 'default',
   // A progress circle names a size other than medium in a class modifier; every other family marks its size as data.
   size: (doc) => {
     const text = textLook(doc);
     if (text !== undefined) return text.size;
     const circle = doc.querySelector('.muxui-progress-circle');
     if (circle !== null) return ['sm', 'lg'].find((size) => circle.classList.contains(`muxui-progress-circle--${size}`)) ?? 'md';
-    return doc.querySelector('[data-size]')?.getAttribute('data-size');
+    return doc.querySelector('[data-muxui-size]')?.getAttribute('data-muxui-size');
   },
   // ButtonGroup's resolved role, which is presentation unless it carries a name.
   role: (doc) => doc.querySelector('[role]')?.getAttribute('role'),
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-muxui-variant]')?.getAttribute('data-muxui-variant'),
   padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
-  orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
+  orientation: (doc) => doc.querySelector('[data-muxui-state-orientation]')?.getAttribute('data-muxui-state-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
   tagPlacement: (doc) => (doc.querySelector('.muxui-input-tags--below') === null ? 'inline' : 'below'),
   // A text field shows its starting text as its input's value; a composer, in its textarea.
@@ -301,9 +301,9 @@ const markupValues = {
     if (doc.querySelector('[aria-multiselectable="true"]') !== null) return 'multiple';
     return items.some((item) => item.hasAttribute('aria-selected')) ? 'single' : 'none';
   },
-  layout: (doc) => doc.querySelector('[data-layout]')?.getAttribute('data-layout'),
+  layout: (doc) => doc.querySelector('[data-muxui-state-layout]')?.getAttribute('data-muxui-state-layout'),
   // A tag carries its colour, which the group's default sets for a tag that names none.
-  color: (doc) => textLook(doc)?.color ?? doc.querySelector('[data-color]')?.getAttribute('data-color'),
+  color: (doc) => textLook(doc)?.color ?? doc.querySelector('[data-muxui-color]')?.getAttribute('data-muxui-color'),
   // TagSelect shows each selected item as a tag, and a selected key that names no item shows none: the items it was given, by their labels.
   items: (doc) => [...doc.querySelectorAll('.muxui-tag-select__tag-text')].map((tag) => tag.textContent),
   as: (doc) => textLook(doc)?.as,
@@ -637,7 +637,7 @@ const behaviourObservers = {
   'MultiSelect.item': {
     disabled: (props) => openedMultiSelect(null, [h(generated.MultiSelect.Item, { id: 'one', ...props }, 'One')], () => {
       const option = document.querySelector('[role="option"]');
-      return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
+      return option.hasAttribute('data-muxui-state-disabled') || option.getAttribute('aria-disabled') === 'true';
     }),
   },
   // A required TagSelect marks its label with an asterisk; no attribute shows it in the closed markup.
@@ -651,7 +651,7 @@ const behaviourObservers = {
       async (container) => {
         await act(async () => container.querySelector('input').focus());
         const option = document.querySelector('[role="option"]');
-        return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
+        return option.hasAttribute('data-muxui-state-disabled') || option.getAttribute('aria-disabled') === 'true';
       },
     ),
   },
@@ -659,7 +659,7 @@ const behaviourObservers = {
   'Select.option': {
     disabled: (props) => withMounted(selectRoot({ defaultOpen: true }, null, h(generated.Select.Item, { id: 'one', ...props }, 'One')), () => {
       const option = document.querySelector('[role="option"]');
-      return option.hasAttribute('data-disabled') || option.getAttribute('aria-disabled') === 'true';
+      return option.hasAttribute('data-muxui-state-disabled') || option.getAttribute('aria-disabled') === 'true';
     }),
   },
   // The palette's dialog renders in a portal that stays empty until it opens, so defaultOpen shows in whether the dialog exists once mounted.
@@ -1064,7 +1064,7 @@ test('every default CommandPalette and its parts state is compared with what the
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.CommandPalette()), { ...api.defaults, defaultOpen: true }), ['defaultOpen: catalog true, rendered false']);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.CommandPalette()), { ...api.defaults, size: 'sm' }), ['size: catalog "sm", rendered "md"']);
   // A part is read in its own element: a root marked disabled makes the close control look disabled unless the read is scoped to the control.
-  const markedRoot = renderToString(h(generated.CommandPalette.Root, { 'data-disabled': '' }, h(generated.CommandPalette.Close, null, 'Done')));
+  const markedRoot = renderToString(h(generated.CommandPalette.Root, { 'data-muxui-state-disabled': '' }, h(generated.CommandPalette.Close, null, 'Done')));
   assert.deepEqual(defaultMismatches(markedRoot, { disabled: false }), ['disabled: catalog false, rendered true']);
   assert.deepEqual(defaultMismatches(markedRoot, { disabled: false }, partRenders['CommandPalette.close'].scope), []);
   // The mounted modal is read for real: the dialog and the backdrop exist there, and the observers fail where they do not.
@@ -1145,33 +1145,33 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-button[\s\S]*border: 0;[\s\S]*outline: 1px solid transparent;[\s\S]*font-size: var\(--muxui-semantic-typography-body-size\)/u);
   assert.match(css, /\.muxui-button[\s\S]*box-shadow: var\(--muxui-button-shadow\)/u);
   assert.match(css, /--muxui-button-shadow: var\(--muxui-semantic-elevation-control\)/u);
-  assert.match(css, /\.muxui-button\[data-hovered\][\s\S]*var\(--muxui-semantic-action-background-hover\)/u);
-  assert.match(css, /\.muxui-button\[data-pressed\][\s\S]*var\(--muxui-semantic-action-background-pressed\)/u);
-  assert.match(css, /\.muxui-button\[data-pressed\]:not\(\[data-disabled\], \[data-pending\], \[aria-expanded='true'\]\)/u);
-  assert.match(css, /\.muxui-button:active:not\(\[data-disabled\], \[data-pending\]\)/u);
+  assert.match(css, /\.muxui-button\[data-muxui-state-hovered\][\s\S]*var\(--muxui-semantic-action-background-hover\)/u);
+  assert.match(css, /\.muxui-button\[data-muxui-state-pressed\][\s\S]*var\(--muxui-semantic-action-background-pressed\)/u);
+  assert.match(css, /\.muxui-button\[data-muxui-state-pressed\]:not\(\[data-muxui-state-disabled\], \[data-muxui-state-pending\], \[aria-expanded='true'\]\)/u);
+  assert.match(css, /\.muxui-button:active:not\(\[data-muxui-state-disabled\], \[data-muxui-state-pending\]\)/u);
 
-  assert.match(css, /\.muxui-link\[data-hovered\][\s\S]*var\(--muxui-semantic-content-link-hover\)/u);
-  assert.match(css, /\.muxui-link\[data-pressed\][\s\S]*var\(--muxui-semantic-content-link-pressed\)/u);
+  assert.match(css, /\.muxui-link\[data-muxui-state-hovered\][\s\S]*var\(--muxui-semantic-content-link-hover\)/u);
+  assert.match(css, /\.muxui-link\[data-muxui-state-pressed\][\s\S]*var\(--muxui-semantic-content-link-pressed\)/u);
   assert.match(css, /\.muxui-link[^\{]*\{[\s\S]*var\(--muxui-semantic-content-link\)/u);
   assert.match(css, /\.muxui-tab\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
   assert.match(css, /\.muxui-autocomplete-option\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
-  assert.match(css, /\.muxui-breadcrumbs-item\[data-current\][\s\S]*font-weight: var\(--muxui-semantic-typography-label-weight\)/u);
-  assert.match(css, /\.muxui-breadcrumbs-item\[data-disabled\]:not\(\[data-current\]\)[^}]*color: var\(--muxui-semantic-content-default\)/u);
-  assert.doesNotMatch(css, /\.muxui-breadcrumbs-item\[data-disabled\][^}]*opacity:/u);
+  assert.match(css, /\.muxui-breadcrumbs-item\[data-muxui-state-current\][\s\S]*font-weight: var\(--muxui-semantic-typography-label-weight\)/u);
+  assert.match(css, /\.muxui-breadcrumbs-item\[data-muxui-state-disabled\]:not\(\[data-muxui-state-current\]\)[^}]*color: var\(--muxui-semantic-content-default\)/u);
+  assert.doesNotMatch(css, /\.muxui-breadcrumbs-item\[data-muxui-state-disabled\][^}]*opacity:/u);
 
   assert.match(css, /\.muxui-dialog\s*\{[^}]*transform: translate\(-50%, -50%\)[^;]*;/u);
-  assert.doesNotMatch(css, /\.muxui-popover\[data-entering\][\s\S]*transform: scale\(0\.97\)/u);
+  assert.doesNotMatch(css, /\.muxui-popover\[data-muxui-state-entering\][\s\S]*transform: scale\(0\.97\)/u);
   assert.match(css, /\.muxui-tooltip\s*\{[\s\S]*font-size: var\(--muxui-semantic-typography-tiny-size\);[\s\S]*line-height: var\(--muxui-semantic-typography-compact-line-height\)/u);
   assert.match(css, /\.muxui-tooltip\s*\{[\s\S]*opacity var\(--muxui-semantic-motion-reveal-transition-duration\) var\(--muxui-semantic-motion-reveal-transition-easing\)/u);
-  assert.match(css, /\.muxui-tooltip\[data-entering\][\s\S]*scale: 0\.9;[\s\S]*filter: blur\(5px\)/u);
+  assert.match(css, /\.muxui-tooltip\[data-muxui-state-entering\][\s\S]*scale: 0\.9;[\s\S]*filter: blur\(5px\)/u);
   assert.match(css, /\.muxui-toast\s*\{[\s\S]*transition: none;/u);
   assert.match(css, /\.muxui-toast\[data-muxui-toast-exiting\][\s\S]*pointer-events: none;/u);
   assert.match(css, /\.muxui-dialog-backdrop\s*\{[\s\S]*position: fixed;[\s\S]*inset: 0;/u);
   assert.match(css, /\.muxui-dialog-content\s*\{[\s\S]*font-weight: var\(--muxui-semantic-typography-body-weight\)/u);
   assert.match(css, /\.muxui-field-description\s*\{[\s\S]*color: var\(--muxui-semantic-content-default\)/u);
-  assert.match(css, /\.muxui-button\[data-pending\] \.muxui-button-content\s*\{[^}]*opacity:\s*0;/u);
-  assert.match(css, /\.muxui-button\[data-pending\]::after[\s\S]*content: none;/u);
-  assert.match(css, /\.muxui-progress-bar\[data-indeterminate\] \.muxui-progress-bar-fill[\s\S]*margin-inline-start: 30%;/u);
+  assert.match(css, /\.muxui-button\[data-muxui-state-pending\] \.muxui-button-content\s*\{[^}]*opacity:\s*0;/u);
+  assert.match(css, /\.muxui-button\[data-muxui-state-pending\]::after[\s\S]*content: none;/u);
+  assert.match(css, /\.muxui-progress-bar\[data-muxui-state-indeterminate\] \.muxui-progress-bar-fill[\s\S]*margin-inline-start: 30%;/u);
   assert.doesNotMatch(css, /muxui-control-spin|muxui-progress-indeterminate/u);
   const infiniteAnimationRules = [...css.matchAll(/([^{}]+\{[^{}]*animation:[^;]*infinite[^{}]*\})/gu)].map(([rule]) => rule);
   assert.ok(infiniteAnimationRules.length > 0, 'current union retains the explicit indeterminate progress behavior');

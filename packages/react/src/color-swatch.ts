@@ -39,11 +39,11 @@ export const ColorSwatch: ForwardRefExoticComponent<ColorSwatchProps & RefAttrib
     // React Aria's props do not name isDisabled or the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
     ...{
       isDisabled: effectiveDisabled,
-      'data-disabled': effectiveDisabled || undefined,
-      'data-readonly': pickerState.readOnly || undefined,
+      'data-muxui-state-disabled': effectiveDisabled || undefined,
+      'data-muxui-state-read-only': pickerState.readOnly || undefined,
       'data-muxui-color-paint': 'sample',
-      'data-shape': shape,
-      'data-two-tone': secondary ? '' : undefined,
+      'data-muxui-shape': shape,
+      'data-muxui-two-tone': secondary ? '' : undefined,
     },
     className: classNames('muxui-color-swatch', className),
     style: secondary && primary ? {

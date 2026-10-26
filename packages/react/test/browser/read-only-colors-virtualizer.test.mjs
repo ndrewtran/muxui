@@ -86,10 +86,10 @@ test('real browser proves read-only color controls, disabled swatch semantics, a
     assert.deepEqual(await readOnlyTargets.evaluateAll((targets) => targets.map((target) => target.value)), initialValues);
     assert.deepEqual(await page.evaluate(() => globalThis.__muxuiReadOnlyColorChanges), []);
 
-    const disabledSwatch = page.locator('.muxui-color-swatch[data-disabled="true"]');
+    const disabledSwatch = page.locator('.muxui-color-swatch[data-muxui-state-disabled="true"]');
     await disabledSwatch.waitFor({ state: 'attached' });
     assert.equal(await disabledSwatch.getAttribute('role'), 'img');
-    assert.equal(await disabledSwatch.getAttribute('data-disabled'), 'true');
+    assert.equal(await disabledSwatch.getAttribute('data-muxui-state-disabled'), 'true');
 
     const viewport = page.locator('.muxui-virtualizer');
     await viewport.waitFor();

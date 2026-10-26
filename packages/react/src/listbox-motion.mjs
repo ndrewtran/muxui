@@ -4,7 +4,7 @@ import { sameGeometry, transformFrom, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-const SELECTED_OPTION_SELECTOR = '[role="option"][aria-selected="true"], [role="option"][data-selected]';
+const SELECTED_OPTION_SELECTOR = '[role="option"][aria-selected="true"], [role="option"][data-muxui-state-selected]';
 const READY_ATTRIBUTE = 'data-muxui-list-box-selection-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-list-box-reduced';
 
@@ -173,7 +173,7 @@ function observeListBoxSelection(root, selectionMode) {
     childList: true,
     characterData: true,
     attributes: true,
-    attributeFilter: ['aria-selected', 'data-selected', 'disabled', 'aria-disabled'],
+    attributeFilter: ['aria-selected', 'data-muxui-state-selected', 'disabled', 'aria-disabled'],
   });
 
   const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleSync);

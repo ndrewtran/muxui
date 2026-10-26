@@ -316,14 +316,14 @@ test('DropZone root carries aria-disabled only while disabled', async () => {
     await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload', disabled: true, onActivate: (event) => activations.push(event) }, 'Drop here')));
     const dropZone = host.querySelector('.muxui-drop-zone');
     assert.ok(dropZone);
-    assert.equal(dropZone.getAttribute('data-disabled'), 'true');
+    assert.equal(dropZone.getAttribute('data-muxui-state-disabled'), 'true');
     assert.equal(dropZone.getAttribute('aria-disabled'), 'true');
     const dropButton = dropZone.querySelector('button');
     await act(async () => dropButton.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })));
     assert.deepEqual(activations, []);
 
     await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload' }, 'Drop here')));
-    assert.equal(dropZone.getAttribute('data-disabled'), null);
+    assert.equal(dropZone.getAttribute('data-muxui-state-disabled'), null);
     assert.equal(dropZone.hasAttribute('aria-disabled'), false);
   } finally {
     await act(async () => root.unmount());
@@ -536,7 +536,7 @@ test('timed overlays mask and cancel disabled interactions without disabling tri
     assert.equal(document.activeElement, disabledTrigger);
     assert.equal(disabledTrigger.disabled, false);
     assert.equal(disabledTrigger.hasAttribute('aria-disabled'), false, 'the working trigger is not announced as disabled');
-    assert.equal(disabledTrigger.hasAttribute('data-disabled'), false);
+    assert.equal(disabledTrigger.hasAttribute('data-muxui-state-disabled'), false);
     act(() => disabledTrigger.focus());
     assert.equal(document.activeElement, disabledTrigger);
 
@@ -579,7 +579,7 @@ test('timed overlays mask and cancel disabled interactions without disabling tri
     await act(async () => root.render(tooltip(true)));
     assert.equal(document.activeElement, document.querySelector('#tooltip-trigger'));
     assert.equal(document.querySelector('#tooltip-trigger').hasAttribute('aria-disabled'), false);
-    assert.equal(document.querySelector('#tooltip-trigger').hasAttribute('data-disabled'), false);
+    assert.equal(document.querySelector('#tooltip-trigger').hasAttribute('data-muxui-state-disabled'), false);
     assert.equal(document.querySelector('#tooltip-trigger').disabled, false);
     assert.deepEqual(tooltipChanges, [true, false]);
   } finally {

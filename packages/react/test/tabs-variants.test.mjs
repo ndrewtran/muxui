@@ -22,7 +22,7 @@ function renderTabs(props = {}) {
 
 test('Tabs exposes a finite variant contract and preserves underline by default', async () => {
   const defaultMarkup = renderTabs();
-  assert.match(defaultMarkup, /data-variant="underline"/u);
+  assert.match(defaultMarkup, /data-muxui-variant="underline"/u);
   assert.match(defaultMarkup, /data-muxui-tabs-variant="underline"/u);
   assert.match(defaultMarkup, /role="tablist"/u);
   assert.match(defaultMarkup, /role="tab"/u);
@@ -30,7 +30,7 @@ test('Tabs exposes a finite variant contract and preserves underline by default'
 
   for (const variant of variants) {
     const markup = renderTabs({ variant });
-    assert.match(markup, new RegExp(`data-variant="${variant}"`, 'u'));
+    assert.match(markup, new RegExp(`data-muxui-variant="${variant}"`, 'u'));
     assert.match(markup, new RegExp(`data-muxui-tabs-variant="${variant}"`, 'u'));
   }
   assert.throws(() => renderTabs({ variant: 'rail' }), /Tabs variant must be one of/u);

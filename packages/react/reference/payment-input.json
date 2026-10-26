@@ -137,7 +137,7 @@
               "optional": true,
               "type": "'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown'",
               "values": ["visa", "mastercard", "amex", "discover", "unknown"],
-              "doc": "The card type the icon records as its `data-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
+              "doc": "The card type the icon records as its `data-muxui-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
             }
           ],
           "ref": { "type": "HTMLSpanElement" },
@@ -176,7 +176,7 @@
           "optional": true,
           "type": "'visa' | 'mastercard' | 'amex' | 'discover' | 'unknown'",
           "values": ["visa", "mastercard", "amex", "discover", "unknown"],
-          "doc": "The card type the icon records as its `data-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
+          "doc": "The card type the icon records as its `data-muxui-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
         }
       ]
     },

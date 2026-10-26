@@ -1,14 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  ColorField as AriaColorField,
-  ColorFieldStateContext as AriaColorFieldStateContext,
-  Label as AriaLabel,
-  Input as AriaInput,
-  Text as AriaText,
-  FieldError as AriaFieldError,
-} from 'react-aria-components';
+import { ColorFieldStateContext as AriaColorFieldStateContext, Label as AriaLabel, Text as AriaText, FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaColorField, AriaInput } from './substrate.ts';
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
 import { colorValue, ColorPickerContext } from './color-context.ts';
@@ -83,8 +77,8 @@ export const ColorField: ForwardRefExoticComponent<ColorFieldProps & RefAttribut
     ...props, ref, name, value: valueColor, defaultValue: defaultColor,
     onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toFormat(space).toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
     isInvalid: invalid ? invalid : undefined, className: classNames('muxui-color-field', className),
-    // React Aria's props do not name the data-size hook the styles read, and TypeScript accepts such a key in a call only from a spread.
-    ...{ 'data-size': resolvedSize },
+    // React Aria's props do not name the data-muxui-size hook the styles read, and TypeScript accepts such a key in a call only from a spread.
+    ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(ColorFieldInput),

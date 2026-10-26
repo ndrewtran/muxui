@@ -127,7 +127,7 @@ async function samplePointerTransition(page, fromDate, toDate) {
           hovered: node.matches(':hover'),
           focused: node.matches(':focus'),
           focusVisible: node.matches(':focus-visible'),
-          dataFocusVisible: node.hasAttribute('data-focus-visible'),
+          dataFocusVisible: node.hasAttribute('data-muxui-state-focus-visible'),
           outlineStyle: style.outlineStyle,
           outlineWidth: style.outlineWidth,
           outlineColor: style.outlineColor,
@@ -186,7 +186,7 @@ async function readKeyboardFocus(page) {
     return {
       date: node.getAttribute('data-muxui-date'),
       pointerMode: Boolean(node.closest('.muxui-range-selection-motion')?.hasAttribute('data-muxui-range-pointer-mode')),
-      dataFocusVisible: node.hasAttribute('data-focus-visible'),
+      dataFocusVisible: node.hasAttribute('data-muxui-state-focus-visible'),
       focusVisible: node.matches(':focus-visible'),
       boxShadow: style.boxShadow,
       outlineStyle: style.outlineStyle,
@@ -250,8 +250,8 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
       const rect = node.getBoundingClientRect();
       return {
         date: node.getAttribute('data-muxui-date'),
-        disabled: node.hasAttribute('data-disabled'),
-        unavailable: node.hasAttribute('data-unavailable'),
+        disabled: node.hasAttribute('data-muxui-state-disabled'),
+        unavailable: node.hasAttribute('data-muxui-state-unavailable'),
         top: rect.top,
       };
     }));
@@ -319,7 +319,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     assertBandCap(endpointBand(current), 'both', 'reverse same-row endpoint band');
 
     const unavailableCell = page.locator('.muxui-range-calendar-cell[data-muxui-date="2026-08-10"]');
-    assert.equal(await unavailableCell.getAttribute('data-unavailable'), 'true', 'RAC owns unavailable state');
+    assert.equal(await unavailableCell.getAttribute('data-muxui-state-unavailable'), 'true', 'RAC owns unavailable state');
     await unavailableCell.focus();
     assert.notEqual(await page.locator('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]').getAttribute('data-muxui-date'), '2026-08-10', 'unavailable focus cannot become a provisional endpoint');
     assert.equal(await page.locator('#range-change-count').textContent(), '0', 'unavailable focus does not commit a range');
@@ -355,7 +355,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     const keyboardPointerFrames = await samplePointerTransition(page, keyboardFocus.date, sameRowDate);
     assertPointerTransition(keyboardPointerFrames, 'keyboard-to-pointer transition');
     await page.keyboard.press('ArrowLeft');
-    await page.waitForFunction(() => document.activeElement?.matches('.muxui-range-calendar-cell[data-focus-visible]'));
+    await page.waitForFunction(() => document.activeElement?.matches('.muxui-range-calendar-cell[data-muxui-state-focus-visible]'));
     const focusAfterPointer = await readKeyboardFocus(page);
     assert.equal(focusAfterPointer.pointerMode, false, 'keyboard input clears pointer mode after pointer hover');
     assert.equal(focusAfterPointer.dataFocusVisible, true, 'keyboard focus remains visible after pointer hover');

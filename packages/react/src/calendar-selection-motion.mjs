@@ -87,7 +87,7 @@ export function CalendarSelectionCell({ date, formattedDate, isSelected }) {
       : React.createElement(motion.span, {
         'aria-hidden': 'true',
         className: 'muxui-calendar-selection',
-        'data-selection-traveling': isTraveling || undefined,
+        'data-muxui-selection-traveling': isTraveling || undefined,
         layoutId,
         initial: false,
         transition: { layout: motionContext?.travelTransition ?? { duration: 0 } },

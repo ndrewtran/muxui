@@ -25,30 +25,8 @@ import { runAfterTransition } from 'react-aria/private/utils/runAfterTransition'
 import { Button as MuxUIButton } from './button.ts';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import type { OverlayGeometry } from './overlay-positioning.mjs';
-import {
-  ButtonContext as AriaButtonContext,
-  DEFAULT_SLOT as ARIA_DEFAULT_SLOT,
-  Dialog as AriaDialog,
-  DialogContext as AriaDialogContext,
-  DialogTrigger as AriaDialogTrigger,
-  DropZone as AriaDropZone,
-  FileTrigger as AriaFileTrigger,
-  Heading as AriaHeading,
-  ModalOverlay as AriaModalOverlay,
-  OverlayTriggerStateContext as AriaOverlayTriggerStateContext,
-  Popover as AriaPopover,
-  PopoverContext as AriaPopoverContext,
-  Pressable as AriaPressable,
-  PreviewTrigger as AriaPreviewTrigger,
-  Text as AriaText,
-  Tooltip as AriaTooltip,
-  TooltipContext as AriaTooltipContext,
-  TooltipTrigger as AriaTooltipTrigger,
-  UNSTABLE_Toast as AriaToast,
-  UNSTABLE_ToastContent as AriaToastContent,
-  UNSTABLE_ToastQueue,
-  UNSTABLE_ToastRegion,
-} from 'react-aria-components';
+import { ButtonContext as AriaButtonContext, DEFAULT_SLOT as ARIA_DEFAULT_SLOT, Dialog as AriaDialog, DialogContext as AriaDialogContext, DialogTrigger as AriaDialogTrigger, FileTrigger as AriaFileTrigger, Heading as AriaHeading, OverlayTriggerStateContext as AriaOverlayTriggerStateContext, PopoverContext as AriaPopoverContext, Pressable as AriaPressable, PreviewTrigger as AriaPreviewTrigger, Text as AriaText, TooltipContext as AriaTooltipContext, TooltipTrigger as AriaTooltipTrigger, UNSTABLE_ToastContent as AriaToastContent, UNSTABLE_ToastQueue } from 'react-aria-components';
+import { AriaDropZone, AriaModalOverlay, AriaPopover, AriaTooltip, AriaToast, AriaToastRegion as UNSTABLE_ToastRegion } from './substrate.ts';
 import type { DropItem, ModalOverlayProps, QueuedToast, TooltipProps as AriaTooltipProps } from 'react-aria-components';
 import { DialogMotion } from './dialog-motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
@@ -300,7 +278,7 @@ export const DropZone: ForwardRefExoticComponent<DropZoneProps & RefAttributes<H
     if (event.target !== dropButton || dropButton.tagName !== 'BUTTON' || disabledRef.current) return;
     onActivate?.({ type: 'activate', x: event.clientX ?? 0, y: event.clientY ?? 0 });
   }, [onActivate]);
-  // RAC sets data-disabled on the root but does not forward aria-disabled, so the render function adds it.
+  // RAC sets data-muxui-state-disabled on the root but does not forward aria-disabled, so the render function adds it.
   return React.createElement(AriaDropZone, {
     ...props,
     ref,
@@ -688,7 +666,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     shouldFlip: geometry.shouldFlip,
     containerPadding: geometry.containerPadding,
     isNonModal: !modal,
-    'data-modal': modal,
+    'data-muxui-modal': modal,
     className: 'muxui-popover-positioner',
     isKeyboardDismissDisabled: !dismissable,
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
@@ -1239,7 +1217,7 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, ori
     nodeRef.current = node;
     lifecycleRef(node);
   }, [lifecycleRef]);
-  return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
+  return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-muxui-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
     React.createElement(AriaToastContent, { className: 'muxui-toast-content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast-title', hasTitle ? undefined : 'muxui-toast-title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast-message' }, value.message)),
@@ -1353,7 +1331,7 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
     // The region reads the queue only through its subscribe, visibleToasts, add, close, pauseAll, resumeAll, and clear;
     // React Aria types it as the ToastQueue class, whose private members no other object has.
-    React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', ...{ placement, 'data-placement': placement },
+    React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },
       children: ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose }) }));
 };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { animate, LazyMotion, domAnimation, useMotionValue, useTransform } from 'motion/react';
 import { span as MotionSpan } from 'motion/react-m';
-import { ColorThumb, ColorWheelTrack } from 'react-aria-components';
+import { AriaColorThumb as ColorThumb, AriaColorWheelTrack as ColorWheelTrack } from './substrate.ts';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -69,7 +69,7 @@ export function ColorWheelMotionTrack({ readOnly }) {
       React.createElement(ColorThumb, {
         ref: thumbRef,
         className: 'muxui-color-wheel-thumb',
-        'data-readonly': readOnly || undefined,
+        'data-muxui-state-read-only': readOnly || undefined,
         style: { backgroundColor: 'transparent' },
       }, (renderProps) => React.createElement(ColorWheelMotionThumb, { ...renderProps, readOnly, thumbRef })),
     ),

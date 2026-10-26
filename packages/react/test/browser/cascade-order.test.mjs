@@ -37,9 +37,9 @@ function swapChunks(css, earlier, later) {
 }
 
 const fixture = (css) => `<!doctype html><html><head><style>${css}</style></head><body>
-  <button id="icon-button" class="muxui-button muxui-icon-button" data-muxui-icon-button data-size="sm">x</button>
+  <button id="icon-button" class="muxui-button muxui-icon-button" data-muxui-icon-button data-muxui-size="sm">x</button>
   <span id="chip" class="muxui-text-editor__btn muxui-command-palette__chip-remove"><span class="muxui-icon-button-icon"></span></span>
-  <button id="lightbox-close" class="muxui-button muxui-lightbox-close" data-size="sm">x</button>
+  <button id="lightbox-close" class="muxui-button muxui-lightbox-close" data-muxui-size="sm">x</button>
 </body></html>`;
 
 // Runs in the page. `winner` is what the later rule gives and `loser` what the earlier one gives; they must differ,

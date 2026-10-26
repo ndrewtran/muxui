@@ -6,7 +6,7 @@ import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const RADIO_INDICATOR_SELECTOR = '.muxui-radio-indicator, .muxui-radio-field__indicator';
-const SELECTED_INDICATOR_SELECTOR = '.muxui-radio[data-selected] .muxui-radio-indicator, .muxui-radio-field[data-selected] .muxui-radio-field__indicator';
+const SELECTED_INDICATOR_SELECTOR = '.muxui-radio[data-muxui-state-selected] .muxui-radio-indicator, .muxui-radio-field[data-muxui-state-selected] .muxui-radio-field__indicator';
 
 const RadioMotionContext = React.createContext({
   reduced: false,
@@ -56,7 +56,7 @@ export function RadioGroupMotion({ children, rootRef }) {
     const observer = new MutationObserver(updateIndicator);
     observer.observe(root, {
       attributes: true,
-      attributeFilter: ['aria-checked', 'checked', 'data-selected', 'disabled'],
+      attributeFilter: ['aria-checked', 'checked', 'data-muxui-state-selected', 'disabled'],
       childList: true,
       subtree: true,
     });

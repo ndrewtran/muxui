@@ -176,7 +176,7 @@ function blocks(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
         return React.createElement('p', { key }, token.text ?? '');
       }
       const language = typeof token.lang === 'string' ? token.lang.trim().split(/\s+/u, 1)[0].replace(/[^a-z0-9_-]/giu, '') : '';
-      return React.createElement('pre', { key, className: 'muxui-markdown-code-block', 'data-language': language || undefined }, React.createElement('code', null, token.text));
+      return React.createElement('pre', { key, className: 'muxui-markdown-code-block', 'data-muxui-language': language || undefined }, React.createElement('code', null, token.text));
     }
     if (token.type === 'blockquote') return React.createElement('blockquote', { key, className: 'muxui-markdown-blockquote' }, blocks(token.tokens, baseUrl, depth + 1, counter));
     if (token.type === 'list') {
@@ -195,7 +195,7 @@ export const Markdown: ForwardRefExoticComponent<MarkdownProps & RefAttributes<H
   const safeBase = safeUrl(baseUrl, HTTP_PROTOCOLS);
   const rootProps = { ...props, ref, className: cx('muxui-markdown', className) };
   if (failure || (baseUrl !== undefined && safeBase === undefined)) {
-    return React.createElement('div', { ...rootProps, 'data-markdown-error': failure ?? 'MARKDOWN_INVALID_BASE_URL' }, invalidFallback);
+    return React.createElement('div', { ...rootProps, 'data-muxui-markdown-error': failure ?? 'MARKDOWN_INVALID_BASE_URL' }, invalidFallback);
   }
   try {
     const tokens = Lexer.lex(source, { async: false, breaks: false, gfm: false, pedantic: false });
@@ -203,7 +203,7 @@ export const Markdown: ForwardRefExoticComponent<MarkdownProps & RefAttributes<H
     return React.createElement('div', rootProps, blocks(tokens, safeBase));
   } catch (error) {
     const code = error instanceof Error && error.message.startsWith('MARKDOWN_') ? error.message : 'MARKDOWN_PARSER_FAILED';
-    return React.createElement('div', { ...rootProps, 'data-markdown-error': code }, invalidFallback);
+    return React.createElement('div', { ...rootProps, 'data-muxui-markdown-error': code }, invalidFallback);
   }
 });
 Markdown.displayName = 'Markdown';

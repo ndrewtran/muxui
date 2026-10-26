@@ -282,7 +282,7 @@ async function waitForStory(page, scheme) {
 
 async function waitForDocumentAnimations(page) {
   await page.evaluate(async () => {
-    document.documentElement.setAttribute('data-reduced-motion', 'true');
+    document.documentElement.setAttribute('data-muxui-motion', 'reduced');
     await document.fonts.ready;
     await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
     // Finish finite transitions so motion reaches its settled styles. Cancel
@@ -408,7 +408,7 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   assert.equal(result.violations.length, 0, `${scheme} Button Matrix has axe violations:\n${formatViolations(result.violations)}`);
 
   const geometry = await page.evaluate(() => Object.fromEntries(['sm', 'md', 'lg'].map((size) => {
-    const button = document.querySelector(`.muxui-button[data-variant="primary"][data-size="${size}"]`);
+    const button = document.querySelector(`.muxui-button[data-muxui-variant="primary"][data-muxui-size="${size}"]`);
     if (!button) throw new Error(`missing primary ${size} button`);
     const rect = button.getBoundingClientRect();
     return [size, { width: rect.width, height: rect.height }];
@@ -416,7 +416,7 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   assert.ok(geometry.sm.height < geometry.md.height && geometry.md.height < geometry.lg.height, `${scheme} Button Matrix heights must increase sm < md < lg: ${JSON.stringify(geometry)}`);
   assert.ok(geometry.sm.width < geometry.md.width && geometry.md.width < geometry.lg.width, `${scheme} Button Matrix widths must increase sm < md < lg: ${JSON.stringify(geometry)}`);
 
-  const destructive = await page.locator('.muxui-button[data-variant="danger"][data-size="md"]').evaluate((button) => {
+  const destructive = await page.locator('.muxui-button[data-muxui-variant="danger"][data-muxui-size="md"]').evaluate((button) => {
     const style = getComputedStyle(button);
     return { color: style.color, backgroundColor: style.backgroundColor };
   });
@@ -426,13 +426,13 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   if (scheme === 'dark') {
     const pressedBackgrounds = [];
     for (const variant of ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse']) {
-      const selector = `.muxui-button[data-variant="${variant}"][data-size="md"]`;
+      const selector = `.muxui-button[data-muxui-variant="${variant}"][data-muxui-size="md"]`;
       const button = page.locator(selector);
       const box = await button.boundingBox();
       assert.ok(box, `missing ${variant} button bounds`);
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
-      await page.waitForFunction((buttonSelector) => document.querySelector(buttonSelector)?.hasAttribute('data-pressed') === true, selector);
+      await page.waitForFunction((buttonSelector) => document.querySelector(buttonSelector)?.hasAttribute('data-muxui-state-pressed') === true, selector);
       pressedBackgrounds.push(await button.evaluate((element) => getComputedStyle(element).backgroundColor));
       await page.mouse.up();
     }
@@ -469,7 +469,7 @@ async function assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme) 
     const list = document.querySelector('.muxui-autocomplete-list');
     return Boolean(list && !list.hasAttribute('hidden') && document.querySelectorAll('.muxui-autocomplete-option').length === 3);
   });
-  const disabled = page.locator('.muxui-autocomplete-option[data-disabled="true"]').first();
+  const disabled = page.locator('.muxui-autocomplete-option[data-muxui-state-disabled="true"]').first();
   assert.equal(await disabled.getAttribute('aria-disabled'), 'true');
   await disabled.evaluate((node) => node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
   assert.equal(await input.inputValue(), '', 'disabled options do not select on pointer activation');
@@ -646,9 +646,9 @@ async function assertModalControlsOpen(page, baseUrl, story, scheme) {
   await waitForLifecycleReadiness(page);
 
   const openModals = () => page.evaluate(() => [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')]
-    .filter((modal) => !modal.closest('[data-exiting]')).length);
+    .filter((modal) => !modal.closest('[data-muxui-state-exiting]')).length);
   const focusInsideTheModal = () => page.evaluate(() => {
-    const modals = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-exiting]'));
+    const modals = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-muxui-state-exiting]'));
     return modals.length === 1 && modals[0].contains(document.activeElement);
   });
   const setOpen = (open) => page.evaluate(([storyId, updatedArgs]) => {
@@ -656,7 +656,7 @@ async function assertModalControlsOpen(page, baseUrl, story, scheme) {
   }, [story.id, { open }]);
   const assertOneFocusedModal = async (label) => {
     await page.waitForFunction(() => {
-      const modals = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-exiting]'));
+      const modals = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].filter((modal) => !modal.closest('[data-muxui-state-exiting]'));
       return modals.length === 1 && modals[0].contains(document.activeElement);
     }, undefined, { timeout: storyTimeoutMs }).catch(async () => {
       assert.fail(`${scheme} ${story.id} ${label}: expected one open modal holding focus, found ${await openModals()} (focus inside: ${await focusInsideTheModal()})`);
@@ -670,7 +670,7 @@ async function assertModalControlsOpen(page, baseUrl, story, scheme) {
   await assertOneFocusedModal('on load');
   await setOpen(false);
   await page.waitForFunction(() => ![...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')]
-    .some((modal) => !modal.closest('[data-exiting]')), undefined, { timeout: storyTimeoutMs });
+    .some((modal) => !modal.closest('[data-muxui-state-exiting]')), undefined, { timeout: storyTimeoutMs });
   await setOpen(true);
   await assertOneFocusedModal('after open false then true');
 }
@@ -685,7 +685,7 @@ async function assertDialogLifecycleDismissal(page, baseUrl, story, scheme) {
   const waitForOpen = (selector) => page.waitForFunction((dialogSelector) => {
     const dialog = document.querySelector(dialogSelector);
     const backdrop = dialog?.closest('.muxui-dialog-backdrop');
-    if (!backdrop || backdrop.hasAttribute('data-exiting')) return false;
+    if (!backdrop || backdrop.hasAttribute('data-muxui-state-exiting')) return false;
     const style = getComputedStyle(backdrop);
     return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
   }, selector, { timeout: storyTimeoutMs });

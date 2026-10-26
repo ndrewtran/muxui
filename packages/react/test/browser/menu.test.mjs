@@ -264,7 +264,7 @@ for (const engine of browserEngines()) {
               return focused;
             });
             assert.equal(handedOver, true, `${label}: the second control takes focus when the first opening closes`);
-            await tab.locator('.muxui-menu-root[data-open]').waitFor({ state: 'attached', timeout: 5000 });
+            await tab.locator('.muxui-menu-root[data-muxui-state-open]').waitFor({ state: 'attached', timeout: 5000 });
             await tab.locator('[role="menuitem"]').first().focus();
             await pollUntil(tab, () => document.activeElement?.closest('[role="menu"]') != null, undefined, { message: `${label}: focus enters the reopened menu`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
             await tab.keyboard.press(key);
@@ -366,7 +366,7 @@ for (const engine of browserEngines()) {
           await tab.keyboard.press('ArrowDown');
           await tab.keyboard.press('ArrowRight');
           await tab.locator('[role="menu"][aria-label="More actions"]').waitFor({ timeout: 5000 });
-          return measure({ item: '.muxui-menu-item[data-has-submenu]', popup: ['[role="menu"][aria-label="More actions"]', '.muxui-menu-popup'] });
+          return measure({ item: '.muxui-menu-item[data-muxui-state-has-submenu]', popup: ['[role="menu"][aria-label="More actions"]', '.muxui-menu-popup'] });
         };
 
         await t.test('a popup inside a submenu opens at end-top, the offset beside its item', async () => {
@@ -374,7 +374,7 @@ for (const engine of browserEngines()) {
           near(popup.left, item.right + offset, 'the submenu sits the offset beside its item, at the end');
           // Its first row lines up with the item, so the popup starts above the item by its own padding.
           assert.ok(Math.abs(popup.top - item.top - crossOffset) <= 4, `${engine}: the submenu starts at its item's top: ${popup.top} against ${item.top}`);
-          assert.equal(await tab.locator('[role="menu"][aria-label="More actions"]').evaluate((menu) => menu.closest('.muxui-menu-popup').dataset.placement), 'right', 'it reports the side it opened on');
+          assert.equal(await tab.locator('[role="menu"][aria-label="More actions"]').evaluate((menu) => menu.closest('.muxui-menu-popup').dataset.muxuiStatePlacement), 'right', 'it reports the side it opened on');
         });
 
         await t.test('a popup inside a submenu keeps the placement it is given', async () => {

@@ -36,8 +36,8 @@ async function readMetrics(page, selector) {
       ariaHidden: node.getAttribute('aria-hidden'),
       inert: node.hasAttribute('inert') || node.inert === true,
       reduced: node.hasAttribute('data-muxui-motion-reduced'),
-      entering: node.hasAttribute('data-entering'),
-      exiting: node.hasAttribute('data-exiting') || node.hasAttribute('data-muxui-toast-exiting'),
+      entering: node.hasAttribute('data-muxui-state-entering'),
+      exiting: node.hasAttribute('data-muxui-state-exiting') || node.hasAttribute('data-muxui-toast-exiting'),
     };
   });
 }
@@ -112,7 +112,7 @@ async function captureDisclosureGroupMotion(page, triggerSelector, duration = 11
       const icon = row.querySelector('.muxui-disclosure-trigger-icon');
       const iconMatrix = icon && new DOMMatrixReadOnly(getComputedStyle(icon).transform);
       return {
-        expanded: row.hasAttribute('data-expanded'),
+        expanded: row.hasAttribute('data-muxui-state-expanded'),
         top: rect.top,
         bottom: rect.bottom,
         panelHeight: panelHost?.getBoundingClientRect().height ?? 0,
@@ -394,12 +394,12 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       const opacity = Number.parseFloat(getComputedStyle(content).opacity);
       return opacity > 0 && opacity < 1;
     }, undefined, { timeout: 1800 });
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
       const row = document.querySelector('[data-motion-id="group-first"]');
       const content = row?.querySelector('.muxui-disclosure-motion-content');
       const panel = row?.querySelector('.muxui-disclosure-motion-panel');
-      return row?.getAttribute('data-expanded') === 'true'
+      return row?.getAttribute('data-muxui-state-expanded') === 'true'
         && Number.parseFloat(getComputedStyle(content).opacity) === 1
         && panel?.style.height === ''
         && panel.getBoundingClientRect().height > 0;
@@ -407,7 +407,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.equal(await page.locator('[data-motion-id="group-first"] .muxui-disclosure-motion-content').evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity)), 1, 'reduced motion snaps an in-flight grouped fade to readable content');
     await page.locator(firstGroupTrigger).click();
     await waitForDisclosureClosed(page, firstGroupPanel);
-    await page.evaluate(() => document.documentElement.removeAttribute('data-reduced-motion'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
 
     const group = page.locator('[data-motion-id="disclosure-group"]');
     await group.evaluate((node) => {
@@ -564,7 +564,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await page.locator('.muxui-alert-dialog__close').click();
     await page.waitForFunction((selector) => {
       const node = document.querySelector(selector);
-      return node?.hasAttribute('data-exiting') && getComputedStyle(node).transitionDuration === '0.25s';
+      return node?.hasAttribute('data-muxui-state-exiting') && getComputedStyle(node).transitionDuration === '0.25s';
     }, alertBackdrop, { timeout: 1800 });
     await page.waitForFunction((selector) => {
       const node = document.querySelector(selector);
@@ -593,8 +593,8 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
         && Math.abs(Number.parseFloat(popupStyle.getPropertyValue('--muxui-modal-y')) || 0) < 0.01
         && Math.abs((Number.parseFloat(popupStyle.getPropertyValue('--muxui-modal-scale')) || 1) - 1) < 0.0001
         && Number(backdropStyle.opacity) >= 0.999
-        && !backdrop.hasAttribute('data-entering')
-        && !backdrop.hasAttribute('data-exiting');
+        && !backdrop.hasAttribute('data-muxui-state-entering')
+        && !backdrop.hasAttribute('data-muxui-state-exiting');
     }, [alertPopup, alertBackdrop], { timeout: 500 });
     await page.locator('.muxui-alert-dialog__close').click();
     await page.locator(alertPopup).waitFor({ state: 'detached', timeout: 1500 });
@@ -625,8 +625,8 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
         && Math.abs(Number.parseFloat(popupStyle.getPropertyValue('--muxui-modal-y')) || 0) < 0.01
         && Math.abs((Number.parseFloat(popupStyle.getPropertyValue('--muxui-modal-scale')) || 1) - 1) < 0.0001
         && Number(backdropStyle.opacity) >= 0.999
-        && !backdrop.hasAttribute('data-entering')
-        && !backdrop.hasAttribute('data-exiting');
+        && !backdrop.hasAttribute('data-muxui-state-entering')
+        && !backdrop.hasAttribute('data-muxui-state-exiting');
     }, [commandPopup, commandBackdrop], { timeout: 500 });
     await page.keyboard.press('Escape');
     await page.locator(commandPopup).waitFor({ state: 'detached', timeout: 1500 });

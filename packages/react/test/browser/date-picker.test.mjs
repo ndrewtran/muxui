@@ -62,7 +62,7 @@ async function openAtCurrentMonth(fixedTime, { todayLabel, heading, year }) {
     await page.locator('.muxui-date-picker .muxui-date-trigger').waitFor();
 
     // An empty field steps from the current year rather than a fixed one.
-    const fieldYear = page.locator('.muxui-date-field [data-type="year"]');
+    const fieldYear = page.locator('.muxui-date-field [data-muxui-state-type="year"]');
     await fieldYear.focus();
     await page.keyboard.press('ArrowUp');
     assert.equal(await fieldYear.textContent(), year, 'an empty DateField year steps from the current year');
@@ -72,7 +72,7 @@ async function openAtCurrentMonth(fixedTime, { todayLabel, heading, year }) {
       const popover = page.locator('.muxui-date-popover');
       await popover.waitFor();
       assert.equal(await popover.locator('.muxui-calendar-heading').textContent(), heading, `an empty ${picker} opens at the browser's current month`);
-      assert.match(await popover.locator('[data-today]').getAttribute('aria-label'), todayLabel, `${picker} marks the browser's today`);
+      assert.match(await popover.locator('[data-muxui-state-today]').getAttribute('aria-label'), todayLabel, `${picker} marks the browser's today`);
       await page.keyboard.press('Escape');
       await popover.waitFor({ state: 'detached' });
     }

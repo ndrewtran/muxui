@@ -33,14 +33,14 @@
 .muxui-data-diff-column { color: var(--muxui-semantic-content-default); font-weight: normal; white-space: nowrap; background: var(--muxui-semantic-surface-subtle); }
 .muxui-data-diff-cell { max-inline-size: 28ch; min-inline-size: 8ch; overflow-wrap: anywhere; font-weight: normal; vertical-align: top; }
 .muxui-data-diff-row + .muxui-data-diff-row { border-block-start: 1px solid var(--muxui-semantic-border-default); }
-.muxui-data-diff-row[data-selectable] { cursor: pointer; }
+.muxui-data-diff-row[data-muxui-selectable] { cursor: pointer; }
 .muxui-data-diff-row { --muxui-data-diff-row-background: transparent; }
-.muxui-data-diff-row[data-change='added'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-added-background); background: var(--muxui-data-diff-row-background); }
-.muxui-data-diff-row[data-change='removed'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-removed-background); background: var(--muxui-data-diff-row-background); }
+.muxui-data-diff-row[data-muxui-change='added'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-added-background); background: var(--muxui-data-diff-row-background); }
+.muxui-data-diff-row[data-muxui-change='removed'] { --muxui-data-diff-row-background: var(--muxui-component-datadiff-removed-background); background: var(--muxui-data-diff-row-background); }
 .muxui-data-diff-change { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; inline-size: 1rem; margin-inline-end: var(--muxui-semantic-layout-tight-gap); font-weight: var(--muxui-semantic-typography-label-weight); }
-.muxui-data-diff-row[data-change='unchanged'] .muxui-data-diff-change { display: none; }
-.muxui-data-diff-row[data-change='added'] .muxui-data-diff-change { color: var(--muxui-semantic-status-success); }
-.muxui-data-diff-row[data-change='removed'] .muxui-data-diff-change { color: var(--muxui-semantic-feedback-invalid); }
+.muxui-data-diff-row[data-muxui-change='unchanged'] .muxui-data-diff-change { display: none; }
+.muxui-data-diff-row[data-muxui-change='added'] .muxui-data-diff-change { color: var(--muxui-semantic-status-success); }
+.muxui-data-diff-row[data-muxui-change='removed'] .muxui-data-diff-change { color: var(--muxui-semantic-feedback-invalid); }
 .muxui-data-diff-values { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--muxui-semantic-layout-tight-gap); }
 .muxui-data-diff-before { background: var(--muxui-component-datadiff-removed-background); }
 .muxui-data-diff-after { background: var(--muxui-component-datadiff-added-background); }
@@ -50,16 +50,16 @@
 .muxui-data-diff-head .muxui-data-diff-selection { z-index: 2; background: var(--muxui-semantic-surface-subtle); }
 /* Composite translucent change paint over an opaque surface before pinning it. */
 .muxui-data-diff-row > .muxui-data-diff-selection { background: linear-gradient(var(--muxui-data-diff-row-background), var(--muxui-data-diff-row-background)) var(--muxui-semantic-surface-raised); box-shadow: inherit; }
-.muxui-data-diff-row[data-selected] > .muxui-data-diff-selection::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; border-inline-start: 2px solid var(--muxui-semantic-selection-track); pointer-events: none; }
+.muxui-data-diff-row[data-muxui-state-selected] > .muxui-data-diff-selection::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; border-inline-start: 2px solid var(--muxui-semantic-selection-track); pointer-events: none; }
 .muxui-data-diff-selection .muxui-checkbox { position: relative; justify-content: center; inline-size: var(--muxui-control-size-sm); vertical-align: middle; }
 /* Hit-test the native input across the label target, so activation bubbles once. */
 .muxui-data-diff-selection .muxui-checkbox input[type='checkbox'] { position: absolute; inset: 0; z-index: 1; inline-size: 100%; block-size: 100%; margin: 0; padding: 0; border: 0; opacity: 0; clip-path: none; pointer-events: auto; appearance: auto; cursor: inherit; }
 .muxui-data-diff-selection .muxui-checkbox:has(input:focus-visible) .muxui-checkbox-indicator { box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-focus-ring-color); }
-.muxui-data-diff-selection .muxui-checkbox:hover:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator { border-color: var(--muxui-component-checkbox-indicator-border-hover); background-color: var(--muxui-semantic-surface-hover); }
-.muxui-data-diff-selection .muxui-checkbox[data-selected]:hover:not([data-disabled]) .muxui-checkbox-indicator { border-color: var(--muxui-semantic-color-color-50); background-color: var(--muxui-semantic-color-color-50); }
-.muxui-data-diff-selection .muxui-checkbox[data-selected]:hover:not([data-disabled]) .muxui-checkbox-indicator svg { color: var(--muxui-component-checkbox-selected-foreground-hover); }
-.muxui-data-diff-row[data-selectable]:hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent); }
-.muxui-data-diff-row[data-selectable]:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent); }
+.muxui-data-diff-selection .muxui-checkbox:hover:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator { border-color: var(--muxui-component-checkbox-indicator-border-hover); background-color: var(--muxui-semantic-surface-hover); }
+.muxui-data-diff-selection .muxui-checkbox[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) .muxui-checkbox-indicator { border-color: var(--muxui-semantic-color-color-50); background-color: var(--muxui-semantic-color-color-50); }
+.muxui-data-diff-selection .muxui-checkbox[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) .muxui-checkbox-indicator svg { color: var(--muxui-component-checkbox-selected-foreground-hover); }
+.muxui-data-diff-row[data-muxui-selectable]:hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent); }
+.muxui-data-diff-row[data-muxui-selectable]:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent); }
 .muxui-data-diff-empty { padding: var(--muxui-semantic-layout-inset-medium); text-align: center; color: var(--muxui-semantic-content-default); }
 .muxui-data-diff-apply { flex: none; margin-inline-start: auto; }
 .muxui-data-diff-apply:disabled { pointer-events: auto; }
@@ -68,13 +68,13 @@
 
 @media (forced-colors: active) {
   .muxui-data-diff { border-color: CanvasText; }
-  .muxui-data-diff-row[data-change],
+  .muxui-data-diff-row[data-muxui-change],
   .muxui-data-diff-before,
   .muxui-data-diff-after { background: Canvas; color: CanvasText; }
   .muxui-data-diff-row .muxui-data-diff-change { color: CanvasText; }
   .muxui-data-diff-selection,
   .muxui-data-diff-row > .muxui-data-diff-selection { background: Canvas; }
-  .muxui-data-diff-row[data-selected] > .muxui-data-diff-selection::before { border-inline-start-color: Highlight; forced-color-adjust: none; }
+  .muxui-data-diff-row[data-muxui-state-selected] > .muxui-data-diff-selection::before { border-inline-start-color: Highlight; forced-color-adjust: none; }
   .muxui-data-diff-apply { border-color: ButtonText; background: ButtonFace; color: ButtonText; }
   .muxui-data-diff-apply:disabled { color: GrayText; }
   .muxui-data-diff-viewport:focus-visible { outline-color: Highlight; }

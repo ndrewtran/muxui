@@ -1,12 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
-import {
-  Tabs as AriaTabs,
-  TabList as AriaTabList,
-  Tab as AriaTab,
-  TabPanels as AriaTabPanels,
-  TabPanel as AriaTabPanel,
-} from 'react-aria-components';
+import { TabPanels as AriaTabPanels } from 'react-aria-components';
+import { AriaTabs, AriaTabList, AriaTab, AriaTabPanel } from './substrate.ts';
 import type { Key } from 'react-aria-components';
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { TabsMotion } from './tabs-motion.mjs';
@@ -81,7 +76,7 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
       className: classNames('muxui-tabs', className),
-      ...{ 'data-size': resolvedSize, 'data-variant': resolvedVariant },
+      ...{ 'data-muxui-size': resolvedSize, 'data-muxui-variant': resolvedVariant },
     },
     React.createElement(TabsMotion, { orientation, variant: resolvedVariant, disabled }, React.createElement(AriaTabList<NormalizedItem>, {
       items: normalized,
@@ -91,7 +86,7 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
         id: item.id,
         ...{
           isDisabled: disabled ? disabled : item.disabled,
-          'data-disabled': (disabled ? disabled : item.disabled) || undefined,
+          'data-muxui-state-disabled': (disabled ? disabled : item.disabled) || undefined,
           'aria-disabled': (disabled ? disabled : item.disabled) || undefined,
         },
         className: 'muxui-tab',

@@ -23,13 +23,13 @@ test('Sidebar Provider, Root, and Toggle render on the server without a window',
   assert.equal(typeof document, 'undefined');
 
   const expanded = renderToString(tree({ shortcut: 'b' }));
-  assert.doesNotMatch(expanded, /data-collapsed/u);
-  assert.match(expanded, /data-foldable/u);
+  assert.doesNotMatch(expanded, /data-muxui-collapsed/u);
+  assert.match(expanded, /data-muxui-foldable/u);
   assert.match(expanded, /aria-expanded="true"/u);
   assert.match(expanded, /aria-label="Toggle sidebar"/u);
 
   const folded = renderToString(tree({ defaultCollapsed: true }));
-  assert.match(folded, /data-collapsed/u);
+  assert.match(folded, /data-muxui-collapsed/u);
   assert.match(folded, /aria-expanded="false"/u);
 
   // Toggle points at the Root the Provider named, and a Root with its own id keeps it.
@@ -46,14 +46,14 @@ test('Sidebar Section labels its nested list and a Root outside a Provider rende
   assert.ok(html.includes(`aria-labelledby="${labelId[1] ?? labelId[2]}"`));
 
   const plain = renderToString(h(Sidebar.Root, null, h(Sidebar.Header, null, h(Sidebar.Search)), h(Sidebar.NavList, null, h(Sidebar.NavItem, { href: '/', icon: Icon }, 'Home'))));
-  assert.doesNotMatch(plain, /data-foldable|data-collapsed|search-button/u);
+  assert.doesNotMatch(plain, /data-muxui-foldable|data-muxui-collapsed|search-button/u);
 });
 
 test('Sidebar density marks only a compact Root and leaves the default markup alone', () => {
   const plain = renderToString(tree());
-  assert.doesNotMatch(plain, /data-density/u);
+  assert.doesNotMatch(plain, /data-muxui-sidebar-density/u);
   assert.equal(renderToString(tree({}, { density: 'default' })), plain);
-  assert.match(renderToString(tree({}, { density: 'compact' })), /<aside[^>]* data-density="compact"/u);
+  assert.match(renderToString(tree({}, { density: 'compact' })), /<aside[^>]* data-muxui-sidebar-density="compact"/u);
 });
 
 test('Sidebar Toggle requires a Provider', () => {
@@ -192,7 +192,7 @@ test('items without a link keep the markup Sidebar always rendered', () => {
     '<aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item"><details>'
       + '<summary class="muxui-sidebar__nav-link muxui-sidebar__nav-link--current"><svg class="muxui-sidebar__nav-icon" aria-hidden="true"></svg><span class="muxui-sidebar__nav-label">Roadmap</span><span class="muxui-sidebar__nav-badge">2</span><svg/></summary>'
       + '<ul class="muxui-sidebar__nav-children">'
-      + '<li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link muxui-sidebar__nav-child-link muxui-sidebar__nav-link--current" data-rac="" href="/now" tabindex="0" data-react-aria-pressable="true" aria-current="page" data-current="true">Now</a></li>'
+      + '<li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link muxui-sidebar__nav-child-link muxui-sidebar__nav-link--current" data-rac="" href="/now" tabindex="0" data-react-aria-pressable="true" aria-current="page" data-muxui-state-current="true">Now</a></li>'
       + '<li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link muxui-sidebar__nav-child-link" data-rac="" href="/next" tabindex="0" data-react-aria-pressable="true">Next</a></li>'
       + '</ul></details></li></ul></aside>',
   );

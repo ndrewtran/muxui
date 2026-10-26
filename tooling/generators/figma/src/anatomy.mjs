@@ -87,9 +87,9 @@ export const BIND_GROUPS = Object.freeze(['fill', 'overlay', 'stroke', 'radius',
 /** How each state is produced on the state target: forced pseudo-classes, React Aria data attributes, or props. */
 export const STATE_EFFECTS = Object.freeze({
   rest: {},
-  hover: { pseudo: ['hover'], attributes: ['data-hovered'] },
-  pressed: { pseudo: ['hover', 'active'], attributes: ['data-hovered', 'data-pressed'] },
-  'focus-visible': { pseudo: ['focus', 'focus-visible'], attributes: ['data-focused', 'data-focus-visible'] },
+  hover: { pseudo: ['hover'], attributes: ['data-muxui-state-hovered'] },
+  pressed: { pseudo: ['hover', 'active'], attributes: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] },
+  'focus-visible': { pseudo: ['focus', 'focus-visible'], attributes: ['data-muxui-state-focused', 'data-muxui-state-focus-visible'] },
   disabled: { props: { disabled: true } },
   invalid: { props: { invalid: true } },
 });

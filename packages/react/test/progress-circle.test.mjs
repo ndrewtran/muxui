@@ -27,7 +27,7 @@ test('ProgressCircle consumer fixture covers semantic and decorative composition
   assert.equal(tab?.getAttribute('aria-label'), 'Loading tab');
   assert.equal(tab?.getAttribute('aria-valuenow'), null);
   assert.equal(tab?.getAttribute('aria-valuetext'), null);
-  assert.equal(tab?.hasAttribute('data-indeterminate'), true);
+  assert.equal(tab?.hasAttribute('data-muxui-state-indeterminate'), true);
   assert.equal(session?.getAttribute('aria-valuenow'), '65');
   assert.equal(session?.getAttribute('aria-valuetext'), '65%');
   assert.equal(session?.getAttribute('aria-labelledby')?.length > 0, true);
@@ -125,7 +125,7 @@ test('ProgressCircle exposes native progressbar semantics and avoids false preci
 
   for (const value of [null, undefined, Number.NaN]) {
     const { element } = elementFor(renderRoot({ value, 'aria-label': 'Loading tab' }));
-    assert.equal(element.hasAttribute('data-indeterminate'), true);
+    assert.equal(element.hasAttribute('data-muxui-state-indeterminate'), true);
     assert.equal(element.getAttribute('aria-valuenow'), null);
     assert.equal(element.getAttribute('aria-valuetext'), null);
     assert.equal(element.getAttribute('aria-valuemin'), '0');

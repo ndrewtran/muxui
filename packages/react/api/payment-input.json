@@ -157,7 +157,7 @@
               "discover",
               "unknown"
             ],
-            "description": "The card type the icon records as its `data-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
+            "description": "The card type the icon records as its `data-muxui-card-type`, in place of the one detected from the leading digits of the number typed into the field. The glyph is the same for every type."
           }
         },
         "eventDetails": {},

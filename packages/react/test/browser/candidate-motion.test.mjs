@@ -48,7 +48,7 @@ async function setup() {
     };
     const NativeObserver = MutationObserver;
     window.MutationObserver = class extends NativeObserver {
-      observe(...args) { if (args[1]?.attributeFilter?.includes('data-reduced-motion')) window.observers.add(this); return super.observe(...args); }
+      observe(...args) { if (args[1]?.attributeFilter?.includes('data-muxui-motion')) window.observers.add(this); return super.observe(...args); }
       disconnect() { window.observers.delete(this); return super.disconnect(); }
     };
     const nativeMatchMedia = window.matchMedia.bind(window);
@@ -99,7 +99,7 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays fin
     assert.equal(await page.locator('.muxui-code-block-copy-icon .lucide-check').count(), 1);
     await page.evaluate(() => document.querySelector('.muxui-code-block-copy').click());
     await page.evaluate(() => window.rejectCopy(new Error('Unavailable')));
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.copyState === 'error');
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'error');
     await settled(page);
     assert.match(await page.locator('.muxui-code-block [role=status]').textContent(), /Clipboard|copy code/u);
     const input = page.getByRole('textbox', { name: 'Message' });
@@ -148,10 +148,10 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays fin
 test('CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced ancestors and mid-flight system preferences', { timeout: 120_000 }, async () => {
   const context = await setup(); const { page, errors } = context;
   try {
-    for (const mode of ['system', 'data-reduced-motion', 'data-muxui-motion']) {
+    for (const mode of ['system', 'data-muxui-motion']) {
       await page.reload(); await page.waitForFunction(() => window.ready); await page.waitForTimeout(50);
       if (mode === 'system') await page.emulateMedia({ reducedMotion: 'reduce' });
-      else await page.evaluate(mode => document.querySelector('#scope').setAttribute(mode, mode === 'data-muxui-motion' ? 'reduced' : ''), mode);
+      else await page.evaluate(mode => document.querySelector('#scope').setAttribute(mode, 'reduced'), mode);
       await activate(page);
       await page.evaluate(() => document.querySelector('.muxui-activity summary').click());
       await page.waitForTimeout(60);
@@ -159,7 +159,7 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced an
       await settled(page);
       await page.emulateMedia({ reducedMotion: 'no-preference' });
     }
-    for (const mode of ['system', 'data-reduced-motion', 'data-muxui-motion']) {
+    for (const mode of ['system', 'data-muxui-motion']) {
       await page.reload(); await page.waitForFunction(() => window.ready); await page.waitForTimeout(50);
       await activate(page);
       // Pause the animations as they appear, so only the preference change can end them, not a slow runner letting them finish.
@@ -169,7 +169,7 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced an
         return running.length > 0;
       }, selector);
       if (mode === 'system') await page.emulateMedia({ reducedMotion: 'reduce' });
-      else await page.evaluate(mode => document.querySelector('#scope').setAttribute(mode, mode === 'data-muxui-motion' ? 'reduced' : ''), mode);
+      else await page.evaluate(mode => document.querySelector('#scope').setAttribute(mode, 'reduced'), mode);
       // A system preference reaches components on the next frame, after emulateMedia resolves.
       const animationCount = () => page.evaluate(selector => [...document.querySelectorAll(selector)].reduce((count, node) => count + node.getAnimations().length, 0), selector);
       await page.waitForFunction(selector => [...document.querySelectorAll(selector)].every(node => node.getAnimations().length === 0), selector, { timeout: 5_000 }).catch(async () => { assert.equal(await animationCount(), 0, mode); });
@@ -177,7 +177,7 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced an
       assert.deepEqual(await page.evaluate(() => [window.observers.size, window.mediaListeners.size]), context.subscriptions, mode);
       const starts = await page.evaluate(() => window.motionStarts.length);
       await page.emulateMedia({ reducedMotion: 'no-preference' });
-      await page.evaluate(() => { document.querySelector('#scope').removeAttribute('data-reduced-motion'); document.querySelector('#scope').removeAttribute('data-muxui-motion'); });
+      await page.evaluate(() => { document.querySelector('#scope').removeAttribute('data-muxui-motion'); });
       await page.waitForTimeout(50);
       assert.equal(await page.evaluate(() => window.motionStarts.length), starts, 'restoring full mode does not replay feedback');
     }

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, LabelHTMLAttributes, RefAttributes } from 'react';
-import { Switch as AriaSwitch } from 'react-aria-components';
+import { AriaSwitch } from '../substrate.ts';
 import type { SwitchProps as AriaSwitchProps } from 'react-aria-components';
 import { h, cx } from './part-utils.ts';
 
@@ -61,5 +61,5 @@ export const ColorModeToggle: ForwardRefExoticComponent<ColorModeToggleProps & R
     onModeChange?.(next);
   };
   // React Aria's props type the handlers on Element, and these on the label; the rest is the label's native attributes.
-  return h(AriaSwitch, { ...(props as AriaSwitchProps), ref, 'aria-label': props['aria-label'] ?? 'Toggle dark mode', isSelected: currentMode === 'dark', isDisabled: disabled, onChange: update, className: cx('muxui-color-mode-toggle', className), ...{ 'data-mode': currentMode } }, children);
+  return h(AriaSwitch, { ...(props as AriaSwitchProps), ref, 'aria-label': props['aria-label'] ?? 'Toggle dark mode', isSelected: currentMode === 'dark', isDisabled: disabled, onChange: update, className: cx('muxui-color-mode-toggle', className), ...{ 'data-muxui-mode': currentMode } }, children);
 });

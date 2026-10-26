@@ -1,9 +1,6 @@
 import React from 'react';
-import {
-  OverlayTriggerStateContext,
-  Popover as AriaPopover,
-  PopoverContext,
-} from 'react-aria-components';
+import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-components';
+import { AriaPopover } from './substrate.ts';
 import { useMotionLifecycle } from './motion-components.mjs';
 
 /**

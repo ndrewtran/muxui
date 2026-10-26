@@ -24,8 +24,8 @@ test('IconButton renders one named button and decorative icon with Button defaul
   assert.equal(document.querySelectorAll('button').length, 1);
   assert.equal(button.getAttribute('aria-label'), 'Search');
   assert.equal(button.getAttribute('type'), 'button');
-  assert.equal(button.dataset.variant, 'ghost');
-  assert.equal(button.dataset.size, 'md');
+  assert.equal(button.dataset.muxuiVariant, 'ghost');
+  assert.equal(button.dataset.muxuiSize, 'md');
   assert.ok(button.classList.contains('consumer-class'));
   assert.ok(button.classList.contains('muxui-button'));
   assert.equal(button.querySelector('.muxui-icon-button-icon').getAttribute('aria-hidden'), 'true');

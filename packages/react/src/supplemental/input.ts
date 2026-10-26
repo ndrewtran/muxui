@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Dispatch, ForwardRefExoticComponent, ForwardedRef, HTMLAttributes, InputHTMLAttributes, RefAttributes, SetStateAction } from 'react';
-import { Input as AriaInput, Label as AriaLabel } from 'react-aria-components';
+import { Label as AriaLabel } from 'react-aria-components';
+import { AriaInput } from '../substrate.ts';
 import type { InputProps as AriaInputProps } from 'react-aria-components';
 import { h, cx } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';

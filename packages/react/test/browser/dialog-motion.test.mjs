@@ -68,7 +68,7 @@ function samplePanel() {
     opacity: Number(style.opacity),
     y: Number.parseFloat(style.getPropertyValue('--muxui-modal-y')) || 0,
     scale: Number.parseFloat(style.getPropertyValue('--muxui-modal-scale')) || 1,
-    backdropExiting: backdrop?.hasAttribute('data-exiting') ?? false,
+    backdropExiting: backdrop?.hasAttribute('data-muxui-state-exiting') ?? false,
     backdropDuration: backdropStyle?.transitionDuration,
     backdropEasing: backdropStyle?.transitionTimingFunction,
   };
@@ -170,7 +170,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     // Negative check: a rejected close must not start an exit, which has no event to await.
     await page.waitForTimeout(35);
     assert.equal(await page.locator('.muxui-dialog').count(), 1, 'a rejected controlled close leaves the dialog open');
-    assert.equal(await page.locator('.muxui-dialog-backdrop').getAttribute('data-exiting'), null, 'a rejected close does not enter exit state');
+    assert.equal(await page.locator('.muxui-dialog-backdrop').getAttribute('data-muxui-state-exiting'), null, 'a rejected close does not enter exit state');
     const rejectedMotion = await readMotion(page);
     assert.equal(rejectedMotion.opacity, 1, 'a rejected close leaves panel opacity settled');
     assert.ok(Math.abs(rejectedMotion.y) < 1 && Math.abs(rejectedMotion.scale - 1) < 0.001, 'a rejected close leaves panel geometry settled');
@@ -277,7 +277,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
       window.setTimeout(() => window.__muxuiDialogSetOpen(true), 24);
     });
     await page.locator('.muxui-dialog').waitFor();
-    await page.waitForFunction(() => !document.querySelector('.muxui-dialog-backdrop')?.hasAttribute('data-exiting'));
+    await page.waitForFunction(() => !document.querySelector('.muxui-dialog-backdrop')?.hasAttribute('data-muxui-state-exiting'));
     await settleEntry(page);
     const reopened = await readMotion(page);
     assert.equal(reopened.opacity, 1, 'rapid close/reopen settles open');

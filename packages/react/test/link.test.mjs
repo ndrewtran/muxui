@@ -39,7 +39,7 @@ async function mount(element) {
 
 const linkIn = (row) => row.querySelector('.muxui-link');
 // A disabled Link renders a span, so the tag name is what separates an activatable anchor from an inert one.
-const state = (node) => [node.localName, node.getAttribute('aria-disabled'), node.getAttribute('data-disabled')];
+const state = (node) => [node.localName, node.getAttribute('aria-disabled'), node.getAttribute('data-muxui-state-disabled')];
 
 test('Link inherits a disabled GridList item the way Button does, and an enabled item leaves both active', async () => {
   const log = [];
@@ -65,11 +65,11 @@ test('Link follows a disabled GridList root', async () => {
   const view = await mount(fixture({ blocked: false, disabled: true }));
   try {
     for (const row of view.container.querySelectorAll('[role="row"]')) {
-      assert.equal(linkIn(row).getAttribute('data-disabled'), 'true', 'a disabled root disables every nested Link');
+      assert.equal(linkIn(row).getAttribute('data-muxui-state-disabled'), 'true', 'a disabled root disables every nested Link');
     }
     await view.rerender(fixture({ blocked: false }));
     for (const row of view.container.querySelectorAll('[role="row"]')) {
-      assert.equal(linkIn(row).getAttribute('data-disabled'), null, 're-enabling the root re-enables the Links');
+      assert.equal(linkIn(row).getAttribute('data-muxui-state-disabled'), null, 're-enabling the root re-enables the Links');
     }
   } finally {
     await view.dispose();
@@ -104,7 +104,7 @@ test('a nested GridList restores its own items instead of inheriting the outer d
   const view = await mount(outer);
   try {
     const links = [...view.container.querySelectorAll('.muxui-link')];
-    assert.deepEqual(links.map((link) => link.getAttribute('data-disabled')), ['true', null]);
+    assert.deepEqual(links.map((link) => link.getAttribute('data-muxui-state-disabled')), ['true', null]);
   } finally {
     await view.dispose();
   }
@@ -162,7 +162,7 @@ test('Breadcrumbs links keep their disabled and current states inside a disabled
     h(GridList, { 'aria-label': 'Cards' }, h(GridList.Item, { id: 'blocked', textValue: 'Blocked', disabled: true }, h(Breadcrumbs, { 'aria-label': 'Nested trail', items })))));
   try {
     const [plain, nested] = [...view.container.querySelectorAll('.muxui-breadcrumbs')];
-    const summary = (nav) => [...nav.querySelectorAll('.muxui-breadcrumbs-item')].map((item) => [item.querySelector('a,span').localName, item.hasAttribute('data-current')]);
+    const summary = (nav) => [...nav.querySelectorAll('.muxui-breadcrumbs-item')].map((item) => [item.querySelector('a,span').localName, item.hasAttribute('data-muxui-state-current')]);
     assert.deepEqual(summary(plain), [['a', false], ['a', false], ['span', true]]);
     assert.deepEqual(summary(nested), summary(plain), 'a Breadcrumbs trail resolves its own link state, with the current item still a plain span');
   } finally {
@@ -172,7 +172,7 @@ test('Breadcrumbs links keep their disabled and current states inside a disabled
 
 test('Link renders the same server markup inside and outside a GridList', () => {
   const html = renderToString(fixture());
-  assert.match(html, /<span[^>]*class="[^"]*muxui-link[^"]*"[^>]*data-disabled="true"/u, 'the blocked item server-renders an inert Link');
+  assert.match(html, /<span[^>]*class="[^"]*muxui-link[^"]*"[^>]*data-muxui-state-disabled="true"/u, 'the blocked item server-renders an inert Link');
   assert.equal([...html.matchAll(/<a [^>]*class="[^"]*muxui-link/gu)].length, 1, 'only the open item renders an anchor');
 });
 

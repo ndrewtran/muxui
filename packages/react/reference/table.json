@@ -57,7 +57,7 @@
               "name": "disabled",
               "optional": true,
               "type": "boolean",
-              "doc": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-disabled`."
+              "doc": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-muxui-state-disabled`."
             },
             {
               "name": "selectionMode",
@@ -260,7 +260,7 @@
           "name": "disabled",
           "optional": true,
           "type": "boolean",
-          "doc": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-disabled`."
+          "doc": "Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-muxui-state-disabled`."
         },
         {
           "name": "selectionMode",

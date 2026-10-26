@@ -1,7 +1,7 @@
 .muxui-lightbox-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-semantic-layout-inset-large); background-color: var(--muxui-modal-backdrop-bg); transition: none; }
-.muxui-lightbox-backdrop[data-entering], .muxui-lightbox-backdrop[data-exiting] { opacity: 1; }
+.muxui-lightbox-backdrop[data-muxui-state-entering], .muxui-lightbox-backdrop[data-muxui-state-exiting] { opacity: 1; }
 .muxui-lightbox-popup { position: fixed; top: 50%; left: 50%; z-index: 101; display: grid; grid-template-rows: minmax(0, 1fr) auto; width: min(94vw, 72rem); height: min(90vh, 52rem); overflow: hidden; color: var(--muxui-semantic-color-neutral-90); background-color: var(--muxui-popup-bg); border: 1px solid var(--muxui-popup-border-color); border-radius: var(--muxui-semantic-shape-overlay-radius); box-shadow: var(--muxui-semantic-elevation-modal); outline: none; transform: translate(-50%, -50%) scale(1); transition: none; }
-.muxui-lightbox-popup[data-entering], .muxui-lightbox-popup[data-exiting] { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.muxui-lightbox-popup[data-muxui-state-entering], .muxui-lightbox-popup[data-muxui-state-exiting] { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .muxui-lightbox-content { display: grid; min-width: 0; min-height: 0; place-items: center; overflow: auto; padding: var(--muxui-semantic-layout-inset-large); overscroll-behavior: contain; }
 .muxui-lightbox-content-layer { display: grid; grid-area: 1 / 1; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; place-items: center; }
 .muxui-lightbox-content > img, .muxui-lightbox-content > picture, .muxui-lightbox-content > video, .muxui-lightbox-content > svg,
@@ -14,7 +14,7 @@
 .muxui-lightbox-close { top: var(--muxui-semantic-layout-inset-medium); right: var(--muxui-semantic-layout-inset-medium); color: var(--muxui-semantic-content-muted); }
 .muxui-lightbox-trigger { cursor: zoom-in; }
 @media (prefers-reduced-motion: reduce) { .muxui-lightbox-backdrop, .muxui-lightbox-popup { transition: none; } }
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { animation: none !important; transition-duration: 0s !important; }
+:where([data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { animation: none !important; transition-duration: 0s !important; }
 /* The Button content wrapper is display: contents. Keep the shared Mux
    Button behavior while preserving the Lightbox icon-control geometry. */
 .muxui-lightbox-previous .muxui-button-content,

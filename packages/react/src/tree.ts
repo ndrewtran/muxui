@@ -2,11 +2,8 @@ import React from 'react';
 import type { ForwardRefExoticComponent, MouseEvent, ReactElement, ReactNode, RefAttributes } from 'react';
 import { TreeMotion } from './tree-motion.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
-import {
-  Tree as AriaTree,
-  TreeItem as AriaTreeItem,
-  TreeItemContent as AriaTreeItemContent,
-} from 'react-aria-components';
+import { TreeItemContent as AriaTreeItemContent } from 'react-aria-components';
+import { AriaTree, AriaTreeItem } from './substrate.ts';
 import type { Key, TreeItemProps } from 'react-aria-components';
 import { IconButton } from './supplemental/icon-button.ts';
 import { classNames, accessibleName } from './control-utils.ts';

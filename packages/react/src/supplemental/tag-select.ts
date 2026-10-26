@@ -1,13 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, Key, KeyboardEvent, ReactElement, ReactNode, RefAttributes, RefObject } from 'react';
-import {
-  ComboBox as AriaComboBox,
-  Group as AriaGroup,
-  Input as AriaInput,
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  useFilter,
-} from 'react-aria-components';
+import { useFilter } from 'react-aria-components';
+import { AriaComboBox, AriaGroup, AriaInput, AriaListBox, AriaListBoxItem } from '../substrate.ts';
 import type { ListBoxItemProps as AriaListBoxItemProps } from 'react-aria-components';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
@@ -243,8 +237,8 @@ const TagSelectRoot: TagSelectRootComponent = /*#__PURE__*/ React.forwardRef<HTM
     layoutKey: layoutVersion,
   }));
   const groupClass = cx('muxui-tag-select__group', `muxui-tag-select__group--${resolvedSize}`, invalid && 'muxui-tag-select__group--invalid');
-  const field = h(AriaComboBox, { inputValue: query, onInputChange: setQuery, onSelectionChange: handleSelectionChange, isDisabled: disabled, 'aria-labelledby': label ? labelId : undefined, 'aria-label': label ? undefined : 'Tags', ...{ 'aria-required': required ? required : undefined, 'aria-invalid': invalid ? invalid : undefined }, allowsEmptyCollection: true, menuTrigger: 'focus', onOpenChange: handleOpenChange, className: 'muxui-tag-select__combobox' }, h(AriaGroup, { ref: groupRef, isDisabled: disabled, isInvalid: invalid, className: groupClass }, tagNodes, h(AriaInput, { ref: inputRef, placeholder: selectedItems.length === 0 ? placeholder : '', className: 'muxui-tag-select__input', onKeyDown: handleInputKeyDown })), h(PopoverMotion, { placement: 'bottom start', offset: 4, containerPadding: 0, style: { width: popoverWidth || undefined }, className: 'muxui-tag-select__popup', ...{ 'data-size': resolvedSize } }, h(AriaListBox<TagSelectItem>, { items: filtered, className: 'muxui-tag-select__listbox', ...{ 'data-size': resolvedSize }, children: CHILDREN_FOLLOW }, renderItem as ReactNode)));
-  return h(TagSelectContext.Provider, { value: { size: resolvedSize } }, h('div', { ...props, ref, className: cx('muxui-tag-select', className), 'data-size': resolvedSize, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-tag-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), field, invalid && errorMessage ? h('span', { className: 'muxui-tag-select__error' }, errorMessage) : description ? h('span', { className: 'muxui-tag-select__description' }, description) : null));
+  const field = h(AriaComboBox, { inputValue: query, onInputChange: setQuery, onSelectionChange: handleSelectionChange, isDisabled: disabled, 'aria-labelledby': label ? labelId : undefined, 'aria-label': label ? undefined : 'Tags', ...{ 'aria-required': required ? required : undefined, 'aria-invalid': invalid ? invalid : undefined }, allowsEmptyCollection: true, menuTrigger: 'focus', onOpenChange: handleOpenChange, className: 'muxui-tag-select__combobox' }, h(AriaGroup, { ref: groupRef, isDisabled: disabled, isInvalid: invalid, className: groupClass }, tagNodes, h(AriaInput, { ref: inputRef, placeholder: selectedItems.length === 0 ? placeholder : '', className: 'muxui-tag-select__input', onKeyDown: handleInputKeyDown })), h(PopoverMotion, { placement: 'bottom start', offset: 4, containerPadding: 0, style: { width: popoverWidth || undefined }, className: 'muxui-tag-select__popup', ...{ 'data-muxui-size': resolvedSize } }, h(AriaListBox<TagSelectItem>, { items: filtered, className: 'muxui-tag-select__listbox', ...{ 'data-muxui-size': resolvedSize }, children: CHILDREN_FOLLOW }, renderItem as ReactNode)));
+  return h(TagSelectContext.Provider, { value: { size: resolvedSize } }, h('div', { ...props, ref, className: cx('muxui-tag-select', className), 'data-muxui-size': resolvedSize, 'data-muxui-state-disabled': dataState(disabled), 'data-muxui-state-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-tag-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), field, invalid && errorMessage ? h('span', { className: 'muxui-tag-select__error' }, errorMessage) : description ? h('span', { className: 'muxui-tag-select__description' }, description) : null));
 }) as TagSelectRootComponent;
 
 export const TagSelect: {

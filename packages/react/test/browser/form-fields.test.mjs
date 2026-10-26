@@ -118,7 +118,7 @@ test('a required CheckboxGroup blocks native submission and shows its error', { 
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), []);
     await page.locator('.muxui-checkbox-group .muxui-field-error').waitFor();
-    assert.equal(await page.locator('.muxui-checkbox-group').getAttribute('data-invalid'), 'true');
+    assert.equal(await page.locator('.muxui-checkbox-group').getAttribute('data-muxui-state-invalid'), 'true');
     assert.notEqual((await page.locator('.muxui-checkbox-group .muxui-field-error').textContent())?.trim() ?? '', '');
 
     await page.locator('.muxui-checkbox', { hasText: 'SMS' }).click();
@@ -222,9 +222,9 @@ test('required fields block native submission and show their invalid state', { t
     await open('required');
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), []);
-    await page.locator('.muxui-switch-field[data-invalid]').waitFor();
+    await page.locator('.muxui-switch-field[data-muxui-state-invalid]').waitFor();
     for (const selector of ['.muxui-text-field', '.muxui-number-field', '.muxui-search-field', '.muxui-autocomplete-search', '.muxui-date-field', '.muxui-time-field', '.muxui-switch-field']) {
-      assert.equal(await page.locator(selector).getAttribute('data-invalid'), 'true', `${selector} is not invalid after a blocked submit`);
+      assert.equal(await page.locator(selector).getAttribute('data-muxui-state-invalid'), 'true', `${selector} is not invalid after a blocked submit`);
     }
   });
 });
@@ -237,9 +237,9 @@ test('errorMessage submits while valid and replaces the built-in message when va
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), []);
     await name.locator('.muxui-field-error').waitFor();
-    assert.equal(await email.getAttribute('data-invalid'), null);
+    assert.equal(await email.getAttribute('data-muxui-state-invalid'), null);
     assert.equal(await email.locator('.muxui-field-error').count(), 0);
-    assert.equal(await name.getAttribute('data-invalid'), 'true');
+    assert.equal(await name.getAttribute('data-muxui-state-invalid'), 'true');
     assert.equal((await name.locator('.muxui-field-error').textContent())?.trim(), 'Tell us your name');
 
     // Commit the edit first: the error collapses on change and would move the button mid-click.

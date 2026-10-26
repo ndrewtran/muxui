@@ -1,11 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ForwardedRef, HTMLAttributes, RefAttributes, RefObject } from 'react';
-import {
-  Modal as AriaModal,
-  ModalOverlay as AriaModalOverlay,
-  OverlayTriggerStateContext,
-  PopoverContext,
-} from 'react-aria-components';
+import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-components';
+import { AriaModal, AriaModalOverlay } from '../substrate.ts';
 import type { ModalOverlayProps as AriaModalOverlayProps } from 'react-aria-components';
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';

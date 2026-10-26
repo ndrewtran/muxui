@@ -377,7 +377,7 @@ export function Resizable({ sizes, defaultSizes, onSizesChange, onSizesCommit, o
   }, [apply]);
 
   const context = React.useMemo<ResizableContext>(() => ({ graph, current, axis, disabled: Boolean(disabled ? disabled : readOnly ? readOnly : !validConfiguration), beginPointer, movePointer, endPointer, cancel, keyboard }), [axis, beginPointer, cancel, current, disabled, endPointer, graph, keyboard, movePointer, readOnly, validConfiguration]);
-  return React.createElement(Context.Provider, { value: context }, React.createElement('div', { ...props, ref: rootRef, className: cx('muxui-resizable', axis && `muxui-resizable--${axis}`, className), 'data-orientation': axis || undefined, 'data-disabled': disabled ? disabled : undefined, 'data-readonly': readOnly ? readOnly : undefined, 'data-invalid': !validConfiguration || !current || undefined }, children));
+  return React.createElement(Context.Provider, { value: context }, React.createElement('div', { ...props, ref: rootRef, className: cx('muxui-resizable', axis && `muxui-resizable--${axis}`, className), 'data-muxui-state-orientation': axis || undefined, 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-invalid': !validConfiguration || !current || undefined }, children));
 }
 
 export function ResizablePanel({ id, minSize = 0, maxSize = 100, className, style, children, ...props }: ResizablePanelProps): ReactElement {
@@ -385,7 +385,7 @@ export function ResizablePanel({ id, minSize = 0, maxSize = 100, className, styl
   const panel = context?.graph?.panelById.get(id);
   const current = context?.current;
   const size = panel && current ? Math.min(panel.max, Math.max(panel.min, current[id])) : undefined;
-  return React.createElement('div', { ...props, id: panel?.domId, className: cx('muxui-resizable-panel', className), style: { ...style, ...(size === undefined ? {} : { flexBasis: `${size}%`, flexGrow: 0, flexShrink: 0 }) }, 'data-panel-id': validId(id) ? id : undefined, 'data-invalid': !panel || size === undefined || undefined }, children);
+  return React.createElement('div', { ...props, id: panel?.domId, className: cx('muxui-resizable-panel', className), style: { ...style, ...(size === undefined ? {} : { flexBasis: `${size}%`, flexGrow: 0, flexShrink: 0 }) }, 'data-muxui-panel-id': validId(id) ? id : undefined, 'data-muxui-state-invalid': !panel || size === undefined || undefined }, children);
 }
 
 export function ResizableHandle({ id, before, after, disabled = false, className, onKeyDown, ...props }: ResizableHandleProps): ReactElement {
@@ -404,6 +404,6 @@ export function ResizableHandle({ id, before, after, disabled = false, className
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => context?.movePointer(id, event);
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => context?.endPointer(id, event.pointerId);
   const onKey = (event: KeyboardEvent<HTMLDivElement>) => { onKeyDown?.(event); if (!event.defaultPrevented && !blocked) context?.keyboard(id, event); };
-  return React.createElement('div', { ...props, role: 'separator', ref: undefined, tabIndex: blocked ? -1 : 0, className: cx('muxui-resizable-handle', className), 'data-handle-id': validId(id) ? id : undefined, 'data-disabled': blocked || undefined, 'aria-disabled': blocked || undefined, 'aria-controls': valid ? `${beforePanel.domId} ${afterPanel.domId}` : undefined, 'aria-orientation': orientation, 'aria-valuemin': valid ? bounds[0] : undefined, 'aria-valuemax': valid ? bounds[1] : undefined, 'aria-valuenow': valid ? value : undefined, 'aria-valuetext': valid ? `${value}% / ${current[after]}%` : undefined, onPointerDown, onPointerMove, onPointerUp, onPointerCancel: (event: PointerEvent<HTMLDivElement>) => context?.cancel(id, event.pointerId), onLostPointerCapture: (event: PointerEvent<HTMLDivElement>) => context?.cancel(id, event.pointerId), onKeyDown: onKey });
+  return React.createElement('div', { ...props, role: 'separator', ref: undefined, tabIndex: blocked ? -1 : 0, className: cx('muxui-resizable-handle', className), 'data-muxui-handle-id': validId(id) ? id : undefined, 'data-muxui-state-disabled': blocked || undefined, 'aria-disabled': blocked || undefined, 'aria-controls': valid ? `${beforePanel.domId} ${afterPanel.domId}` : undefined, 'aria-orientation': orientation, 'aria-valuemin': valid ? bounds[0] : undefined, 'aria-valuemax': valid ? bounds[1] : undefined, 'aria-valuenow': valid ? value : undefined, 'aria-valuetext': valid ? `${value}% / ${current[after]}%` : undefined, onPointerDown, onPointerMove, onPointerUp, onPointerCancel: (event: PointerEvent<HTMLDivElement>) => context?.cancel(id, event.pointerId), onLostPointerCapture: (event: PointerEvent<HTMLDivElement>) => context?.cancel(id, event.pointerId), onKeyDown: onKey });
 }
 

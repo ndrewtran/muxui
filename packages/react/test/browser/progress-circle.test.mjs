@@ -24,12 +24,12 @@ test('ProgressCircle consumer fixture hydrates with native refs, states, dimensi
     assert.equal(await tab.getAttribute('aria-label'), 'Loading tab');
     assert.equal(await tab.getAttribute('aria-valuenow'), null);
     assert.equal(await tab.getAttribute('aria-valuetext'), null);
-    assert.equal(await tab.getAttribute('data-indeterminate'), '');
+    assert.equal(await tab.getAttribute('data-muxui-state-indeterminate'), '');
     assert.equal(await session.getAttribute('aria-valuenow'), '65');
     assert.equal(await session.getAttribute('aria-valuetext'), '65%');
     assert.equal(await page.locator('#decorative-action [role="progressbar"]').count(), 0);
     assert.equal(await page.locator('#decorative-track-wrapper svg').getAttribute('aria-hidden'), 'true');
-    assert.equal(await page.locator('#decorative-track-wrapper .muxui-progress-circle__indicator').getAttribute('data-indeterminate'), '');
+    assert.equal(await page.locator('#decorative-track-wrapper .muxui-progress-circle__indicator').getAttribute('data-muxui-state-indeterminate'), '');
     assert.deepEqual(await page.locator('#decorative-track-wrapper .muxui-progress-circle__indicator').evaluate((node) => {
       const style = getComputedStyle(node);
       return { animation: style.animationName, dasharray: style.strokeDasharray.replaceAll(',', ' ').replace(/\s+/gu, ' ').trim() };
@@ -97,11 +97,7 @@ test('ProgressCircle consumer fixture hydrates with native refs, states, dimensi
     await assertReducedMotion('OS reduced-motion');
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
-    await assertReducedMotion('data-reduced-motion');
-
     await page.evaluate(() => {
-      document.documentElement.removeAttribute('data-reduced-motion');
       document.documentElement.setAttribute('data-muxui-motion', 'reduced');
     });
     await assertReducedMotion('data-muxui-motion=reduced');

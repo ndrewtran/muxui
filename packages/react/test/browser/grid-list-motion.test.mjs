@@ -109,17 +109,17 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     await page.waitForFunction((selector) => Number(getComputedStyle(document.querySelector(selector)).opacity) >= 0.99, `${secondary} .muxui-grid-list-hover`);
     await page.waitForFunction((selector) => Number(getComputedStyle(document.querySelector(selector)).opacity) < 0.01, `${primary} .muxui-grid-list-hover`);
 
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction((selector) => {
       const root = document.querySelector(selector);
       return root?.hasAttribute('data-muxui-grid-list-motion-reduced')
         && !root.hasAttribute('data-muxui-grid-list-motion-ready');
     }, secondary);
     await moveToRow(page, 'Secondary Two');
-    await page.waitForFunction(() => document.querySelector('#secondary-list [role="row"][data-hovered]'));
+    await page.waitForFunction(() => document.querySelector('#secondary-list [role="row"][data-muxui-state-hovered]'));
     assert.equal(await page.getByRole('row', { name: 'Secondary Two', exact: true }).evaluate((row) => getComputedStyle(row).backgroundImage.includes('linear-gradient')), true);
 
-    await page.evaluate(() => document.documentElement.removeAttribute('data-reduced-motion'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
     await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-muxui-grid-list-motion-ready'), secondary);
     await waitForLayerAlignment(page, secondary, 'Secondary Two');
 
@@ -254,17 +254,17 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     await page.mouse.move(pointOnOne.x + 70, pointOnOne.y + 20);
     await page.mouse.down();
     await ripple.waitFor({ state: 'attached' });
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction((selector) => document.querySelectorAll(`${selector} .muxui-grid-list-ripple`).length === 0, primary);
     await page.mouse.up();
     await page.mouse.move(pointOnOne.x + 70, pointOnOne.y + 20);
     await page.mouse.down();
     await ripple.waitFor({ state: 'attached' });
-    assert.equal(await ripple.getAttribute('data-static'), 'true');
+    assert.equal(await ripple.getAttribute('data-muxui-static'), 'true');
     assert.equal(await ripple.evaluate((node) => getComputedStyle(node).transform), 'none');
     await page.mouse.up();
     await page.waitForFunction((selector) => document.querySelectorAll(`${selector} .muxui-grid-list-ripple`).length === 0, primary);
-    await page.evaluate(() => document.documentElement.removeAttribute('data-reduced-motion'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
     await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-muxui-grid-list-motion-ready'), primary);
 
     await page.evaluate((selector) => {
@@ -275,7 +275,7 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     await page.mouse.move(pointOnOne.x + 70, pointOnOne.y + 20);
     await page.mouse.down();
     await ripple.waitFor({ state: 'attached' });
-    assert.equal(await ripple.getAttribute('data-static'), 'true');
+    assert.equal(await ripple.getAttribute('data-muxui-static'), 'true');
     await page.mouse.up();
     await page.waitForFunction((selector) => document.querySelectorAll(`${selector} .muxui-grid-list-ripple`).length === 0, primary);
     await page.evaluate((selector) => {

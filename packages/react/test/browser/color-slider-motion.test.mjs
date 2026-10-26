@@ -115,7 +115,7 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
       await page.keyboard.down('ArrowRight');
       await waitForFace(page, 'press');
       assert.equal(await input(page).inputValue(), '65');
-      assert.equal(await page.locator('[data-proof="controlled"] .muxui-color-slider-thumb').getAttribute('data-focus-visible'), 'true');
+      assert.equal(await page.locator('[data-proof="controlled"] .muxui-color-slider-thumb').getAttribute('data-muxui-state-focus-visible'), 'true');
       assert.notEqual(await page.locator('[data-proof="controlled"] .muxui-color-slider-thumb').evaluate((node) => getComputedStyle(node).boxShadow), 'none');
       await page.keyboard.up('ArrowRight');
       await waitForFace(page, 'idle');
@@ -314,7 +314,7 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
         assert.ok(Math.abs(Number(await input(touchPage).inputValue()) - 77) <= 2);
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
         await waitForFace(touchPage, 'idle');
-        assert.equal(await touchPage.locator('[data-proof="controlled"] .muxui-color-slider-thumb').getAttribute('data-dragging'), null);
+        assert.equal(await touchPage.locator('[data-proof="controlled"] .muxui-color-slider-thumb').getAttribute('data-muxui-state-dragging'), null);
         assert.deepEqual(errors, [], errors.join('\n'));
       } finally { await touchPage.close(); }
     });

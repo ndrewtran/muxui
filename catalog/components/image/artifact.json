@@ -43,8 +43,8 @@
       "strategy": "direct",
       "behavior": [
         "Renders a native HTMLImageElement and forwards native attributes, dimensions, refs, and callbacks.",
-        "When the primary source fails to load and fallbackSrc or fallbackSrcSet is supplied, the image switches to the fallback once and sets data-fallback.",
-        "If the fallback also fails, or none is supplied, the image sets data-error, keeps the failed source, and tries nothing further.",
+        "When the primary source fails to load and fallbackSrc or fallbackSrcSet is supplied, the image switches to the fallback once and sets data-muxui-fallback.",
+        "If the fallback also fails, or none is supplied, the image sets data-muxui-error, keeps the failed source, and tries nothing further.",
         "Changing src, srcSet, fallbackSrc, or fallbackSrcSet starts recovery over, so the new primary source is tried first.",
         "onError runs for every load error, including the failure of the fallback.",
         "radius and fit select the muxui-image--radius-* and muxui-image--fit-* modifier classes without changing intrinsic image dimensions.",

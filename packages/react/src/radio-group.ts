@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
-import { Radio as AriaRadio, RadioGroup as AriaRadioGroup, FieldError as AriaFieldError } from 'react-aria-components';
+import { FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaRadio, AriaRadioGroup } from './substrate.ts';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { RadioGroupMotion, RadioMotionIndicator } from './radio-motion.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
@@ -99,7 +100,7 @@ export const RadioGroup: ForwardRefExoticComponent<RadioGroupProps & RefAttribut
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby ?? generatedLabelledby,
       // The data-* hooks the styles read are not props React Aria types, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-orientation': orientation, 'data-size': resolvedSize },
+      ...{ 'data-muxui-state-orientation': orientation, 'data-muxui-size': resolvedSize },
       className: classNames('muxui-radio-group', className),
     }, radioContent,
     // Inside the group, so RAC wires it into the group's aria-describedby and shows it only while the group is invalid.
@@ -108,7 +109,7 @@ export const RadioGroup: ForwardRefExoticComponent<RadioGroupProps & RefAttribut
     const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref, children: group });
     const content = label === undefined
       ? motionGroup
-      : React.createElement('div', { className: 'muxui-radio-group-field', ...{ 'data-disabled': disabled ? disabled : undefined, 'data-invalid': invalid ? invalid : undefined } },
+      : React.createElement('div', { className: 'muxui-radio-group-field', ...{ 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-invalid': invalid ? invalid : undefined } },
         React.createElement('span', { id: generatedLabelledby, className: 'muxui-field-label' }, label),
         motionGroup);
     return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, content);

@@ -10,12 +10,12 @@ const REDUCED_ATTRIBUTE = 'data-muxui-grid-list-motion-reduced';
 const RIPPLE_READY_ATTRIBUTE = 'data-muxui-grid-list-ripple-ready';
 const RIPPLE_HOST_CLASS = 'muxui-grid-list-ripple-host';
 const RIPPLE_CLASS = 'muxui-grid-list-ripple';
-const RIPPLE_BLOCKED_SELECTOR = '[data-disabled], [aria-disabled="true"], [data-dragging], [data-drop-target]';
+const RIPPLE_BLOCKED_SELECTOR = '[data-muxui-state-disabled], [aria-disabled="true"], [data-muxui-state-dragging], [data-muxui-state-drop-target]';
 const RIPPLE_CONTROL_SELECTOR = 'button, a[href], input, select, textarea, [contenteditable="true"], [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"]';
 const INELIGIBLE_SELECTOR = /*#__PURE__*/ [
-  '[data-selected]', '[aria-selected="true"]', '[data-disabled]', '[aria-disabled="true"]',
-  '[data-dragging]', '[data-drop-target]', '[data-pressed]', '[aria-pressed="true"]',
-  '[data-focus-visible]', ':focus-visible',
+  '[data-muxui-state-selected]', '[aria-selected="true"]', '[data-muxui-state-disabled]', '[aria-disabled="true"]',
+  '[data-muxui-state-dragging]', '[data-muxui-state-drop-target]', '[data-muxui-state-pressed]', '[aria-pressed="true"]',
+  '[data-muxui-state-focus-visible]', ':focus-visible',
 ].join(', ');
 
 function directRows(root) {
@@ -29,7 +29,7 @@ function rowFromTarget(root, target) {
 
 function isHoverable(root, row) {
   return Boolean(row && root.contains(row)
-    && !root.matches('[data-disabled], [aria-disabled="true"]')
+    && !root.matches('[data-muxui-state-disabled], [aria-disabled="true"]')
     && !row.matches(INELIGIBLE_SELECTOR));
 }
 
@@ -197,8 +197,8 @@ function observeGridListHover(root) {
     characterData: true,
     attributes: true,
     attributeFilter: [
-      'aria-disabled', 'aria-pressed', 'aria-selected', 'data-disabled', 'data-dragging',
-      'data-drop-target', 'data-focus-visible', 'data-pressed', 'data-selected', 'disabled',
+      'aria-disabled', 'aria-pressed', 'aria-selected', 'data-muxui-state-disabled', 'data-muxui-state-dragging',
+      'data-muxui-state-drop-target', 'data-muxui-state-focus-visible', 'data-muxui-state-pressed', 'data-muxui-state-selected', 'disabled',
     ],
   });
 
@@ -227,7 +227,7 @@ function observeGridListHover(root) {
     }
   });
 
-  const initialHover = directRows(root).find((row) => row.hasAttribute('data-hovered')) ?? null;
+  const initialHover = directRows(root).find((row) => row.hasAttribute('data-muxui-state-hovered')) ?? null;
   if (initialHover) {
     pointerRow = initialHover;
     sync(true);
@@ -337,7 +337,7 @@ function observeGridListRipple(root) {
     const minimumVisibleMs = perceivedMs;
     const fadeDurationMs = motion ? motion.duration * 1000 : (reduced ? 80 : 0);
     if (isStatic) {
-      ripple.setAttribute('data-static', 'true');
+      ripple.setAttribute('data-muxui-static', 'true');
     } else {
       const x = Number.isFinite(clientX) ? Math.max(0, Math.min(rect.width, clientX - rect.left)) : rect.width / 2;
       const y = Number.isFinite(clientY) ? Math.max(0, Math.min(rect.height, clientY - rect.top)) : rect.height / 2;
@@ -451,7 +451,7 @@ function observeGridListRipple(root) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['aria-disabled', 'data-disabled', 'data-dragging', 'data-drop-target', 'data-muxui-motion', 'data-reduced-motion'],
+    attributeFilter: ['aria-disabled', 'data-muxui-state-disabled', 'data-muxui-state-dragging', 'data-muxui-state-drop-target', 'data-muxui-motion'],
   });
 
   root.addEventListener('pointerdown', pointerDown);

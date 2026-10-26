@@ -170,7 +170,7 @@ export function useMotionLifecycle({ isOpen, placement, triggerRef, property = '
     animationIdRef.current = animationId;
     const initialOpen = Boolean(isOpen) && animatedNodeRef.current !== node;
     animatedNodeRef.current = node;
-    const resolvedPlacement = node.getAttribute('data-placement') ?? placement;
+    const resolvedPlacement = node.getAttribute('data-muxui-state-placement') ?? placement;
     const from = initialOpen
       ? { opacity: 0, ...(entryOffset ?? placementOffset(resolvedPlacement)) }
       : valuesRef.current ?? (property === 'translate' ? readTranslate(node) : readVisibleValues(node));

@@ -1,16 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, Key, ReactElement, ReactNode, RefAttributes } from 'react';
-import {
-  Autocomplete as AriaAutocomplete,
-  Button as AriaButton,
-  Dialog as AriaDialog,
-  DialogTrigger as AriaDialogTrigger,
-  Input as AriaInput,
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  SearchField as AriaSearchField,
-  useFilter,
-} from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, useFilter } from 'react-aria-components';
+import { AriaButton, AriaInput, AriaListBox, AriaListBoxItem, AriaSearchField } from '../substrate.ts';
 import type { DialogTriggerProps as AriaDialogTriggerProps, ListBoxItemProps as AriaListBoxItemProps, Selection } from 'react-aria-components';
 import SearchIcon from 'lucide-react/dist/esm/icons/search.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
@@ -173,10 +164,10 @@ const MultiSelectRoot: MultiSelectRootComponent = /*#__PURE__*/ React.forwardRef
   const reset = () => { updateSelection(new Set()); onReset?.(); };
   const selectAll = () => { updateSelection('all'); onSelectAll?.(); };
   const footer = showFooter && h('div', { className: 'muxui-multi-select__footer' }, h('button', { type: 'button', className: 'muxui-multi-select__footer-btn', onClick: reset }, 'Reset'), h('button', { type: 'button', className: 'muxui-multi-select__footer-btn', onClick: selectAll }, 'Select all'));
-  const popup = h(PopoverMotion, { placement: 'bottom', offset: 4, containerPadding: 0, className: cx('muxui-multi-select__popup', resolvedSize !== 'md' && `muxui-multi-select__popup--${resolvedSize}`), ...{ 'data-size': resolvedSize }, style: { width: popoverWidth || undefined } }, h(AriaDialog, { className: 'muxui-multi-select__dialog' }, h(AriaAutocomplete, { filter: contains, inputValue: query, onInputChange: setQuery, children: CHILDREN_FOLLOW }, search, h(AriaListBox<MultiSelectItem>, { items: allItems, selectionMode: 'multiple', selectedKeys: selected as Selection, onSelectionChange: updateSelection as (keys: Selection) => void, escapeKeyBehavior: 'none', 'aria-label': typeof label === 'string' ? label : 'Options', renderEmptyState: () => empty, className: cx('muxui-multi-select__listbox', resolvedSize !== 'md' && `muxui-multi-select__listbox--${resolvedSize}`), ...{ 'data-size': resolvedSize }, children: CHILDREN_FOLLOW }, renderItem as ReactNode)), footer));
+  const popup = h(PopoverMotion, { placement: 'bottom', offset: 4, containerPadding: 0, className: cx('muxui-multi-select__popup', resolvedSize !== 'md' && `muxui-multi-select__popup--${resolvedSize}`), ...{ 'data-muxui-size': resolvedSize }, style: { width: popoverWidth || undefined } }, h(AriaDialog, { className: 'muxui-multi-select__dialog' }, h(AriaAutocomplete, { filter: contains, inputValue: query, onInputChange: setQuery, children: CHILDREN_FOLLOW }, search, h(AriaListBox<MultiSelectItem>, { items: allItems, selectionMode: 'multiple', selectedKeys: selected as Selection, onSelectionChange: updateSelection as (keys: Selection) => void, escapeKeyBehavior: 'none', 'aria-label': typeof label === 'string' ? label : 'Options', renderEmptyState: () => empty, className: cx('muxui-multi-select__listbox', resolvedSize !== 'md' && `muxui-multi-select__listbox--${resolvedSize}`), ...{ 'data-muxui-size': resolvedSize }, children: CHILDREN_FOLLOW }, renderItem as ReactNode)), footer));
   const trigger = h(AriaButton, { ref: triggerRef, isDisabled: disabled, onClick: () => setPopoverWidth(`${triggerRef.current?.getBoundingClientRect().width ?? 0}px`), className: cx('muxui-multi-select__trigger', invalid && 'muxui-multi-select__trigger--invalid'), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? (ariaLabel === undefined && labelId ? labelId : undefined), 'aria-describedby': describedBy }, h('span', { className: cx('muxui-multi-select__trigger-inner', `muxui-multi-select__trigger-inner--${resolvedSize}`) }, h('span', { className: cx('muxui-multi-select__value', selectedCount ? 'muxui-multi-select__value--selected' : 'muxui-multi-select__value--placeholder') }, selectedCount ? h(React.Fragment, null, selectedCountFormatter?.(selectedCount) ?? `${selectedCount} selected`, supportingText && h('span', { className: 'muxui-multi-select__supporting-text' }, supportingText)) : placeholder), h('span', { className: 'muxui-multi-select__icon', 'aria-hidden': true }, h(ChevronDownIcon, { size: 16, focusable: 'false' }))));
   const select = h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen } as AriaDialogTriggerProps, trigger, popup);
-  return h(MultiSelectContext.Provider, { value: { size: resolvedSize, close: () => setOpen(false) } }, h('div', { ...props, ref, className: cx('muxui-multi-select', `muxui-multi-select--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-multi-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), select, status && h('span', { id: statusId, hidden: true }, status), showDescription && h('span', { id: descriptionId, className: 'muxui-multi-select__description' }, description), showError && h('span', { id: errorId, className: 'muxui-multi-select__error' }, errorMessage)));
+  return h(MultiSelectContext.Provider, { value: { size: resolvedSize, close: () => setOpen(false) } }, h('div', { ...props, ref, className: cx('muxui-multi-select', `muxui-multi-select--${resolvedSize}`, className), 'data-muxui-size': resolvedSize, 'data-muxui-state-disabled': dataState(disabled), 'data-muxui-state-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-multi-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), select, status && h('span', { id: statusId, hidden: true }, status), showDescription && h('span', { id: descriptionId, className: 'muxui-multi-select__description' }, description), showError && h('span', { id: errorId, className: 'muxui-multi-select__error' }, errorMessage)));
 }) as MultiSelectRootComponent;
 
 export const MultiSelect: {

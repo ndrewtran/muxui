@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:3aedff66005a623261cbd4ddb024eaa33ed8cb65cc98d9b0c38e9d2e509229d3 -->
+<!-- @generated-content-sha256: sha256:f45c489a30e812d40cc4678989687bdb0b1218b0c880368c57083899be3ff6f0 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -47,6 +47,12 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+## State attributes
+
+Components mark their state with `data-muxui-state-<name>` attributes (`data-muxui-state-disabled`, `data-muxui-state-selected`, `data-muxui-state-focus-visible`, ...). Boolean states are presence-only, so select `[data-muxui-state-disabled]` and never compare its value; enumerated states carry theirs (`data-muxui-state-orientation="vertical"`). React Aria's unprefixed state names are not emitted, apart from the two below, and there is no alias.
+
+Two attributes are React Aria's own and are not part of this contract. Date and time field segments keep `data-placeholder` beside `data-muxui-state-placeholder`, because React Aria reads it to decide which segment a press in the padding of the field focuses. The hidden form input inside DatePicker and DateRangePicker keeps `data-disabled`, which React Aria sets below anything Mux UI can wrap. No Mux UI style selects either one, and neither should be relied on.
 
 ## Local tarball usage
 
@@ -203,11 +209,11 @@ These contracts are projected from the component bindings in the canonical catal
 - Tab or Shift+Tab closes the menu and any open submenu and moves focus on from the trigger by the browser's own tab order.
 - Without a Menu.Trigger, Tab or Shift+Tab moves focus on from the control that opened the menu, else from the popup's anchor.
 - A Menu.Trigger inside a Toolbar sends Tab or Shift+Tab out of the Toolbar, as Tab from the closed trigger does.
-- Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu-item[data-has-submenu] and [data-open].
+- Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu-item[data-muxui-state-has-submenu] and [data-muxui-state-open].
 - Items require stable string IDs. Supply textValue for rich content. A per-item onAction runs before list and root onAction/onSelect. Data-backed actions preserve normalized item metadata; compound actions return identity fields id, key, and value.
 - Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Without a placement, a top-level popup opens at bottom-start and a popup inside a Menu.Submenu opens beside its item at end-top.
 - For context coordinates, position a consumer-owned element at the desired point and pass its element ref as anchorRef while controlling Menu.Root open. modal=false allows outside content to remain accessible.
-- Mux selectors are .muxui-menu-root, .muxui-menu-trigger, .muxui-menu-popup, .muxui-menu-list, .muxui-menu-item, .muxui-menu-section, .muxui-menu-section-header, and .muxui-menu-separator. Item states use data-disabled, data-focused, data-focus-visible, data-has-submenu, and data-open. Root uses data-open and data-disabled.
+- Mux selectors are .muxui-menu-root, .muxui-menu-trigger, .muxui-menu-popup, .muxui-menu-list, .muxui-menu-item, .muxui-menu-section, .muxui-menu-section-header, and .muxui-menu-separator. Item states use data-muxui-state-disabled, data-muxui-state-focused, data-muxui-state-focus-visible, data-muxui-state-has-submenu, and data-muxui-state-open. Root uses data-muxui-state-open and data-muxui-state-disabled.
 - Trigger refs target native buttons and preserve native handlers. Root, Popup, List, and Item refs target divs; Section and Header refs target section/header elements; Separator refs target an hr.
 
 Public parts: `root`, `trigger`, `popup`, `list`, `item`, `submenu`, `section`, `header`, `separator`.
@@ -221,7 +227,7 @@ Public parts: `root`, `trigger`, `popup`, `list`, `item`, `submenu`, `section`, 
 - layout=stack navigates along the orientation. layout=grid uses actual item positions for two-dimensional arrow navigation; consumer CSS or style determines the columns and dimensions. Orientation is vertical by default.
 - Root disabled state disables every compound item and suppresses selection/action callbacks. A child disabled=false cannot re-enable an item under a disabled root.
 - Data-backed onAction returns the item record. Compound onAction returns identity fields id, key, and value; onSelectionChange always returns string IDs or all.
-- Mux selectors are .muxui-list-box, .muxui-list-box-section, .muxui-list-box-section-header, and .muxui-list-box-item. Root states include data-layout, data-orientation, data-disabled, and data-focus-visible; items expose data-selected, data-disabled, data-focused, and data-focus-visible.
+- Mux selectors are .muxui-list-box, .muxui-list-box-section, .muxui-list-box-section-header, and .muxui-list-box-item. Root states include data-muxui-state-layout, data-muxui-state-orientation, data-muxui-state-disabled, and data-muxui-state-focus-visible; items expose data-muxui-state-selected, data-muxui-state-disabled, data-muxui-state-focused, and data-muxui-state-focus-visible.
 - Root and Item refs target divs; Section and Header refs target section/header elements.
 
 Public parts: `root`, `section`, `header`, `item`.
@@ -236,7 +242,7 @@ Public parts: `root`, `section`, `header`, `item`.
 - In the default vertical stack, Up and Down arrows move between items and Left and Right arrows reach controls nested in the focused item. With layout=grid or orientation=horizontal, arrow keys move between items by their rendered positions, mirrored in right-to-left, and Tab and Shift+Tab move through the nested controls of the focused item. layout=grid lays items out in auto-fill columns of at least 10rem whose content wraps; orientation=horizontal scrolls along the inline axis. The default column tracks have no specificity, so a plain class or inline style on the GridList sets grid-template-columns whatever the stylesheet order.
 - Nested links and buttons run only their own action and never change selection or run onAction.
 - A nested Button or Link follows its GridList.Item, so a disabled item disables it. An explicit disabled prop on the Button or Link wins, so disabled={false} keeps it active.
-- Mux selectors are .muxui-grid-list and .muxui-grid-list-item. Root states include data-layout, data-orientation, and data-focus-visible; items expose data-selected, data-disabled, data-hovered, data-focused, and data-focus-visible. Root and Item refs target divs.
+- Mux selectors are .muxui-grid-list and .muxui-grid-list-item. Root states include data-muxui-state-layout, data-muxui-state-orientation, and data-muxui-state-focus-visible; items expose data-muxui-state-selected, data-muxui-state-disabled, data-muxui-state-hovered, data-muxui-state-focused, and data-muxui-state-focus-visible. Root and Item refs target divs.
 - Inside a Virtualizer with layout=grid, a GridList must use layout=grid and the vertical orientation. It carries data-muxui-virtualized, mounts only the visible rows, renders each row inside positioned wrapper elements instead of as a direct child, and takes no padding because the layout spaces its items from the GridList CSS gap. Its own column-gap and row-gap set that spacing; see Virtualizer.
 
 Public parts: `root`, `item`.
@@ -282,8 +288,8 @@ Public parts: `root`, `viewport`, `item`.
 - Popup-specific props override root geometry.
 - anchorRef positions the popup against a consumer-owned element, and modal=false keeps outside content accessible.
 - Select class names are .muxui-select, .muxui-select-label, .muxui-select-trigger, .muxui-select-value, .muxui-select-popover, .muxui-select-list, .muxui-select-option, .muxui-select-description, and .muxui-select-error.
-- Root states include data-open, data-disabled, data-readonly, and data-invalid.
-- Options expose data-selected, data-disabled, data-focused, and data-focus-visible.
+- Root states include data-muxui-state-open, data-muxui-state-disabled, data-muxui-state-read-only, and data-muxui-state-invalid.
+- Options expose data-muxui-state-selected, data-muxui-state-disabled, data-muxui-state-focused, and data-muxui-state-focus-visible.
 - Root, Popup, List, and Item refs target divs; Trigger targets a button; Label, Value, Description, and Error target spans.
 - Error renders only while invalid.
 - Named forms submit the selected item id, not item.value.
@@ -315,7 +321,7 @@ Public parts: `root`, `label`, `input`, `description`, `error`.
 - A read-only field does not submit or clear from the keyboard.
 - Enter and Escape do nothing while an input method composition is in progress.
 - A native keydown handler in inputProps that calls preventDefault stops both shortcuts.
-- The root has data-empty while the field is empty, and not while it holds text.
+- The root has data-muxui-state-empty while the field is empty, and not while it holds text.
 - Interactive control sizes use the shared sm, md, and lg targets; md is the default.
 - The forwarded ref resolves to the outer div; inputRef resolves to the native HTMLInputElement for focus and selection.
 - inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props.
@@ -392,8 +398,8 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 - With modal set to false, the Popover is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking.
 - Changing modal while open keeps the existing content, uncontrolled values, and child state.
 - Entering modal mode focuses the dialog surface when focus is outside it.
-- Keep the muxui-popover-positioner and muxui-popover selectors, and the data-placement and transition state attributes.
-- data-modal on the positioner exposes the modal setting for consumer styling.
+- Keep the muxui-popover-positioner and muxui-popover selectors, and the data-muxui-state-placement and transition state attributes.
+- data-muxui-modal on the positioner exposes the modal setting for consumer styling.
 - A dismissable non-modal Popover also closes on an outside press, and on Escape while focus is on the trigger.
 - With dismissable set to false, Escape, an outside press, and the trigger do not close the Popover, in modal and non-modal mode.
 - A button with slot="close" in the content still closes it.
@@ -413,9 +419,9 @@ Public parts: `trigger`, `root`, `content`.
 - start and end resolve through the current locale direction.
 - An unsupported placement, a non-finite offset or crossOffset, a non-boolean shouldFlip, or a negative or non-finite containerPadding throws a TypeError.
 - anchorRef positions the Tooltip against another DOM element, while the trigger still owns hover, focus, and the description.
-- Keep the muxui-tooltip selector and the data-placement, data-entering, and data-exiting attributes for consumer styling.
+- Keep the muxui-tooltip selector and the data-muxui-state-placement, data-muxui-state-entering, and data-muxui-state-exiting attributes for consumer styling.
 - With disabled set, the Tooltip does not open, and an open one closes.
-- The trigger stays operable: disabled adds no aria-disabled or data-disabled to it.
+- The trigger stays operable: disabled adds no aria-disabled or data-muxui-state-disabled to it.
 - A Tooltip describes its trigger and does not name it, so an icon-only trigger needs its own accessible name.
 - The Tooltip surface has pointer events turned off, so links and buttons in its content do not receive clicks.
 

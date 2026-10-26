@@ -1,7 +1,8 @@
 import React from 'react';
 import { animate, LazyMotion, domAnimation, useMotionValue, useTransform } from 'motion/react';
 import { span as MotionSpan } from 'motion/react-m';
-import { ColorSliderStateContext, ColorThumb, SliderFill, SliderTrack } from 'react-aria-components';
+import { ColorSliderStateContext } from 'react-aria-components';
+import { AriaColorThumb as ColorThumb, AriaSliderFill as SliderFill, AriaSliderTrack as SliderTrack } from './substrate.ts';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -133,7 +134,7 @@ export function ColorSliderMotionTrack({ readOnly }) {
       React.createElement(ColorThumb, {
         ref: thumbRef,
         className: 'muxui-color-slider-thumb',
-        'data-readonly': readOnly || undefined,
+        'data-muxui-state-read-only': readOnly || undefined,
         style: { backgroundColor: 'transparent' },
       }, (renderProps) => React.createElement(PreciseColorThumb, { ...renderProps, readOnly, trackRef, thumbRef })),
     ),

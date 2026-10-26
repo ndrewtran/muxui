@@ -41,8 +41,8 @@
 .muxui-activity-status { font-size: var(--muxui-semantic-typography-text-xs-font-size); white-space: nowrap; }
 .muxui-activity-mark { grid-column: 1; grid-row: 1; display: inline-flex; align-items: center; justify-content: center; flex: none; inline-size: 20px; block-size: 20px; color: var(--muxui-semantic-content-default); font-weight: var(--muxui-semantic-typography-text-font-weight); }
 .muxui-activity-mark > svg { display: block; flex: none; }
-.muxui-activity-item[data-status='completed'] .muxui-activity-mark { color: var(--muxui-semantic-status-success); }
-.muxui-activity-item[data-status='failed'] .muxui-activity-mark { color: var(--muxui-semantic-feedback-invalid); }
+.muxui-activity-item[data-muxui-status='completed'] .muxui-activity-mark { color: var(--muxui-semantic-status-success); }
+.muxui-activity-item[data-muxui-status='failed'] .muxui-activity-mark { color: var(--muxui-semantic-feedback-invalid); }
 .muxui-activity-item-chevron { grid-column: 3; grid-row: 1; display: block; flex: none; color: var(--muxui-semantic-color-neutral-default-50); }
 .muxui-activity-item summary[aria-expanded='true'] .muxui-activity-item-chevron { transform: rotate(180deg); }
 .muxui-activity-details { display: flex; flex-direction: column; gap: var(--muxui-semantic-layout-tight-gap); padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium); border-end-start-radius: var(--muxui-semantic-shape-container-radius); border-end-end-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-color-neutral-12); overflow-wrap: anywhere; }

@@ -1,12 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
-import {
-  TagGroup as AriaTagGroup,
-  TagList as AriaTagList,
-  Tag as AriaTag,
-  Label as AriaLabel,
-} from 'react-aria-components';
+import { TagGroup as AriaTagGroup, Label as AriaLabel } from 'react-aria-components';
+import { AriaTagList, AriaTag } from './substrate.ts';
 import type { Key, Selection } from 'react-aria-components';
 import { IconButton } from './supplemental/icon-button.ts';
 import type { IconButtonProps } from './supplemental/icon-button.ts';
@@ -130,8 +126,8 @@ export const TagGroup: ForwardRefExoticComponent<TagGroupProps & RefAttributes<H
       textValue: item.textValue,
       isDisabled: disabled ? disabled : item.disabled,
       className: 'muxui-tag',
-      // React Aria's Tag props name neither data-color nor data-variant, the hooks the styles read.
-      ...{ 'data-color': tagColor(item), 'data-variant': resolvedVariant },
+      // React Aria's Tag props name neither data-muxui-color nor data-muxui-variant, the hooks the styles read.
+      ...{ 'data-muxui-color': tagColor(item), 'data-muxui-variant': resolvedVariant },
     }, item.label, onRemove ? React.createElement(IconButton, {
       slot: 'remove',
       disabled: disabled ? disabled : item.disabled,

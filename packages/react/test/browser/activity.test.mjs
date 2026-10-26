@@ -26,7 +26,7 @@ async function setup(list = items) {
   await page.addInitScript(() => {
     window.observers = new Set(); window.listeners = new Set(); window.starts = [];
     const Observer = MutationObserver;
-    window.MutationObserver = class extends Observer { observe(...args) { if (args[1]?.attributeFilter?.some(attribute => ['hidden', 'data-reduced-motion'].includes(attribute))) window.observers.add(this); return super.observe(...args); } disconnect() { window.observers.delete(this); return super.disconnect(); } };
+    window.MutationObserver = class extends Observer { observe(...args) { if (args[1]?.attributeFilter?.some(attribute => ['hidden', 'data-muxui-motion'].includes(attribute))) window.observers.add(this); return super.observe(...args); } disconnect() { window.observers.delete(this); return super.disconnect(); } };
     const matchMedia = window.matchMedia.bind(window);
     window.matchMedia = query => { const media = matchMedia(query); const add = media.addEventListener.bind(media); const remove = media.removeEventListener.bind(media); media.addEventListener = (type, listener, options) => { if (query.includes('reduced-motion')) window.listeners.add(listener); add(type, listener, options); }; media.removeEventListener = (type, listener, options) => { window.listeners.delete(listener); remove(type, listener, options); }; return media; };
     const animate = Element.prototype.animate;
@@ -101,15 +101,15 @@ test('Activity keeps controlled callbacks, focus and reduced close semantics, an
     await page.locator('summary').nth(1).evaluate(node => window.flush(() => node.click())); assert.equal(await page.locator('summary').nth(1).evaluate(node => node === document.activeElement), true, 'item collapse returns focused content to its native summary'); await settle(page, '.muxui-activity-item:nth-child(2) ' + itemPanel, false);
     await page.locator('summary').nth(1).click(); await settle(page, '.muxui-activity-item:nth-child(2) ' + itemPanel, true); await page.getByRole('button', { name: 'Cancel request' }).focus();
     await page.evaluate(() => window.mount({ expanded: false })); assert.equal(await page.locator('.muxui-activity-trigger').evaluate(node => node === document.activeElement), true); assert.equal(await page.locator(outer).evaluate(node => node.inert), true); await settle(page, outer, false);
-    for (const mode of ['system', 'data-reduced-motion', 'data-muxui-motion']) {
+    for (const mode of ['system', 'data-muxui-motion']) {
       await page.evaluate(() => window.mount({ expanded: true })); await settle(page, outer, true);
       await page.locator('summary').first().click(); await settle(page, itemPanel, true);
       await sample(page, 'summary', itemPanel, 80);
-      if (mode === 'system') await page.emulateMedia({ reducedMotion: 'reduce' }); else await page.locator('#scope').evaluate((node, mode) => node.setAttribute(mode, mode === 'data-muxui-motion' ? 'reduced' : ''), mode);
+      if (mode === 'system') await page.emulateMedia({ reducedMotion: 'reduce' }); else await page.locator('#scope').evaluate((node, mode) => node.setAttribute(mode, 'reduced'), mode);
       await settle(page, itemPanel, false); assert.equal(await page.locator('details').first().getAttribute('open'), null);
       await page.evaluate(() => window.mount({ expanded: false })); await settle(page, outer, false);
       const starts = await page.evaluate(() => window.starts.length); await page.evaluate(() => window.mount({ expanded: true })); await settle(page, outer, true); assert.equal(await page.evaluate(() => window.starts.length), starts, mode + ' skips motion');
-      await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.locator('#scope').evaluate(node => { node.removeAttribute('data-reduced-motion'); node.removeAttribute('data-muxui-motion'); });
+      await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.locator('#scope').evaluate(node => { node.removeAttribute('data-muxui-motion'); });
     }
     await page.evaluate(() => { window.items[0].details = 'Changed caller content '.repeat(35); window.mount({ expanded: true }); });
     await page.locator('summary').first().click(); await page.waitForTimeout(80);

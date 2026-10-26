@@ -307,8 +307,8 @@ for (const engine of browserEngines()) {
         await t.test(`horizontal ${layout} scrolls inline and arrows move along it`, async () => {
           await ltr.open({ layout, orientation: 'horizontal', count: 12, width: 420 });
           const root = ltr.root();
-          assert.equal(await root.getAttribute('data-orientation'), 'horizontal');
-          assert.equal(await root.getAttribute('data-layout'), layout);
+          assert.equal(await root.getAttribute('data-muxui-state-orientation'), 'horizontal');
+          assert.equal(await root.getAttribute('data-muxui-state-layout'), layout);
           assert.deepEqual(await root.evaluate((node) => [getComputedStyle(node).overflowX, node.scrollWidth > node.clientWidth]), ['auto', true], 'the root scrolls inline');
           const tops = await ltr.tab.locator('[role="row"]').evaluateAll((rows) => new Set(rows.map((row) => Math.round(row.getBoundingClientRect().top))).size);
           assert.equal(tops, 1, 'cards sit in a single row');

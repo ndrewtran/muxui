@@ -1,12 +1,7 @@
 import React from 'react';
 import type { ButtonHTMLAttributes, ForwardRefExoticComponent, HTMLAttributes, ReactElement, ReactNode, RefAttributes } from 'react';
-import {
-  Button as AriaButton,
-  Dialog as AriaDialog,
-  DialogTrigger as AriaDialogTrigger,
-  Heading as AriaHeading,
-  Text as AriaText,
-} from 'react-aria-components';
+import { Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Heading as AriaHeading, Text as AriaText } from 'react-aria-components';
+import { AriaButton } from '../substrate.ts';
 import type { ButtonProps as AriaButtonProps, DialogProps as AriaDialogProps, DialogTriggerProps as AriaDialogTriggerProps } from 'react-aria-components';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { Button as MuxUIButton } from '../button.ts';

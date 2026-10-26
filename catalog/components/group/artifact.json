@@ -83,8 +83,8 @@
       "lifecycle": "experimental",
       "strategy": "direct",
       "behavior": [
-        "disabled sets aria-disabled and data-disabled on the group root, and invalid sets aria-invalid and data-invalid.",
-        "readOnly sets only data-readonly on the group root.",
+        "disabled sets aria-disabled and data-muxui-state-disabled on the group root, and invalid sets aria-invalid and data-muxui-state-invalid.",
+        "readOnly sets only data-muxui-state-read-only on the group root.",
         "Group renders a div, not a fieldset, and does not pass disabled, invalid, or readOnly to the controls inside it.",
         "Content remains in document order"
       ],

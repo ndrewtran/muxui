@@ -174,7 +174,7 @@ test('Mux preset themes resolve compiler colors and live React scopes in Chrome'
     }
     await page.locator('#harbour-button').waitFor({ timeout: 10_000 });
     assert.deepEqual(errors, [], errors.join('\n'));
-    assert.equal(await page.locator('#harbour-button').getAttribute('data-variant'), 'primary');
+    assert.equal(await page.locator('#harbour-button').getAttribute('data-muxui-variant'), 'primary');
     assert.equal(await page.locator('#harbour-field').getAttribute('aria-labelledby') !== null, true);
     assert.equal(await page.evaluate(() => document.documentElement.dataset.exportedPresetCount), '15');
     assert.equal(await page.evaluate(() => document.documentElement.dataset.exportedPresetLookupCount), '15');

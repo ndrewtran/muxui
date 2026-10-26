@@ -168,7 +168,7 @@ test('immediate action labels and selection marks retain contrast in every inter
     React.createElement(CheckboxField.Root, { defaultChecked: true },
       React.createElement(CheckboxField.Button, null,
         React.createElement(CheckboxField.Indicator), 'Selected field choice')),
-    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-color': 'brand', 'data-selected': true }, 'Selected tag')));
+    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-muxui-color': 'brand', 'data-muxui-state-selected': true }, 'Selected tag')));
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
@@ -211,44 +211,44 @@ test('immediate action labels and selection marks retain contrast in every inter
       await page.mouse.up();
       await page.mouse.move(880, 580);
 
-      await action.evaluate((element) => element.setAttribute('data-hovered', ''));
+      await action.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-hover');
       await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-hovered');
+      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-muxui-state-hovered');
       await action.evaluate((element) => {
-        element.removeAttribute('data-hovered');
-        element.setAttribute('data-pressed', '');
+        element.removeAttribute('data-muxui-state-hovered');
+        element.setAttribute('data-muxui-state-pressed', '');
       });
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-pressed');
       await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-pressed');
-      await action.evaluate((element) => element.removeAttribute('data-pressed'));
+      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-muxui-state-pressed');
+      await action.evaluate((element) => element.removeAttribute('data-muxui-state-pressed'));
 
       await disabledAction.evaluate((element) => {
-        element.setAttribute('data-hovered', '');
-        element.setAttribute('data-pressed', '');
+        element.setAttribute('data-muxui-state-hovered', '');
+        element.setAttribute('data-muxui-state-pressed', '');
       });
       await waitForTokenProperty(page, '#disabled-action', 'background-color', 'semantic.selection.track');
       await waitForTokenProperty(page, '#disabled-action .muxui-button-content', 'color', 'semantic.action.foreground');
       await assertTextContrast('#disabled-action .muxui-button-content', '#disabled-action', 'disabled Button', mode, 'hover and pressed attributes');
 
-      await checkbox.evaluate((element) => element.setAttribute('data-hovered', ''));
+      await checkbox.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
       await checkbox.locator('.muxui-checkbox-indicator svg').evaluate(async (element) => {
         await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
       });
       await assertTextContrast('.muxui-checkbox-indicator svg', '.muxui-checkbox-indicator', 'selected Checkbox mark', mode, 'hover');
 
-      await checkboxFieldButton.evaluate((element) => element.setAttribute('data-hovered', ''));
+      await checkboxFieldButton.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
       await waitForTokenProperty(page, '.muxui-checkbox-field__indicator svg', 'color', 'component.checkbox.selected-foreground-hover');
       await assertTextContrast('.muxui-checkbox-field__indicator svg', '.muxui-checkbox-field__indicator', 'selected CheckboxField mark', mode, 'hover');
 
-      await tag.evaluate((element) => element.setAttribute('data-hovered', ''));
+      await tag.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
       await waitForTokenProperty(page, '#selected-tag', 'color', 'component.taggroup.brand-selected-foreground');
       await assertTextContrast('#selected-tag', '#selected-tag', 'selected TagGroup item', mode, 'hover');
     }
 
     await page.evaluate(() => {
-      document.documentElement.setAttribute('data-reduced-motion', 'true');
+      document.documentElement.setAttribute('data-muxui-motion', 'reduced');
       // Dark once painted the pressed primary fill over the forced-colors system colours.
       document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
     });
@@ -269,7 +269,7 @@ test('immediate action labels and selection marks retain contrast in every inter
     assert.equal(await action.evaluate((element) => getComputedStyle(element).color), systemButtonText,
       'primary Button pressed keeps its forced-colors system foreground');
     // This markup is not hydrated, so set the React Aria pressed attribute directly.
-    await action.evaluate((element) => element.setAttribute('data-pressed', ''));
+    await action.evaluate((element) => element.setAttribute('data-muxui-state-pressed', ''));
     const systemButtonFace = await page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.backgroundColor = 'ButtonFace';
@@ -280,17 +280,17 @@ test('immediate action labels and selection marks retain contrast in every inter
     });
     assert.equal(await action.evaluate((element) => getComputedStyle(element).backgroundColor), systemButtonFace,
       'primary Button pressed keeps its forced-colors system background in the dark scheme');
-    await action.evaluate((element) => element.removeAttribute('data-pressed'));
+    await action.evaluate((element) => element.removeAttribute('data-muxui-state-pressed'));
     await page.mouse.up();
 
     await page.evaluate(() => {
       const tagList = document.createElement('div');
       tagList.className = 'muxui-tag-list';
       tagList.tabIndex = 0;
-      tagList.setAttribute('data-focus-visible', '');
+      tagList.setAttribute('data-muxui-state-focus-visible', '');
       document.body.append(tagList);
       const tag = document.getElementById('selected-tag');
-      tag.setAttribute('data-hovered', '');
+      tag.setAttribute('data-muxui-state-hovered', '');
     });
     assert.equal(await page.locator('.muxui-tag-list').last().evaluate((element) => getComputedStyle(element).outlineColor),
       await page.evaluate(() => { const probe = document.createElement('span'); probe.style.outlineColor = 'Highlight'; document.body.append(probe); const color = getComputedStyle(probe).outlineColor; probe.remove(); return color; }),
@@ -343,14 +343,14 @@ test('Button-family labels keep their rest colour and 4.5:1 contrast while only 
       return { label: flatten([fill, getComputedStyle(element).color]), fill };
     });
     const setState = (selector, attributes) => page.locator(selector).evaluate((element, names) => {
-      for (const name of ['data-hovered', 'data-pressed', 'data-focus-visible']) element.removeAttribute(name);
+      for (const name of ['data-muxui-state-hovered', 'data-muxui-state-pressed', 'data-muxui-state-focus-visible']) element.removeAttribute(name);
       for (const name of names) element.setAttribute(name, '');
     }, attributes);
     const focus = async (selector, context) => {
       await page.keyboard.press('Shift');
       await page.locator(selector).evaluate((element) => element.focus());
       assert.equal(await page.locator(selector).evaluate((element) => element.matches(':focus-visible')), true, `${context} keyboard focus`);
-      await setState(selector, ['data-focus-visible']);
+      await setState(selector, ['data-muxui-state-focus-visible']);
       const value = await paint(selector);
       await page.locator(selector).evaluate((element) => element.blur());
       await setState(selector, []);
@@ -392,10 +392,10 @@ test('Button-family labels keep their rest colour and 4.5:1 contrast while only 
               await page.mouse.move(1190, 590);
             }
             // Unhydrated markup: apply the React Aria state attributes directly.
-            await setState(selector, ['data-hovered']);
-            states['data-hovered'] = await paint(selector);
-            await setState(selector, ['data-hovered', 'data-pressed']);
-            states['data-pressed'] = await paint(selector);
+            await setState(selector, ['data-muxui-state-hovered']);
+            states['data-muxui-state-hovered'] = await paint(selector);
+            await setState(selector, ['data-muxui-state-hovered', 'data-muxui-state-pressed']);
+            states['data-muxui-state-pressed'] = await paint(selector);
             await setState(selector, []);
             states['focus-visible'] = await focus(selector, context);
             verify(context, rest, states);
@@ -415,9 +415,9 @@ test('focus, choice geometry, and validation text have independent semantic over
   try {
     const page = await browser.newPage();
     await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>
-      <label class="muxui-radio muxui-radio--sm" data-focus-visible><span class="muxui-radio-indicator"></span></label>
-      <div class="muxui-radio-field muxui-radio-field--sm"><label class="muxui-radio-field__button" data-focus-visible><span class="muxui-radio-field__indicator"></span></label></div>
-      <div class="muxui-text-editor" data-invalid><label class="muxui-text-editor__label">Label</label><p class="muxui-text-editor__description">Validation</p></div>
+      <label class="muxui-radio muxui-radio--sm" data-muxui-state-focus-visible><span class="muxui-radio-indicator"></span></label>
+      <div class="muxui-radio-field muxui-radio-field--sm"><label class="muxui-radio-field__button" data-muxui-state-focus-visible><span class="muxui-radio-field__indicator"></span></label></div>
+      <div class="muxui-text-editor" data-muxui-state-invalid><label class="muxui-text-editor__label">Label</label><p class="muxui-text-editor__description">Validation</p></div>
     </body></html>`);
     for (const mode of ['light', 'dark']) {
     await page.evaluate((scheme) => {
