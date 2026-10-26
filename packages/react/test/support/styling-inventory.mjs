@@ -93,8 +93,8 @@ export function stateFailures(catalogStates, classification = catalogStateKinds)
 
 /**
  * What is wrong with a part map: an anatomy entry that is not mapped exactly once, a family or part the catalog
- * lacks, a class that is not established, or a no-element or pending entry without a reason. `parts` holds the
- * four row lists; each row is [family, part, class or reason].
+ * lacks, a class that is not established, or a no-element entry without a reason. `parts` holds the
+ * three row lists; each row is [family, part, class or reason].
  */
 export function partFailures(anatomy, parts, isEstablished) {
   const failures = [];
@@ -107,7 +107,7 @@ export function partFailures(anatomy, parts, isEstablished) {
       if (seen.has(key)) failures.push(`${key}: listed as ${seen.get(key)} and ${kind}`);
       seen.set(key, kind);
       if ((kind === 'mapped' || kind === 'shared') && !isEstablished(value)) failures.push(`${key}: ${value} is not an established class`);
-      if ((kind === 'noElement' || kind === 'pending') && !value) failures.push(`${key}: ${kind} without a reason`);
+      if (kind === 'noElement' && !value) failures.push(`${key}: ${kind} without a reason`);
     }
   }
   for (const [family, list] of anatomy) {

@@ -528,7 +528,7 @@ function ImagePicker({ editor, disabled, callbacks }: PickerProps) {
     return insert(src);
   };
   // TypeScript accepts a data-* key in a call only from a spread.
-  return React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
+  return React.createElement(IconButton, { className: 'muxui-text-editor__btn muxui-text-editor__image-picker', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
     if (callbacks.onImageRequest) callbacks.onImageRequest({ insertImage: (src, alt) => insert(src, alt) });
     else promptImage();
   } }, React.createElement(ImageIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }));

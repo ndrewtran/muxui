@@ -8,7 +8,7 @@ import * as RAC from 'react-aria-components';
 import { compilePureTokenGraph, cssDeclaration } from '@muxui/tokens/core';
 import { catalogStateKinds, establishedClasses, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
 import { booleanStates, enumeratedStates, stateAttribute, substrateStateAttributes } from '../src/styling-contract.ts';
-import { mappedParts, noElementParts, partClass, pendingParts, publicSharedClasses, sharedParts } from './support/styling-parts.ts';
+import { mappedParts, noElementParts, partClass, publicSharedClasses, sharedParts } from './support/styling-parts.ts';
 import {
   attributeFindingsIn, auditedReactAria, booleanValueSelectors, foreignAttributes, historicalPaths, listSources, probePaths, renamedPropAttributes, racStateWriters, reactAriaImportProblems, reactAriaVersionProblems, reviewedRacImports, reviewedRacWriters,
   scriptAttributeFindings, styleAttributeFindings, substrateWrappers,
@@ -145,7 +145,7 @@ test('semantic styling roles compile across all declared mode combinations', () 
 // entry, not that a class is emitted on the right element; that proof comes with the class scheme PR.
 const catalog = await readCatalog(resolve(packageRoot, '../..'));
 const { selected, isEstablished } = await establishedClasses(packageRoot, styles.map(({ css }) => css));
-const parts = { mapped: mappedParts, shared: sharedParts, noElement: noElementParts, pending: pendingParts };
+const parts = { mapped: mappedParts, shared: sharedParts, noElement: noElementParts };
 
 // React Aria spells every state data-<name> except read-only (data-readonly); the Mux spelling replaces it.
 const reactAriaName = (state) => `data-${state === 'read-only' ? 'readonly' : state}`;
@@ -197,9 +197,7 @@ test('the state classification refuses an unclassified name, a stale entry and a
 
 test('every catalog anatomy entry is in the part map exactly once with an established class or a reason', () => {
   assert.deepEqual(partFailures(catalog.anatomy, parts, isEstablished), []);
-  assert.equal(mappedParts.length + sharedParts.length + noElementParts.length + pendingParts.length, [...catalog.anatomy.values()].flat().length);
-  // The pending list only shrinks; an entry leaves it with a decision, never by being called no-element.
-  assert.ok(pendingParts.length <= 12);
+  assert.equal(mappedParts.length + sharedParts.length + noElementParts.length, [...catalog.anatomy.values()].flat().length);
 });
 
 test('the part map check refuses a bogus class, a duplicate, a missing entry and keys the catalog lacks', () => {
@@ -210,7 +208,7 @@ test('the part map check refuses a bogus class, a duplicate, a missing entry and
   assert.equal(isEstablished('muxui-button__bogus'), false);
   assert.match(failures({ mapped: withValue(mappedParts, 'button', 'root', 'muxui-button__bogus') }), /button\.root: muxui-button__bogus is not an established class/u);
   assert.match(failures({ shared: withValue(sharedParts, 'autocomplete', 'label', 'muxui-field-bogus') }), /autocomplete\.label: muxui-field-bogus is not an established class/u);
-  assert.match(failures({ pending: [...pendingParts, ['button', 'root', 'Both.']] }), /button\.root: listed as mapped and pending/u);
+  assert.match(failures({ noElement: [...noElementParts, ['button', 'root', 'Both.']] }), /button\.root: listed as mapped and noElement/u);
   assert.match(failures({ mapped: without(mappedParts, 'activity', 'header') }), /activity\.header: not mapped/u);
   assert.match(failures({ mapped: [...mappedParts, ['nope', 'root', 'muxui-button']] }), /nope\.root: unknown family/u);
   assert.match(failures({ mapped: [...mappedParts, ['button', 'nope', 'muxui-button']] }), /button\.nope: unknown part/u);

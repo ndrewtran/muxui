@@ -1562,13 +1562,13 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
       input: React.createElement(AriaGroup, { className: 'muxui-date-range-control' },
         React.createElement(AriaDateInput, {
           slot: 'start',
-          className: 'muxui-date-input',
+          className: 'muxui-date-input muxui-date-range-picker__start',
           children: (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' }),
         }),
         React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
         React.createElement(AriaDateInput, {
           slot: 'end',
-          className: 'muxui-date-input',
+          className: 'muxui-date-input muxui-date-range-picker__end',
           children: (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' }),
         }),
         React.createElement(IconButton, { ref: triggerRef, slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),

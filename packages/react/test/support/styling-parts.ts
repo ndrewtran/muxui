@@ -12,8 +12,8 @@ export const partClass = (slug: string, part: string): string => part === 'root'
 export const publicSharedClasses = ['muxui-field-label', 'muxui-field-input', 'muxui-field-description', 'muxui-field-error'] as const;
 
 // The part map: every catalog anatomy entry exactly once, as today's target and not its eventual public disposition
-// (plain becomes the BEM `partClass` hook, shared is public only if listed above, no element stays out of the DOM,
-// pending is undecided). Rows are [family slug, part, value]. A class is the one the element carries today, whether or
+// (plain becomes the BEM `partClass` hook, shared is public only if listed above, no element stays out of the DOM).
+// Rows are [family slug, part, value]. A class is the one the element carries today, whether or
 // not a rule styles it. This is inventory, not proof that the class is emitted on the right element.
 type PartRow = readonly [family: string, part: string, value: string];
 
@@ -143,6 +143,8 @@ export const mappedParts: readonly PartRow[] = [
   ['date-field', 'root', 'muxui-date-field'],
   ['date-picker', 'root', 'muxui-date-picker'],
   ['date-range-picker', 'root', 'muxui-date-range-picker'],
+  ['date-range-picker', 'start', 'muxui-date-range-picker__start'],
+  ['date-range-picker', 'end', 'muxui-date-range-picker__end'],
   ['dialog', 'backdrop', 'muxui-dialog-backdrop'],
   ['dialog', 'root', 'muxui-dialog'],
   ['dialog', 'title', 'muxui-dialog-title'],
@@ -201,6 +203,7 @@ export const mappedParts: readonly PartRow[] = [
   ['list-box', 'item', 'muxui-list-box-item'],
   ['markdown', 'root', 'muxui-markdown'],
   ['markdown', 'code', 'muxui-markdown-code'],
+  ['markdown', 'heading', 'muxui-markdown__heading'],
   ['menu', 'root', 'muxui-menu-root'],
   ['menu', 'trigger', 'muxui-menu-trigger'],
   ['menu', 'popup', 'muxui-menu-popup'],
@@ -243,6 +246,7 @@ export const mappedParts: readonly PartRow[] = [
   ['payment-input', 'error', 'muxui-payment-input__error'],
   ['payment-input', 'card-icon', 'muxui-payment-input__card-icon'],
   ['popover', 'root', 'muxui-popover'],
+  ['popover', 'trigger', 'muxui-overlay-pop-trigger'],
   ['preview-trigger', 'root', 'muxui-preview-trigger'],
   ['preview-trigger', 'content', 'muxui-preview-content'],
   ['progress-bar', 'root', 'muxui-progress-bar'],
@@ -357,6 +361,7 @@ export const mappedParts: readonly PartRow[] = [
   ['text-editor', 'custom-color-field', 'muxui-text-editor__color-field'],
   ['text-editor', 'bubble-menu', 'muxui-text-editor__bubble-menu'],
   ['text-editor', 'selection-actions', 'muxui-text-editor__selection-bar'],
+  ['text-editor', 'image-picker', 'muxui-text-editor__image-picker'],
   ['text-field', 'root', 'muxui-text-field'],
   ['time-field', 'root', 'muxui-time-field'],
   ['toast', 'region', 'muxui-toast-region'],
@@ -449,34 +454,25 @@ export const sharedParts: readonly PartRow[] = [
   ['token-field', 'label', 'muxui-field-label'],
 ];
 
-/** Parts that render no element of their own, with the reason. */
+/** Parts that render no element Mux can class, with the reason. */
 export const noElementParts: readonly PartRow[] = [
   ['alert-dialog', 'root', 'Provider; renders no element.'],
+  ['checkbox', 'input', 'React Aria renders the native input inside its own visually hidden wrapper.'],
   ['checkbox-group', 'options', 'The options are the group children.'],
+  ['color-swatch-picker', 'selection', 'A state, not an element: selection is the selected state of the swatch.'],
   ['command-palette', 'collection', 'Collection renders its items and no element.'],
   ['drop-zone', 'content', 'Children render in place.'],
+  ['file-trigger', 'input', 'React Aria renders the native input inside its own visually hidden wrapper.'],
   ['form', 'content', 'Children render in place.'],
-  ['group', 'label', 'Children render in the root.'],
   ['group', 'content', 'Children render in the root.'],
+  ['group', 'label', 'Children render in the root.'],
   ['markdown', 'content', 'The rendered nodes are the root children.'],
   ['menu', 'submenu', 'Pairs a trigger with a popup; renders no element.'],
   ['popover', 'content', 'Children render in the root.'],
+  ['preview-trigger', 'trigger', 'The caller supplies the element; Mux adds no class.'],
   ['sidebar', 'provider', 'Provider; renders no element.'],
+  ['switch', 'input', 'React Aria renders the native input inside its own visually hidden wrapper.'],
+  ['toolbar', 'control', 'The caller supplies the controls; Mux adds no class.'],
+  ['tooltip', 'trigger', 'The caller supplies the element; Mux adds no class.'],
   ['tree', 'children', 'Child items render as nested items.'],
-];
-
-/** Parts the plain, shared and no-element forms cannot describe yet, with the reason. */
-export const pendingParts: readonly PartRow[] = [
-  ['checkbox', 'input', 'Hidden native input: an element with no Mux class.'],
-  ['color-swatch-picker', 'selection', 'No element; shown through the swatch selected state.'],
-  ['date-range-picker', 'start', 'Both inputs share muxui-date-input; telling them apart needs a slot qualifier.'],
-  ['date-range-picker', 'end', 'Both inputs share muxui-date-input; telling them apart needs a slot qualifier.'],
-  ['file-trigger', 'input', 'Hidden native input: an element with no Mux class.'],
-  ['markdown', 'heading', 'Native h1 to h6 elements with no Mux class.'],
-  ['popover', 'trigger', 'The shared pressable helper adds muxui-overlay-pop-trigger; whether it is the part class or stays shared is open.'],
-  ['preview-trigger', 'trigger', 'Caller-supplied element; Mux adds no class.'],
-  ['switch', 'input', 'Hidden native input: an element with no Mux class.'],
-  ['text-editor', 'image-picker', 'Shares muxui-text-editor__btn with the other toolbar actions.'],
-  ['toolbar', 'control', 'Caller-supplied element; Mux adds no class.'],
-  ['tooltip', 'trigger', 'Caller-supplied element; Mux adds no class.'],
 ];
