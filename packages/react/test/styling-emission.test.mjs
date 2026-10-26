@@ -10,21 +10,17 @@
 // its own example (a runtime fixture has none). The canonical examples are held to the same standard as the fixtures: a React
 // warning or an exception while one renders fails.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
-import { registerHooks } from 'node:module';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import ts from 'typescript-6';
 import * as M from '../generated/index.mjs';
 import { Markdown } from '../generated/markdown.js';
 import { TextEditor } from '../generated/text-editor.js';
-import { classGrammar, emittedFindings, readAuthored, vocabularyFindings } from './support/class-vocabulary.mjs';
+import { captured, renderCatalogExamples } from './support/catalog-example-renders.mjs';
+import { emittedFindings, readAuthored, vocabularyFindings } from './support/class-vocabulary.mjs';
 import { createDom } from './support/dom.mjs';
 import { readCatalog } from './support/styling-inventory.mjs';
 import { callerElementFixtures, clientFixtures, hookOnlyFixtures } from './support/styling-fixtures.mjs';
@@ -38,56 +34,8 @@ const lib = { h: React.createElement, M, TextEditor, Markdown };
 const sleep = (milliseconds) => new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds));
 const rowKey = (row) => `${row.family}.${row.part}`;
 
-// Tier 1: every canonical example of every family, server-rendered. The examples are TSX that import `@muxui/react`, so a module
-// hook transpiles them in process and resolves their bare imports from this package.
-const anchor = pathToFileURL(resolve(packageRoot, 'test/anchor.mjs')).href;
-const catalogUrl = pathToFileURL(resolve(repositoryRoot, 'catalog')).href;
-const hooks = registerHooks({
-  resolve: (specifier, context, next) => next(specifier, context.parentURL?.startsWith(catalogUrl) && !/^[./]/u.test(specifier) ? { ...context, parentURL: anchor } : context),
-  load(url, context, next) {
-    if (!url.endsWith('.tsx') || !url.startsWith(catalogUrl)) return next(url, context);
-    const source = ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-    return { format: 'module', shortCircuit: true, source };
-  },
-});
-/** Runs `render` with console.error and console.warn captured: a React warning or an exception is returned, never swallowed. */
-function captured(render) {
-  const messages = [];
-  const { error, warn } = console;
-  console.error = (...arguments_) => messages.push(String(arguments_[0]).slice(0, 160));
-  console.warn = (...arguments_) => messages.push(String(arguments_[0]).slice(0, 160));
-  let html = '';
-  try {
-    html = render();
-  } catch (caught) {
-    messages.push(`threw: ${String(caught?.message ?? caught).slice(0, 160)}`);
-  } finally {
-    console.error = error;
-    console.warn = warn;
-  }
-  return { html, messages };
-}
-
-/** @type {{ family: string, name: string, html: string, errors: string[], owned: Set<string> }[]} */
-const examples = [];
-try {
-  for (const family of slugs) {
-    const directory = resolve(repositoryRoot, `catalog/components/${family}/examples/react`);
-    for (const file of (await readdir(directory)).filter((name) => name.endsWith('.tsx')).sort()) {
-      const path = resolve(directory, file);
-      const text = await readFile(path, 'utf8');
-      const module = await import(pathToFileURL(path).href);
-      const Example = Object.values(module).find((value) => typeof value === 'function');
-      assert.ok(Example, `${family}/${file} exports a component`);
-      // A class the example styles for itself in a <style> block is the example's, not Mux's.
-      const owned = new Set([...text.matchAll(/\.(muxui-[a-z0-9-]+)/gu)].map(([, name]) => name).filter((name) => !classGrammar(slugs)(name)));
-      const { html, messages } = captured(() => renderToString(React.createElement(Example)));
-      examples.push({ family, name: `${family}/${file.replace(/\.tsx$/u, '')}`, html, errors: messages, owned });
-    }
-  }
-} finally {
-  hooks.deregister();
-}
+// Tier 1: every canonical example of every family, server-rendered (support/catalog-example-renders.mjs).
+const examples = await renderCatalogExamples(slugs);
 const documentOf = (html) => new JSDOM(`<!doctype html><body>${html}`).window.document;
 const exampleDocuments = examples.map((example) => ({ ...example, document: documentOf(example.html) }));
 
