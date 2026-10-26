@@ -4,7 +4,7 @@ import { sameGeometry, transformFrom, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-const ROW_SELECTOR = '.muxui-tree-item[role="row"]';
+const ROW_SELECTOR = '.muxui-tree__item[role="row"]';
 const READY_ATTRIBUTE = 'data-muxui-tree-motion-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-tree-motion-reduced';
 
@@ -92,7 +92,7 @@ function sanitizeSnapshot(row, height, paddingInlineStart) {
 
 function makeExitPlaceholder(root, parent, rows, entries, nestedRuns, totalHeight) {
   const wrapper = root.ownerDocument.createElement('div');
-  wrapper.className = 'muxui-tree-motion-exit';
+  wrapper.className = 'muxui-tree__motion-exit';
   wrapper.setAttribute('data-muxui-tree-exit', 'true');
   wrapper.setAttribute('aria-hidden', 'true');
   wrapper.inert = true;
@@ -122,7 +122,7 @@ function observeTreeMotion(root) {
 
   const view = root.ownerDocument.defaultView;
   const hover = root.ownerDocument.createElement('span');
-  hover.className = 'muxui-tree-hover';
+  hover.className = 'muxui-tree__hover';
   hover.setAttribute('aria-hidden', 'true');
   hover.hidden = true;
   root.appendChild(hover);

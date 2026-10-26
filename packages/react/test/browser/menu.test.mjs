@@ -264,7 +264,7 @@ for (const engine of browserEngines()) {
               return focused;
             });
             assert.equal(handedOver, true, `${label}: the second control takes focus when the first opening closes`);
-            await tab.locator('.muxui-menu-root[data-muxui-state-open]').waitFor({ state: 'attached', timeout: 5000 });
+            await tab.locator('.muxui-menu__root[data-muxui-state-open]').waitFor({ state: 'attached', timeout: 5000 });
             await tab.locator('[role="menuitem"]').first().focus();
             await pollUntil(tab, () => document.activeElement?.closest('[role="menu"]') != null, undefined, { message: `${label}: focus enters the reopened menu`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
             await tab.keyboard.press(key);
@@ -346,12 +346,12 @@ for (const engine of browserEngines()) {
           await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'networkidle' });
           await tab.locator('#menu-trigger').waitFor({ timeout: 15_000 });
           await tab.locator('#menu-trigger').click();
-          await tab.locator('.muxui-menu-popup').first().waitFor({ timeout: 5000 });
+          await tab.locator('.muxui-menu__popup').first().waitFor({ timeout: 5000 });
         };
 
         await t.test('a top-level popup opens at bottom-start, the offset below its trigger', async () => {
           await visit('');
-          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu__popup' });
           near(popup.top, trigger.bottom + offset, 'the popup sits the offset below the trigger');
           near(popup.left, trigger.left + crossOffset, 'the popup starts at its trigger\'s start edge');
         });
@@ -361,12 +361,12 @@ for (const engine of browserEngines()) {
         const openSubmenu = async (query) => {
           await visit(`?submenu${query}`);
           // The root popup is still moving as it opens, and the submenu is placed against where its item is by then.
-          await measure({ root: '.muxui-menu-popup' });
+          await measure({ root: '.muxui-menu__popup' });
           await tab.keyboard.press('ArrowDown');
           await tab.keyboard.press('ArrowDown');
           await tab.keyboard.press('ArrowRight');
           await tab.locator('[role="menu"][aria-label="More actions"]').waitFor({ timeout: 5000 });
-          return measure({ item: '.muxui-menu-item[data-muxui-state-has-submenu]', popup: ['[role="menu"][aria-label="More actions"]', '.muxui-menu-popup'] });
+          return measure({ item: '.muxui-menu__item[data-muxui-state-has-submenu]', popup: ['[role="menu"][aria-label="More actions"]', '.muxui-menu__popup'] });
         };
 
         await t.test('a popup inside a submenu opens at end-top, the offset beside its item', async () => {
@@ -374,7 +374,7 @@ for (const engine of browserEngines()) {
           near(popup.left, item.right + offset, 'the submenu sits the offset beside its item, at the end');
           // Its first row lines up with the item, so the popup starts above the item by its own padding.
           assert.ok(Math.abs(popup.top - item.top - crossOffset) <= 4, `${engine}: the submenu starts at its item's top: ${popup.top} against ${item.top}`);
-          assert.equal(await tab.locator('[role="menu"][aria-label="More actions"]').evaluate((menu) => menu.closest('.muxui-menu-popup').dataset.muxuiStatePlacement), 'right', 'it reports the side it opened on');
+          assert.equal(await tab.locator('[role="menu"][aria-label="More actions"]').evaluate((menu) => menu.closest('.muxui-menu__popup').dataset.muxuiStatePlacement), 'right', 'it reports the side it opened on');
         });
 
         await t.test('a popup inside a submenu keeps the placement it is given', async () => {
@@ -389,21 +389,21 @@ for (const engine of browserEngines()) {
 
         await t.test('a top-level popup keeps the placement it is given', async () => {
           await visit('?placement=end-top');
-          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu__popup' });
           near(popup.left, trigger.right + offset, 'end-top puts the popup the offset beside its trigger');
           near(popup.top, trigger.top + crossOffset, 'and starts it at its trigger\'s top edge');
         });
 
         await t.test('the container padding keeps the popup off the window edge', async () => {
           await visit('?edge');
-          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu__popup' });
           assert.ok(trigger.left < containerPadding, 'the trigger is closer to the edge than the padding');
           near(popup.left, containerPadding, 'the popup stops at the padding');
         });
 
         await t.test('a popup with no room below its trigger flips above it', async () => {
           await visit('?low');
-          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu-popup' });
+          const { trigger, popup } = await measure({ trigger: '#menu-trigger', popup: '.muxui-menu__popup' });
           near(popup.bottom, trigger.top - offset, 'the popup sits the offset above the trigger');
         });
         assert.deepEqual(errors, [], `${engine}: the page logged no errors`);

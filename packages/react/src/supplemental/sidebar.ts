@@ -302,7 +302,7 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
     content = h(React.Fragment, null,
       h('div', { className: 'muxui-sidebar__nav-row' },
         named(h(AriaLink, { id: child ? labelId : undefined, href, className, ...{ 'aria-current': current ? 'page' : undefined } }, ...body())),
-        h(AriaButton, { ref: controlRef, className: 'muxui-sidebar__nav-btn muxui-sidebar__nav-toggle', 'aria-labelledby': labelId, 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
+        h(AriaButton, { ref: controlRef, className: 'muxui-sidebar__nav-button muxui-sidebar__nav-toggle', 'aria-labelledby': labelId, 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
       nested);
   } else {
     // Folded, the group has no room to open: activating it unfolds the sidebar and opens the group.
@@ -429,7 +429,7 @@ const SidebarSearch = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarSear
   }, [sidebar?.collapsed]);
   React.useEffect(() => () => clearTimeout(pending.current?.timer), []);
   return nativePart('div', 'muxui-sidebar__search', { ...props, className }, ref, h(React.Fragment, null,
-    sidebar && h(SidebarRailTooltip, { label: placeholder, children: h('button', { type: 'button', className: 'muxui-sidebar__nav-btn muxui-sidebar__search-button', 'aria-label': placeholder, onClick: unfold }) }),
+    sidebar && h(SidebarRailTooltip, { label: placeholder, children: h('button', { type: 'button', className: 'muxui-sidebar__nav-button muxui-sidebar__search-button', 'aria-label': placeholder, onClick: unfold }) }),
     h(SearchIcon, { className: 'muxui-sidebar__search-icon', 'aria-hidden': true, focusable: 'false' }),
     h('input', { ref: inputRef, className: 'muxui-sidebar__search-input', placeholder, value, onChange, 'aria-label': placeholder })));
 });
@@ -438,7 +438,7 @@ const SidebarNavList = /*#__PURE__*/ React.forwardRef<HTMLUListElement, PartProp
 const SidebarSection = /*#__PURE__*/ React.forwardRef<HTMLLIElement, SidebarSectionProps>(function SidebarSection({ label, className, children, ...props }, ref) { const labelId = React.useId(); return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, h('span', { id: labelId, className: 'muxui-sidebar__section-label' }, label), h('ul', { className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId }, children)); });
 // The item hands each owned prop to the node, which also draws the nested entries, and the attributes it does not know go along.
 const SidebarNavItem = function SidebarNavItem({ children, href, icon, badge, current = false, external = false, items, expanded, defaultExpanded = false, onExpandedChange, ...props }: SidebarNavItemProps) { return h(SidebarNavNode, { ...props, href, icon, badge, current, external, items, expanded, defaultExpanded, onExpandedChange, label: children }); };
-const SidebarNavButton = /*#__PURE__*/ React.forwardRef<HTMLAnchorElement, SidebarNavButtonProps>(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-btn', current && 'muxui-sidebar__nav-btn--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', ...{ 'aria-hidden': true } }), props.children); });
+const SidebarNavButton = /*#__PURE__*/ React.forwardRef<HTMLAnchorElement, SidebarNavButtonProps>(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-button', current && 'muxui-sidebar__nav-button--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', ...{ 'aria-hidden': true } }), props.children); });
 const SidebarAccountCard = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarAccountCardProps>(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) {
   const sidebar = React.useContext(SidebarContext);
   const card = React.useRef<HTMLDivElement>(null);
@@ -506,7 +506,7 @@ const SidebarMobileTrigger = function SidebarMobileTrigger({ children, logo }: S
   // The drawer is always full size, so its navigation ignores the folded state of the desktop sidebar.
   // React Aria's DialogTrigger types its children as a prop, and takes the trigger and the overlay as two children.
   return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen } as AriaDialogTriggerProps,
-    h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-menu-btn', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' }))),
+    h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' }))),
     h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog', children: ({ close }) => h(SidebarContext.Provider, { value: null }, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children) }))));
 };
 const SidebarFeatureCard = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarFeatureCardProps>(function SidebarFeatureCard({ title, description, dismissLabel, onDismiss, ...props }, ref) { return nativePart('div', 'muxui-sidebar__feature-card', props, ref, h(React.Fragment, null, title && h('div', { className: 'muxui-sidebar__feature-card-title' }, title), description && h('div', { className: 'muxui-sidebar__feature-card-description' }, description), props.children, onDismiss && h('button', { type: 'button', className: 'muxui-sidebar__feature-card-dismiss', onClick: onDismiss }, dismissLabel == null ? 'Dismiss' : dismissLabel))); });

@@ -107,11 +107,11 @@ export const ListBox: ListBoxComponent = /*#__PURE__*/ (() => {
   ListBox.displayName = 'ListBox';
   ListBox.Root = ListBox;
   ListBox.Section = React.forwardRef<HTMLElement, ListBoxSectionProps>(function ListBoxSection({ children, className, title, ...props }, ref) {
-    return React.createElement(AriaListBoxSection, { ...(props as AriaListBoxSectionProps<unknown>), ref, className: classNames('muxui-list-box-section', className) },
+    return React.createElement(AriaListBoxSection, { ...(props as AriaListBoxSectionProps<unknown>), ref, className: classNames('muxui-list-box__section', className) },
       title !== undefined ? React.createElement(ListBox.Header, null, title) : null, children);
   });
   ListBox.Header = React.forwardRef<HTMLElement, HTMLAttributes<HTMLElement>>(function ListBoxHeader({ children, className, ...props }, ref) {
-    return React.createElement(AriaHeader, { ...props, ref, className: classNames('muxui-list-box-section-header', className) }, children);
+    return React.createElement(AriaHeader, { ...props, ref, className: classNames('muxui-list-box__header', className) }, children);
   });
   ListBox.Item = React.forwardRef<HTMLDivElement, ListBoxItemProps>(function ListBoxItem({ children, id, textValue, disabled = false, className, ...props }, ref) {
     const context = React.useContext(ListBoxContext);
@@ -122,7 +122,7 @@ export const ListBox: ListBoxComponent = /*#__PURE__*/ (() => {
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
-      className: classNames('muxui-list-box-item', className),
+      className: classNames('muxui-list-box__item', className),
     }, children);
   });
   return ListBox;

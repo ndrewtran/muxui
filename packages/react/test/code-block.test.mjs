@@ -6,6 +6,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { installDom } from './support/dom.mjs';
+import { guardedPrefixes } from './support/styling-inventory.mjs';
 import { highlightCodeDocuments } from '../src/supplemental/code-block-highlight.mjs';
 
 // React Aria selects its client layout hooks when the overlay module loads.
@@ -27,9 +28,9 @@ test('CodeBlock escapes text, retains whitespace and trailing lines, and preserv
   // HTML parsing normalizes CRLF; React's escaped SSR bytes retain the input CR.
   assert.match(markup({ source }), /\r\n/u);
   assert.equal(document.querySelector('code').textContent, source.replaceAll('\r\n', '\n'));
-  assert.equal(document.querySelectorAll('.muxui-code-block-line').length, 3);
-  assert.deepEqual([...document.querySelectorAll('.muxui-code-block-number')].map((node) => node.dataset.muxuiLineNumber), ['1', '2', '3']);
-  assert.ok([...document.querySelectorAll('.muxui-code-block-number')].every((node) => node.getAttribute('aria-hidden') === 'true' && node.textContent === ''));
+  assert.equal(document.querySelectorAll('.muxui-code-block__line').length, 3);
+  assert.deepEqual([...document.querySelectorAll('.muxui-code-block__number')].map((node) => node.dataset.muxuiLineNumber), ['1', '2', '3']);
+  assert.ok([...document.querySelectorAll('.muxui-code-block__number')].every((node) => node.getAttribute('aria-hidden') === 'true' && node.textContent === ''));
   assert.equal(document.querySelector('pre').tabIndex, 0);
   assert.equal(document.querySelector('button').type, 'button');
   assert.equal(document.querySelector('button').getAttribute('aria-label'), 'Copy code');
@@ -37,7 +38,7 @@ test('CodeBlock escapes text, retains whitespace and trailing lines, and preserv
   assert.equal(document.querySelector('button').textContent, '');
   assert.equal(document.querySelector('button .lucide-copy').getAttribute('aria-hidden'), 'true');
   assert.equal(documentOf({ source: '', copyable: false, lineNumbers: false }).querySelector('code').textContent, '');
-  assert.equal(documentOf({ source: 'x', copyable: false, lineNumbers: false }).querySelector('button, .muxui-code-block-number'), null);
+  assert.equal(documentOf({ source: 'x', copyable: false, lineNumbers: false }).querySelector('button, .muxui-code-block__number'), null);
   for (const props of [{}, { source: 'x', mode: 'other' }, { source: 'x', before: 'x' }, { mode: 'diff', before: '', after: '', source: 'x' }, { source: 'x', children: 'x' }, { source: 'x', dangerouslySetInnerHTML: { __html: 'x' } }]) {
     assert.throws(() => markup(props), TypeError);
   }
@@ -50,23 +51,23 @@ test('CodeBlock diff reconstructs both inputs and numbers empty, mixed, repeated
     ['a', 'a\n'], ['a\n', 'a'], ['\n', '\n\n'], ['a\r\nb', 'a\r\nc'],
   ]) {
     const document = documentOf({ mode: 'diff', before, after });
-    const rows = [...document.querySelectorAll('.muxui-code-block-line')];
+    const rows = [...document.querySelectorAll('.muxui-code-block__line')];
     const original = rows.filter((row) => row.dataset.muxuiChange !== 'added');
     const updated = rows.filter((row) => row.dataset.muxuiChange !== 'removed');
-    assert.equal(original.map((row) => row.querySelector('.muxui-code-block-text').textContent.replace(/\n$/u, '')).join('\n'), before.replaceAll('\r\n', '\n'));
-    assert.equal(updated.map((row) => row.querySelector('.muxui-code-block-text').textContent.replace(/\n$/u, '')).join('\n'), after.replaceAll('\r\n', '\n'));
-    assert.deepEqual(original.map((row) => row.querySelectorAll('.muxui-code-block-number')[0].dataset.muxuiLineNumber), original.map((_, i) => String(i + 1)));
-    assert.deepEqual(updated.map((row) => row.querySelectorAll('.muxui-code-block-number')[1].dataset.muxuiLineNumber), updated.map((_, i) => String(i + 1)));
+    assert.equal(original.map((row) => row.querySelector('.muxui-code-block__text').textContent.replace(/\n$/u, '')).join('\n'), before.replaceAll('\r\n', '\n'));
+    assert.equal(updated.map((row) => row.querySelector('.muxui-code-block__text').textContent.replace(/\n$/u, '')).join('\n'), after.replaceAll('\r\n', '\n'));
+    assert.deepEqual(original.map((row) => row.querySelectorAll('.muxui-code-block__number')[0].dataset.muxuiLineNumber), original.map((_, i) => String(i + 1)));
+    assert.deepEqual(updated.map((row) => row.querySelectorAll('.muxui-code-block__number')[1].dataset.muxuiLineNumber), updated.map((_, i) => String(i + 1)));
     for (const row of rows.filter((row) => row.dataset.muxuiChange !== 'context')) {
-      assert.match(row.querySelector('.muxui-code-block-sr-only').textContent, /^(Added|Removed) line: /u);
-      assert.equal(row.querySelector('.muxui-code-block-marker').getAttribute('aria-hidden'), 'true');
+      assert.match(row.querySelector('.muxui-code-block__status').textContent, /^(Added|Removed) line: /u);
+      assert.equal(row.querySelector('.muxui-code-block__marker').getAttribute('aria-hidden'), 'true');
     }
     const description = document.querySelector('pre').getAttribute('aria-describedby');
     assert.match(document.getElementById(description).textContent, /Original.*first column.*Updated.*second/u);
     assert.equal(document.querySelector('button').getAttribute('aria-label'), 'Copy updated code');
   }
   const mixed = documentOf({ mode: 'diff', before: 'a\nb\nc', after: 'a\nx\nc\ny' });
-  assert.deepEqual([...mixed.querySelectorAll('.muxui-code-block-line')].map((row) => row.dataset.muxuiChange), ['context', 'removed', 'added', 'context', 'added']);
+  assert.deepEqual([...mixed.querySelectorAll('.muxui-code-block__line')].map((row) => row.dataset.muxuiChange), ['context', 'removed', 'added', 'context', 'added']);
 });
 
 test('CodeBlock work and input bounds are exact with an honest replacement fallback', () => {
@@ -128,7 +129,7 @@ test('CodeBlock copies exact input and announces only fulfillment; rejects unava
     assert.deepEqual(writes, [source]);
     assert.equal(button.disabled, true);
     assert.equal(button.getAttribute('aria-busy'), 'true');
-    assert.ok(button.querySelector('.muxui-button-spinner'));
+    assert.ok(button.querySelector('.muxui-button__spinner'));
     assert.equal(document.querySelector('[role="status"]').textContent, '');
     assert.equal(document.querySelector('[role="tooltip"]'), null);
     await act(async () => button.click());
@@ -157,7 +158,7 @@ test('CodeBlock copies exact input and announces only fulfillment; rejects unava
       assert.ok(document.querySelector('button .lucide-copy'));
       assert.equal(document.querySelector('button').disabled, false);
       assert.equal(document.querySelector('[role="tooltip"]'), null);
-      assert.match(document.querySelector('.muxui-code-block-notice').textContent, /Could not copy/u);
+      assert.match(document.querySelector('.muxui-code-block__notice').textContent, /Could not copy/u);
     }
     await act(async () => root.render(e({ mode: 'diff', before: 'old', after: 'new' })));
     await act(async () => document.querySelector('button').click());
@@ -245,11 +246,11 @@ test('CodeBlock replaces and cleans up its three-second feedback timer without r
 
 test('CodeBlock CSS keeps metadata out of selection, token-derived wrapping, forced colors, and visible focus', async () => {
   const css = await readFile(new URL('../src/supplemental/code-block.css', import.meta.url), 'utf8');
-  assert.match(css, /\.muxui-code-block-number::before \{ content: attr\(data-muxui-line-number\)/u);
+  assert.match(css, /\.muxui-code-block__number::before \{ content: attr\(data-muxui-line-number\)/u);
   assert.match(css, /user-select: none/u);
   assert.match(css, /white-space: pre-wrap; overflow-wrap: anywhere/u);
   assert.match(css, /forced-colors: active/u);
-  assert.match(css, /\.muxui-code-block-text span \{ color: CanvasText !important; \}/u);
+  assert.match(css, /\.muxui-code-block__text span \{ color: CanvasText !important; \}/u);
   assert.match(css, /:focus-visible/u);
   assert.doesNotMatch(css, /animation:|@keyframes|#[\da-f]{3,8}\b/u);
 });
@@ -261,26 +262,26 @@ test('warm-engine SSR stays plain, hydrates safely, and diff tokens retain each 
   assert.ok(documents);
   const props = { mode: 'diff', before, after, language: ' TS ' };
   const html = renderToString(e(props));
-  assert.doesNotMatch(html, /muxui-code-block-token-/u);
+  assert.ok(!html.includes(guardedPrefixes.codeBlockToken));
   const dom = new JSDOM(`<!doctype html><div id="root">${html}</div>`);
   const restore = installDom(dom);
   const errors = [];
   let root;
   try {
     await act(async () => { root = hydrateRoot(document.querySelector('#root'), e(props), { onRecoverableError: (error) => errors.push(error) }); });
-    for (let attempt = 0; attempt < 100 && !document.querySelector('.muxui-code-block-token-link'); attempt++) {
+    for (let attempt = 0; attempt < 100 && !document.querySelector('.muxui-code-block__token-link'); attempt++) {
       await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
     }
     assert.deepEqual(errors, []);
     assert.equal(document.querySelector('code').dataset.muxuiLanguage, ' TS ');
-    assert.ok(document.querySelector('.muxui-code-block-token-link'));
-    for (const row of document.querySelectorAll('.muxui-code-block-line')) {
+    assert.ok(document.querySelector('.muxui-code-block__token-link'));
+    for (const row of document.querySelectorAll('.muxui-code-block__line')) {
       const removed = row.dataset.muxuiChange === 'removed';
-      const numbers = row.querySelectorAll('.muxui-code-block-number');
+      const numbers = row.querySelectorAll('.muxui-code-block__number');
       const number = Number(numbers[removed ? 0 : 1].dataset.muxuiLineNumber);
       const expected = documents[removed ? 0 : 1][number - 1];
-      const tokens = [...row.querySelector('.muxui-code-block-text').children];
-      assert.deepEqual(tokens.map((token) => ({ text: token.textContent, role: token.classList.contains('muxui-code-block-token-link') ? 'link' : token.classList.contains('muxui-code-block-token-strong') ? 'strong' : undefined })), expected);
+      const tokens = [...row.querySelector('.muxui-code-block__text').children];
+      assert.deepEqual(tokens.map((token) => ({ text: token.textContent, role: token.classList.contains('muxui-code-block__token-link') ? 'link' : token.classList.contains('muxui-code-block__token-strong') ? 'strong' : undefined })), expected);
     }
     await act(async () => root.render(e({ source: '<script>unsafe()</script>\r\n\tconst x = 1;\n\r\u2028', language: 'typescript' })));
     await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));

@@ -1,3 +1,5 @@
+import { partSelector } from '../../../../../packages/react/test/support/styling-parts.ts';
+
 /** @type {import('../anatomy.mjs').Anatomy} */
 export default {
   family: 'checkbox',
@@ -11,12 +13,12 @@ export default {
   stateTarget: '.muxui-checkbox',
   fixture: { children: 'Label' },
   parts: [
-    { id: 'root', node: 'FRAME', selector: '.muxui-checkbox', bind: ['gap', 'size'], layout: { direction: 'HORIZONTAL', align: 'CENTER' } },
+    { id: 'root', node: 'FRAME', selector: partSelector('checkbox', 'root'), bind: ['gap', 'size'], layout: { direction: 'HORIZONTAL', align: 'CENTER' } },
     {
       id: 'indicator',
       parent: 'root',
       node: 'FRAME',
-      selector: '.muxui-checkbox-indicator',
+      selector: partSelector('checkbox', 'indicator'),
       bind: ['fill', 'overlay', 'stroke', 'radius', 'size', 'shadow'],
       layout: { direction: 'HORIZONTAL', align: 'CENTER', justify: 'CENTER' },
     },
@@ -24,12 +26,12 @@ export default {
       id: 'glyph',
       parent: 'indicator',
       node: 'GLYPH',
-      selector: '.muxui-checkbox-indicator svg',
+      selector: '.muxui-checkbox__indicator svg',
       bind: ['size', 'text'],
       glyph: (variant) => (variant.selection === 'indeterminate' ? 'lucide-minus' : 'lucide-check'),
       when: (variant) => variant.selection !== 'unchecked',
     },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-checkbox-label', bind: ['text'] },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: partSelector('checkbox', 'label'), bind: ['text'] },
   ],
   preview: [
     'size=md,value=unchecked,state=rest',

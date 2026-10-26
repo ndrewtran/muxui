@@ -16,8 +16,8 @@ function documentHtml() {
 }
 
 const input = (page, id = 'controlled') => page.locator(`#${id} input[type="range"]`);
-const thumb = (page, id = 'controlled') => page.locator(`#${id} .muxui-slider-thumb`);
-const track = (page, id = 'controlled') => page.locator(`#${id} .muxui-slider-track`);
+const thumb = (page, id = 'controlled') => page.locator(`#${id} .muxui-slider__thumb`);
+const track = (page, id = 'controlled') => page.locator(`#${id} .muxui-slider__track`);
 
 async function center(locator) {
   const rect = await locator.boundingBox();
@@ -27,7 +27,7 @@ async function center(locator) {
 
 async function waitForScale(page, predicate, id = 'controlled') {
   await page.waitForFunction(({ id, predicate }) => {
-    const node = document.querySelector(`#${id} .muxui-slider-thumb-face`);
+    const node = document.querySelector(`#${id} .muxui-slider__thumb-face`);
     if (!node) return false;
     const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
     return predicate === 'pressed'
@@ -122,7 +122,7 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
         await page.mouse.move(point.x, point.y);
         await page.mouse.down();
         await page.waitForFunction(() => {
-          const node = document.querySelector('#controlled .muxui-slider-thumb-face');
+          const node = document.querySelector('#controlled .muxui-slider__thumb-face');
           return node && getComputedStyle(node).transform === 'none';
         });
         await page.mouse.up();

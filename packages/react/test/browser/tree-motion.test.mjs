@@ -17,7 +17,7 @@ function documentHtml() {
 }
 
 function row(tree, key) {
-  return tree.locator(`.muxui-tree-item[data-key="${key}"]`);
+  return tree.locator(`.muxui-tree__item[data-key="${key}"]`);
 }
 
 async function bounds(locator) {
@@ -51,7 +51,7 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     assert.equal(await row(primary, 'child-a').count(), 0, 'initial render does not reveal collapsed rows');
 
     const parent = row(primary, 'parent');
-    const parentToggle = parent.locator('.muxui-tree-toggle');
+    const parentToggle = parent.locator('.muxui-tree__toggle');
     await parentToggle.click();
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-a"]'));
     assert.equal(await parent.getAttribute('aria-expanded'), 'true');
@@ -70,14 +70,14 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="grandchild"]'));
     await waitForRevealToSettle(page, '.muxui-tree [data-key="grandchild"]');
     const liveIndent = await primary.evaluate((node) => Object.fromEntries(['child-a', 'grandchild'].map((key) => {
-      const label = node.querySelector(`[data-key="${key}"] .muxui-tree-item-label`);
+      const label = node.querySelector(`[data-key="${key}"] .muxui-tree__item-label`);
       return [key, label.getBoundingClientRect().left];
     })));
     await page.evaluate(() => window.setFirstTreeExpanded(['parent']));
     await page.waitForFunction(() => !document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="grandchild"]'));
     assert.equal(await row(primary, 'grandchild').count(), 0, 'nested collapse removes its descendants from the active collection');
     await primary.locator(':scope > [data-muxui-tree-exit]').waitFor();
-    const nestedGhostIndent = await primary.locator(':scope > [data-muxui-tree-exit] [data-muxui-tree-ghost-key="grandchild"] .muxui-tree-item-label')
+    const nestedGhostIndent = await primary.locator(':scope > [data-muxui-tree-exit] [data-muxui-tree-ghost-key="grandchild"] .muxui-tree__item-label')
       .evaluate((label) => label.getBoundingClientRect().left);
     assert.ok(Math.abs(nestedGhostIndent - liveIndent.grandchild) < 0.5,
       `a depth-three exit snapshot preserves its live indentation (${nestedGhostIndent}px vs ${liveIndent.grandchild}px)`);
@@ -104,7 +104,7 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     const ancestorGhostIndent = await primary.evaluate((node) => {
       const exit = node.querySelector(':scope > [data-muxui-tree-exit]');
       return Object.fromEntries(['child-a', 'grandchild'].map((key) => {
-        const label = exit.querySelector(`[data-muxui-tree-ghost-key="${key}"] .muxui-tree-item-label`);
+        const label = exit.querySelector(`[data-muxui-tree-ghost-key="${key}"] .muxui-tree__item-label`);
         return [key, label?.getBoundingClientRect().left];
       }));
     });
@@ -192,23 +192,23 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     const primaryParentBox = await parent.boundingBox();
     await page.mouse.move(primaryParentBox.x + primaryParentBox.width / 2, primaryParentBox.y + primaryParentBox.height / 2);
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="parent"][data-muxui-state-hovered]'));
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('.muxui-tree-hover:not([hidden])'));
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('.muxui-tree__hover:not([hidden])'));
     assert.equal(await parent.evaluate((node) => getComputedStyle(node).backgroundColor), selectedBackground,
       'hovering a selected row preserves its selection fill');
-    assert.equal(await independent.locator('.muxui-tree-hover').evaluate((node) => node.hidden), true,
+    assert.equal(await independent.locator('.muxui-tree__hover').evaluate((node) => node.hidden), true,
       'hover state remains local to its Tree');
 
     await page.evaluate(() => window.setFirstTreeExpanded(['parent']));
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-b"]'));
     await waitForRevealToSettle(page, '.muxui-tree [data-key="child-b"]');
-    const hover = primary.locator('.muxui-tree-hover');
+    const hover = primary.locator('.muxui-tree__hover');
     const start = await bounds(hover);
     const childBox = await row(primary, 'child-b').boundingBox();
     await page.mouse.move(childBox.x + 48, childBox.y + childBox.height / 2);
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-b"][data-muxui-state-hovered]'));
     const motionSampleHandle = await page.waitForFunction((startTop) => {
       const root = document.querySelectorAll('.muxui-tree')[0];
-      const shape = root?.querySelector('.muxui-tree-hover');
+      const shape = root?.querySelector('.muxui-tree__hover');
       const destination = root?.querySelector('[data-key="child-b"]');
       if (!shape || shape.hidden || !destination) return false;
       const top = shape.getBoundingClientRect().top;
@@ -222,12 +222,12 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
       && motionSample.transform !== 'none', 'the hover overlay is visibly in flight between enabled rows');
     await page.waitForFunction(() => {
       const root = document.querySelectorAll('.muxui-tree')[0];
-      const shape = root?.querySelector('.muxui-tree-hover')?.getBoundingClientRect();
+      const shape = root?.querySelector('.muxui-tree__hover')?.getBoundingClientRect();
       const target = root?.querySelector('[data-key="child-b"]')?.getBoundingClientRect();
       return shape && target && Math.abs(shape.top - target.top) < 1 && Math.abs(shape.height - target.height) < 1;
     });
     const settledGeometry = await primary.evaluate((node) => {
-      const shape = node.querySelector('.muxui-tree-hover').getBoundingClientRect();
+      const shape = node.querySelector('.muxui-tree__hover').getBoundingClientRect();
       const target = node.querySelector('[data-key="child-b"]').getBoundingClientRect();
       return { topDelta: Math.abs(shape.top - target.top), heightDelta: Math.abs(shape.height - target.height) };
     });
@@ -236,26 +236,26 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
 
     await page.evaluate(() => window.setFirstTreeExpanded([]));
     await page.waitForFunction(() => !document.querySelectorAll('.muxui-tree').item(0)?.querySelector('[data-key="child-b"]'));
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('.muxui-tree-hover[hidden]'));
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(0)?.querySelector('.muxui-tree__hover[hidden]'));
     assert.equal(await primary.locator(':scope > [data-muxui-tree-exit]').count(), 1,
       'collapsing the hovered branch clears the stale overlay while its visual exit completes');
 
     const independentParentBox = await row(independent, 'parent').boundingBox();
     await page.mouse.move(independentParentBox.x + independentParentBox.width / 2, independentParentBox.y + independentParentBox.height / 2);
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(1)?.querySelector('.muxui-tree-hover:not([hidden])'));
-    assert.equal(await primary.locator('.muxui-tree-hover').evaluate((node) => node.hidden), true,
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(1)?.querySelector('.muxui-tree__hover:not([hidden])'));
+    assert.equal(await primary.locator('.muxui-tree__hover').evaluate((node) => node.hidden), true,
       'transferring hover clears the previous Tree overlay');
-    const independentToggle = row(independent, 'parent').locator('.muxui-tree-toggle');
+    const independentToggle = row(independent, 'parent').locator('.muxui-tree__toggle');
     await independentToggle.click();
     await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(1)?.querySelector('[data-key="disabled-child"]'));
     await waitForRevealToSettle(page, '.muxui-tree[aria-label="Independent tree"] [data-key="disabled-child"]');
     const disabledBounds = await bounds(row(independent, 'disabled-child'));
     await page.mouse.move(480, disabledBounds.top + disabledBounds.height / 2);
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(1)?.querySelector('.muxui-tree-hover[hidden]'));
-    assert.equal(await independent.locator('.muxui-tree-hover').evaluate((node) => node.hidden), true,
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-tree').item(1)?.querySelector('.muxui-tree__hover[hidden]'));
+    assert.equal(await independent.locator('.muxui-tree__hover').evaluate((node) => node.hidden), true,
       'disabled rows do not receive the hover overlay');
     await page.mouse.move(1050, 760);
-    assert.equal(await independent.locator('.muxui-tree-hover').evaluate((node) => node.hidden), true,
+    assert.equal(await independent.locator('.muxui-tree__hover').evaluate((node) => node.hidden), true,
       'pointer leave clears the overlay');
 
     assert.deepEqual(pageErrors, [], 'browser has no uncaught runtime errors');

@@ -1,3 +1,5 @@
+import { partSelector } from '../../../../../packages/react/test/support/styling-parts.ts';
+
 /** @type {import('../anatomy.mjs').Anatomy} */
 export default {
   family: 'text-field',
@@ -8,18 +10,18 @@ export default {
   stateTarget: '.muxui-field-input',
   fixture: { label: 'Label', description: 'Description', defaultValue: 'Value' },
   parts: [
-    { id: 'root', node: 'FRAME', selector: '.muxui-text-field', bind: ['gap', 'size'], layout: { direction: 'VERTICAL', previewWidth: 208 } },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-field-label', bind: ['text'] },
+    { id: 'root', node: 'FRAME', selector: partSelector('text-field', 'root'), bind: ['gap', 'size'], layout: { direction: 'VERTICAL', previewWidth: 208 } },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: partSelector('text-field', 'label'), bind: ['text'] },
     {
       id: 'input',
       parent: 'root',
       node: 'FRAME',
-      selector: '.muxui-field-input',
+      selector: partSelector('text-field', 'input'),
       bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'size', 'shadow'],
       layout: { direction: 'HORIZONTAL', align: 'CENTER', centerInMinHeight: true },
     },
-    { id: 'value', parent: 'input', node: 'TEXT', selector: '.muxui-field-input', bind: ['text'] },
-    { id: 'description', parent: 'root', node: 'TEXT', selector: '.muxui-field-description', bind: ['text'] },
+    { id: 'value', parent: 'input', node: 'TEXT', selector: partSelector('text-field', 'input'), bind: ['text'] },
+    { id: 'description', parent: 'root', node: 'TEXT', selector: partSelector('text-field', 'description'), bind: ['text'] },
   ],
   preview: [
     'size=md,state=rest',

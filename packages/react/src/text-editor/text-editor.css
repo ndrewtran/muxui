@@ -271,7 +271,7 @@
   padding: 0;
 }
 
-.muxui-text-editor__btn .muxui-icon-button-icon {
+.muxui-text-editor__btn .muxui-icon-button__icon {
   width: 1rem;
   height: 1rem;
 }
@@ -358,12 +358,12 @@
   color: var(--muxui-semantic-color-neutral-60);
 }
 
-.muxui-text-editor__color-field {
+.muxui-text-editor__custom-color-field {
   display: flex;
   flex-direction: column;
 }
 
-.muxui-text-editor__color-field input {
+.muxui-text-editor__custom-color-field input {
   box-sizing: border-box;
   width: 100%;
   min-height: var(--muxui-field-min-height);
@@ -377,7 +377,7 @@
   outline: none;
 }
 
-.muxui-text-editor__color-field input:focus {
+.muxui-text-editor__custom-color-field input:focus {
   border-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
@@ -464,7 +464,7 @@
   outline: none;
 }
 
-.muxui-text-editor__selection-bar {
+.muxui-text-editor__selection-actions {
   box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
@@ -482,7 +482,7 @@
 }
 
 /* The field state keeps one width, so typing never resizes the bar. */
-.muxui-text-editor__selection-bar[data-muxui-instruction] {
+.muxui-text-editor__selection-actions[data-muxui-instruction] {
   inline-size: min(22rem, calc(100vw - 1rem));
 }
 
@@ -542,12 +542,12 @@
   color: var(--muxui-semantic-color-neutral-90);
 }
 
-.muxui-text-editor__selection-bar[data-muxui-phase='error'] {
+.muxui-text-editor__selection-actions[data-muxui-phase='error'] {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 @media (forced-colors: active) {
-  .muxui-text-editor__selection-bar {
+  .muxui-text-editor__selection-actions {
     border-color: ButtonText;
     background: Canvas;
     color: CanvasText;
@@ -599,11 +599,11 @@
 
 /* The bar floats above the field, so it takes a lighter surface than the field's. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-text-editor__selection-bar {
+  :scope .muxui-text-editor__selection-actions {
     background-color: var(--muxui-semantic-color-neutral-18);
   }
 
-  :scope .muxui-text-editor__selection-bar:not([data-muxui-phase='error']) {
+  :scope .muxui-text-editor__selection-actions:not([data-muxui-phase='error']) {
     border-color: var(--muxui-semantic-color-neutral-26);
   }
 }

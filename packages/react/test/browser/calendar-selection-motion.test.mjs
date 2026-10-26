@@ -14,7 +14,7 @@ function documentHtml() {
 }
 
 function cell(page, calendar, day) {
-  return page.locator(`#${calendar} .muxui-calendar-cell`).filter({ hasText: new RegExp(`^${day}$`, 'u') });
+  return page.locator(`#${calendar} .muxui-calendar__cell`).filter({ hasText: new RegExp(`^${day}$`, 'u') });
 }
 
 async function center(locator) {
@@ -32,7 +32,7 @@ async function markerCenter(locator) {
 async function waitForMarkerAlignment(page, calendar) {
   await page.waitForFunction((id) => {
     const root = document.querySelector(`#${id}`);
-    const marker = root?.querySelector('.muxui-calendar-selection');
+    const marker = root?.querySelector('.muxui-calendar__selection');
     const cellNode = marker?.parentElement;
     if (!marker || !cellNode) return false;
     const circle = marker.getBoundingClientRect();
@@ -43,7 +43,7 @@ async function waitForMarkerAlignment(page, calendar) {
 }
 
 async function markerIsAligned(page, calendar) {
-  return page.locator(`#${calendar} .muxui-calendar-selection`).evaluate((marker) => {
+  return page.locator(`#${calendar} .muxui-calendar__selection`).evaluate((marker) => {
     const circle = marker.getBoundingClientRect();
     const target = marker.parentElement.getBoundingClientRect();
     return Math.abs(circle.left + circle.width / 2 - (target.left + target.width / 2)) < 1
@@ -62,8 +62,8 @@ async function paintScale(locator) {
 
 async function waitForTravelCompletion(page, calendar) {
   await page.waitForFunction((id) => {
-    const marker = document.querySelector(`#${id} .muxui-calendar-selection`);
-    const paint = marker?.querySelector('.muxui-calendar-selection-paint');
+    const marker = document.querySelector(`#${id} .muxui-calendar__selection`);
+    const paint = marker?.querySelector('.muxui-calendar__selection-paint');
     if (!marker || !paint || marker.hasAttribute('data-muxui-selection-traveling')) return false;
     const transform = getComputedStyle(paint).transform;
     if (transform === 'none') return true;
@@ -87,7 +87,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
   try {
     const staticMarkup = renderToString(fixture());
     // Day cells, and so the selected circle, render only after hydration.
-    assert.doesNotMatch(staticMarkup, /class="muxui-calendar-selection"/u, 'SSR renders blank day placeholders');
+    assert.doesNotMatch(staticMarkup, /class="muxui-calendar__selection"/u, 'SSR renders blank day placeholders');
     assert.match(staticMarkup, /data-muxui-calendar-placeholder/u);
     browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1100, height: 900 }, locale: 'en-US', reducedMotion: 'no-preference' });
@@ -105,14 +105,14 @@ test('Calendar selection circle travels within a month, resets across dates/page
 
     const primary = page.locator('#primary');
     const secondary = page.locator('#secondary');
-    assert.equal(await page.locator('.muxui-calendar-selection').count(), 3, 'each Calendar instance has its own selected background');
+    assert.equal(await page.locator('.muxui-calendar__selection').count(), 3, 'each Calendar instance has its own selected background');
     await waitForMarkerAlignment(page, 'primary');
     const selectedForeground = await cell(page, 'secondary', 14).evaluate((node) => getComputedStyle(node).color);
-    const secondaryBefore = await markerCenter(secondary.locator('.muxui-calendar-selection'));
+    const secondaryBefore = await markerCenter(secondary.locator('.muxui-calendar__selection'));
     const source = cell(page, 'primary', 14);
     const target = cell(page, 'primary', 16);
-    const sourceLabel = source.locator('.muxui-calendar-date');
-    const targetLabel = target.locator('.muxui-calendar-date');
+    const sourceLabel = source.locator('.muxui-calendar__date');
+    const targetLabel = target.locator('.muxui-calendar__date');
     const targetForegroundBeforeClick = await targetLabel.evaluate((node) => getComputedStyle(node).color);
     const sourceLabelBefore = await sourceLabel.boundingBox();
     const targetLabelBefore = await targetLabel.boundingBox();
@@ -120,7 +120,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
     await page.evaluate(() => {
       const peak = window.__calendarSquishPeak = { x: 1, y: 1, done: false };
       const sample = () => {
-        const paint = document.querySelector('#primary .muxui-calendar-selection[data-muxui-selection-traveling] .muxui-calendar-selection-paint');
+        const paint = document.querySelector('#primary .muxui-calendar__selection[data-muxui-selection-traveling] .muxui-calendar__selection-paint');
         const transform = paint && getComputedStyle(paint).transform;
         if (transform && transform !== 'none') {
           const matrix = new DOMMatrixReadOnly(transform);
@@ -132,7 +132,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
       requestAnimationFrame(sample);
     });
     const travelRecording = await recordFrames(page, () => {
-      const rect = document.querySelector('#primary .muxui-calendar-selection')?.getBoundingClientRect();
+      const rect = document.querySelector('#primary .muxui-calendar__selection')?.getBoundingClientRect();
       return rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : null;
     });
 
@@ -150,7 +150,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
         playState: animation.playState,
       } : null;
     });
-    const marker = primary.locator('.muxui-calendar-selection');
+    const marker = primary.locator('.muxui-calendar__selection');
     assert.equal(await marker.getAttribute('data-muxui-selection-traveling'), 'true', 'shared indicator travel has started');
     assert.ok(colorTransition && colorTransition.playState === 'running', 'selected foreground transition starts with date selection');
     assert.ok(colorTransition.duration >= 850, 'selected foreground uses the Calendar state composite duration');
@@ -162,7 +162,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
     const targetLabelAfter = await targetLabel.boundingBox();
     assert.ok(Math.abs(sourceLabelAfter.y - sourceLabelBefore.y) < 0.5, 'old date text remains anchored while the circle travels');
     assert.ok(Math.abs(targetLabelAfter.y - targetLabelBefore.y) < 0.5, 'new date text remains anchored while the circle travels');
-    assert.deepEqual(await markerCenter(secondary.locator('.muxui-calendar-selection')), secondaryBefore, 'other Calendar instances do not retarget');
+    assert.deepEqual(await markerCenter(secondary.locator('.muxui-calendar__selection')), secondaryBefore, 'other Calendar instances do not retarget');
     await waitForMarkerAlignment(page, 'primary');
     await waitForTravelCompletion(page, 'primary');
     const travelFrames = await travelRecording.stop();
@@ -172,54 +172,54 @@ test('Calendar selection circle travels within a month, resets across dates/page
     const movingScale = await page.evaluate(() => Object.assign(window.__calendarSquishPeak, { done: true }));
     assert.ok(movingScale.x > 1.03 && movingScale.y < 0.97, 'selection paint squishes while its outer circle travels');
     await page.waitForFunction(() => {
-      const selected = document.querySelector('#primary .muxui-calendar-cell[data-muxui-state-selected]');
-      const label = selected?.querySelector('.muxui-calendar-date');
+      const selected = document.querySelector('#primary .muxui-calendar__cell[data-muxui-state-selected]');
+      const label = selected?.querySelector('.muxui-calendar__date');
       return label && getComputedStyle(label).color === getComputedStyle(selected).color;
     });
     const targetForegroundAfterTravel = await targetLabel.evaluate((node) => getComputedStyle(node).color);
     assert.equal(targetForegroundAfterTravel, selectedForeground, 'selected foreground finishes as the circle settles');
-    const settledScale = await paintScale(marker.locator('.muxui-calendar-selection-paint'));
+    const settledScale = await paintScale(marker.locator('.muxui-calendar__selection-paint'));
     assert.ok(Math.abs(settledScale.x - 1) < 0.01 && Math.abs(settledScale.y - 1) < 0.01, 'selection paint returns to a true circle');
 
     const interruptedTarget = cell(page, 'primary', 18);
     await interruptedTarget.click();
-    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar-selection')?.hasAttribute('data-muxui-selection-traveling'));
+    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar__selection')?.hasAttribute('data-muxui-selection-traveling'));
     await page.evaluate(() => window.__muxuiCalendarSelectionProof.clearPrimary());
-    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar-cell[data-muxui-state-selected]')?.textContent === '16');
+    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar__cell[data-muxui-state-selected]')?.textContent === '16');
     await page.evaluate(() => window.__muxuiCalendarSelectionProof.setPrimaryMotionPolicy('always'));
     await waitForFrames(page);
     await interruptedTarget.click();
     await waitForFrames(page);
     assert.equal(await interruptedTarget.getAttribute('data-muxui-state-selected'), 'true');
-    const resetMarker = primary.locator('.muxui-calendar-selection');
+    const resetMarker = primary.locator('.muxui-calendar__selection');
     assert.equal(await resetMarker.getAttribute('data-muxui-selection-traveling'), null, 'controlled deselection during travel clears the moving date before a no-motion reselect');
     assert.equal(await markerIsAligned(page, 'primary'), true, 'reselect under consumer reduced policy snaps without stale travel state');
-    const resetScale = await paintScale(resetMarker.locator('.muxui-calendar-selection-paint'));
+    const resetScale = await paintScale(resetMarker.locator('.muxui-calendar__selection-paint'));
     assert.ok(Math.abs(resetScale.x - 1) < 0.01 && Math.abs(resetScale.y - 1) < 0.01, 'no-motion reselect does not retain the squish');
     await page.evaluate(() => window.__muxuiCalendarSelectionProof.setPrimaryMotionPolicy('never'));
     await waitForFrames(page);
 
-    await page.locator('#primary .muxui-calendar-next').click();
-    await page.waitForFunction(() => !document.querySelector('#primary .muxui-calendar-grid').parentElement.style.height);
-    assert.match(await page.locator('#primary .muxui-calendar-heading').textContent(), /March 2026/u);
+    await page.locator('#primary .muxui-calendar__next').click();
+    await page.waitForFunction(() => !document.querySelector('#primary .muxui-calendar__grid').parentElement.style.height);
+    assert.match(await page.locator('#primary .muxui-calendar__heading').textContent(), /March 2026/u);
     const marchTarget = cell(page, 'primary', 10);
     await marchTarget.click();
     await waitForFrames(page);
-    const markerAfterPageChange = await markerCenter(primary.locator('.muxui-calendar-selection'));
+    const markerAfterPageChange = await markerCenter(primary.locator('.muxui-calendar__selection'));
     const marchTargetCenter = await center(marchTarget);
     assert.ok(Math.abs(markerAfterPageChange.x - marchTargetCenter.x) < 1 && Math.abs(markerAfterPageChange.y - marchTargetCenter.y) < 1, 'the first in-page selection after paging snaps to its date');
     assert.equal(await marchTarget.getAttribute('data-muxui-state-selected'), 'true', 'the first in-page selection after paging snaps to its date');
-    assert.equal(await primary.locator('.muxui-calendar-selection').getAttribute('data-muxui-selection-traveling'), null, 'page change does not start indicator squish');
-    const pageResetScale = await paintScale(primary.locator('.muxui-calendar-selection-paint'));
+    assert.equal(await primary.locator('.muxui-calendar__selection').getAttribute('data-muxui-selection-traveling'), null, 'page change does not start indicator squish');
+    const pageResetScale = await paintScale(primary.locator('.muxui-calendar__selection-paint'));
     assert.ok(Math.abs(pageResetScale.x - 1) < 0.01 && Math.abs(pageResetScale.y - 1) < 0.01, 'page change keeps the selection paint circular');
 
     await page.locator('#date-picker .muxui-date-trigger').click();
-    const pickerSelected = page.locator('.muxui-date-popover .muxui-calendar-cell[data-muxui-state-selected]');
+    const pickerSelected = page.locator('.muxui-date-popover .muxui-calendar__cell[data-muxui-state-selected]');
     await pickerSelected.waitFor();
     const pickerPaint = await pickerSelected.evaluate((node) => ({
       background: getComputedStyle(node).backgroundColor,
       foreground: getComputedStyle(node).color,
-      marker: node.querySelector('.muxui-calendar-selection'),
+      marker: node.querySelector('.muxui-calendar__selection'),
     }));
     assert.equal(pickerPaint.marker, null, 'DatePicker keeps its existing non-motion calendar renderer');
     assert.notEqual(pickerPaint.background, 'rgba(0, 0, 0, 0)', 'DatePicker selected background keeps its non-motion fallback');
@@ -232,24 +232,24 @@ test('Calendar selection circle travels within a month, resets across dates/page
     await reducedTarget.click();
     await waitForFrames(page);
     assert.equal(await markerIsAligned(page, 'primary'), true, 'system reduced motion aligns on the first frames');
-    assert.equal(await page.locator('#primary .muxui-calendar-selection').evaluate((node) => node.getAnimations().length), 0, 'system reduced motion keeps the selection instant');
-    const reducedScale = await paintScale(page.locator('#primary .muxui-calendar-selection-paint'));
+    assert.equal(await page.locator('#primary .muxui-calendar__selection').evaluate((node) => node.getAnimations().length), 0, 'system reduced motion keeps the selection instant');
+    const reducedScale = await paintScale(page.locator('#primary .muxui-calendar__selection-paint'));
     assert.ok(Math.abs(reducedScale.x - 1) < 0.01 && Math.abs(reducedScale.y - 1) < 0.01, 'system reduced motion never squishes the selection');
 
     const parentReducedTarget = cell(page, 'parent-reduced-motion', 16);
     await parentReducedTarget.click();
     await waitForFrames(page);
     assert.equal(await markerIsAligned(page, 'parent-reduced-motion'), true, 'a consumer MotionConfig reduced policy disables Calendar movement');
-    assert.equal(await page.locator('#parent-reduced-motion .muxui-calendar-selection').evaluate((node) => node.getAnimations().length), 0, 'consumer reduced policy does not create layout animations');
-    assert.equal(await page.locator('#parent-reduced-motion .muxui-calendar-selection').getAttribute('data-muxui-selection-traveling'), null, 'consumer reduced policy suppresses indicator travel state');
-    const parentReducedScale = await paintScale(page.locator('#parent-reduced-motion .muxui-calendar-selection-paint'));
+    assert.equal(await page.locator('#parent-reduced-motion .muxui-calendar__selection').evaluate((node) => node.getAnimations().length), 0, 'consumer reduced policy does not create layout animations');
+    assert.equal(await page.locator('#parent-reduced-motion .muxui-calendar__selection').getAttribute('data-muxui-selection-traveling'), null, 'consumer reduced policy suppresses indicator travel state');
+    const parentReducedScale = await paintScale(page.locator('#parent-reduced-motion .muxui-calendar__selection-paint'));
     assert.ok(Math.abs(parentReducedScale.x - 1) < 0.01 && Math.abs(parentReducedScale.y - 1) < 0.01, 'consumer reduced policy never squishes the selection');
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const rapidFirst = cell(page, 'primary', 12);
     const rapidLast = cell(page, 'primary', 13);
     await rapidFirst.click();
-    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar-selection')?.hasAttribute('data-muxui-selection-traveling'));
+    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar__selection')?.hasAttribute('data-muxui-selection-traveling'));
     await rapidLast.click();
     assert.equal(await rapidLast.getAttribute('data-muxui-state-selected'), 'true', 'rapid selection immediately targets the latest date');
     assert.equal(await page.evaluate(() => window.__muxuiCalendarSelectionProof.changes.at(-1)), '2026-03-13');

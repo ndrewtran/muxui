@@ -71,7 +71,7 @@ async function openAtCurrentMonth(fixedTime, { todayLabel, heading, year }) {
       await page.locator(`.muxui-${picker} .muxui-date-trigger`).click();
       const popover = page.locator('.muxui-date-popover');
       await popover.waitFor();
-      assert.equal(await popover.locator('.muxui-calendar-heading').textContent(), heading, `an empty ${picker} opens at the browser's current month`);
+      assert.equal(await popover.locator('.muxui-calendar__heading').textContent(), heading, `an empty ${picker} opens at the browser's current month`);
       assert.match(await popover.locator('[data-muxui-state-today]').getAttribute('aria-label'), todayLabel, `${picker} marks the browser's today`);
       await page.keyboard.press('Escape');
       await popover.waitFor({ state: 'detached' });

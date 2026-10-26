@@ -118,9 +118,9 @@ function PreciseColorThumb({ color, isHovered, isDragging, isDisabled, readOnly,
     return () => controls.forEach((control) => control.stop());
   }, [blocked, percent, reduced, state.orientation, thumbRef, x, y]);
 
-  return React.createElement(MotionSpan, { className: 'muxui-color-slider-thumb-visual', 'aria-hidden': true, style: { x, y } },
-    React.createElement(MotionSpan, { className: 'muxui-color-slider-thumb-halo', style: { opacity: haloOpacity, scale: haloScale } }),
-    React.createElement(MotionSpan, { ref: faceRef, className: 'muxui-color-slider-thumb-face', 'data-muxui-color-paint': 'sample', style: { scale, backgroundColor: color.toString('css') } }),
+  return React.createElement(MotionSpan, { className: 'muxui-color-slider__thumb-visual', 'aria-hidden': true, style: { x, y } },
+    React.createElement(MotionSpan, { className: 'muxui-color-slider__thumb-halo', style: { opacity: haloOpacity, scale: haloScale } }),
+    React.createElement(MotionSpan, { ref: faceRef, className: 'muxui-color-slider__thumb-face', 'data-muxui-color-paint': 'sample', style: { scale, backgroundColor: color.toString('css') } }),
   );
 }
 
@@ -129,11 +129,11 @@ export function ColorSliderMotionTrack({ readOnly }) {
   const trackRef = React.useRef(null);
   const thumbRef = React.useRef(null);
   return React.createElement(LazyMotion, { features: domAnimation, strict: true },
-    React.createElement(SliderTrack, { ref: trackRef, className: 'muxui-color-slider-track', 'data-muxui-color-paint': 'track' },
-      React.createElement(SliderFill, { className: 'muxui-color-slider-fill' }),
+    React.createElement(SliderTrack, { ref: trackRef, className: 'muxui-color-slider__track', 'data-muxui-color-paint': 'track' },
+      React.createElement(SliderFill, { className: 'muxui-color-slider__fill' }),
       React.createElement(ColorThumb, {
         ref: thumbRef,
-        className: 'muxui-color-slider-thumb',
+        className: 'muxui-color-slider__thumb',
         'data-muxui-state-read-only': readOnly || undefined,
         style: { backgroundColor: 'transparent' },
       }, (renderProps) => React.createElement(PreciseColorThumb, { ...renderProps, readOnly, trackRef, thumbRef })),

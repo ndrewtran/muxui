@@ -13,8 +13,8 @@ function documentHtml() {
 async function readIndicator(page, selector) {
   return page.locator(selector).evaluate((root) => {
     const selected = root.querySelector('[role="tab"][aria-selected="true"]');
-    const label = selected?.querySelector('.muxui-tab-label');
-    const indicator = root.querySelector('.muxui-tabs-motion-underline');
+    const label = selected?.querySelector('.muxui-tabs__tab-label');
+    const indicator = root.querySelector('.muxui-tabs__motion-underline');
     const list = root.querySelector('[role="tablist"]');
     const rect = (node) => {
       const value = node?.getBoundingClientRect();
@@ -48,7 +48,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await page.waitForFunction(() => document.documentElement.dataset.muxuiTabsHydrated === 'true');
     assert.deepEqual(errors, []);
     assert.match(await page.locator('#primary-tabs').getAttribute('class'), /tabs-primary/u);
-    assert.equal(await page.locator('.muxui-tab-panels').count(), 2, 'SSR and hydration retain both tab panel trees');
+    assert.equal(await page.locator('.muxui-tabs__panels').count(), 2, 'SSR and hydration retain both tab panel trees');
 
     const initial = await readIndicator(page, '#primary-tabs');
     assert.equal(initial.selectedLabel, 'A');
@@ -63,8 +63,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     assert.equal(await page.locator('#tabs-changes').textContent(), '0', 'controlled state changes do not require an animation callback');
     await page.waitForFunction((beforeWidth) => {
       const root = document.querySelector('#primary-tabs');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       if (!indicator || !label) return false;
       const currentWidth = indicator.getBoundingClientRect().width;
       const targetWidth = label.getBoundingClientRect().width;
@@ -76,14 +76,14 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     assert.ok(inFlight.indicator.width > initial.indicator.width && inFlight.indicator.width < inFlight.label.width, 'label movement is observed in flight');
     await page.waitForFunction(() => {
       const root = document.querySelector('#primary-tabs');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       return Boolean(indicator && label && Math.abs(indicator.getBoundingClientRect().width - label.getBoundingClientRect().width) < 1);
     });
     const settledLong = await readIndicator(page, '#primary-tabs');
     assert.ok(settledLong.label && settledLong.indicator);
     assert.ok(Math.abs(settledLong.indicator.width - settledLong.label.width) < 1);
-    assert.equal(await page.locator('#primary-tabs .muxui-tab-panel:not([data-muxui-hidden])').textContent(), 'Long panel');
+    assert.equal(await page.locator('#primary-tabs .muxui-tabs__panel:not([data-muxui-hidden])').textContent(), 'Long panel');
 
     const verticalBefore = await readIndicator(page, '#vertical-tabs');
     assert.equal(verticalBefore.listDirection, 'rtl');
@@ -94,8 +94,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await page.waitForFunction(() => document.querySelector('#vertical-tabs [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'A considerably longer label');
     await page.waitForFunction((beforeTop) => {
       const root = document.querySelector('#vertical-tabs');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       if (!indicator || !label) return false;
       const currentTop = indicator.getBoundingClientRect().top;
       const targetTop = label.getBoundingClientRect().top;
@@ -104,8 +104,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     }, verticalBefore.indicator.top);
     await page.waitForFunction(() => {
       const root = document.querySelector('#vertical-tabs');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       return Boolean(indicator && label && Math.abs(indicator.getBoundingClientRect().top - label.getBoundingClientRect().top) < 1);
     });
     const verticalAfter = await readIndicator(page, '#vertical-tabs');
@@ -128,8 +128,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     });
     await page.waitForFunction((beforeWidth) => {
       const root = document.querySelector('#primary-tabs');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       if (!indicator || !label) return false;
       const currentWidth = indicator.getBoundingClientRect().width;
       const targetWidth = label.getBoundingClientRect().width;
@@ -139,9 +139,9 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
       const tabs = document.querySelector('#primary-tabs');
-      const root = tabs?.querySelector('.muxui-tabs-motion');
-      const indicator = tabs?.querySelector('.muxui-tabs-motion-underline');
-      const label = tabs?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const root = tabs?.querySelector('.muxui-tabs__motion');
+      const indicator = tabs?.querySelector('.muxui-tabs__motion-underline');
+      const label = tabs?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       return root?.hasAttribute('data-muxui-tabs-reduced') && indicator && label
         && Math.abs(indicator.getBoundingClientRect().left - label.getBoundingClientRect().left) < 1
         && Math.abs(indicator.getBoundingClientRect().width - label.getBoundingClientRect().width) < 1;
@@ -160,8 +160,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     const systemBefore = await readIndicator(page, '#primary-tabs');
     await page.waitForFunction((beforeWidth) => {
       const root = document.querySelector('#primary-tabs');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      const label = root?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       if (!indicator || !label) return false;
       const currentWidth = indicator.getBoundingClientRect().width;
       const targetWidth = label.getBoundingClientRect().width;
@@ -171,9 +171,9 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForFunction(() => {
       const tabs = document.querySelector('#primary-tabs');
-      const root = tabs?.querySelector('.muxui-tabs-motion');
-      const indicator = tabs?.querySelector('.muxui-tabs-motion-underline');
-      const label = tabs?.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label');
+      const root = tabs?.querySelector('.muxui-tabs__motion');
+      const indicator = tabs?.querySelector('.muxui-tabs__motion-underline');
+      const label = tabs?.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label');
       return root?.hasAttribute('data-muxui-tabs-reduced') && indicator && label
         && Math.abs(indicator.getBoundingClientRect().left - label.getBoundingClientRect().left) < 1
         && Math.abs(indicator.getBoundingClientRect().width - label.getBoundingClientRect().width) < 1;
@@ -186,7 +186,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
       window.__muxuiTabsUnmount();
     });
     await page.locator('#tabs-unmounted').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('.muxui-tabs-motion-underline').count(), 0, 'unmount removes per-instance indicator nodes');
+    assert.equal(await page.locator('.muxui-tabs__motion-underline').count(), 0, 'unmount removes per-instance indicator nodes');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();

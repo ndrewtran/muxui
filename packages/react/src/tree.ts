@@ -130,7 +130,7 @@ function treeItem(item: NormalizedTreeItem, expansionTrigger: TreeExpansionTrigg
     textValue: item.textValue,
     hasChildItems: nested.length > 0,
     isDisabled: item.disabled,
-    className: 'muxui-tree-item',
+    className: 'muxui-tree__item',
     onClickCapture: rowExpansionEnabled ? (event: MouseEvent<HTMLElement>) => {
       if (!event.currentTarget.contains(event.target as Node)) return;
       if (isTreeInteractiveTarget(event.target, event.currentTarget)) return;
@@ -142,9 +142,9 @@ function treeItem(item: NormalizedTreeItem, expansionTrigger: TreeExpansionTrigg
     React.createElement(AriaTreeItemContent, {
       children: ({ state }) => {
         rowExpansion.toggleKey = rowExpansionEnabled ? () => state.toggleKey(item.id) : undefined;
-        return React.createElement('div', { className: 'muxui-tree-item-content' },
-          nested.length ? React.createElement(IconButton, { slot: 'chevron', 'aria-label': 'Toggle', disabled: item.disabled, className: 'muxui-tree-toggle' }, React.createElement(ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', fill: 'currentColor', strokeWidth: 0, size: 16 })) : null,
-          React.createElement('span', { className: 'muxui-tree-item-label' }, item.label));
+        return React.createElement('div', { className: 'muxui-tree__item-content' },
+          nested.length ? React.createElement(IconButton, { slot: 'chevron', 'aria-label': 'Toggle', disabled: item.disabled, className: 'muxui-tree__toggle' }, React.createElement(ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', fill: 'currentColor', strokeWidth: 0, size: 16 })) : null,
+          React.createElement('span', { className: 'muxui-tree__item-label' }, item.label));
       },
     }),
     nested.map((child) => React.cloneElement(treeItem(child, expansionTrigger, treeDisabled), { key: child.id })));

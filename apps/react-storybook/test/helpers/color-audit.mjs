@@ -13,11 +13,11 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
   // properties may be dynamic; descendants and ordinary component chrome stay audited.
   const dynamicColorParts = [
     ['.muxui-color-area[data-muxui-color-paint="area"]', ['background-color', 'background-image']],
-    ['.muxui-color-area-thumb[data-muxui-color-paint="sample"]', ['background-color']],
-    ['.muxui-color-slider-track[data-muxui-color-paint="track"]', ['background-image']],
-    ['.muxui-color-slider-thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
-    ['.muxui-color-wheel-track[data-muxui-color-paint="track"]', ['background-image']],
-    ['.muxui-color-wheel-thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-area__thumb[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-slider__track[data-muxui-color-paint="track"]', ['background-image']],
+    ['.muxui-color-slider__thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-wheel__track[data-muxui-color-paint="track"]', ['background-image']],
+    ['.muxui-color-wheel__thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
     ['.muxui-color-swatch[data-muxui-color-paint="sample"]', ['background-color', 'background-image']],
   ];
 

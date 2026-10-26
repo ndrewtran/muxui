@@ -5,7 +5,7 @@ import { collectAncestors, observeAncestorAttributes, sameGeometry, transformFro
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-const MENU_ITEM_SELECTOR = '.muxui-menu-item';
+const MENU_ITEM_SELECTOR = '.muxui-menu__item';
 
 function directMenuItems(root) {
   return [...root.querySelectorAll(MENU_ITEM_SELECTOR)]
@@ -58,7 +58,7 @@ function setDestination(node, target) {
 
 function createFocusNode(root) {
   const node = root.ownerDocument.createElement('span');
-  node.className = 'muxui-menu-focus';
+  node.className = 'muxui-menu__focus';
   node.setAttribute('aria-hidden', 'true');
   node.setAttribute('data-muxui-menu-focus', 'true');
   node.hidden = true;

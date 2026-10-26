@@ -79,7 +79,7 @@ async function hydrateAcrossTimezones(fixedTime, { today, todayLabel, heading })
       assert.equal(await todayCell.count(), 1);
       assert.equal(await todayCell.textContent(), today, `${id} marks the browser's today`);
       assert.match(await todayCell.getAttribute('aria-label'), todayLabel);
-      assert.equal(await page.locator(`#${id} .muxui-calendar-heading`).textContent(), heading);
+      assert.equal(await page.locator(`#${id} .muxui-calendar__heading`).textContent(), heading);
       assert.equal(await page.locator(`#${id} [data-muxui-calendar-placeholder]`).count(), 0);
     }
     assert.deepEqual(await heights(), before, 'the calendar frames keep their server height');
@@ -95,8 +95,8 @@ async function hydrateAcrossTimezones(fixedTime, { today, todayLabel, heading })
 
     // After the first month change the reserve is released, matching client-mounted calendars.
     await page.evaluate(() => window.__mountClient());
-    await page.locator('#client-range .muxui-range-calendar-cell[data-muxui-state-today]').waitFor();
-    for (const id of ['single', 'range', 'client-single', 'client-range']) await page.locator(`#${id} .muxui-calendar-next`).click();
+    await page.locator('#client-range .muxui-range-calendar__cell[data-muxui-state-today]').waitFor();
+    for (const id of ['single', 'range', 'client-single', 'client-range']) await page.locator(`#${id} .muxui-calendar__next`).click();
     await page.waitForFunction(() => ['single', 'range'].every((id) => {
       const height = (key) => document.querySelector(`#${key} > div`).getBoundingClientRect().height;
       return Math.abs(height(id) - height(`client-${id}`)) < 0.5;

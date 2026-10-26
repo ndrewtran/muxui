@@ -74,7 +74,7 @@ export function CalendarSelectionCell({ date, formattedDate, isSelected }) {
   }, [isSelected, motionContext?.reduced, pageKey, traveling]);
 
   const paint = React.createElement(motion.span, {
-    className: 'muxui-calendar-selection-paint',
+    className: 'muxui-calendar__selection-paint',
     animate: isTraveling ? TRAVEL_SCALE : CIRCLE_SCALE,
     transition: motionContext?.squishTransition ?? { duration: 0 },
   });
@@ -82,11 +82,11 @@ export function CalendarSelectionCell({ date, formattedDate, isSelected }) {
     ? motionContext?.reduced
       ? React.createElement('span', {
         'aria-hidden': 'true',
-        className: 'muxui-calendar-selection',
-      }, React.createElement('span', { className: 'muxui-calendar-selection-paint' }))
+        className: 'muxui-calendar__selection',
+      }, React.createElement('span', { className: 'muxui-calendar__selection-paint' }))
       : React.createElement(motion.span, {
         'aria-hidden': 'true',
-        className: 'muxui-calendar-selection',
+        className: 'muxui-calendar__selection',
         'data-muxui-selection-traveling': isTraveling || undefined,
         layoutId,
         initial: false,
@@ -99,6 +99,6 @@ export function CalendarSelectionCell({ date, formattedDate, isSelected }) {
   return React.createElement(React.Fragment, null,
     indicator,
     React.createElement('span', {
-      className: 'muxui-calendar-date',
+      className: 'muxui-calendar__date',
     }, formattedDate));
 }

@@ -60,7 +60,7 @@ async function readMotion(page) {
 // Serialized into the page by recordFrames, so it must stay self-contained.
 function samplePanel() {
   const node = document.querySelector('.muxui-dialog');
-  const backdrop = document.querySelector('.muxui-dialog-backdrop');
+  const backdrop = document.querySelector('.muxui-dialog__backdrop');
   if (!node) return null;
   const style = getComputedStyle(node);
   const backdropStyle = backdrop && getComputedStyle(backdrop);
@@ -79,7 +79,7 @@ function isMidFlight({ opacity, y, scale }) {
 }
 
 async function openTriggered(page) {
-  await page.locator('.muxui-dialog-trigger').click();
+  await page.locator('.muxui-dialog__trigger').click();
   await page.locator('.muxui-dialog').waitFor();
 }
 
@@ -132,7 +132,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     const entryRecording = await recordFrames(page, samplePanel);
     await openTriggered(page);
     await waitForPanelEntry(page);
-    const entryBackdrop = await page.locator('.muxui-dialog-backdrop').evaluate((node) => ({ duration: getComputedStyle(node).transitionDuration, easing: getComputedStyle(node).transitionTimingFunction }));
+    const entryBackdrop = await page.locator('.muxui-dialog__backdrop').evaluate((node) => ({ duration: getComputedStyle(node).transitionDuration, easing: getComputedStyle(node).transitionTimingFunction }));
     assert.equal(entryBackdrop.duration, '0.4s', 'backdrop uses the modal composite settle duration');
     assert.match(entryBackdrop.easing, /^linear\(/u, 'backdrop uses the modal composite spring curve');
     await settleEntry(page);
@@ -160,17 +160,17 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     assert.ok(exit.scale < 1 && exit.scale > 0.97, `exit scales down: ${JSON.stringify(exit)}`);
     assert.equal(exit.backdropDuration, '0.25s', 'backdrop uses the modal-dismiss composite settle duration');
     assert.match(exit.backdropEasing, /^linear\(/u, 'backdrop uses the modal-dismiss composite spring curve');
-    await page.waitForFunction(() => document.activeElement?.classList.contains('muxui-dialog-trigger'));
-    assert.equal(await page.locator('.muxui-dialog-trigger').evaluate((node) => document.activeElement === node), true, 'Escape restores trigger focus');
+    await page.waitForFunction(() => document.activeElement?.classList.contains('muxui-dialog__trigger'));
+    assert.equal(await page.locator('.muxui-dialog__trigger').evaluate((node) => document.activeElement === node), true, 'Escape restores trigger focus');
 
     await page.evaluate(() => window.__muxuiDialogSetModeOpen('rejected'));
     await page.locator('.muxui-dialog').waitFor();
     await settleEntry(page);
-    await page.locator('.muxui-dialog-close').click();
+    await page.locator('.muxui-dialog__close').click();
     // Negative check: a rejected close must not start an exit, which has no event to await.
     await page.waitForTimeout(35);
     assert.equal(await page.locator('.muxui-dialog').count(), 1, 'a rejected controlled close leaves the dialog open');
-    assert.equal(await page.locator('.muxui-dialog-backdrop').getAttribute('data-muxui-state-exiting'), null, 'a rejected close does not enter exit state');
+    assert.equal(await page.locator('.muxui-dialog__backdrop').getAttribute('data-muxui-state-exiting'), null, 'a rejected close does not enter exit state');
     const rejectedMotion = await readMotion(page);
     assert.equal(rejectedMotion.opacity, 1, 'a rejected close leaves panel opacity settled');
     assert.ok(Math.abs(rejectedMotion.y) < 1 && Math.abs(rejectedMotion.scale - 1) < 0.001, 'a rejected close leaves panel geometry settled');
@@ -194,7 +194,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.locator('#dialog-scope').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
       const panel = document.querySelector('.muxui-dialog');
-      const backdrop = document.querySelector('.muxui-dialog-backdrop');
+      const backdrop = document.querySelector('.muxui-dialog__backdrop');
       return panel?.hasAttribute('data-muxui-dialog-reduced')
         && backdrop?.hasAttribute('data-muxui-dialog-reduced')
         && getComputedStyle(panel).opacity === '1'
@@ -262,7 +262,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.keyboard.press('Escape');
     await page.mouse.click(4, 4);
     assert.equal(await page.locator('.muxui-dialog').count(), 1, 'dismissable=false blocks Escape and outside dismissal');
-    assert.equal(await page.locator('.muxui-dialog-close').count(), 0, 'dismissable=false removes the close button');
+    assert.equal(await page.locator('.muxui-dialog__close').count(), 0, 'dismissable=false removes the close button');
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
 
@@ -277,7 +277,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
       window.setTimeout(() => window.__muxuiDialogSetOpen(true), 24);
     });
     await page.locator('.muxui-dialog').waitFor();
-    await page.waitForFunction(() => !document.querySelector('.muxui-dialog-backdrop')?.hasAttribute('data-muxui-state-exiting'));
+    await page.waitForFunction(() => !document.querySelector('.muxui-dialog__backdrop')?.hasAttribute('data-muxui-state-exiting'));
     await settleEntry(page);
     const reopened = await readMotion(page);
     assert.equal(reopened.opacity, 1, 'rapid close/reopen settles open');

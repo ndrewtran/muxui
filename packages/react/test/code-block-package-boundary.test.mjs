@@ -5,6 +5,7 @@ import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { build } from 'vite';
 import test from 'node:test';
+import { guardedPrefixes } from './support/styling-inventory.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const publicEntry = resolve(packageRoot, 'generated/index.mjs');
@@ -22,7 +23,7 @@ test('root import and CodeBlock SSR do not load a Shiki module, engine, or gramm
     const { renderToString } = await import('react-dom/server');
     const html = renderToString(React.createElement(CodeBlock, {source: 'const x = 1;', language: 'typescript'}));
     assert.ok(html.includes('const x = 1;'));
-    assert.ok(!html.includes('muxui-code-block-token-'));
+    assert.ok(!html.includes(${JSON.stringify(guardedPrefixes.codeBlockToken)}));
   `;
   const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], { cwd: packageRoot, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -84,7 +85,7 @@ test('packed public consumer hydrates and highlights with exact copy text and re
       const source = '\\tconst value = "<script>&";\\r\\n  // retained  \\n';
       const element = React.createElement(CodeBlock, {source, language: 'typescript'});
       const html = renderToString(element);
-      assert.ok(!html.includes('muxui-code-block-token-'));
+      assert.ok(!html.includes(${JSON.stringify(guardedPrefixes.codeBlockToken)}));
       const dom = new JSDOM('<!doctype html><div id="root">' + html + '</div>', {pretendToBeVisual: true});
       for (const name of [...Object.getOwnPropertyNames(dom.window).filter((name) => /^(HTML|SVG)\\w*Element$/.test(name)), 'window', 'document', 'Document', 'DocumentFragment', 'Node', 'NodeFilter', 'Element', 'Event', 'MutationObserver', 'getComputedStyle']) {
         if (dom.window[name] !== undefined) Object.defineProperty(globalThis, name, {configurable: true, writable: true, value: name === 'window' ? dom.window : dom.window[name]});
@@ -98,9 +99,9 @@ test('packed public consumer hydrates and highlights with exact copy text and re
       const errors = [];
       let root;
       await act(async () => { root = hydrateRoot(document.querySelector('#root'), element, {onRecoverableError: (error) => errors.push(error.message)}); });
-      for (let count = 0; count < 200 && !document.querySelector('.muxui-code-block-token-link'); count++) await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+      for (let count = 0; count < 200 && !document.querySelector('.muxui-code-block__token-link'); count++) await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
       assert.deepEqual(errors, []);
-      assert.ok(document.querySelector('.muxui-code-block-token-link'));
+      assert.ok(document.querySelector('.muxui-code-block__token-link'));
       assert.equal(document.querySelector('code').textContent, source);
       assert.equal(document.querySelector('script'), null);
       await act(async () => document.querySelector('button').click());

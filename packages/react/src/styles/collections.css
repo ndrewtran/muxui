@@ -1,22 +1,22 @@
 /* Mux UI-owned collection and color parity source. */
 /* MuxUI component source: calendar.css */
-.muxui-calendar-header {
+.muxui-calendar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--muxui-semantic-layout-control-gap);
   margin-bottom: 0;
 }
-.muxui-calendar-grid {
+.muxui-calendar__grid {
   border-collapse: collapse;
   width: 100%;
 }
 
-.muxui-calendar-grid-header {
+.muxui-calendar__grid-header {
   display: table-header-group;
 }
 
-.muxui-calendar-header-cell {
+.muxui-calendar__header-cell {
   text-align: center;
   padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-tiny);
   font-family: var(--muxui-semantic-typography-text-font-family);
@@ -25,11 +25,11 @@
   color: var(--muxui-semantic-content-default);
 }
 
-.muxui-calendar-grid-body {
+.muxui-calendar__grid-body {
   display: table-row-group;
 }
 
-.muxui-calendar-cell {
+.muxui-calendar__cell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -45,32 +45,32 @@
   transition: background var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing), color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-calendar-cell:hover {
+.muxui-calendar__cell:hover {
   background: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-calendar-cell:hover:not([data-muxui-state-selected], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-calendar__cell:hover:not([data-muxui-state-selected], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
-.muxui-calendar-cell[data-muxui-state-selected] {
+.muxui-calendar__cell[data-muxui-state-selected] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
-.muxui-calendar-cell[data-muxui-state-selected]:hover {
+.muxui-calendar__cell[data-muxui-state-selected]:hover {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
-.muxui-calendar-cell:has(> .muxui-calendar-selection)[data-muxui-state-selected] {
+.muxui-calendar__cell:has(> .muxui-calendar__selection)[data-muxui-state-selected] {
   position: relative;
   background: transparent;
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
-.muxui-calendar-cell > .muxui-calendar-selection {
+.muxui-calendar__cell > .muxui-calendar__selection {
   position: absolute;
   z-index: 0;
   inset: 0;
@@ -78,7 +78,7 @@
   pointer-events: none;
 }
 
-.muxui-calendar-cell .muxui-calendar-selection-paint {
+.muxui-calendar__cell .muxui-calendar__selection-paint {
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -86,60 +86,60 @@
   transform-origin: center;
 }
 
-.muxui-calendar-cell > .muxui-calendar-date {
+.muxui-calendar__cell > .muxui-calendar__date {
   position: relative;
   z-index: 1;
 }
 
-.muxui-calendar-cell:has(> .muxui-calendar-selection)[data-muxui-state-selected]:hover > .muxui-calendar-selection > .muxui-calendar-selection-paint {
+.muxui-calendar__cell:has(> .muxui-calendar__selection)[data-muxui-state-selected]:hover > .muxui-calendar__selection > .muxui-calendar__selection-paint {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
-.muxui-calendar-cell[data-muxui-state-today] {
+.muxui-calendar__cell[data-muxui-state-today] {
   font-weight: var(--muxui-semantic-typography-control-weight);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.muxui-calendar-cell[data-muxui-state-outside-month] {
+.muxui-calendar__cell[data-muxui-state-outside-month] {
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-calendar-cell[data-muxui-state-disabled] {
+.muxui-calendar__cell[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-calendar-cell[data-muxui-state-unavailable] {
+.muxui-calendar__cell[data-muxui-state-unavailable] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
 }
 
-.muxui-calendar[data-muxui-state-disabled] .muxui-calendar-previous svg,
-.muxui-calendar[data-muxui-state-disabled] .muxui-calendar-next svg,
-.muxui-range-calendar[data-muxui-state-disabled] .muxui-calendar-previous svg,
-.muxui-range-calendar[data-muxui-state-disabled] .muxui-calendar-next svg {
+.muxui-calendar[data-muxui-state-disabled] .muxui-calendar__previous svg,
+.muxui-calendar[data-muxui-state-disabled] .muxui-calendar__next svg,
+.muxui-range-calendar[data-muxui-state-disabled] .muxui-calendar__previous svg,
+.muxui-range-calendar[data-muxui-state-disabled] .muxui-calendar__next svg {
   opacity: 0.45;
 }
 
-.muxui-calendar-cell[data-muxui-state-focus-visible] {
+.muxui-calendar__cell[data-muxui-state-focus-visible] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
 @media (forced-colors: active) {
-  .muxui-calendar-cell[data-muxui-state-selected] {
+  .muxui-calendar__cell[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
   }
 
-  .muxui-calendar-cell > .muxui-calendar-selection {
+  .muxui-calendar__cell > .muxui-calendar__selection {
     display: none;
   }
 
-  .muxui-calendar-cell:has(> .muxui-calendar-selection)[data-muxui-state-selected] {
+  .muxui-calendar__cell:has(> .muxui-calendar__selection)[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
   }
@@ -154,7 +154,7 @@
 }
 
 .muxui-color-area[data-muxui-state-disabled],
-.muxui-color-area-thumb[data-muxui-state-disabled] {
+.muxui-color-area__thumb[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 /* MuxUI component source: color-field.css */
@@ -241,58 +241,58 @@
   align-self: center;
 }
 
-.muxui-color-slider-track {
+.muxui-color-slider__track {
   grid-column: 1 / -1;
   grid-row: 2;
   height: 0.9375rem;
   border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
-.muxui-color-slider-thumb,
-.muxui-color-wheel-thumb {
+.muxui-color-slider__thumb,
+.muxui-color-wheel__thumb {
   border-color: transparent;
   box-shadow: none;
 }
 
-.muxui-color-slider-thumb {
+.muxui-color-slider__thumb {
   top: 50%;
 }
 
-.muxui-color-slider-thumb-visual,
-.muxui-color-wheel-thumb-visual {
+.muxui-color-slider__thumb-visual,
+.muxui-color-wheel__thumb-visual {
   position: absolute;
   inset: -2px;
   border-radius: inherit;
   pointer-events: none;
 }
 
-.muxui-color-slider-thumb-face,
-.muxui-color-slider-thumb-halo,
-.muxui-color-wheel-thumb-face,
-.muxui-color-wheel-thumb-halo {
+.muxui-color-slider__thumb-face,
+.muxui-color-slider__thumb-halo,
+.muxui-color-wheel__thumb-face,
+.muxui-color-wheel__thumb-halo {
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
 }
 
-.muxui-color-slider-thumb-face,
-.muxui-color-wheel-thumb-face {
+.muxui-color-slider__thumb-face,
+.muxui-color-wheel__thumb-face {
   border: 2px solid var(--muxui-semantic-control-color-thumb-border);
   box-shadow:
     0 0 0 1px var(--muxui-semantic-control-color-thumb-shadow),
     inset 0 0 0 1px var(--muxui-semantic-control-color-thumb-shadow);
 }
 
-.muxui-color-slider-thumb-halo,
-.muxui-color-wheel-thumb-halo {
+.muxui-color-slider__thumb-halo,
+.muxui-color-wheel__thumb-halo {
   inset: -3.25px;
   border: 1px solid var(--muxui-semantic-selection-track);
   opacity: 0;
 }
 
 .muxui-color-slider[data-muxui-state-disabled],
-.muxui-color-slider-thumb[data-muxui-state-disabled] {
+.muxui-color-slider__thumb[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 /* MuxUI component source: color-swatch.css */
@@ -331,7 +331,7 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-color-swatch-picker-item {
+.muxui-color-swatch-picker__item {
   position: relative;
   border-radius: var(--muxui-semantic-shape-radius-xs);
   outline: none;
@@ -339,27 +339,27 @@
   transition: box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-focus-visible] {
+.muxui-color-swatch-picker__item[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-selected] {
+.muxui-color-swatch-picker__item[data-muxui-state-selected] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-selection-track);
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-selected][data-muxui-state-focus-visible] {
+.muxui-color-swatch-picker__item[data-muxui-state-selected][data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-selection-track),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-hovered]:not([data-muxui-state-selected]) {
+.muxui-color-swatch-picker__item[data-muxui-state-hovered]:not([data-muxui-state-selected]) {
   box-shadow: 0 0 0 2px var(--muxui-semantic-border-indicator);
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-disabled] {
+.muxui-color-swatch-picker__item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
@@ -370,11 +370,11 @@
 }
 
 .muxui-color-wheel[data-muxui-state-disabled],
-.muxui-color-wheel-thumb[data-muxui-state-disabled] {
+.muxui-color-wheel__thumb[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 
-.muxui-color-wheel-track {
+.muxui-color-wheel__track {
 
 }
 /* MuxUI component source: combobox.css */
@@ -386,7 +386,7 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-combo-box-popover {
+.muxui-combo-box__popover {
   padding: var(--muxui-semantic-layout-inset-tight);
   min-width: var(--anchor-width);
   max-height: 17.5rem;
@@ -400,26 +400,26 @@
 }
 
 :where(
-  .muxui-combo-box-popover[data-muxui-size='sm'],
-  .muxui-combo-box-list[data-muxui-size='sm'],
-  .muxui-select-popover[data-muxui-size='sm'],
-  .muxui-select-list[data-muxui-size='sm']
+  .muxui-combo-box__popover[data-muxui-size='sm'],
+  .muxui-combo-box__list[data-muxui-size='sm'],
+  .muxui-select__popup[data-muxui-size='sm'],
+  .muxui-select__list[data-muxui-size='sm']
 ) { --muxui-control-target-size: var(--muxui-control-size-sm); }
 
 :where(
-  .muxui-combo-box-popover[data-muxui-size='lg'],
-  .muxui-combo-box-list[data-muxui-size='lg'],
-  .muxui-select-popover[data-muxui-size='lg'],
-  .muxui-select-list[data-muxui-size='lg']
+  .muxui-combo-box__popover[data-muxui-size='lg'],
+  .muxui-combo-box__list[data-muxui-size='lg'],
+  .muxui-select__popup[data-muxui-size='lg'],
+  .muxui-select__list[data-muxui-size='lg']
 ) { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
-.muxui-combo-box-list {
+.muxui-combo-box__list {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-gap);
 }
 
-.muxui-combo-box-option[data-muxui-state-selected] {
+.muxui-combo-box__option[data-muxui-state-selected] {
   color: var(--muxui-semantic-selection-track);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
@@ -441,7 +441,7 @@
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-grid-list-item {
+.muxui-grid-list__item {
   display: flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
@@ -457,39 +457,39 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-grid-list-item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled], [data-muxui-state-dragging], [data-muxui-state-drop-target]) {
+.muxui-grid-list__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled], [data-muxui-state-dragging], [data-muxui-state-drop-target]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent)
   );
 }
 
-.muxui-grid-list-item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-drop-target]):where([data-muxui-state-disabled], [data-muxui-state-dragging]) {
+.muxui-grid-list__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-drop-target]):where([data-muxui-state-disabled], [data-muxui-state-dragging]) {
   background-color: var(--muxui-semantic-surface-subtle);
   background-image: none;
 }
 
-.muxui-grid-list-item[data-muxui-state-selected] {
+.muxui-grid-list__item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
 }
 
-.muxui-grid-list-item[data-muxui-state-focus-visible] {
+.muxui-grid-list__item[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-grid-list-item[data-muxui-state-disabled] {
+.muxui-grid-list__item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-grid-list-item[data-muxui-state-dragging] {
+.muxui-grid-list__item[data-muxui-state-dragging] {
   opacity: 0.6;
 }
 
-.muxui-grid-list-item[data-muxui-state-drop-target] {
+.muxui-grid-list__item[data-muxui-state-drop-target] {
   background-color: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   outline: 2px solid var(--muxui-semantic-selection-track);
@@ -505,7 +505,7 @@
   overflow-y: hidden;
 }
 
-.muxui-grid-list[data-muxui-state-layout='stack'][data-muxui-state-orientation='horizontal'] > .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-state-layout='stack'][data-muxui-state-orientation='horizontal'] > .muxui-grid-list__item {
   flex: 0 0 auto;
 }
 
@@ -536,8 +536,8 @@
   overflow-y: hidden;
 }
 
-.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item,
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list__item,
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item {
   flex-direction: column;
   align-items: stretch;
   min-inline-size: 0;
@@ -545,8 +545,8 @@
   overflow-wrap: anywhere;
 }
 
-.muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list-item[data-muxui-state-focus-visible],
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-focus-visible] {
+.muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list__item[data-muxui-state-focus-visible],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
   box-shadow: inset 0 0 0 4px var(--muxui-semantic-focus-inner);
@@ -556,15 +556,15 @@
    fill, so default text and nested links and buttons keep their own colors and
    contrast. A focused selected item shows the focus ring, its halo, then the
    selection ring. */
-.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected],
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected] {
+.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list__item[data-muxui-state-selected],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-background);
   color: var(--muxui-semantic-content-strong);
   box-shadow: inset 0 0 0 2px var(--muxui-semantic-selection-track);
 }
 
-.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible],
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible] {
+.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list__item[data-muxui-state-selected][data-muxui-state-focus-visible],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-selected][data-muxui-state-focus-visible] {
   box-shadow:
     inset 0 0 0 4px var(--muxui-semantic-focus-inner),
     inset 0 0 0 6px var(--muxui-semantic-selection-track);
@@ -581,7 +581,7 @@
   overflow-y: auto;
 }
 
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item {
   box-sizing: border-box;
   min-block-size: 100%;
 }
@@ -592,7 +592,7 @@
   background-color: var(--muxui-semantic-surface-canvas);
 }
 
-.muxui-grid-list-hover {
+.muxui-grid-list__hover {
   position: absolute;
   z-index: 0;
   top: 0;
@@ -609,29 +609,29 @@
   transition: opacity var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-hover {
+.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list__hover {
   display: block;
 }
 
-.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item,
-.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list__item,
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list__item {
   position: relative;
   isolation: isolate;
   z-index: 1;
 }
 
-.muxui-grid-list[data-muxui-grid-list-ripple-ready] > .muxui-grid-list-item,
-.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-ripple-ready] .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-grid-list-ripple-ready] > .muxui-grid-list__item,
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-ripple-ready] .muxui-grid-list__item {
   position: relative;
   isolation: isolate;
 }
 
 /* RAC's row wrappers are stacking contexts, so the hover layer goes beneath them. */
-.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] > .muxui-grid-list-hover {
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] > .muxui-grid-list__hover {
   z-index: -1;
 }
 
-.muxui-grid-list-ripple-host {
+.muxui-grid-list__ripple-host {
   position: absolute;
   z-index: -1;
   inset: 0;
@@ -640,7 +640,7 @@
   pointer-events: none;
 }
 
-.muxui-grid-list-ripple {
+.muxui-grid-list__ripple {
   position: absolute;
   border-radius: 50%;
   background-color: var(--muxui-semantic-surface-strong);
@@ -650,17 +650,17 @@
   transition: opacity var(--muxui-grid-list-ripple-fade-duration, var(--muxui-semantic-motion-state-transition-duration)) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-grid-list-ripple[data-muxui-static] {
+.muxui-grid-list__ripple[data-muxui-static] {
   inset: 0;
   border-radius: inherit;
   transform: none;
 }
 
-.muxui-grid-list[data-muxui-grid-list-motion-reduced] .muxui-grid-list-ripple {
+.muxui-grid-list[data-muxui-grid-list-motion-reduced] .muxui-grid-list__ripple {
   transition-duration: 80ms;
 }
 
-.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
+.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list__item:not(
   [data-muxui-state-selected],
   [aria-selected='true'],
   [data-muxui-state-disabled],
@@ -676,7 +676,7 @@
   background-image: none;
 }
 
-.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list__item:not(
   [data-muxui-state-selected],
   [aria-selected='true'],
   [data-muxui-state-disabled],
@@ -692,7 +692,7 @@
   background-image: none;
 }
 
-.muxui-grid-list[data-muxui-grid-list-motion-reduced] > .muxui-grid-list-hover {
+.muxui-grid-list[data-muxui-grid-list-motion-reduced] > .muxui-grid-list__hover {
   transition: none;
 }
 
@@ -701,15 +701,15 @@
     background: Canvas;
   }
 
-  .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-hover {
+  .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list__hover {
     display: none;
   }
 
-  .muxui-grid-list-ripple-host {
+  .muxui-grid-list__ripple-host {
     display: none;
   }
 
-  .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
+  .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list__item:not(
     [data-muxui-state-selected],
     [aria-selected='true'],
     [data-muxui-state-disabled],
@@ -724,7 +724,7 @@
     background: Canvas;
   }
 
-  .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
+  .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list__item:not(
     [data-muxui-state-selected],
     [aria-selected='true'],
     [data-muxui-state-disabled],
@@ -739,35 +739,35 @@
     background: Canvas;
   }
 
-  .muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list-item[data-muxui-state-focus-visible],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-focus-visible] {
+  .muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list__item[data-muxui-state-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-focus-visible] {
     outline-color: Highlight;
     box-shadow: none;
   }
 
-  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected] {
+  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list__item[data-muxui-state-selected],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
     box-shadow: none;
   }
 
-  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible] {
+  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list__item[data-muxui-state-selected][data-muxui-state-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-selected][data-muxui-state-focus-visible] {
     outline-color: HighlightText;
     box-shadow: none;
   }
 
   /* LinkText is only guaranteed legible on Canvas, so nested links follow the selected text color. */
-  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected] a,
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected] a {
+  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list__item[data-muxui-state-selected] a,
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-selected] a {
     color: HighlightText;
   }
 }
 
 @media (prefers-contrast: more) {
-  .muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list-item[data-muxui-state-focus-visible],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-focus-visible] {
+  .muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list__item[data-muxui-state-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list__item[data-muxui-state-focus-visible] {
     outline-width: 3px;
     outline-offset: -3px;
   }
@@ -789,49 +789,49 @@
   overflow: auto;
 }
 
-.muxui-list-box-item {
+.muxui-list-box__item {
   position: relative;
   background-color: transparent;
 }
 
-.muxui-list-box-item[data-muxui-state-selected],
-.muxui-list-box-item[aria-selected='true'] {
+.muxui-list-box__item[data-muxui-state-selected],
+.muxui-list-box__item[aria-selected='true'] {
   background-color: var(--muxui-semantic-color-neutral-90);
   color: var(--muxui-semantic-color-neutral-5);
 }
 
-.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box-item[data-muxui-state-selected],
-.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box-item[aria-selected='true'] {
+.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box__item[data-muxui-state-selected],
+.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box__item[aria-selected='true'] {
   background-color: transparent;
 }
 
-.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box-item {
+.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box__item {
   transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-list-box[data-muxui-list-box-reduced] .muxui-list-box-item {
+.muxui-list-box[data-muxui-list-box-reduced] .muxui-list-box__item {
   transition-duration: 0s !important;
 }
 
-.muxui-list-box .muxui-list-box-item[data-muxui-state-focused]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not(:hover):not([data-muxui-state-hovered]) {
+.muxui-list-box .muxui-list-box__item[data-muxui-state-focused]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not(:hover):not([data-muxui-state-hovered]) {
   background-color: transparent;
   color: var(--muxui-item-color);
   transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-list-box .muxui-list-box-item:hover:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']),
-.muxui-list-box .muxui-list-box-item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']) {
+.muxui-list-box .muxui-list-box__item:hover:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']),
+.muxui-list-box .muxui-list-box__item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-list-box-item[data-muxui-state-focus-visible],
-.muxui-list-box-item:focus-visible {
+.muxui-list-box__item[data-muxui-state-focus-visible],
+.muxui-list-box__item:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 1px;
 }
 
-.muxui-list-box-selection {
+.muxui-list-box__selection {
   position: absolute;
   z-index: -1;
   left: 0;
@@ -844,7 +844,7 @@
   transform-origin: 0 0;
 }
 
-.muxui-list-box[data-muxui-list-box-reduced] .muxui-list-box-selection {
+.muxui-list-box[data-muxui-list-box-reduced] .muxui-list-box__selection {
   visibility: hidden;
 }
 
@@ -867,25 +867,25 @@
   grid-template-columns: none;
 }
 
-.muxui-list-box[data-muxui-state-layout='grid'] > .muxui-list-box-section {
+.muxui-list-box[data-muxui-state-layout='grid'] > .muxui-list-box__section {
   display: contents;
 }
 
-.muxui-list-box[data-muxui-state-layout='grid'] .muxui-list-box-section-header {
+.muxui-list-box[data-muxui-state-layout='grid'] .muxui-list-box__header {
   grid-column: 1 / -1;
 }
 
 /* MuxUI component source: menu.css */
-.muxui-menu-root {
+.muxui-menu__root {
   display: inline-block;
 }
 
 /* The trigger draws the same keyboard ring as Button, from React Aria's modality-aware data-muxui-state-focus-visible alone: native :focus-visible also matches the first pointer click on a trigger that stays closed, so the browser's own outline is cleared. The transparent outline stays visible in forced colors. */
-.muxui-menu-trigger {
+.muxui-menu__trigger {
   outline: none;
 }
 
-.muxui-menu-trigger[data-muxui-state-focus-visible] {
+.muxui-menu__trigger[data-muxui-state-focus-visible] {
   outline: 2px solid transparent;
   outline-offset: 2px;
   box-shadow:
@@ -893,19 +893,19 @@
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-menu-popup {
+.muxui-menu__popup {
   outline: none;
   max-block-size: var(--available-height);
   overflow: auto;
 }
 
-.muxui-menu-section-header,
-.muxui-list-box-section-header {
+.muxui-menu__header,
+.muxui-list-box__header {
   padding: var(--muxui-semantic-layout-inset-tight);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
-.muxui-menu-separator {
+.muxui-menu__separator {
   border: 0;
   border-block-start: 1px solid var(--muxui-semantic-border-strong);
   margin-block: var(--muxui-semantic-layout-tight-gap);
@@ -923,7 +923,7 @@
   color: var(--muxui-semantic-content-default);
 }
 
-.muxui-menu-item {
+.muxui-menu__item {
   border: none;
   background: none;
   width: 100%;
@@ -933,7 +933,7 @@
   text-decoration: none;
 }
 
-.muxui-menu-focus {
+.muxui-menu__focus {
   position: absolute;
   z-index: 0;
   top: 0;
@@ -946,24 +946,24 @@
   transform-origin: 0 0;
 }
 
-.muxui-menu-item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
+.muxui-menu__item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
   background-color: transparent;
   color: var(--muxui-item-focus-color);
 }
 
 @media (forced-colors: active) {
-  .muxui-menu-focus {
+  .muxui-menu__focus {
     display: none;
   }
 
-  .muxui-menu-item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
+  .muxui-menu__item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
     background-color: Highlight;
     color: HighlightText;
   }
 }
 
 /* MuxUI component source: radio.css */
-.muxui-radio {
+.muxui-radio-group__radio {
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
@@ -974,10 +974,10 @@
   user-select: none;
 }
 
-.muxui-radio.muxui-radio--sm { --muxui-control-target-size: var(--muxui-control-size-sm); }
-.muxui-radio.muxui-radio--lg { --muxui-control-target-size: var(--muxui-control-size-lg); }
+.muxui-radio-group__radio.muxui-radio-group__radio--sm { --muxui-control-target-size: var(--muxui-control-size-sm); }
+.muxui-radio-group__radio.muxui-radio-group__radio--lg { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
-.muxui-radio-indicator {
+.muxui-radio-group__indicator {
   --muxui-component-radio-dot-size: 0.5rem;
 
   display: inline-flex;
@@ -997,7 +997,7 @@
   pointer-events: none;
 }
 
-.muxui-radio-indicator::after {
+.muxui-radio-group__indicator::after {
   content: '';
   width: var(--muxui-component-radio-dot-size);
   height: var(--muxui-component-radio-dot-size);
@@ -1010,32 +1010,32 @@
   opacity: 0;
 }
 
-.muxui-radio.muxui-radio--sm .muxui-radio-indicator {
+.muxui-radio-group__radio.muxui-radio-group__radio--sm .muxui-radio-group__indicator {
   --muxui-component-radio-dot-size: 0.375rem;
   width: var(--muxui-semantic-layout-icon-size);
   height: var(--muxui-semantic-layout-icon-size);
 }
 
-.muxui-radio.muxui-radio--sm .muxui-radio-indicator::after {
+.muxui-radio-group__radio.muxui-radio-group__radio--sm .muxui-radio-group__indicator::after {
   width: 0.375rem;
   height: 0.375rem;
 }
 
 /* RAC keeps the native input as the focus target; the indicator owns focus paint. */
-.muxui-radio input[type='radio'] {
+.muxui-radio-group__radio input[type='radio'] {
   outline: none;
 }
 
-.muxui-radio[data-muxui-state-selected] .muxui-radio-indicator {
+.muxui-radio-group__radio[data-muxui-state-selected] .muxui-radio-group__indicator {
   border-color: var(--muxui-semantic-selection-track);
   background-color: var(--muxui-semantic-surface-raised);
 }
 
-.muxui-radio[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-indicator {
+.muxui-radio-group__radio[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-group__indicator {
   border-color: var(--muxui-semantic-color-color-50);
 }
 
-.muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
+.muxui-radio-group__radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-group__indicator {
   border-color: var(--muxui-semantic-border-indicator-hover);
   background-color: var(--muxui-semantic-surface-hover);
 }
@@ -1044,29 +1044,29 @@
    selected hover rule's specificity, outranks the unselected hover rule, and
    follows both in source order. :where() names the owning RadioGroup without
    adding specificity. */
-.muxui-radio[data-muxui-state-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
-.muxui-radio[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
+.muxui-radio-group__radio[data-muxui-state-invalid] .muxui-radio-group__indicator:where(.muxui-radio-group *),
+.muxui-radio-group__radio[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-group__indicator:where(.muxui-radio-group *) {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-radio[data-muxui-state-disabled] {
+.muxui-radio-group__radio[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-radio[data-muxui-state-selected] .muxui-radio-indicator::after {
+.muxui-radio-group__radio[data-muxui-state-selected] .muxui-radio-group__indicator::after {
   transform: scale(1);
   opacity: 1;
 }
 
-.muxui-radio-group[data-muxui-radio-motion] .muxui-radio-indicator::after,
+.muxui-radio-group[data-muxui-radio-motion] .muxui-radio-group__indicator::after,
 .muxui-radio-group[data-muxui-radio-motion] .muxui-radio-field__dot {
   display: none;
   transform: scale(0);
   opacity: 0;
 }
 
-.muxui-radio-motion-dot {
+.muxui-radio-group__motion-dot {
   display: block;
   width: var(--muxui-component-radio-dot-size, 0.5rem);
   height: var(--muxui-component-radio-dot-size, 0.5rem);
@@ -1075,103 +1075,103 @@
   pointer-events: none;
 }
 
-.muxui-radio.muxui-radio--sm .muxui-radio-motion-dot,
-.muxui-radio-field--sm .muxui-radio-motion-dot {
+.muxui-radio-group__radio.muxui-radio-group__radio--sm .muxui-radio-group__motion-dot,
+.muxui-radio-field--sm .muxui-radio-group__motion-dot {
   width: 0.375rem;
   height: 0.375rem;
 }
 
-.muxui-radio-field__indicator > .muxui-radio-motion-dot {
+.muxui-radio-field__indicator > .muxui-radio-group__motion-dot {
   background-color: var(--muxui-semantic-color-color-60);
 }
 /* MuxUI component source: range-calendar.css */
-.muxui-range-calendar-cell {
+.muxui-range-calendar__cell {
   color: var(--muxui-semantic-content-default);
 }
 
-.muxui-range-calendar-cell:hover {
+.muxui-range-calendar__cell:hover {
   background: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-range-calendar-cell:hover:not([data-muxui-state-selected], [data-muxui-state-selection-start], [data-muxui-state-selection-end], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__cell:hover:not([data-muxui-state-selected], [data-muxui-state-selection-start], [data-muxui-state-selection-end], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-range-calendar-cell[data-muxui-state-today] {
+.muxui-range-calendar__cell[data-muxui-state-today] {
   font-weight: var(--muxui-semantic-typography-control-weight);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.muxui-range-calendar-cell[data-muxui-state-outside-month] {
+.muxui-range-calendar__cell[data-muxui-state-outside-month] {
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-range-calendar-cell[data-muxui-state-disabled] {
+.muxui-range-calendar__cell[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-range-calendar-cell[data-muxui-state-unavailable] {
+.muxui-range-calendar__cell[data-muxui-state-unavailable] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
 }
 
-.muxui-range-calendar-cell[data-muxui-state-focus-visible] {
+.muxui-range-calendar__cell[data-muxui-state-focus-visible] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selected] {
+.muxui-range-calendar__cell[data-muxui-state-selected] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   border-radius: 0;
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selection-start] {
+.muxui-range-calendar__cell[data-muxui-state-selection-start] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selection-end] {
+.muxui-range-calendar__cell[data-muxui-state-selection-end] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
   border-radius: 0 var(--muxui-semantic-shape-pill-radius) var(--muxui-semantic-shape-pill-radius) 0;
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selection-start]:hover,
-.muxui-range-calendar-cell[data-muxui-state-selection-end]:hover {
+.muxui-range-calendar__cell[data-muxui-state-selection-start]:hover,
+.muxui-range-calendar__cell[data-muxui-state-selection-end]:hover {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selected]:hover {
+.muxui-range-calendar__cell[data-muxui-state-selected]:hover {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
 /* The provisional range uses a row-local band so the calendar stays in RAC's
    grid and the date text never participates in the animation. */
-.muxui-range-selection-motion {
+.muxui-range-calendar__selection-motion {
   position: relative;
 }
 
-.muxui-range-selection-motion > .muxui-range-selection-bands {
+.muxui-range-calendar__selection-motion > .muxui-range-calendar__selection-bands {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
 }
 
-.muxui-range-selection-motion > div:not(.muxui-range-selection-bands) {
+.muxui-range-calendar__selection-motion > div:not(.muxui-range-calendar__selection-bands) {
   position: relative;
   z-index: 1;
 }
 
-.muxui-range-selection-band {
+.muxui-range-calendar__selection-band {
   position: absolute;
   box-sizing: border-box;
   border-radius: 0;
@@ -1179,76 +1179,76 @@
   pointer-events: none;
 }
 
-.muxui-range-selection-band[data-muxui-range-band-cap='left'] {
+.muxui-range-calendar__selection-band[data-muxui-range-band-cap='left'] {
   border-radius: calc(var(--muxui-calendar-cell-size, 28px) / 2) 0 0 calc(var(--muxui-calendar-cell-size, 28px) / 2);
 }
 
-.muxui-range-selection-band[data-muxui-range-band-cap='right'] {
+.muxui-range-calendar__selection-band[data-muxui-range-band-cap='right'] {
   border-radius: 0 calc(var(--muxui-calendar-cell-size, 28px) / 2) calc(var(--muxui-calendar-cell-size, 28px) / 2) 0;
 }
 
-.muxui-range-selection-band[data-muxui-range-band-cap='both'] {
+.muxui-range-calendar__selection-band[data-muxui-range-band-cap='both'] {
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-state-selected]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background: transparent;
   color: var(--muxui-semantic-content-default);
   border-radius: 0;
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-range-anchor]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-range-anchor]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background: transparent;
   color: var(--muxui-semantic-content-default);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-start]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-start]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-end]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-end]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   border-radius: 0 var(--muxui-semantic-shape-pill-radius) var(--muxui-semantic-shape-pill-radius) 0;
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-start][data-muxui-state-selection-end]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-start][data-muxui-state-selection-end]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
 @media not (forced-colors: active) {
-  .muxui-range-selection-motion[data-muxui-range-selecting][data-muxui-range-pointer-mode] .muxui-range-calendar-cell:is(:hover, :focus) {
+  .muxui-range-calendar__selection-motion[data-muxui-range-selecting][data-muxui-range-pointer-mode] .muxui-range-calendar__cell:is(:hover, :focus) {
     border: none;
     outline: none;
     box-shadow: none;
   }
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-range-anchor]:hover {
+.muxui-range-calendar__selection-motion[data-muxui-range-selecting] .muxui-range-calendar__cell[data-muxui-range-anchor]:hover {
   background: var(--muxui-semantic-selection-track);
 }
 
 /* Mux-owned selected-tab indicator. Underline uses the label rect while
    filled variants use the trigger bounds; each position is instance-local. */
-.muxui-tabs-motion {
+.muxui-tabs__motion {
   position: relative;
   isolation: isolate;
   min-inline-size: 0;
 }
 
-.muxui-tabs-motion > .muxui-tab-list,
-.muxui-tabs-motion-overflow-content > .muxui-tab-list {
+.muxui-tabs__motion > .muxui-tabs__list,
+.muxui-tabs__motion-overflow-content > .muxui-tabs__list {
   position: relative;
   z-index: 1;
 }
 
-.muxui-tabs-motion-underline {
+.muxui-tabs__motion-underline {
   position: absolute;
   left: 0;
   top: 0;
@@ -1264,136 +1264,136 @@
   pointer-events: none;
 }
 
-.muxui-tabs-motion[data-muxui-tabs-ready] .muxui-tabs-motion-underline {
+.muxui-tabs__motion[data-muxui-tabs-ready] .muxui-tabs__motion-underline {
   opacity: 1;
 }
 
-.muxui-tabs-motion[data-muxui-tabs-reduced] .muxui-tabs-motion-underline {
+.muxui-tabs__motion[data-muxui-tabs-reduced] .muxui-tabs__motion-underline {
   transition: none;
 }
 
 /* Filled variants keep the selected shape behind the list; the fixed
    foreground layer supplies inverse contrast only inside that shape. */
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] > .muxui-tab-list,
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] > .muxui-tab-list,
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tabs-motion-overflow-content > .muxui-tab-list {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] > .muxui-tabs__list,
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] > .muxui-tabs__list,
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__motion-overflow-content > .muxui-tabs__list {
   border: 0;
   background: transparent;
   padding: var(--muxui-semantic-layout-inset-tiny);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] > .muxui-tab-list {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] > .muxui-tabs__list {
   inline-size: max-content;
   max-inline-size: 100%;
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'],
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'],
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'],
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'],
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] {
   background: var(--muxui-semantic-action-neutral-background);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] {
   inline-size: fit-content;
   max-inline-size: 100%;
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] {
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] {
   inline-size: fit-content;
   max-inline-size: 100%;
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] > .muxui-tab-list {
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] > .muxui-tabs__list {
   inline-size: max-content;
   max-inline-size: 100%;
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab,
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab,
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab,
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab,
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab {
   z-index: 1;
   background: transparent;
   color: var(--muxui-semantic-content-default);
   padding-inline: var(--muxui-semantic-layout-inset-small);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab,
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab,
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab {
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab {
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab {
   flex: 0 0 auto;
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 /* Standard Mux interaction states remain visible around the moving shape. */
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:hover:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:hover:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:hover:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:hover:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab:hover:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab:hover:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background: var(--muxui-semantic-action-neutral-background-hover);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:active:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:active:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:active:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:active:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab:active:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab:active:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
   background: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
 /* Selected tabs start clear so hover and RAC keyboard focus can compose with
    the moving shape without inheriting a native focus shadow. */
-.muxui-tabs-motion .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']) {
+.muxui-tabs__motion .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']) {
   outline: none;
   box-shadow: none;
 }
 
 /* Selected hover feedback stays in the background so the moving fill and
    inverse foreground remain intact; active and pressed keep their own fill. */
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-hover) 12%, transparent);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
+.muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
   background-color: var(--muxui-semantic-action-neutral-background-hover);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true'], :active, [data-muxui-state-pressed]) {
+.muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__tab:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true'], :active, [data-muxui-state-pressed]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']) {
+.muxui-tabs .muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
+.muxui-tabs .muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
+.muxui-tabs .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']) {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
   box-shadow: none;
 }
 
 /* The selected tab's accent ring is reserved for keyboard-visible focus. */
-.muxui-tabs-motion .muxui-tab:is([data-muxui-state-selected], [aria-selected='true'])[data-muxui-state-focus-visible]:not([data-muxui-state-disabled], [aria-disabled='true']) {
+.muxui-tabs__motion .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true'])[data-muxui-state-focus-visible]:not([data-muxui-state-disabled], [aria-disabled='true']) {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
 /* The selected state is also visible before hydration measures the shape. */
-.muxui-tabs-motion:not([data-muxui-tabs-ready]):not([data-muxui-tabs-variant='underline']) .muxui-tab[data-muxui-state-selected] {
+.muxui-tabs__motion:not([data-muxui-tabs-ready]):not([data-muxui-tabs-variant='underline']) .muxui-tabs__tab[data-muxui-state-selected] {
   background: var(--muxui-semantic-surface-emphasis);
   color: var(--muxui-semantic-content-on-solid);
 }
 
-.muxui-tabs-motion-foreground {
+.muxui-tabs__motion-foreground {
   position: absolute;
   inset: 0;
   box-sizing: border-box;
@@ -1404,31 +1404,31 @@
   clip-path: inset(100%);
 }
 
-.muxui-tabs-motion-label {
+.muxui-tabs__motion-label {
   position: absolute;
   white-space: nowrap;
   color: var(--muxui-semantic-content-on-solid);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tabs-motion-underline,
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tabs-motion-underline,
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tabs-motion-underline {
+.muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__motion-underline,
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__motion-underline,
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__motion-underline {
   z-index: 0;
   background: var(--muxui-semantic-surface-emphasis);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tabs-motion-underline {
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__motion-underline {
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] {
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] {
   max-inline-size: 100%;
   min-inline-size: 0;
   overflow: hidden;
 }
 
-.muxui-tabs-motion-overflow-viewport {
+.muxui-tabs__motion-overflow-viewport {
   box-sizing: border-box;
   max-inline-size: 100%;
   min-inline-size: 0;
@@ -1439,30 +1439,30 @@
   scroll-padding-inline: var(--muxui-semantic-control-size-md);
 }
 
-.muxui-tabs-motion-overflow-viewport::-webkit-scrollbar {
+.muxui-tabs__motion-overflow-viewport::-webkit-scrollbar {
   display: none;
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tabs-motion-overflow-viewport {
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__motion-overflow-viewport {
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background: transparent;
   padding-inline: var(--muxui-semantic-control-size-md);
 }
 
-.muxui-tabs-motion-overflow-content {
+.muxui-tabs__motion-overflow-content {
   position: relative;
   inline-size: max-content;
   min-inline-size: 100%;
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab-list {
+.muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__list {
   inline-size: max-content;
   min-inline-size: 100%;
   border: 0;
   border-radius: inherit;
 }
 
-.muxui-tabs-motion-edge {
+.muxui-tabs__motion-edge {
   position: absolute;
   z-index: 3;
   display: grid;
@@ -1479,62 +1479,62 @@
     outline-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tabs-motion-edge:hover:not(:disabled),
-.muxui-tabs-motion-edge[data-muxui-state-hovered]:not(:disabled) {
+.muxui-tabs__motion-edge:hover:not(:disabled),
+.muxui-tabs__motion-edge[data-muxui-state-hovered]:not(:disabled) {
   background-color: transparent;
   background-image: linear-gradient(var(--muxui-semantic-action-neutral-background-hover), var(--muxui-semantic-action-neutral-background-hover));
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-tabs-motion-edge:active:not(:disabled),
-.muxui-tabs-motion-edge[data-muxui-state-pressed]:not(:disabled) {
+.muxui-tabs__motion-edge:active:not(:disabled),
+.muxui-tabs__motion-edge[data-muxui-state-pressed]:not(:disabled) {
   background-color: transparent;
   background-image: linear-gradient(var(--muxui-semantic-action-neutral-background-pressed), var(--muxui-semantic-action-neutral-background-pressed));
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-tabs-motion-edge--left,
-.muxui-tabs-motion-edge--right {
+.muxui-tabs__motion-edge--left,
+.muxui-tabs__motion-edge--right {
   inset-block: 0;
   inline-size: var(--muxui-semantic-control-size-md);
 }
 
-.muxui-tabs-motion-edge--left {
+.muxui-tabs__motion-edge--left {
   left: 0;
   border-top-left-radius: var(--muxui-semantic-shape-pill-radius);
   border-bottom-left-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion-edge--right {
+.muxui-tabs__motion-edge--right {
   right: 0;
   border-top-right-radius: var(--muxui-semantic-shape-pill-radius);
   border-bottom-right-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion-edge--before,
-.muxui-tabs-motion-edge--after {
+.muxui-tabs__motion-edge--before,
+.muxui-tabs__motion-edge--after {
   inset-inline: 0;
   block-size: var(--muxui-semantic-control-size-md);
 }
 
-.muxui-tabs-motion-edge--before {
+.muxui-tabs__motion-edge--before {
   inset-block-start: 0;
   border-start-start-radius: var(--muxui-semantic-shape-pill-radius);
   border-start-end-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion-edge--after {
+.muxui-tabs__motion-edge--after {
   inset-block-end: 0;
   border-end-start-radius: var(--muxui-semantic-shape-pill-radius);
   border-end-end-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-tabs-motion-edge:focus-visible {
+.muxui-tabs__motion-edge:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -4px;
 }
 
-.muxui-tabs-motion-edge:disabled {
+.muxui-tabs__motion-edge:disabled {
   background-color: transparent;
   background-image: none;
   color: var(--muxui-semantic-content-faint);
@@ -1542,16 +1542,16 @@
   cursor: not-allowed;
 }
 
-.muxui-tabs-motion-edge:disabled svg {
+.muxui-tabs__motion-edge:disabled svg {
   opacity: 0.45;
 }
 
 /* Keep scrolling tabs out from under the transparent arrow controls. */
-.muxui-tabs-motion[data-muxui-tabs-overflow] .muxui-tabs-motion-overflow-viewport {
+.muxui-tabs__motion[data-muxui-tabs-overflow] .muxui-tabs__motion-overflow-viewport {
   clip-path: inset(0 var(--muxui-semantic-control-size-md));
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion-overflow-viewport {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion-overflow-viewport {
   block-size: 100%;
   max-block-size: 100%;
   overflow-x: hidden;
@@ -1561,30 +1561,30 @@
   padding-inline: 0;
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-overflow] .muxui-tabs-motion-overflow-viewport {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion[data-muxui-tabs-overflow] .muxui-tabs__motion-overflow-viewport {
   clip-path: inset(var(--muxui-semantic-control-size-md) 0);
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion-overflow-content {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion-overflow-content {
   inline-size: 100%;
   min-block-size: 100%;
   block-size: max-content;
 }
 
 @media (forced-colors: active) {
-  .muxui-tabs-motion-foreground,
-  .muxui-tabs-motion:not([data-muxui-tabs-variant='underline']) .muxui-tabs-motion-underline {
+  .muxui-tabs__motion-foreground,
+  .muxui-tabs__motion:not([data-muxui-tabs-variant='underline']) .muxui-tabs__motion-underline {
     display: none;
   }
 
-  .muxui-tabs-motion:not([data-muxui-tabs-variant='underline']) .muxui-tab[data-muxui-state-selected] {
+  .muxui-tabs__motion:not([data-muxui-tabs-variant='underline']) .muxui-tabs__tab[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
     forced-color-adjust: none;
   }
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab-list {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__list {
   inline-size: 100%;
   min-block-size: max-content;
 }
@@ -1593,7 +1593,7 @@
   --muxui-field-font-size: var(--muxui-semantic-typography-text-s-font-size);
 }
 
-.muxui-select-trigger {
+.muxui-select__trigger {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -1609,13 +1609,13 @@
 }
 
 :where(
-  .muxui-select:not([data-muxui-state-invalid]) > .muxui-select-trigger,
-  .muxui-select-trigger:not([data-muxui-state-invalid])
+  .muxui-select:not([data-muxui-state-invalid]) > .muxui-select__trigger,
+  .muxui-select__trigger:not([data-muxui-state-invalid])
 ):hover:not(:focus, :focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open], [data-muxui-state-disabled]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-select-trigger[data-muxui-state-disabled] {
+.muxui-select__trigger[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   outline-color: var(--muxui-field-border-color);
   color: var(--muxui-field-color);
@@ -1623,17 +1623,17 @@
   pointer-events: none;
 }
 
-.muxui-select[data-muxui-state-invalid] > .muxui-select-trigger,
-.muxui-select-trigger[data-muxui-state-invalid] {
+.muxui-select[data-muxui-state-invalid] > .muxui-select__trigger,
+.muxui-select__trigger[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-select[data-muxui-state-invalid] > .muxui-select-trigger:is(:focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open]),
-.muxui-select-trigger[data-muxui-state-invalid]:is(:focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open]) {
+.muxui-select[data-muxui-state-invalid] > .muxui-select__trigger:is(:focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open]),
+.muxui-select__trigger[data-muxui-state-invalid]:is(:focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open]) {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-select-value {
+.muxui-select__value {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1642,11 +1642,11 @@
   white-space: nowrap;
 }
 
-.muxui-select-value[data-muxui-state-placeholder] {
+.muxui-select__value[data-muxui-state-placeholder] {
   color: var(--muxui-semantic-color-neutral-50);
 }
 
-.muxui-select-popover {
+.muxui-select__popup {
   padding: var(--muxui-semantic-layout-inset-tight);
   min-width: var(--anchor-width, 10rem);
   max-height: 17.5rem;
@@ -1654,14 +1654,14 @@
   overflow-x: hidden;
 }
 
-.muxui-select-list {
+.muxui-select__list {
   display: flex;
   flex-direction: column;
   gap: 0;
   outline: none;
 }
 
-.muxui-select-option[data-muxui-state-selected] {
+.muxui-select__option[data-muxui-state-selected] {
   color: var(--muxui-semantic-selection-track);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
@@ -1675,7 +1675,7 @@
   touch-action: none;
 }
 
-.muxui-slider-header {
+.muxui-slider__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1685,13 +1685,13 @@
   top: 1px;
 }
 
-.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-header {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider__header {
   width: max-content;
   justify-content: flex-start;
   gap: var(--muxui-semantic-layout-control-content-gap);
 }
 
-.muxui-slider-control {
+.muxui-slider__control {
   display: flex;
   align-items: center;
   width: 100%;
@@ -1699,13 +1699,13 @@
   cursor: pointer;
 }
 
-.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-control {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider__control {
   flex-direction: column;
   width: 1.25rem;
   height: 10rem;
 }
 
-.muxui-slider[data-muxui-state-disabled] .muxui-slider-control {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider__control {
   cursor: not-allowed;
 }
 
@@ -1716,7 +1716,7 @@
   min-block-size: 10rem;
 }
 
-.muxui-slider-track {
+.muxui-slider__track {
   position: relative;
   flex: 1;
   height: 0.25rem;
@@ -1724,13 +1724,13 @@
   background-color: var(--muxui-semantic-surface-track);
 }
 
-.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-track {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider__track {
   width: 0.25rem;
   height: 100%;
   flex: 1;
 }
 
-.muxui-slider-fill {
+.muxui-slider__fill {
   position: absolute;
   top: 0;
   left: 0;
@@ -1740,18 +1740,18 @@
   transition: background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-fill {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider__fill {
   width: 100%;
   height: auto;
   bottom: 0;
   top: auto;
 }
 
-.muxui-slider[data-muxui-state-disabled] .muxui-slider-fill {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider__fill {
   background-color: var(--muxui-semantic-surface-disabled);
 }
 
-.muxui-slider-thumb {
+.muxui-slider__thumb {
   position: absolute;
   width: 1.125rem;
   height: 1.125rem;
@@ -1765,14 +1765,14 @@
   cursor: grab;
 }
 
-.muxui-slider-thumb-visual {
+.muxui-slider__thumb-visual {
   position: absolute;
   inset: -2px;
   border-radius: inherit;
   pointer-events: none;
 }
 
-.muxui-slider-thumb-face {
+.muxui-slider__thumb-face {
   position: absolute;
   inset: 0;
   border: 2px solid var(--muxui-semantic-border-indicator);
@@ -1783,28 +1783,28 @@
   pointer-events: none;
 }
 
-.muxui-slider:not([data-muxui-state-orientation='vertical']) .muxui-slider-thumb {
+.muxui-slider:not([data-muxui-state-orientation='vertical']) .muxui-slider__thumb {
   top: 50%;
   transform: translateY(-50%);
 }
 
-.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-thumb {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider__thumb {
   left: 50%;
   transform: translateX(-50%);
 }
 
-.muxui-slider-thumb:focus-visible,
-.muxui-slider-thumb[data-muxui-state-focus-visible] {
+.muxui-slider__thumb:focus-visible,
+.muxui-slider__thumb[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-slider-thumb[data-muxui-state-dragging] {
+.muxui-slider__thumb[data-muxui-state-dragging] {
   cursor: grabbing;
 }
 
-.muxui-slider-thumb[data-muxui-state-dragging] .muxui-slider-thumb-face {
+.muxui-slider__thumb[data-muxui-state-dragging] .muxui-slider__thumb-face {
   border-color: var(--muxui-semantic-border-dragging);
 }
 
@@ -1812,20 +1812,20 @@
   opacity: 0.45;
 }
 
-.muxui-slider[data-muxui-state-disabled] .muxui-slider-track {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider__track {
   background-color: var(--muxui-semantic-surface-track);
 }
 
-.muxui-slider[data-muxui-state-disabled] .muxui-slider-thumb {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider__thumb {
   cursor: not-allowed;
 }
 
-.muxui-slider[data-muxui-state-disabled] .muxui-slider-thumb-face {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider__thumb-face {
   background-color: var(--muxui-semantic-surface-canvas);
   border-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-slider-output {
+.muxui-slider__output {
   color: var(--muxui-semantic-content-default);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
@@ -1833,49 +1833,49 @@
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider > .muxui-slider-header > .muxui-field-label {
+  :scope .muxui-slider > .muxui-slider__header > .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider > .muxui-slider-header > .muxui-slider-output {
+  :scope .muxui-slider > .muxui-slider__header > .muxui-slider__output {
     color: var(--muxui-semantic-content-muted);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider > .muxui-slider-header > .muxui-field-label {
+  :scope .muxui-slider > .muxui-slider__header > .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider > .muxui-slider-header > .muxui-slider-output {
+  :scope .muxui-slider > .muxui-slider__header > .muxui-slider__output {
     color: var(--muxui-semantic-color-neutral-default-50);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider-track {
+  :scope .muxui-slider__track {
     background-color: var(--muxui-semantic-color-neutral-default-88);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider-thumb-face {
+  :scope .muxui-slider__thumb-face {
     background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider-fill {
+  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider__fill {
     background-color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider-thumb-face {
+  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider__thumb-face {
     border-color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
@@ -1896,13 +1896,13 @@
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-table-header {
+.muxui-table__header {
   --muxui-table-header-separator: var(--muxui-semantic-border-default);
   border-bottom: 0;
   box-shadow: inset 0 -2px var(--muxui-table-header-separator);
 }
 
-.muxui-table-column {
+.muxui-table__column {
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
   text-align: start;
   font-size: var(--muxui-semantic-typography-small-size);
@@ -1912,43 +1912,43 @@
   cursor: default;
 }
 
-.muxui-table-column[data-muxui-state-focus-visible] {
+.muxui-table__column[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-table-column-content {
+.muxui-table__column-content {
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
 }
 
 /* Sortable headers always reserve the chevron slot, so revealing it never shifts the label. The base chevron points up (ascending) and doubles as the unsorted hint, because activating an unsorted header sorts ascending. The hint uses the faint content role for low-emphasis indicators, well below the sorted chevron's strong content. A disabled Table ignores sorting, so it shows no hint. */
-.muxui-table-sort-icon {
+.muxui-table__sort-icon {
   visibility: hidden;
   color: var(--muxui-semantic-content-faint);
   transform: rotate(180deg);
 }
 
-.muxui-table-column[data-muxui-state-sort-direction] .muxui-table-sort-icon {
+.muxui-table__column[data-muxui-state-sort-direction] .muxui-table__sort-icon {
   visibility: visible;
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-table-column[data-muxui-state-sort-direction='descending'] .muxui-table-sort-icon {
+.muxui-table__column[data-muxui-state-sort-direction='descending'] .muxui-table__sort-icon {
   transform: none;
 }
 
-.muxui-table:not([data-muxui-state-disabled]) .muxui-table-column[data-muxui-state-allows-sorting]:is([data-muxui-state-hovered], [data-muxui-state-focus-visible]) .muxui-table-sort-icon {
+.muxui-table:not([data-muxui-state-disabled]) .muxui-table__column[data-muxui-state-allows-sorting]:is([data-muxui-state-hovered], [data-muxui-state-focus-visible]) .muxui-table__sort-icon {
   visibility: visible;
 }
 
-.muxui-table-body {
+.muxui-table__body {
 
 }
 
-.muxui-table-row {
+.muxui-table__row {
   --muxui-table-row-separator: var(--muxui-semantic-border-faint);
   border-bottom: 0;
   box-shadow: inset 0 -1px var(--muxui-table-row-separator);
@@ -1956,27 +1956,27 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-table-row[data-muxui-state-hovered] {
+.muxui-table__row[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-table-row[data-muxui-state-selected] {
+.muxui-table__row[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-background);
 }
 
-.muxui-table-row[data-muxui-state-focus-visible] {
+.muxui-table__row[data-muxui-state-focus-visible] {
   box-shadow:
     inset 0 -1px var(--muxui-table-row-separator, transparent),
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-table-row[data-muxui-state-disabled] {
+.muxui-table__row[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-table-cell {
+.muxui-table__cell {
   box-sizing: border-box;
   min-block-size: var(--muxui-control-size-md);
   padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
@@ -1984,7 +1984,7 @@
   outline: none;
 }
 
-.muxui-table-cell[data-muxui-state-focus-visible] {
+.muxui-table__cell[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -2000,7 +2000,7 @@
   flex-direction: row;
 }
 
-.muxui-tab-list {
+.muxui-tabs__list {
   position: relative;
   border-bottom: 2px solid var(--muxui-semantic-border-subtle);
   display: flex;
@@ -2008,13 +2008,13 @@
   gap: 0;
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tab-list {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__list {
   flex-direction: column;
   border-bottom: none;
   border-inline-end: 2px solid var(--muxui-component-tabs-vertical-list-border);
 }
 
-.muxui-tab {
+.muxui-tabs__tab {
   display: inline-flex;
   box-sizing: border-box;
   align-items: center;
@@ -2039,34 +2039,34 @@
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tab {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__tab {
   justify-content: flex-start;
   text-align: left;
 }
 
-.muxui-tab:hover:not([data-muxui-state-disabled], [data-muxui-state-selected]) {
+.muxui-tabs__tab:hover:not([data-muxui-state-disabled], [data-muxui-state-selected]) {
   color: var(--muxui-semantic-content-default);
   background-color: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-tab:focus-visible:not([data-muxui-state-selected], [aria-selected='true']) {
+.muxui-tabs__tab:focus-visible:not([data-muxui-state-selected], [aria-selected='true']) {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
-.muxui-tab[data-muxui-state-selected] {
+.muxui-tabs__tab[data-muxui-state-selected] {
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-tab[data-muxui-state-disabled] {
+.muxui-tabs__tab[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-tab-panel {
+.muxui-tabs__panel {
   padding: calc(var(--muxui-semantic-layout-inset-large) * 1.414141) 0;
   color: var(--muxui-component-tabs-panel-foreground);
   font-family: var(--muxui-semantic-typography-text-font-family);
@@ -2076,17 +2076,17 @@
 }
 
 /* React Aria makes a panel focusable only when it has no tabbable content, so this ring marks that focus stop. */
-.muxui-tab-panel:focus-visible,
-.muxui-tab-panel[data-muxui-state-focus-visible] {
+.muxui-tabs__panel:focus-visible,
+.muxui-tabs__panel[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
-.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tab-panel {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__panel {
   padding: 0 calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
 }
 
-.muxui-tab-panel[data-muxui-hidden] {
+.muxui-tabs__panel[data-muxui-hidden] {
   display: none;
 }
 
@@ -2097,21 +2097,21 @@
   gap: var(--muxui-semantic-layout-control-gap);
 }
 
-.muxui-tag-list {
+.muxui-tag-group__list {
   display: flex;
   flex-wrap: wrap;
   gap: var(--muxui-semantic-layout-control-gap);
   outline: none;
 }
 
-.muxui-tag-list[data-muxui-state-focus-visible],
-.muxui-tag-list:focus-visible {
+.muxui-tag-group__list[data-muxui-state-focus-visible],
+.muxui-tag-group__list:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-tag {
+.muxui-tag-group__tag {
   /* Neutral is the default colour. A colour block below swaps in that colour's tokens. */
   --muxui-tag-text: var(--muxui-component-taggroup-tag-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-tag-foreground);
@@ -2147,7 +2147,7 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tag[data-muxui-color='brand'] {
+.muxui-tag-group__tag[data-muxui-color='brand'] {
   --muxui-tag-text: var(--muxui-component-taggroup-brand-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-brand-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-brand-dot);
@@ -2158,7 +2158,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='success'] {
+.muxui-tag-group__tag[data-muxui-color='success'] {
   --muxui-tag-text: var(--muxui-component-taggroup-success-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-success-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-success-dot);
@@ -2169,7 +2169,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='warning'] {
+.muxui-tag-group__tag[data-muxui-color='warning'] {
   --muxui-tag-text: var(--muxui-component-taggroup-warning-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-warning-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-warning-dot);
@@ -2180,7 +2180,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='error'] {
+.muxui-tag-group__tag[data-muxui-color='error'] {
   --muxui-tag-text: var(--muxui-component-taggroup-error-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-error-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-error-dot);
@@ -2191,7 +2191,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='red'] {
+.muxui-tag-group__tag[data-muxui-color='red'] {
   --muxui-tag-text: var(--muxui-component-taggroup-red-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-red-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-red-dot);
@@ -2202,7 +2202,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='orange'] {
+.muxui-tag-group__tag[data-muxui-color='orange'] {
   --muxui-tag-text: var(--muxui-component-taggroup-orange-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-orange-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-orange-dot);
@@ -2213,7 +2213,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='amber'] {
+.muxui-tag-group__tag[data-muxui-color='amber'] {
   --muxui-tag-text: var(--muxui-component-taggroup-amber-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-amber-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-amber-dot);
@@ -2224,7 +2224,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='yellow'] {
+.muxui-tag-group__tag[data-muxui-color='yellow'] {
   --muxui-tag-text: var(--muxui-component-taggroup-yellow-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-yellow-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-yellow-dot);
@@ -2235,7 +2235,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='lime'] {
+.muxui-tag-group__tag[data-muxui-color='lime'] {
   --muxui-tag-text: var(--muxui-component-taggroup-lime-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-lime-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-lime-dot);
@@ -2246,7 +2246,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='green'] {
+.muxui-tag-group__tag[data-muxui-color='green'] {
   --muxui-tag-text: var(--muxui-component-taggroup-green-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-green-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-green-dot);
@@ -2257,7 +2257,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='emerald'] {
+.muxui-tag-group__tag[data-muxui-color='emerald'] {
   --muxui-tag-text: var(--muxui-component-taggroup-emerald-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-emerald-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-emerald-dot);
@@ -2268,7 +2268,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='teal'] {
+.muxui-tag-group__tag[data-muxui-color='teal'] {
   --muxui-tag-text: var(--muxui-component-taggroup-teal-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-teal-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-teal-dot);
@@ -2279,7 +2279,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='bluegreen'] {
+.muxui-tag-group__tag[data-muxui-color='bluegreen'] {
   --muxui-tag-text: var(--muxui-component-taggroup-bluegreen-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-bluegreen-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-bluegreen-dot);
@@ -2290,7 +2290,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='cyan'] {
+.muxui-tag-group__tag[data-muxui-color='cyan'] {
   --muxui-tag-text: var(--muxui-component-taggroup-cyan-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-cyan-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-cyan-dot);
@@ -2301,7 +2301,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='sky'] {
+.muxui-tag-group__tag[data-muxui-color='sky'] {
   --muxui-tag-text: var(--muxui-component-taggroup-sky-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-sky-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-sky-dot);
@@ -2312,7 +2312,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-light);
 }
 
-.muxui-tag[data-muxui-color='indigo'] {
+.muxui-tag-group__tag[data-muxui-color='indigo'] {
   --muxui-tag-text: var(--muxui-component-taggroup-indigo-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-indigo-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-indigo-dot);
@@ -2323,7 +2323,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='violet'] {
+.muxui-tag-group__tag[data-muxui-color='violet'] {
   --muxui-tag-text: var(--muxui-component-taggroup-violet-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-violet-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-violet-dot);
@@ -2334,7 +2334,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='purple'] {
+.muxui-tag-group__tag[data-muxui-color='purple'] {
   --muxui-tag-text: var(--muxui-component-taggroup-purple-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-purple-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-purple-dot);
@@ -2345,7 +2345,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='fuchsia'] {
+.muxui-tag-group__tag[data-muxui-color='fuchsia'] {
   --muxui-tag-text: var(--muxui-component-taggroup-fuchsia-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-fuchsia-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-fuchsia-dot);
@@ -2356,7 +2356,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='pink'] {
+.muxui-tag-group__tag[data-muxui-color='pink'] {
   --muxui-tag-text: var(--muxui-component-taggroup-pink-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-pink-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-pink-dot);
@@ -2367,7 +2367,7 @@
   --muxui-tag-selected-overlay: var(--muxui-component-taggroup-selected-overlay-scheme);
 }
 
-.muxui-tag[data-muxui-color='rose'] {
+.muxui-tag-group__tag[data-muxui-color='rose'] {
   --muxui-tag-text: var(--muxui-component-taggroup-rose-foreground);
   --muxui-tag-text-strong: var(--muxui-component-taggroup-rose-strong-foreground);
   --muxui-tag-dot: var(--muxui-component-taggroup-rose-dot);
@@ -2387,44 +2387,44 @@
  * Hover adds 6 points and pressed 12, except strong pressed in dark, which adds 11 so its
  * label keeps 4.5:1 on the lightest hues under theme presets.
  */
-.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral']) {
+.muxui-tag-group__tag[data-muxui-color]:not([data-muxui-color='neutral']) {
   --muxui-tag-edge: color-mix(in srgb, var(--muxui-tag-weak) 0%, var(--muxui-tag-heavy) 80%);
 }
 
-.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='soft'] {
+.muxui-tag-group__tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='soft'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 40%, var(--muxui-tag-heavy) 20%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 28%, var(--muxui-tag-heavy) 38%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 16%, var(--muxui-tag-heavy) 56%);
 }
 
-.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='outline'] {
+.muxui-tag-group__tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='outline'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 32%, var(--muxui-tag-heavy) 12%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 20%, var(--muxui-tag-heavy) 30%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 8%, var(--muxui-tag-heavy) 48%);
 }
 
-.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='dot'] {
+.muxui-tag-group__tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='dot'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 28%, var(--muxui-tag-heavy) 18%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 16%, var(--muxui-tag-heavy) 36%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 4%, var(--muxui-tag-heavy) 54%);
 }
 
-.muxui-tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='strong'] {
+.muxui-tag-group__tag[data-muxui-color]:not([data-muxui-color='neutral'])[data-muxui-variant='strong'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-tag-weak) 32%, var(--muxui-tag-heavy) 52%);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-tag-weak) 20%, var(--muxui-tag-heavy) 70%);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-tag-weak) 0%, var(--muxui-tag-heavy) 90%);
 }
 
-.muxui-tag[data-muxui-variant='outline'] {
+.muxui-tag-group__tag[data-muxui-variant='outline'] {
   /* An inset shadow, so the outline stays free for focus. */
   box-shadow: inset 0 0 0 1px var(--muxui-tag-edge);
 }
 
-.muxui-tag[data-muxui-variant='dot'] {
+.muxui-tag-group__tag[data-muxui-variant='dot'] {
   color: var(--muxui-component-taggroup-tag-foreground);
 }
 
-.muxui-tag[data-muxui-variant='dot']::before {
+.muxui-tag-group__tag[data-muxui-variant='dot']::before {
   content: '';
   flex: none;
   inline-size: 0.375rem;
@@ -2433,47 +2433,47 @@
   background-color: var(--muxui-tag-dot);
 }
 
-.muxui-tag[data-muxui-variant='strong'] {
+.muxui-tag-group__tag[data-muxui-variant='strong'] {
   color: var(--muxui-tag-text-strong);
 }
 
 /* Neutral steps its strong fill up one weight from the neutral action background. */
-.muxui-tag[data-muxui-color='neutral'][data-muxui-variant='strong'] {
+.muxui-tag-group__tag[data-muxui-color='neutral'][data-muxui-variant='strong'] {
   --muxui-tag-fill: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
   --muxui-tag-fill-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 20%, transparent);
 }
 
-.muxui-tag[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled]) {
+.muxui-tag-group__tag[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled]) {
   background-color: var(--muxui-tag-fill-hover);
 }
 
-.muxui-tag[data-muxui-state-pressed]:not([data-muxui-state-selected], [data-muxui-state-disabled]) {
+.muxui-tag-group__tag[data-muxui-state-pressed]:not([data-muxui-state-selected], [data-muxui-state-disabled]) {
   background-color: var(--muxui-tag-fill-pressed);
 }
 
-.muxui-tag[data-muxui-state-selected]:not([data-muxui-state-disabled]) {
+.muxui-tag-group__tag[data-muxui-state-selected]:not([data-muxui-state-disabled]) {
   --muxui-tag-dot: currentcolor;
   background-color: var(--muxui-tag-selected-background);
   box-shadow: none;
   color: var(--muxui-tag-selected-text);
 }
 
-.muxui-tag[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
+.muxui-tag-group__tag[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 10%, transparent),
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 10%, transparent)
   );
 }
 
-.muxui-tag[data-muxui-state-selected][data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
+.muxui-tag-group__tag[data-muxui-state-selected][data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 18%, transparent),
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 18%, transparent)
   );
 }
 
-.muxui-tag[data-muxui-state-disabled] {
+.muxui-tag-group__tag[data-muxui-state-disabled] {
   --muxui-tag-dot: currentcolor;
   background-color: var(--muxui-semantic-surface-hover);
   box-shadow: none;
@@ -2482,13 +2482,13 @@
   pointer-events: none;
 }
 
-.muxui-tag[data-muxui-state-focus-visible],
-.muxui-tag:focus-visible {
+.muxui-tag-group__tag[data-muxui-state-focus-visible],
+.muxui-tag-group__tag:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
-.muxui-tag-remove {
+.muxui-tag-group__remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2508,25 +2508,25 @@
   transition: background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing), color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tag-remove:hover:not([data-muxui-state-disabled]) {
+.muxui-tag-group__remove:hover:not([data-muxui-state-disabled]) {
   background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
 }
 
-.muxui-tag-remove:focus-visible {
+.muxui-tag-group__remove:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
-.muxui-tag-remove[data-muxui-state-disabled] {
+.muxui-tag-group__remove[data-muxui-state-disabled] {
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tag-remove {
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tag-group__remove {
   --muxui-icon-button-size: 1.5rem;
 }
 
-.muxui-tag-remove .muxui-icon-button-icon {
+.muxui-tag-group__remove .muxui-icon-button__icon {
   width: 0.75rem;
   height: 0.75rem;
 }
@@ -2611,7 +2611,7 @@
   border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
-.muxui-tree-item {
+.muxui-tree__item {
   position: relative;
   z-index: 1;
   outline: none;
@@ -2619,15 +2619,15 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-tree-item[data-muxui-state-hovered] {
+.muxui-tree__item[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
-.muxui-tree[data-muxui-tree-motion-ready='true'] > .muxui-tree-item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']) {
+.muxui-tree[data-muxui-tree-motion-ready='true'] > .muxui-tree__item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']) {
   background-color: transparent;
 }
 
-.muxui-tree-hover {
+.muxui-tree__hover {
   position: absolute;
   z-index: 0;
   inset: 0 auto auto 0;
@@ -2637,7 +2637,7 @@
   transform-origin: 0 0;
 }
 
-.muxui-tree-motion-exit {
+.muxui-tree__motion-exit {
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
@@ -2646,43 +2646,43 @@
   pointer-events: none;
 }
 
-.muxui-tree-motion-exit .muxui-tree-item {
+.muxui-tree__motion-exit .muxui-tree__item {
   transition: none;
 }
 
-.muxui-tree-item[data-muxui-state-selected] {
+.muxui-tree__item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-background);
 }
 
-.muxui-tree-item[data-muxui-state-focus-visible] {
+.muxui-tree__item[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
   border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
-.muxui-tree-item[data-muxui-state-disabled] {
+.muxui-tree__item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-tree-item[aria-level='1'] {
+.muxui-tree__item[aria-level='1'] {
   padding-inline-start: var(--muxui-semantic-layout-inset-small);
 }
-.muxui-tree-item[aria-level='2'] {
+.muxui-tree__item[aria-level='2'] {
   padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 0.78125rem);
 }
-.muxui-tree-item[aria-level='3'] {
+.muxui-tree__item[aria-level='3'] {
   padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 1.5625rem);
 }
-.muxui-tree-item[aria-level='4'] {
+.muxui-tree__item[aria-level='4'] {
   padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 2.34375rem);
 }
-.muxui-tree-item[aria-level='5'] {
+.muxui-tree__item[aria-level='5'] {
   padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 3.125rem);
 }
 
-.muxui-tree-item-content {
+.muxui-tree__item-content {
   position: relative;
   display: flex;
   box-sizing: border-box;
@@ -2693,7 +2693,7 @@
   min-block-size: var(--muxui-control-size-md);
 }
 
-.muxui-tree-toggle {
+.muxui-tree__toggle {
   position: absolute;
   inset-inline-start: var(--muxui-semantic-layout-inset-small);
   inset-block-start: 0;
@@ -2707,50 +2707,50 @@
   outline: none;
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tree-toggle {
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tree__toggle {
   --muxui-icon-button-size: 0.75rem;
   height: 100%;
   min-height: 0;
 }
 
-.muxui-tree-toggle .muxui-icon-button-icon {
+.muxui-tree__toggle .muxui-icon-button__icon {
   width: 1rem;
   height: 1rem;
 }
 
 /* Keep the actual RAC chevron button over the visible indicator
    so pointer and keyboard expansion use the same control. */
-.muxui-tree-item[data-muxui-state-has-child-items] .muxui-tree-item-content::before {
+.muxui-tree__item[data-muxui-state-has-child-items] .muxui-tree__item-content::before {
   content: '\25B6';
   display: inline-block;
   font-size: 0.6em;
   transition: transform var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tree-item[data-muxui-state-expanded] .muxui-tree-item-content::before {
+.muxui-tree__item[data-muxui-state-expanded] .muxui-tree__item-content::before {
   transform: rotate(90deg);
 }
 
 /* RAC state attributes are mirrored by the wrappers for deterministic styling. */
-.muxui-combo-box-option[aria-disabled='true'],
-.muxui-select-option[aria-disabled='true'] {
+.muxui-combo-box__option[aria-disabled='true'],
+.muxui-select__option[aria-disabled='true'] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-list-box-item[data-muxui-state-disabled],
-.muxui-list-box-item[aria-disabled='true'],
-.muxui-menu-item[data-muxui-state-disabled],
-.muxui-menu-item[aria-disabled='true'] {
+.muxui-list-box__item[data-muxui-state-disabled],
+.muxui-list-box__item[aria-disabled='true'],
+.muxui-menu__item[data-muxui-state-disabled],
+.muxui-menu__item[aria-disabled='true'] {
   opacity: 0.45;
   background-color: transparent;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-select-trigger[aria-disabled='true'] {
+.muxui-select__trigger[aria-disabled='true'] {
   background-color: var(--muxui-semantic-surface-hover);
   outline-color: var(--muxui-field-border-color);
   color: var(--muxui-field-color);
@@ -2794,7 +2794,7 @@
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-token {
+.muxui-token-field__token {
 	display: inline-flex;
 	align-items: center;
 	box-sizing: border-box;
@@ -2822,19 +2822,19 @@
   opacity: 0.45;
 }
 
-.muxui-token-input {
+.muxui-token-field__input {
   outline: none;
 }
 
-.muxui-token-field[data-muxui-state-disabled] .muxui-token-input,
-.muxui-token-field[aria-disabled='true'] .muxui-token-input {
+.muxui-token-field[data-muxui-state-disabled] .muxui-token-field__input,
+.muxui-token-field[aria-disabled='true'] .muxui-token-field__input {
   cursor: not-allowed;
   color: var(--muxui-semantic-content-strong);
   pointer-events: none;
 }
 
-.muxui-token-field[data-muxui-state-disabled] .muxui-token-placeholder,
-.muxui-token-field[aria-disabled='true'] .muxui-token-placeholder {
+.muxui-token-field[data-muxui-state-disabled] .muxui-token-field__placeholder,
+.muxui-token-field[aria-disabled='true'] .muxui-token-field__placeholder {
   color: var(--muxui-semantic-content-default);
 }
 
@@ -2851,7 +2851,7 @@
 }
 
 @media (forced-colors: active) {
-  :where(.muxui-calendar, .muxui-range-calendar, .muxui-grid-list, .muxui-list-box, .muxui-menu, .muxui-select-popover, .muxui-combo-box-popover, .muxui-table, .muxui-tabs, .muxui-toolbar, .muxui-tree, .muxui-token-field, .muxui-color-picker) {
+  :where(.muxui-calendar, .muxui-range-calendar, .muxui-grid-list, .muxui-list-box, .muxui-menu, .muxui-select__popup, .muxui-combo-box__popover, .muxui-table, .muxui-tabs, .muxui-toolbar, .muxui-tree, .muxui-token-field, .muxui-color-picker) {
     border-color: ButtonText;
     background: Canvas;
     color: CanvasText;
@@ -2860,131 +2860,131 @@
 
   :where(
     .muxui-color-area[data-muxui-state-disabled],
-    .muxui-color-area-thumb[data-muxui-state-disabled],
+    .muxui-color-area__thumb[data-muxui-state-disabled],
     .muxui-color-slider[data-muxui-state-disabled],
-    .muxui-color-slider-thumb[data-muxui-state-disabled],
-    .muxui-color-swatch-picker-item[data-muxui-state-disabled],
+    .muxui-color-slider__thumb[data-muxui-state-disabled],
+    .muxui-color-swatch-picker__item[data-muxui-state-disabled],
     .muxui-color-wheel[data-muxui-state-disabled],
-    .muxui-color-wheel-thumb[data-muxui-state-disabled],
-    .muxui-grid-list-item[data-muxui-state-disabled],
-    .muxui-list-box-item[data-muxui-state-disabled],
-    .muxui-list-box-item[aria-disabled='true'],
-    .muxui-menu-item[data-muxui-state-disabled],
-    .muxui-menu-item[aria-disabled='true'],
-    .muxui-radio[data-muxui-state-disabled],
+    .muxui-color-wheel__thumb[data-muxui-state-disabled],
+    .muxui-grid-list__item[data-muxui-state-disabled],
+    .muxui-list-box__item[data-muxui-state-disabled],
+    .muxui-list-box__item[aria-disabled='true'],
+    .muxui-menu__item[data-muxui-state-disabled],
+    .muxui-menu__item[aria-disabled='true'],
+    .muxui-radio-group__radio[data-muxui-state-disabled],
     .muxui-slider[data-muxui-state-disabled],
-    .muxui-table-row[data-muxui-state-disabled],
-    .muxui-tree-item[data-muxui-state-disabled],
-    .muxui-tab[data-muxui-state-disabled]
+    .muxui-table__row[data-muxui-state-disabled],
+    .muxui-tree__item[data-muxui-state-disabled],
+    .muxui-tabs__tab[data-muxui-state-disabled]
   ) {
     opacity: 1;
   }
 
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[data-muxui-state-selected],
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[aria-selected='true'] {
+  :where(.muxui-calendar__cell, .muxui-range-calendar__cell, .muxui-grid-list__item, .muxui-list-box__item, .muxui-menu__item, .muxui-select__option, .muxui-combo-box__option, .muxui-tabs__tab, .muxui-table__row)[data-muxui-state-selected],
+  :where(.muxui-calendar__cell, .muxui-range-calendar__cell, .muxui-grid-list__item, .muxui-list-box__item, .muxui-menu__item, .muxui-select__option, .muxui-combo-box__option, .muxui-tabs__tab, .muxui-table__row)[aria-selected='true'] {
     background: Highlight;
     color: HighlightText;
   }
 
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row):focus-visible {
+  :where(.muxui-calendar__cell, .muxui-range-calendar__cell, .muxui-grid-list__item, .muxui-list-box__item, .muxui-menu__item, .muxui-select__option, .muxui-combo-box__option, .muxui-tabs__tab, .muxui-table__row):focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
 
-  .muxui-tag-list[data-muxui-state-focus-visible],
-  .muxui-tag-list:focus-visible {
+  .muxui-tag-group__list[data-muxui-state-focus-visible],
+  .muxui-tag-group__list:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
     box-shadow: none;
   }
 
-  .muxui-tag[data-muxui-variant='outline'] {
+  .muxui-tag-group__tag[data-muxui-variant='outline'] {
     outline: 1px solid ButtonText;
     outline-offset: -1px;
   }
 
-  .muxui-tag[data-muxui-variant='dot']::before {
+  .muxui-tag-group__tag[data-muxui-variant='dot']::before {
     background-color: CanvasText;
     forced-color-adjust: none;
   }
 
-  .muxui-tag[data-muxui-state-selected] {
+  .muxui-tag-group__tag[data-muxui-state-selected] {
     background: Highlight !important;
     color: HighlightText !important;
   }
 
-  .muxui-tag[data-muxui-state-selected][data-muxui-variant='dot']::before {
+  .muxui-tag-group__tag[data-muxui-state-selected][data-muxui-variant='dot']::before {
     background-color: HighlightText;
   }
 
-  .muxui-tag[data-muxui-state-focus-visible],
-  .muxui-tag:focus-visible {
+  .muxui-tag-group__tag[data-muxui-state-focus-visible],
+  .muxui-tag-group__tag:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
   }
 
-  .muxui-list-box-item[data-muxui-state-selected],
-  .muxui-list-box-item[aria-selected='true'] {
+  .muxui-list-box__item[data-muxui-state-selected],
+  .muxui-list-box__item[aria-selected='true'] {
     background: Highlight !important;
     color: HighlightText !important;
   }
 
-  .muxui-list-box-selection {
+  .muxui-list-box__selection {
     display: none;
   }
 
-  .muxui-table-column .muxui-table-sort-icon,
-  .muxui-table-column[data-muxui-state-sort-direction] .muxui-table-sort-icon {
+  .muxui-table__column .muxui-table__sort-icon,
+  .muxui-table__column[data-muxui-state-sort-direction] .muxui-table__sort-icon {
     color: CanvasText;
   }
 
-  .muxui-radio[data-muxui-state-focus-visible] .muxui-radio-indicator {
+  .muxui-radio-group__radio[data-muxui-state-focus-visible] .muxui-radio-group__indicator {
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
 
-  .muxui-radio-group[data-muxui-radio-motion] .muxui-radio-indicator > .muxui-radio-motion-dot,
-  .muxui-radio-group[data-muxui-radio-motion] .muxui-radio-field__indicator > .muxui-radio-motion-dot {
+  .muxui-radio-group[data-muxui-radio-motion] .muxui-radio-group__indicator > .muxui-radio-group__motion-dot,
+  .muxui-radio-group[data-muxui-radio-motion] .muxui-radio-field__indicator > .muxui-radio-group__motion-dot {
     background-color: CanvasText;
     forced-color-adjust: none;
   }
 }
 
-:where([data-muxui-motion='reduced']) :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag, .muxui-virtualizer) {
+:where([data-muxui-motion='reduced']) :where(.muxui-calendar__cell, .muxui-range-calendar__cell, .muxui-grid-list__item, .muxui-list-box__item, .muxui-menu__item, .muxui-select__option, .muxui-combo-box__option, .muxui-tabs__tab, .muxui-table__row, .muxui-tag-group__tag, .muxui-virtualizer) {
   animation: none !important;
   transition-duration: 0s !important;
 }
 
 /* RAC exposes selected state as aria-selected on composite tabs/options. */
-.muxui-tab[aria-selected='true'] {
+.muxui-tabs__tab[aria-selected='true'] {
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-autocomplete-option[aria-selected='true'] {
+.muxui-autocomplete__option[aria-selected='true'] {
   color: var(--muxui-semantic-content-link);
 }
 
 @media (forced-colors: active) {
-  .muxui-list-box-item[data-muxui-state-focus-visible] {
+  .muxui-list-box__item[data-muxui-state-focus-visible] {
     outline: 2px solid Highlight;
     outline-color: Highlight;
   }
 }
 
 @media (prefers-contrast: more) {
-  .muxui-list-box-item[data-muxui-state-focus-visible] {
+  .muxui-list-box__item[data-muxui-state-focus-visible] {
     outline-width: 3px;
   }
 }
 
 /* Calendar cells keep the transparent disabled/outside-month treatment. */
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-calendar-cell[data-muxui-state-disabled],
-  :scope .muxui-calendar-cell[data-muxui-state-outside-month],
-  :scope .muxui-calendar-cell[data-muxui-state-unavailable],
-  :scope .muxui-range-calendar-cell[data-muxui-state-disabled],
-  :scope .muxui-range-calendar-cell[data-muxui-state-outside-month],
-  :scope .muxui-range-calendar-cell[data-muxui-state-unavailable] {
+  :scope .muxui-calendar__cell[data-muxui-state-disabled],
+  :scope .muxui-calendar__cell[data-muxui-state-outside-month],
+  :scope .muxui-calendar__cell[data-muxui-state-unavailable],
+  :scope .muxui-range-calendar__cell[data-muxui-state-disabled],
+  :scope .muxui-range-calendar__cell[data-muxui-state-outside-month],
+  :scope .muxui-range-calendar__cell[data-muxui-state-unavailable] {
     background-color: transparent;
     color: var(--muxui-semantic-content-default);
     opacity: 0.35;
@@ -2992,12 +2992,12 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-calendar-cell[data-muxui-state-disabled],
-  :scope .muxui-calendar-cell[data-muxui-state-outside-month],
-  :scope .muxui-calendar-cell[data-muxui-state-unavailable],
-  :scope .muxui-range-calendar-cell[data-muxui-state-disabled],
-  :scope .muxui-range-calendar-cell[data-muxui-state-outside-month],
-  :scope .muxui-range-calendar-cell[data-muxui-state-unavailable] {
+  :scope .muxui-calendar__cell[data-muxui-state-disabled],
+  :scope .muxui-calendar__cell[data-muxui-state-outside-month],
+  :scope .muxui-calendar__cell[data-muxui-state-unavailable],
+  :scope .muxui-range-calendar__cell[data-muxui-state-disabled],
+  :scope .muxui-range-calendar__cell[data-muxui-state-outside-month],
+  :scope .muxui-range-calendar__cell[data-muxui-state-unavailable] {
     background-color: transparent;
     color: var(--muxui-semantic-content-default);
     opacity: 0.35;
@@ -3007,10 +3007,10 @@
 /* RAC exposes keyboard focus on calendar controls as data-muxui-state-focus-visible. Keep
    the two-ring focus treatment on the equivalent navigation controls and
    cells without styling programmatic data-muxui-state-focused state. */
-.muxui-calendar-previous[data-muxui-state-focus-visible],
-.muxui-calendar-next[data-muxui-state-focus-visible],
-.muxui-calendar-cell[data-muxui-state-focus-visible],
-.muxui-range-calendar-cell[data-muxui-state-focus-visible] {
+.muxui-calendar__previous[data-muxui-state-focus-visible],
+.muxui-calendar__next[data-muxui-state-focus-visible],
+.muxui-calendar__cell[data-muxui-state-focus-visible],
+.muxui-range-calendar__cell[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
@@ -3084,9 +3084,9 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select:not([data-muxui-state-disabled], [data-muxui-state-invalid]) > .muxui-select-trigger:not(:hover, :focus, :focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
-  :scope .muxui-combo-box:not([data-muxui-state-disabled], [data-muxui-state-invalid]) .muxui-combo-control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
-  :scope .muxui-combo-control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
+  :scope .muxui-select:not([data-muxui-state-disabled], [data-muxui-state-invalid]) > .muxui-select__trigger:not(:hover, :focus, :focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
+  :scope .muxui-combo-box:not([data-muxui-state-disabled], [data-muxui-state-invalid]) .muxui-combo-box__control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
+  :scope .muxui-combo-box__control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-combo-box .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-disabled], [data-muxui-state-invalid]) {
     background-color: var(--muxui-field-bg);
     outline-color: var(--muxui-field-border-color);
@@ -3096,9 +3096,9 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-color-field .muxui-field-input[data-muxui-state-disabled],
-  :scope .muxui-select-trigger[data-muxui-state-disabled],
-  :scope .muxui-combo-control[data-muxui-state-disabled],
-  :scope .muxui-combo-box[data-muxui-state-disabled] .muxui-combo-control,
+  :scope .muxui-select__trigger[data-muxui-state-disabled],
+  :scope .muxui-combo-box__control[data-muxui-state-disabled],
+  :scope .muxui-combo-box[data-muxui-state-disabled] .muxui-combo-box__control,
   :scope .muxui-token-field[data-muxui-state-disabled],
   :scope .muxui-token-field[aria-disabled='true'] {
     background-color: var(--muxui-semantic-color-neutral-default-96);
@@ -3106,18 +3106,18 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-popover,
-  :scope .muxui-combo-box-popover {
+  :scope .muxui-select__popup,
+  :scope .muxui-combo-box__popover {
     background-color: var(--muxui-semantic-color-neutral-default-100);
     border-color: var(--muxui-semantic-color-neutral-default-90);
   }
 }
 
-.muxui-combo-control {
+.muxui-combo-box__control {
   outline-color: var(--muxui-field-border-color);
 }
 
-.muxui-combo-box-trigger {
+.muxui-combo-box__trigger {
   position: static;
   inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
@@ -3130,16 +3130,16 @@
   transition: transform var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-combo-box-trigger {
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-combo-box__trigger {
   --muxui-icon-button-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
-.muxui-combo-box-trigger .muxui-icon-button-icon {
+.muxui-combo-box__trigger .muxui-icon-button__icon {
   width: 1rem;
   height: 1rem;
 }
 
-.muxui-combo-box-arrow {
+.muxui-combo-box__arrow {
   color: var(--muxui-semantic-color-neutral-default-60);
   width: 1rem;
   height: 1rem;
@@ -3167,80 +3167,80 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
-    .muxui-select-value[data-muxui-state-placeholder],
-    .muxui-select-arrow,
-    .muxui-combo-box-trigger
+    .muxui-select__value[data-muxui-state-placeholder],
+    .muxui-select__arrow,
+    .muxui-combo-box__trigger
   ) {
     color: var(--muxui-semantic-color-neutral-60);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-trigger[data-muxui-state-placeholder],
-  :scope .muxui-select-trigger [data-muxui-state-placeholder] {
+  :scope .muxui-select__trigger[data-muxui-state-placeholder],
+  :scope .muxui-select__trigger [data-muxui-state-placeholder] {
     color: var(--muxui-semantic-color-neutral-default-60);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
-    .muxui-select-trigger,
-    .muxui-select-arrow
+    .muxui-select__trigger,
+    .muxui-select__arrow
   ) {
     color: var(--muxui-semantic-color-neutral-50);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-select-option, .muxui-combo-box-option) {
+  :scope :where(.muxui-select__option, .muxui-combo-box__option) {
     color: var(--muxui-semantic-color-neutral-default-30);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-select-option, .muxui-combo-box-option)[data-muxui-state-focused] {
+  :scope :where(.muxui-select__option, .muxui-combo-box__option)[data-muxui-state-focused] {
     background-color: var(--muxui-semantic-color-neutral-default-96);
     color: var(--muxui-semantic-color-neutral-default-20);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-value[data-muxui-state-placeholder] {
+  :scope .muxui-select__value[data-muxui-state-placeholder] {
     color: var(--muxui-semantic-color-neutral-50);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-value[data-muxui-state-placeholder] {
+  :scope .muxui-select__value[data-muxui-state-placeholder] {
     color: var(--muxui-semantic-color-neutral-50);
   }
 }
 
 /* Enabled placeholder text needs the local neutral-60 contrast correction;
    disabled controls retain neutral-50 plus disabled treatment. */
-.muxui-select:not([data-muxui-state-disabled], [aria-disabled='true']) .muxui-select-value[data-muxui-state-placeholder] {
+.muxui-select:not([data-muxui-state-disabled], [aria-disabled='true']) .muxui-select__value[data-muxui-state-placeholder] {
   color: var(--muxui-semantic-color-neutral-60);
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-arrow {
+  :scope .muxui-select__arrow {
     color: var(--muxui-semantic-color-neutral-60);
   }
 }
 
 /* Scheme-scoped so an unthemed root keeps the unscoped tab defaults. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tab-list {
+  :scope .muxui-tabs__list {
     border-color: var(--muxui-semantic-color-neutral-18);
   }
 
-  :scope .muxui-tab:not([data-muxui-state-selected], [aria-selected='true']) {
+  :scope .muxui-tabs__tab:not([data-muxui-state-selected], [aria-selected='true']) {
     color: var(--muxui-component-tabs-tab-foreground);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-table-column {
+  :scope .muxui-table__column {
     color: var(--muxui-semantic-content-muted);
   }
 }
@@ -3252,19 +3252,19 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-table-column {
+  :scope .muxui-table__column {
     color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-table-header {
+  :scope .muxui-table__header {
     --muxui-table-header-separator: var(--muxui-semantic-color-neutral-default-88);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-table-row {
+  :scope .muxui-table__row {
     --muxui-table-row-separator: var(--muxui-semantic-color-neutral-default-96);
   }
 }
@@ -3276,7 +3276,7 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-grid-list-item:not(
+  :scope .muxui-grid-list__item:not(
     [data-muxui-state-selected],
     [data-muxui-state-disabled],
     [data-muxui-state-dragging],
@@ -3294,7 +3294,7 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
+  :scope .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list__item:not(
     [data-muxui-state-selected],
     [aria-selected='true'],
     [data-muxui-state-disabled],
@@ -3311,7 +3311,7 @@
   }
 }
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
+  :scope .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list__item:not(
     [data-muxui-state-selected],
     [aria-selected='true'],
     [data-muxui-state-disabled],
@@ -3336,7 +3336,7 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-list-box-item {
+  :scope .muxui-list-box__item {
     color: var(--muxui-item-color);
   }
 }
@@ -3349,8 +3349,8 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
-    .muxui-color-slider > .muxui-slider-output,
-    .muxui-color-slider > .muxui-color-slider-output
+    .muxui-color-slider > .muxui-slider__output,
+    .muxui-color-slider > .muxui-color-slider__output
   ) {
     color: var(--muxui-semantic-color-neutral-default-60);
   }
@@ -3358,11 +3358,11 @@
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
   :scope .muxui-table[data-muxui-state-focus-visible],
-  :scope .muxui-table-column[data-muxui-state-focus-visible],
-  :scope .muxui-table-row[data-muxui-state-focus-visible],
-  :scope .muxui-table-cell[data-muxui-state-focus-visible],
-  :scope .muxui-tabs .muxui-tab:focus-visible:not([data-muxui-state-selected], [aria-selected='true']),
-  :scope .muxui-tabs .muxui-tab[data-muxui-state-focus-visible]:not([data-muxui-state-selected], [aria-selected='true']),
+  :scope .muxui-table__column[data-muxui-state-focus-visible],
+  :scope .muxui-table__row[data-muxui-state-focus-visible],
+  :scope .muxui-table__cell[data-muxui-state-focus-visible],
+  :scope .muxui-tabs .muxui-tabs__tab:focus-visible:not([data-muxui-state-selected], [aria-selected='true']),
+  :scope .muxui-tabs .muxui-tabs__tab[data-muxui-state-focus-visible]:not([data-muxui-state-selected], [aria-selected='true']),
   :scope .muxui-grid-list[data-muxui-state-focus-visible],
   :scope .muxui-list-box[data-muxui-state-focus-visible] {
     box-shadow:
@@ -3375,10 +3375,10 @@
 /* Keep collection popups on shared radius/shadow primitives. Mux UI's
    overlay elevation is intentionally stronger, while the base popup uses
    the low-alpha long-tail shadow and the 10px radius token. */
-.muxui-autocomplete-popover,
-.muxui-combo-box-popover,
+.muxui-autocomplete__popover,
+.muxui-combo-box__popover,
 .muxui-menu,
-.muxui-select-popover {
+.muxui-select__popup {
   border-radius: var(--muxui-semantic-control-radius);
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
@@ -3391,8 +3391,8 @@
    option without changing the input's focus semantics. */
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
   :scope
-    .muxui-combo-box-popover
-    .muxui-combo-box-option:first-child {
+    .muxui-combo-box__popover
+    .muxui-combo-box__option:first-child {
     background-color: var(--muxui-semantic-color-neutral-default-14);
     color: var(--muxui-semantic-color-neutral-default-90);
   }
@@ -3400,8 +3400,8 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope
-    .muxui-combo-box-popover
-    .muxui-combo-box-option:first-child {
+    .muxui-combo-box__popover
+    .muxui-combo-box__option:first-child {
     background-color: var(--muxui-semantic-color-neutral-default-96);
     color: var(--muxui-semantic-content-default);
   }
@@ -3439,7 +3439,7 @@
   overflow: auto;
 }
 
-.muxui-virtualizer-item {
+.muxui-virtualizer__item {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -3458,26 +3458,26 @@
   user-select: none;
 }
 
-.muxui-virtualizer-item[data-muxui-state-disabled],
-.muxui-virtualizer-item[aria-disabled='true'] {
+.muxui-virtualizer__item[data-muxui-state-disabled],
+.muxui-virtualizer__item[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-virtualizer-item[data-muxui-state-focused] {
+.muxui-virtualizer__item[data-muxui-state-focused] {
   background-color: var(--muxui-item-focus-bg);
   color: var(--muxui-item-focus-color);
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-virtualizer-item {
+  :scope .muxui-virtualizer__item {
     color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-virtualizer-item[data-muxui-state-focused] {
+  :scope .muxui-virtualizer__item[data-muxui-state-focused] {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     color: var(--muxui-semantic-color-neutral-default-18);
   }
@@ -3498,13 +3498,13 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-tree-item-label {
+.muxui-tree__item-label {
   position: static;
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
   :scope .muxui-tree[data-muxui-state-focus-visible],
-  :scope .muxui-tree-item[data-muxui-state-focus-visible] {
+  :scope .muxui-tree__item[data-muxui-state-focus-visible] {
     box-shadow:
       0 0 0 2px var(--muxui-focus-ring-inner),
       0 0 0 4px var(--muxui-focus-ring-outer);
@@ -3522,7 +3522,7 @@
   }
 }
 
-.muxui-radio[data-muxui-state-focus-visible] .muxui-radio-indicator {
+.muxui-radio-group__radio[data-muxui-state-focus-visible] .muxui-radio-group__indicator {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -3531,7 +3531,7 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-radio {
+.muxui-radio-group__radio {
   outline: none;
 }
 
@@ -3548,45 +3548,45 @@
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio {
+  :scope .muxui-radio-group__radio {
     color: var(--muxui-semantic-color-neutral-default-90);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-radio-group, .muxui-radio-group-field) .muxui-field-label {
+  :scope :where(.muxui-radio-group, .muxui-radio-group__field) .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-radio-group[data-muxui-state-invalid], .muxui-radio-group-field[data-muxui-state-invalid]) .muxui-field-label {
+  :scope :where(.muxui-radio-group[data-muxui-state-invalid], .muxui-radio-group__field[data-muxui-state-invalid]) .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-focus-visible],
-.muxui-color-swatch-picker-item:focus-visible {
+.muxui-color-swatch-picker__item[data-muxui-state-focus-visible],
+.muxui-color-swatch-picker__item:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-color-swatch-picker-item[data-muxui-state-selected][data-muxui-state-focus-visible],
-.muxui-color-swatch-picker-item[data-muxui-state-selected]:focus-visible {
+.muxui-color-swatch-picker__item[data-muxui-state-selected][data-muxui-state-focus-visible],
+.muxui-color-swatch-picker__item[data-muxui-state-selected]:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-selection-track),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider > .muxui-slider-header > .muxui-field-label {
+  :scope .muxui-slider > .muxui-slider__header > .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider-thumb {
+  :scope .muxui-slider__thumb {
     border-color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
@@ -3594,13 +3594,13 @@
 /* The disabled slider track uses the dark neutral-22 surface. The
    disabled-track rule above otherwise wins over the dark track token. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider-track {
+  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider__track {
     background-color: var(--muxui-semantic-color-neutral-default-88);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-list-box-item[data-muxui-state-focused] {
+  :scope .muxui-list-box__item[data-muxui-state-focused] {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     color: var(--muxui-semantic-color-neutral-default-18);
   }
@@ -3656,54 +3656,54 @@
   }
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selection-start] {
+.muxui-range-calendar__cell[data-muxui-state-selection-start] {
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selection-end] {
+.muxui-range-calendar__cell[data-muxui-state-selection-end] {
   border-radius: 0 var(--muxui-semantic-shape-pill-radius) var(--muxui-semantic-shape-pill-radius) 0;
 }
 
-.muxui-range-calendar-cell[data-muxui-state-selection-start][data-muxui-state-selection-end] {
+.muxui-range-calendar__cell[data-muxui-state-selection-start][data-muxui-state-selection-end] {
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio {
+  :scope .muxui-radio-group__radio {
     color: var(--muxui-semantic-color-neutral-default-20);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio-indicator {
+  :scope .muxui-radio-group__indicator {
     background-color: var(--muxui-semantic-color-neutral-default-98);
     border-color: var(--muxui-semantic-color-neutral-default-60);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio-indicator::after,
-  :scope .muxui-radio-indicator > .muxui-radio-motion-dot {
+  :scope .muxui-radio-group__indicator::after,
+  :scope .muxui-radio-group__indicator > .muxui-radio-group__motion-dot {
     background-color: var(--muxui-semantic-action-selection-indicator);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-muxui-state-selected] .muxui-radio-indicator {
+  :scope .muxui-radio-group__radio[data-muxui-state-selected] .muxui-radio-group__indicator {
     background-color: var(--muxui-semantic-color-neutral-default-98);
     border-color: var(--muxui-semantic-action-selection-background);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
+  :scope .muxui-radio-group__radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-group__indicator {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     border-color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @media (forced-colors: none) {
-  .muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
+  .muxui-radio-group__radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-group__indicator {
     background-color: var(--muxui-semantic-surface-raised);
     background-image: linear-gradient(
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
@@ -3712,7 +3712,7 @@
   }
 
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
+    :scope .muxui-radio-group__radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-group__indicator {
       background-color: var(--muxui-semantic-color-neutral-default-98);
       background-image: linear-gradient(
         color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
@@ -3726,31 +3726,31 @@
    ties the dark selected rule and must stay after it; the hovered selector
    outranks the dark hover rule. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-muxui-state-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
-  :scope .muxui-radio[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
+  :scope .muxui-radio-group__radio[data-muxui-state-invalid] .muxui-radio-group__indicator:where(.muxui-radio-group *),
+  :scope .muxui-radio-group__radio[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-group__indicator:where(.muxui-radio-group *) {
     border-color: var(--muxui-semantic-feedback-invalid-border);
   }
 }
 
 /* Range endpoints keep selection paint when they fall outside this month. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-range-calendar-cell[data-muxui-state-selection-start],
-  :scope .muxui-range-calendar-cell[data-muxui-state-selection-end] {
+  :scope .muxui-range-calendar__cell[data-muxui-state-selection-start],
+  :scope .muxui-range-calendar__cell[data-muxui-state-selection-end] {
     background-color: var(--muxui-semantic-selection-track);
     color: var(--muxui-semantic-action-foreground);
   }
 }
 
 /* RangeCalendar endpoint palettes invert together, so keep their change instant. */
-.muxui-range-calendar-cell {
+.muxui-range-calendar__cell {
   transition: none;
 }
 
 @media (forced-colors: active) {
   .muxui-color-swatch-picker[data-muxui-state-focus-visible],
   .muxui-color-swatch-picker:focus-visible,
-  .muxui-color-swatch-picker-item[data-muxui-state-focus-visible],
-  .muxui-color-swatch-picker-item:focus-visible {
+  .muxui-color-swatch-picker__item[data-muxui-state-focus-visible],
+  .muxui-color-swatch-picker__item:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
     box-shadow: none;

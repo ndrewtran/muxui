@@ -53,9 +53,9 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     assert.equal(await payment.inputValue(), '4000 0000 0000 0002');
     assert.equal(await page.locator('.muxui-payment-input__card-icon').getAttribute('data-muxui-card-type'), 'visa');
 
-    const light = await page.locator('.muxui-resizable-handle').evaluate((node) => getComputedStyle(node).backgroundColor);
+    const light = await page.locator('.muxui-resizable__handle').evaluate((node) => getComputedStyle(node).backgroundColor);
     await page.locator('#dark-toggle').click();
-    const dark = await page.locator('.muxui-resizable-handle').evaluate((node) => getComputedStyle(node).backgroundColor);
+    const dark = await page.locator('.muxui-resizable__handle').evaluate((node) => getComputedStyle(node).backgroundColor);
     assert.notEqual(light, dark);
 
     const editor = page.locator('#document-editor');
@@ -183,7 +183,7 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     await page.keyboard.press('Enter');
     await page.getByRole('dialog').waitFor();
     assert.equal(await page.getByRole('dialog').getAttribute('aria-label'), 'First');
-    await page.locator('.muxui-lightbox-popup').press('ArrowRight');
+    await page.locator('.muxui-lightbox__popup').press('ArrowRight');
     assert.match(await page.getByRole('dialog').textContent(), /Second/u);
     await page.keyboard.press('Escape');
     await page.getByRole('dialog').waitFor({ state: 'detached' });
@@ -199,7 +199,7 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     await trigger.click();
     await page.getByRole('dialog').waitFor();
     await page.evaluate(() => {
-      const popup = document.querySelector('.muxui-lightbox-popup');
+      const popup = document.querySelector('.muxui-lightbox__popup');
       const start = new Event('touchstart', { bubbles: true });
       Object.defineProperty(start, 'touches', { value: [{ clientX: 100 }] });
       const end = new Event('touchend', { bubbles: true });

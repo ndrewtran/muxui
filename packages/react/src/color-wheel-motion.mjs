@@ -54,9 +54,9 @@ function ColorWheelMotionThumb({ color, isHovered, isDragging, isDisabled, readO
     return () => controls.forEach((control) => control.stop());
   }, [blocked, hover, isDragging, isHovered, keyPressed, press, reduced, thumbRef]);
 
-  return React.createElement(MotionSpan, { className: 'muxui-color-wheel-thumb-visual', 'aria-hidden': true },
-    React.createElement(MotionSpan, { className: 'muxui-color-wheel-thumb-halo', style: { opacity: haloOpacity, scale: haloScale } }),
-    React.createElement(MotionSpan, { className: 'muxui-color-wheel-thumb-face', 'data-muxui-color-paint': 'sample', style: { scale, backgroundColor: color.toString('css') } }),
+  return React.createElement(MotionSpan, { className: 'muxui-color-wheel__thumb-visual', 'aria-hidden': true },
+    React.createElement(MotionSpan, { className: 'muxui-color-wheel__thumb-halo', style: { opacity: haloOpacity, scale: haloScale } }),
+    React.createElement(MotionSpan, { className: 'muxui-color-wheel__thumb-face', 'data-muxui-color-paint': 'sample', style: { scale, backgroundColor: color.toString('css') } }),
   );
 }
 
@@ -65,10 +65,10 @@ export function ColorWheelMotionTrack({ readOnly }) {
   const thumbRef = React.useRef(null);
   return React.createElement(LazyMotion, { features: domAnimation, strict: true },
     React.createElement(React.Fragment, null,
-      React.createElement(ColorWheelTrack, { className: 'muxui-color-wheel-track', 'data-muxui-color-paint': 'track' }),
+      React.createElement(ColorWheelTrack, { className: 'muxui-color-wheel__track', 'data-muxui-color-paint': 'track' }),
       React.createElement(ColorThumb, {
         ref: thumbRef,
-        className: 'muxui-color-wheel-thumb',
+        className: 'muxui-color-wheel__thumb',
         'data-muxui-state-read-only': readOnly || undefined,
         style: { backgroundColor: 'transparent' },
       }, (renderProps) => React.createElement(ColorWheelMotionThumb, { ...renderProps, readOnly, thumbRef })),

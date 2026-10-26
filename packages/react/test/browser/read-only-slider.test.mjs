@@ -15,7 +15,7 @@ function fixtureDocument() {
     readOnly: true,
     step: 1,
   })));
-  return pageShell({ head: '<style>.muxui-slider { width: 400px; } .muxui-slider-track { height: 24px; }</style>', body, entry: '/packages/react/test/fixtures/read-only-slider-browser-entry.mjs' });
+  return pageShell({ head: '<style>.muxui-slider { width: 400px; } .muxui-slider__track { height: 24px; }</style>', body, entry: '/packages/react/test/fixtures/read-only-slider-browser-entry.mjs' });
 }
 
 test('real browser read-only Slider blocks keyboard and pointer changes while retaining focus', { timeout: 90_000 }, async () => {
@@ -43,7 +43,7 @@ test('real browser read-only Slider blocks keyboard and pointer changes while re
     assert.deepEqual(await page.evaluate(() => globalThis.__muxuiReadOnlySliderChanges), []);
     assert.equal(await page.evaluate(() => document.activeElement?.id), inputId);
 
-    const track = page.locator('.muxui-slider-track');
+    const track = page.locator('.muxui-slider__track');
     const box = await track.boundingBox();
     assert.ok(box);
     await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);

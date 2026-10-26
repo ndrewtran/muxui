@@ -53,12 +53,12 @@ window.mountControls();`;
   }
   const disabled=page.locator('button:disabled');assert.equal(await disabled.count(),9);
   for(const button of await disabled.all()) await blocked(button);
-  await clear();await page.getByRole('button',{name:'Copy code'}).click();await page.waitForFunction(()=>document.querySelector('.muxui-code-block-copy').disabled);
+  await clear();await page.getByRole('button',{name:'Copy code'}).click();await page.waitForFunction(()=>document.querySelector('.muxui-code-block__copy').disabled);
   // The Mux IconButton consumes its own press, so a Copy click never reaches caller handlers on the host.
   assert.deepEqual(await page.evaluate(()=>window.hostClicks),[]);await blocked(page.getByRole('button',{name:'Copy code'}));
   await page.evaluate(()=>{window.finishCopy();window.mountControls({disabled:false,pending:true});});
   // A fulfilled write re-enables Copy with the Copied feedback, so settle it before listing the disabled controls.
-  await page.waitForFunction(()=>!document.querySelector('.muxui-code-block-copy').disabled);
+  await page.waitForFunction(()=>!document.querySelector('.muxui-code-block__copy').disabled);
   for(const button of await page.locator('button:disabled').all()) await blocked(button);
   await page.evaluate(()=>window.mountControls({disabled:true,pending:true}));await blocked(page.getByRole('button',{name:'Stop response'}));
   await page.evaluate(()=>window.mountControls({disabled:false}));

@@ -6,8 +6,8 @@ import { launchBrowser, startServer } from './harness.mjs';
 async function readGeometry(page, selector) {
   return page.locator(selector).evaluate((root) => {
     const selected = root.querySelector('[role="tab"][aria-selected="true"]');
-    const label = selected?.querySelector('.muxui-tab-label');
-    const indicator = root.querySelector('.muxui-tabs-motion-underline');
+    const label = selected?.querySelector('.muxui-tabs__tab-label');
+    const indicator = root.querySelector('.muxui-tabs__motion-underline');
     const rect = (node) => {
       const value = node?.getBoundingClientRect();
       return value ? { left: value.left, top: value.top, width: value.width, height: value.height } : null;
@@ -26,10 +26,10 @@ async function readGeometry(page, selector) {
 function sampleContrast(selector) {
   const root = document.querySelector(selector);
   const selected = root.querySelector('[role="tab"][aria-selected="true"]');
-  const label = selected?.querySelector('.muxui-tab-label');
-  const foreground = root.querySelector('.muxui-tabs-motion-foreground');
-  const indicator = root.querySelector('.muxui-tabs-motion-underline');
-  const copy = [...(foreground?.querySelectorAll('.muxui-tabs-motion-label') ?? [])]
+  const label = selected?.querySelector('.muxui-tabs__tab-label');
+  const foreground = root.querySelector('.muxui-tabs__motion-foreground');
+  const indicator = root.querySelector('.muxui-tabs__motion-underline');
+  const copy = [...(foreground?.querySelectorAll('.muxui-tabs__motion-label') ?? [])]
     .find((node) => node.textContent?.trim() === selected?.textContent?.trim());
   const rangeRect = (node) => {
     if (!node) return null;
@@ -72,12 +72,12 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.waitForFunction(() => document.documentElement.dataset.muxuiTabsHydrated === 'true');
     assert.deepEqual(errors, []);
 
-    const initialLabel = page.locator('#light-underline-tabs [aria-selected="true"] .muxui-tab-label');
+    const initialLabel = page.locator('#light-underline-tabs [aria-selected="true"] .muxui-tabs__tab-label');
     await initialLabel.evaluate((label) => { label.style.letterSpacing = '3px'; });
     const initialLabelAligned = () => {
       const root = document.querySelector('#light-underline-tabs');
-      const label = root.querySelector('[aria-selected="true"] .muxui-tab-label').getBoundingClientRect();
-      const indicator = root.querySelector('.muxui-tabs-motion-underline').getBoundingClientRect();
+      const label = root.querySelector('[aria-selected="true"] .muxui-tabs__tab-label').getBoundingClientRect();
+      const indicator = root.querySelector('.muxui-tabs__motion-underline').getBoundingClientRect();
       return Math.abs(label.width - indicator.width) < 1;
     };
     await page.waitForFunction(initialLabelAligned);
@@ -89,7 +89,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       for (const variant of ['underline', 'pill', 'overflow', 'segment']) {
         const root = `${canvas} #${scheme}-${variant}-tabs`;
         assert.equal(await page.locator(root).getAttribute('data-muxui-variant'), variant);
-        assert.equal(await page.locator(`${root} .muxui-tabs-motion`).getAttribute('data-muxui-tabs-variant'), variant);
+        assert.equal(await page.locator(`${root} .muxui-tabs__motion`).getAttribute('data-muxui-tabs-variant'), variant);
       }
 
       const underline = await readGeometry(page, `${canvas} #${scheme}-underline-tabs`);
@@ -99,11 +99,11 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       const pill = await readGeometry(page, `${canvas} #${scheme}-pill-tabs`);
       assert.ok(pill.trigger && pill.indicator);
       assert.ok(Math.abs(pill.indicator.width - pill.trigger.width) < 1, `${scheme} pill follows trigger width`);
-      assert.notEqual(await page.locator(`${canvas} #${scheme}-pill-tabs .muxui-tabs-motion-underline`).evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
+      assert.notEqual(await page.locator(`${canvas} #${scheme}-pill-tabs .muxui-tabs__motion-underline`).evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
 
       const segmentTabs = page.locator(`${canvas} #${scheme}-segment-tabs [role="tab"]`);
       const segmentGeometry = await segmentTabs.evaluateAll((tabs) => tabs.map((tab) => {
-        const label = tab.querySelector('.muxui-tab-label');
+        const label = tab.querySelector('.muxui-tabs__tab-label');
         const style = getComputedStyle(tab);
         return {
           width: tab.getBoundingClientRect().width,
@@ -209,7 +209,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       await page.waitForFunction((selector) => {
         const root = document.querySelector(selector);
         const selected = root?.querySelector('[role="tab"][aria-selected="true"]');
-        const indicator = root?.querySelector('.muxui-tabs-motion-underline');
+        const indicator = root?.querySelector('.muxui-tabs__motion-underline');
         return Boolean(selected && indicator && Math.abs(indicator.getBoundingClientRect().width - selected.getBoundingClientRect().width) < 1);
       }, `${canvas} #${scheme}-pill-tabs`);
       const pillAfter = await readGeometry(page, `${canvas} #${scheme}-pill-tabs`);
@@ -224,7 +224,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.waitForFunction((selector) => {
       const root = document.querySelector(selector);
       const selected = root?.querySelector('[role="tab"][aria-selected="true"]');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
       return Boolean(selected && indicator && (indicator.getAnimations().length > 0 || Math.abs(indicator.getBoundingClientRect().width - selected.getBoundingClientRect().width) > 0.5));
     }, motionPill);
     await page.locator(`${motionPill} [role="tab"]`).nth(0).click();
@@ -232,8 +232,8 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.waitForFunction((selector) => {
       const root = document.querySelector(selector);
       const selected = root?.querySelector('[role="tab"][aria-selected="true"]');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
-      return Boolean(root?.querySelector('.muxui-tabs-motion')?.hasAttribute('data-muxui-tabs-reduced')
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
+      return Boolean(root?.querySelector('.muxui-tabs__motion')?.hasAttribute('data-muxui-tabs-reduced')
         && selected && indicator && Math.abs(indicator.getBoundingClientRect().width - selected.getBoundingClientRect().width) < 1);
     }, motionPill, { timeout: 1000 });
     await page.locator('#tabs-preview-light').evaluate((canvas) => canvas.removeAttribute('data-muxui-motion'));
@@ -241,8 +241,8 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
 
     const overflowRoot = '#tabs-preview-light #light-overflow-tabs';
     await page.locator(overflowRoot).evaluate((root) => { root.style.inlineSize = '220px'; });
-    await page.waitForFunction((selector) => document.querySelector(`${selector} .muxui-tabs-motion`)?.hasAttribute('data-muxui-tabs-overflow'), overflowRoot);
-    const overflowMotion = page.locator(`${overflowRoot} .muxui-tabs-motion`);
+    await page.waitForFunction((selector) => document.querySelector(`${selector} .muxui-tabs__motion`)?.hasAttribute('data-muxui-tabs-overflow'), overflowRoot);
+    const overflowMotion = page.locator(`${overflowRoot} .muxui-tabs__motion`);
     assert.equal(await overflowMotion.locator('button[aria-label="Scroll tabs left"]').count(), 1);
     assert.equal(await overflowMotion.locator('button[aria-label="Scroll tabs right"]').count(), 1);
     assert.equal(await overflowMotion.locator('button[aria-label="Scroll tabs left"]').isDisabled(), true);
@@ -268,7 +268,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.notEqual(edgeStates.pressed.image, 'none', 'overflow next pressed state is visible');
     assert.ok(parseFloat(edgeStates.focused.outline) >= 2, 'overflow next focus state is visible');
     const disabledEdge = await overflowMotion.locator('button[aria-label="Scroll tabs left"]').evaluate((node) => {
-      const viewport = node.parentElement?.querySelector('.muxui-tabs-motion-overflow-viewport');
+      const viewport = node.parentElement?.querySelector('.muxui-tabs__motion-overflow-viewport');
       return {
         opacity: getComputedStyle(node).opacity,
         iconOpacity: getComputedStyle(node.querySelector('svg')).opacity,
@@ -296,25 +296,25 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const settledContrast = contrastSamples.at(-1);
     assert.notEqual(settledContrast.originalColor, settledContrast.contrastColor, 'selected contrast text uses the inverse foreground layer');
 
-    const overflowViewport = overflowMotion.locator('.muxui-tabs-motion-overflow-viewport');
+    const overflowViewport = overflowMotion.locator('.muxui-tabs__motion-overflow-viewport');
     await overflowViewport.evaluate((node) => { node.scrollLeft = 0; });
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs button[aria-label="Scroll tabs left"]')?.disabled);
     const initialScroll = await overflowViewport.evaluate((node) => node.scrollLeft);
     const maxScroll = await overflowViewport.evaluate((node) => node.scrollWidth - node.clientWidth);
-    const scrollRecording = await recordFrames(page, () => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport').scrollLeft);
+    const scrollRecording = await recordFrames(page, () => document.querySelector('#light-overflow-tabs .muxui-tabs__motion-overflow-viewport').scrollLeft);
     await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
     // The reversal must interrupt a scroll that is under way and has enabled the opposite arrow.
     await page.waitForFunction((start) => {
       const root = document.querySelector('#light-overflow-tabs');
-      return root.querySelector('.muxui-tabs-motion-overflow-viewport').scrollLeft > start
+      return root.querySelector('.muxui-tabs__motion-overflow-viewport').scrollLeft > start
         && !root.querySelector('button[aria-label="Scroll tabs left"]').disabled;
     }, initialScroll);
     const reversalStart = await overflowMotion.evaluate((root) => {
-      const position = root.querySelector('.muxui-tabs-motion-overflow-viewport').scrollLeft;
+      const position = root.querySelector('.muxui-tabs__motion-overflow-viewport').scrollLeft;
       root.querySelector('button[aria-label="Scroll tabs left"]').click();
       return position;
     });
-    await page.waitForFunction((start) => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport').scrollLeft < start, reversalStart);
+    await page.waitForFunction((start) => document.querySelector('#light-overflow-tabs .muxui-tabs__motion-overflow-viewport').scrollLeft < start, reversalStart);
     const reversedScroll = await overflowViewport.evaluate((node) => node.scrollLeft);
     const scrollFrames = await scrollRecording.stop();
     const inFlightScroll = scrollFrames.find((offset) => offset > initialScroll && offset < maxScroll - 0.5) ?? scrollFrames.at(-1);
@@ -327,14 +327,14 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const peakScroll = Math.max(...scrollFrames);
     assert.ok(peakScroll <= reversalStart + frameStep + 0.5 && peakScroll < maxScroll - 0.5,
       `reversal stops the forward scroll within one frame (${reversalStart} + ${frameStep} -> peak ${peakScroll} of ${maxScroll})`);
-    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < 1);
+    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs__motion-overflow-viewport')?.scrollLeft < 1);
 
     // Keyboard, element.click(), and assistive-tech activation reverse without a pointerdown stopping
     // the scroll first. Both clicks run inside the recorder so Motion's frame step precedes each sample;
     // the spin lands activation late in the frame, where a stale final step would overshoot.
     const clickReversal = await recordFrames(page, (spinMs, state) => {
       const root = document.querySelector('#light-overflow-tabs');
-      const viewport = root.querySelector('.muxui-tabs-motion-overflow-viewport');
+      const viewport = root.querySelector('.muxui-tabs__motion-overflow-viewport');
       if (!state.started) {
         state.started = true;
         root.querySelector('button[aria-label="Scroll tabs right"]').click();
@@ -356,16 +356,16 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const clickPainted = [clickActivation.painted, ...clickFrames];
     assert.ok(clickPainted.every((offset) => offset <= clickActivation.base + 0.5), `click reversal never paints past the activation position ${clickActivation.base}: ${JSON.stringify(clickPainted)}`);
     assert.ok(clickPainted.at(-1) < clickActivation.base, `click reversal moves backwards: ${JSON.stringify(clickPainted)}`);
-    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < 1);
+    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs__motion-overflow-viewport')?.scrollLeft < 1);
 
     const scrollDestination = await overflowViewport.evaluate((node) => Math.min(node.scrollWidth - node.clientWidth, node.scrollLeft + node.clientWidth * 0.8));
     await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
     await page.waitForFunction((destination) => {
-      const offset = document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport').scrollLeft;
+      const offset = document.querySelector('#light-overflow-tabs .muxui-tabs__motion-overflow-viewport').scrollLeft;
       return offset > 1 && offset < destination - 1;
     }, scrollDestination);
     await page.locator(overflowRoot).evaluate((root) => root.setAttribute('data-muxui-motion', 'reduced'));
-    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion')?.hasAttribute('data-muxui-tabs-reduced'));
+    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs__motion')?.hasAttribute('data-muxui-tabs-reduced'));
     assert.ok(Math.abs(await overflowViewport.evaluate((node) => node.scrollLeft) - scrollDestination) < 1, 'enabling reduced motion settles an active scroll at its destination');
     await overflowMotion.locator('button[aria-label="Scroll tabs left"]').click();
     const reducedScrollBefore = await overflowViewport.evaluate((node) => node.scrollLeft);
@@ -375,11 +375,11 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.locator(overflowRoot).evaluate((root) => root.removeAttribute('data-muxui-motion'));
     await page.evaluate(() => { document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration'); document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration'); });
 
-    await overflowMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => { node.scrollLeft = 8; });
+    await overflowMotion.locator('.muxui-tabs__motion-overflow-viewport').evaluate((node) => { node.scrollLeft = 8; });
     await page.waitForFunction(() => !document.querySelector('#light-overflow-tabs button[aria-label="Scroll tabs left"]')?.disabled);
-    const beforeScroll = await overflowMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => node.scrollLeft);
+    const beforeScroll = await overflowMotion.locator('.muxui-tabs__motion-overflow-viewport').evaluate((node) => node.scrollLeft);
     await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
-    await page.waitForFunction((before) => document.querySelector('#tabs-preview-light #light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft > before, beforeScroll);
+    await page.waitForFunction((before) => document.querySelector('#tabs-preview-light #light-overflow-tabs .muxui-tabs__motion-overflow-viewport')?.scrollLeft > before, beforeScroll);
     await page.waitForFunction(() => !document.querySelector('#tabs-preview-light #light-overflow-tabs button[aria-label="Scroll tabs left"]')?.disabled);
     assert.equal(await overflowMotion.locator('button[aria-label="Scroll tabs left"]').isDisabled(), false);
 
@@ -389,7 +389,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.waitForFunction(() => {
       const root = document.querySelector('#tabs-preview-light #light-overflow-tabs');
       const selected = root?.querySelector('[role="tab"][aria-selected="true"]');
-      const indicator = root?.querySelector('.muxui-tabs-motion-underline');
+      const indicator = root?.querySelector('.muxui-tabs__motion-underline');
       return Boolean(selected && indicator && Math.abs(indicator.getBoundingClientRect().width - selected.getBoundingClientRect().width) < 1);
     });
     const overflowAfter = await readGeometry(page, overflowRoot);
@@ -409,21 +409,21 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.equal(overflowFocus.offset, '2px');
 
     const verticalRoot = '#tabs-preview-dark #dark-vertical-overflow-tabs';
-    await page.waitForFunction((selector) => document.querySelector(`${selector} .muxui-tabs-motion`)?.hasAttribute('data-muxui-tabs-overflow'), verticalRoot);
-    const verticalMotion = page.locator(`${verticalRoot} .muxui-tabs-motion`);
+    await page.waitForFunction((selector) => document.querySelector(`${selector} .muxui-tabs__motion`)?.hasAttribute('data-muxui-tabs-overflow'), verticalRoot);
+    const verticalMotion = page.locator(`${verticalRoot} .muxui-tabs__motion`);
     assert.equal(await verticalMotion.locator('button[aria-label="Scroll tabs up"]').count(), 1);
     assert.equal(await verticalMotion.locator('button[aria-label="Scroll tabs down"]').count(), 1);
     assert.equal(await verticalMotion.locator('button:enabled').count(), 0, 'disabling Tabs also disables its scroll controls');
-    const verticalScroll = await verticalMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => node.scrollTop);
+    const verticalScroll = await verticalMotion.locator('.muxui-tabs__motion-overflow-viewport').evaluate((node) => node.scrollTop);
     assert.ok(verticalScroll > 0, 'vertical overflow reveals the default selected tab');
-    assert.match(await verticalMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => getComputedStyle(node).clipPath), /^inset\([\d.]+px 0px\)$/u, 'overflow viewport clips content behind its vertical edges');
+    assert.match(await verticalMotion.locator('.muxui-tabs__motion-overflow-viewport').evaluate((node) => getComputedStyle(node).clipPath), /^inset\([\d.]+px 0px\)$/u, 'overflow viewport clips content behind its vertical edges');
 
     await page.locator('#tabs-preview-dark #dark-overflow-tabs').evaluate((root) => { root.dir = 'rtl'; });
-    await page.waitForFunction(() => document.querySelector('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs-motion')?.dataset.muxuiTabsDirection === 'rtl');
-    const rtlMotion = page.locator('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs-motion');
-    const rtlBeforeScroll = await rtlMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => node.scrollLeft);
+    await page.waitForFunction(() => document.querySelector('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs__motion')?.dataset.muxuiTabsDirection === 'rtl');
+    const rtlMotion = page.locator('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs__motion');
+    const rtlBeforeScroll = await rtlMotion.locator('.muxui-tabs__motion-overflow-viewport').evaluate((node) => node.scrollLeft);
     await rtlMotion.locator('button[aria-label="Scroll tabs left"]').click();
-    await page.waitForFunction((before) => document.querySelector('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < before, rtlBeforeScroll);
+    await page.waitForFunction((before) => document.querySelector('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs__motion-overflow-viewport')?.scrollLeft < before, rtlBeforeScroll);
     await rtlMotion.locator('[role="tab"]').last().click();
     await page.waitForFunction(() => document.querySelector('#tabs-preview-dark #dark-overflow-tabs [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'Billing');
     assert.equal(await page.locator('#tabs-preview-light #light-overflow-tabs [role="tab"][aria-selected="true"]').textContent(), 'Billing', 'instances remain independent');
@@ -431,7 +431,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const segmentRoot = '#tabs-preview-light #light-segment-tabs';
     await page.locator(`${segmentRoot} [role="tab"]`).last().click();
     await page.waitForFunction((selector) => document.querySelector(`${selector} [role="tab"][aria-selected="true"]`)?.textContent?.trim() === 'Month', segmentRoot);
-    assert.equal(await page.locator(`${segmentRoot} .muxui-tab-panel:not([data-muxui-hidden])`).textContent(), 'Month');
+    assert.equal(await page.locator(`${segmentRoot} .muxui-tabs__panel:not([data-muxui-hidden])`).textContent(), 'Month');
 
     const pillTabs = page.locator(`${motionPill} [role="tab"]`);
     await pillTabs.first().focus();
@@ -485,7 +485,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => {
       const root = document.querySelector('#light-pill-tabs');
-      const shape = root.querySelector('.muxui-tabs-motion-underline').getBoundingClientRect();
+      const shape = root.querySelector('.muxui-tabs__motion-underline').getBoundingClientRect();
       const selected = root.querySelector('[role="tab"][aria-selected="true"]').getBoundingClientRect();
       return Math.abs(shape.left - selected.left) < 1 && Math.abs(shape.width - selected.width) < 1;
     });
@@ -519,7 +519,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.equal(blurredSelected.selected, 'true', 'blur does not change selection');
     assert.equal(blurredSelected.focusVisible, false, 'blur clears the selected tab focus-visible state');
     assert.equal(blurredSelected.outlineStyle, 'none', 'blur clears the selected tab accent ring');
-    const foreground = await page.locator(`${motionPill} .muxui-tabs-motion-foreground`).evaluate((node) => ({
+    const foreground = await page.locator(`${motionPill} .muxui-tabs__motion-foreground`).evaluate((node) => ({
       hidden: node.getAttribute('aria-hidden'), inert: node.inert, clip: getComputedStyle(node).clipPath,
       labels: node.children.length, duplicateIds: node.querySelectorAll('[id]').length,
     }));
@@ -530,13 +530,13 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.notEqual(foreground.clip, 'inset(100%)', 'contrast layer follows the measured shape');
     const textAlignment = await page.locator(motionPill).evaluate((root) => {
       const textBounds = (node) => { const range = document.createRange(); range.selectNodeContents(node); return range.getBoundingClientRect(); };
-      const original = textBounds(root.querySelector('[role="tab"][aria-selected="true"] .muxui-tab-label'));
-      const copy = textBounds(root.querySelectorAll('.muxui-tabs-motion-label')[2]);
+      const original = textBounds(root.querySelector('[role="tab"][aria-selected="true"] .muxui-tabs__tab-label'));
+      const copy = textBounds(root.querySelectorAll('.muxui-tabs__motion-label')[2]);
       return Math.abs(original.left - copy.left) < 0.5 && Math.abs(original.top - copy.top) < 0.5;
     });
     assert.ok(textAlignment, 'contrast text stays aligned with its original label');
     await page.emulateMedia({ forcedColors: 'active' });
-    assert.equal(await page.locator(`${motionPill} .muxui-tabs-motion-foreground`).evaluate((node) => getComputedStyle(node).display), 'none');
+    assert.equal(await page.locator(`${motionPill} .muxui-tabs__motion-foreground`).evaluate((node) => getComputedStyle(node).display), 'none');
     assert.equal(await page.locator(`${motionPill} [role="tab"][aria-selected="true"]`).evaluate((node) => getComputedStyle(node).forcedColorAdjust), 'none');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {

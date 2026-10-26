@@ -14,13 +14,13 @@ const sizedTargets = Object.freeze({
   'text-field': { selector: '.muxui-field-input' },
   'text-field-invalid': { selector: '.muxui-field-input' },
   'search-field': { selector: '.muxui-field-input' },
-  'number-field': { selector: '.muxui-number-control' },
+  'number-field': { selector: '.muxui-number-field__control' },
   'date-field': { selector: '.muxui-date-input' },
   'time-field': { selector: '.muxui-date-input' },
-  'date-picker': { selector: '.muxui-date-control' },
-  'date-range-picker': { selector: '.muxui-date-range-control' },
-  'combo-box': { selector: '.muxui-combo-control' },
-  select: { selector: '.muxui-select-trigger' },
+  'date-picker': { selector: '.muxui-date-picker__control' },
+  'date-range-picker': { selector: '.muxui-date-range-picker__control' },
+  'combo-box': { selector: '.muxui-combo-box__control' },
+  select: { selector: '.muxui-select__trigger' },
   autocomplete: { selector: '.muxui-field-input' },
   'command-palette': { selector: '.muxui-command-palette__trigger' },
   'color-field': { selector: '.muxui-field-input' },
@@ -30,7 +30,7 @@ const sizedTargets = Object.freeze({
   'checkbox-group-md-child': { expectedHeight: sizes.md, selector: '.muxui-checkbox' },
   'checkbox-group-lg-md-child': { expectedHeight: sizes.md, selector: '.muxui-checkbox' },
   'checkbox-field': { selector: '.muxui-checkbox-field__button' },
-  'radio-group': { selector: '.muxui-radio' },
+  'radio-group': { selector: '.muxui-radio-group__radio' },
   'radio-field': { selector: '.muxui-radio-field__button' },
   switch: { selector: '.muxui-switch' },
   'switch-field': { selector: '.muxui-switch-field__button' },
@@ -41,19 +41,19 @@ const sizedTargets = Object.freeze({
   'multi-select': { selector: '.muxui-multi-select__trigger-inner' },
   'tag-select': { anatomy: true, selector: '.muxui-tag-select__group' },
   'toggle-button': { selector: '.muxui-toggle-button' },
-  tabs: { count: 2, selector: '.muxui-tab' },
+  tabs: { count: 2, selector: '.muxui-tabs__tab' },
 });
 
 const defaultTargets = Object.freeze({
-  'option-default': { count: 1, selector: '.muxui-list-box-item' },
-  'tree-default': { count: 2, selector: '.muxui-tree-item-content' },
+  'option-default': { count: 1, selector: '.muxui-list-box__item' },
+  'tree-default': { count: 2, selector: '.muxui-tree__item-content' },
   'toolbar-default': { count: 2, selector: '.muxui-toolbar > .muxui-button' },
   'color-mode-toggle-default': { count: 1, minHeight: sizes.md, selector: '.muxui-color-mode-toggle' },
-  'header-nav-default': { count: 1, selector: '.muxui-header-nav__nav-btn' },
+  'header-nav-default': { count: 1, selector: '.muxui-header-nav__nav-button' },
   'sidebar-search-default': { count: 1, selector: '.muxui-sidebar__search-input' },
   'sidebar-account-trigger-default': { count: 1, selector: '.muxui-sidebar__account-trigger' },
   'sidebar-feature-dismiss-default': { count: 1, selector: '.muxui-sidebar__feature-card-dismiss' },
-  'table-default': { count: 1, selector: '.muxui-table-row' },
+  'table-default': { count: 1, selector: '.muxui-table__row' },
 });
 
 const compactInteractiveTargets = Object.freeze({
@@ -63,15 +63,15 @@ const compactInteractiveTargets = Object.freeze({
 
 const portalTargets = Object.freeze({
   'combo-box': {
-    listSelector: '.muxui-combo-box-list',
-    opener: '.muxui-combo-box-trigger',
-    optionSelector: '.muxui-combo-box-option',
+    listSelector: '.muxui-combo-box__list',
+    opener: '.muxui-combo-box__trigger',
+    optionSelector: '.muxui-combo-box__option',
     expectedCount: 2,
   },
   select: {
-    listSelector: '.muxui-select-list',
-    opener: '.muxui-select-trigger',
-    optionSelector: '.muxui-select-option',
+    listSelector: '.muxui-select__list',
+    opener: '.muxui-select__trigger',
+    optionSelector: '.muxui-select__option',
     expectedCount: 2,
   },
   'multi-select': {
@@ -236,11 +236,11 @@ async function measureAlertDialogCloseCases(page) {
 
 async function measureAutocompleteOptions(page, size) {
   return page.evaluate((targetSize) => {
-    const list = document.querySelector(`.muxui-autocomplete-list[data-muxui-size="${targetSize}"]`);
-    const nodes = list ? [...list.querySelectorAll('.muxui-autocomplete-option')] : [];
+    const list = document.querySelector(`.muxui-autocomplete__list[data-muxui-size="${targetSize}"]`);
+    const nodes = list ? [...list.querySelectorAll('.muxui-autocomplete__option')] : [];
     return {
       count: nodes.length,
-      lists: [...document.querySelectorAll('.muxui-autocomplete-list')].map((candidate) => {
+      lists: [...document.querySelectorAll('.muxui-autocomplete__list')].map((candidate) => {
         const rect = candidate.getBoundingClientRect();
         const style = getComputedStyle(candidate);
         return {
@@ -337,7 +337,7 @@ async function measureCompactInteractiveTargets(page, size) {
 async function measureTableCells(page) {
   return page.evaluate(() => {
     const controlCase = document.querySelector('[data-default-controls] [data-control-id="table-default"]');
-    const nodes = controlCase ? [...controlCase.querySelectorAll('.muxui-table-cell')] : [];
+    const nodes = controlCase ? [...controlCase.querySelectorAll('.muxui-table__cell')] : [];
     return nodes.map((node) => {
       const rect = node.getBoundingClientRect();
       return { height: rect.height, scrollHeight: node.scrollHeight, width: rect.width };
@@ -533,7 +533,7 @@ function collectAutocompleteFailures(measurements, expectedHeight, size, failure
   for (const node of measurements.nodes) {
     if (!(node.height > 0 && node.width > 0)) failures.push(`autocomplete-portal/${size} has zero geometry`);
     if (Math.abs(node.height - expectedHeight) >= 0.01) failures.push(
-      `autocomplete-portal/${size} (.muxui-autocomplete-option) rendered ${node.height}px, expected ${expectedHeight}px; `
+      `autocomplete-portal/${size} (.muxui-autocomplete__option) rendered ${node.height}px, expected ${expectedHeight}px; `
       + `min-block-size ${node.minBlockSize}, padding-block ${node.paddingBlock}, font-size ${node.fontSize}`,
     );
     if (node.scrollHeight > node.height + 1) failures.push(`autocomplete-portal/${size} text is vertically clipped`);
@@ -543,8 +543,8 @@ function collectAutocompleteFailures(measurements, expectedHeight, size, failure
 async function waitForAutocompleteOptions(page, size, expectedHeight) {
   try {
     await page.waitForFunction(({ targetSize, targetHeight }) => {
-      const list = document.querySelector(`.muxui-autocomplete-list[data-muxui-size="${targetSize}"]`);
-      const option = list?.querySelector('.muxui-autocomplete-option');
+      const list = document.querySelector(`.muxui-autocomplete__list[data-muxui-size="${targetSize}"]`);
+      const option = list?.querySelector('.muxui-autocomplete__option');
       if (!list || !option) return false;
       const listStyle = getComputedStyle(list);
       const optionRect = option.getBoundingClientRect();
@@ -560,7 +560,7 @@ async function waitForAutocompleteOptions(page, size, expectedHeight) {
 
 async function waitForAutocompleteClosed(page) {
   try {
-    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-autocomplete-list')].every((list) => {
+    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-autocomplete__list')].every((list) => {
       const style = getComputedStyle(list);
       const rect = list.getBoundingClientRect();
       return style.display === 'none' || style.visibility === 'hidden' || rect.height === 0;

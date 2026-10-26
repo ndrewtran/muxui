@@ -15,6 +15,7 @@ import {
 } from '../src/collections.mjs';
 import { ToggleButton } from '../src/components.ts';
 import { readRuntimeSources, runtimeSourceFor } from '../src/runtime-sources.mjs';
+import { hasClassToken } from './support/class-tokens.mjs';
 import { createDom } from './support/dom.mjs';
 
 const REPOSITORY_ROOT = resolve(import.meta.dirname, '../../..');
@@ -134,14 +135,14 @@ function deleteBeforeInput(node) {
 
 test('R1.3 collection source preserves glyph alignment state selectors', async () => {
   const styles = await readFile(resolve(import.meta.dirname, '../src/styles/collections.css'), 'utf8');
-  assert.match(styles, /\.muxui-calendar\[data-muxui-state-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
-  assert.match(styles, /\.muxui-range-calendar\[data-muxui-state-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
-  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-block: max\(0px, calc\(\(var\(--muxui-control-target-size/u);
-  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-inline: var\(--muxui-semantic-layout-inset-large\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-muxui-state-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-muxui-state-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
-  assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
-  assert.match(styles, /\.muxui-token\s*\{[\s\S]*?display:\s*inline-flex;[\s\S]*?padding-inline:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?background-color:\s*var\(--muxui-semantic-surface-subtle\);/u, 'TokenField tokens need a visible, separated affordance');
+  assert.match(styles, /\.muxui-calendar\[data-muxui-state-disabled\] \.muxui-calendar__(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
+  assert.match(styles, /\.muxui-range-calendar\[data-muxui-state-disabled\] \.muxui-calendar__(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
+  assert.match(styles, /\.muxui-tabs__tab\s*\{[\s\S]*?padding-block: max\(0px, calc\(\(var\(--muxui-control-target-size/u);
+  assert.match(styles, /\.muxui-tabs__tab\s*\{[\s\S]*?padding-inline: var\(--muxui-semantic-layout-inset-large\);/u);
+  assert.match(styles, /\.muxui-tree__item\[data-muxui-state-has-child-items\] \.muxui-tree__item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\);/u);
+  assert.match(styles, /\.muxui-tree__item\[data-muxui-state-expanded\] \.muxui-tree__item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
+  assert.match(styles, /\.muxui-tree__toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
+  assert.match(styles, /\.muxui-token-field__token\s*\{[\s\S]*?display:\s*inline-flex;[\s\S]*?padding-inline:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?background-color:\s*var\(--muxui-semantic-surface-subtle\);/u, 'TokenField tokens need a visible, separated affordance');
   const baseStyles = await readFile(resolve(import.meta.dirname, '../src/styles/base.css'), 'utf8');
   assert.match(baseStyles, /\.muxui-calendar,\s*\.muxui-range-calendar\s*\{[^}]*box-sizing:\s*content-box;[^}]*background: var\(--muxui-semantic-surface-raised\);[^}]*border: 1px solid var\(--muxui-semantic-border-strong\);/u);
 });
@@ -176,9 +177,9 @@ test('R1.3 temporal adapters preserve ISO values and calendar navigation', async
   try {
     await act(async () => root.render(React.createElement(Calendar, { label: 'Start date', defaultValue: '2025-01-15', onChange: (value) => changes.push(value) })));
     assert.match(container.querySelector('.muxui-calendar').textContent, /Start date/u);
-    assert.match(container.querySelector('.muxui-calendar-heading').textContent, /January 2025/u);
+    assert.match(container.querySelector('.muxui-calendar__heading').textContent, /January 2025/u);
     await act(async () => container.querySelector('button[aria-label="Next month"]').click());
-    assert.match(container.querySelector('.muxui-calendar-heading').textContent, /February 2025/u);
+    assert.match(container.querySelector('.muxui-calendar__heading').textContent, /February 2025/u);
     const dateCell = container.querySelector('[aria-label="Wednesday, February 12, 2025"]');
     await act(async () => dateCell.click());
     assert.deepEqual(changes, ['2025-02-12']);
@@ -198,14 +199,14 @@ test('R1.3 temporal adapters preserve ISO values and calendar navigation', async
     }
     await act(async () => root.render(React.createElement(ReadOnlyControlledCalendar)));
     await act(async () => container.querySelector('button[aria-label="Next month"]').click());
-    assert.match(container.querySelector('.muxui-calendar-heading').textContent, /February 2025/u);
+    assert.match(container.querySelector('.muxui-calendar__heading').textContent, /February 2025/u);
     assert.ok(focusChanges.length > 0);
     const readOnlyDateCell = container.querySelector('[aria-label="Wednesday, February 12, 2025"]');
     await act(async () => readOnlyDateCell.click());
     assert.deepEqual(readOnlySelections, []);
 
     await act(async () => root.render(React.createElement(RangeCalendar, { label: 'Date range', defaultValue: { start: '2025-01-01', end: '2025-01-04' } })));
-    assert.equal(container.querySelector('.muxui-range-calendar-cell')?.classList.contains('muxui-range-calendar-cell'), true);
+    assert.equal(container.querySelector('.muxui-range-calendar__cell')?.classList.contains('muxui-range-calendar__cell'), true);
   } finally {
     await act(async () => {
       document.activeElement?.blur();
@@ -221,14 +222,14 @@ test('embedded RAC button controls inherit the Mux UI button chrome reset', asyn
   assert.notEqual(resetStart, -1);
   const reset = styles.slice(resetStart, styles.indexOf('\n}\n', resetStart) + 3);
   for (const className of [
-    'muxui-date-trigger', 'muxui-calendar-previous', 'muxui-calendar-next',
-    'muxui-combo-box-trigger', 'muxui-select-trigger', 'muxui-tag-remove',
-    'muxui-tree-toggle', 'muxui-disclosure-trigger', 'muxui-search-clear',
+    'muxui-date-trigger', 'muxui-calendar__previous', 'muxui-calendar__next',
+    'muxui-combo-box__trigger', 'muxui-select__trigger', 'muxui-tag-group__remove',
+    'muxui-tree__toggle', 'muxui-disclosure__trigger', 'muxui-search-field__clear',
   ]) assert.match(reset, new RegExp(`\\.${className}\\b`, 'u'));
   assert.match(reset, /border:\s*0;[\s\S]*outline:\s*1px solid transparent;/u);
   assert.match(reset, /appearance:\s*none;/u);
-  assert.match(styles, /\.muxui-calendar-previous,\n\.muxui-calendar-next\s*\{[^}]*padding:\s*0;/u);
-  assert.match(styles, /\.muxui-combo-box-trigger\s*\{[^}]*border:\s*none;[\s\S]*background:\s*transparent;/u);
+  assert.match(styles, /\.muxui-calendar__previous,\n\.muxui-calendar__next\s*\{[^}]*padding:\s*0;/u);
+  assert.match(styles, /\.muxui-combo-box__trigger\s*\{[^}]*border:\s*none;[\s\S]*background:\s*transparent;/u);
 });
 
 test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled guards', async () => {
@@ -242,14 +243,14 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     React.createElement(Slider, { 'aria-label': 'SSR numeric slider', readOnly: true }),
   ))).window.document;
   assert.equal(ssr.querySelector('.muxui-color-area')?.getAttribute('data-muxui-state-read-only'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-area-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-area__thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
   assert.equal(ssr.querySelector('.muxui-color-slider')?.getAttribute('data-muxui-state-read-only'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-slider-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-slider__thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
   assert.equal(ssr.querySelector('.muxui-color-wheel')?.getAttribute('data-muxui-state-read-only'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-wheel-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-wheel__thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
   assert.equal(ssr.querySelector('.muxui-color-swatch-picker[role="listbox"]')?.getAttribute('data-muxui-state-read-only'), 'true');
   assert.equal(ssr.querySelector('.muxui-slider')?.getAttribute('data-muxui-state-read-only'), 'true');
-  assert.equal(ssr.querySelector('.muxui-slider-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-slider__thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
@@ -266,17 +267,17 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
       )),
     )));
     assert.equal(container.querySelectorAll('.muxui-color-field').length, 2);
-    assert.ok(container.querySelector('.muxui-color-area-thumb'));
-    assert.ok(container.querySelector('.muxui-color-slider-track'));
-    assert.equal(container.querySelectorAll('.muxui-color-swatch-picker-item').length, 2);
-    assert.ok(container.querySelector('.muxui-color-wheel-track'));
+    assert.ok(container.querySelector('.muxui-color-area__thumb'));
+    assert.ok(container.querySelector('.muxui-color-slider__track'));
+    assert.equal(container.querySelectorAll('.muxui-color-swatch-picker__item').length, 2);
+    assert.ok(container.querySelector('.muxui-color-wheel__track'));
     assert.equal(container.querySelector('.muxui-color-field input').value, '#FF0000');
-    await act(async () => container.querySelectorAll('.muxui-color-swatch-picker-item')[1].click());
+    await act(async () => container.querySelectorAll('.muxui-color-swatch-picker__item')[1].click());
     assert.equal(changes.some(([kind, value]) => kind === 'picker' && typeof value === 'string' && value.includes('0, 0, 255')), true);
 
     const disabledChanges = [];
     await act(async () => root.render(React.createElement(ColorSwatchPicker, { 'aria-label': 'Disabled palette', disabled: true, items: [{ id: 'red', color: '#ff0000' }], onChange: (value) => disabledChanges.push(value) })));
-    const disabledItem = container.querySelector('.muxui-color-swatch-picker-item');
+    const disabledItem = container.querySelector('.muxui-color-swatch-picker__item');
     assert.equal(disabledItem.getAttribute('aria-disabled'), 'true');
     assert.equal(disabledItem.getAttribute('data-muxui-state-disabled'), 'true');
     await act(async () => disabledItem.click());
@@ -294,12 +295,12 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
       ))));
     const disabledNestedArea = container.querySelector('.muxui-color-area');
     assert.equal(container.querySelector('.muxui-color-field input').disabled, true);
-    const disabledNestedAreaField = disabledNestedArea.closest('.muxui-color-area-field');
+    const disabledNestedAreaField = disabledNestedArea.closest('.muxui-color-area__field');
     assert.equal(disabledNestedAreaField.getAttribute('aria-disabled'), 'true');
     assert.equal(disabledNestedAreaField.getAttribute('data-muxui-state-disabled'), 'true');
     assert.equal(container.querySelector('.muxui-color-slider input')?.disabled, true);
     assert.equal(container.querySelector('.muxui-color-wheel input')?.disabled, true);
-    assert.equal(container.querySelector('.muxui-color-swatch-picker-item')?.getAttribute('aria-disabled'), 'true');
+    assert.equal(container.querySelector('.muxui-color-swatch-picker__item')?.getAttribute('aria-disabled'), 'true');
     assert.equal(container.querySelector('.muxui-color-swatch')?.getAttribute('data-muxui-state-disabled'), 'true');
     await act(async () => disabledNestedArea.click());
     assert.deepEqual(pickerChanges, []);
@@ -316,7 +317,7 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     const readOnlyNestedField = container.querySelector('.muxui-color-field input');
     const readOnlyNestedArea = container.querySelector('.muxui-color-area');
     assert.equal(readOnlyNestedField.readOnly, true);
-    const readOnlyNestedAreaField = readOnlyNestedArea.closest('.muxui-color-area-field');
+    const readOnlyNestedAreaField = readOnlyNestedArea.closest('.muxui-color-area__field');
     assert.equal(readOnlyNestedAreaField.hasAttribute('aria-readonly'), false);
     assert.equal(readOnlyNestedAreaField.getAttribute('data-muxui-state-read-only'), 'true');
     const readOnlyPicker = container.querySelector('.muxui-color-picker');
@@ -344,7 +345,7 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     const readOnlySlider = readOnlySliderTargets[0];
     const readOnlyWheel = readOnlyWheelTargets[0];
     const readOnlySwatchList = container.querySelector('.muxui-color-swatch-picker[role="listbox"]');
-    const readOnlySwatch = container.querySelector('.muxui-color-swatch-picker-item');
+    const readOnlySwatch = container.querySelector('.muxui-color-swatch-picker__item');
     assert.equal(hasReadOnlyMarkers(readOnlySwatchList), true);
     assert.equal(readOnlySwatch?.hasAttribute('aria-readonly'), false);
     await act(async () => readOnlySlider.focus());
@@ -469,8 +470,8 @@ test('R1.3 null keeps date and colour values controlled and empty', async () => 
     React.createElement(ColorSwatchPicker, { 'aria-label': 'Swatches', value: props.swatch, items: swatches, onChange: (value) => changes.push(['swatch', value]) }),
     React.createElement(ColorField, { label: 'Colour', value: props.color, onChange: (value) => changes.push(['color', value]) }))));
   const selected = () => ({
-    date: [...container.querySelectorAll('.muxui-calendar-cell[data-muxui-state-selected="true"]')].map((cell) => cell.textContent),
-    range: [...container.querySelectorAll('.muxui-range-calendar-cell[data-muxui-state-selected="true"]')].map((cell) => cell.textContent),
+    date: [...container.querySelectorAll('.muxui-calendar__cell[data-muxui-state-selected="true"]')].map((cell) => cell.textContent),
+    range: [...container.querySelectorAll('.muxui-range-calendar__cell[data-muxui-state-selected="true"]')].map((cell) => cell.textContent),
     swatch: [...container.querySelectorAll('.muxui-color-swatch-picker [aria-selected="true"]')].length,
     color: container.querySelector('.muxui-color-field input').value,
   });
@@ -479,7 +480,7 @@ test('R1.3 null keeps date and colour values controlled and empty', async () => 
     await render({ date: null, range: null, swatch: null, color: null });
     assert.deepEqual(selected(), empty);
     const day = (selector, label) => [...container.querySelectorAll(selector)].find((cell) => cell.textContent === label);
-    await act(async () => day('.muxui-calendar-cell', '10').click());
+    await act(async () => day('.muxui-calendar__cell', '10').click());
     await act(async () => container.querySelectorAll('.muxui-color-swatch-picker [role="option"]')[1].click());
     assert.deepEqual(changes, [['date', '2026-03-10'], ['swatch', 'rgba(0, 255, 0, 1)']]);
     assert.deepEqual(selected(), empty, 'controlled empty values ignore interaction until the owner updates');
@@ -678,14 +679,14 @@ test('R1.3 scalar composites preserve string and numeric callbacks with disabled
       React.createElement(Slider, { label: 'Volume', defaultValue: 1, min: 0, max: 3 }),
     )));
     assert.ok(container.querySelector('.muxui-combo-box input'));
-    assert.ok(container.querySelector('.muxui-combo-box-trigger'));
-    const comboArrow = container.querySelector('svg.muxui-combo-box-arrow');
+    assert.ok(container.querySelector('.muxui-combo-box__trigger'));
+    const comboArrow = container.querySelector('svg.muxui-combo-box__arrow');
     assert.ok(comboArrow);
     assert.equal(comboArrow.getAttribute('aria-hidden'), 'true');
     assert.equal(comboArrow.querySelector('path')?.getAttribute('d'), 'm6 9 6 6 6-6');
-    assert.equal(container.querySelectorAll('.muxui-radio').length, 2);
+    assert.equal(container.querySelectorAll('.muxui-radio-group__radio').length, 2);
     assert.equal(container.querySelector('input[type="range"]').value, '1');
-    assert.equal(container.querySelector('.muxui-radio input[value="pro"]').checked, true);
+    assert.equal(container.querySelector('.muxui-radio-group__radio input[value="pro"]').checked, true);
     assert.equal(container.querySelector('.muxui-combo-box input').value, 'Melbourne');
 
     document.activeElement?.blur();
@@ -697,7 +698,7 @@ test('R1.3 scalar composites preserve string and numeric callbacks with disabled
     )));
     const disabledComboInput = container.querySelector('.muxui-combo-box input');
     assert.equal(disabledComboInput.disabled, true);
-    assert.equal(container.querySelector('.muxui-radio input').disabled, true);
+    assert.equal(container.querySelector('.muxui-radio-group__radio input').disabled, true);
     const disabledSlider = container.querySelector('input[type="range"]');
     assert.equal(disabledSlider.disabled, true);
   } finally {
@@ -732,10 +733,10 @@ test('R1.3 ComboBox selects, filters, submits, and keeps disabled and read-only 
   const form = document.querySelector('#form');
   // Named forms submit the item id, not item.value.
   const items = [{ id: 'red', label: 'Red' }, { id: 'green', label: 'Green', disabled: true }, { id: 'blue', label: 'Blue', value: 'b' }];
-  const options = () => [...document.querySelectorAll('.muxui-combo-box-option')];
+  const options = () => [...document.querySelectorAll('.muxui-combo-box__option')];
   const option = (label) => options().find((candidate) => candidate.textContent === label);
   const input = () => container.querySelector('.muxui-combo-box input');
-  const open = async () => act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+  const open = async () => act(async () => container.querySelector('.muxui-combo-box__trigger').click());
   const selections = [];
   const changes = [];
   try {
@@ -832,8 +833,8 @@ async function comboBoxClearsSelection(control) {
   const log = [];
   try {
     await act(async () => root.render(React.createElement(ComboBoxClearHarness, { items, log, ...control })));
-    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
-    await act(async () => [...document.querySelectorAll('.muxui-combo-box-option')].find((option) => option.textContent === 'Blue').click());
+    await act(async () => container.querySelector('.muxui-combo-box__trigger').click());
+    await act(async () => [...document.querySelectorAll('.muxui-combo-box__option')].find((option) => option.textContent === 'Blue').click());
     assert.deepEqual(log, ['blue']);
     assert.equal(input().value, 'Blue');
     assert.deepEqual(submitted(), ['blue']);
@@ -866,12 +867,12 @@ test('R1.3 ComboBox selectedId null is a controlled field with no selection', as
   const input = () => container.querySelector('.muxui-combo-box input');
   const submitted = () => [...new FormData(form).getAll('color')];
   const render = (props) => act(async () => root.render(React.createElement(ComboBox, { label: 'Color', name: 'color', items, ...props })));
-  const selectedOptions = () => [...document.querySelectorAll('.muxui-combo-box-option[aria-selected="true"]')];
+  const selectedOptions = () => [...document.querySelectorAll('.muxui-combo-box__option[aria-selected="true"]')];
   try {
     await render({ selectedId: null });
     assert.equal(input().value, '');
     assert.deepEqual(submitted(), ['']);
-    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+    await act(async () => container.querySelector('.muxui-combo-box__trigger').click());
     assert.deepEqual(selectedOptions(), []);
     await act(async () => input().blur());
 
@@ -887,7 +888,7 @@ test('R1.3 ComboBox selectedId null is a controlled field with no selection', as
     await render({ key: 'text', selectedId: null, value: 'Re', onChange() {} });
     assert.equal(input().value, 'Re');
     assert.deepEqual(submitted(), ['']);
-    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+    await act(async () => container.querySelector('.muxui-combo-box__trigger').click());
     assert.deepEqual(selectedOptions(), []);
   } finally {
     document.activeElement?.blur();
@@ -908,8 +909,8 @@ test('R1.3 ComboBox text that matches no option is not a cleared selection', asy
     // Over a selection: the selection stays until the field is left, then the input restores its label.
     const kept = [];
     await act(async () => root.render(React.createElement(ComboBoxClearHarness, { key: 'kept', items, log: kept, controlText: false, controlSelection: false })));
-    await act(async () => container.querySelector('.muxui-combo-box-trigger').click());
-    await act(async () => [...document.querySelectorAll('.muxui-combo-box-option')].find((option) => option.textContent === 'Blue').click());
+    await act(async () => container.querySelector('.muxui-combo-box__trigger').click());
+    await act(async () => [...document.querySelectorAll('.muxui-combo-box__option')].find((option) => option.textContent === 'Blue').click());
     await act(async () => typeInto(input(), 'zzz'));
     assert.deepEqual(kept, ['blue']);
     assert.deepEqual(submitted(), ['blue']);
@@ -982,7 +983,7 @@ test('Slider exposes disabled state on its labelled group while preserving thumb
     assert.equal(slider?.getAttribute('aria-disabled'), 'true');
     assert.equal(slider?.getAttribute('data-muxui-state-disabled'), 'true');
     assert.equal(slider?.querySelector('.muxui-field-label')?.textContent, 'Disabled volume');
-    assert.equal(slider?.querySelector('.muxui-slider-output')?.textContent, '1');
+    assert.equal(slider?.querySelector('.muxui-slider__output')?.textContent, '1');
     assert.equal(input?.disabled, true);
     assert.equal(input?.getAttribute('aria-labelledby')?.includes(slider?.querySelector('.muxui-field-label')?.id ?? ''), true);
 
@@ -1009,11 +1010,11 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
         { value: 'legacy', label: 'Legacy', disabled: true },
       ],
     })));
-    const radios = [...container.querySelectorAll('.muxui-radio')];
+    const radios = [...container.querySelectorAll('.muxui-radio-group__radio')];
     assert.equal(radios.length, 3);
-    assert.equal(container.querySelectorAll('.muxui-radio-indicator').length, 3);
+    assert.equal(container.querySelectorAll('.muxui-radio-group__indicator').length, 3);
     assert.equal(radios[1].getAttribute('data-muxui-state-selected'), 'true');
-    assert.equal(radios[1].querySelector('.muxui-radio-indicator')?.getAttribute('aria-hidden'), 'true');
+    assert.equal(radios[1].querySelector('.muxui-radio-group__indicator')?.getAttribute('aria-hidden'), 'true');
     assert.equal(radios[0].querySelector('input').disabled, false);
     assert.equal(radios[2].querySelector('input').disabled, true);
 
@@ -1034,7 +1035,7 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
       ],
     })));
     const readOnlyGroup = container.querySelector('[role="radiogroup"]');
-    const readOnlyRadios = [...container.querySelectorAll('.muxui-radio')];
+    const readOnlyRadios = [...container.querySelectorAll('.muxui-radio-group__radio')];
     const readOnlyInputs = readOnlyRadios.map((radio) => radio.querySelector('input'));
     assert.equal(readOnlyGroup.getAttribute('aria-readonly'), 'true');
     assert.equal(readOnlyRadios.every((radio) => radio.getAttribute('data-muxui-state-read-only') === 'true'), true);
@@ -1053,8 +1054,8 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
       ],
     })));
     assert.equal(container.querySelector('[role="radiogroup"]').getAttribute('aria-disabled'), 'true');
-    assert.equal([...container.querySelectorAll('.muxui-radio input')].every((input) => input.disabled), true);
-    assert.equal([...container.querySelectorAll('.muxui-radio')].every((radio) => radio.getAttribute('data-muxui-state-disabled') === 'true'), true);
+    assert.equal([...container.querySelectorAll('.muxui-radio-group__radio input')].every((input) => input.disabled), true);
+    assert.equal([...container.querySelectorAll('.muxui-radio-group__radio')].every((radio) => radio.getAttribute('data-muxui-state-disabled') === 'true'), true);
   } finally {
     document.activeElement?.blur();
     await act(async () => root.unmount());
@@ -1097,22 +1098,22 @@ test('R1.3 field collections keep unsupported props out of public DOM surfaces',
     label: 'Plan', options: [{ value: 'pro', label: 'Pro' }],
     description: 'RADIO_DESCRIPTION', errorMessage: 'RADIO_ERROR', 'data-leak': 'RADIO_LEAK',
   }));
-  assert.match(radio, /muxui-radio-group/u);
+  assert.ok(hasClassToken(radio, 'muxui-radio-group'));
   assert.doesNotMatch(radio, /RADIO_(?:DESCRIPTION|ERROR|LEAK)/u);
 
   const tag = renderToString(React.createElement(TagGroup, {
     label: 'Tags', items: [{ id: 'one', label: 'One' }],
     description: 'TAG_DESCRIPTION', errorMessage: 'TAG_ERROR', readOnly: true, required: true, invalid: true, 'data-leak': 'TAG_LEAK',
   }));
-  assert.match(tag, /muxui-tag-group/u);
+  assert.ok(hasClassToken(tag, 'muxui-tag-group'));
   assert.doesNotMatch(tag, /TAG_(?:DESCRIPTION|ERROR|LEAK)/u);
 
   const token = renderToString(React.createElement(TokenField, {
     label: 'Tags', defaultValue: ['Design', 'Product research'],
     description: 'TOKEN_DESCRIPTION', errorMessage: 'TOKEN_ERROR', required: true, invalid: true, 'data-leak': 'TOKEN_LEAK',
   }));
-  assert.match(token, /muxui-token-field/u);
-  assert.equal((token.match(/class="muxui-token"/gu) ?? []).length, 2, 'TokenField SSR keeps both canonical token affordances');
+  assert.ok(hasClassToken(token, 'muxui-token-field'));
+  assert.equal((token.match(/class="muxui-token-field__token"/gu) ?? []).length, 2, 'TokenField SSR keeps both canonical token affordances');
   assert.doesNotMatch(token, /TOKEN_(?:DESCRIPTION|ERROR|LEAK)/u);
 });
 
@@ -1130,17 +1131,17 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
     assert.equal(container.querySelectorAll('[role="menuitem"]').length, 1);
     assert.equal(container.querySelector('[role="menuitem"]').textContent, 'Edit');
     assert.equal(container.querySelectorAll('[role="row"]').length, 3);
-    assert.equal(container.querySelectorAll('.muxui-table-cell').length, 1);
-    assert.equal(container.querySelectorAll('.muxui-tag').length, 1);
+    assert.equal(container.querySelectorAll('.muxui-table__cell').length, 1);
+    assert.equal(container.querySelectorAll('.muxui-tag-group__tag').length, 1);
     await act(async () => container.querySelector('[role="menuitem"]').click());
-    await act(async () => container.querySelector('.muxui-table-row').click());
-    await act(async () => container.querySelector('.muxui-tag').click());
-    await act(async () => container.querySelector('.muxui-tag-remove').click());
+    await act(async () => container.querySelector('.muxui-table__row').click());
+    await act(async () => container.querySelector('.muxui-tag-group__tag').click());
+    await act(async () => container.querySelector('.muxui-tag-group__remove').click());
     assert.deepEqual(actions, [['menu', 'edit'], ['table', 'ada'], ['tag', 'one'], ['remove', 'one']]);
 
     // Without onRemove, tags neither announce nor handle removal.
     await act(async () => root.render(React.createElement(TagGroup, { label: 'Fixed tags', items: [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }] })));
-    const fixedTag = container.querySelector('.muxui-tag');
+    const fixedTag = container.querySelector('.muxui-tag-group__tag');
     await act(async () => {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
       fixedTag.focus();
@@ -1154,8 +1155,8 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
       await act(async () => fixedTag.dispatchEvent(event));
       assert.equal(event.defaultPrevented, false, `${key} is not handled without onRemove`);
     }
-    assert.equal(container.querySelectorAll('.muxui-tag').length, 2);
-    assert.equal(container.querySelector('.muxui-tag-remove'), null);
+    assert.equal(container.querySelectorAll('.muxui-tag-group__tag').length, 2);
+    assert.equal(container.querySelector('.muxui-tag-group__remove'), null);
 
     const disabledActions = [];
     await act(async () => root.render(React.createElement('div', null,
@@ -1164,9 +1165,9 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
       React.createElement(TagGroup, { label: 'Disabled tags', disabled: true, items: [{ id: 'one', label: 'One' }], onAction: (item) => disabledActions.push(['tag', item.id]), onRemove: (items) => disabledActions.push(['remove', items.map((item) => item.id).join(',')]) }),
     )));
     await act(async () => container.querySelector('[role="menuitem"]').click());
-    await act(async () => container.querySelector('.muxui-table-row').click());
-    await act(async () => container.querySelector('.muxui-tag').click());
-    await act(async () => container.querySelector('.muxui-tag-remove').click());
+    await act(async () => container.querySelector('.muxui-table__row').click());
+    await act(async () => container.querySelector('.muxui-tag-group__tag').click());
+    await act(async () => container.querySelector('.muxui-tag-group__remove').click());
     assert.deepEqual(disabledActions, []);
   } finally {
     await act(async () => root.unmount());
@@ -1188,8 +1189,8 @@ test('R1.3 TagGroup selects tags and reports the selected ids as a Set', async (
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const items = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }, { id: 'three', label: 'Three', disabled: true }];
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   // A new key remounts the group, so each scenario starts from its own defaults.
   const render = (key, props) => act(async () => root.render(React.createElement(TagGroup, { key, label: 'Tags', items, ...props })));
   const reports = [];
@@ -1237,8 +1238,8 @@ test('R1.3 TagGroup with onAction runs it while nothing is selected and selects 
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const log = [];
   try {
     await act(async () => root.render(React.createElement(TagGroup, {
@@ -1270,8 +1271,8 @@ test('R1.3 TagGroup drops a removed tag from its own selection', async () => {
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const log = [];
   // The application owns the items; the group owns the selection.
   function Filters() {
@@ -1286,8 +1287,8 @@ test('R1.3 TagGroup drops a removed tag from its own selection', async () => {
   try {
     await act(async () => root.render(React.createElement(Filters)));
     assert.deepEqual(selected(), ['One']);
-    await act(async () => tag('One').querySelector('.muxui-tag-remove').click());
-    assert.deepEqual([[...container.querySelectorAll('.muxui-tag')].map((node) => node.textContent), selected(), log], [['Two'], [], []]);
+    await act(async () => tag('One').querySelector('.muxui-tag-group__remove').click());
+    assert.deepEqual([[...container.querySelectorAll('.muxui-tag-group__tag')].map((node) => node.textContent), selected(), log], [['Two'], [], []]);
 
     // The selection is empty, so a press runs the action rather than toggling a lingering 'One'.
     await act(async () => tag('Two').click());
@@ -1316,7 +1317,7 @@ test('R1.3 TagGroup reports only the enabled tags among the removed ones', async
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const removed = [];
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent.startsWith(name));
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent.startsWith(name));
   const items = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta', disabled: true }, { id: 'c', label: 'Gamma' }];
   try {
     await act(async () => root.render(React.createElement(TagGroup, {
@@ -1343,8 +1344,8 @@ test('R1.3 TagGroup keeps React Aria range selection in an uncontrolled multiple
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   try {
     await act(async () => root.render(React.createElement(TagGroup, { label: 'Tags', items: ['One', 'Two', 'Three'], selectionMode: 'multiple' })));
     await act(async () => tag('One').click());
@@ -1364,8 +1365,8 @@ test('R1.3 TagGroup keeps select-all in an uncontrolled multiple group', async (
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const reports = [];
   const render = (items) => act(async () => root.render(React.createElement(TagGroup, {
     label: 'Tags', items, selectionMode: 'multiple', onSelectionChange: (keys) => reports.push([...keys]),
@@ -1393,8 +1394,8 @@ test('R1.3 TagGroup hands the application a copy of the selection', async () => 
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const reports = [];
   try {
     await act(async () => root.render(React.createElement(TagGroup, {
@@ -1416,7 +1417,7 @@ test('R1.3 TagGroup applies defaultSelectedKeys to items that arrive after mount
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const render = (items) => act(async () => root.render(React.createElement(TagGroup, {
     label: 'Tags', items, selectionMode: 'multiple', defaultSelectedKeys: new Set(['One']),
   })));
@@ -1434,8 +1435,8 @@ test('R1.3 TagGroup forgets a removed tag that was only a range anchor', async (
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
+  const tag = (name) => [...container.querySelectorAll('.muxui-tag-group__tag')].find((node) => node.textContent === name);
+  const selected = () => [...container.querySelectorAll('.muxui-tag-group__tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const render = (items) => act(async () => root.render(React.createElement(TagGroup, { label: 'Tags', items, selectionMode: 'multiple' })));
   try {
     await render(['One', 'Two', 'Three', 'Four']);
@@ -1501,11 +1502,11 @@ test('R1.3 collection items expose keyboard focus-visible state when unselected'
     },
     {
       component: React.createElement(ColorSwatchPicker, { 'aria-label': 'Palette', items: [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }] }),
-      selector: '.muxui-color-swatch-picker-item',
+      selector: '.muxui-color-swatch-picker__item',
     },
     {
       component: React.createElement(Table, { 'aria-label': 'People', selectionMode: 'none', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'ada', name: 'Ada' }, { id: 'grace', name: 'Grace' }] }),
-      selector: '.muxui-table-row',
+      selector: '.muxui-table__row',
     },
   ];
   try {
@@ -1541,9 +1542,9 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
       name: 'color',
       onChange: (value) => changes.push(value),
     })));
-    assert.match(container.querySelector('.muxui-select-value').textContent, /Blue/u);
-    await act(async () => container.querySelector('.muxui-select-trigger').click());
-    const options = [...document.querySelectorAll('.muxui-select-option')];
+    assert.match(container.querySelector('.muxui-select__value').textContent, /Blue/u);
+    await act(async () => container.querySelector('.muxui-select__trigger').click());
+    const options = [...document.querySelectorAll('.muxui-select__option')];
     assert.deepEqual(options.map((option) => option.textContent), ['Red', 'Blue']);
     assert.equal(options.find((option) => option.textContent === 'Blue')?.getAttribute('aria-selected'), 'true');
     await act(async () => options[0].click());
@@ -1558,11 +1559,11 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
       readOnly: true,
       onChange: (value) => changes.push(value),
     })));
-    const readOnlyTrigger = container.querySelector('.muxui-select-trigger');
+    const readOnlyTrigger = container.querySelector('.muxui-select__trigger');
     assert.equal(container.querySelector('.muxui-select')?.getAttribute('data-muxui-state-read-only'), 'true');
     await act(async () => readOnlyTrigger.click());
-    await act(async () => document.querySelector('.muxui-select-option')?.click());
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Blue');
+    await act(async () => document.querySelector('.muxui-select__option')?.click());
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Blue');
     assert.deepEqual(changes, ['red']);
 
     await act(async () => root.render(React.createElement(Select, {
@@ -1573,11 +1574,11 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
       placeholder: 'Choose a color',
       onChange: (value) => changes.push(value),
     })));
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Choose a color');
-    const emptyReadOnlyTrigger = container.querySelector('.muxui-select-trigger');
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Choose a color');
+    const emptyReadOnlyTrigger = container.querySelector('.muxui-select__trigger');
     await act(async () => emptyReadOnlyTrigger.click());
-    await act(async () => document.querySelector('.muxui-select-option')?.click());
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Choose a color');
+    await act(async () => document.querySelector('.muxui-select__option')?.click());
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Choose a color');
 
     await act(async () => root.render(React.createElement(Select, {
       key: 'toggle-read-only',
@@ -1586,10 +1587,10 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
       defaultValue: 'blue',
       onChange: (value) => changes.push(value),
     })));
-    const editableTrigger = container.querySelector('.muxui-select-trigger');
+    const editableTrigger = container.querySelector('.muxui-select__trigger');
     await act(async () => editableTrigger.click());
-    await act(async () => [...document.querySelectorAll('.muxui-select-option')].find((option) => option.textContent === 'Red')?.click());
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    await act(async () => [...document.querySelectorAll('.muxui-select__option')].find((option) => option.textContent === 'Red')?.click());
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Red');
     await act(async () => root.render(React.createElement(Select, {
       key: 'toggle-read-only',
       label: 'Toggle read-only color',
@@ -1598,15 +1599,15 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
       placeholder: 'Choose a color',
       onChange: (value) => changes.push(value),
     })));
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
-    const toggledReadOnlyTrigger = container.querySelector('.muxui-select-trigger');
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Red');
+    const toggledReadOnlyTrigger = container.querySelector('.muxui-select__trigger');
     toggledReadOnlyTrigger.focus();
     await act(async () => toggledReadOnlyTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })));
     await act(async () => toggledReadOnlyTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Red');
     await act(async () => toggledReadOnlyTrigger.click());
-    await act(async () => [...document.querySelectorAll('.muxui-select-option')].find((option) => option.textContent === 'Blue')?.click());
-    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    await act(async () => [...document.querySelectorAll('.muxui-select__option')].find((option) => option.textContent === 'Blue')?.click());
+    assert.equal(container.querySelector('.muxui-select__value')?.textContent, 'Red');
     assert.deepEqual(changes, ['red', 'red']);
   } finally {
     await act(async () => root.unmount());
@@ -1681,7 +1682,7 @@ test('R1.3 TokenField keeps typed text beside tokens and reports only token chan
   try {
     await act(async () => root.render(React.createElement(TokenField, { label: 'Tags', defaultValue: ['alpha'], name: 'tags', placeholder: 'Add tag', onChange: (value) => changes.push(value) })));
     assert.equal(textbox().hasAttribute('aria-placeholder'), false);
-    assert.equal(container.querySelector('.muxui-token-placeholder'), null);
+    assert.equal(container.querySelector('.muxui-token-field__placeholder'), null);
     for (const character of 'beta') await act(async () => insertTextBeforeInput(textbox(), character));
     assert.match(textbox().textContent, /alpha.*beta$/u);
     assert.deepEqual(changes, [], 'text edits do not change the token array');
@@ -1691,10 +1692,10 @@ test('R1.3 TokenField keeps typed text beside tokens and reports only token chan
     assert.deepEqual(changes, [[]]);
     assert.deepEqual(values(), []);
     assert.equal(textbox().getAttribute('aria-placeholder'), 'Add tag');
-    assert.equal(container.querySelector('.muxui-token-placeholder')?.textContent, 'Add tag');
+    assert.equal(container.querySelector('.muxui-token-field__placeholder')?.textContent, 'Add tag');
     await act(async () => insertTextBeforeInput(textbox(), 'x'));
     assert.equal(textbox().hasAttribute('aria-placeholder'), false);
-    assert.equal(container.querySelector('.muxui-token-placeholder'), null);
+    assert.equal(container.querySelector('.muxui-token-field__placeholder'), null);
 
     // A controlled re-render with an equal token array keeps the field value and
     // its draft text. Outside token changes and rejected edits are proven in the
@@ -1827,7 +1828,7 @@ test('R1.3 GridList, Tree, and Table select on press and Enter while nothing is 
   const families = [
     ['grid', (props) => React.createElement(GridList, { 'aria-label': 'Grid', items, ...props }), '[role="grid"] [role="row"]'],
     ['tree', (props) => React.createElement(Tree, { 'aria-label': 'Tree', items, ...props }), '[role="treegrid"] [role="row"]'],
-    ['table', (props) => React.createElement(Table, { 'aria-label': 'Table', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], ...props }), '.muxui-table-row'],
+    ['table', (props) => React.createElement(Table, { 'aria-label': 'Table', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], ...props }), '.muxui-table__row'],
   ];
   const pressEnter = (row) => {
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
@@ -1882,25 +1883,25 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
       onAction: (item) => actions.push(item?.id),
     })));
     assert.equal(container.querySelectorAll('[role="row"]').length, 2);
-    assert.equal(container.querySelector('[role="row"] .muxui-tree-item-label').textContent, 'Parent');
+    assert.equal(container.querySelector('[role="row"] .muxui-tree__item-label').textContent, 'Parent');
     const child = [...container.querySelectorAll('[role="row"]')].find((row) => row.getAttribute('aria-label') === 'Child');
     assert.equal(child?.getAttribute('data-muxui-state-disabled'), 'true');
     const parent = [...container.querySelectorAll('[role="row"]')].find((row) => row.getAttribute('aria-label') === 'Parent');
-    const toggle = parent?.querySelector('.muxui-tree-toggle');
-    const content = parent?.querySelector('.muxui-tree-item-content');
-    assert.equal(parent?.querySelectorAll('.muxui-tree-toggle').length, 1);
+    const toggle = parent?.querySelector('.muxui-tree__toggle');
+    const content = parent?.querySelector('.muxui-tree__item-content');
+    assert.equal(parent?.querySelectorAll('.muxui-tree__toggle').length, 1);
     assert.ok(content);
-    assert.equal(content?.querySelector('.muxui-tree-toggle'), toggle);
-    assert.equal(content?.querySelector('.muxui-tree-item-label')?.textContent, 'Parent');
+    assert.equal(content?.querySelector('.muxui-tree__toggle'), toggle);
+    assert.equal(content?.querySelector('.muxui-tree__item-label')?.textContent, 'Parent');
     assert.equal(toggle?.getAttribute('slot'), 'chevron');
     assert.equal(toggle?.getAttribute('aria-label'), 'Toggle');
     assert.equal(toggle?.querySelector('svg')?.getAttribute('aria-hidden'), 'true');
     assert.equal(toggle?.querySelector('svg')?.getAttribute('focusable'), 'false');
     assert.equal(toggle?.querySelector('svg')?.classList.contains('lucide-chevron-right'), true);
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-    assert.match(styles, /\.muxui-tree-item\[data-muxui-state-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
-    assert.match(styles, /\.muxui-tree-item\[data-muxui-state-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
-    assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
+    assert.match(styles, /\.muxui-tree__item\[data-muxui-state-has-child-items\] \.muxui-tree__item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
+    assert.match(styles, /\.muxui-tree__item\[data-muxui-state-expanded\] \.muxui-tree__item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
+    assert.match(styles, /\.muxui-tree__toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
     await act(async () => child.click());
     assert.deepEqual(actions, []);
   } finally {
@@ -1943,7 +1944,7 @@ test('R1.3 unavailable calendar dates stay focusable but never select', async ()
     const rangeCell = container.querySelector('[aria-label="Thursday, January 2, 2025"]');
     assert.equal(rangeCell.getAttribute('data-muxui-state-unavailable'), 'true');
     await act(async () => rangeCell.click());
-    await act(async () => container.querySelector('.muxui-calendar-next').click());
+    await act(async () => container.querySelector('.muxui-calendar__next').click());
     assert.deepEqual(rangeChanges, []);
     assert.ok(rangeFocus.every((date) => /^\d{4}-\d{2}-\d{2}$/u.test(date)));
   } finally {
@@ -1952,7 +1953,7 @@ test('R1.3 unavailable calendar dates stay focusable but never select', async ()
   }
 });
 
-const calendarDay = (container, text) => [...container.querySelectorAll('.muxui-calendar-cell, .muxui-range-calendar-cell')].find((cell) => cell.textContent === text && !cell.hasAttribute('data-muxui-state-outside-month'));
+const calendarDay = (container, text) => [...container.querySelectorAll('.muxui-calendar__cell, .muxui-range-calendar__cell')].find((cell) => cell.textContent === text && !cell.hasAttribute('data-muxui-state-outside-month'));
 const selectedDays = (container) => [...container.querySelectorAll('[data-muxui-state-selected="true"]')].map((cell) => cell.textContent);
 
 // React Aria merges a context's props under the component's own, and an explicit false overrides an inherited
@@ -2054,13 +2055,13 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
       value: 'red', onOpenChange: (open) => opens.push(open), onChange: (value) => selections.push(value),
     };
     await act(async () => root.render(React.createElement(Select, { ...selectProps, open: false })));
-    assert.equal(container.querySelector('.muxui-select-trigger').getAttribute('aria-expanded'), 'false');
-    await act(async () => container.querySelector('.muxui-select-trigger').click());
+    assert.equal(container.querySelector('.muxui-select__trigger').getAttribute('aria-expanded'), 'false');
+    await act(async () => container.querySelector('.muxui-select__trigger').click());
     assert.deepEqual(opens, [true]);
-    assert.equal(container.querySelector('.muxui-select-option'), null);
+    assert.equal(container.querySelector('.muxui-select__option'), null);
     await act(async () => root.render(React.createElement(Select, { ...selectProps, open: true })));
-    assert.ok(document.querySelector('.muxui-select-option'));
-    await act(async () => document.querySelectorAll('.muxui-select-option')[1].click());
+    assert.ok(document.querySelector('.muxui-select__option'));
+    await act(async () => document.querySelectorAll('.muxui-select__option')[1].click());
     assert.deepEqual(selections, ['blue']);
 
     const sortCalls = [];
@@ -2073,7 +2074,7 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
     await act(async () => container.querySelector('[role="columnheader"][data-muxui-state-allows-sorting="true"]').click());
     await act(async () => container.querySelector('[role="columnheader"]:nth-child(2)').click());
     assert.deepEqual(sortCalls, [{ column: 'name', direction: 'ascending' }]);
-    assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => row.textContent), ['Ada10', 'Bob2']);
+    assert.deepEqual([...container.querySelectorAll('.muxui-table__row')].map((row) => row.textContent), ['Ada10', 'Bob2']);
     assert.deepEqual(Object.keys(sortCalls[0]).sort(), ['column', 'direction']);
 
     const reservedColumns = [{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'value', label: 'Value' }, { id: 'label', label: 'Label' }, { id: 'id', label: 'ID' }, { id: 'key', label: 'Key' }];
@@ -2081,7 +2082,7 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
       'aria-label': 'Reserved columns', columns: reservedColumns,
       rows: [{ id: 'r1', values: { name: 'Ada', value: '42', label: 'Primary', id: 'A-1', key: 'k1' } }, { id: 'r2', name: 'Bob', value: '7' }],
     })));
-    assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => [...row.querySelectorAll('.muxui-table-cell')].map((cell) => cell.textContent)), [
+    assert.deepEqual([...container.querySelectorAll('.muxui-table__row')].map((row) => [...row.querySelectorAll('.muxui-table__cell')].map((cell) => cell.textContent)), [
       ['Ada', '42', 'Primary', 'A-1', 'k1'],
       ['Bob', '7', '', 'r2', ''],
     ]);
@@ -2129,7 +2130,7 @@ test('R1.3 Table sortable headers carry aria-sort and a decorative sort chevron'
     assert.equal(Role.getAttribute('data-muxui-state-sort-direction'), null);
     assert.equal(Age.getAttribute('aria-sort'), null);
     for (const header of [Name, Role]) {
-      const chevron = header.querySelector('svg.muxui-table-sort-icon');
+      const chevron = header.querySelector('svg.muxui-table__sort-icon');
       assert.ok(chevron, `${header.textContent} renders the chevron`);
       assert.equal(chevron.getAttribute('aria-hidden'), 'true');
       assert.equal(chevron.getAttribute('focusable'), 'false');
@@ -2137,7 +2138,7 @@ test('R1.3 Table sortable headers carry aria-sort and a decorative sort chevron'
       assert.equal(chevron.classList.contains('lucide-chevron-down'), true);
     }
     // The label stays the header's whole accessible text; non-sortable headers get no wrapper or chevron.
-    assert.equal(Age.querySelector('svg, .muxui-table-column-content'), null);
+    assert.equal(Age.querySelector('svg, .muxui-table__column-content'), null);
   }
   assert.equal(render({}).querySelector('.muxui-table').hasAttribute('data-muxui-state-disabled'), false);
   assert.equal(render({ disabled: true }).querySelector('.muxui-table').hasAttribute('data-muxui-state-disabled'), true);
@@ -2258,7 +2259,7 @@ test('R1.3 readOnly mutation guards block RAC-handled range and swatch changes',
       assert.equal(currentTarget.value, initialValue, selector);
       assert.equal(document.activeElement, currentTarget);
     }
-    const swatch = container.querySelectorAll('.muxui-color-swatch-picker-item')[1];
+    const swatch = container.querySelectorAll('.muxui-color-swatch-picker__item')[1];
     const selectedBefore = swatch.getAttribute('aria-selected');
     await act(async () => swatch.click());
     assert.equal(swatch.getAttribute('aria-selected'), selectedBefore);
@@ -2287,7 +2288,7 @@ test('R1.3 Slider onChangeEnd follows RAC interaction lifecycle', async () => {
       await act(async () => container.querySelector('.muxui-slider input[type="range"]').dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })));
     }
     assert.deepEqual(ends, [2, 2, 2]);
-    const thumb = container.querySelector('.muxui-slider-thumb');
+    const thumb = container.querySelector('.muxui-slider__thumb');
     await act(async () => thumb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerId: 6 })));
     await act(async () => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerId: 6 })));
     assert.deepEqual(ends, [2, 2, 2, 2]);
@@ -2302,7 +2303,7 @@ test('R1.3 Slider onChangeEnd follows RAC interaction lifecycle', async () => {
 
     const noTransition = [];
     await act(async () => root.render(React.createElement(Slider, { key: 'no-transition', 'aria-label': 'No transition', defaultValue: 1, onChangeEnd: (value) => noTransition.push(value) })));
-    const noTransitionThumb = container.querySelector('.muxui-slider-thumb');
+    const noTransitionThumb = container.querySelector('.muxui-slider__thumb');
     await act(async () => noTransitionThumb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerId: 8 })));
     await act(async () => window.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, cancelable: true, pointerId: 8 })));
     assert.deepEqual(noTransition, []);
@@ -2401,7 +2402,7 @@ test('R1.3 Virtualizer mounts exact fixed-row windows and preserves focused iden
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const items = Array.from({ length: 100 }, (_, index) => ({ id: `item-${index}`, label: `Item ${index}` }));
-  const mounted = () => [...container.querySelectorAll('.muxui-virtualizer-item')].map((item) => Number(item.getAttribute('aria-posinset')) - 1);
+  const mounted = () => [...container.querySelectorAll('.muxui-virtualizer__item')].map((item) => Number(item.getAttribute('aria-posinset')) - 1);
   const presentation = () => container.querySelector('[role="presentation"]');
   const viewport = () => container.querySelector('.muxui-virtualizer');
   try {
@@ -2558,7 +2559,7 @@ test('R1.3 GridList.Item composes items, ignores items, and selects when control
     await act(async () => root.render(fixture({})));
     assert.deepEqual(rows().map((row) => row.getAttribute('aria-label')), ['Alpha', 'Beta card'], 'children replace items; textValue falls back to the text content');
     assert.equal(itemRef.current, rows()[0], 'the item ref targets the row');
-    assert.ok(rows()[0].classList.contains('muxui-grid-list-item') && rows()[0].classList.contains('poster'));
+    assert.ok(rows()[0].classList.contains('muxui-grid-list__item') && rows()[0].classList.contains('poster'));
     assert.equal(rows()[0].style.color, 'red');
     await act(async () => rows()[1].click());
     assert.deepEqual([changes, selected()], [[['b']], ['Beta card']], 'uncontrolled press selects');

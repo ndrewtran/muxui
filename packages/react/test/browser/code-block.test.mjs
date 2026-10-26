@@ -131,7 +131,7 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
     });
     await page.goto(`${server.url}/code-block.html`);
     await page.locator('.muxui-code-block').first().waitFor();
-    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-code-block')].every((block) => block.querySelector('.muxui-code-block-token-link')));
+    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-code-block')].every((block) => block.querySelector('.muxui-code-block__token-link')));
     assert.equal(await page.locator('code').first().textContent(), source);
     assert.equal(await page.evaluate(() => window.clipboardReads), 0);
     for (const scheme of ['light', 'dark']) {
@@ -139,7 +139,7 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
       const colors = await page.locator('.muxui-code-block').first().evaluate((block) => {
         const style = getComputedStyle(block);
         const color = (selector) => getComputedStyle(block.querySelector(selector)).color;
-        return { link: color('.muxui-code-block-token-link'), strong: color('.muxui-code-block-token-strong'), background: style.backgroundColor };
+        return { link: color('.muxui-code-block__token-link'), strong: color('.muxui-code-block__token-strong'), background: style.backgroundColor };
       });
       assert.notEqual(colors.link, colors.strong);
       assert.notEqual(colors.link, colors.background);
@@ -194,7 +194,7 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
     await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'pending');
     assert.equal(await copy.isDisabled(), true);
     assert.equal(await copy.getAttribute('aria-busy'), 'true');
-    assert.equal(await copy.locator('.muxui-button-spinner').count(), 1);
+    assert.equal(await copy.locator('.muxui-button__spinner').count(), 1);
     await page.keyboard.press('Space');
     assert.equal(await page.evaluate(() => window.copyWrites.length), 6);
     await page.evaluate(() => { window.pendingCopy = false; window.finishCopy(); });
@@ -209,7 +209,7 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
     await page.evaluate(() => { window.rejectCopy = false; window.mountCodeBlock(); });
     const pre = page.locator('pre').first();
     await page.waitForFunction(() => document.querySelector('code').textContent.includes('loadPanel'));
-    await page.waitForFunction(() => document.querySelector('.muxui-code-block-token-link'));
+    await page.waitForFunction(() => document.querySelector('.muxui-code-block__token-link'));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.equal(await pre.evaluate((node) => node.scrollWidth > node.clientWidth), true);
     await pre.focus();
@@ -223,15 +223,15 @@ test('CodeBlock keyboard copying, narrow overflow/wrap, and forced-color change 
     if (directory) await page.screenshot({ path: join(directory, 'code-block-dark-390-wrap.png') });
 
     await page.emulateMedia({ forcedColors: 'active' });
-    const changes = await page.locator('[data-muxui-mode="diff"] .muxui-code-block-line:not([data-muxui-change="context"])').evaluateAll((rows) => rows.map((row) => ({
-      text: row.querySelector('.muxui-code-block-sr-only').textContent,
-      marker: getComputedStyle(row.querySelector('.muxui-code-block-marker'), '::before').content,
+    const changes = await page.locator('[data-muxui-mode="diff"] .muxui-code-block__line:not([data-muxui-change="context"])').evaluateAll((rows) => rows.map((row) => ({
+      text: row.querySelector('.muxui-code-block__status').textContent,
+      marker: getComputedStyle(row.querySelector('.muxui-code-block__marker'), '::before').content,
       foreground: getComputedStyle(row).color, background: getComputedStyle(row).backgroundColor,
     })));
     assert.ok(changes.some((row) => row.text.startsWith('Added') && row.marker.includes('+')));
     assert.ok(changes.some((row) => row.text.startsWith('Removed') && row.marker.includes('−')));
     assert.ok(changes.every((row) => row.foreground !== row.background));
-    const tokens = await page.locator('.muxui-code-block-text span').evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).color));
+    const tokens = await page.locator('.muxui-code-block__text span').evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).color));
     assert.ok(tokens.length > 0);
     assert.equal(new Set(tokens).size, 1, 'forced colors override every syntax token');
     assert.deepEqual(errors, []);

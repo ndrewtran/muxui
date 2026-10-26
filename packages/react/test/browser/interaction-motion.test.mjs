@@ -106,10 +106,10 @@ async function captureDisclosureGroupMotion(page, triggerSelector, duration = 11
       const next = rows[index + 1];
       const nextRect = next?.getBoundingClientRect();
       const style = getComputedStyle(row);
-      const panelHost = row.querySelector('.muxui-disclosure-panel-host');
-      const content = row.querySelector('.muxui-disclosure-motion-content');
+      const panelHost = row.querySelector('.muxui-disclosure__panel-host');
+      const content = row.querySelector('.muxui-disclosure__motion-content');
       const contentStyle = content && getComputedStyle(content);
-      const icon = row.querySelector('.muxui-disclosure-trigger-icon');
+      const icon = row.querySelector('.muxui-disclosure__trigger-icon');
       const iconMatrix = icon && new DOMMatrixReadOnly(getComputedStyle(icon).transform);
       return {
         expanded: row.hasAttribute('data-muxui-state-expanded'),
@@ -233,7 +233,7 @@ async function waitForReflow(page, selector) {
 }
 
 function disclosurePanel(id) {
-  return `[data-motion-id="${id}"] .muxui-disclosure-motion-panel`;
+  return `[data-motion-id="${id}"] .muxui-disclosure__motion-panel`;
 }
 
 function toastSelector(id) {
@@ -271,11 +271,11 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       root.style.setProperty('--muxui-semantic-motion-interaction-transition-duration', '900ms');
     });
 
-    const primaryTrigger = page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger');
+    const primaryTrigger = page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger');
     const primaryPanel = disclosurePanel('primary-disclosure');
     assert.equal((await readMetrics(page, primaryPanel)).ariaHidden, 'true', 'closed disclosure is aria-hidden');
     await primaryTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
+    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger')?.getAttribute('aria-expanded') === 'true');
     const opening = await waitForDisclosureIntermediate(page, primaryPanel);
     assert.ok(opening.height > 0 && opening.height < opening.full, 'disclosure expand has an in-flight measured height');
     await waitForDisclosureOpen(page, primaryPanel);
@@ -284,7 +284,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.equal((await readMetrics(page, primaryPanel)).styleHeight, '', 'open disclosure releases inline height');
 
     await primaryTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'false');
+    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger')?.getAttribute('aria-expanded') === 'false');
     const closing = await waitForDisclosureIntermediate(page, primaryPanel);
     assert.ok(closing.height > 0 && closing.height < naturalHeight, 'disclosure collapse has an in-flight measured height');
     await waitForDisclosureClosed(page, primaryPanel);
@@ -293,16 +293,16 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     const reopening = await waitForDisclosureIntermediate(page, primaryPanel);
     await primaryTrigger.click();
     // Click 3 must reverse a collapse that is already shrinking, not the unfinished expand.
-    await page.waitForFunction(({ selector, from }) => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'false'
+    await page.waitForFunction(({ selector, from }) => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger')?.getAttribute('aria-expanded') === 'false'
       && document.querySelector(selector).getBoundingClientRect().height < from - 0.5, { selector: primaryPanel, from: reopening.height });
     await primaryTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
+    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger')?.getAttribute('aria-expanded') === 'true');
     await waitForDisclosureIntermediate(page, primaryPanel);
     await waitForDisclosureOpen(page, primaryPanel);
     assert.ok((await page.locator(primaryPanel).evaluate((node) => node.getBoundingClientRect().height)) > 0, 'rapid disclosure toggle settles open');
 
-    const firstGroupTrigger = '[data-motion-id="group-first"] .muxui-disclosure-trigger';
-    const secondGroupTrigger = '[data-motion-id="group-second"] .muxui-disclosure-trigger';
+    const firstGroupTrigger = '[data-motion-id="group-first"] .muxui-disclosure__trigger';
+    const secondGroupTrigger = '[data-motion-id="group-second"] .muxui-disclosure__trigger';
     const firstGroupPanel = disclosurePanel('group-first');
     const secondGroupPanel = disclosurePanel('group-second');
     const groupGeometry = await page.locator('[data-motion-id="disclosure-group"]').evaluate((group) => {
@@ -312,11 +312,11 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
         const value = style.getPropertyValue(token).trim();
         return Number.parseFloat(value) * (value.endsWith('rem') ? rem : 1);
       };
-      const panel = group.querySelector('.muxui-disclosure-motion-panel');
+      const panel = group.querySelector('.muxui-disclosure__motion-panel');
       return {
         gap: pixels('--muxui-semantic-layout-group-gap'),
         radius: pixels('--muxui-component-disclosuregroup-radius'),
-        iconSize: group.querySelector('.muxui-disclosure-trigger-icon').getBoundingClientRect().width,
+        iconSize: group.querySelector('.muxui-disclosure__trigger-icon').getBoundingClientRect().width,
         duration: getComputedStyle(panel).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
         surroundingDuration: style.getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
         nestedDuration: getComputedStyle(panel.firstElementChild).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
@@ -390,21 +390,21 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
 
     await page.locator(firstGroupTrigger).click();
     await page.waitForFunction(() => {
-      const content = document.querySelector('[data-motion-id="group-first"] .muxui-disclosure-motion-content');
+      const content = document.querySelector('[data-motion-id="group-first"] .muxui-disclosure__motion-content');
       const opacity = Number.parseFloat(getComputedStyle(content).opacity);
       return opacity > 0 && opacity < 1;
     }, undefined, { timeout: 1800 });
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
       const row = document.querySelector('[data-motion-id="group-first"]');
-      const content = row?.querySelector('.muxui-disclosure-motion-content');
-      const panel = row?.querySelector('.muxui-disclosure-motion-panel');
+      const content = row?.querySelector('.muxui-disclosure__motion-content');
+      const panel = row?.querySelector('.muxui-disclosure__motion-panel');
       return row?.getAttribute('data-muxui-state-expanded') === 'true'
         && Number.parseFloat(getComputedStyle(content).opacity) === 1
         && panel?.style.height === ''
         && panel.getBoundingClientRect().height > 0;
     }, undefined, { timeout: 500 });
-    assert.equal(await page.locator('[data-motion-id="group-first"] .muxui-disclosure-motion-content').evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity)), 1, 'reduced motion snaps an in-flight grouped fade to readable content');
+    assert.equal(await page.locator('[data-motion-id="group-first"] .muxui-disclosure__motion-content').evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity)), 1, 'reduced motion snaps an in-flight grouped fade to readable content');
     await page.locator(firstGroupTrigger).click();
     await waitForDisclosureClosed(page, firstGroupPanel);
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
@@ -635,7 +635,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
 
     await page.evaluate(() => window.__interactionUnmount());
     await page.locator('#interaction-unmounted').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('.muxui-disclosure-motion-panel, .muxui-toast, .muxui-alert-dialog__popup, .muxui-command-palette__popup').count(), 0, 'unmount releases interaction surfaces');
+    assert.equal(await page.locator('.muxui-disclosure__motion-panel, .muxui-toast, .muxui-alert-dialog__popup, .muxui-command-palette__popup').count(), 0, 'unmount releases interaction surfaces');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
@@ -720,10 +720,10 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
     assert.equal(await page.evaluate(() => window.__interactionToastDismisses?.['toast-runtime-reduced'] ?? 0), 1, 'runtime reduced Toast dismisses once');
     await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
 
-    const primaryTrigger = page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger');
+    const primaryTrigger = page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger');
     const primaryPanel = disclosurePanel('primary-disclosure');
     await primaryTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
+    await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger')?.getAttribute('aria-expanded') === 'true');
     await waitForDisclosureIntermediate(page, primaryPanel);
     // Grow in the same frame that records the late in-flight height.
     const growthRecording = await recordFrames(page, (selector, state) => {
@@ -780,8 +780,8 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await page.waitForFunction(() => typeof window.__interactionSetDisclosure === 'function');
 
     const controlledPanel = disclosurePanel('controlled-disclosure');
-    const controlledTrigger = page.locator('[data-motion-id="controlled-disclosure"] .muxui-disclosure-trigger');
-    const contentSelector = `${controlledPanel} > .muxui-disclosure-motion-content`;
+    const controlledTrigger = page.locator('[data-motion-id="controlled-disclosure"] .muxui-disclosure__trigger');
+    const contentSelector = `${controlledPanel} > .muxui-disclosure__motion-content`;
     const initial = await readMetrics(page, contentSelector);
     assert.equal(initial.opacity, 1, 'initial expanded content is fully readable after hydration');
     assert.equal(initial.transform, 'none', 'initial expanded content has no entrance transform');
@@ -814,7 +814,7 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await waitForDisclosureClosed(page, controlledPanel);
 
     const primaryPanel = disclosurePanel('primary-disclosure');
-    await page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger').click();
+    await page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure__trigger').click();
     await waitForDisclosureOpen(page, primaryPanel);
     const beforeResize = (await readMetrics(page, primaryPanel)).height;
     await page.evaluate(() => window.__interactionGrowDisclosure());
@@ -832,8 +832,8 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
       document.documentElement.dataset.muxuiColorScheme = 'dark';
       window.__interactionSetMultiple(true);
     });
-    const first = page.locator('[data-motion-id="group-first"] .muxui-disclosure-trigger');
-    const second = page.locator('[data-motion-id="group-second"] .muxui-disclosure-trigger');
+    const first = page.locator('[data-motion-id="group-first"] .muxui-disclosure__trigger');
+    const second = page.locator('[data-motion-id="group-second"] .muxui-disclosure__trigger');
     await first.click();
     await second.click();
     assert.equal(await first.getAttribute('aria-expanded'), 'true');
@@ -842,8 +842,8 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     assert.equal(await page.getByRole('button', { name: 'Disabled grouped disclosure', exact: true }).isDisabled(), true);
 
     const firstPanel = disclosurePanel('group-first');
-    const firstContent = `${firstPanel} > .muxui-disclosure-panel`;
-    await page.addStyleTag({ content: '[data-motion-id="group-first"] .muxui-disclosure-panel { padding: 14px; }' });
+    const firstContent = `${firstPanel} > .muxui-disclosure__panel`;
+    await page.addStyleTag({ content: '[data-motion-id="group-first"] .muxui-disclosure__panel { padding: 14px; }' });
     const allSidePadding = await readDisclosureLayout(page, firstPanel, { stableFrames: 2 });
     assert.equal(allSidePadding.hostPaddingTop, 0, 'the RAC region host owns no top padding');
     assert.equal(allSidePadding.hostPaddingBottom, 0, 'the RAC region host owns no bottom padding');
@@ -888,19 +888,19 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await waitForDisclosureClosed(page, firstPanel);
     await first.click();
     await waitForDisclosureOpen(page, firstPanel);
-    const reducedContent = await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`);
+    const reducedContent = await readMetrics(page, `${firstPanel} > .muxui-disclosure__motion-content`);
     assert.equal(reducedContent.opacity, 1);
     assert.equal(reducedContent.transform, 'none');
-    assert.equal(await first.locator('.muxui-disclosure-trigger-icon').evaluate((node) => node.style.transform), 'rotate(180deg)', 'reduced chevron immediately matches expansion');
+    assert.equal(await first.locator('.muxui-disclosure__trigger-icon').evaluate((node) => node.style.transform), 'rotate(180deg)', 'reduced chevron immediately matches expansion');
 
     await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await first.click();
     await waitForDisclosureClosed(page, firstPanel);
-    assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`)).opacity, 0);
+    assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure__motion-content`)).opacity, 0);
     await first.click();
     await waitForDisclosureOpen(page, firstPanel);
-    assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`)).transform, 'none');
+    assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure__motion-content`)).transform, 'none');
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();

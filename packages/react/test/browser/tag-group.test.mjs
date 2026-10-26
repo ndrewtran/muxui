@@ -56,7 +56,7 @@ function measureContrast({ colours: measured, states }) {
   };
   const stateAttributes = { rest: [], hover: ['data-muxui-state-hovered'], pressed: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] };
   const results = [];
-  for (const tag of document.querySelectorAll('.muxui-tag')) {
+  for (const tag of document.querySelectorAll('.muxui-tag-group__tag')) {
     const colour = tag.getAttribute('data-muxui-color');
     if (!measured.includes(colour)) continue;
     const surface = tag.closest('[data-surface]');
@@ -126,7 +126,7 @@ test('TagGroup tags focus with an offset outline, keep the outline edge off the 
   try {
     const page = await browser.newPage();
     await page.setContent(`<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="reduced"><head><style>${css}</style></head><body>${renderToString(h('main', null, ...variants.map(group)))}</body></html>`);
-    const tag = (variant, name) => page.locator(`.muxui-tag[data-muxui-variant="${variant}"]`, { hasText: name });
+    const tag = (variant, name) => page.locator(`.muxui-tag-group__tag[data-muxui-variant="${variant}"]`, { hasText: name });
     const read = (locator, property) => locator.evaluate((element, name) => getComputedStyle(element)[name], property);
     const probe = (property, value) => page.evaluate(([name, next]) => {
       const element = document.createElement('span');
@@ -189,7 +189,7 @@ test('TagGroup fills and outline edges use the specified weights in each scheme'
       const alpha = (value) => Number(/\/\s*([\d.]+)\)/u.exec(value)?.[1] ?? 1) * 100;
       const states = { rest: [], hover: ['data-muxui-state-hovered'], pressed: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] };
       const found = {};
-      for (const tag of document.querySelectorAll('.muxui-tag')) {
+      for (const tag of document.querySelectorAll('.muxui-tag-group__tag')) {
         const key = `${tag.dataset.muxuiColor} ${tag.dataset.muxuiVariant}`;
         found[key] = {};
         for (const [state, attributes] of Object.entries(states)) {

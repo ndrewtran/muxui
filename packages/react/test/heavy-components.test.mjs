@@ -20,7 +20,7 @@ function reactProps(element) {
 
 test('Markdown renders its bounded subset without raw HTML or unsafe URLs', () => {
   const html = renderToStaticMarkup(React.createElement(Markdown, { source: '# Heading\n\n[bad](javascript:alert(1)) <img src=x>\n\n`code`\n\n> Quote' }));
-  assert.match(html, /Heading/u); assert.match(html, /muxui-markdown-code/u); assert.match(html, /muxui-markdown-blockquote/u);
+  assert.match(html, /Heading/u); assert.match(html, /muxui-markdown__code/u); assert.match(html, /muxui-markdown__blockquote/u);
   assert.doesNotMatch(html, /javascript:|<img/u);
   const mixed = renderToStaticMarkup(React.createElement(Markdown, { source: 'before <span>raw</span> after' }));
   assert.match(mixed, /before raw after/u); assert.doesNotMatch(mixed, /<span>|<\/span>/u);
@@ -62,7 +62,7 @@ test('Markdown returns its fallback for source, line count, and line length boun
 test('Markdown preserves indented code as paragraph content while fencing creates code blocks', () => {
   const html = renderToStaticMarkup(React.createElement(Markdown, { source: '    indented code\n\n```js\nfenced code\n```' }));
   assert.match(html, /<p>indented code<\/p>/u);
-  assert.match(html, /<pre class="muxui-markdown-code-block" data-muxui-language="js"><code>fenced code<\/code><\/pre>/u);
+  assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code>fenced code<\/code><\/pre>/u);
 });
 test('TextEditor only accepts the finite owned document grammar', () => {
   const input = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi', marks: [{ type: 'link', attrs: { href: 'javascript:bad' } }] }] }, { type: 'script', content: [] }] };
@@ -116,7 +116,7 @@ test('Resizable is server-renderable with separator ARIA bounds', () => {
 test('closed Lightbox does not render content or call renderContent during SSR', () => {
   let calls = 0;
   const html = renderToStaticMarkup(React.createElement(Lightbox, { items: [{ key: 'one', label: 'One' }] }, React.createElement(LightboxTrigger, { itemKey: 'one' }, 'Open'), React.createElement(LightboxBackdrop, null, React.createElement(LightboxPopup, null, React.createElement(LightboxContent, { renderContent: () => { calls += 1; return 'content'; } })) )));
-  assert.equal(calls, 0); assert.doesNotMatch(html, /muxui-lightbox-content/u); assert.match(html, /Open/u);
+  assert.equal(calls, 0); assert.doesNotMatch(html, /muxui-lightbox__content/u); assert.match(html, /Open/u);
 });
 
 test('Markdown filters credential URLs, keeps safe images, and bounds inline token work', () => {
@@ -426,7 +426,7 @@ test('TextEditor advanced controls expose the color dialog and durable image URL
     await act(async () => colorTrigger.click());
     assert.equal(document.querySelectorAll('.muxui-text-editor__color-swatch').length, 16);
     assert.equal(document.querySelector('[role="dialog"][aria-label="Text color picker"]') !== null, true);
-    const customColor = document.querySelector('.muxui-text-editor__color-field input');
+    const customColor = document.querySelector('.muxui-text-editor__custom-color-field input');
     assert.ok(customColor);
     assert.equal(customColor.type, 'text');
     await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
@@ -452,7 +452,7 @@ const selectionActionList = [
 // `scope` is the attribute text of a Mux runtime scope around the editor; jsdom has no user-agent
 // direction rule, so a scoped RTL editor gets the one the browser applies.
 async function mountSelectionEditor({ onSelectionRequest, scope = '', ...props } = {}) {
-  const dom = new JSDOM(`<!doctype html><style>[dir="rtl"] .ProseMirror, [dir="rtl"].muxui-text-editor__selection-bar { direction: rtl; }</style><button id="outside">Outside</button><div id="root" ${scope}></div>`, { url: 'http://localhost/' });
+  const dom = new JSDOM(`<!doctype html><style>[dir="rtl"] .ProseMirror, [dir="rtl"].muxui-text-editor__selection-actions { direction: rtl; }</style><button id="outside">Outside</button><div id="root" ${scope}></div>`, { url: 'http://localhost/' });
   const restore = installDom(dom, { layoutStubs: true });
   // jsdom has no layout, so give ProseMirror's coordinate lookups empty rectangles.
   const emptyRect = () => ({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 });
@@ -1375,7 +1375,7 @@ test('Resizable keeps an invalid Handle inert when pointer and key events reach 
   try {
     // A Handle without its required id makes the layout invalid.
     await act(async () => root.render(React.createElement(Resizable, { defaultSizes: { left: 50, right: 50 } }, React.createElement(ResizablePanel, { id: 'left' }), React.createElement(ResizableHandle, { before: 'left', after: 'right', 'aria-label': 'Resize' }), React.createElement(ResizablePanel, { id: 'right' }))));
-    const handle = document.querySelector('.muxui-resizable-handle');
+    const handle = document.querySelector('.muxui-resizable__handle');
     assert.equal(handle.getAttribute('aria-disabled'), 'true');
     const props = reactProps(handle);
     const pointerEvent = { button: 0, pointerId: 1, clientX: 5, clientY: 5, currentTarget: handle };
@@ -1457,12 +1457,12 @@ test('Lightbox derives its dialog label, selects the first default item, navigat
         React.createElement(LightboxClose, null))))));
     assert.ok(document.querySelector('[role="dialog"][aria-label="First"]'));
     assert.match(document.querySelector('[role="dialog"]')?.textContent ?? '', /First/u);
-    const trigger = document.querySelector('.muxui-lightbox-trigger');
+    const trigger = document.querySelector('.muxui-lightbox__trigger');
     await act(async () => { trigger.focus(); trigger.click(); });
-    const popup = document.querySelector('.muxui-lightbox-popup');
+    const popup = document.querySelector('.muxui-lightbox__popup');
     await act(async () => popup.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })));
     assert.match(document.querySelector('[role="dialog"]')?.textContent ?? '', /Second/u);
-    await act(async () => document.querySelector('.muxui-lightbox-close').click());
+    await act(async () => document.querySelector('.muxui-lightbox__close').click());
     await act(async () => Promise.resolve());
     assert.equal(document.querySelector('[role="dialog"]') === null, true, 'close removes the dialog');
     assert.equal(document.activeElement, trigger);
@@ -1481,7 +1481,7 @@ test('Lightbox maps a left swipe to previous in RTL', async () => {
     document.documentElement.dir = 'rtl';
     root = createRoot(document.querySelector('#root'));
     await act(async () => root.render(React.createElement(Lightbox, { items: [{ key: 'one', label: 'First' }, { key: 'two', label: 'Second' }], defaultOpen: true, defaultSelectedKey: 'two', loop: true, renderContent: (item) => item.label }, React.createElement(LightboxBackdrop, null, React.createElement(LightboxPopup, null, React.createElement(LightboxContent, null))))));
-    const popup = document.querySelector('.muxui-lightbox-popup');
+    const popup = document.querySelector('.muxui-lightbox__popup');
     const touchEvent = (type, points) => {
       const event = new window.Event(type, { bubbles: true });
       Object.defineProperty(event, type === 'touchstart' ? 'touches' : 'changedTouches', { value: points });
@@ -1525,16 +1525,16 @@ test('Lightbox repeats controlled interaction requests and restores focus after 
   try {
     root = createRoot(document.querySelector('#root'));
     await act(async () => root.render(React.createElement(Harness)));
-    const trigger = document.querySelector('.muxui-lightbox-trigger');
+    const trigger = document.querySelector('.muxui-lightbox__trigger');
     await act(async () => trigger.focus());
     await act(async () => trigger.click());
-    const next = document.querySelector('.muxui-lightbox-next');
+    const next = document.querySelector('.muxui-lightbox__next');
     await act(async () => next.click());
     await act(async () => next.click());
     assert.deepEqual(selectedChanges, ['two', 'two']);
     assert.match(document.querySelector('[role="dialog"]')?.textContent ?? '', /First/u);
 
-    const close = document.querySelector('.muxui-lightbox-close');
+    const close = document.querySelector('.muxui-lightbox__close');
     await act(async () => close.focus());
     await act(async () => close.click());
     await act(async () => Promise.resolve());

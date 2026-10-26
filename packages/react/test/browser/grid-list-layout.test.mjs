@@ -256,13 +256,13 @@ for (const engine of browserEngines()) {
           await ltr.tab.mouse.move(box.x + box.width / 2, box.y + 8);
           await pollUntil(ltr.tab, (card) => {
             const row = document.querySelector(`[role="row"]:has([data-card="${card}"])`).getBoundingClientRect();
-            const layer = document.querySelector('.muxui-grid-list-hover');
+            const layer = document.querySelector('.muxui-grid-list__hover');
             const rect = layer.getBoundingClientRect();
             return Number(getComputedStyle(layer).opacity) >= 0.99
               && ['left', 'top', 'width', 'height'].every((side) => Math.abs(rect[side] - row[side]) < 0.75);
           }, id, {
             message: `the hover layer settles on card ${id}`,
-            report: (card) => ({ opacity: getComputedStyle(document.querySelector('.muxui-grid-list-hover')).opacity, layer: document.querySelector('.muxui-grid-list-hover').getBoundingClientRect().toJSON(), row: document.querySelector(`[role="row"]:has([data-card="${card}"])`).getBoundingClientRect().toJSON() }),
+            report: (card) => ({ opacity: getComputedStyle(document.querySelector('.muxui-grid-list__hover')).opacity, layer: document.querySelector('.muxui-grid-list__hover').getBoundingClientRect().toJSON(), row: document.querySelector(`[role="row"]:has([data-card="${card}"])`).getBoundingClientRect().toJSON() }),
             timeout: 5000,
           });
         }
@@ -281,7 +281,7 @@ for (const engine of browserEngines()) {
         // Hovering leaves the hover layer with wide-layout geometry until it fades.
         const hovered = await ltr.row('b').boundingBox();
         await ltr.tab.mouse.move(hovered.x + hovered.width / 2, hovered.y + 8);
-        await pollUntil(ltr.tab, () => Number(getComputedStyle(document.querySelector('.muxui-grid-list-hover')).opacity) >= 0.99, undefined, { message: 'the hover layer fades in', report: () => getComputedStyle(document.querySelector('.muxui-grid-list-hover')).opacity });
+        await pollUntil(ltr.tab, () => Number(getComputedStyle(document.querySelector('.muxui-grid-list__hover')).opacity) >= 0.99, undefined, { message: 'the hover layer fades in', report: () => getComputedStyle(document.querySelector('.muxui-grid-list__hover')).opacity });
         await ltr.tab.mouse.move(0, 0);
         await ltr.enter();
         await ltr.press([['ArrowRight', 'b'], ['ArrowRight', 'c']]);

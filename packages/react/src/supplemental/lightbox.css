@@ -1,28 +1,28 @@
-.muxui-lightbox-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-semantic-layout-inset-large); background-color: var(--muxui-modal-backdrop-bg); transition: none; }
-.muxui-lightbox-backdrop[data-muxui-state-entering], .muxui-lightbox-backdrop[data-muxui-state-exiting] { opacity: 1; }
-.muxui-lightbox-popup { position: fixed; top: 50%; left: 50%; z-index: 101; display: grid; grid-template-rows: minmax(0, 1fr) auto; width: min(94vw, 72rem); height: min(90vh, 52rem); overflow: hidden; color: var(--muxui-semantic-color-neutral-90); background-color: var(--muxui-popup-bg); border: 1px solid var(--muxui-popup-border-color); border-radius: var(--muxui-semantic-shape-overlay-radius); box-shadow: var(--muxui-semantic-elevation-modal); outline: none; transform: translate(-50%, -50%) scale(1); transition: none; }
-.muxui-lightbox-popup[data-muxui-state-entering], .muxui-lightbox-popup[data-muxui-state-exiting] { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-.muxui-lightbox-content { display: grid; min-width: 0; min-height: 0; place-items: center; overflow: auto; padding: var(--muxui-semantic-layout-inset-large); overscroll-behavior: contain; }
-.muxui-lightbox-content-layer { display: grid; grid-area: 1 / 1; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; place-items: center; }
-.muxui-lightbox-content > img, .muxui-lightbox-content > picture, .muxui-lightbox-content > video, .muxui-lightbox-content > svg,
-.muxui-lightbox-content-layer > img, .muxui-lightbox-content-layer > picture, .muxui-lightbox-content-layer > video, .muxui-lightbox-content-layer > svg { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-.muxui-lightbox-caption { min-width: 0; margin: 0; padding: var(--muxui-semantic-layout-inset-medium) var(--muxui-semantic-layout-inset-xxlarge); overflow: hidden; color: var(--muxui-modal-description-color); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-modal-description-font-size); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.muxui-lightbox-previous, .muxui-lightbox-next, .muxui-lightbox-close { position: absolute; z-index: 1; border-radius: var(--muxui-semantic-shape-pill-radius); background-color: var(--muxui-semantic-color-neutral-10); box-shadow: var(--muxui-semantic-elevation-floating); }
-.muxui-lightbox-previous, .muxui-lightbox-next { top: 50%; transform: translateY(-50%); }
-.muxui-lightbox-previous { left: var(--muxui-semantic-layout-inset-medium); }
-.muxui-lightbox-next { right: var(--muxui-semantic-layout-inset-medium); }
-.muxui-lightbox-close { top: var(--muxui-semantic-layout-inset-medium); right: var(--muxui-semantic-layout-inset-medium); color: var(--muxui-semantic-content-muted); }
-.muxui-lightbox-trigger { cursor: zoom-in; }
-@media (prefers-reduced-motion: reduce) { .muxui-lightbox-backdrop, .muxui-lightbox-popup { transition: none; } }
-:where([data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { animation: none !important; transition-duration: 0s !important; }
+.muxui-lightbox__backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-semantic-layout-inset-large); background-color: var(--muxui-modal-backdrop-bg); transition: none; }
+.muxui-lightbox__backdrop[data-muxui-state-entering], .muxui-lightbox__backdrop[data-muxui-state-exiting] { opacity: 1; }
+.muxui-lightbox__popup { position: fixed; top: 50%; left: 50%; z-index: 101; display: grid; grid-template-rows: minmax(0, 1fr) auto; width: min(94vw, 72rem); height: min(90vh, 52rem); overflow: hidden; color: var(--muxui-semantic-color-neutral-90); background-color: var(--muxui-popup-bg); border: 1px solid var(--muxui-popup-border-color); border-radius: var(--muxui-semantic-shape-overlay-radius); box-shadow: var(--muxui-semantic-elevation-modal); outline: none; transform: translate(-50%, -50%) scale(1); transition: none; }
+.muxui-lightbox__popup[data-muxui-state-entering], .muxui-lightbox__popup[data-muxui-state-exiting] { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.muxui-lightbox__content { display: grid; min-width: 0; min-height: 0; place-items: center; overflow: auto; padding: var(--muxui-semantic-layout-inset-large); overscroll-behavior: contain; }
+.muxui-lightbox__content-layer { display: grid; grid-area: 1 / 1; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; place-items: center; }
+.muxui-lightbox__content > img, .muxui-lightbox__content > picture, .muxui-lightbox__content > video, .muxui-lightbox__content > svg,
+.muxui-lightbox__content-layer > img, .muxui-lightbox__content-layer > picture, .muxui-lightbox__content-layer > video, .muxui-lightbox__content-layer > svg { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.muxui-lightbox__caption { min-width: 0; margin: 0; padding: var(--muxui-semantic-layout-inset-medium) var(--muxui-semantic-layout-inset-xxlarge); overflow: hidden; color: var(--muxui-modal-description-color); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-modal-description-font-size); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.muxui-lightbox__previous, .muxui-lightbox__next, .muxui-lightbox__close { position: absolute; z-index: 1; border-radius: var(--muxui-semantic-shape-pill-radius); background-color: var(--muxui-semantic-color-neutral-10); box-shadow: var(--muxui-semantic-elevation-floating); }
+.muxui-lightbox__previous, .muxui-lightbox__next { top: 50%; transform: translateY(-50%); }
+.muxui-lightbox__previous { left: var(--muxui-semantic-layout-inset-medium); }
+.muxui-lightbox__next { right: var(--muxui-semantic-layout-inset-medium); }
+.muxui-lightbox__close { top: var(--muxui-semantic-layout-inset-medium); right: var(--muxui-semantic-layout-inset-medium); color: var(--muxui-semantic-content-muted); }
+.muxui-lightbox__trigger { cursor: zoom-in; }
+@media (prefers-reduced-motion: reduce) { .muxui-lightbox__backdrop, .muxui-lightbox__popup { transition: none; } }
+:where([data-muxui-motion='reduced']) :where(.muxui-lightbox__backdrop, .muxui-lightbox__popup) { animation: none !important; transition-duration: 0s !important; }
 /* The Button content wrapper is display: contents. Keep the shared Mux
    Button behavior while preserving the Lightbox icon-control geometry. */
-.muxui-lightbox-previous .muxui-button-content,
-.muxui-lightbox-next .muxui-button-content,
-.muxui-lightbox-close .muxui-button-content { display: contents; }
+.muxui-lightbox__previous .muxui-button__label,
+.muxui-lightbox__next .muxui-button__label,
+.muxui-lightbox__close .muxui-button__label { display: contents; }
 
 /* Dialog.Close is an sm icon control: equal insets and mode-aware neutral 60. */
-.muxui-lightbox-close.muxui-button {
+.muxui-lightbox__close.muxui-button {
   aspect-ratio: 1;
   min-height: auto;
   padding: var(--muxui-semantic-layout-inset-tight);
@@ -32,8 +32,8 @@
   color: var(--muxui-semantic-color-neutral-60);
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox-previous,
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox-next {
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox__previous,
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox__next {
   width: fit-content;
   height: var(--muxui-control-target-size, var(--muxui-control-size-md));
   min-height: var(--muxui-control-target-size, var(--muxui-control-size-md));
@@ -41,19 +41,19 @@
   padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1em) / 2));
 }
 
-.muxui-lightbox-previous .muxui-icon-button-icon,
-.muxui-lightbox-next .muxui-icon-button-icon {
+.muxui-lightbox__previous .muxui-icon-button__icon,
+.muxui-lightbox__next .muxui-icon-button__icon {
   width: 1.5rem;
   height: 1.5rem;
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox-close {
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox__close {
   --muxui-icon-button-size: 1.5rem;
   min-height: auto;
   padding: var(--muxui-semantic-layout-inset-tight);
 }
 
-.muxui-lightbox-close .muxui-icon-button-icon {
+.muxui-lightbox__close .muxui-icon-button__icon {
   width: 1rem;
   height: 1rem;
 }

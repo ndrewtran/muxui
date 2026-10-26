@@ -4571,9 +4571,10 @@ function supportFilesNamedBy(text) {
 test('a change to the part map runs the Storybook anatomy proof, the Figma checks and the React typecheck', async () => {
   const reactTestReferenceSources = await reactTestTexts();
   const result = await plan([partMapPath], { ...edited(partMapPath), reactTestReferenceSources });
-  // Only the test that reads it by name. types.test.tsx imports it as `.js` and the test tsconfig does not name it, so the text
-  // scan does not follow a tsconfig into the five tests that mention one.
-  assert.deepEqual(result.reactTestFiles, ['test/styling-tokens.test.mjs']);
+  // Only the tests that read it by name: the shared styling test, the emission test and the hookOnly browser test. types.test.tsx
+  // imports it as `.js` and the test tsconfig does not name it, so the text scan does not follow a tsconfig into the five tests that
+  // mention one.
+  assert.deepEqual(result.reactTestFiles, ['test/browser/hook-only-reach.test.mjs', 'test/styling-emission.test.mjs', 'test/styling-tokens.test.mjs']);
   assert.equal(result.storyTooling, true);
   assert.deepEqual(result.storyUnitTests, [{ file: 'test/storybook.test.mjs' }]);
   assert.ok(result.packageChecks.includes('@muxui/figma'));

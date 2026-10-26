@@ -33,8 +33,8 @@ async function center(locator) {
 
 async function selectedIndicator(page, id) {
   return page.locator(`#${id} input[type="radio"]:checked`).evaluate((node) => {
-    const owner = node.closest('.muxui-radio, .muxui-radio-field__button');
-    const indicator = owner?.querySelector('.muxui-radio-indicator, .muxui-radio-field__indicator');
+    const owner = node.closest('.muxui-radio-group__radio, .muxui-radio-field__button');
+    const indicator = owner?.querySelector('.muxui-radio-group__indicator, .muxui-radio-field__indicator');
     const rect = indicator?.getBoundingClientRect();
     return rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : null;
   });
@@ -43,9 +43,9 @@ async function selectedIndicator(page, id) {
 async function waitForAlignment(page, id) {
   await page.waitForFunction((groupId) => {
     const inputNode = document.querySelector(`#${groupId} input[type="radio"]:checked`);
-    const dot = document.querySelector(`#${groupId} .muxui-radio-motion-dot`);
-    const owner = inputNode?.closest('.muxui-radio, .muxui-radio-field__button');
-    const indicator = owner?.querySelector('.muxui-radio-indicator, .muxui-radio-field__indicator');
+    const dot = document.querySelector(`#${groupId} .muxui-radio-group__motion-dot`);
+    const owner = inputNode?.closest('.muxui-radio-group__radio, .muxui-radio-field__button');
+    const indicator = owner?.querySelector('.muxui-radio-group__indicator, .muxui-radio-field__indicator');
     if (!dot || !indicator) return false;
     const dotRect = dot.getBoundingClientRect();
     const indicatorRect = indicator.getBoundingClientRect();
@@ -58,9 +58,9 @@ async function waitForAlignment(page, id) {
 async function waitForTravel(page, id, from) {
   await page.waitForFunction(({ groupId, start }) => {
     const inputNode = document.querySelector(`#${groupId} input[type="radio"]:checked`);
-    const dot = document.querySelector(`#${groupId} .muxui-radio-motion-dot`);
-    const owner = inputNode?.closest('.muxui-radio, .muxui-radio-field__button');
-    const indicator = owner?.querySelector('.muxui-radio-indicator, .muxui-radio-field__indicator');
+    const dot = document.querySelector(`#${groupId} .muxui-radio-group__motion-dot`);
+    const owner = inputNode?.closest('.muxui-radio-group__radio, .muxui-radio-field__button');
+    const indicator = owner?.querySelector('.muxui-radio-group__indicator, .muxui-radio-field__indicator');
     if (!dot || !indicator) return false;
     const dotRect = dot.getBoundingClientRect();
     const indicatorRect = indicator.getBoundingClientRect();
@@ -84,9 +84,9 @@ async function waitForFrames(page, count = 2) {
 async function assertAlignedNow(page, id, message) {
   const aligned = await page.evaluate((groupId) => {
     const inputNode = document.querySelector(`#${groupId} input[type="radio"]:checked`);
-    const dot = document.querySelector(`#${groupId} .muxui-radio-motion-dot`);
-    const owner = inputNode?.closest('.muxui-radio, .muxui-radio-field__button');
-    const indicator = owner?.querySelector('.muxui-radio-indicator, .muxui-radio-field__indicator');
+    const dot = document.querySelector(`#${groupId} .muxui-radio-group__motion-dot`);
+    const owner = inputNode?.closest('.muxui-radio-group__radio, .muxui-radio-field__button');
+    const indicator = owner?.querySelector('.muxui-radio-group__indicator, .muxui-radio-field__indicator');
     if (!dot || !indicator) return false;
     const dotRect = dot.getBoundingClientRect();
     const indicatorRect = indicator.getBoundingClientRect();
@@ -98,13 +98,13 @@ async function assertAlignedNow(page, id, message) {
 
 async function waitForReducedDot(page, id) {
   await page.waitForFunction((groupId) => {
-    const dot = document.querySelector(`#${groupId} .muxui-radio-motion-dot`);
+    const dot = document.querySelector(`#${groupId} .muxui-radio-group__motion-dot`);
     return Boolean(dot && !dot.hasAttribute('style'));
   }, id);
 }
 
 async function assertForcedDotContrast(page, id, message) {
-  const contrast = await page.locator(`#${id} .muxui-radio-motion-dot`).evaluate((node) => ({
+  const contrast = await page.locator(`#${id} .muxui-radio-group__motion-dot`).evaluate((node) => ({
     dot: getComputedStyle(node).backgroundColor,
     indicator: getComputedStyle(node.parentElement).backgroundColor,
     adjustment: getComputedStyle(node).forcedColorAdjust,
@@ -127,12 +127,12 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     await page.waitForFunction(() => document.documentElement.dataset.muxuiRadioHydrated === 'true');
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('[role="radiogroup"]').count(), 6);
-    assert.equal(await page.locator('.muxui-radio-motion-dot').count(), 6);
-    assert.equal(await group(page, 'compound').locator('.muxui-radio-motion-dot').count(), 1, 'compound RadioField gets the same travelling dot');
+    assert.equal(await page.locator('.muxui-radio-group__motion-dot').count(), 6);
+    assert.equal(await group(page, 'compound').locator('.muxui-radio-group__motion-dot').count(), 1, 'compound RadioField gets the same travelling dot');
 
-    const controlledBefore = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
+    const controlledBefore = await center(group(page, 'controlled').locator('.muxui-radio-group__motion-dot'));
     const travelRecording = await recordFrames(page, () => {
-      const rect = document.querySelector('#controlled .muxui-radio-motion-dot')?.getBoundingClientRect();
+      const rect = document.querySelector('#controlled .muxui-radio-group__motion-dot')?.getBoundingClientRect();
       return rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : null;
     });
     await activate(page, 'controlled', 'two');
@@ -142,7 +142,7 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     assert.ok(controlledDuring && controlledDuring.y > controlledBefore.y + 1, `dot visibly leaves the first indicator during travel: ${JSON.stringify(travelFrames)}`);
     assert.ok(controlledDuring.y < controlledBefore.y + 30, 'dot is still between indicators during travel');
     const controlledAfter = await selectedIndicator(page, 'controlled');
-    const controlledDotAfter = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
+    const controlledDotAfter = await center(group(page, 'controlled').locator('.muxui-radio-group__motion-dot'));
     assert.ok(controlledAfter);
     assert.ok(Math.abs(controlledDotAfter.y - controlledAfter.y) < 1, 'dot settles on the selected indicator');
     assert.equal(await page.locator('#controlled input[type="radio"]:checked').inputValue(), 'two');
@@ -154,7 +154,7 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     await activate(page, 'uncontrolled', 'two');
     await waitForAlignment(page, 'uncontrolled');
     assert.equal(await page.locator('#uncontrolled input[type="radio"]:checked').inputValue(), 'two');
-    assert.equal(await page.locator('.muxui-radio-motion-dot').count(), 6, 'groups keep independent dot instances');
+    assert.equal(await page.locator('.muxui-radio-group__motion-dot').count(), 6, 'groups keep independent dot instances');
 
     const keyboard = group(page, 'keyboard');
     await input(page, 'keyboard', 'one').focus();
@@ -164,12 +164,12 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     assert.equal(await keyboard.locator('input[type="radio"]:checked').inputValue(), 'four', 'native keyboard navigation skips disabled radios');
     assert.equal(await input(page, 'keyboard', 'three').isDisabled(), true);
 
-    const horizontalBefore = await center(group(page, 'horizontal').locator('.muxui-radio-motion-dot'));
+    const horizontalBefore = await center(group(page, 'horizontal').locator('.muxui-radio-group__motion-dot'));
     await input(page, 'horizontal', 'one').focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await group(page, 'horizontal').locator('input[type="radio"]:checked').inputValue(), 'two', 'horizontal keyboard navigation follows the inline axis');
     await waitForTravel(page, 'horizontal', horizontalBefore);
-    const horizontalDuring = await center(group(page, 'horizontal').locator('.muxui-radio-motion-dot'));
+    const horizontalDuring = await center(group(page, 'horizontal').locator('.muxui-radio-group__motion-dot'));
     assert.ok(horizontalDuring.x > horizontalBefore.x + 1, 'horizontal dot travels along the inline axis');
     await waitForAlignment(page, 'horizontal');
 
@@ -181,7 +181,7 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
-    const reducedFrom = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
+    const reducedFrom = await center(group(page, 'controlled').locator('.muxui-radio-group__motion-dot'));
     await activate(page, 'controlled', 'one');
     await waitForTravel(page, 'controlled', reducedFrom);
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));

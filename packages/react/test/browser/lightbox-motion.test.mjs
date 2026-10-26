@@ -16,7 +16,7 @@ async function waitForHydration(page) {
 }
 
 async function readShell(page) {
-  return page.locator('.muxui-lightbox-popup').evaluate((node) => {
+  return page.locator('.muxui-lightbox__popup').evaluate((node) => {
     const style = getComputedStyle(node);
     const rect = node.getBoundingClientRect();
     return {
@@ -45,7 +45,7 @@ function translateY(value) {
 
 async function waitForShellSettled(page) {
   await page.waitForFunction(() => {
-    const node = document.querySelector('.muxui-lightbox-popup');
+    const node = document.querySelector('.muxui-lightbox__popup');
     if (!node) return false;
     const style = getComputedStyle(node);
     return Number(style.opacity) >= 0.99 && (style.translate === 'none' || style.translate === '0px' || style.translate === '0px 0px');
@@ -54,7 +54,7 @@ async function waitForShellSettled(page) {
 
 async function waitForCrossfade(page) {
   await page.waitForFunction(() => {
-    const layers = [...document.querySelectorAll('.muxui-lightbox-content-layer')];
+    const layers = [...document.querySelectorAll('.muxui-lightbox__content-layer')];
     if (layers.length !== 2) return false;
     const opacities = layers.map((node) => Number(getComputedStyle(node).opacity));
     return opacities.some((opacity) => opacity > 0 && opacity < 1);
@@ -73,17 +73,17 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(`${url}/lightbox-motion.html`, { waitUntil: 'networkidle' });
     await waitForHydration(page);
-    assert.equal(await page.locator('.muxui-lightbox-popup').count(), 0, 'SSR and hydration begin closed');
+    assert.equal(await page.locator('.muxui-lightbox__popup').count(), 0, 'SSR and hydration begin closed');
 
     const trigger = page.getByRole('button', { name: 'Open lightbox' });
     const entryRecording = await recordFrames(page, () => {
-      const node = document.querySelector('.muxui-lightbox-popup');
+      const node = document.querySelector('.muxui-lightbox__popup');
       if (!node) return null;
       const style = getComputedStyle(node);
       return { opacity: Number(style.opacity), translate: style.translate };
     });
     await trigger.click();
-    const popup = page.locator('.muxui-lightbox-popup');
+    const popup = page.locator('.muxui-lightbox__popup');
     await popup.waitFor();
     await waitForShellSettled(page);
     const entryFrames = await entryRecording.stop();
@@ -99,8 +99,8 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     assert.equal(await popup.evaluate((node) => node.contains(document.activeElement)), true, 'opening moves focus into the dialog');
 
     const exitRecording = await recordFrames(page, () => {
-      const node = document.querySelector('.muxui-lightbox-popup');
-      if (!node || !document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-muxui-state-exiting')) return null;
+      const node = document.querySelector('.muxui-lightbox__popup');
+      if (!node || !document.querySelector('.muxui-lightbox__backdrop')?.hasAttribute('data-muxui-state-exiting')) return null;
       const style = getComputedStyle(node);
       return { opacity: Number(style.opacity), translate: style.translate };
     });
@@ -117,11 +117,11 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
 
     await trigger.click();
     await popup.waitFor();
-    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.muxui-lightbox-popup')).opacity) < 0.99, undefined, { timeout: 1_000 });
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.muxui-lightbox__popup')).opacity) < 0.99, undefined, { timeout: 1_000 });
     // Close, then reopen in the same frame that records visible exit progress, so the
     // interrupted values and the interruption cannot drift apart on slow runners.
     const interruptRecording = await recordFrames(page, (_, state) => {
-      const node = document.querySelector('.muxui-lightbox-popup');
+      const node = document.querySelector('.muxui-lightbox__popup');
       if (!state.closed) {
         state.closed = true;
         window.__muxuiLightboxSetOpen(false);
@@ -130,7 +130,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
       if (!node) return null;
       const style = getComputedStyle(node);
       const frame = { opacity: Number(style.opacity), translate: style.translate };
-      const exiting = document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-muxui-state-exiting') === true;
+      const exiting = document.querySelector('.muxui-lightbox__backdrop')?.hasAttribute('data-muxui-state-exiting') === true;
       if (!state.reopened) {
         if (!exiting) return null;
         state.exitStartOpacity ??= frame.opacity;
@@ -141,7 +141,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
       }
       return exiting ? null : { phase: 'reopened', ...frame };
     });
-    await page.waitForFunction(() => document.querySelector('.muxui-lightbox-popup') && !document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-muxui-state-exiting'), undefined, { timeout: 1_000 });
+    await page.waitForFunction(() => document.querySelector('.muxui-lightbox__popup') && !document.querySelector('.muxui-lightbox__backdrop')?.hasAttribute('data-muxui-state-exiting'), undefined, { timeout: 1_000 });
     await waitForShellSettled(page);
     const interruptFrames = await interruptRecording.stop();
     const midExit = interruptFrames.find(({ phase }) => phase === 'midExit');
@@ -154,13 +154,13 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     assert.ok(reopened.opacity > 0 && reopened.opacity < 0.99, `reopen starts from interrupted opacity: ${JSON.stringify({ midExit, reopened })}`);
     assert.ok(Math.abs(reopened.opacity - midExit.opacity) < 0.3, `reopen stays near interrupted opacity: ${JSON.stringify({ midExit, reopened })}`);
     assert.ok(Math.abs(reopenedY - midExitY) < 36, `reopen stays near interrupted translate: ${JSON.stringify({ midExit, reopened })}`);
-    assert.equal(await page.locator('.muxui-lightbox-popup').count(), 1, 'close/reopen keeps one shell');
+    assert.equal(await page.locator('.muxui-lightbox__popup').count(), 1, 'close/reopen keeps one shell');
 
     // Navigate A→B, then to C in the same frame that records B mid-crossfade.
     const rapidRecording = await recordFrames(page, (_, state) => {
-      const layers = [...document.querySelectorAll('.muxui-lightbox-content-layer')].map((node) => ({
+      const layers = [...document.querySelectorAll('.muxui-lightbox__content-layer')].map((node) => ({
         key: node.querySelector('img')?.dataset.imageKey,
-        current: node.classList.contains('muxui-lightbox-content-layer--current'),
+        current: node.classList.contains('muxui-lightbox__content-layer--current'),
         ariaHidden: node.getAttribute('aria-hidden'),
         opacity: Number(getComputedStyle(node).opacity),
       }));
@@ -202,20 +202,20 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     assert.ok(beforeRapidTwo > 0 && beforeRapidTwo < 1, `A→B is in flight before rapid navigation: ${JSON.stringify(beforeRapid)}`);
     const duringRapidTwo = duringRapid.find(({ key }) => key === 'two')?.opacity ?? 1;
     assert.ok(duringRapidTwo > 0 && duringRapidTwo < 0.95, `B keeps its in-flight opacity while C enters: ${JSON.stringify(duringRapid)}`);
-    const layers = page.locator('.muxui-lightbox-content-layer');
+    const layers = page.locator('.muxui-lightbox__content-layer');
     const reversedTwo = reversed.find(({ key }) => key === 'two')?.opacity ?? 0;
     assert.ok(reversedTwo > 0.02, `reverse navigation resumes B from its retained opacity: ${JSON.stringify(reversed)}`);
-    await page.waitForFunction(() => document.querySelectorAll('.muxui-lightbox-content-layer--outgoing').length === 0, undefined, { timeout: 1_000 });
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-lightbox__content-layer--outgoing').length === 0, undefined, { timeout: 1_000 });
     assert.equal(await layers.count(), 1, 'all retired rapid-navigation layers are cleaned up');
     assert.equal(await popup.locator('img[data-image-key="two"]').count(), 1, 'reverse navigation keeps the selected image');
 
     await popup.press('ArrowRight');
     await waitForCrossfade(page);
-    await page.locator('.muxui-lightbox-content-layer--outgoing').waitFor({ state: 'detached' });
+    await page.locator('.muxui-lightbox__content-layer--outgoing').waitFor({ state: 'detached' });
     assert.equal(await popup.locator('img[data-image-key="three"]').count(), 1, 'keyboard navigation keeps the current image');
     await page.evaluate(() => {
       document.documentElement.dir = 'rtl';
-      const popupNode = document.querySelector('.muxui-lightbox-popup');
+      const popupNode = document.querySelector('.muxui-lightbox__popup');
       const start = new Event('touchstart', { bubbles: true });
       Object.defineProperty(start, 'touches', { value: [{ clientX: 100 }] });
       const end = new Event('touchend', { bubbles: true });
@@ -224,7 +224,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
       popupNode?.dispatchEvent(end);
     });
     await waitForCrossfade(page);
-    await page.locator('.muxui-lightbox-content-layer--outgoing').waitFor({ state: 'detached' });
+    await page.locator('.muxui-lightbox__content-layer--outgoing').waitFor({ state: 'detached' });
     assert.equal(await popup.locator('img[data-image-key="two"]').count(), 1, 'RTL swipe preserves existing previous navigation semantics');
 
     await page.evaluate(() => {
@@ -241,11 +241,11 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     await popup.waitFor({ state: 'detached' });
     await page.evaluate(() => window.__muxuiLightboxSetOpen(true));
     await popup.waitFor();
-    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.muxui-lightbox-popup')).opacity) < 0.99, undefined, { timeout: 1_000 });
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.muxui-lightbox__popup')).opacity) < 0.99, undefined, { timeout: 1_000 });
     const reducedStarted = Date.now();
     await page.locator('#lightbox-origin').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
-      const node = document.querySelector('.muxui-lightbox-popup');
+      const node = document.querySelector('.muxui-lightbox__popup');
       if (!node) return false;
       const style = getComputedStyle(node);
       return node.hasAttribute('data-muxui-lightbox-reduced')
@@ -278,9 +278,9 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
       window.__muxuiLightboxSetOpen(true);
     });
     await popup.waitFor();
-    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.muxui-lightbox-popup')).opacity) < 0.99, undefined, { timeout: 1_000 });
+    await page.waitForFunction(() => Number(getComputedStyle(document.querySelector('.muxui-lightbox__popup')).opacity) < 0.99, undefined, { timeout: 1_000 });
     const capturedStyle = await page.evaluate(() => {
-      window.__muxuiLightboxCaptured = document.querySelector('.muxui-lightbox-popup');
+      window.__muxuiLightboxCaptured = document.querySelector('.muxui-lightbox__popup');
       return window.__muxuiLightboxCaptured?.style.cssText;
     });
     await page.evaluate(() => window.__muxuiLightboxUnmount());

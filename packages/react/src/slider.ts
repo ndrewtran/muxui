@@ -85,7 +85,7 @@ export const Slider: ForwardRefExoticComponent<SliderProps & RefAttributes<HTMLD
       className: classNames('muxui-slider', className),
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(SliderMotionTrack, { orientation, readOnly, name })));
+    }, React.createElement('div', { className: 'muxui-slider__header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider__output' })), React.createElement('div', { className: 'muxui-slider__control' }, React.createElement(SliderMotionTrack, { orientation, readOnly, name })));
   });
   component.displayName = 'Slider';
   return component;

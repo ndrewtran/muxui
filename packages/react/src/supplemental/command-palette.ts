@@ -331,7 +331,7 @@ const CommandPaletteInput = /*#__PURE__*/ React.forwardRef<HTMLInputElement, Com
   }));
 });
 const CommandPaletteClearButton = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, CommandPaletteClearButtonProps>(function CommandPaletteClearButton({ disabled = false, className, children, ...props }, ref) {
-  return h(AriaButton, { ...(props as AriaButtonProps), ref, isDisabled: disabled, ...{ 'data-muxui-variant': 'ghost', 'data-muxui-size': 'sm' }, className: cx('muxui-button', 'muxui-command-palette__clear', className) }, children ?? 'Clear');
+  return h(AriaButton, { ...(props as AriaButtonProps), ref, isDisabled: disabled, ...{ 'data-muxui-variant': 'ghost', 'data-muxui-size': 'sm' }, className: cx('muxui-button', 'muxui-command-palette__clear-button', className) }, children ?? 'Clear');
 });
 // ListBox, Section and Collection are generic over the item they list, which the public component types say and a forwardRef component does not.
 const CommandPaletteListBox = /*#__PURE__*/ React.forwardRef<HTMLDivElement, CommandPaletteListBoxProps>(function CommandPaletteListBox({ className, ...props }, ref) {

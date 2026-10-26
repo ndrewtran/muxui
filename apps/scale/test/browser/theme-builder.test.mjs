@@ -42,9 +42,9 @@ async function verifyPreviewColours(page, url) {
         };
         const checks = [
           ['.muxui-button[data-muxui-variant="primary"]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
-          ['.muxui-checkbox-indicator[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-checkbox__indicator[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
           ['.muxui-switch[data-muxui-state-selected]', '::before', 'backgroundColor', '--muxui-semantic-selection-track'],
-          ['.muxui-grid-list-item[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-grid-list__item[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
           ['.muxui-calendar', null, 'backgroundColor', '--muxui-semantic-surface-raised'],
           ['.muxui-menu', null, 'backgroundColor', '--muxui-semantic-surface-raised'],
         ].map(([selector, pseudo, property, token]) => {
@@ -55,7 +55,7 @@ async function verifyPreviewColours(page, url) {
         // Exercise the endpoint/outside-month cascade using the renderer's exact state hooks.
         for (const endpoint of ['data-muxui-state-selection-start', 'data-muxui-state-selection-end']) {
           const cell = document.createElement('button');
-          cell.className = 'muxui-range-calendar-cell';
+          cell.className = 'muxui-range-calendar__cell';
           for (const attribute of [endpoint, 'data-muxui-state-selected', 'data-muxui-state-outside-month']) cell.setAttribute(attribute, 'true');
           canvas.append(cell);
           for (const [property, token] of [['backgroundColor', '--muxui-semantic-selection-track'], ['color', '--muxui-semantic-action-foreground']]) {
@@ -80,9 +80,9 @@ async function verifyPreviewColours(page, url) {
         await mkdir(screenshotDir, { recursive: true });
         await page.locator('.preview-canvas').screenshot({ path: join(screenshotDir, `components-${colorMode}-${namedColor.slice(1)}.png`) });
       }
-      await page.locator('.muxui-select-trigger').click();
-      await page.locator('.muxui-select-popover').waitFor();
-      assert.equal(await page.locator('.muxui-select-popover').evaluate((node) => getComputedStyle(node).backgroundColor), await page.locator('.muxui-menu').evaluate((node) => getComputedStyle(node).backgroundColor), `${colorMode}: portal surface follows preview`);
+      await page.locator('.muxui-select__trigger').click();
+      await page.locator('.muxui-select__popup').waitFor();
+      assert.equal(await page.locator('.muxui-select__popup').evaluate((node) => getComputedStyle(node).backgroundColor), await page.locator('.muxui-menu').evaluate((node) => getComputedStyle(node).backgroundColor), `${colorMode}: portal surface follows preview`);
       await page.keyboard.press('Escape');
       await page.getByRole('button', { name: 'Hover me', exact: true }).focus();
       await page.keyboard.press('Shift+Tab');
@@ -203,9 +203,9 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     assert.equal(await page.locator('.scale-app').getAttribute('data-muxui-color-scheme'), 'dark');
     await page.waitForFunction(() => getComputedStyle(document.querySelector('.theme-card')).backgroundColor === getComputedStyle(document.querySelector('.scale-app')).backgroundColor);
     assert.equal(await page.locator('.theme-card').first().evaluate((node) => getComputedStyle(node).backgroundColor), await page.locator('.scale-app').evaluate((node) => getComputedStyle(node).backgroundColor));
-    await page.locator('.muxui-select-trigger').click();
-    await page.locator('.muxui-select-popover').waitFor();
-    assert.equal(await page.locator('.muxui-select-popover').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-color-neutral-5').trim()), await page.locator('.scale-app').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-color-neutral-5').trim()));
+    await page.locator('.muxui-select__trigger').click();
+    await page.locator('.muxui-select__popup').waitFor();
+    assert.equal(await page.locator('.muxui-select__popup').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-color-neutral-5').trim()), await page.locator('.scale-app').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-color-neutral-5').trim()));
     await page.keyboard.press('Escape');
     const screenshotDir = process.env.MUXUI_SCALE_SCREENSHOT_DIR;
     if (screenshotDir) {

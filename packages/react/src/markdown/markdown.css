@@ -40,7 +40,7 @@
   font-size: var(--muxui-semantic-typography-heading-s-font-size);
 }
 
-.muxui-markdown :where(p, ul, ol, .muxui-markdown-blockquote, .muxui-markdown-code-block) {
+.muxui-markdown :where(p, ul, ol, .muxui-markdown__blockquote, .muxui-markdown__code-block) {
   margin-block: 0 var(--muxui-semantic-layout-section-gap);
 }
 
@@ -59,7 +59,7 @@
 }
 
 /* Private helper compositions used by Markdown output. */
-.muxui-markdown-blockquote {
+.muxui-markdown__blockquote {
   margin: 0;
   padding-block: var(--muxui-semantic-layout-inset-medium);
   padding-inline: var(--muxui-semantic-layout-inset-large);
@@ -69,14 +69,14 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
 }
 
-.muxui-markdown-blockquote__content {
+.muxui-markdown__blockquote-content {
   margin: 0;
   font-size: var(--muxui-semantic-typography-text-l-font-size);
   font-style: italic;
   line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
-.muxui-markdown-blockquote__attribution {
+.muxui-markdown__blockquote-attribution {
   margin-block-start: var(--muxui-semantic-layout-action-gap);
   color: var(--muxui-semantic-color-neutral-70);
   font-size: var(--muxui-semantic-typography-label-s-font-size);
@@ -84,7 +84,7 @@
   line-height: var(--muxui-semantic-typography-label-line-height);
 }
 
-.muxui-markdown-code {
+.muxui-markdown__code {
   padding-block: var(--muxui-semantic-layout-inset-tight);
   padding-inline: var(--muxui-semantic-layout-inset-tiny);
   border-radius: var(--muxui-semantic-shape-indicator-radius);
@@ -96,7 +96,7 @@
   overflow-wrap: anywhere;
 }
 
-.muxui-markdown-code-block {
+.muxui-markdown__code-block {
   box-sizing: border-box;
   max-inline-size: 100%;
   margin: 0;
@@ -113,17 +113,17 @@
   white-space: pre;
 }
 
-.muxui-markdown-code-block--wrap {
+.muxui-markdown__code-block--wrap {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
-.muxui-markdown-code-block code {
+.muxui-markdown__code-block code {
   color: inherit;
   font: inherit;
 }
 
-.muxui-markdown-image {
+.muxui-markdown__image {
   display: block;
   max-inline-size: 100%;
   block-size: auto;

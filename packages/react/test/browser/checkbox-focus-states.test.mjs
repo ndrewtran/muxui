@@ -118,16 +118,16 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
       throw new Error(`${error.message}\n${errors.join('\n')}`);
     }
     const core = page.locator('[data-testid="core"]');
-    const coreIndicator = core.locator('.muxui-checkbox-indicator');
+    const coreIndicator = core.locator('.muxui-checkbox__indicator');
     const field = page.locator('[data-testid="field"]');
     const fieldButton = field.locator('.muxui-checkbox-field__button');
     const fieldIndicator = field.locator('.muxui-checkbox-field__indicator');
     const coreIndeterminate = page.locator('[data-testid="core-indeterminate"]');
-    const coreIndeterminateIndicator = coreIndeterminate.locator('.muxui-checkbox-indicator');
+    const coreIndeterminateIndicator = coreIndeterminate.locator('.muxui-checkbox__indicator');
     const fieldIndeterminate = page.locator('[data-testid="field-indeterminate"]');
     const fieldIndeterminateIndicator = fieldIndeterminate.locator('.muxui-checkbox-field__indicator');
     const coreInvalid = page.locator('[data-testid="core-invalid"]');
-    const coreInvalidIndicator = coreInvalid.locator('.muxui-checkbox-indicator');
+    const coreInvalidIndicator = coreInvalid.locator('.muxui-checkbox__indicator');
     const fieldInvalid = page.locator('[data-testid="field-invalid"]');
     const fieldInvalidIndicator = fieldInvalid.locator('.muxui-checkbox-field__indicator');
     const coreDisabled = page.locator('[data-testid="core-disabled"]');
@@ -340,9 +340,9 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     // Each part is [hovered host, painted descendant]; a null descendant paints the host's ::before.
     // The Switch root forwards its test id to the outer field wrapper.
     const parts = {
-      'core-selected': ['[data-testid="core-selected"]', '.muxui-checkbox-indicator'],
-      'core-unchecked': ['[data-testid="core-unchecked"]', '.muxui-checkbox-indicator'],
-      'core-indeterminate': ['[data-testid="core-indeterminate"]', '.muxui-checkbox-indicator'],
+      'core-selected': ['[data-testid="core-selected"]', '.muxui-checkbox__indicator'],
+      'core-unchecked': ['[data-testid="core-unchecked"]', '.muxui-checkbox__indicator'],
+      'core-indeterminate': ['[data-testid="core-indeterminate"]', '.muxui-checkbox__indicator'],
       'field-selected': ['[data-testid="field-selected"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
       'field-unchecked': ['[data-testid="field-unchecked"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
       'field-indeterminate': ['[data-testid="field-indeterminate"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
@@ -350,8 +350,8 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
       'switch-unchecked': ['[data-testid="switch-unchecked"] .muxui-switch, [data-testid="switch-unchecked"].muxui-switch', null],
       'switch-field-selected': ['[data-testid="switch-field-selected"] .muxui-switch-field__button', null],
       'switch-field-unchecked': ['[data-testid="switch-field-unchecked"] .muxui-switch-field__button', null],
-      'radio-selected': ['[data-testid="radio"] .muxui-radio[data-muxui-state-selected]', '.muxui-radio-indicator'],
-      'radio-unchecked': ['[data-testid="radio"] .muxui-radio:not([data-muxui-state-selected])', '.muxui-radio-indicator'],
+      'radio-selected': ['[data-testid="radio"] .muxui-radio-group__radio[data-muxui-state-selected]', '.muxui-radio-group__indicator'],
+      'radio-unchecked': ['[data-testid="radio"] .muxui-radio-group__radio:not([data-muxui-state-selected])', '.muxui-radio-group__indicator'],
       'radio-field-selected': ['[data-testid="radio-field"] .muxui-radio-field__button[data-muxui-state-selected]', '.muxui-radio-field__indicator'],
       'radio-field-unchecked': ['[data-testid="radio-field"] .muxui-radio-field__button:not([data-muxui-state-selected])', '.muxui-radio-field__indicator'],
     };

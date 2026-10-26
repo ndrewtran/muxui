@@ -7,12 +7,12 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(RangeSelectionMotionFixture)));
-  const consumerFocusStyle = `@scope (.range-consumer) { :scope :is(button, .muxui-range-calendar-cell):focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; } }`;
+  const consumerFocusStyle = `@scope (.range-consumer) { :scope :is(button, .muxui-range-calendar__cell):focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; } }`;
   return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><style>${consumerFocusStyle}</style>`, bodyAttributes: 'style="margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body: `<div class="range-consumer">${body}</div>`, entry: '/test/fixtures/range-selection-motion-browser-entry.mjs' });
 }
 
 async function readRange(page) {
-  return page.locator('.muxui-range-selection-motion').evaluate((root) => {
+  return page.locator('.muxui-range-calendar__selection-motion').evaluate((root) => {
     const rect = (node) => {
       const value = node?.getBoundingClientRect();
       return value ? { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height } : null;
@@ -87,7 +87,7 @@ function endpointBand(current) {
 
 async function waitForEndpointBand(page) {
   await page.waitForFunction(() => {
-    const root = document.querySelector('.muxui-range-selection-motion');
+    const root = document.querySelector('.muxui-range-calendar__selection-motion');
     const endpoint = root?.querySelector('[data-muxui-range-provisional-endpoint]');
     if (!endpoint) return false;
     const endpointRect = endpoint.getBoundingClientRect();
@@ -101,8 +101,8 @@ async function waitForEndpointBand(page) {
 }
 
 async function samplePointerTransition(page, fromDate, toDate) {
-  const from = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${fromDate}"]`);
-  const to = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${toDate}"]`);
+  const from = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${fromDate}"]`);
+  const to = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${toDate}"]`);
   const fromRect = await from.boundingBox();
   const toRect = await to.boundingBox();
   assert.ok(fromRect && toRect, `pointer transition has visible cells: ${fromDate} -> ${toDate}`);
@@ -119,8 +119,8 @@ async function samplePointerTransition(page, fromDate, toDate) {
     window.__muxuiRangePointerEventMarker = markPointerEvent;
     for (const eventType of ['pointerover', 'pointermove', 'pointerdown']) document.addEventListener(eventType, markPointerEvent, true);
     const sample = () => {
-      const root = document.querySelector('.muxui-range-selection-motion');
-      const cells = [...(root?.querySelectorAll('.muxui-range-calendar-cell[data-muxui-date]') ?? [])].map((node) => {
+      const root = document.querySelector('.muxui-range-calendar__selection-motion');
+      const cells = [...(root?.querySelectorAll('.muxui-range-calendar__cell[data-muxui-date]') ?? [])].map((node) => {
         const style = getComputedStyle(node);
         return {
           date: node.getAttribute('data-muxui-date'),
@@ -181,11 +181,11 @@ function assertPointerTransition({ frames, firstPointerEventAt }, label) {
 async function readKeyboardFocus(page) {
   return page.evaluate(() => {
     const node = document.activeElement;
-    if (!(node instanceof HTMLElement) || !node.matches('.muxui-range-calendar-cell')) return null;
+    if (!(node instanceof HTMLElement) || !node.matches('.muxui-range-calendar__cell')) return null;
     const style = getComputedStyle(node);
     return {
       date: node.getAttribute('data-muxui-date'),
-      pointerMode: Boolean(node.closest('.muxui-range-selection-motion')?.hasAttribute('data-muxui-range-pointer-mode')),
+      pointerMode: Boolean(node.closest('.muxui-range-calendar__selection-motion')?.hasAttribute('data-muxui-range-pointer-mode')),
       dataFocusVisible: node.hasAttribute('data-muxui-state-focus-visible'),
       focusVisible: node.matches(':focus-visible'),
       boxShadow: style.boxShadow,
@@ -206,7 +206,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     await page.goto(`${url}/range-selection-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiRangeSelectionHydrated === 'true');
     assert.deepEqual(errors, []);
-    assert.equal(await page.locator('.muxui-range-selection-motion').count(), 0, 'closed range popover stays absent after SSR/hydration');
+    assert.equal(await page.locator('.muxui-range-calendar__selection-motion').count(), 0, 'closed range popover stays absent after SSR/hydration');
 
     const checkCapScenario = async (anchor, endpoint, expected, label) => {
       const capPage = await browser.newPage({ viewport: { width: 1100, height: 800 } });
@@ -217,10 +217,10 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
         await capPage.waitForFunction(() => document.documentElement.dataset.muxuiRangeSelectionHydrated === 'true');
         await capPage.evaluate(() => window.__muxuiRangeSetOpen(true));
         await capPage.locator('.muxui-date-popover').waitFor();
-        await capPage.locator(`.muxui-range-calendar-cell[data-muxui-date="${anchor}"]`).click();
-        await capPage.waitForFunction(() => document.querySelector('.muxui-range-selection-motion')?.hasAttribute('data-muxui-range-selecting'));
-        await capPage.locator(`.muxui-range-calendar-cell[data-muxui-date="${endpoint}"]`).hover();
-        await capPage.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, endpoint);
+        await capPage.locator(`.muxui-range-calendar__cell[data-muxui-date="${anchor}"]`).click();
+        await capPage.waitForFunction(() => document.querySelector('.muxui-range-calendar__selection-motion')?.hasAttribute('data-muxui-range-selecting'));
+        await capPage.locator(`.muxui-range-calendar__cell[data-muxui-date="${endpoint}"]`).hover();
+        await capPage.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, endpoint);
         await waitForEndpointBand(capPage);
         const current = await readRange(capPage);
         assertBandCap(endpointBand(current), expected, label);
@@ -238,15 +238,15 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
 
     await page.evaluate(() => window.__muxuiRangeSetOpen(true));
     await page.locator('.muxui-date-popover').waitFor();
-    const anchorCell = page.locator('.muxui-range-calendar-cell[data-muxui-date="2026-08-26"]');
+    const anchorCell = page.locator('.muxui-range-calendar__cell[data-muxui-date="2026-08-26"]');
     await anchorCell.click();
-    await page.waitForFunction(() => document.querySelector('.muxui-range-selection-motion')?.hasAttribute('data-muxui-range-selecting'));
+    await page.waitForFunction(() => document.querySelector('.muxui-range-calendar__selection-motion')?.hasAttribute('data-muxui-range-selecting'));
     let current = await readRange(page);
     assert.equal(current.anchor, '2026-08-26');
     assert.equal(current.endpoint, null, 'the fixed anchor has no provisional outline before a hover endpoint');
     assert.equal(await page.locator('#range-change-count').textContent(), '0', 'starting an anchor does not commit a range');
 
-    const visibleCells = await page.locator('.muxui-range-calendar-cell[data-muxui-date]').evaluateAll((nodes) => nodes.map((node) => {
+    const visibleCells = await page.locator('.muxui-range-calendar__cell[data-muxui-date]').evaluateAll((nodes) => nodes.map((node) => {
       const rect = node.getBoundingClientRect();
       return {
         date: node.getAttribute('data-muxui-date'),
@@ -261,11 +261,11 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     const splitDate = visibleCells.find(({ date, disabled, unavailable }) => date > '2026-08-28' && !disabled && !unavailable)?.date;
     const sameRowDate = visibleCells.find(({ date, disabled, unavailable, top }) => date > '2026-08-26' && date < weekWrapDate && !disabled && !unavailable && top === anchorGeometry.top)?.date;
     assert.ok(weekWrapDate && reverseDate && splitDate && sameRowDate, `range fixture needs selectable forward, reverse, and split dates: ${JSON.stringify(visibleCells)}`);
-    const weekWrapCell = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${weekWrapDate}"]`);
+    const weekWrapCell = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${weekWrapDate}"]`);
     const forwardPointerFrames = await samplePointerTransition(page, '2026-08-26', weekWrapDate);
     assertPointerTransition(forwardPointerFrames, 'forward pointer transition');
     await weekWrapCell.hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, weekWrapDate);
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, weekWrapDate);
     await waitForEndpointBand(page);
     current = await readRange(page);
     assert.equal(current.anchor, '2026-08-26');
@@ -281,21 +281,21 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     assert.ok(forwardEndpointBand, `forward week-wrap endpoint band has a cap: ${JSON.stringify(current.bands)}`);
     assertBandCap(forwardEndpointBand, 'both', 'forward week-wrap endpoint band');
 
-    const sameRowCell = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${sameRowDate}"]`);
+    const sameRowCell = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${sameRowDate}"]`);
     const interiorPointerFrames = await samplePointerTransition(page, weekWrapDate, sameRowDate);
     assertPointerTransition(interiorPointerFrames, 'endpoint leave transition');
     await sameRowCell.hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
     await waitForEndpointBand(page);
     current = await readRange(page);
     assertBandCap(endpointBand(current), 'both', 'forward same-row endpoint band');
 
     await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '800ms'); });
-    const reverseCell = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${reverseDate}"]`);
+    const reverseCell = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${reverseDate}"]`);
     const reversePointerFrames = await samplePointerTransition(page, sameRowDate, reverseDate);
     assertPointerTransition(reversePointerFrames, 'reverse pointer transition');
     await reverseCell.hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, reverseDate);
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, reverseDate);
     await waitForEndpointBand(page);
     current = await readRange(page);
     assert.equal(current.anchor, '2026-08-26', 'reverse hover preserves the current anchor');
@@ -311,32 +311,32 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
 
     const reverseSameRowDate = [...visibleCells].reverse().find(({ date, disabled, unavailable, top }) => date < '2026-08-26' && !disabled && !unavailable && top === anchorGeometry.top)?.date;
     assert.ok(reverseSameRowDate, 'range fixture needs a selectable reverse same-row date');
-    const reverseSameRowCell = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${reverseSameRowDate}"]`);
+    const reverseSameRowCell = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${reverseSameRowDate}"]`);
     await reverseSameRowCell.hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, reverseSameRowDate);
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, reverseSameRowDate);
     await waitForEndpointBand(page);
     current = await readRange(page);
     assertBandCap(endpointBand(current), 'both', 'reverse same-row endpoint band');
 
-    const unavailableCell = page.locator('.muxui-range-calendar-cell[data-muxui-date="2026-08-10"]');
+    const unavailableCell = page.locator('.muxui-range-calendar__cell[data-muxui-date="2026-08-10"]');
     assert.equal(await unavailableCell.getAttribute('data-muxui-state-unavailable'), 'true', 'RAC owns unavailable state');
     await unavailableCell.focus();
-    assert.notEqual(await page.locator('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]').getAttribute('data-muxui-date'), '2026-08-10', 'unavailable focus cannot become a provisional endpoint');
+    assert.notEqual(await page.locator('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]').getAttribute('data-muxui-date'), '2026-08-10', 'unavailable focus cannot become a provisional endpoint');
     assert.equal(await page.locator('#range-change-count').textContent(), '0', 'unavailable focus does not commit a range');
-    const splitCell = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${splitDate}"]`);
+    const splitCell = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${splitDate}"]`);
     await splitCell.hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, splitDate);
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, splitDate);
     current = await readRange(page);
     assert.equal(current.endpoint, splitDate);
     assert.equal(await page.locator('#range-change-count').textContent(), '0');
     assert.ok(current.unavailable && current.bands.every(({ rect }) => !rect || !overlaps(rect, current.unavailable)), 'unavailable cells are excluded from the provisional band');
 
-    const keyboardEndpoint = page.locator(`.muxui-range-calendar-cell[data-muxui-date="${splitDate}"]`);
+    const keyboardEndpoint = page.locator(`.muxui-range-calendar__cell[data-muxui-date="${splitDate}"]`);
     await keyboardEndpoint.focus();
     await page.keyboard.press('ArrowLeft');
     const endpointBeforeKeyboard = current.endpoint;
     await page.waitForFunction((date) => {
-      const next = document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date');
+      const next = document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date');
       return next && next !== date;
     }, endpointBeforeKeyboard);
     assert.equal(await page.locator('#range-change-count').textContent(), '0', 'keyboard focus changes do not commit');
@@ -355,7 +355,7 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     const keyboardPointerFrames = await samplePointerTransition(page, keyboardFocus.date, sameRowDate);
     assertPointerTransition(keyboardPointerFrames, 'keyboard-to-pointer transition');
     await page.keyboard.press('ArrowLeft');
-    await page.waitForFunction(() => document.activeElement?.matches('.muxui-range-calendar-cell[data-muxui-state-focus-visible]'));
+    await page.waitForFunction(() => document.activeElement?.matches('.muxui-range-calendar__cell[data-muxui-state-focus-visible]'));
     const focusAfterPointer = await readKeyboardFocus(page);
     assert.equal(focusAfterPointer.pointerMode, false, 'keyboard input clears pointer mode after pointer hover');
     assert.equal(focusAfterPointer.dataFocusVisible, true, 'keyboard focus remains visible after pointer hover');
@@ -369,22 +369,22 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
       document.documentElement.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '1200ms');
       window.__muxuiRangeSetOpen(true);
     });
-    await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${weekWrapDate}"]`).hover();
+    await page.locator(`.muxui-range-calendar__cell[data-muxui-date="${weekWrapDate}"]`).hover();
     await page.waitForFunction(() => {
-      const root = document.querySelector('.muxui-range-selection-motion');
+      const root = document.querySelector('.muxui-range-calendar__selection-motion');
       return (root?.querySelectorAll('[data-muxui-range-band]').length ?? 0) >= 2;
     });
-    await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${sameRowDate}"]`).hover();
+    await page.locator(`.muxui-range-calendar__cell[data-muxui-date="${sameRowDate}"]`).hover();
     await page.waitForFunction(() => {
-      const bands = [...document.querySelectorAll('.muxui-range-selection-motion [data-muxui-range-band]')];
+      const bands = [...document.querySelectorAll('.muxui-range-calendar__selection-motion [data-muxui-range-band]')];
       return bands.length >= 2 && bands.some((node) => {
         const opacity = Number.parseFloat(getComputedStyle(node).opacity);
         return opacity > 0 && opacity < 1;
       });
     }, undefined, { timeout: 800 });
-    await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${weekWrapDate}"]`).hover();
+    await page.locator(`.muxui-range-calendar__cell[data-muxui-date="${weekWrapDate}"]`).hover();
     await page.waitForFunction((date) => {
-      const root = document.querySelector('.muxui-range-selection-motion');
+      const root = document.querySelector('.muxui-range-calendar__selection-motion');
       return root?.querySelector('[data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date
         && root.querySelectorAll('[data-muxui-range-band]').length >= 2;
     }, weekWrapDate);
@@ -398,25 +398,25 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
       document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration');
     });
-    await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${sameRowDate}"]`).hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
+    await page.locator(`.muxui-range-calendar__cell[data-muxui-date="${sameRowDate}"]`).hover();
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
     const reducedStarted = Date.now();
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
-      const root = document.querySelector('.muxui-range-selection-motion');
+      const root = document.querySelector('.muxui-range-calendar__selection-motion');
       if (!root?.hasAttribute('data-muxui-range-selection-reduced')) return false;
       return [...root.querySelectorAll('[data-muxui-range-band]')].every((node) => node.style.opacity === '1');
     }, undefined, { timeout: 300 });
     assert.ok(Date.now() - reducedStarted < 300, 'explicit reduced mode settles range movement immediately');
     await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${sameRowDate}"]`).hover();
-    await page.waitForFunction((date) => document.querySelector('.muxui-range-selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
-    await page.locator(`.muxui-range-calendar-cell[data-muxui-date="${weekWrapDate}"]`).hover();
+    await page.locator(`.muxui-range-calendar__cell[data-muxui-date="${sameRowDate}"]`).hover();
+    await page.waitForFunction((date) => document.querySelector('.muxui-range-calendar__selection-motion [data-muxui-range-provisional-endpoint]')?.getAttribute('data-muxui-date') === date, sameRowDate);
+    await page.locator(`.muxui-range-calendar__cell[data-muxui-date="${weekWrapDate}"]`).hover();
     const systemReducedStarted = Date.now();
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForFunction(() => {
-      const root = document.querySelector('.muxui-range-selection-motion');
+      const root = document.querySelector('.muxui-range-calendar__selection-motion');
       return root?.hasAttribute('data-muxui-range-selection-reduced')
         && [...root.querySelectorAll('[data-muxui-range-band]')].every((node) => node.style.opacity === '1');
     }, undefined, { timeout: 300 });

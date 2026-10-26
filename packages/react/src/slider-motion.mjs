@@ -76,10 +76,10 @@ function SliderMotionThumb({ isDragging, isDisabled, orientation, readOnly, trac
   }, [blocked, isDragging, keyPressed, pointerCancelled, reduced, squish, thumbRef]);
 
   return React.createElement(MotionSpan, {
-    className: 'muxui-slider-thumb-visual',
+    className: 'muxui-slider__thumb-visual',
     'aria-hidden': true,
   }, React.createElement(MotionSpan, {
-    className: 'muxui-slider-thumb-face',
+    className: 'muxui-slider__thumb-face',
     style: { scaleX, scaleY },
   }));
 }
@@ -89,13 +89,13 @@ export function SliderMotionTrack({ orientation, readOnly, name }) {
   const trackRef = React.useRef(null);
   const thumbRef = React.useRef(null);
   return React.createElement(LazyMotion, { features: domAnimation, strict: true },
-    React.createElement(SliderTrack, { ref: trackRef, className: 'muxui-slider-track' },
-      React.createElement(SliderFill, { className: 'muxui-slider-fill' }),
+    React.createElement(SliderTrack, { ref: trackRef, className: 'muxui-slider__track' },
+      React.createElement(SliderFill, { className: 'muxui-slider__fill' }),
       React.createElement(SliderThumb, {
         ref: thumbRef,
         // The thumb owns the native range input, so it carries the form name.
         name,
-        className: 'muxui-slider-thumb',
+        className: 'muxui-slider__thumb',
         'data-muxui-state-read-only': readOnly || undefined,
       }, (renderProps) => React.createElement(SliderMotionThumb, { ...renderProps, orientation, readOnly, trackRef, thumbRef })),
     ),

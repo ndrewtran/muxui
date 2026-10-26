@@ -307,7 +307,7 @@ export const Virtualizer: VirtualizerComponent = React.forwardRef<HTMLDivElement
       children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, {
         id: item.id,
         textValue: item.textValue,
-        className: 'muxui-virtualizer-item',
+        className: 'muxui-virtualizer__item',
         isDisabled: disabled ? disabled : item.disabled,
       }, item.label ?? item.value ?? item.id),
     }),

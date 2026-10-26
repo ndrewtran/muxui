@@ -5,7 +5,7 @@ import { fixture } from '../fixtures/calendar-height-motion-browser-entry.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function geometry(page) {
-  return page.locator('.muxui-calendar-grid').evaluate((grid) => {
+  return page.locator('.muxui-calendar__grid').evaluate((grid) => {
     const body = grid.parentElement;
     const calendar = body.parentElement;
     return {
@@ -24,7 +24,7 @@ function geometry(page) {
 async function settled(page, previous) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   if (previous) {
-    const samples = await page.locator('.muxui-calendar-grid').evaluate(async (grid) => {
+    const samples = await page.locator('.muxui-calendar__grid').evaluate(async (grid) => {
       const samples = [];
       while (grid.parentElement.style.height) {
         samples.push(grid.parentElement.getBoundingClientRect().height);
@@ -35,7 +35,7 @@ async function settled(page, previous) {
     const target = (await geometry(page)).grid;
     assert.ok(samples.every((height) => height >= Math.min(previous.body, target) - 0.5 && height <= Math.max(previous.body, target) + 0.5), 'spring settles without height overshoot');
   }
-  await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height);
+  await page.waitForFunction(() => !document.querySelector('.muxui-calendar__grid').parentElement.style.height);
   const result = await geometry(page);
   assert.ok(Math.abs(result.body - result.grid) < 1, `body returns to natural grid height: ${JSON.stringify(result)}`);
   assert.equal(result.overflow, '', 'temporary clipping is removed');
@@ -44,7 +44,7 @@ async function settled(page, previous) {
 }
 
 async function navigate(page, direction) {
-  await page.locator(`.muxui-calendar-${direction}`).click();
+  await page.locator(`.muxui-calendar__${direction}`).click();
 }
 
 // Records every frame from before the click: a stalled runner can finish the spring between polls, but not between frames.
@@ -52,7 +52,7 @@ async function recordFrames(page, previous, growing) {
   await page.evaluate(({ previous, growing }) => {
     const recorder = { frames: [], stopped: false };
     const record = () => {
-      const grid = document.querySelector('.muxui-calendar-grid');
+      const grid = document.querySelector('.muxui-calendar__grid');
       const body = grid.parentElement;
       const calendar = body.parentElement;
       const height = body.getBoundingClientRect().height;
@@ -131,7 +131,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       if (kind === 'range-picker') await page.evaluate(() => { document.body.style.marginTop = '600px'; });
       if (kind.includes('picker')) {
         await page.locator('.muxui-date-trigger').click();
-        await page.locator('.muxui-calendar-grid').waitFor();
+        await page.locator('.muxui-calendar__grid').waitFor();
         await page.waitForFunction(() => document.querySelector('.muxui-date-popover').getAnimations().every((animation) => animation.playState === 'finished'));
         assert.match(await page.locator('.muxui-date-popover').getAttribute('data-muxui-state-placement'), kind === 'range-picker' ? /top/u : /bottom/u);
       }
@@ -166,7 +166,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       // Redirect an active growth back toward the smaller month.
       await growUntilMidFlight(page, april);
       const beforeRedirect = await geometry(page);
-      await page.locator('.muxui-calendar-previous').evaluate((button) => button.click());
+      await page.locator('.muxui-calendar__previous').evaluate((button) => button.click());
       const redirected = await geometry(page);
       assert.ok(Math.abs(redirected.body - beforeRedirect.body) < 8, 'rapid navigation starts at the visible height');
       await settled(page);
@@ -175,7 +175,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       // A nested trigger scope must also reach portaled popup calendars.
       await growUntilMidFlight(page, april);
       await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
-      await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: INTERRUPTION_WAIT });
+      await page.waitForFunction(() => !document.querySelector('.muxui-calendar__grid').parentElement.style.height, undefined, { timeout: INTERRUPTION_WAIT });
       assert.equal((await settled(page)).rows, 6);
       await navigate(page, 'previous');
       assert.equal((await geometry(page)).height, '');
@@ -183,7 +183,7 @@ test('calendar month height interpolates without changing semantics or reduced m
       assert.equal((await geometry(page)).height, '', 'restoring motion does not replay height changes');
       await growUntilMidFlight(page, april);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height, undefined, { timeout: INTERRUPTION_WAIT });
+      await page.waitForFunction(() => !document.querySelector('.muxui-calendar__grid').parentElement.style.height, undefined, { timeout: INTERRUPTION_WAIT });
       await navigate(page, 'previous');
       assert.equal((await geometry(page)).height, '', 'system reduced motion changes height immediately');
       await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -196,22 +196,22 @@ test('calendar month height interpolates without changing semantics or reduced m
         await page.evaluate((theme) => document.documentElement.setAttribute('data-muxui-color-scheme', theme), theme);
         await page.locator('.muxui-calendar, .muxui-range-calendar').screenshot({ path: `/tmp/muxui-calendar-height-${kind}-${theme}.png` });
       }
-      await page.locator('.muxui-calendar-next').focus();
+      await page.locator('.muxui-calendar__next').focus();
       await page.keyboard.press('Enter');
       await settled(page);
-      assert.equal(await page.locator('.muxui-calendar-next').evaluate((button) => document.activeElement === button), true, 'keyboard navigation keeps focus');
+      assert.equal(await page.locator('.muxui-calendar__next').evaluate((button) => document.activeElement === button), true, 'keyboard navigation keeps focus');
       if (kind.includes('picker')) {
         await page.keyboard.press('Escape');
         await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
         // RAC restores trigger focus in the frame after the popup unmounts, not when its node detaches.
         await page.waitForFunction(() => document.activeElement?.matches('.muxui-date-trigger'));
         await page.locator('.muxui-date-trigger').click();
-        await page.locator('.muxui-calendar-grid').waitFor();
+        await page.locator('.muxui-calendar__grid').waitFor();
       }
-      await page.locator('.muxui-calendar-previous').evaluate((button) => button.click());
-      await page.waitForFunction(() => document.querySelector('.muxui-calendar-grid').parentElement.style.height);
+      await page.locator('.muxui-calendar__previous').evaluate((button) => button.click());
+      await page.waitForFunction(() => document.querySelector('.muxui-calendar__grid').parentElement.style.height);
       await page.evaluate(() => {
-        window.removedCalendarBody = document.querySelector('.muxui-calendar-grid').parentElement;
+        window.removedCalendarBody = document.querySelector('.muxui-calendar__grid').parentElement;
         window.unmountCalendar();
       });
       // Outlast the height animation to prove unmount stopped it; there is no event to wait for.

@@ -219,14 +219,14 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       React.createElement(AriaMenuTrigger, {
         isOpen: currentOpen,
         onOpenChange: setOpen,
-        children: React.createElement('div', { ...props, ref, className: classNames('muxui-menu-root', className), 'data-muxui-state-open': currentOpen || undefined, 'data-muxui-state-disabled': disabled ? disabled : undefined }, children),
+        children: React.createElement('div', { ...props, ref, className: classNames('muxui-menu__root', className), 'data-muxui-state-open': currentOpen || undefined, 'data-muxui-state-disabled': disabled ? disabled : undefined }, children),
       }));
   });
 
   const MenuTrigger = React.forwardRef<HTMLButtonElement, MenuTriggerProps>(function MenuTrigger({ disabled = false, onActivate, className, children, ...props }, ref) {
     const context = React.useContext(MenuContext);
     const effectiveDisabled = disabled ? disabled : context.disabled;
-    return React.createElement(CollectionTrigger, { ...props, ref, disabled: effectiveDisabled, onActivate, className: classNames('muxui-menu-trigger', className) }, children);
+    return React.createElement(CollectionTrigger, { ...props, ref, disabled: effectiveDisabled, onActivate, className: classNames('muxui-menu__trigger', className) }, children);
   });
 
   const MenuPopup = /*#__PURE__*/ React.forwardRef<HTMLDivElement, MenuPopupProps>(function MenuPopup({ children, placement, offset = MENU_POPUP_GEOMETRY.offset, crossOffset = MENU_POPUP_GEOMETRY.crossOffset, shouldFlip = MENU_POPUP_GEOMETRY.shouldFlip, containerPadding = MENU_POPUP_GEOMETRY.containerPadding, anchorRef, modal = true, className, ...props }, ref) {
@@ -236,7 +236,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
     // React Aria reads it. A SubmenuTrigger marker a consumer puts directly around a popup reads as nested too, and Menu.Root replaces any outside it.
     const nested = useSlottedContext(PopoverContext, props.slot)?.trigger === 'SubmenuTrigger';
     const { placement: validPlacement, ...geometry } = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, { ...MENU_POPUP_GEOMETRY, placement: 'bottom-start' }, 'Menu.Popup');
-    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, placement: nested && placement === undefined ? undefined : validPlacement, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu-popup', className) },
+    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, placement: nested && placement === undefined ? undefined : validPlacement, ref, triggerRef: anchorRef, isNonModal: !normalizeBoolean(modal, true, 'Menu.Popup modal'), className: classNames('muxui-menu__popup', className) },
       React.createElement(MenuAnchorContext.Provider, { value: anchorRef ?? null }, children));
   });
 
@@ -260,7 +260,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
     const menuOpen = menuTrigger?.isOpen ?? false;
     useMenuLayoutEffect(() => {
       if (!menuOpen) opener.current = null;
-      else if (!document.activeElement?.closest('.muxui-menu-popup')) opener.current = document.activeElement;
+      else if (!document.activeElement?.closest('.muxui-menu__popup')) opener.current = document.activeElement;
     }, [menuOpen]);
     const menu = React.createElement(AriaMenu<NormalizedItem>, {
       ...props,
@@ -288,7 +288,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       },
       // React Aria's props do not name aria-disabled or the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
-      className: classNames(standalone ? 'muxui-menu' : 'muxui-menu muxui-menu-list', className),
+      className: classNames(standalone ? 'muxui-menu' : 'muxui-menu muxui-menu__list', className),
       children: hasChildren ? children : (item: NormalizedItem) => React.createElement(MenuItem, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label),
     });
     return React.createElement(MenuContext.Provider, { value: { ...context, disabled: effectiveDisabled } },
@@ -307,21 +307,21 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       shouldCloseOnSelect,
       onAction: onAction ? () => { if (!effectiveDisabled) onAction(); } : undefined,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
-      className: classNames('muxui-menu-item', className),
+      className: classNames('muxui-menu__item', className),
     }, children);
   });
 
   const MenuSection = React.forwardRef<HTMLElement, MenuSectionProps>(function MenuSection({ children, title, className, ...props }, ref) {
-    return React.createElement(AriaMenuSection, { ...(props as AriaMenuSectionProps<unknown>), ref, className: classNames('muxui-menu-section', className) },
+    return React.createElement(AriaMenuSection, { ...(props as AriaMenuSectionProps<unknown>), ref, className: classNames('muxui-menu__section', className) },
       title !== undefined ? React.createElement(MenuHeader, null, title) : null, children);
   });
 
   const MenuHeader = React.forwardRef<HTMLElement, HTMLAttributes<HTMLElement>>(function MenuHeader({ children, className, ...props }, ref) {
-    return React.createElement(AriaHeader, { ...props, ref, className: classNames('muxui-menu-section-header', className) }, children);
+    return React.createElement(AriaHeader, { ...props, ref, className: classNames('muxui-menu__header', className) }, children);
   });
 
   const MenuSeparator = React.forwardRef<HTMLHRElement, HTMLAttributes<HTMLHRElement>>(function MenuSeparator({ className, ...props }, ref) {
-    return React.createElement(AriaSeparator, { ...props, ref, elementType: 'hr', className: classNames('muxui-menu-separator', className) });
+    return React.createElement(AriaSeparator, { ...props, ref, elementType: 'hr', className: classNames('muxui-menu__separator', className) });
   });
 
   Menu.Root = MenuRoot;

@@ -5,6 +5,7 @@ import { Markdown } from '../../../packages/react/generated/markdown.js';
 import { TextEditor } from '../../../packages/react/generated/text-editor.js';
 import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
 import selectNativeApi from '../../../packages/react/api/select-native.json' with { type: 'json' };
+import { partRow, selectorOf } from '../../../packages/react/test/support/styling-parts.ts';
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
@@ -463,8 +464,8 @@ const INTERACTION_OPEN_FAMILIES = new Set(['DatePicker', 'DateRangePicker', 'Com
 const INTERACTION_OPEN_SELECTORS = Object.freeze({
   DatePicker: '.muxui-date-trigger',
   DateRangePicker: '.muxui-date-trigger',
-  ComboBox: '.muxui-combo-box-trigger',
-  Select: '.muxui-select-trigger',
+  ComboBox: '.muxui-combo-box__trigger',
+  Select: '.muxui-select__trigger',
   CommandPalette: '.muxui-command-palette__trigger',
 });
 const LIFECYCLE_ATTRIBUTES = Object.freeze({
@@ -2019,60 +2020,6 @@ function UncontrolledHarness({ record, args }) {
   );
 }
 
-const CANONICAL_PART_SELECTORS = Object.freeze({
-  Avatar: { image: ['.muxui-avatar__image'], fallback: ['.muxui-avatar__fallback'] },
-  Button: { label: ['.muxui-button-content'] },
-  IconButton: { icon: ['.muxui-icon-button-icon'] },
-  Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
-  Link: { label: ['.muxui-link'] },
-  ListBox: { header: ['.muxui-list-box-section-header'] },
-  // Menu.Submenu renders no element of its own: its item is the one that carries data-muxui-state-has-submenu.
-  Menu: { header: ['.muxui-menu-section-header'], submenu: ['.muxui-menu-item[data-muxui-state-has-submenu]'] },
-  Image: { root: ['.muxui-image'] },
-  CodeBlock: { status: ['.muxui-code-block [role="status"]'] },
-  PromptComposer: { status: ['.muxui-prompt-composer [role="status"]'] },
-  Message: { status: ['.muxui-message [role="status"]'] },
-  Activity: { status: ['.muxui-activity [role="status"]'] },
-  Select: { popup: ['.muxui-select-popover'] },
-  SelectNative: { select: ['.muxui-select-native'], label: ['.muxui-select-native__label'], description: ['.muxui-select-native__description'], error: ['.muxui-select-native__error'] },
-  Meter: { label: ['.muxui-value-label'] },
-  ProgressBar: { label: ['.muxui-value-label'] },
-  ToggleButton: { label: ['.muxui-toggle-button'] },
-  CheckboxGroup: { options: ['.muxui-checkbox-group .muxui-checkbox'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  DateField: { segment: ['.muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  DatePicker: { segment: ['.muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  DateRangePicker: {
-    start: ['.muxui-date-range-picker .muxui-date-input[slot="start"]', '.muxui-date-range-picker .muxui-date-input:first-of-type', '.muxui-date-range-picker .muxui-date-input'],
-    end: ['.muxui-date-range-picker .muxui-date-input[slot="end"]', '.muxui-date-range-picker .muxui-date-input:last-of-type', '.muxui-date-range-picker .muxui-date-input'],
-    description: ['.muxui-field-description'],
-    error: ['.muxui-field-error'],
-  },
-  Form: { content: ['.muxui-form > *'] },
-  NumberField: { decrement: ['.muxui-number-stepper-decrement'], increment: ['.muxui-number-stepper-increment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  SearchField: { clear: ['.muxui-search-clear'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  Switch: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  TextField: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  TimeField: { segment: ['.muxui-time-field .muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  Autocomplete: { popover: ['.muxui-autocomplete-popover'], list: ['.muxui-autocomplete-list'] },
-  Calendar: { label: ['.muxui-calendar-heading'] },
-  ColorArea: { area: ['.muxui-color-area'] },
-  ColorField: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  ColorPicker: { field: ['.muxui-color-picker .muxui-color-field'], area: ['.muxui-color-picker .muxui-color-area'], slider: ['.muxui-color-picker .muxui-color-slider'], swatch: ['.muxui-color-picker .muxui-color-swatch'] },
-  ColorSwatchPicker: { swatch: ['.muxui-color-swatch-picker .muxui-color-swatch'], selection: ['.muxui-color-swatch-picker [aria-selected="true"]', '.muxui-color-swatch-picker .muxui-color-swatch-picker-item'] },
-  RangeCalendar: { grid: ['.muxui-range-calendar .muxui-calendar-grid'] },
-  Tabs: { list: ['.muxui-tab-list'], panels: ['.muxui-tab-panels'], panel: ['.muxui-tab-panel'] },
-  TagGroup: { list: ['.muxui-tag-list'], remove: ['.muxui-tag-remove'] },
-  ToggleButtonGroup: { button: ['.muxui-toggle-button-group .muxui-toggle-button'] },
-  Toolbar: { control: ['.muxui-toolbar button', '.muxui-toolbar [role="button"]'] },
-  Tree: { children: ['.muxui-tree .muxui-tree-item'] },
-  Virtualizer: { viewport: ['.muxui-virtualizer'], item: ['.muxui-virtualizer .muxui-virtualizer-item', '.muxui-virtualizer-item'] },
-  DropZone: { content: ['.muxui-drop-zone'] },
-  FileTrigger: { input: ['.muxui-file-trigger input[type="file"]', 'input[type="file"]'] },
-  Popover: { trigger: ['.muxui-overlay-pop-trigger', '.muxui-popover-positioner ~ button'], content: ['.muxui-popover > *'] },
-  PreviewTrigger: { content: ['.muxui-preview-content'] },
-  Tooltip: { trigger: ['.muxui-tooltip-trigger', '.muxui-tooltip ~ button', 'button'] },
-});
-
 const EXECUTABLE_ANATOMY_PARTS = Object.freeze({
   Autocomplete: new Set(['popover', 'list']),
   Virtualizer: new Set(['item']),
@@ -2082,26 +2029,21 @@ function executableAnatomyPart(family, part) {
   return EXECUTABLE_ANATOMY_PARTS[family]?.has(part) ?? false;
 }
 
+/** The part-map row of a binding's part. An unknown family or part throws, so a typo can never read as "no element". */
+function anatomyRow(binding, part) {
+  return partRow(familySlug(binding.export), part);
+}
+
+/** The selectors that find a part in the rendered anatomy: its row's selector, or none for a part that renders no element. */
 function partSelectors(binding, part) {
-  const root = binding.selector;
-  if (part === 'root') return [root];
-  const familySelectors = CANONICAL_PART_SELECTORS[binding.export]?.[part] ?? [];
-  const rootClass = root.replace(/^\./u, '');
-  const suffix = kebabCase(part);
-  const selectors = [
-    ...familySelectors,
-    `${root}-${suffix}`,
-    `.${rootClass}-${suffix}`,
-    `.muxui-${suffix}`,
-    `.muxui-field-${suffix}`,
-  ];
-  if (part === 'input') selectors.push(`${root} input`, `${root} textarea`);
-  if (part === 'label') selectors.push(`${root} label`, `${root} .muxui-field-label`, `${root} .muxui-value-label`);
-  if (part === 'trigger') selectors.push(`${root} button`, `${root} [role="button"]`);
-  if (part === 'item' || part === 'option' || part === 'cell' || part === 'row' || part === 'tab') {
-    selectors.push(`${root} [role="${part === 'item' ? 'option' : part}"]`);
-  }
-  return [...new Set(selectors)];
+  const selector = selectorOf(anatomyRow(binding, part));
+  return selector === undefined ? [] : [selector];
+}
+
+/** Why a part renders no element, from its row, or undefined for a part that has one. */
+function noElementReason(binding, part) {
+  const row = anatomyRow(binding, part);
+  return row.disposition === 'none' ? row.reason : undefined;
 }
 
 function anatomyArgsForBinding(record, sourceArgs) {
@@ -2112,6 +2054,8 @@ function anatomyArgsForBinding(record, sourceArgs) {
   // errorMessage renders only while invalid, so the anatomy shows the error part through invalid.
   if (props.has('errorMessage') && props.has('invalid')) args.invalid = true;
   if (record.family === 'ColorSwatchPicker') args.defaultValue = '#ff0000';
+  // The label part is the field label Calendar renders only when it has a label.
+  if (record.family === 'Calendar') args.label = 'Date';
   if (record.family === 'ListBox') {
     args.children = e(MuxUI.ListBox.Section, { title: 'Options' },
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
@@ -2171,12 +2115,16 @@ function AnatomyHarness({ record, args }) {
     : null;
   const anatomyStatus = e('div', { className: 'muxui-storybook-anatomy-status' },
     e('p', null, 'The state matrix renders the live component parts. Each row resolves its real DOM hook after mount.'),
-    e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => e('li', {
-      key: part,
-      'data-muxui-storybook-api-part-status': matches[part] > 0 ? 'found' : executableAnatomyPart(record.family, part) ? 'executable' : 'unresolved',
-      'data-muxui-storybook-api-part-proof': executableAnatomyPart(record.family, part) ? 'browser' : undefined,
-      'data-muxui-storybook-api-part-route': partSelectors(record.binding, part).join(' | '),
-    }, e('code', null, `${partSelectors(record.binding, part)[0]} (${part})`), `: ${matches[part] > 0 ? `${matches[part]} live node(s)` : executableAnatomyPart(record.family, part) ? 'executable Browser Proof route' : 'unresolved route'}`))),
+    e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => {
+      const reason = noElementReason(record.binding, part);
+      const executable = executableAnatomyPart(record.family, part);
+      return e('li', {
+        key: part,
+        'data-muxui-storybook-api-part-status': reason ? 'no-element' : matches[part] > 0 ? 'found' : executable ? 'executable' : 'unresolved',
+        'data-muxui-storybook-api-part-proof': executable ? 'browser' : undefined,
+        'data-muxui-storybook-api-part-route': reason ? `no element (${reason})` : partSelectors(record.binding, part).join(' | '),
+      }, e('code', null, `${partSelectors(record.binding, part)[0] ?? 'no element'} (${part})`), `: ${reason ? `renders no element (${reason})` : matches[part] > 0 ? `${matches[part]} live node(s)` : executable ? 'executable Browser Proof route' : 'unresolved route'}`);
+    })),
   );
   const content = e('div', {
     ref: hostRef,
@@ -2419,23 +2367,23 @@ function collectionSelectionPlan(family, selector) {
 
 async function dialogBrowserProof({ canvasElement }) {
   const family = 'Dialog';
-  const trigger = browserProofElement(canvasElement, '.muxui-dialog-trigger, .muxui-button', family);
+  const trigger = browserProofElement(canvasElement, '.muxui-dialog__trigger, .muxui-button', family);
   trigger.focus();
   trigger.click();
   await waitForBrowserEvent(canvasElement, 'openChange', family);
   const dialog = await waitForBrowserElement('.muxui-dialog', document, 2_000);
   assertBrowser(browserElementVisible(dialog), 'dialog portal is visible after activation');
   await waitForBrowserFocusWithin(dialog);
-  const close = dialog.querySelector('.muxui-dialog-close');
+  const close = dialog.querySelector('.muxui-dialog__close');
   assertBrowser(close, 'dialog close control is missing');
   close.click();
-  await waitForBrowserElementGone('.muxui-dialog-backdrop');
+  await waitForBrowserElementGone('.muxui-dialog__backdrop');
   await waitForBrowserFocus(trigger);
 }
 
 async function popoverBrowserProof({ canvasElement }) {
   const family = 'Popover';
-  const trigger = browserProofElement(canvasElement, '.muxui-overlay-pop-trigger, .muxui-button', family);
+  const trigger = browserProofElement(canvasElement, '.muxui-popover__trigger, .muxui-button', family);
   trigger.click();
   await waitForBrowserEvent(canvasElement, 'openChange', family);
   const popover = await waitForVisibleBrowserElement('.muxui-popover', family);
@@ -2485,7 +2433,7 @@ async function timedOverlayBrowserProof({ canvasElement, family }) {
 async function toastBrowserProof({ canvasElement }) {
   const family = 'Toast';
   const toast = await waitForVisibleBrowserElement('.muxui-toast', family);
-  const dismiss = toast.querySelector('.muxui-toast-dismiss');
+  const dismiss = toast.querySelector('.muxui-toast__dismiss');
   assertBrowser(dismiss, 'toast dismiss control is missing');
   dismiss.click();
   await waitForBrowserEvent(canvasElement, 'dismiss', family);
@@ -2493,10 +2441,10 @@ async function toastBrowserProof({ canvasElement }) {
 
 const BROWSER_PROOF_PLANS = {
   Button: activationPlan('Button', '.muxui-button'),
-  Breadcrumbs: activationPlan('Breadcrumbs', '.muxui-breadcrumbs-link', 'navigate'),
+  Breadcrumbs: activationPlan('Breadcrumbs', '.muxui-breadcrumbs__link', 'navigate'),
   Checkbox: activationPlan('Checkbox', '.muxui-checkbox input', 'change'),
-  Disclosure: activationPlan('Disclosure', '.muxui-disclosure-trigger', 'expandedChange'),
-  DisclosureGroup: activationPlan('DisclosureGroup', '.muxui-disclosure-trigger', 'expandedChange'),
+  Disclosure: activationPlan('Disclosure', '.muxui-disclosure__trigger', 'expandedChange'),
+  DisclosureGroup: activationPlan('DisclosureGroup', '.muxui-disclosure__trigger', 'expandedChange'),
   Group: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-group', 'Group');
     assertBrowser(root.getAttribute('role') === 'group', 'group exposes its declared role');
@@ -2513,19 +2461,19 @@ const BROWSER_PROOF_PLANS = {
     const root = browserProofElement(canvasElement, '.muxui-meter', 'Meter');
     assertBrowser(root.getAttribute('role') === 'meter', 'meter role');
     assertBrowser(Number(root.getAttribute('aria-valuenow')) >= 0, 'meter exposes a numeric value');
-    assertBrowser(root.querySelector('.muxui-meter-fill')?.style.inlineSize?.endsWith('%'), 'meter fill exposes a proportional geometry');
+    assertBrowser(root.querySelector('.muxui-meter__fill')?.style.inlineSize?.endsWith('%'), 'meter fill exposes a proportional geometry');
   },
   ProgressBar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-progress-bar', 'ProgressBar');
     assertBrowser(root.getAttribute('role') === 'progressbar', 'progress bar role');
-    assertBrowser(root.querySelector('.muxui-progress-bar-track'), 'progress bar track');
-    assertBrowser(root.querySelector('.muxui-progress-bar-fill'), 'progress bar fill');
+    assertBrowser(root.querySelector('.muxui-progress-bar__track'), 'progress bar track');
+    assertBrowser(root.querySelector('.muxui-progress-bar__fill'), 'progress bar fill');
     assertBrowser(root.getAttribute('aria-valuenow') !== null, 'progress bar exposes its current value');
   },
   Separator: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-separator', 'Separator');
     assertBrowser(root.getAttribute('role') === 'separator', 'separator role');
-    assertBrowser(root.getAttribute('aria-orientation') === 'horizontal' || root.classList.contains('muxui-separator-horizontal'), 'separator orientation');
+    assertBrowser(root.getAttribute('aria-orientation') === 'horizontal' || root.classList.contains('muxui-separator--horizontal'), 'separator orientation');
   },
   ToggleButton: activationPlan('ToggleButton', '.muxui-toggle-button', 'change'),
   Autocomplete: async ({ canvasElement }) => {
@@ -2533,8 +2481,8 @@ const BROWSER_PROOF_PLANS = {
     const input = root.querySelector('input');
     assertBrowser(input, 'autocomplete input');
     input.focus();
-    const list = await waitForVisibleBrowserElement('.muxui-autocomplete-list', 'Autocomplete');
-    const option = list.querySelector('.muxui-autocomplete-option');
+    const list = await waitForVisibleBrowserElement('.muxui-autocomplete__list', 'Autocomplete');
+    const option = list.querySelector('.muxui-autocomplete__option');
     assertBrowser(option, 'autocomplete option');
     option.click();
     await waitForBrowserEvent(canvasElement, 'change', 'Autocomplete');
@@ -2554,14 +2502,14 @@ const BROWSER_PROOF_PLANS = {
     trigger.click();
     await waitForBrowserEvent(canvasElement, 'openChange', 'DatePicker');
     const popover = await waitForVisibleBrowserElement('.muxui-date-popover', 'DatePicker');
-    assertBrowser(popover.querySelector('.muxui-calendar-cell'), 'date picker calendar cells');
+    assertBrowser(popover.querySelector('.muxui-calendar__cell'), 'date picker calendar cells');
   },
   DateRangePicker: async ({ canvasElement }) => {
     const trigger = browserProofElement(canvasElement, '.muxui-date-trigger', 'DateRangePicker');
     trigger.click();
     await waitForBrowserEvent(canvasElement, 'openChange', 'DateRangePicker');
     const popover = await waitForVisibleBrowserElement('.muxui-date-popover', 'DateRangePicker');
-    assertBrowser(popover.querySelector('.muxui-range-calendar-cell'), 'date range calendar cells');
+    assertBrowser(popover.querySelector('.muxui-range-calendar__cell'), 'date range calendar cells');
   },
   Form: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-form', 'Form');
@@ -2577,14 +2525,14 @@ const BROWSER_PROOF_PLANS = {
     submit.click();
     assertBrowser(submitted, 'submitting the form fires its native submit event');
   },
-  NumberField: activationPlan('NumberField', '.muxui-number-stepper-increment', 'change'),
+  NumberField: activationPlan('NumberField', '.muxui-number-field__increment', 'change'),
   SearchField: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-search-field', 'SearchField');
     const input = root.querySelector('input');
     assertBrowser(input, 'search input');
     setBrowserInputValue(input, 'proof');
     await waitForBrowserEvent(canvasElement, 'change', 'SearchField');
-    const clear = root.querySelector('.muxui-search-clear');
+    const clear = root.querySelector('.muxui-search-field__clear');
     assertBrowser(clear, 'search clear control');
     clear.click();
     await waitForBrowserEvent(canvasElement, 'clear', 'SearchField');
@@ -2612,7 +2560,7 @@ const BROWSER_PROOF_PLANS = {
   },
   Calendar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-calendar', 'Calendar');
-    const cell = root.querySelector('[data-muxui-state-type="day"]:not([aria-disabled="true"]):not([data-muxui-state-selected="true"]), .muxui-calendar-cell:not([aria-disabled="true"])');
+    const cell = root.querySelector('[data-muxui-state-type="day"]:not([aria-disabled="true"]):not([data-muxui-state-selected="true"]), .muxui-calendar__cell:not([aria-disabled="true"])');
     assertBrowser(cell, 'calendar day cell');
     cell.click();
     await waitForBrowserEvent(canvasElement, 'change', 'Calendar');
@@ -2636,7 +2584,7 @@ const BROWSER_PROOF_PLANS = {
   },
   ColorSlider: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-color-slider', 'ColorSlider');
-    const track = root.querySelector('.muxui-color-slider-track');
+    const track = root.querySelector('.muxui-color-slider__track');
     assertBrowser(track, 'color slider track');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
     activateBrowserColorTarget(track);
@@ -2648,7 +2596,7 @@ const BROWSER_PROOF_PLANS = {
     assertBrowser(bounds.width > 0 && bounds.height > 0, 'color swatch has measurable geometry');
     assertBrowser(root.getAttribute('data-muxui-color') || getComputedStyle(root).backgroundColor !== '', 'color swatch exposes a color presentation');
   },
-  ColorSwatchPicker: activationPlan('ColorSwatchPicker', '.muxui-color-swatch-picker-item', 'change'),
+  ColorSwatchPicker: activationPlan('ColorSwatchPicker', '.muxui-color-swatch-picker__item', 'change'),
   ColorWheel: async ({ canvasElement }) => {
     const control = browserProofElement(canvasElement, '.muxui-color-wheel [role="slider"], .muxui-color-wheel input[type="range"]', 'ColorWheel');
     nudgeBrowserRangeControl(control);
@@ -2658,29 +2606,29 @@ const BROWSER_PROOF_PLANS = {
     const root = browserProofElement(canvasElement, '.muxui-combo-box', 'ComboBox');
     const input = root.querySelector('input');
     assertBrowser(input, 'combo box input');
-    const trigger = root.querySelector('.muxui-combo-box-trigger');
+    const trigger = root.querySelector('.muxui-combo-box__trigger');
     assertBrowser(trigger, 'combo box options trigger');
     trigger.click();
-    const option = await waitForVisibleBrowserElement('.muxui-combo-box-option', 'ComboBox');
+    const option = await waitForVisibleBrowserElement('.muxui-combo-box__option', 'ComboBox');
     assertBrowser(option, 'combo box option');
     option.click();
     await waitForBrowserEvent(canvasElement, 'select', 'ComboBox');
     assertBrowser(input.value.length > 0, 'combo box selection populates the input');
   },
-  GridList: collectionSelectionPlan('GridList', '.muxui-grid-list-item'),
-  ListBox: collectionSelectionPlan('ListBox', '.muxui-list-box-item'),
+  GridList: collectionSelectionPlan('GridList', '.muxui-grid-list__item'),
+  ListBox: collectionSelectionPlan('ListBox', '.muxui-list-box__item'),
   // The proof story logs every event, which selects the triggered composition, so the items mount once it opens.
   Menu: async ({ canvasElement }) => {
-    canvasElement.querySelector('.muxui-menu-trigger')?.click();
-    const item = await waitForVisibleBrowserElement('.muxui-menu-item', 'Menu');
+    canvasElement.querySelector('.muxui-menu__trigger')?.click();
+    const item = await waitForVisibleBrowserElement('.muxui-menu__item', 'Menu');
     item.focus();
     item.click();
     await waitForBrowserEvent(canvasElement, 'action', 'Menu');
   },
-  RadioGroup: activationPlan('RadioGroup', '.muxui-radio', 'change'),
+  RadioGroup: activationPlan('RadioGroup', '.muxui-radio-group__radio', 'change'),
   RangeCalendar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-range-calendar', 'RangeCalendar');
-    const cells = [...root.querySelectorAll('.muxui-range-calendar-cell:not([aria-disabled="true"]):not([data-muxui-state-selected="true"])')];
+    const cells = [...root.querySelectorAll('.muxui-range-calendar__cell:not([aria-disabled="true"]):not([data-muxui-state-selected="true"])')];
     assertBrowser(cells.length >= 2, 'range calendar has two unselected day cells');
     cells[0].click();
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
@@ -2688,20 +2636,20 @@ const BROWSER_PROOF_PLANS = {
     await waitForBrowserEvent(canvasElement, 'change', 'RangeCalendar');
   },
   Select: async ({ canvasElement }) => {
-    const trigger = browserProofElement(canvasElement, '.muxui-select-trigger', 'Select');
+    const trigger = browserProofElement(canvasElement, '.muxui-select__trigger', 'Select');
     trigger.click();
     await waitForBrowserEvent(canvasElement, 'openChange', 'Select');
-    const popover = await waitForVisibleBrowserElement('.muxui-select-popover', 'Select');
-    assertBrowser(popover.querySelector('.muxui-select-option'), 'select options');
+    const popover = await waitForVisibleBrowserElement('.muxui-select__popup', 'Select');
+    assertBrowser(popover.querySelector('.muxui-select__option'), 'select options');
   },
   Slider: rangeChangePlan('Slider', '[role="slider"], input[type="range"]'),
-  Table: activationPlan('Table', '.muxui-table-row', 'rowAction'),
-  Tabs: activationPlan('Tabs', '.muxui-tab:nth-of-type(2)', 'change'),
-  TagGroup: activationPlan('TagGroup', '.muxui-tag-remove', 'remove'),
+  Table: activationPlan('Table', '.muxui-table__row', 'rowAction'),
+  Tabs: activationPlan('Tabs', '.muxui-tabs__tab:nth-of-type(2)', 'change'),
+  TagGroup: activationPlan('TagGroup', '.muxui-tag-group__remove', 'remove'),
   ToggleButtonGroup: activationPlan('ToggleButtonGroup', '.muxui-toggle-button', 'selectionChange'),
   TokenField: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-token-field', 'TokenField');
-    const input = root.querySelector('.muxui-token-input[contenteditable="true"]');
+    const input = root.querySelector('.muxui-token-field__input[contenteditable="true"]');
     assertBrowser(input, 'token field input');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
     input.focus();
@@ -2719,17 +2667,17 @@ const BROWSER_PROOF_PLANS = {
     // Typed text is a draft; Enter turns it into a token and reports the change.
     edit('insertParagraph');
     await waitForBrowserEvent(canvasElement, 'change', 'TokenField');
-    assertBrowser([...root.querySelectorAll('.muxui-token')].some((token) => token.textContent === 'Review'), 'Enter turns the draft into a token');
+    assertBrowser([...root.querySelectorAll('.muxui-token-field__token')].some((token) => token.textContent === 'Review'), 'Enter turns the draft into a token');
   },
   Toolbar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-toolbar', 'Toolbar');
     assertBrowser(root.getAttribute('role') === 'toolbar', 'toolbar role');
     assertBrowser(root.querySelector('button, [role="button"]'), 'toolbar control');
   },
-  Tree: collectionSelectionPlan('Tree', '.muxui-tree-item'),
+  Tree: collectionSelectionPlan('Tree', '.muxui-tree__item'),
   Virtualizer: async ({ canvasElement }) => {
     const virtualizer = browserProofElement(canvasElement, '.muxui-virtualizer', 'Virtualizer');
-    const item = virtualizer.querySelector('.muxui-virtualizer-item');
+    const item = virtualizer.querySelector('.muxui-virtualizer__item');
     assertBrowser(item, 'virtualizer item');
     virtualizer.scrollTop = 64;
     virtualizer.dispatchEvent(new Event('scroll', { bubbles: true }));
@@ -2767,10 +2715,10 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Avatar: '.muxui-avatar',
   ButtonGroup: '.muxui-button-group button',
   Card: '.muxui-card',
-  CodeBlock: '.muxui-code-block-copy',
-  PromptComposer: '.muxui-prompt-composer-input',
-  Message: '.muxui-message-sources-trigger',
-  Activity: '.muxui-activity-trigger',
+  CodeBlock: '.muxui-code-block__copy',
+  PromptComposer: '.muxui-prompt-composer__input',
+  Message: '.muxui-message__sources-trigger',
+  Activity: '.muxui-activity__trigger',
   DataDiff: '.muxui-data-diff input[type="checkbox"]',
   CheckboxField: '.muxui-checkbox-field__button',
   ColorModeToggle: '.muxui-color-mode-toggle',
@@ -2778,15 +2726,15 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Image: '.muxui-image',
   InputTags: '.muxui-input-tags input',
   Input: '.muxui-input',
-  Lightbox: '.muxui-lightbox-trigger',
+  Lightbox: '.muxui-lightbox__trigger',
   Markdown: '.muxui-markdown',
   MultiSelect: '.muxui-multi-select__trigger',
   PaymentInput: '.muxui-payment-input__input',
   ProgressCircle: '.muxui-progress-circle',
   RadioField: '.muxui-radio-field__button',
-  Resizable: '.muxui-resizable-handle',
+  Resizable: '.muxui-resizable__handle',
   SelectNative: '.muxui-select-native',
-  Sidebar: '.muxui-sidebar__mobile-menu-btn',
+  Sidebar: '.muxui-sidebar__mobile-trigger',
   SwitchField: '.muxui-switch-field__button',
   TagSelect: '.muxui-tag-select__input',
   Text: '.muxui-text',

@@ -4,7 +4,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const entry = '/packages/react/test/fixtures/color-picker-browser-entry.mjs';
 const documentHtml = () => pageShell({
-  head: '<style>body { margin: 0; padding: 16px; } .muxui-color-area { width: 200px; height: 200px; } .muxui-color-slider { width: 240px; } .muxui-color-slider-track { height: 24px; }</style>',
+  head: '<style>body { margin: 0; padding: 16px; } .muxui-color-area { width: 200px; height: 200px; } .muxui-color-slider { width: 240px; } .muxui-color-slider__track { height: 24px; }</style>',
   body: '<div id="root"></div>',
   entry,
 });
@@ -24,7 +24,7 @@ test('real browser drags a hue slider off black in a hex picker, then the area e
     const hue = () => page.locator('.muxui-color-slider input[type="range"]').inputValue();
 
     // Black has no hue in hex, yet the thumb follows the pointer and the picker still reports rgba().
-    const track = await page.locator('.muxui-color-slider-track').boundingBox();
+    const track = await page.locator('.muxui-color-slider__track').boundingBox();
     await page.mouse.move(track.x + 0.5 * track.width, track.y + track.height / 2);
     await page.mouse.down();
     await page.mouse.move(track.x + 0.25 * track.width, track.y + track.height / 2);

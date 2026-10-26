@@ -512,7 +512,7 @@ function ColorPicker({ editor, disabled, callbacks }: PickerProps) {
         React.createElement('div', { className: 'muxui-text-editor__color-swatches' }, [...SAFE_COLORS].map((hex) => React.createElement('button', { key: hex, type: 'button', className: 'muxui-text-editor__color-swatch', style: { backgroundColor: hex }, 'aria-label': hex, onClick: () => apply(hex) }))),
         React.createElement('div', { className: 'muxui-text-editor__color-field-row' },
           React.createElement(AriaLabel, { className: 'muxui-text-editor__color-field-label' }, 'Custom'),
-          React.createElement(AriaColorField, { value: color, onChange: handleColorChange, className: 'muxui-text-editor__color-field', 'aria-label': 'Custom color' }, React.createElement(AriaInput, null)),
+          React.createElement(AriaColorField, { value: color, onChange: handleColorChange, className: 'muxui-text-editor__custom-color-field', 'aria-label': 'Custom color' }, React.createElement(AriaInput, null)),
         ),
       ),
     ),
@@ -528,7 +528,7 @@ function ImagePicker({ editor, disabled, callbacks }: PickerProps) {
     return insert(src);
   };
   // TypeScript accepts a data-* key in a call only from a spread.
-  return React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
+  return React.createElement(IconButton, { className: 'muxui-text-editor__btn muxui-text-editor__image-picker', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
     if (callbacks.onImageRequest) callbacks.onImageRequest({ insertImage: (src, alt) => insert(src, alt) });
     else promptImage();
   } }, React.createElement(ImageIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }));
@@ -1354,7 +1354,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
       'aria-label': 'Selection actions',
       'aria-orientation': 'horizontal',
       'aria-busy': phase === 'pending' ? 'true' : undefined,
-      className: 'muxui-text-editor__selection-bar',
+      className: 'muxui-text-editor__selection-actions',
       'data-muxui-phase': phase,
       'data-muxui-instruction': instruction && !expanded && phase === 'idle' ? '' : undefined,
       onKeyDown: onBarKeyDown,

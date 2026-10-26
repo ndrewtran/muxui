@@ -207,7 +207,7 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
         : React.createElement(Select.Trigger, null,
           // Select.Value hands a function child to React Aria's SelectValue with the selection, which the public type, nodes only, does not name.
           React.createElement(Select.Value, null, (selectedContent === undefined || selectedContent === null ? (({ selectedText }: { selectedText: string }) => selectedText || placeholder) : selectedContent) as ReactNode),
-          React.createElement(ChevronDownIcon, { className: 'muxui-select-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
+          React.createElement(ChevronDownIcon, { className: 'muxui-select__arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
       React.createElement(Select.Popup, null, React.createElement(Select.List, { items })));
     return React.createElement(SelectContext.Provider, { value: selectContext },
       React.createElement(AriaSelect, {
@@ -232,29 +232,29 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
   Select.Root = Select as SelectComponent['Root'];
   Select.Label = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectLabel({ children, className, ...props }, ref) {
     // React Aria types a Label's ref as a label element's, though elementType makes it the span the public type names.
-    return React.createElement(AriaLabel, { ...props, ref: ref as Ref<HTMLLabelElement>, elementType: 'span', className: classNames('muxui-field-label muxui-select-label', className) }, children);
+    return React.createElement(AriaLabel, { ...props, ref: ref as Ref<HTMLLabelElement>, elementType: 'span', className: classNames('muxui-field-label muxui-select__label', className) }, children);
   });
   Select.Trigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(function SelectTrigger({ children, disabled = false, className, ...props }, ref) {
     const context = React.useContext(SelectContext);
     const effectiveDisabled = disabled ? disabled : context.disabled;
-    return React.createElement(CollectionTrigger, { ...props, ref, disabled: effectiveDisabled, className: classNames('muxui-select-trigger', className) }, children);
+    return React.createElement(CollectionTrigger, { ...props, ref, disabled: effectiveDisabled, className: classNames('muxui-select__trigger', className) }, children);
   });
   Select.Value = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectValue({ children, className, ...props }, ref) {
-    return React.createElement(AriaSelectValue, { ...props, ref, className: classNames('muxui-select-value', className) }, children);
+    return React.createElement(AriaSelectValue, { ...props, ref, className: classNames('muxui-select__value', className) }, children);
   });
   Select.Popup = React.forwardRef<HTMLDivElement, SelectPopupProps>(function SelectPopup({ children, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal, className, ...props }, ref) {
     const context = React.useContext(SelectContext);
     const defaults: Required<OverlayGeometryInput> = { ...SELECT_GEOMETRY, ...context.geometry };
     defaults.placement = defaults.placement.replace(' ', '-');
     const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, defaults, 'Select.Popup');
-    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, ref, triggerRef: anchorRef ?? context.anchorRef, isNonModal: !normalizeBoolean(modal, context.modal ?? true, 'Select.Popup modal'), className: classNames('muxui-select-popover', className), ...{ 'data-muxui-size': context.resolvedSize } }, children);
+    return React.createElement(PopoverMotion, { ...(props as AriaPopoverProps), ...geometry, ref, triggerRef: anchorRef ?? context.anchorRef, isNonModal: !normalizeBoolean(modal, context.modal ?? true, 'Select.Popup modal'), className: classNames('muxui-select__popup', className), ...{ 'data-muxui-size': context.resolvedSize } }, children);
   });
   Select.List = React.forwardRef<HTMLDivElement, SelectListProps>(function SelectList({ children, items, className, ...props }, ref) {
     const context = React.useContext(SelectContext);
     // normalizeItems takes no items as an empty list, so an omitted list has no default here to state.
     const normalized = normalizeItems(items);
     const hasChildren = children !== undefined && children !== null;
-    return React.createElement(AriaListBox<NormalizedItem>, { ...(props as AriaListBoxProps<NormalizedItem>), ref, items: hasChildren ? undefined : normalized, className: classNames('muxui-select-list', className), ...{ 'data-muxui-size': context.resolvedSize }, children: hasChildren ? children : (item: NormalizedItem) => React.createElement(Select.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label) });
+    return React.createElement(AriaListBox<NormalizedItem>, { ...(props as AriaListBoxProps<NormalizedItem>), ref, items: hasChildren ? undefined : normalized, className: classNames('muxui-select__list', className), ...{ 'data-muxui-size': context.resolvedSize }, children: hasChildren ? children : (item: NormalizedItem) => React.createElement(Select.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label) });
   });
   Select.Item = React.forwardRef<HTMLDivElement, SelectItemProps>(function SelectItem({ children, id, textValue, disabled = false, className, ...props }, ref) {
     const context = React.useContext(SelectContext);
@@ -265,14 +265,14 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
-      className: classNames('muxui-select-option', className),
+      className: classNames('muxui-select__option', className),
     }, children);
   });
   Select.Description = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectDescription({ children, className, ...props }, ref) {
-    return React.createElement(AriaText, { ...props, ref, elementType: 'span', slot: 'description', className: classNames('muxui-field-description muxui-select-description', className) }, children);
+    return React.createElement(AriaText, { ...props, ref, elementType: 'span', slot: 'description', className: classNames('muxui-field-description muxui-select__description', className) }, children);
   });
   Select.Error = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectError({ children, className, ...props }, ref) {
-    return React.createElement(AriaFieldError, { ...props, ref, elementType: 'span', className: classNames('muxui-field-error muxui-select-error', className) }, children);
+    return React.createElement(AriaFieldError, { ...props, ref, elementType: 'span', className: classNames('muxui-field-error muxui-select__error', className) }, children);
   });
   return Select;
 })();

@@ -44,7 +44,7 @@ for (const engine of browserEngines()) {
         try {
           const status = tab.getByRole('status');
           const name = tab.getByRole('textbox', { name: 'Display name' });
-          const trigger = (label) => tab.locator('.muxui-select', { has: tab.locator('.muxui-select-label', { hasText: label }) }).locator('.muxui-select-trigger');
+          const trigger = (label) => tab.locator('.muxui-select', { has: tab.locator('.muxui-select__label', { hasText: label }) }).locator('.muxui-select__trigger');
           const weekly = tab.getByRole('switch', { name: 'Weekly summary' });
           const expectStatus = (text) => pollUntil(tab, (expected) => document.querySelector('[role="status"]').textContent === expected, text, {
             message: `the status reads ${text}`,

@@ -29,23 +29,23 @@ test('DataDiff renders escaped scalars, labeled table cells, explicit change sem
     rows: [{ ...rows[0], values: { name: malicious, stock: 0 } }, ...rows.slice(1)],
   });
   assert.equal(document.querySelector('script'), null);
-  assert.equal(document.querySelector('[data-muxui-row-id="old"] .muxui-data-diff-cell').textContent.includes(malicious), true);
-  assert.equal(document.querySelector('[data-muxui-row-id="old"] td.muxui-data-diff-cell').textContent, '0');
-  assert.equal(document.querySelector('[data-muxui-row-id="context"] td.muxui-data-diff-cell').textContent, 'false');
-  assert.equal(document.querySelector('[data-muxui-row-id="new"] td.muxui-data-diff-cell').textContent, 'null');
+  assert.equal(document.querySelector('[data-muxui-row-id="old"] .muxui-data-diff__cell').textContent.includes(malicious), true);
+  assert.equal(document.querySelector('[data-muxui-row-id="old"] td.muxui-data-diff__cell').textContent, '0');
+  assert.equal(document.querySelector('[data-muxui-row-id="context"] td.muxui-data-diff__cell').textContent, 'false');
+  assert.equal(document.querySelector('[data-muxui-row-id="new"] td.muxui-data-diff__cell').textContent, 'null');
   assert.equal(document.querySelector('#review').title, 'Native tooltip');
   assert.equal(document.querySelector('#review').dataset.consumer, 'kept');
   assert.ok(document.querySelector('#review').classList.contains('consumer'));
   assert.equal(document.getElementById(document.querySelector('table').getAttribute('aria-labelledby')).textContent, 'Proposed changes');
   assert.ok(document.querySelector('th[scope="col"]'));
-  assert.ok(document.querySelector('thead tr').firstElementChild.matches('th.muxui-data-diff-selection[scope="col"]'));
-  assert.deepEqual([...document.querySelectorAll('thead .muxui-data-diff-column')].map((cell) => cell.textContent), ['Name', 'Stock']);
+  assert.ok(document.querySelector('thead tr').firstElementChild.matches('th.muxui-data-diff__selection[scope="col"]'));
+  assert.deepEqual([...document.querySelectorAll('thead .muxui-data-diff__column')].map((cell) => cell.textContent), ['Name', 'Stock']);
   for (const row of document.querySelectorAll('tbody tr')) {
-    assert.ok(row.firstElementChild.matches('td.muxui-data-diff-selection'));
-    assert.ok(row.children[1].matches('th.muxui-data-diff-cell[scope="row"]'));
+    assert.ok(row.firstElementChild.matches('td.muxui-data-diff__selection'));
+    assert.ok(row.children[1].matches('th.muxui-data-diff__cell[scope="row"]'));
   }
   assert.equal(document.querySelector('[data-muxui-row-id="context"] input'), null);
-  const changedCell = document.querySelector('[data-muxui-row-id="update"] td.muxui-data-diff-cell');
+  const changedCell = document.querySelector('[data-muxui-row-id="update"] td.muxui-data-diff__cell');
   assert.match(changedCell.textContent, /Before: 4After: 8/u);
   assert.equal(changedCell.querySelector('del').textContent, '4');
   assert.equal(changedCell.querySelector('ins').textContent, '8');
@@ -116,7 +116,7 @@ test('DataDiff native row/select-all selection gives ordered counts and applies 
     assert.equal(changes.length, 0);
     assert.equal(applied.length, 0);
     assert.equal(document.querySelector('[role="status"]').textContent, '1 removal · 1 addition · 1 update');
-    await act(async () => document.querySelector('[data-muxui-row-id="old"] td.muxui-data-diff-cell').click());
+    await act(async () => document.querySelector('[data-muxui-row-id="old"] td.muxui-data-diff__cell').click());
     assert.equal(changes.length, 1);
     assert.deepEqual(selected(), ['new', 'update']);
     assert.deepEqual(changes.at(-1), ['new', 'update']);
@@ -163,7 +163,7 @@ test('DataDiff controlled requests remain controlled, prune stale IDs, and gate 
       await act(async () => root.render(element({ ...props, ...gate })));
       assert.ok([...document.querySelectorAll('input, button')].every((control) => control.disabled));
       const count = changes.length;
-      await act(async () => document.querySelector('[data-muxui-row-id="new"] td.muxui-data-diff-cell').click());
+      await act(async () => document.querySelector('[data-muxui-row-id="new"] td.muxui-data-diff__cell').click());
       assert.equal(changes.length, count);
     }
     await act(async () => root.render(element({ ...props, selectedIds: ['new'] })));

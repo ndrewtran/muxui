@@ -114,7 +114,7 @@ export const ColorSwatchPicker: ForwardRefExoticComponent<ColorSwatchPickerProps
           color: item.color!,
           // React Aria's item props name none of these, and TypeScript accepts such a key in a call only from a spread.
           ...{ id: item.id, isDisabled: effectiveDisabled || item.disabled, 'data-muxui-state-read-only': effectiveReadOnly || undefined },
-          className: 'muxui-color-swatch-picker-item',
+          className: 'muxui-color-swatch-picker__item',
         },
         React.createElement(AriaColorSwatch, {
           color: item.color,

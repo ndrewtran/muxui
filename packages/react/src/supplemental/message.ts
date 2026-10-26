@@ -66,19 +66,19 @@ export const Message: ForwardRefExoticComponent<MessageProps & RefAttributes<HTM
   useCandidateMotion(sourcePanel, expanded, { active: expanded, reveal: true });
   const toggle = () => { const next = !expanded; if (sourcesExpanded === undefined) setLocalExpanded(next); onSourcesExpandedChange?.(next); };
   return e('article', { ...props, ref, className: ['muxui-message', className].filter(Boolean).join(' '), 'data-muxui-sender': sender, 'data-muxui-streaming': streaming ? true : undefined },
-    author && e('header', { className: 'muxui-message-author' }, author),
-    e('div', { className: 'muxui-message-content' }, children),
-    (actions.length > 0 || sources.length > 0) && e('div', { className: 'muxui-message-toolbar' },
-      actions.length > 0 && e('div', { className: 'muxui-message-actions', role: 'group', 'aria-label': 'Message actions' },
-        actions.map((action) => e('button', { key: action.id, 'data-muxui-size': 'sm', 'data-muxui-variant': 'ghost', type: 'button', className: ['muxui-button', action.pressed !== undefined && 'muxui-toggle-button', action.icon && 'muxui-icon-button', 'muxui-message-action'].filter(Boolean).join(' '), 'data-muxui-icon-button': action.icon ? '' : undefined, 'aria-label': action.label, disabled: action.disabled, 'data-muxui-state-disabled': action.disabled || undefined, 'aria-pressed': action.pressed, 'data-muxui-state-selected': action.pressed || undefined, onClick: action.onAction }, action.icon ? e('span', { className: 'muxui-icon-button-icon', 'aria-hidden': true }, action.icon) : action.label))),
-      sources.length > 0 && e('button', { 'data-muxui-size': 'sm', 'data-muxui-variant': 'ghost', type: 'button', className: 'muxui-button muxui-message-sources-trigger', 'aria-expanded': expanded, 'aria-controls': `${id}-sources`, onClick: toggle }, `${sources.length} ${sources.length === 1 ? 'source' : 'sources'}`, e(ChevronDown, { ref: chevron, className: 'muxui-message-sources-chevron', size: 16, 'aria-hidden': true, focusable: 'false' }))),
-    sources.length > 0 && e('ul', { ref: sourcePanel, id: `${id}-sources`, className: 'muxui-message-sources', hidden: !expanded }, sources.map((source, index) => {
+    author && e('header', { className: 'muxui-message__author' }, author),
+    e('div', { className: 'muxui-message__content' }, children),
+    (actions.length > 0 || sources.length > 0) && e('div', { className: 'muxui-message__toolbar' },
+      actions.length > 0 && e('div', { className: 'muxui-message__actions', role: 'group', 'aria-label': 'Message actions' },
+        actions.map((action) => e('button', { key: action.id, 'data-muxui-size': 'sm', 'data-muxui-variant': 'ghost', type: 'button', className: ['muxui-button', action.pressed !== undefined && 'muxui-toggle-button', action.icon && 'muxui-icon-button', 'muxui-message__action'].filter(Boolean).join(' '), 'data-muxui-icon-button': action.icon ? '' : undefined, 'aria-label': action.label, disabled: action.disabled, 'data-muxui-state-disabled': action.disabled || undefined, 'aria-pressed': action.pressed, 'data-muxui-state-selected': action.pressed || undefined, onClick: action.onAction }, action.icon ? e('span', { className: 'muxui-icon-button__icon', 'aria-hidden': true }, action.icon) : action.label))),
+      sources.length > 0 && e('button', { 'data-muxui-size': 'sm', 'data-muxui-variant': 'ghost', type: 'button', className: 'muxui-button muxui-message__sources-trigger', 'aria-expanded': expanded, 'aria-controls': `${id}-sources`, onClick: toggle }, `${sources.length} ${sources.length === 1 ? 'source' : 'sources'}`, e(ChevronDown, { ref: chevron, className: 'muxui-message__sources-chevron', size: 16, 'aria-hidden': true, focusable: 'false' }))),
+    sources.length > 0 && e('ul', { ref: sourcePanel, id: `${id}-sources`, className: 'muxui-message__sources', hidden: !expanded }, sources.map((source, index) => {
       const href = safeHref(source.href);
-      return e('li', { key: source.id }, e('span', { className: 'muxui-message-source-index', 'aria-hidden': true }, index + 1),
-        e('div', null, href ? e('a', { href, className: 'muxui-link' }, source.label) : e('span', null, source.label), source.description && e('span', { className: 'muxui-message-source-description' }, source.description)));
+      return e('li', { key: source.id }, e('span', { className: 'muxui-message__source-index', 'aria-hidden': true }, index + 1),
+        e('div', null, href ? e('a', { href, className: 'muxui-link' }, source.label) : e('span', null, source.label), source.description && e('span', { className: 'muxui-message__source-description' }, source.description)));
     })),
-    followUps.length > 0 && onFollowUp && e('div', { className: 'muxui-message-follow-ups', role: 'group', 'aria-label': 'Follow-ups' }, e('span', { className: 'muxui-message-follow-up-label' }, 'Follow-ups'),
-      followUps.map((item) => e('button', { key: item.id, 'data-muxui-size': 'sm', 'data-muxui-variant': 'neutral', className: 'muxui-button', type: 'button', onClick: () => onFollowUp(item) }, item.label, e(ArrowUpRight, { className: 'muxui-message-follow-up-icon', size: 16, 'aria-hidden': true, focusable: 'false' })))),
-    e('span', { className: 'muxui-message-sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, streaming ? streamingLabel : ''));
+    followUps.length > 0 && onFollowUp && e('div', { className: 'muxui-message__follow-ups', role: 'group', 'aria-label': 'Follow-ups' }, e('span', { className: 'muxui-message__follow-up-label' }, 'Follow-ups'),
+      followUps.map((item) => e('button', { key: item.id, 'data-muxui-size': 'sm', 'data-muxui-variant': 'neutral', className: 'muxui-button', type: 'button', onClick: () => onFollowUp(item) }, item.label, e(ArrowUpRight, { className: 'muxui-message__follow-up-icon', size: 16, 'aria-hidden': true, focusable: 'false' })))),
+    e('span', { className: 'muxui-message__status', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, streaming ? streamingLabel : ''));
 });
 Message.displayName = 'Message';

@@ -67,7 +67,7 @@ export const IconButton: ForwardRefExoticComponent<IconButtonProps & RefAttribut
     showTextWhileLoading: false,
   };
   return React.createElement(Button, buttonProps, React.createElement('span', {
-    className: 'muxui-icon-button-icon',
+    className: 'muxui-icon-button__icon',
     'aria-hidden': true,
   }, children));
 });

@@ -235,5 +235,5 @@ export function DialogMotion({ children, originRef, onExitComplete, onReducedCha
     setModalNode(node);
   }, []);
 
-  return React.createElement(AriaModal, { ref: assignModalRef, className: 'muxui-dialog-modal' }, children);
+  return React.createElement(AriaModal, { ref: assignModalRef, className: 'muxui-dialog__modal' }, children);
 }

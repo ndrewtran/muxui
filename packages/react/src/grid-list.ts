@@ -232,7 +232,7 @@ export const GridList: GridListComponent = /*#__PURE__*/ (() => {
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
-      className: classNames('muxui-grid-list-item', className),
+      className: classNames('muxui-grid-list__item', className),
     }, React.createElement(GridListItemDisabledContext.Provider, { value: effectiveDisabled }, children));
   });
   return component;

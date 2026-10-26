@@ -822,20 +822,20 @@ for (const engine of browserEngines()) {
           await ltr.tab.mouse.move(box.x + box.width / 2, box.y + 8);
           await pollUntil(ltr.tab, (card) => {
             const row = document.querySelector(`[role="row"]:has([data-card="${card}"])`).getBoundingClientRect();
-            const layer = document.querySelector('.muxui-grid-list-hover');
+            const layer = document.querySelector('.muxui-grid-list__hover');
             const rect = layer.getBoundingClientRect();
             return Number(getComputedStyle(layer).opacity) >= 0.99
               && ['left', 'top', 'width', 'height'].every((side) => Math.abs(rect[side] - row[side]) < 0.75);
           }, id, {
             message: `the hover layer settles on card ${id}`,
-            report: (card) => ({ opacity: getComputedStyle(document.querySelector('.muxui-grid-list-hover')).opacity, layer: document.querySelector('.muxui-grid-list-hover').getBoundingClientRect().toJSON(), row: document.querySelector(`[role="row"]:has([data-card="${card}"])`).getBoundingClientRect().toJSON() }),
+            report: (card) => ({ opacity: getComputedStyle(document.querySelector('.muxui-grid-list__hover')).opacity, layer: document.querySelector('.muxui-grid-list__hover').getBoundingClientRect().toJSON(), row: document.querySelector(`[role="row"]:has([data-card="${card}"])`).getBoundingClientRect().toJSON() }),
             timeout: 5000,
           });
         }
         // The layer sits under the cards: it is the lowest layer of the isolated GridList.
         assert.deepEqual(await ltr.tab.evaluate(() => {
           const root = document.querySelector('[role="grid"]');
-          return [getComputedStyle(root).isolation, getComputedStyle(root.querySelector('.muxui-grid-list-hover')).zIndex];
+          return [getComputedStyle(root).isolation, getComputedStyle(root.querySelector('.muxui-grid-list__hover')).zIndex];
         }), ['isolate', '-1']);
         // A hovered selected card keeps its selection style instead of the hover tint.
         await ltr.card('2').click();
@@ -852,13 +852,13 @@ for (const engine of browserEngines()) {
         try {
           await pollUntil(ltr.tab, () => {
             const row = document.querySelector('[role="row"]:has([data-card="1"])');
-            const host = row.querySelector('.muxui-grid-list-ripple-host');
-            if (!host || !host.querySelector('.muxui-grid-list-ripple')) return false;
+            const host = row.querySelector('.muxui-grid-list__ripple-host');
+            if (!host || !host.querySelector('.muxui-grid-list__ripple')) return false;
             const [hostBox, rowBox] = [host.getBoundingClientRect(), row.getBoundingClientRect()];
             return ['left', 'top', 'width', 'height'].every((side) => Math.abs(hostBox[side] - rowBox[side]) < 0.75);
           }, undefined, {
             message: 'the ripple host covers exactly the pressed card',
-            report: () => { const row = document.querySelector('[role="row"]:has([data-card="1"])'); return { host: row.querySelector('.muxui-grid-list-ripple-host')?.getBoundingClientRect().toJSON(), row: row.getBoundingClientRect().toJSON(), ripples: row.querySelectorAll('.muxui-grid-list-ripple').length }; },
+            report: () => { const row = document.querySelector('[role="row"]:has([data-card="1"])'); return { host: row.querySelector('.muxui-grid-list__ripple-host')?.getBoundingClientRect().toJSON(), row: row.getBoundingClientRect().toJSON(), ripples: row.querySelectorAll('.muxui-grid-list__ripple').length }; },
           });
         } finally {
           await ltr.tab.mouse.up();
@@ -879,8 +879,8 @@ for (const engine of browserEngines()) {
           const started = performance.now();
           const tick = () => {
             seen.opacity = getComputedStyle(row).opacity;
-            seen.ripples = Math.max(seen.ripples, row.querySelectorAll('.muxui-grid-list-ripple').length);
-            seen.hover = Math.max(seen.hover, Number(getComputedStyle(document.querySelector('.muxui-grid-list-hover')).opacity));
+            seen.ripples = Math.max(seen.ripples, row.querySelectorAll('.muxui-grid-list__ripple').length);
+            seen.hover = Math.max(seen.hover, Number(getComputedStyle(document.querySelector('.muxui-grid-list__hover')).opacity));
             if (performance.now() - started >= 400) resolve(seen);
             else requestAnimationFrame(tick);
           };

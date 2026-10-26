@@ -328,18 +328,18 @@
 /* Bare RAC buttons need the same chrome reset as the Mux UI Button base. Component
    rules below provide their own geometry, fills, and state treatments. */
 :where(
-  .muxui-number-stepper,
-  .muxui-toast-dismiss,
-  .muxui-dialog-close,
+  .muxui-number-field__stepper,
+  .muxui-toast__dismiss,
+  .muxui-dialog__close,
   .muxui-date-trigger,
-  .muxui-calendar-previous,
-  .muxui-calendar-next,
-  .muxui-combo-box-trigger,
-  .muxui-select-trigger,
-  .muxui-tag-remove,
-  .muxui-tree-toggle,
-  .muxui-disclosure-trigger,
-  .muxui-search-clear
+  .muxui-calendar__previous,
+  .muxui-calendar__next,
+  .muxui-combo-box__trigger,
+  .muxui-select__trigger,
+  .muxui-tag-group__remove,
+  .muxui-tree__toggle,
+  .muxui-disclosure__trigger,
+  .muxui-search-field__clear
 ) {
   position: relative;
   box-sizing: border-box;
@@ -368,7 +368,7 @@
   user-select: none;
 }
 
-.muxui-select-trigger,
+.muxui-select__trigger,
 .muxui-field-input,
 .muxui-date-input,
 .muxui-input,
@@ -458,7 +458,7 @@
 ) { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 :where(
-  .muxui-select-trigger,
+  .muxui-select__trigger,
   .muxui-field-input,
   .muxui-date-input,
   .muxui-input,
@@ -470,17 +470,17 @@
 }
 
 .muxui-text-area__textarea { min-block-size: 5rem; }
-.muxui-select-trigger[data-muxui-state-disabled] {
+.muxui-select__trigger[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
-.muxui-select[data-muxui-state-disabled] > .muxui-select-trigger[data-muxui-state-disabled] {
+.muxui-select[data-muxui-state-disabled] > .muxui-select__trigger[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
 }
-.muxui-select-trigger[data-muxui-state-focus-visible],
-.muxui-select-trigger:focus-visible,
-.muxui-select-trigger[data-muxui-state-open],
+.muxui-select__trigger[data-muxui-state-focus-visible],
+.muxui-select__trigger:focus-visible,
+.muxui-select__trigger[data-muxui-state-open],
 .muxui-field-input:focus,
 .muxui-field-input[data-muxui-state-open],
 .muxui-date-input[data-muxui-state-focused],
@@ -510,8 +510,8 @@
   color: var(--muxui-field-placeholder-color);
 }
 
-.muxui-combo-box-arrow,
-.muxui-select-arrow {
+.muxui-combo-box__arrow,
+.muxui-select__arrow {
   transition: transform var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
   display: inline-flex;
   align-items: center;
@@ -525,7 +525,7 @@
   transform: rotate(0deg);
 }
 
-.muxui-combo-box-trigger {
+.muxui-combo-box__trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -540,14 +540,14 @@
   cursor: pointer;
 }
 
-.muxui-combo-box-trigger:focus-visible {
+.muxui-combo-box__trigger:focus-visible {
   outline: none;
 }
 
-.muxui-select-trigger[data-muxui-state-open] .muxui-select-arrow,
-.muxui-select-trigger[aria-expanded='true'] .muxui-select-arrow,
-.muxui-combo-control[data-muxui-state-open] .muxui-combo-box-arrow,
-.muxui-combo-box-trigger[aria-expanded='true'] .muxui-combo-box-arrow {
+.muxui-select__trigger[data-muxui-state-open] .muxui-select__arrow,
+.muxui-select__trigger[aria-expanded='true'] .muxui-select__arrow,
+.muxui-combo-box__control[data-muxui-state-open] .muxui-combo-box__arrow,
+.muxui-combo-box__trigger[aria-expanded='true'] .muxui-combo-box__arrow {
   transform: rotate(180deg);
 }
 
@@ -590,14 +590,14 @@
   line-height: var(--muxui-semantic-typography-compact-line-height);
   cursor: default;
 }
-:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-token-field, .muxui-color-area-field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-muxui-state-disabled] .muxui-field-label {
+:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-token-field, .muxui-color-area__field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-muxui-state-disabled] .muxui-field-label {
   color: var(--muxui-semantic-content-default);
 }
 :where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-color-field, .muxui-token-field)[data-muxui-state-disabled] .muxui-field-label {
   opacity: 0.45;
 }
 
-.muxui-autocomplete-search[data-muxui-state-disabled] > .muxui-field-label {
+.muxui-autocomplete__search[data-muxui-state-disabled] > .muxui-field-label {
   color: var(--muxui-semantic-content-default);
   opacity: 0.45;
 }
@@ -668,7 +668,7 @@
   color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-slider-output {
+.muxui-slider__output {
   color: var(--muxui-semantic-content-muted);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
@@ -676,7 +676,7 @@
 }
 
 .muxui-slider[data-muxui-state-disabled] > .muxui-field-label,
-.muxui-slider[data-muxui-state-disabled] .muxui-slider-output {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider__output {
   color: var(--muxui-semantic-content-default);
 }
 
@@ -688,9 +688,9 @@
   color: var(--muxui-semantic-content-default);
 }
 
-.muxui-select-popover,
-.muxui-combo-box-popover,
-.muxui-autocomplete-list,
+.muxui-select__popup,
+.muxui-combo-box__popover,
+.muxui-autocomplete__list,
 .muxui-menu,
 .muxui-popover,
 .muxui-alert-dialog__popup,
@@ -711,12 +711,12 @@
 
 /* PopoverMotion owns the finite shell cycle. Keep RAC's placement transform
    and avoid a second CSS transition on the same surface. */
-.muxui-select-popover,
-.muxui-combo-box-popover,
-.muxui-autocomplete-popover,
-.muxui-autocomplete-list,
+.muxui-select__popup,
+.muxui-combo-box__popover,
+.muxui-autocomplete__popover,
+.muxui-autocomplete__list,
 .muxui-menu,
-.muxui-menu-popup,
+.muxui-menu__popup,
 .muxui-popover,
 .muxui-alert-dialog__popup,
 .muxui-command-palette__popup,
@@ -730,7 +730,7 @@
 :where(
   .muxui-select [data-muxui-part='header'],
   .muxui-combo-box [data-muxui-part='header'],
-  .muxui-autocomplete-list [data-muxui-part='header'],
+  .muxui-autocomplete__list [data-muxui-part='header'],
   .muxui-list-box [data-muxui-part='header'],
   .muxui-menu [data-muxui-part='header'],
   .muxui-command-palette__section-header
@@ -746,11 +746,11 @@
   cursor: default;
 }
 
-.muxui-select-option,
-.muxui-combo-box-option,
-.muxui-autocomplete-option,
-.muxui-list-box-item,
-.muxui-menu-item,
+.muxui-select__option,
+.muxui-combo-box__option,
+.muxui-autocomplete__option,
+.muxui-list-box__item,
+.muxui-menu__item,
 .muxui-command-palette__item,
 .muxui-multi-select__item,
 .muxui-tag-select__item {
@@ -773,11 +773,11 @@
   user-select: none;
 }
 
-.muxui-select-option[data-muxui-state-focused],
-.muxui-combo-box-option[data-muxui-state-focused],
-.muxui-autocomplete-option[data-muxui-state-focused],
-.muxui-list-box-item[data-muxui-state-focused],
-.muxui-menu-item[data-muxui-state-focused],
+.muxui-select__option[data-muxui-state-focused],
+.muxui-combo-box__option[data-muxui-state-focused],
+.muxui-autocomplete__option[data-muxui-state-focused],
+.muxui-list-box__item[data-muxui-state-focused],
+.muxui-menu__item[data-muxui-state-focused],
 .muxui-command-palette__item[data-muxui-state-focused],
 .muxui-multi-select__item[data-muxui-state-focused],
 .muxui-tag-select__item[data-muxui-state-focused] {
@@ -785,11 +785,11 @@
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-select-option[data-muxui-state-disabled],
-.muxui-combo-box-option[data-muxui-state-disabled],
-.muxui-autocomplete-option[data-muxui-state-disabled],
-.muxui-list-box-item[data-muxui-state-disabled],
-.muxui-menu-item[data-muxui-state-disabled],
+.muxui-select__option[data-muxui-state-disabled],
+.muxui-combo-box__option[data-muxui-state-disabled],
+.muxui-autocomplete__option[data-muxui-state-disabled],
+.muxui-list-box__item[data-muxui-state-disabled],
+.muxui-menu__item[data-muxui-state-disabled],
 .muxui-command-palette__item[data-muxui-state-disabled],
 .muxui-multi-select__item[data-muxui-state-disabled],
 .muxui-tag-select__item[data-muxui-state-disabled] {
@@ -799,7 +799,7 @@
   pointer-events: none;
 }
 
-.muxui-disclosure-panel {
+.muxui-disclosure__panel {
   color: var(--muxui-semantic-content-default);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
@@ -880,8 +880,8 @@
   pointer-events: none;
 }
 
-.muxui-date-control,
-.muxui-date-range-control {
+.muxui-date-picker__control,
+.muxui-date-range-picker__control {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -898,11 +898,11 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-date-picker .muxui-date-control {
+.muxui-date-picker .muxui-date-picker__control {
   padding-inline-end: var(--muxui-semantic-layout-inset-tiny);
 }
 
-.muxui-date-range-separator {
+.muxui-date-range-picker__separator {
   display: inline-block;
   inline-size: auto;
   overflow: visible;
@@ -912,29 +912,29 @@
   flex: 0 0 auto;
 }
 
-.muxui-date-control:focus-within,
-.muxui-date-range-control:focus-within {
+.muxui-date-picker__control:focus-within,
+.muxui-date-range-picker__control:focus-within {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-date-control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
-.muxui-date-range-control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
+.muxui-date-picker__control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
+.muxui-date-range-picker__control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-date-picker[data-muxui-state-invalid] .muxui-date-control,
-.muxui-date-range-picker[data-muxui-state-invalid] .muxui-date-range-control {
+.muxui-date-picker[data-muxui-state-invalid] .muxui-date-picker__control,
+.muxui-date-range-picker[data-muxui-state-invalid] .muxui-date-range-picker__control {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-date-picker[data-muxui-state-invalid] .muxui-date-control:focus-within,
-.muxui-date-range-picker[data-muxui-state-invalid] .muxui-date-range-control:focus-within {
+.muxui-date-picker[data-muxui-state-invalid] .muxui-date-picker__control:focus-within,
+.muxui-date-range-picker[data-muxui-state-invalid] .muxui-date-range-picker__control:focus-within {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-date-picker[data-muxui-state-disabled] .muxui-date-control,
-.muxui-date-range-picker[data-muxui-state-disabled] .muxui-date-range-control {
+.muxui-date-picker[data-muxui-state-disabled] .muxui-date-picker__control,
+.muxui-date-range-picker[data-muxui-state-disabled] .muxui-date-range-picker__control {
   background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
@@ -1041,8 +1041,8 @@
   position: relative;
 }
 
-.muxui-date-control .muxui-date-trigger,
-.muxui-date-range-control .muxui-date-trigger {
+.muxui-date-picker__control .muxui-date-trigger,
+.muxui-date-range-picker__control .muxui-date-trigger {
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   border-top: none;
@@ -1053,8 +1053,8 @@
   background-color: var(--muxui-semantic-surface-raised);
 }
 
-.muxui-date-control .muxui-date-trigger:hover,
-.muxui-date-range-control .muxui-date-trigger:hover {
+.muxui-date-picker__control .muxui-date-trigger:hover,
+.muxui-date-range-picker__control .muxui-date-trigger:hover {
   background-color: var(--muxui-semantic-surface-hover);
 }
 
@@ -1066,16 +1066,16 @@
   outline: none;
 }
 
-.muxui-date-picker-popover,
-.muxui-date-range-picker-popover {
+.muxui-date-picker__popover,
+.muxui-date-range-picker__popover {
   box-shadow: 0 4px 16px var(--muxui-component-datepicker-popover-shadow-color);
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
     .muxui-date-trigger,
-    .muxui-date-control .muxui-date-trigger,
-    .muxui-date-range-control .muxui-date-trigger
+    .muxui-date-picker__control .muxui-date-trigger,
+    .muxui-date-range-picker__control .muxui-date-trigger
   ) {
     background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 85%, black);
     border-color: var(--muxui-semantic-color-neutral-84);
@@ -1104,7 +1104,7 @@
   inline-size: calc(var(--muxui-calendar-cell-size) * 7);
 }
 
-.muxui-calendar-header-cell {
+.muxui-calendar__header-cell {
   text-align: center;
   padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-tiny);
   font-family: var(--muxui-semantic-typography-text-font-family);
@@ -1113,8 +1113,8 @@
   color: var(--muxui-semantic-content-muted);
 }
 
-.muxui-calendar-cell,
-.muxui-range-calendar-cell {
+.muxui-calendar__cell,
+.muxui-range-calendar__cell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1133,42 +1133,42 @@
     color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-calendar-cell:hover,
-.muxui-range-calendar-cell:hover {
+.muxui-calendar__cell:hover,
+.muxui-range-calendar__cell:hover {
   background: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-calendar-cell[data-muxui-state-today],
-.muxui-range-calendar-cell[data-muxui-state-today] {
+.muxui-calendar__cell[data-muxui-state-today],
+.muxui-range-calendar__cell[data-muxui-state-today] {
   font-weight: var(--muxui-semantic-typography-control-weight);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.muxui-calendar-cell[data-muxui-state-outside-month],
-.muxui-range-calendar-cell[data-muxui-state-outside-month] {
+.muxui-calendar__cell[data-muxui-state-outside-month],
+.muxui-range-calendar__cell[data-muxui-state-outside-month] {
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-calendar-cell[data-muxui-state-disabled],
-.muxui-calendar-cell[data-muxui-state-unavailable],
-.muxui-range-calendar-cell[data-muxui-state-disabled],
-.muxui-range-calendar-cell[data-muxui-state-unavailable] {
+.muxui-calendar__cell[data-muxui-state-disabled],
+.muxui-calendar__cell[data-muxui-state-unavailable],
+.muxui-range-calendar__cell[data-muxui-state-disabled],
+.muxui-range-calendar__cell[data-muxui-state-unavailable] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-calendar-cell[data-muxui-state-focus-visible],
-.muxui-range-calendar-cell[data-muxui-state-focus-visible] {
+.muxui-calendar__cell[data-muxui-state-focus-visible],
+.muxui-range-calendar__cell[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
-.muxui-calendar-previous,
-.muxui-calendar-next {
+.muxui-calendar__previous,
+.muxui-calendar__next {
   box-sizing: border-box;
   width: 28px;
   height: 28px;
@@ -1181,38 +1181,38 @@
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-calendar-previous:hover:not([data-muxui-state-disabled]),
-.muxui-calendar-next:hover:not([data-muxui-state-disabled]),
-.muxui-calendar-previous[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
-.muxui-calendar-next[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
+.muxui-calendar__previous:hover:not([data-muxui-state-disabled]),
+.muxui-calendar__next:hover:not([data-muxui-state-disabled]),
+.muxui-calendar__previous[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
+.muxui-calendar__next[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-color: var(--muxui-semantic-action-neutral-background-hover);
 }
 
-.muxui-calendar-previous:active:not([data-muxui-state-disabled]),
-.muxui-calendar-next:active:not([data-muxui-state-disabled]),
-.muxui-calendar-previous[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
-.muxui-calendar-next[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
+.muxui-calendar__previous:active:not([data-muxui-state-disabled]),
+.muxui-calendar__next:active:not([data-muxui-state-disabled]),
+.muxui-calendar__previous[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
+.muxui-calendar__next[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
   background-color: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
-.muxui-calendar-previous svg,
-.muxui-calendar-next svg {
+.muxui-calendar__previous svg,
+.muxui-calendar__next svg {
   color: currentColor;
   stroke: currentColor;
 }
 
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-calendar-previous,
-.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-calendar-next {
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-calendar__previous,
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-calendar__next {
   --muxui-icon-button-size: 28px;
 }
 
-.muxui-calendar-previous .muxui-icon-button-icon,
-.muxui-calendar-next .muxui-icon-button-icon {
+.muxui-calendar__previous .muxui-icon-button__icon,
+.muxui-calendar__next .muxui-icon-button__icon {
   width: 1rem;
   height: 1rem;
 }
 
-.muxui-calendar-heading {
+.muxui-calendar__heading {
   margin: 0;
   padding: 0;
   text-align: center;
@@ -1225,9 +1225,9 @@
   border: none;
 }
 
-.muxui-color-area-thumb,
-.muxui-color-slider-thumb,
-.muxui-color-wheel-thumb {
+.muxui-color-area__thumb,
+.muxui-color-slider__thumb,
+.muxui-color-wheel__thumb {
   width: 0.78125rem;
   height: 0.78125rem;
   border-radius: var(--muxui-semantic-shape-pill-radius);
@@ -1239,16 +1239,16 @@
   transition: box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-color-area-thumb[data-muxui-state-focus-visible],
-.muxui-color-slider-thumb[data-muxui-state-focus-visible],
-.muxui-color-wheel-thumb[data-muxui-state-focus-visible] {
+.muxui-color-area__thumb[data-muxui-state-focus-visible],
+.muxui-color-slider__thumb[data-muxui-state-focus-visible],
+.muxui-color-wheel__thumb[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-color-slider-thumb[data-muxui-state-dragging],
-.muxui-color-wheel-thumb[data-muxui-state-dragging] {
+.muxui-color-slider__thumb[data-muxui-state-dragging],
+.muxui-color-wheel__thumb[data-muxui-state-dragging] {
   cursor: grabbing;
 }
 
@@ -1258,7 +1258,7 @@
   cursor: not-allowed;
   pointer-events: none;
 }
-.muxui-dialog-title {
+.muxui-dialog__title {
   margin: 0;
   padding-right: calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
   color: var(--muxui-modal-title-color);
@@ -1355,22 +1355,22 @@
   gap: var(--muxui-modal-actions-gap);
   margin-top: var(--muxui-semantic-layout-action-gap);
 }
-.muxui-dialog-backdrop {
+.muxui-dialog__backdrop {
   position: fixed;
   inset: 0;
   background-color: var(--muxui-modal-backdrop-bg);
   z-index: 100;
   transition: opacity var(--muxui-semantic-motion-modal-transition-duration) var(--muxui-semantic-motion-modal-transition-easing);
 }
-.muxui-dialog-backdrop[data-muxui-state-entering] {
+.muxui-dialog__backdrop[data-muxui-state-entering] {
   opacity: 0;
 }
-.muxui-dialog-backdrop[data-muxui-state-exiting] {
+.muxui-dialog__backdrop[data-muxui-state-exiting] {
   opacity: 0;
   transition: opacity var(--muxui-semantic-motion-modal-dismiss-transition-duration) var(--muxui-semantic-motion-modal-dismiss-transition-easing);
 }
 
-.muxui-dialog-close {
+.muxui-dialog__close {
   position: absolute;
   color: var(--muxui-semantic-content-muted);
   min-height: auto;
@@ -1390,8 +1390,8 @@
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
-.muxui-progress-bar-track,
-.muxui-meter-track {
+.muxui-progress-bar__track,
+.muxui-meter__track {
   position: relative;
   width: 100%;
   height: var(--muxui-progress-track-height);
@@ -1400,22 +1400,22 @@
   overflow: hidden;
 }
 
-.muxui-progress-bar-fill,
-.muxui-meter-fill {
+.muxui-progress-bar__fill,
+.muxui-meter__fill {
   height: 100%;
   background-color: var(--muxui-progress-indicator-bg);
   border-radius: var(--muxui-progress-track-radius);
   transition: width var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
-.muxui-checkbox-group-field {
+.muxui-checkbox-group__field {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-gap);
   width: max-content;
 }
 
-.muxui-radio-group-field {
+.muxui-radio-group__field {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-gap);
@@ -1439,11 +1439,11 @@
 }
 
 /* A horizontal group wraps its options, so the group error takes a row of its own. */
-.muxui-radio-group[data-muxui-state-orientation='horizontal'] > .muxui-radio-group-error {
+.muxui-radio-group[data-muxui-state-orientation='horizontal'] > .muxui-radio-group__error {
   flex-basis: 100%;
 }
 
-.muxui-combo-control {
+.muxui-combo-box__control {
   display: flex;
   align-items: center;
   position: relative;
@@ -1459,43 +1459,43 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-combo-control:focus-within {
+.muxui-combo-box__control:focus-within {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-combo-control[data-muxui-state-open] {
+.muxui-combo-box__control[data-muxui-state-open] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-combo-control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
+.muxui-combo-box__control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-combo-box[data-muxui-state-invalid] .muxui-combo-control,
-.muxui-combo-control[data-muxui-state-invalid] {
+.muxui-combo-box[data-muxui-state-invalid] .muxui-combo-box__control,
+.muxui-combo-box__control[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-combo-box[data-muxui-state-invalid] .muxui-combo-control:focus-within,
-.muxui-combo-control[data-muxui-state-invalid]:focus-within {
+.muxui-combo-box[data-muxui-state-invalid] .muxui-combo-box__control:focus-within,
+.muxui-combo-box__control[data-muxui-state-invalid]:focus-within {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-combo-control[data-muxui-state-disabled] {
+.muxui-combo-box__control[data-muxui-state-disabled] {
   background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }
 
-.muxui-combo-box[data-muxui-state-disabled] .muxui-combo-control {
+.muxui-combo-box[data-muxui-state-disabled] .muxui-combo-box__control {
   background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }
 
-.muxui-combo-control > .muxui-field-input {
+.muxui-combo-box__control > .muxui-field-input {
   border: none;
   background: transparent;
   outline: none;

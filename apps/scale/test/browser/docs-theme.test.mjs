@@ -213,15 +213,15 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await page.waitForFunction(() => document.querySelector('.scale-app')?.dataset.muxuiMotion === 'reduced' && document.querySelector('.scale-app')?.dataset.muxuiDensity === 'compact');
     const portalPage = await context.newPage();
     await portalPage.goto(`${url}/components/select/`);
-    await (await waitForHydrated(portalPage.locator('.muxui-select-trigger').first())).click();
-    await portalPage.locator('.muxui-select-popover').waitFor();
-    const portal = portalPage.locator('.muxui-select-popover');
+    await (await waitForHydrated(portalPage.locator('.muxui-select__trigger').first())).click();
+    await portalPage.locator('.muxui-select__popup').waitFor();
+    const portal = portalPage.locator('.muxui-select__popup');
     assert.notEqual(await portal.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
     assert.equal(await portal.evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-reference-color-brand-60').trim()), appliedBrand);
     assert.equal(await portal.evaluate((node) => getComputedStyle(node).boxSizing), 'content-box');
 
     await portalPage.goto(`${url}/components/number-field/`);
-    const numberStepper = portalPage.locator('.muxui-number-stepper').first();
+    const numberStepper = portalPage.locator('.muxui-number-field__stepper').first();
     await numberStepper.waitFor();
     const numberStepperGeometry = await numberStepper.evaluate((node) => {
       const styles = getComputedStyle(node);
@@ -246,7 +246,7 @@ test('docs Scale applies one validated theme across shell, islands and portals',
 
     await portalPage.setViewportSize({ width: 1280, height: 900 });
     await portalPage.goto(`${url}/components/dialog/`);
-    const dialogTrigger = portalPage.locator('.muxui-dialog-trigger').first();
+    const dialogTrigger = portalPage.locator('.muxui-dialog__trigger').first();
     await (await waitForHydrated(dialogTrigger)).click();
     const dialog = portalPage.locator('.muxui-dialog');
     await dialog.waitFor();
@@ -264,7 +264,7 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     assert.ok(mobileDialog.left >= 0 && mobileDialog.right <= mobileDialog.viewport, `mobile dialog overflows viewport: ${JSON.stringify(mobileDialog)}`);
     await portalPage.close();
     const calendarGeometry = await page.locator('.preview-canvas .muxui-calendar').evaluate((calendar) => {
-      const grid = calendar.querySelector('.muxui-calendar-grid');
+      const grid = calendar.querySelector('.muxui-calendar__grid');
       if (!grid) throw new Error('Missing calendar grid');
       const calendarRect = calendar.getBoundingClientRect();
       const gridRect = grid.getBoundingClientRect();
@@ -373,9 +373,9 @@ test('docs Scale applies one validated theme across shell, islands and portals',
 
     const importedPortalPage = await context.newPage();
     await importedPortalPage.goto(`${url}/components/select/`);
-    await (await waitForHydrated(importedPortalPage.locator('.muxui-select-trigger').first())).click();
-    await importedPortalPage.locator('.muxui-select-popover').waitFor();
-    const importedPortal = importedPortalPage.locator('.muxui-select-popover');
+    await (await waitForHydrated(importedPortalPage.locator('.muxui-select__trigger').first())).click();
+    await importedPortalPage.locator('.muxui-select__popup').waitFor();
+    const importedPortal = importedPortalPage.locator('.muxui-select__popup');
     assert.equal(await importedPortal.evaluate((node) => getComputedStyle(node).borderTopLeftRadius), await resolveToken(importedPortalPage, 'border-radius', '--muxui-semantic-control-radius'));
     assert.equal(await importedPortal.evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-reference-color-brand-60').trim()), importedBrand);
     await importedPortalPage.close();

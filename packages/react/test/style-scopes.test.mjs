@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 import { importantCategory, importantDeclarations, importantIdentity } from './support/important-declarations.mjs';
+import { guardedPrefixes } from './support/styling-inventory.mjs';
 
 // Every authored stylesheet, so a new one is checked without being listed.
 const sourceRoot = new URL('../src/', import.meta.url);
@@ -54,7 +55,7 @@ test('authored color-mode descendants use nearest explicit @scope boundaries', a
     /^\s*\[data-muxui-color-scheme(?:\s*=\s*['"](?:light|dark)['"])?\]\s+(?!\{)/mu,
     'mode descendants are not globally scoped',
   );
-  assert.match(combined, /:scope\s+:where\(\.muxui-meter-fill, \.muxui-progress-bar-fill\)/u);
+  assert.match(combined, /:scope\s+:where\(\.muxui-meter__fill, \.muxui-progress-bar__fill\)/u);
 });
 
 // Returns every rule selector inside light or dark colour-scheme @scope blocks,
@@ -87,18 +88,28 @@ function schemeScopedSelectors(css) {
   return selectors;
 }
 
+// Figma variables hold one value per mode, so these families must not switch tokens by selector. The pattern matches the root and
+// every part class of the listed families (`.muxui-tabs`, `.muxui-tabs__tab`), and Button outside the Toolbar.
+const migrated = new RegExp(`\\.muxui-(?:${guardedPrefixes.modeAwareFamilies.join('|')})(?:__[a-z0-9-]+)?(?![\\w-])|(?<!\\.muxui-toolbar > |:not\\()\\.muxui-button(?![\\w-])`, 'u');
+const modeOffenders = (css) => schemeScopedSelectors(css)
+  .map(({ scheme, selector }) => `${scheme} ${selector}`)
+  .filter((rule) => migrated.test(rule));
+
 test('migrated families paint mode-aware tokens instead of colour-scheme overrides', async () => {
   const combined = (await Promise.all(sourceFiles.map((url) => readFile(url, 'utf8')))).join('\n');
   const selectors = schemeScopedSelectors(combined);
   for (const scheme of ['light', 'dark']) {
     assert.ok(selectors.some((rule) => rule.scheme === scheme), `other families still author ${scheme}-scheme rules`);
   }
-  // Figma variables hold one value per mode, so these families must not switch tokens by selector.
-  const migrated = /\.muxui-(?:checkbox(?:-indicator|-field(?:__\w+)?)?|switch(?:-label|-indicator)?|text-field|tabs?|tab-(?:list|panels?|label)|tag(?:-group|-list|-remove)?|select-native(?:-field|__\w+)?)(?![\w-])|(?<!\.muxui-toolbar > |:not\()\.muxui-button(?![\w-])/u;
-  const offenders = selectors
-    .map(({ scheme, selector }) => `${scheme} ${selector}`)
-    .filter((rule) => migrated.test(rule));
-  assert.deepEqual(offenders, []);
+  assert.deepEqual(modeOffenders(combined), []);
+});
+
+test('the mode-aware guard reads the renamed part classes of the migrated families', () => {
+  const scoped = (scheme, selector) => `@scope ([data-muxui-color-scheme='${scheme}']) to (.muxui-nested) { ${selector} { color: red; } }`;
+  assert.deepEqual(modeOffenders(scoped('dark', '.muxui-checkbox__indicator')), ['dark .muxui-checkbox__indicator']);
+  assert.deepEqual(modeOffenders(scoped('light', '.muxui-tabs__tab')), ['light .muxui-tabs__tab']);
+  assert.deepEqual(modeOffenders(scoped('dark', '.muxui-tag-group .muxui-tag-group__tag')), ['dark .muxui-tag-group .muxui-tag-group__tag']);
+  assert.deepEqual(modeOffenders(scoped('dark', '.muxui-calendar__cell')), []);
 });
 
 // Every `!important` declaration Mux UI ships, pinned by category and identity (file, enclosing rules, property,
@@ -136,7 +147,7 @@ test('the authored !important declarations are exactly the pinned ones, by categ
   });
   assert.deepEqual(found, importantPin);
   // The structural ones are internal parts, not accessibility adaptations.
-  assert.ok(found.structural.every((identity) => /\.muxui-toggle-button-group-motion-label \{|\.muxui-progress-bar\[data-muxui-state-indeterminate\]/u.test(identity)));
+  assert.ok(found.structural.every((identity) => /\.muxui-toggle-button-group__motion-label \{|\.muxui-progress-bar\[data-muxui-state-indeterminate\]/u.test(identity)));
 });
 
 test('the generated stylesheets keep every !important declaration in muxui.components', () => {

@@ -135,19 +135,19 @@ export const Button: ForwardRefExoticComponent<ButtonProps & RefAttributes<HTMLB
     // A conditional, not pending || ...: extraction reads a fallback on an owned prop as an executed default.
     : { 'aria-busy': pending ? true : ariaBusy || undefined };
   const content = React.createElement('span', {
-    className: ['muxui-button-content', showPendingText ? 'muxui-button-content--with-spinner' : ''].filter(Boolean).join(' '),
+    className: ['muxui-button__label', showPendingText ? 'muxui-button__label--with-spinner' : ''].filter(Boolean).join(' '),
     id: labelPendingContent ? pendingContentLabelId : undefined,
     style: pending && !showTextWhileLoading ? { visibility: 'hidden' } : undefined,
   }, children);
   const spinner = pending ? React.createElement('svg', {
-    className: ['muxui-button-spinner', showPendingText ? 'muxui-button-spinner--inline' : ''].filter(Boolean).join(' '),
+    className: ['muxui-button__spinner', showPendingText ? 'muxui-button__spinner--inline' : ''].filter(Boolean).join(' '),
     viewBox: '0 0 24 24',
     fill: 'none',
     'aria-hidden': 'true',
   }, React.createElement('circle', {
-    className: 'muxui-button-spinner-track', cx: '12', cy: '12', r: '10', strokeWidth: '3',
+    className: 'muxui-button__spinner-track', cx: '12', cy: '12', r: '10', strokeWidth: '3',
   }), React.createElement('circle', {
-    className: 'muxui-button-spinner-arc', cx: '12', cy: '12', r: '10', strokeWidth: '3', strokeLinecap: 'round',
+    className: 'muxui-button__spinner-arc', cx: '12', cy: '12', r: '10', strokeWidth: '3', strokeLinecap: 'round',
   })) : null;
   return React.createElement(AriaButton, {
     // React Aria passes the native attributes it does not own through to the <button>; its

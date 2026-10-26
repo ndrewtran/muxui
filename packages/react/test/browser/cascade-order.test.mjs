@@ -38,8 +38,8 @@ function swapChunks(css, earlier, later) {
 
 const fixture = (css) => `<!doctype html><html><head><style>${css}</style></head><body>
   <button id="icon-button" class="muxui-button muxui-icon-button" data-muxui-icon-button data-muxui-size="sm">x</button>
-  <span id="chip" class="muxui-text-editor__btn muxui-command-palette__chip-remove"><span class="muxui-icon-button-icon"></span></span>
-  <button id="lightbox-close" class="muxui-button muxui-lightbox-close" data-muxui-size="sm">x</button>
+  <span id="chip" class="muxui-text-editor__btn muxui-command-palette__chip-remove"><span class="muxui-icon-button__icon"></span></span>
+  <button id="lightbox-close" class="muxui-button muxui-lightbox__close" data-muxui-size="sm">x</button>
 </body></html>`;
 
 // Runs in the page. `winner` is what the later rule gives and `loser` what the earlier one gives; they must differ,
@@ -58,7 +58,7 @@ function observe() {
   const labelS = 'var(--muxui-semantic-typography-label-s-font-size)';
   return [
     ['padding', style('#icon-button').paddingLeft, probe('padding-left', 'var(--muxui-semantic-layout-inset-tight)'), probe('padding-left', '0')],
-    ['chipIcon', style('#chip .muxui-icon-button-icon').width, probe('width', '0.875rem'), probe('width', '1rem')],
+    ['chipIcon', style('#chip .muxui-icon-button__icon').width, probe('width', '0.875rem'), probe('width', '1rem')],
     ['iconButtonFont', style('#icon-button').fontSize, probe('font-size', labelM), probe('font-size', labelS)],
     ['lightboxFont', style('#lightbox-close').fontSize, probe('font-size', labelM), probe('font-size', labelS)],
     ['lightboxPadding', style('#lightbox-close').paddingLeft, probe('padding-left', 'var(--muxui-semantic-layout-inset-tight)'), probe('padding-left', 'var(--muxui-semantic-layout-inset-small)')],

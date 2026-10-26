@@ -202,18 +202,18 @@ export const CodeBlock: ForwardRefExoticComponent<CodeBlockProps & RefAttributes
     'data-muxui-diff-strategy': mode === 'diff' ? listing.coarse ? 'replacement' : 'minimal' : undefined,
   },
   // Conditionals, not ||: extraction reads a fallback on an owned prop as an executed default.
-  (filename ? filename : language ? language : copyable ? copyable : mode === 'diff') && React.createElement('div', { className: 'muxui-code-block-header' },
-    React.createElement(CodeXml, { className: 'muxui-code-block-icon', size: 16, 'aria-hidden': true, focusable: 'false' }),
-    React.createElement('span', { className: 'muxui-code-block-filename' }, filename ? filename : language),
-    mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-counts', role: 'group', 'aria-label': `${added} added lines, ${removed} removed lines` },
-      React.createElement('span', { className: 'muxui-code-block-added-count', 'aria-hidden': true }, `+${added}`),
-      React.createElement('span', { className: 'muxui-code-block-removed-count', 'aria-hidden': true }, `−${removed}`)),
+  (filename ? filename : language ? language : copyable ? copyable : mode === 'diff') && React.createElement('div', { className: 'muxui-code-block__header' },
+    React.createElement(CodeXml, { className: 'muxui-code-block__icon', size: 16, 'aria-hidden': true, focusable: 'false' }),
+    React.createElement('span', { className: 'muxui-code-block__filename' }, filename ? filename : language),
+    mode === 'diff' && React.createElement('span', { className: 'muxui-code-block__counts', role: 'group', 'aria-label': `${added} added lines, ${removed} removed lines` },
+      React.createElement('span', { className: 'muxui-code-block__added-count', 'aria-hidden': true }, `+${added}`),
+      React.createElement('span', { className: 'muxui-code-block__removed-count', 'aria-hidden': true }, `−${removed}`)),
     copyable && React.createElement(Tooltip, {
       content: 'Copied', open: status === 'copied', disabled: status !== 'copied',
       onOpenChange: (open) => { if (!open && status === 'copied') dismissFeedback(); },
       trigger: React.createElement(IconButton, {
       ref: copyButton, variant: 'neutral', size: 'sm',
-      type: 'button', className: 'muxui-code-block-copy', onActivate: copyText,
+      type: 'button', className: 'muxui-code-block__copy', onActivate: copyText,
       disabled: status === 'pending', pending: status === 'pending',
       onPointerEnter: (event) => { lastPointerType.current = event.pointerType; },
       onPointerDown: (event) => { lastPointerType.current = event.pointerType; },
@@ -223,27 +223,27 @@ export const CodeBlock: ForwardRefExoticComponent<CodeBlockProps & RefAttributes
       onBlur: () => { if (status === 'copied') dismissFeedback(); },
       onKeyDown: (event) => { if (event.key === 'Escape') dismissFeedback(); },
       'aria-label': mode === 'diff' ? 'Copy updated code' : 'Copy code',
-    }, React.createElement('span', { ref: copyIcon, className: 'muxui-code-block-copy-icon' },
+    }, React.createElement('span', { ref: copyIcon, className: 'muxui-code-block__copy-icon' },
       React.createElement(status === 'copied' ? Check : Copy, { size: 16, 'aria-hidden': true, focusable: 'false' }))),
     })),
-  listing.coarse && React.createElement('p', { className: 'muxui-code-block-notice' }, 'Large change shown as removed and added lines.'),
-  mode === 'diff' && lineNumbers && React.createElement('span', { id: legendId, className: 'muxui-code-block-sr-only' }, 'Original line numbers are in the first column. Updated line numbers are in the second.'),
-  React.createElement('pre', { className: 'muxui-code-block-pre', style: { '--muxui-code-block-gutter-width': `${String(listing.rows.length).length}ch` }, tabIndex: 0, 'aria-label': mode === 'diff' ? 'Code changes' : 'Code', 'aria-describedby': mode === 'diff' && lineNumbers ? legendId : undefined },
-    React.createElement('code', { className: 'muxui-code-block-code', 'data-muxui-language': language }, listing.rows.map((row, index) =>
-      React.createElement('span', { className: 'muxui-code-block-line', key: index, 'data-muxui-change': row.kind },
-        lineNumbers && mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-number', 'aria-hidden': true, 'data-muxui-line-number': row.old ?? '' }),
-        lineNumbers && React.createElement('span', { className: 'muxui-code-block-number', 'aria-hidden': true, 'data-muxui-line-number': row.next ?? '' }),
-        mode === 'diff' && React.createElement('span', { className: 'muxui-code-block-marker', 'aria-hidden': true, 'data-muxui-marker': row.kind === 'added' ? '+' : row.kind === 'removed' ? '−' : ' ' }),
-        row.kind !== 'context' && React.createElement('span', { className: 'muxui-code-block-sr-only' }, `${row.kind === 'added' ? 'Added' : 'Removed'} line: `),
-        React.createElement('span', { className: 'muxui-code-block-text' },
+  listing.coarse && React.createElement('p', { className: 'muxui-code-block__notice' }, 'Large change shown as removed and added lines.'),
+  mode === 'diff' && lineNumbers && React.createElement('span', { id: legendId, className: 'muxui-code-block__status' }, 'Original line numbers are in the first column. Updated line numbers are in the second.'),
+  React.createElement('pre', { className: 'muxui-code-block__pre', style: { '--muxui-code-block-gutter-width': `${String(listing.rows.length).length}ch` }, tabIndex: 0, 'aria-label': mode === 'diff' ? 'Code changes' : 'Code', 'aria-describedby': mode === 'diff' && lineNumbers ? legendId : undefined },
+    React.createElement('code', { className: 'muxui-code-block__code', 'data-muxui-language': language }, listing.rows.map((row, index) =>
+      React.createElement('span', { className: 'muxui-code-block__line', key: index, 'data-muxui-change': row.kind },
+        lineNumbers && mode === 'diff' && React.createElement('span', { className: 'muxui-code-block__number', 'aria-hidden': true, 'data-muxui-line-number': row.old ?? '' }),
+        lineNumbers && React.createElement('span', { className: 'muxui-code-block__number', 'aria-hidden': true, 'data-muxui-line-number': row.next ?? '' }),
+        mode === 'diff' && React.createElement('span', { className: 'muxui-code-block__marker', 'aria-hidden': true, 'data-muxui-marker': row.kind === 'added' ? '+' : row.kind === 'removed' ? '−' : ' ' }),
+        row.kind !== 'context' && React.createElement('span', { className: 'muxui-code-block__status' }, `${row.kind === 'added' ? 'Added' : 'Removed'} line: `),
+        React.createElement('span', { className: 'muxui-code-block__text' },
           highlighted
             ? [highlighted[mode === 'diff' && row.kind !== 'removed' ? 1 : 0][(row.kind === 'removed' ? row.old : row.next) - 1]?.map((token, tokenIndex) =>
-              React.createElement('span', { key: tokenIndex, className: token.role ? `muxui-code-block-token-${token.role}` : undefined }, token.text)) ?? row.text,
+              React.createElement('span', { key: tokenIndex, className: token.role ? `muxui-code-block__token-${token.role}` : undefined }, token.text)) ?? row.text,
               index < listing.rows.length - 1 ? '\n' : '']
             : row.text + (index < listing.rows.length - 1 ? '\n' : '')))))),
-  React.createElement('span', { className: 'muxui-code-block-sr-only', role: 'status', 'aria-live': 'polite', 'aria-atomic': true },
+  React.createElement('span', { className: 'muxui-code-block__status', role: 'status', 'aria-live': 'polite', 'aria-atomic': true },
     currentCopy && copy.succeeded ? 'Code copied.' : status === 'error' ? copyError : ''),
-  status === 'error' && React.createElement('p', { className: 'muxui-code-block-notice', 'aria-hidden': true }, copyError));
+  status === 'error' && React.createElement('p', { className: 'muxui-code-block__notice', 'aria-hidden': true }, copyError));
 });
 
 CodeBlock.displayName = 'CodeBlock';

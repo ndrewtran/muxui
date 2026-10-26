@@ -252,7 +252,7 @@ test('Mux preset themes resolve compiler colors and live React scopes in Chrome'
 
     const readMeterNesting = () => page.evaluate(() => Object.fromEntries(
       [['outer', 'outer-dark'], ['inner', 'inner-light'], ['deep', 'deep-dark']].map(([name, id]) => {
-        const fill = document.querySelector(`#${id}-meter .muxui-meter-fill`);
+        const fill = document.querySelector(`#${id}-meter .muxui-meter__fill`);
         if (!fill) throw new Error(`${name} meter fill is missing`);
         return [name, getComputedStyle(fill).backgroundColor];
       }),

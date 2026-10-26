@@ -32,7 +32,7 @@ test('component selectors stay Mux UI-owned', async () => {
     assert.match(css, new RegExp(`\\.muxui-${slug}(?:\\b|[-_])`));
   }
   assert.match(await readFile(resolve(import.meta.dirname, '../generated/overlays.js'), 'utf8'), /muxui-file-trigger/u);
-  assert.match(css, /\.muxui-checkbox-indicator/);
+  assert.match(css, /\.muxui-checkbox__indicator/);
   assert.match(css, /data-muxui-state-indeterminate/);
   assert.match(css, /semantic-feedback-invalid/);
   assert.doesNotMatch(css, /--color-60/u);
@@ -186,8 +186,8 @@ test('Button exposes seven variants with stable root hooks', async () => {
   assert.match(css, /\.muxui-button\[data-muxui-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
 
   const pendingWithText = renderToString(React.createElement(Button, { pending: true, showTextWhileLoading: true }, 'Saving'));
-  assert.match(pendingWithText, /muxui-button-content--with-spinner/u);
-  assert.match(pendingWithText, /muxui-button-spinner--inline/u);
+  assert.match(pendingWithText, /muxui-button__label--with-spinner/u);
+  assert.match(pendingWithText, /muxui-button__spinner--inline/u);
   assert.doesNotMatch(pendingWithText, /visibility:hidden/u);
 });
 
@@ -398,7 +398,7 @@ const partRenders = {
   'CommandPalette.trigger': { scope: '.muxui-command-palette__trigger', render: () => commandPalette() },
   'CommandPalette.close': { scope: '.muxui-command-palette__close', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.Close, null, 'Done')) },
   'CommandPalette.search-field': { scope: '.muxui-command-palette__search-field', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.SearchField, null, h(generated.CommandPalette.Input))) },
-  'CommandPalette.clear-button': { scope: '.muxui-command-palette__clear', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.SearchField, null, h(generated.CommandPalette.Input), h(generated.CommandPalette.ClearButton))) },
+  'CommandPalette.clear-button': { scope: '.muxui-command-palette__clear-button', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.SearchField, null, h(generated.CommandPalette.Input), h(generated.CommandPalette.ClearButton))) },
   'CommandPalette.item': { scope: '[role="option"]', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.ListBox, { 'aria-label': 'Commands' }, h(generated.CommandPalette.Item, { id: 'one', title: 'One' }))) },
   // The backdrop renders no markup until the palette opens; its default is observed on the mounted modal.
   'CommandPalette.backdrop': { render: () => commandPalette() },
@@ -524,7 +524,7 @@ async function sentUpstream(render, match) {
 const popupSent = (props) => sentUpstream(() => renderToString(menuRoot(null, props)), (sent) => 'isNonModal' in sent);
 // A Select's popup takes the geometry its root sets, and its own where it sets one, so the root's value is read where the popup sends it.
 const selectPopupSent = (rootProps) => sentUpstream(() => renderToString(selectRoot(rootProps)), (sent) => 'isNonModal' in sent);
-const selectPlaceholder = (props) => new JSDOM(renderToString(selectField(props))).window.document.querySelector('.muxui-select-value')?.textContent;
+const selectPlaceholder = (props) => new JSDOM(renderToString(selectField(props))).window.document.querySelector('.muxui-select__value')?.textContent;
 
 // Defaults only behaviour shows. Each observer renders the component (optionally
 // with the prop overridden) and returns what the renderer does.
@@ -541,7 +541,7 @@ const behaviourObservers = {
     // A pending Button either keeps its label visible beside the spinner or hides it.
     showTextWhileLoading: (props) => {
       const { document } = new JSDOM(renderToString(h(generated.Button, { pending: true, ...props }, 'Saving'))).window;
-      return !(document.querySelector('.muxui-button-content')?.getAttribute('style') ?? '').includes('visibility:hidden');
+      return !(document.querySelector('.muxui-button__label')?.getAttribute('style') ?? '').includes('visibility:hidden');
     },
   },
   ToggleButtonGroup: {
@@ -1153,11 +1153,11 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-link\[data-muxui-state-hovered\][\s\S]*var\(--muxui-semantic-content-link-hover\)/u);
   assert.match(css, /\.muxui-link\[data-muxui-state-pressed\][\s\S]*var\(--muxui-semantic-content-link-pressed\)/u);
   assert.match(css, /\.muxui-link[^\{]*\{[\s\S]*var\(--muxui-semantic-content-link\)/u);
-  assert.match(css, /\.muxui-tab\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
-  assert.match(css, /\.muxui-autocomplete-option\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
-  assert.match(css, /\.muxui-breadcrumbs-item\[data-muxui-state-current\][\s\S]*font-weight: var\(--muxui-semantic-typography-label-weight\)/u);
-  assert.match(css, /\.muxui-breadcrumbs-item\[data-muxui-state-disabled\]:not\(\[data-muxui-state-current\]\)[^}]*color: var\(--muxui-semantic-content-default\)/u);
-  assert.doesNotMatch(css, /\.muxui-breadcrumbs-item\[data-muxui-state-disabled\][^}]*opacity:/u);
+  assert.match(css, /\.muxui-tabs__tab\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
+  assert.match(css, /\.muxui-autocomplete__option\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
+  assert.match(css, /\.muxui-breadcrumbs__item\[data-muxui-state-current\][\s\S]*font-weight: var\(--muxui-semantic-typography-label-weight\)/u);
+  assert.match(css, /\.muxui-breadcrumbs__item\[data-muxui-state-disabled\]:not\(\[data-muxui-state-current\]\)[^}]*color: var\(--muxui-semantic-content-default\)/u);
+  assert.doesNotMatch(css, /\.muxui-breadcrumbs__item\[data-muxui-state-disabled\][^}]*opacity:/u);
 
   assert.match(css, /\.muxui-dialog\s*\{[^}]*transform: translate\(-50%, -50%\)[^;]*;/u);
   assert.doesNotMatch(css, /\.muxui-popover\[data-muxui-state-entering\][\s\S]*transform: scale\(0\.97\)/u);
@@ -1166,18 +1166,18 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-tooltip\[data-muxui-state-entering\][\s\S]*scale: 0\.9;[\s\S]*filter: blur\(5px\)/u);
   assert.match(css, /\.muxui-toast\s*\{[\s\S]*transition: none;/u);
   assert.match(css, /\.muxui-toast\[data-muxui-toast-exiting\][\s\S]*pointer-events: none;/u);
-  assert.match(css, /\.muxui-dialog-backdrop\s*\{[\s\S]*position: fixed;[\s\S]*inset: 0;/u);
-  assert.match(css, /\.muxui-dialog-content\s*\{[\s\S]*font-weight: var\(--muxui-semantic-typography-body-weight\)/u);
+  assert.match(css, /\.muxui-dialog__backdrop\s*\{[\s\S]*position: fixed;[\s\S]*inset: 0;/u);
+  assert.match(css, /\.muxui-dialog__content\s*\{[\s\S]*font-weight: var\(--muxui-semantic-typography-body-weight\)/u);
   assert.match(css, /\.muxui-field-description\s*\{[\s\S]*color: var\(--muxui-semantic-content-default\)/u);
-  assert.match(css, /\.muxui-button\[data-muxui-state-pending\] \.muxui-button-content\s*\{[^}]*opacity:\s*0;/u);
+  assert.match(css, /\.muxui-button\[data-muxui-state-pending\] \.muxui-button__label\s*\{[^}]*opacity:\s*0;/u);
   assert.match(css, /\.muxui-button\[data-muxui-state-pending\]::after[\s\S]*content: none;/u);
-  assert.match(css, /\.muxui-progress-bar\[data-muxui-state-indeterminate\] \.muxui-progress-bar-fill[\s\S]*margin-inline-start: 30%;/u);
+  assert.match(css, /\.muxui-progress-bar\[data-muxui-state-indeterminate\] \.muxui-progress-bar__fill[\s\S]*margin-inline-start: 30%;/u);
   assert.doesNotMatch(css, /muxui-control-spin|muxui-progress-indeterminate/u);
   const infiniteAnimationRules = [...css.matchAll(/([^{}]+\{[^{}]*animation:[^;]*infinite[^{}]*\})/gu)].map(([rule]) => rule);
   assert.ok(infiniteAnimationRules.length > 0, 'current union retains the explicit indeterminate progress behavior');
-  assert.ok(infiniteAnimationRules.every((rule) => /\.muxui-(?:progress-(?:bar|circle)|button-spinner)/u.test(rule)), 'continuous animation is restricted to indeterminate progress and pending button spinners');
-  assert.match(css, /\.muxui-button-spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate var\(--muxui-semantic-motion-progress-spin-duration\) var\(--muxui-semantic-motion-constant-easing\) infinite;/u);
-  assert.match(css, /\.muxui-button-spinner-arc\s*\{[\s\S]*animation: muxui-button-spinner-dash var\(--muxui-semantic-motion-progress-sweep-duration\) var\(--muxui-semantic-motion-progress-easing\) infinite;/u);
+  assert.ok(infiniteAnimationRules.every((rule) => /\.muxui-(?:progress-(?:bar|circle)|button__spinner)/u.test(rule)), 'continuous animation is restricted to indeterminate progress and pending button spinners');
+  assert.match(css, /\.muxui-button__spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate var\(--muxui-semantic-motion-progress-spin-duration\) var\(--muxui-semantic-motion-constant-easing\) infinite;/u);
+  assert.match(css, /\.muxui-button__spinner-arc\s*\{[\s\S]*animation: muxui-button-spinner-dash var\(--muxui-semantic-motion-progress-sweep-duration\) var\(--muxui-semantic-motion-progress-easing\) infinite;/u);
 
   assert.match(css, /--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
   assert.match(css, /--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);

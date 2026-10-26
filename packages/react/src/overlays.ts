@@ -415,11 +415,11 @@ function DialogContent({ title, description, actions, children, ariaLabel, dismi
   // explicit actions still close a non-dismissable Dialog.
   const explicitCloseState = React.useMemo(() => triggerState && { ...triggerState, close: explicitClose }, [triggerState, explicitClose]);
   const dialog = React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
-    hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: classNames('muxui-dialog-title', titleClassName) }, title) : null,
-    description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog-description', descriptionClassName) }, description) : null,
-    React.createElement('div', { className: classNames('muxui-dialog-content', contentClassName) }, children),
-    actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog-actions', actionsClassName) }, actions) : null,
-    dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
+    hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: classNames('muxui-dialog__title', titleClassName) }, title) : null,
+    description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog__description', descriptionClassName) }, description) : null,
+    React.createElement('div', { className: classNames('muxui-dialog__content', contentClassName) }, children),
+    actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog__actions', actionsClassName) }, actions) : null,
+    dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog__close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
   return React.createElement(AriaOverlayTriggerStateContext.Provider, { value: explicitCloseState }, dialog);
 }
 
@@ -463,7 +463,7 @@ function DialogOverlay({ dismissable, backdropClassName, children, state, inside
     ref: backdropRef,
     isDismissable: dismissable,
     isKeyboardDismissDisabled: !dismissable,
-    className: classNames('muxui-dialog-backdrop', backdropClassName),
+    className: classNames('muxui-dialog__backdrop', backdropClassName),
     isExiting: !isOpen && phase.exiting,
   };
   if (!insideTrigger) {
@@ -581,7 +581,7 @@ export const Dialog: ForwardRefExoticComponent<DialogProps & RefAttributes<HTMLE
     const content = React.createElement(DialogOverlay, { dismissable, backdropClassName, state: triggerState, insideTrigger: hasTrigger, originRef: motionOriginRef },
       React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, explicitClose: triggerState.close, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
     if (hasTrigger) {
-      return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
+      return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(trigger, false, 'muxui-dialog__trigger'), content);
     }
     return React.createElement(React.Fragment, null,
       React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
@@ -667,7 +667,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     containerPadding: geometry.containerPadding,
     isNonModal: !modal,
     'data-muxui-modal': modal,
-    className: 'muxui-popover-positioner',
+    className: 'muxui-popover__positioner',
     isKeyboardDismissDisabled: !dismissable,
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
   }, React.createElement(PopoverSurface, {
@@ -750,7 +750,7 @@ export const Popover: ForwardRefExoticComponent<PopoverProps & RefAttributes<HTM
   };
   const dismissibleTrigger = React.cloneElement(trigger, { onKeyDown: composeEventHandlers(trigger.props.onKeyDown, onTriggerKeyDown) });
   const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, onDismissOutside: dismissNonModal, explicitClose: triggerState.close }, children);
-  return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(dismissibleTrigger, false, 'muxui-overlay-pop-trigger'), content);
+  return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(dismissibleTrigger, false, 'muxui-popover__trigger'), content);
 });
 
 function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }: { disabled: boolean; open?: boolean; defaultOpen: boolean; onOpenChange?: (open: boolean) => void }) {
@@ -918,7 +918,7 @@ export const PreviewTrigger: ForwardRefExoticComponent<PreviewTriggerProps & Ref
     // focus stays on the trigger until Tab moves into the preview.
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, React.createElement('div', { className: 'muxui-preview-content' }, children)));
+  }, React.createElement('div', { className: 'muxui-preview-trigger__content' }, children)));
 });
 
 PreviewTrigger.displayName = 'PreviewTrigger';
@@ -1169,7 +1169,7 @@ function createAnimatedToastQueue(queue: UNSTABLE_ToastQueue<ToastContent>, clos
 function moveFocusFromExitingToast(node: HTMLElement, returnFocus: Element | null) {
   const active = node.ownerDocument.activeElement;
   if (!active || !node.contains(active)) return;
-  const region = node.closest('.muxui-toast-region');
+  const region = node.closest('.muxui-toast__region');
   const remaining = region ? [...region.querySelectorAll('.muxui-toast:not([data-muxui-toast-exiting])')] : [];
   const next = remaining.find((candidate) => node.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) ?? remaining.at(-1);
   const target = getInteractionModality() !== 'pointer' && next ? next : returnFocus;
@@ -1218,10 +1218,10 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, ori
     lifecycleRef(node);
   }, [lifecycleRef]);
   return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-muxui-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
-    React.createElement(AriaToastContent, { className: 'muxui-toast-content' },
-      React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast-title', hasTitle ? undefined : 'muxui-toast-title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
-      React.createElement(AriaText, { slot: 'description', className: 'muxui-toast-message' }, value.message)),
-    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast-dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })));
+    React.createElement(AriaToastContent, { className: 'muxui-toast__content' },
+      React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast__title', hasTitle ? undefined : 'muxui-toast__title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
+      React.createElement(AriaText, { slot: 'description', className: 'muxui-toast__message' }, value.message)),
+    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })));
 }
 
 /** What a notification added through the manager can say and do. */
@@ -1331,7 +1331,7 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
     // The region reads the queue only through its subscribe, visibleToasts, add, close, pauseAll, resumeAll, and clear;
     // React Aria types it as the ToastQueue class, whose private members no other object has.
-    React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },
+    React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast__region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },
       children: ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose }) }));
 };
 

@@ -46,16 +46,16 @@ test('PromptComposer model Select hydrates closed with a native button and contr
     const errors = [];
     await act(async () => { root = hydrateRoot(document.querySelector('#root'), element, { onRecoverableError: (error) => errors.push(error) }); });
     assert.deepEqual(errors, []);
-    const trigger = document.querySelector('.muxui-select-trigger');
+    const trigger = document.querySelector('.muxui-select__trigger');
     assert.equal(trigger.type, 'button');
     assert.equal(trigger.getAttribute('aria-label'), 'Model');
     assert.equal(trigger.getAttribute('aria-expanded'), 'false');
-    assert.equal(document.querySelector('.muxui-select-value').textContent, 'Detailed');
-    assert.equal(document.querySelector('.muxui-select-popover'), null);
+    assert.equal(document.querySelector('.muxui-select__value').textContent, 'Detailed');
+    assert.equal(document.querySelector('.muxui-select__popup'), null);
     await act(async () => root.render(e({ ...props, selectedModel: 'standard' })));
-    assert.equal(document.querySelector('.muxui-select-value').textContent, 'Standard');
+    assert.equal(document.querySelector('.muxui-select__value').textContent, 'Standard');
     await act(async () => document.querySelector('form').reset());
-    assert.equal(document.querySelector('.muxui-select-value').textContent, 'Standard');
+    assert.equal(document.querySelector('.muxui-select__value').textContent, 'Standard');
     assert.deepEqual(calls, []);
     await act(async () => root.unmount());
   } finally { restore(); }

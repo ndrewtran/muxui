@@ -76,8 +76,8 @@ function StorySurface({ children, scheme, direction, viewMode }) {
     const isOverlayHost = (element) => element instanceof HTMLElement
       && (element.style.display === 'contents'
         || element.hasAttribute('data-overlay-container')
-        || element.classList.contains('muxui-dialog-backdrop')
-        || element.classList.contains('muxui-toast-region'));
+        || element.classList.contains('muxui-dialog__backdrop')
+        || element.classList.contains('muxui-toast__region'));
     const annotateOverlayHosts = () => {
       for (const child of document.body.children) {
         if (!isOverlayHost(child) || managed.has(child)) continue;

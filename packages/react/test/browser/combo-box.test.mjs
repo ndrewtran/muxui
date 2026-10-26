@@ -68,7 +68,7 @@ test('real browser ComboBox reports a cleared selection and submits an empty val
     // Typing the start of a name filters the options; choosing one selects it.
     const choose = async () => {
       await input.pressSequentially('Syd');
-      await page.locator('.muxui-combo-box-option', { hasText: 'Sydney' }).click();
+      await page.locator('.muxui-combo-box__option', { hasText: 'Sydney' }).click();
       await page.waitForFunction(() => document.querySelector('input[role="combobox"]').value === 'Sydney');
     };
 
@@ -97,8 +97,8 @@ test('real browser ComboBox reports a cleared selection and submits an empty val
       assert.deepEqual((await events()).filter(([type]) => type === 'select'), [['select', 'syd'], ['select', 'none'], ['select', 'syd'], ['select', 'none']], mode);
       assert.deepEqual(await submit(), [''], mode);
       // Open the list: nothing is selected.
-      await page.locator('.muxui-combo-box-trigger').click();
-      assert.equal(await page.locator('.muxui-combo-box-option[aria-selected="true"]').count(), 0, mode);
+      await page.locator('.muxui-combo-box__trigger').click();
+      assert.equal(await page.locator('.muxui-combo-box__option[aria-selected="true"]').count(), 0, mode);
       await page.keyboard.press('Escape');
     }
 

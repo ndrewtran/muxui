@@ -46,7 +46,7 @@ for (const engine of browserEngines()) {
           tab.on('pageerror', (error) => errors.push(error.message));
           await tab.goto(`${url}/header-nav.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
           const logo = tab.locator('.muxui-header-nav__logo-link');
-          const navButton = tab.locator('.muxui-header-nav__nav-btn');
+          const navButton = tab.locator('.muxui-header-nav__nav-button');
           await logo.waitFor();
 
           const read = (locator) => locator.evaluate((node) => {

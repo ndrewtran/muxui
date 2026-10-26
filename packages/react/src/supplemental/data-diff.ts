@@ -63,7 +63,7 @@ type CheckboxProps = { checked: boolean; indeterminate?: boolean; disabled?: boo
 function checkbox({ checked, indeterminate = false, disabled, ...props }: CheckboxProps) {
   return React.createElement('label', { className: 'muxui-checkbox muxui-checkbox--sm', 'data-muxui-size': 'sm', 'data-muxui-state-selected': checked || undefined, 'data-muxui-state-indeterminate': indeterminate || undefined, 'data-muxui-state-disabled': disabled || undefined },
     React.createElement('input', { ...props, type: 'checkbox', checked, disabled, 'aria-checked': indeterminate ? 'mixed' : checked }),
-    React.createElement('span', { className: 'muxui-checkbox-indicator', 'aria-hidden': true, 'data-muxui-state-selected': checked || undefined, 'data-muxui-state-indeterminate': indeterminate || undefined },
+    React.createElement('span', { className: 'muxui-checkbox__indicator', 'aria-hidden': true, 'data-muxui-state-selected': checked || undefined, 'data-muxui-state-indeterminate': indeterminate || undefined },
       (indeterminate || checked) && React.createElement(indeterminate ? Minus : Check, { size: 12, 'aria-hidden': true, focusable: 'false' })));
 }
 
@@ -145,13 +145,13 @@ function cellValue(row: DataDiffRow, column: DataDiffColumn) {
   const before = row.before[column.id];
   const after = row.after[column.id];
   if (Object.is(before, after)) return scalar(after);
-  return React.createElement('span', { className: 'muxui-data-diff-values' },
-    React.createElement('span', { className: 'muxui-data-diff-before' },
-      React.createElement('span', { className: 'muxui-data-diff-sr-only' }, 'Before: '),
+  return React.createElement('span', { className: 'muxui-data-diff__values' },
+    React.createElement('span', { className: 'muxui-data-diff__before' },
+      React.createElement('span', { className: 'muxui-data-diff__sr-only' }, 'Before: '),
       React.createElement('del', null, scalar(before))),
-    React.createElement(ArrowRight, { className: 'muxui-data-diff-arrow', size: 14, 'aria-hidden': true, focusable: 'false' }),
-    React.createElement('span', { className: 'muxui-data-diff-after' },
-      React.createElement('span', { className: 'muxui-data-diff-sr-only' }, 'After: '),
+    React.createElement(ArrowRight, { className: 'muxui-data-diff__arrow', size: 14, 'aria-hidden': true, focusable: 'false' }),
+    React.createElement('span', { className: 'muxui-data-diff__after' },
+      React.createElement('span', { className: 'muxui-data-diff__sr-only' }, 'After: '),
       React.createElement('ins', null, scalar(after))));
 }
 
@@ -226,40 +226,40 @@ export const DataDiff: ForwardRefExoticComponent<DataDiffProps & RefAttributes<H
     'data-muxui-state-disabled': disabled ? true : undefined,
     'aria-busy': pending ? true : props['aria-busy'],
   },
-  React.createElement('div', { className: 'muxui-data-diff-header' },
-    React.createElement('span', { id: titleId, className: 'muxui-data-diff-title' }, label),
-    description && React.createElement('span', { id: descriptionId, className: 'muxui-data-diff-description' }, description)),
-  React.createElement('div', { className: 'muxui-data-diff-viewport', tabIndex: 0, role: 'region', 'aria-labelledby': titleId, 'aria-describedby': description ? descriptionId : undefined },
-    React.createElement('table', { className: 'muxui-data-diff-table', 'aria-labelledby': titleId, 'aria-describedby': description ? descriptionId : undefined },
-      React.createElement('thead', { className: 'muxui-data-diff-head' },
+  React.createElement('div', { className: 'muxui-data-diff__header' },
+    React.createElement('span', { id: titleId, className: 'muxui-data-diff__title' }, label),
+    description && React.createElement('span', { id: descriptionId, className: 'muxui-data-diff__description' }, description)),
+  React.createElement('div', { className: 'muxui-data-diff__viewport', tabIndex: 0, role: 'region', 'aria-labelledby': titleId, 'aria-describedby': description ? descriptionId : undefined },
+    React.createElement('table', { className: 'muxui-data-diff__table', 'aria-labelledby': titleId, 'aria-describedby': description ? descriptionId : undefined },
+      React.createElement('thead', { className: 'muxui-data-diff__head' },
         React.createElement('tr', null,
-          React.createElement('th', { scope: 'col', className: 'muxui-data-diff-selection' },
+          React.createElement('th', { scope: 'col', className: 'muxui-data-diff__selection' },
             checkbox({ ref: selectAllRef, checked: allSelected, indeterminate: mixed, 'aria-label': 'Select all proposed changes', disabled: gated || !selectable.length,
               onChange: () => changeSelection(allSelected ? [] : selectable.map((row) => row.id)) })),
-          columns.map((column) => React.createElement('th', { key: column.id, scope: 'col', className: 'muxui-data-diff-column' }, column.label)))),
-      React.createElement('tbody', { className: 'muxui-data-diff-body' },
+          columns.map((column) => React.createElement('th', { key: column.id, scope: 'col', className: 'muxui-data-diff__column' }, column.label)))),
+      React.createElement('tbody', { className: 'muxui-data-diff__body' },
         rows.length ? rows.map((row) => React.createElement('tr', {
-          key: row.id, className: 'muxui-data-diff-row', 'data-muxui-row-id': row.id,
+          key: row.id, className: 'muxui-data-diff__row', 'data-muxui-row-id': row.id,
           'data-muxui-change': row.kind, 'data-muxui-state-selected': selectedSet.has(row.id) || undefined,
           'data-muxui-selectable': row.kind !== 'unchanged' && !row.disabled && !gated || undefined,
           'data-muxui-state-disabled': row.disabled || undefined,
-          onClick: (event: MouseEvent<HTMLTableRowElement>) => { if (!(event.target as Element).closest('.muxui-data-diff-selection')) toggleRow(row); },
+          onClick: (event: MouseEvent<HTMLTableRowElement>) => { if (!(event.target as Element).closest('.muxui-data-diff__selection')) toggleRow(row); },
         },
-        React.createElement('td', { className: 'muxui-data-diff-selection' }, row.kind !== 'unchanged' && checkbox({
+        React.createElement('td', { className: 'muxui-data-diff__selection' }, row.kind !== 'unchanged' && checkbox({
           checked: selectedSet.has(row.id), 'aria-label': `Select ${row.label} (${changeLabels[row.kind].toLowerCase()})`, disabled: gated || row.disabled,
           onChange: () => toggleRow(row),
         })),
         columns.map((column, index) => React.createElement(index === 0 ? 'th' : 'td', {
-          key: column.id, className: 'muxui-data-diff-cell', scope: index === 0 ? 'row' : undefined,
+          key: column.id, className: 'muxui-data-diff__cell', scope: index === 0 ? 'row' : undefined,
         }, index === 0 && React.createElement(React.Fragment, null,
-          React.createElement('span', { className: 'muxui-data-diff-change', 'aria-hidden': true }, row.kind === 'updated' ? React.createElement(RefreshCw, { size: 14, 'aria-hidden': true, focusable: 'false' }) : changeMarkers[row.kind]),
-          React.createElement('span', { className: 'muxui-data-diff-sr-only' }, `${changeLabels[row.kind]} row, ${row.label}: `)), cellValue(row, column))))) : React.createElement('tr', null, React.createElement('td', { colSpan: columns.length + 1, className: 'muxui-data-diff-empty' }, emptyMessage))))),
-  React.createElement('div', { className: 'muxui-data-diff-footer' },
-    React.createElement('span', { ref: totalsRef, className: 'muxui-data-diff-totals', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, totals),
-    React.createElement('button', { 'data-muxui-size': 'sm', 'data-muxui-variant': 'primary', type: 'button', className: 'muxui-button muxui-data-diff-apply', disabled: gated || !selected.length || !onApply, 'data-muxui-state-disabled': gated || !selected.length || !onApply || undefined, 'data-muxui-state-pending': pending ? true : undefined,
+          React.createElement('span', { className: 'muxui-data-diff__change', 'aria-hidden': true }, row.kind === 'updated' ? React.createElement(RefreshCw, { size: 14, 'aria-hidden': true, focusable: 'false' }) : changeMarkers[row.kind]),
+          React.createElement('span', { className: 'muxui-data-diff__sr-only' }, `${changeLabels[row.kind]} row, ${row.label}: `)), cellValue(row, column))))) : React.createElement('tr', null, React.createElement('td', { colSpan: columns.length + 1, className: 'muxui-data-diff__empty' }, emptyMessage))))),
+  React.createElement('div', { className: 'muxui-data-diff__footer' },
+    React.createElement('span', { ref: totalsRef, className: 'muxui-data-diff__totals', role: 'status', 'aria-live': 'polite', 'aria-atomic': true }, totals),
+    React.createElement('button', { 'data-muxui-size': 'sm', 'data-muxui-variant': 'primary', type: 'button', className: 'muxui-button muxui-data-diff__apply', disabled: gated || !selected.length || !onApply, 'data-muxui-state-disabled': gated || !selected.length || !onApply || undefined, 'data-muxui-state-pending': pending ? true : undefined,
       onClick: () => { if (!gated && selected.length) onApply?.([...selected]); },
     // Without applyLabel the label counts the selection, with the same conditional in place of ??.
-    }, React.createElement('span', { ref: applyCountRef, className: 'muxui-data-diff-apply-label' }, pending ? 'Applying…' : applyLabel == null ? `Apply ${selected.length} ${selected.length === 1 ? 'change' : 'changes'}` : applyLabel))));
+    }, React.createElement('span', { ref: applyCountRef, className: 'muxui-data-diff__apply-label' }, pending ? 'Applying…' : applyLabel == null ? `Apply ${selected.length} ${selected.length === 1 ? 'change' : 'changes'}` : applyLabel))));
 });
 
 DataDiff.displayName = 'DataDiff';

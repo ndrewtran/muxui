@@ -549,6 +549,14 @@ Components mark their state with \`data-muxui-state-<name>\` attributes (\`data-
 
 Two attributes are React Aria's own and are not part of this contract. Date and time field segments keep \`data-placeholder\` beside \`data-muxui-state-placeholder\`, because React Aria reads it to decide which segment a press in the padding of the field focuses. The hidden form input inside DatePicker and DateRangePicker keeps \`data-disabled\`, which React Aria sets below anything Mux UI can wrap. No Mux UI style selects either one, and neither should be relied on.
 
+## Class hooks
+
+A component's root element carries \`muxui-<family>\` (\`muxui-tabs\`), and a documented part carries \`muxui-<family>__<part>\` (\`muxui-tabs__list\`, \`muxui-select__popup\`). Two roots differ: \`Input.Root\` renders the wrapper \`muxui-input__root\` around the control \`muxui-input\`, and \`Menu.Root\` renders the wrapper \`muxui-menu__root\` around the list \`muxui-menu\`. \`AlertDialog.Root\` is a provider and renders no element, and \`Card.Button\` is the card root as a native button, \`button.muxui-card\`.
+
+Modifiers (\`muxui-checkbox--sm\`, \`muxui-card--outlined\`) and every class not named as a part are internal and can change without notice; select state through the \`data-muxui-state-*\` attributes above. Four classes are shared by the form families and are documented only under a scope, normally the family root (\`.muxui-select .muxui-field-label\`): \`muxui-field-label\`, \`muxui-field-input\`, \`muxui-field-description\` and \`muxui-field-error\`. Six parts have another scope. The CheckboxGroup and RadioGroup labels sit under \`.muxui-checkbox-group__field\` and \`.muxui-radio-group__field\`, the Switch description and error sit under \`.muxui-switch-field\`, and the DatePicker and DateRangePicker calendars sit in their popovers, as \`.muxui-date-picker__popover .muxui-calendar\` and \`.muxui-date-range-picker__popover .muxui-calendar\`.
+
+Part classes were dash forms before (\`muxui-tab-list\` is now \`muxui-tabs__list\`) and there is no alias, so update selectors to the BEM name. This package is pre-release: class names can change between versions, and the server and client markup of one page must come from the same installed version.
+
 ## Local tarball usage
 
 To develop against an unpublished build, install the versioned local candidate from the package directory instead:
