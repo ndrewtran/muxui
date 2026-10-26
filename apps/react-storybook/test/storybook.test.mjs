@@ -703,7 +703,7 @@ test('the nested submenu story is a closed menu with a submenu and a control aft
     assert.ok(menu, 'the trigger opens the menu');
     // The submenu is in the list as one item that announces a menu, named for what it opens.
     assert.deepEqual([...menu.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent), ['Rename', 'Share', 'Delete']);
-    assert.equal(menu.querySelector('.muxui-menu-item[data-muxui-state-has-submenu]').textContent, 'Share');
+    assert.equal(menu.querySelector('.muxui-menu__item[data-muxui-state-has-submenu]').textContent, 'Share');
   } finally {
     await act(async () => root.unmount());
     env.resolveAnimations();
@@ -725,7 +725,7 @@ test('the Menu Anatomy story offers no items or children control, though the oth
     await withRuntime(async ({ root }) => {
       await act(async () => root.render(anatomy.render({ ...anatomy.args, ...values })));
       await settleRuntime();
-      labels = [...new Set([...document.querySelectorAll('.muxui-menu-item')].map((item) => item.textContent))].sort();
+      labels = [...new Set([...document.querySelectorAll('.muxui-menu__item')].map((item) => item.textContent))].sort();
     });
     return labels;
   };
@@ -1144,14 +1144,14 @@ test('Separator vertical specimen has content on both sides of a stretched rule'
   const row = vertical.parentElement;
   assert.equal(row.style.display, 'flex');
   assert.deepEqual([...row.children].map((node) => node.textContent || node.getAttribute('role')), ['Left', 'separator', 'Right']);
-  assert.ok(sections.get('horizontal').querySelector('[role="separator"].muxui-separator-horizontal'));
+  assert.ok(sections.get('horizontal').querySelector('[role="separator"].muxui-separator--horizontal'));
 });
 
 test('Dialog specimen is a settings dialog because destructive confirmation belongs to AlertDialog', async () => {
   await withRuntime(async ({ root: reactRoot }) => {
     await act(async () => reactRoot.render(renderFamily('Dialog', { defaultOpen: true })));
     await settleRuntime(60);
-    assert.equal(document.querySelector('.muxui-dialog-title').textContent, 'Project settings');
+    assert.equal(document.querySelector('.muxui-dialog__title').textContent, 'Project settings');
     assert.match(document.querySelector('.muxui-dialog').textContent, /Review the settings for this project\./u);
     assert.doesNotMatch(document.body.textContent, /Delete draft/u);
   });
@@ -1166,10 +1166,10 @@ test('Dialog open row is picked with the lifecycle rows and mounts one open dial
   // The open row is the one mounted, and it starts settled rather than entering.
   assert.equal(sections.get('open').querySelector('.muxui-storybook-transition-status').textContent, 'open: open');
   for (const state of ['entering', 'exiting']) assert.match(sections.get(state).textContent, new RegExp(`Select ${state} to inspect`, 'u'));
-  assert.ok(sections.get('closed').querySelector('.muxui-dialog-trigger'), 'the closed row still renders its trigger');
+  assert.ok(sections.get('closed').querySelector('.muxui-dialog__trigger'), 'the closed row still renders its trigger');
 
   await withRuntime(async ({ root: reactRoot }) => {
-    const modals = () => document.querySelectorAll('.muxui-dialog-backdrop').length;
+    const modals = () => document.querySelectorAll('.muxui-dialog__backdrop').length;
     await act(async () => reactRoot.render(renderStateCoverage(currentRecord('Dialog'))));
     await settleRuntime(60);
     // Open from the first frame: no closed phase, and exactly one modal even though three rows could open one.
@@ -1179,7 +1179,7 @@ test('Dialog open row is picked with the lifecycle rows and mounts one open dial
     assert.equal(document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition'), 'open');
     // The row's own close button reports the change, like a real Dialog.
     const phase = () => document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition');
-    await act(async () => dialog.querySelector('.muxui-dialog-close').click());
+    await act(async () => dialog.querySelector('.muxui-dialog__close').click());
     assert.equal(phase(), 'closed');
     // Another row replaces the open one instead of stacking a second modal.
     const lifecycleSelect = document.querySelector('[data-muxui-storybook-lifecycle-select="Dialog"]');
@@ -1198,7 +1198,7 @@ test('Dialog open row is picked with the lifecycle rows and mounts one open dial
     const closed = { ...createStory(currentRecord('Dialog'), 'states').args, open: false };
     await act(async () => reactRoot.render(renderStateCoverage(currentRecord('Dialog'), closed)));
     await settleRuntime(60);
-    assert.equal(document.querySelectorAll('.muxui-dialog-backdrop').length, 0);
+    assert.equal(document.querySelectorAll('.muxui-dialog__backdrop').length, 0);
     assert.equal(document.querySelector('[data-muxui-storybook-lifecycle="open"] [data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition'), 'closed');
   });
 });
@@ -1210,7 +1210,7 @@ test('Controls changed on the mounted States story drive the Dialog open row', a
     const row = () => document.querySelector('[data-muxui-storybook-lifecycle="open"]');
     const phase = () => row().querySelector('[data-muxui-storybook-transition]').getAttribute('data-muxui-storybook-transition');
     // The trigger reports the Dialog's open state at once, where jsdom never finishes React Aria's exit animation.
-    const expanded = () => row().querySelector('.muxui-dialog-trigger').getAttribute('aria-expanded');
+    const expanded = () => row().querySelector('.muxui-dialog__trigger').getAttribute('aria-expanded');
     // Storybook re-renders the same story with new args, so the tree stays mounted between these renders.
     const settle = async () => {
       await settleRuntime(30);
@@ -1232,14 +1232,14 @@ test('Controls changed on the mounted States story drive the Dialog open row', a
     // A controlled Dialog stays open until its owner closes it, but still reports the attempt.
     const attempts = [];
     await render({ ...stock, open: true, onOpenChange: (next) => attempts.push(next) });
-    await act(async () => document.querySelector('.muxui-dialog-close').click());
+    await act(async () => document.querySelector('.muxui-dialog__close').click());
     await settle();
     assert.deepEqual(attempts, [false]);
     assert.deepEqual([expanded(), phase()], ['true', 'open']);
 
     // With open unset again the row keeps its own dismissal.
     await render(stock);
-    await act(async () => document.querySelector('.muxui-dialog-close').click());
+    await act(async () => document.querySelector('.muxui-dialog__close').click());
     await settle();
     assert.deepEqual([expanded(), phase()], ['false', 'closed']);
   });
@@ -1361,7 +1361,7 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
     assert.match(log(), /dismiss:/u);
     assert.equal(host.querySelector('.muxui-sidebar__feature-card'), null, 'the consumer removes a dismissed card');
 
-    await act(async () => host.querySelector('.muxui-sidebar__mobile-menu-btn').click());
+    await act(async () => host.querySelector('.muxui-sidebar__mobile-trigger').click());
     await settleRuntime();
     const drawer = document.querySelector('.muxui-sidebar__mobile-dialog');
     assert.ok(drawer, 'the drawer opens');
@@ -1465,7 +1465,7 @@ test('InputTags keeps supplied seeds and copy, and offers placement and tag-focu
 test('RadioField renders its own parts inside RadioGroup and routes field props to the first field', async () => {
   const doc = (args) => new JSDOM(renderToStaticMarkup(renderFamily('RadioField', args))).window.document;
   const base = doc({});
-  assert.equal(base.querySelector('.muxui-radio'), null, 'no RadioGroup option stands in for a field');
+  assert.equal(base.querySelector('.muxui-radio-group__radio'), null, 'no RadioGroup option stands in for a field');
   const fields = [...base.querySelectorAll('.muxui-radio-field')];
   assert.equal(fields.length, 2);
   for (const part of ['button', 'indicator', 'dot', 'description']) {
@@ -1713,23 +1713,23 @@ test('Lightbox Controlled story updates open and selection from callbacks and sh
     await act(async () => reactRoot.render(controlled.render(controlled.args)));
     const values = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent);
     assert.deepEqual(values(), { open: false, selectedKey: 'one' });
-    const triggers = [...host.querySelectorAll('.muxui-lightbox-trigger')];
+    const triggers = [...host.querySelectorAll('.muxui-lightbox__trigger')];
     assert.deepEqual(triggers.map((node) => node.textContent), ['Open One', 'Open Two']);
     await act(async () => triggers[1].click());
     await settleRuntime(60);
     assert.deepEqual(values(), { open: true, selectedKey: 'two' });
-    assert.equal(document.querySelector('.muxui-lightbox-content-layer--current').textContent, 'Item 2 of 2');
-    assert.equal(document.querySelector('.muxui-lightbox-caption').textContent, 'Two');
-    await act(async () => document.querySelector('.muxui-lightbox-previous').click());
+    assert.equal(document.querySelector('.muxui-lightbox__content-layer--current').textContent, 'Item 2 of 2');
+    assert.equal(document.querySelector('.muxui-lightbox__caption').textContent, 'Two');
+    await act(async () => document.querySelector('.muxui-lightbox__previous').click());
     await settleRuntime(60);
     assert.deepEqual(values(), { open: true, selectedKey: 'one' });
-    assert.equal(document.querySelector('.muxui-lightbox-caption').textContent, 'One');
-    await act(async () => document.querySelector('.muxui-lightbox-close').click());
+    assert.equal(document.querySelector('.muxui-lightbox__caption').textContent, 'One');
+    await act(async () => document.querySelector('.muxui-lightbox__close').click());
     await settleRuntime(60);
     assert.equal(values().open, false);
     const events = createEventsStory(lightbox);
     await act(async () => reactRoot.render(React.cloneElement(events.render(events.args), { key: 'events' })));
-    await act(async () => host.querySelectorAll('.muxui-lightbox-trigger')[0].click());
+    await act(async () => host.querySelectorAll('.muxui-lightbox__trigger')[0].click());
     await settleRuntime(60);
     assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /openChange: true/u);
   });
@@ -1739,7 +1739,7 @@ test('Menu uses the triggered composition for open-state stories and keeps the p
   const menu = currentRecord('Menu');
   const plain = new JSDOM(renderToStaticMarkup(renderFamily('Menu', storyArgsForBinding(menu.binding, 'default', 'Menu')))).window.document;
   assert.ok(plain.querySelector('.muxui-menu'));
-  assert.equal(plain.querySelector('.muxui-menu-trigger'), null, 'the default is the action list');
+  assert.equal(plain.querySelector('.muxui-menu__trigger'), null, 'the default is the action list');
   assert.equal(Object.hasOwn(storyArgsForBinding(menu.binding, 'default', 'Menu'), 'defaultOpen'), false);
   assert.equal(createUncontrolledStory(menu).args.defaultOpen, false);
   assert.equal(createControlledStory(menu).args.open, false);
@@ -1748,28 +1748,28 @@ test('Menu uses the triggered composition for open-state stories and keeps the p
     const controlled = createControlledStory(menu);
     await act(async () => reactRoot.render(controlled.render(controlled.args)));
     const values = () => JSON.parse(host.querySelector('[data-muxui-controlled-values]').textContent);
-    const trigger = host.querySelector('.muxui-menu-trigger');
+    const trigger = host.querySelector('.muxui-menu__trigger');
     assert.ok(trigger, 'Controlled uses Menu.Root with a trigger');
-    assert.equal(document.querySelector('.muxui-menu-popup'), null);
+    assert.equal(document.querySelector('.muxui-menu__popup'), null);
     await act(async () => trigger.click());
     await settleRuntime();
     assert.equal(values().open, true);
-    assert.deepEqual([...document.querySelectorAll('.muxui-menu-popup .muxui-menu-item')].map((node) => node.textContent), ['Save', 'Delete']);
-    await act(async () => document.querySelector('.muxui-menu-item').click());
+    assert.deepEqual([...document.querySelectorAll('.muxui-menu__popup .muxui-menu__item')].map((node) => node.textContent), ['Save', 'Delete']);
+    await act(async () => document.querySelector('.muxui-menu__item').click());
     await settleRuntime();
     assert.equal(values().open, false, 'choosing an item closes the popup through onOpenChange');
 
     const uncontrolled = createUncontrolledStory(menu);
     await act(async () => reactRoot.render(React.cloneElement(uncontrolled.render(uncontrolled.args), { key: 'uncontrolled' })));
-    await act(async () => host.querySelector('.muxui-menu-trigger').click());
+    await act(async () => host.querySelector('.muxui-menu__trigger').click());
     await settleRuntime();
-    assert.ok(document.querySelector('.muxui-menu-popup'), 'Uncontrolled opens its own popup');
+    assert.ok(document.querySelector('.muxui-menu__popup'), 'Uncontrolled opens its own popup');
 
     const events = createEventsStory(menu);
     await act(async () => reactRoot.render(React.cloneElement(events.render(events.args), { key: 'events' })));
-    await act(async () => host.querySelector('.muxui-menu-trigger').click());
+    await act(async () => host.querySelector('.muxui-menu__trigger').click());
     await settleRuntime();
-    await act(async () => document.querySelector('.muxui-menu-item').click());
+    await act(async () => document.querySelector('.muxui-menu__item').click());
     await settleRuntime();
     const log = host.querySelector('[data-muxui-storybook-event-log]').textContent;
     assert.match(log, /openChange: true/u);
@@ -1780,16 +1780,16 @@ test('Menu uses the triggered composition for open-state stories and keeps the p
     await act(async () => reactRoot.render(React.cloneElement(states.render(states.args), { key: 'states' })));
     await settleRuntime();
     const rowPopup = (row) => {
-      const trigger = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('.muxui-menu-trigger');
+      const trigger = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('.muxui-menu__trigger');
       return document.getElementById(trigger.getAttribute('aria-controls'));
     };
-    assert.equal(document.querySelectorAll('.muxui-menu-popup').length, 2, 'the open and placement rows each show a popup');
+    assert.equal(document.querySelectorAll('.muxui-menu__popup').length, 2, 'the open and placement rows each show a popup');
     assert.equal(ancestorProp(rowPopup('placement'), 'placement'), 'top');
     assert.equal(ancestorProp(rowPopup('open'), 'placement'), 'bottom start', 'React Aria spells the default bottom-start with a space');
     for (const row of ['open', 'placement']) {
       const room = [...host.querySelectorAll('.muxui-storybook-state')].find((node) => node.querySelector('h3').textContent === row).querySelector('[data-muxui-storybook-popup-room]');
       assert.equal(room.style.minBlockSize, '14rem', `${row} reserves room for its popup`);
-      assert.ok(room.querySelector('.muxui-menu-trigger'));
+      assert.ok(room.querySelector('.muxui-menu__trigger'));
     }
   });
 });
@@ -1913,11 +1913,11 @@ test('a value the user sets wins over a named state at render time, even false, 
   assert.equal(codeBlock(codeOverridden, 'wrap').hasAttribute('data-muxui-wrap'), false, 'wrap: false wins in the wrap row');
   assert.equal(codeBlock(codeOverridden, 'diff').getAttribute('data-muxui-mode'), 'code', 'a mode equal to the default wins in the diff row');
 
-  const composerError = (sections) => sections.get('error').querySelector('.muxui-prompt-composer-error');
+  const composerError = (sections) => sections.get('error').querySelector('.muxui-prompt-composer__error');
   assert.equal(composerError(rows('PromptComposer', {})).textContent, 'Unable to send. Try again.');
   assert.equal(composerError(rows('PromptComposer', { error: '' })), null, 'an empty error wins in the error row');
 
-  const selectAll = (sections) => sections.get('mixed').querySelector('.muxui-data-diff-selection input').getAttribute('aria-checked');
+  const selectAll = (sections) => sections.get('mixed').querySelector('.muxui-data-diff__selection input').getAttribute('aria-checked');
   assert.equal(selectAll(rows('DataDiff', {})), 'mixed');
   assert.equal(selectAll(rows('DataDiff', { defaultSelectedIds: [] })), 'false', 'an empty selection wins in the mixed row');
 });
@@ -1977,7 +1977,7 @@ test('the open row clicks its trigger open, unless the user set it closed', asyn
   const isOpen = {
     DatePicker: (row) => row.querySelector('.muxui-date-trigger').getAttribute('aria-expanded') === 'true',
     DateRangePicker: (row) => row.querySelector('.muxui-date-trigger').getAttribute('aria-expanded') === 'true',
-    Select: (row) => row.querySelector('.muxui-select-trigger').getAttribute('aria-expanded') === 'true',
+    Select: (row) => row.querySelector('.muxui-select__trigger').getAttribute('aria-expanded') === 'true',
     CommandPalette: (row) => row.querySelector('.muxui-command-palette').hasAttribute('data-muxui-state-open'),
   };
   for (const [family, opened] of Object.entries(isOpen)) {
@@ -2634,7 +2634,7 @@ test('behavior-only state evidence executes the focused Mux UI interactions', as
     const dialogDismissals = [];
     await act(async () => root.render(renderFamily('Dialog', { open: true, title: 'Delete draft', onOpenChange: (open) => dialogDismissals.push(open) })));
     await settle(20);
-    const dialogClose = document.querySelector('.muxui-dialog-close');
+    const dialogClose = document.querySelector('.muxui-dialog__close');
     assert.ok(dialogClose, 'Dialog dismiss target');
     await act(async () => dialogClose.click());
     assert.deepEqual(dialogDismissals, [false], 'Dialog dismissal callback');
@@ -2650,7 +2650,7 @@ test('behavior-only state evidence executes the focused Mux UI interactions', as
     let toastDismissals = 0;
     await act(async () => root.render(React.createElement(ToastProvider, null, renderFamily('Toast', { onDismiss: () => { toastDismissals += 1; } }))));
     await settle(100);
-    const toastClose = document.querySelector('.muxui-toast-dismiss');
+    const toastClose = document.querySelector('.muxui-toast__dismiss');
     assert.ok(toastClose, 'Toast dismiss target');
     await act(async () => toastClose.click());
     await settle(40);
@@ -2668,8 +2668,8 @@ test('interaction-open coverage opens the public field and collection triggers',
   const families = [
     ['DatePicker', '.muxui-date-popover', '.muxui-date-trigger'],
     ['DateRangePicker', '.muxui-date-popover', '.muxui-date-trigger'],
-    ['ComboBox', '.muxui-combo-box-popover', '.muxui-combo-box-trigger'],
-    ['Select', '.muxui-select-popover', '.muxui-select-trigger'],
+    ['ComboBox', '.muxui-combo-box__popover', '.muxui-combo-box__trigger'],
+    ['Select', '.muxui-select__popup', '.muxui-select__trigger'],
   ];
   for (const [family, overlaySelector, triggerSelector] of families) {
     const env = installRuntimeDom();
@@ -3008,8 +3008,8 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.match(preview, /observer\.observe\(document\.body, \{ childList: true \}\)/);
   assert.match(preview, /element\.style\.display === 'contents'/);
   assert.match(preview, /element\.hasAttribute\('data-overlay-container'\)/);
-  assert.match(preview, /element\.classList\.contains\('muxui-dialog-backdrop'\)/);
-  assert.match(preview, /element\.classList\.contains\('muxui-toast-region'\)/);
+  assert.match(preview, /element\.classList\.contains\('muxui-dialog__backdrop'\)/);
+  assert.match(preview, /element\.classList\.contains\('muxui-toast__region'\)/);
   assert.match(preview, /child\.setAttribute\('role', 'region'\)/);
   assert.match(preview, /child\.setAttribute\('aria-label', 'Mux UI overlay'\)/);
   assert.match(preview, /element\.removeAttribute\('role'\)/);

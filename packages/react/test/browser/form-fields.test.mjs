@@ -134,7 +134,7 @@ test('a required RadioGroup blocks native submission and shows its group error o
     assert.equal(await page.locator('.muxui-field-error').count(), 0, 'no error before the first submit');
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [], 'the browser blocks the submit');
-    await page.locator('.muxui-radio-group-error').waitFor();
+    await page.locator('.muxui-radio-group__error').waitFor();
     const errors = page.locator('.muxui-field-error');
     assert.equal(await errors.count(), 1, 'the message shows once for the group');
     assert.equal((await errors.textContent())?.trim(), 'Choose a plan to continue.');
@@ -154,9 +154,9 @@ test('a required RadioGroup without errorMessage shows the browser message once'
     await open('radio-group-native');
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [], 'the browser blocks the submit');
-    await page.locator('.muxui-radio-group-error').waitFor();
+    await page.locator('.muxui-radio-group__error').waitFor();
     assert.equal(await page.locator('.muxui-field-error').count(), 1);
-    assert.notEqual((await page.locator('.muxui-radio-group-error').textContent())?.trim() ?? '', '', 'the default message is the browser validation message');
+    assert.notEqual((await page.locator('.muxui-radio-group__error').textContent())?.trim() ?? '', '', 'the default message is the browser validation message');
     await page.getByRole('radio', { name: 'Yearly' }).evaluate((node) => node.closest('label').click());
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [['submit', { plan: 'yearly' }]]);
@@ -167,7 +167,7 @@ test('Autocomplete Escape and Enter act on the open list before the field and fo
   await withPage(async ({ page, open, events }) => {
     await open('autocomplete');
     const input = page.getByRole('combobox', { name: 'City' });
-    const list = page.locator('.muxui-autocomplete-list');
+    const list = page.locator('.muxui-autocomplete__list');
     await input.click();
     await page.keyboard.type('Syd');
     assert.equal(await input.getAttribute('aria-expanded'), 'true');
@@ -223,7 +223,7 @@ test('required fields block native submission and show their invalid state', { t
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), []);
     await page.locator('.muxui-switch-field[data-muxui-state-invalid]').waitFor();
-    for (const selector of ['.muxui-text-field', '.muxui-number-field', '.muxui-search-field', '.muxui-autocomplete-search', '.muxui-date-field', '.muxui-time-field', '.muxui-switch-field']) {
+    for (const selector of ['.muxui-text-field', '.muxui-number-field', '.muxui-search-field', '.muxui-autocomplete__search', '.muxui-date-field', '.muxui-time-field', '.muxui-switch-field']) {
       assert.equal(await page.locator(selector).getAttribute('data-muxui-state-invalid'), 'true', `${selector} is not invalid after a blocked submit`);
     }
   });
@@ -338,7 +338,7 @@ test('Autocomplete shows the chosen label, submits its value, filters after sele
   await withPage(async ({ page, open, events }) => {
     await open('countries');
     const input = page.getByRole('combobox', { name: 'Country' });
-    const options = page.locator('.muxui-autocomplete-option');
+    const options = page.locator('.muxui-autocomplete__option');
     await input.click();
     await page.keyboard.type('Australia');
     await options.filter({ hasText: 'Australia' }).click();

@@ -49,7 +49,7 @@ test('new overlay props are SSR/hydration safe and clean up open portals', async
     h(Tooltip, { trigger, content: 'Help', placement: 'end-bottom', anchorRef: { current: null } }),
     alertDialog({ defaultOpen: false }));
   const server = renderToString(fixture());
-  assert.doesNotMatch(server, /muxui-dialog-backdrop|muxui-popover-positioner|muxui-tooltip|muxui-alert-dialog__backdrop/u);
+  assert.doesNotMatch(server, /muxui-dialog__backdrop|muxui-popover__positioner|muxui-tooltip|muxui-alert-dialog__backdrop/u);
   const env = installDom(`<div id="root">${server}</div>`);
   const errors = [];
   let root;
@@ -79,16 +79,16 @@ test('Dialog composes named parts and merges descriptions without leaking part p
     assert.equal(document.querySelector('#root').getAttribute('aria-hidden'), 'true');
     assert.ok(dialog.classList.contains('consumer-dialog'));
     assert.ok(dialog.classList.contains('custom-panel'));
-    for (const part of ['backdrop', 'title', 'description', 'content', 'actions', 'close']) assert.ok(document.querySelector(`.muxui-dialog-${part}.custom-${part}`));
+    for (const part of ['backdrop', 'title', 'description', 'content', 'actions', 'close']) assert.ok(document.querySelector(`.muxui-dialog__${part}.custom-${part}`));
     assert.equal(dialog.hasAttribute('panelClassName'), false);
-    const id = document.querySelector('.muxui-dialog-description').id;
+    const id = document.querySelector('.muxui-dialog__description').id;
     await act(async () => root.render(h(Dialog, { ...props, title: 'Updated review' })));
-    assert.equal(document.querySelector('.muxui-dialog-description').id, id);
+    assert.equal(document.querySelector('.muxui-dialog__description').id, id);
     await act(async () => root.render(h(Dialog, { ...props, description: null, actions: null, dismissable: false })));
     assertAssociation(dialog, 'aria-describedby', ['Additional context.']);
-    assert.equal(document.querySelector('.muxui-dialog-description'), null);
-    assert.equal(document.querySelector('.muxui-dialog-actions'), null);
-    assert.equal(document.querySelector('.muxui-dialog-close'), null);
+    assert.equal(document.querySelector('.muxui-dialog__description'), null);
+    assert.equal(document.querySelector('.muxui-dialog__actions'), null);
+    assert.equal(document.querySelector('.muxui-dialog__close'), null);
   } finally {
     await act(async () => root.unmount());
     env.restore();

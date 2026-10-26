@@ -1,5 +1,5 @@
 /* Mux UI-owned styling for the visible native SelectNative control. */
-.muxui-select-native-field {
+.muxui-select-native__field {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-gap);
@@ -14,7 +14,7 @@
   line-height: var(--muxui-semantic-typography-compact-line-height);
 }
 
-.muxui-select-native-field[data-muxui-state-required] > .muxui-select-native__label::after {
+.muxui-select-native__field[data-muxui-state-required] > .muxui-select-native__label::after {
   content: ' *';
   color: var(--muxui-semantic-selection-track);
 }
@@ -38,9 +38,9 @@
   appearance: auto;
 }
 
-.muxui-select-native-field[data-muxui-size='sm'],
+.muxui-select-native__field[data-muxui-size='sm'],
 .muxui-select-native[data-muxui-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
-.muxui-select-native-field[data-muxui-size='lg'],
+.muxui-select-native__field[data-muxui-size='lg'],
 .muxui-select-native[data-muxui-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-select-native:focus-visible {
@@ -76,12 +76,12 @@
 
 .muxui-select-native__description { color: var(--muxui-field-description-color); }
 .muxui-select-native__error { color: var(--muxui-field-error-color); }
-.muxui-select-native-field[data-muxui-state-disabled] > .muxui-select-native__label {
+.muxui-select-native__field[data-muxui-state-disabled] > .muxui-select-native__label {
   color: var(--muxui-component-selectnative-disabled-label);
   opacity: 0.45;
 }
-.muxui-select-native-field[data-muxui-state-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
-.muxui-select-native-field[data-muxui-state-disabled][data-muxui-state-invalid] > .muxui-select-native__label {
+.muxui-select-native__field[data-muxui-state-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
+.muxui-select-native__field[data-muxui-state-disabled][data-muxui-state-invalid] > .muxui-select-native__label {
   color: var(--muxui-component-selectnative-disabled-invalid-label);
 }
 
@@ -106,7 +106,7 @@
     color: GrayText !important;
   }
 
-  .muxui-select-native-field[data-muxui-state-disabled] > .muxui-select-native__label {
+  .muxui-select-native__field[data-muxui-state-disabled] > .muxui-select-native__label {
     opacity: 1 !important;
   }
 }

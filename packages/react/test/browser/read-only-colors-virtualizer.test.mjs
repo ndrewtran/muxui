@@ -45,7 +45,7 @@ function fixtureDocument() {
     body { margin: 0; }
     .muxui-color-area { width: 220px; height: 160px; }
     .muxui-color-slider { width: 220px; }
-    .muxui-color-slider-track { height: 24px; }
+    .muxui-color-slider__track { height: 24px; }
     .muxui-color-wheel { width: 96px; height: 96px; }
   </style>`, body, entry: '/packages/react/test/fixtures/read-only-colors-virtualizer-browser-entry.mjs' });
 }
@@ -93,7 +93,7 @@ test('real browser proves read-only color controls, disabled swatch semantics, a
 
     const viewport = page.locator('.muxui-virtualizer');
     await viewport.waitFor();
-    await page.locator('.muxui-virtualizer-item').first().waitFor();
+    await page.locator('.muxui-virtualizer__item').first().waitFor();
     const initialLayout = await viewport.evaluate((node) => ({
       blockSize: getComputedStyle(node).blockSize,
       items: [...node.querySelectorAll('[role="option"]')].map((item) => item.textContent),

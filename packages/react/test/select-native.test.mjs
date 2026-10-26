@@ -28,7 +28,7 @@ test('SelectNative renders native options, field associations, and visual/native
     size: 4,
   }, optionTree()));
   const document = new JSDOM(html).window.document;
-  const root = document.querySelector('.muxui-select-native-field');
+  const root = document.querySelector('.muxui-select-native__field');
   const select = document.querySelector('select');
   const label = document.querySelector('label');
   assert.ok(root);

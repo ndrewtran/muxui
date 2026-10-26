@@ -22,7 +22,7 @@ test('real browser drags a hex gray wheel through hues without snapping back or 
     await page.waitForFunction(() => document.documentElement.dataset.muxuiColorWheelReady === 'true');
     const gray = 'rgba(128, 128, 128, 1)';
     for (const [name, label] of [['wheel', 'Wheel'], ['picker', 'Picker wheel']]) {
-      const track = page.locator(`.muxui-color-wheel:has(input[aria-label="${label}"]) .muxui-color-wheel-track`);
+      const track = page.locator(`.muxui-color-wheel:has(input[aria-label="${label}"]) .muxui-color-wheel__track`);
       const box = await track.boundingBox();
       const hue = () => page.locator(`input[aria-label="${label}"]`).inputValue();
       const last = () => page.evaluate((key) => globalThis.__muxuiColorWheelChanges[key].at(-1), name);

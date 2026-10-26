@@ -212,7 +212,7 @@ test('keyboard Toast dismissal moves focus to the next toast, then back to the p
     await page.waitForFunction(() => document.querySelectorAll('.muxui-toast').length === 3);
     const focusedToast = () => page.evaluate(() => {
       const active = document.activeElement;
-      return active?.closest('.muxui-toast')?.querySelector('.muxui-toast-message')?.textContent || active?.id || active?.tagName;
+      return active?.closest('.muxui-toast')?.querySelector('.muxui-toast__message')?.textContent || active?.id || active?.tagName;
     });
 
     // Tab from the page through Third (toast, dismiss) to Second's dismiss button.
@@ -255,7 +255,7 @@ test('a declarative Toast whose onDismiss unmounts it still plays its exit', { t
     const toast = page.locator('.muxui-toast');
     await toast.waitFor({ state: 'visible' });
     await page.waitForTimeout(400);
-    await page.locator('.muxui-toast-dismiss').click();
+    await page.locator('.muxui-toast__dismiss').click();
     await page.locator('#unmounted').waitFor();
     assert.equal(await page.locator('.muxui-toast[data-muxui-toast-exiting]').count(), 1, 'the exiting toast is retained after its owner unmounts');
     await toast.waitFor({ state: 'detached' });
@@ -357,7 +357,7 @@ async function deleteOpenerRow(page, dialog) {
 // Each case removes the opener of a rows Dialog, closes it one way, and expects focus on `expected`.
 const removedOpenerCases = [
   ['Escape', 'rows', 'rows', (page) => page.keyboard.press('Escape')],
-  ['the close button', 'rows', 'rows', (page) => page.locator('.rows-dialog .muxui-dialog-close').click()],
+  ['the close button', 'rows', 'rows', (page) => page.locator('.rows-dialog .muxui-dialog__close').click()],
   ['a backdrop press', 'rows', 'rows', (page) => page.mouse.click(10, 10)],
   ['Escape with no focusable ancestor', 'rows&focusable=0', 'BODY', (page) => page.keyboard.press('Escape')],
   // A nested Dialog's opener sits inside a still-open outer Dialog, whose own
@@ -365,9 +365,9 @@ const removedOpenerCases = [
   ['Escape inside an outer Dialog', 'nested-dialog-rows', 'outer-rows', (page) => page.keyboard.press('Escape')],
   // React Aria restores to the enclosing non-modal Popover's trigger, so the
   // fallback must not pre-empt it, for virtual or keyboard input alike.
-  ['a virtual click inside a non-modal Popover', 'nested-popover-rows', 'pop-trigger', (page) => page.locator('.rows-dialog .muxui-dialog-close').evaluate((node) => node.click())],
+  ['a virtual click inside a non-modal Popover', 'nested-popover-rows', 'pop-trigger', (page) => page.locator('.rows-dialog .muxui-dialog__close').evaluate((node) => node.click())],
   ['a keyboard close inside a non-modal Popover', 'nested-popover-rows', 'pop-trigger', async (page) => {
-    await page.locator('.rows-dialog .muxui-dialog-close').focus();
+    await page.locator('.rows-dialog .muxui-dialog__close').focus();
     await page.keyboard.press('Enter');
   }],
 ];
@@ -546,7 +546,7 @@ test('a pointer Toast dismissal returns focus to the page so timers keep running
     await page.locator('#before').focus();
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
-    const dismiss = page.locator('.muxui-toast-dismiss').first();
+    const dismiss = page.locator('.muxui-toast__dismiss').first();
     assert.equal(await dismiss.evaluate((node) => node === document.activeElement), true);
     await dismiss.click();
     await page.waitForFunction(() => document.activeElement?.id === 'before');

@@ -50,8 +50,8 @@ test('compound Menu action ordering is Mux-owned and disabled cannot be overridd
     h(Menu.Separator), h(Menu.Item, { id: 'blocked', disabled: true }, 'Blocked'));
   try {
     await act(async () => root.render(fixture()));
-    assert.equal(container.querySelector('.muxui-menu-section').tagName, 'SECTION');
-    assert.equal(container.querySelector('.muxui-menu-separator').tagName, 'HR');
+    assert.equal(container.querySelector('.muxui-menu__section').tagName, 'SECTION');
+    assert.equal(container.querySelector('.muxui-menu__separator').tagName, 'HR');
     await act(async () => container.querySelector('[role="menuitem"]').click());
     assert.deepEqual(seen, [['item'], ['action', { id: 'copy', key: 'copy', value: 'copy' }], ['select', { id: 'copy', key: 'copy', value: 'copy' }]]);
     await act(async () => root.render(fixture(true)));
@@ -99,9 +99,9 @@ test('Select composition names and spans remain explicit while simple usage keep
     h(Select.Label, null, 'Choice'), h(Select.Trigger, null, h(Select.Value)),
     h(Select.Popup, null, h(Select.List, null, h(Select.Item, { id: 'one', textValue: 'One' }, h('strong', null, 'One')))),
     h(Select.Description, null, 'Description'), h(Select.Error, null, 'Error')));
-  assert.match(compound, /<span class="muxui-field-label muxui-select-label"/u);
-  assert.match(compound, /class="muxui-field-description muxui-select-description"/u);
-  assert.match(compound, /class="muxui-field-error muxui-select-error"/u);
+  assert.match(compound, /<span class="muxui-field-label muxui-select__label"/u);
+  assert.match(compound, /class="muxui-field-description muxui-select__description"/u);
+  assert.match(compound, /class="muxui-field-error muxui-select__error"/u);
   assert.match(compound, /<strong>One<\/strong>/u);
   assert.match(renderToString(h(Select, { label: 'Choice', items: ['one'] })), /Select an option/u);
   assert.match(renderToString(h(Select, { label: 'Choice', items: ['one'], selectedContent: h('strong', null, 'Custom value') })), /<strong>Custom value<\/strong>/u);

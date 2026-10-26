@@ -9,15 +9,15 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const families = Object.freeze([
   ['text', '.muxui-field-input'],
   ['search', '.muxui-field-input'],
-  ['number', '.muxui-number-control'],
+  ['number', '.muxui-number-field__control'],
   ['date', '.muxui-date-input'],
   ['time', '.muxui-date-input'],
-  ['date-picker', '.muxui-date-control'],
-  ['date-range', '.muxui-date-range-control'],
+  ['date-picker', '.muxui-date-picker__control'],
+  ['date-range', '.muxui-date-range-picker__control'],
   ['autocomplete', '.muxui-field-input'],
   ['color', '.muxui-field-input'],
-  ['combo', '.muxui-combo-control'],
-  ['select', '.muxui-select-trigger'],
+  ['combo', '.muxui-combo-box__control'],
+  ['select', '.muxui-select__trigger'],
   ['token', '.muxui-token-field'],
   ['input', '.muxui-input'],
   ['textarea', '.muxui-text-area__textarea'],
@@ -53,14 +53,14 @@ const labelSelectors = Object.freeze({
 const readonlyFamilies = Object.freeze([
   ['text', '.muxui-field-input'],
   ['search', '.muxui-field-input'],
-  ['number', '.muxui-number-control'],
+  ['number', '.muxui-number-field__control'],
   ['date', '.muxui-date-input'],
   ['time', '.muxui-date-input'],
-  ['date-picker', '.muxui-date-control'],
-  ['date-range', '.muxui-date-range-control'],
+  ['date-picker', '.muxui-date-picker__control'],
+  ['date-range', '.muxui-date-range-picker__control'],
   ['color', '.muxui-field-input'],
-  ['combo', '.muxui-combo-control'],
-  ['select', '.muxui-select-trigger'],
+  ['combo', '.muxui-combo-box__control'],
+  ['select', '.muxui-select__trigger'],
   ['autocomplete', '.muxui-field-input'],
   ['token', '.muxui-token-field'],
   ['input', '.muxui-input'],
@@ -340,7 +340,7 @@ createRoot(document.getElementById('root')).render(React.createElement(FieldStat
         await blurPage(page);
       }
 
-      for (const [name, selector] of [['date-picker', '.muxui-date-control'], ['date-range', '.muxui-date-range-control']]) {
+      for (const [name, selector] of [['date-picker', '.muxui-date-picker__control'], ['date-range', '.muxui-date-range-picker__control']]) {
         await focusDateTrigger(page, `${name}-normal`, `${name}-normal`, selector);
         await blurPage(page);
       }
@@ -392,7 +392,7 @@ createRoot(document.getElementById('root')).render(React.createElement(FieldStat
         assert.equal(currentLabel.opacity, referenceLabel.opacity, `${mode} forced-colors invalid ${name} label opacity`);
       }
 
-      for (const [name, selector] of [['date-picker', '.muxui-date-control'], ['date-range', '.muxui-date-range-control']]) {
+      for (const [name, selector] of [['date-picker', '.muxui-date-picker__control'], ['date-range', '.muxui-date-range-picker__control']]) {
         await focusDateTrigger(page, `${name}-normal`, `${name}-normal`, selector);
         await blurPage(page);
       }

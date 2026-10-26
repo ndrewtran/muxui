@@ -44,7 +44,7 @@ function setDestination(node, target) {
 
 function createSelectionNode(root) {
   const node = root.ownerDocument.createElement('span');
-  node.className = 'muxui-list-box-selection';
+  node.className = 'muxui-list-box__selection';
   node.setAttribute('aria-hidden', 'true');
   node.setAttribute('data-muxui-list-box-selection', 'true');
   root.appendChild(node);

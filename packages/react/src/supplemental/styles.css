@@ -720,11 +720,11 @@
   color: var(--muxui-field-placeholder-color);
 }
 
-.muxui-command-palette__clear {
+.muxui-command-palette__clear-button {
   flex: 0 0 auto;
 }
 
-.muxui-command-palette__search-field[data-muxui-state-empty] .muxui-command-palette__clear {
+.muxui-command-palette__search-field[data-muxui-state-empty] .muxui-command-palette__clear-button {
   display: none;
 }
 
@@ -775,7 +775,7 @@
   --muxui-icon-button-size: 1.5rem;
 }
 
-.muxui-command-palette__chip-remove .muxui-icon-button-icon {
+.muxui-command-palette__chip-remove .muxui-icon-button__icon {
   width: 0.875rem;
   height: 0.875rem;
 }
@@ -1094,7 +1094,7 @@
 
 
 
-.muxui-header-nav__nav-btn {
+.muxui-header-nav__nav-button {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -1112,18 +1112,18 @@
   cursor: pointer;
 }
 
-.muxui-header-nav__nav-btn:hover {
+.muxui-header-nav__nav-button:hover {
   background: var(--muxui-semantic-color-neutral-96);
   color: var(--muxui-semantic-color-neutral-10);
 }
 
-.muxui-header-nav__nav-btn--current {
+.muxui-header-nav__nav-button--current {
   background: var(--muxui-semantic-color-neutral-94);
   color: var(--muxui-semantic-color-neutral-10);
 }
 
 .muxui-header-nav__logo-link:focus-visible,
-.muxui-header-nav__nav-btn:focus-visible {
+.muxui-header-nav__nav-button:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
@@ -1209,8 +1209,8 @@
   background: var(--muxui-semantic-color-neutral-96);
 }
 
-.muxui-header-nav__mobile-trigger .muxui-icon-button-icon,
-.muxui-header-nav__mobile-close-btn .muxui-icon-button-icon {
+.muxui-header-nav__mobile-trigger .muxui-icon-button__icon,
+.muxui-header-nav__mobile-close-btn .muxui-icon-button__icon {
   width: 1.5rem;
   height: 1.5rem;
 }
@@ -1226,20 +1226,20 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-header-nav__nav-btn {
+  :scope .muxui-header-nav__nav-button {
     color: var(--muxui-semantic-color-neutral-100);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-header-nav__nav-btn:hover {
+  :scope .muxui-header-nav__nav-button:hover {
     background: var(--muxui-semantic-color-neutral-20);
     color: var(--muxui-semantic-color-neutral-100);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-header-nav__nav-btn--current {
+  :scope .muxui-header-nav__nav-button--current {
     background: var(--muxui-semantic-color-neutral-22);
     color: var(--muxui-semantic-color-neutral-100);
   }
@@ -2531,7 +2531,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 
 
-.muxui-sidebar__nav-btn {
+.muxui-sidebar__nav-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2546,12 +2546,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   cursor: pointer;
 }
 
-.muxui-sidebar__nav-btn:hover {
+.muxui-sidebar__nav-button:hover {
   background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
   color: var(--muxui-semantic-color-neutral-90);
 }
 
-.muxui-sidebar__nav-btn--current {
+.muxui-sidebar__nav-button--current {
   background: var(--muxui-semantic-color-neutral-16);
   color: var(--muxui-semantic-color-neutral-100);
 }
@@ -2564,7 +2564,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   font: inherit;
 }
 
-.muxui-sidebar__nav-btn.muxui-sidebar__nav-toggle {
+.muxui-sidebar__nav-button.muxui-sidebar__nav-toggle {
   flex-shrink: 0;
   inline-size: var(--muxui-control-size-sm);
 }
@@ -2711,7 +2711,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   height: 1rem;
 }
 
-.muxui-sidebar__account-trigger .muxui-icon-button-icon {
+.muxui-sidebar__account-trigger .muxui-icon-button__icon {
   width: 1rem;
   height: 1rem;
 }
@@ -2787,7 +2787,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   align-items: center;
 }
 
-.muxui-sidebar__mobile-menu-btn {
+.muxui-sidebar__mobile-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2801,12 +2801,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   padding: 0;
 }
 
-.muxui-sidebar__mobile-menu-btn:hover {
+.muxui-sidebar__mobile-trigger:hover {
   background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
 }
 
-.muxui-sidebar__mobile-menu-btn .muxui-icon-button-icon,
-.muxui-sidebar__mobile-close-btn .muxui-icon-button-icon {
+.muxui-sidebar__mobile-trigger .muxui-icon-button__icon,
+.muxui-sidebar__mobile-close-btn .muxui-icon-button__icon {
   width: 1.5rem;
   height: 1.5rem;
 }
@@ -3056,7 +3056,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   font: inherit;
 }
 
-.muxui-sidebar__nav-btn.muxui-sidebar__search-button {
+.muxui-sidebar__nav-button.muxui-sidebar__search-button {
   display: none;
   position: absolute;
   inset: 0;
@@ -3064,7 +3064,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   block-size: auto;
 }
 
-.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-btn.muxui-sidebar__search-button {
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-button.muxui-sidebar__search-button {
   display: flex;
 }
 
@@ -3136,9 +3136,9 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     .muxui-sidebar__nav-link,
     .muxui-sidebar__nav-link:hover,
     .muxui-sidebar__nav-link--current,
-    .muxui-sidebar__nav-btn,
-    .muxui-sidebar__nav-btn:hover,
-    .muxui-sidebar__nav-btn--current,
+    .muxui-sidebar__nav-button,
+    .muxui-sidebar__nav-button:hover,
+    .muxui-sidebar__nav-button--current,
     .muxui-sidebar__account-name,
     .muxui-sidebar__feature-card-title
   ) {
@@ -3181,13 +3181,13 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-sidebar__nav-btn:hover {
+  :scope .muxui-sidebar__nav-button:hover {
     background: var(--muxui-semantic-color-neutral-20);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-sidebar__nav-btn--current {
+  :scope .muxui-sidebar__nav-button--current {
     background: var(--muxui-semantic-color-neutral-22);
   }
 }
@@ -3245,7 +3245,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-sidebar__mobile-menu-btn:hover {
+  :scope .muxui-sidebar__mobile-trigger:hover {
     background: var(--muxui-semantic-color-neutral-20);
   }
 }
@@ -3258,14 +3258,14 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
   :scope :is(
-    .muxui-header-nav__nav-btn:not(.muxui-header-nav__nav-btn--current):hover,
+    .muxui-header-nav__nav-button:not(.muxui-header-nav__nav-button--current):hover,
     .muxui-header-nav__mobile-trigger:hover,
     .muxui-header-nav__mobile-close-btn:hover,
     .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover,
-    .muxui-sidebar__nav-btn:not(.muxui-sidebar__nav-btn--current):hover,
+    .muxui-sidebar__nav-button:not(.muxui-sidebar__nav-button--current):hover,
     .muxui-sidebar__account-trigger:hover,
     .muxui-sidebar__feature-card-dismiss:hover,
-    .muxui-sidebar__mobile-menu-btn:hover,
+    .muxui-sidebar__mobile-trigger:hover,
     .muxui-sidebar__mobile-close-btn:hover
   ) {
     background: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 4%, transparent);
@@ -3275,10 +3275,10 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
   :scope :is(
     .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover,
-    .muxui-sidebar__nav-btn:not(.muxui-sidebar__nav-btn--current):hover,
+    .muxui-sidebar__nav-button:not(.muxui-sidebar__nav-button--current):hover,
     .muxui-sidebar__account-trigger:hover,
     .muxui-sidebar__feature-card-dismiss:hover,
-    .muxui-sidebar__mobile-menu-btn:hover,
+    .muxui-sidebar__mobile-trigger:hover,
     .muxui-sidebar__mobile-close-btn:hover
   ) {
     background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
@@ -3287,9 +3287,9 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :is(
-    .muxui-header-nav__nav-btn:not(.muxui-header-nav__nav-btn--current):hover,
+    .muxui-header-nav__nav-button:not(.muxui-header-nav__nav-button--current):hover,
     .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover,
-    .muxui-sidebar__nav-btn:not(.muxui-sidebar__nav-btn--current):hover
+    .muxui-sidebar__nav-button:not(.muxui-sidebar__nav-button--current):hover
   ) {
     background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
   }
@@ -3302,7 +3302,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
       .muxui-header-nav__mobile-close-btn:hover,
       .muxui-sidebar__account-trigger:hover,
       .muxui-sidebar__feature-card-dismiss:hover,
-      .muxui-sidebar__mobile-menu-btn:hover,
+      .muxui-sidebar__mobile-trigger:hover,
       .muxui-sidebar__mobile-close-btn:hover
     ) {
       background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
@@ -3315,7 +3315,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     .muxui-header-nav__mobile-trigger,
     .muxui-header-nav__mobile-close-btn,
     .muxui-sidebar__feature-card-dismiss,
-    .muxui-sidebar__mobile-menu-btn,
+    .muxui-sidebar__mobile-trigger,
     .muxui-sidebar__mobile-close-btn
   ) {
     color: var(--muxui-semantic-color-neutral-100);
@@ -3329,21 +3329,21 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 @media (forced-colors: none) {
-  .muxui-header-nav__nav-btn--current:hover,
+  .muxui-header-nav__nav-button--current:hover,
   .muxui-sidebar__nav-link--current:hover,
-  .muxui-sidebar__nav-btn--current:hover {
+  .muxui-sidebar__nav-button--current:hover {
     background-color: var(--muxui-semantic-color-neutral-94);
   }
 
   .muxui-sidebar__nav-link--current:hover,
-  .muxui-sidebar__nav-btn--current:hover {
+  .muxui-sidebar__nav-button--current:hover {
     background-color: var(--muxui-semantic-color-neutral-16);
   }
 
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-header-nav__nav-btn--current:hover,
+    :scope .muxui-header-nav__nav-button--current:hover,
     :scope .muxui-sidebar__nav-link--current:hover,
-    :scope .muxui-sidebar__nav-btn--current:hover {
+    :scope .muxui-sidebar__nav-button--current:hover {
       background-color: var(--muxui-semantic-color-neutral-22);
       background-image: linear-gradient(
         color-mix(in srgb, currentColor 6%, transparent),
@@ -3352,9 +3352,9 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     }
   }
 
-  .muxui-header-nav__nav-btn--current:hover,
+  .muxui-header-nav__nav-button--current:hover,
   .muxui-sidebar__nav-link--current:hover,
-  .muxui-sidebar__nav-btn--current:hover {
+  .muxui-sidebar__nav-button--current:hover {
     background-image: linear-gradient(
       color-mix(in srgb, currentColor 6%, transparent),
       color-mix(in srgb, currentColor 6%, transparent)
@@ -3706,7 +3706,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   --muxui-icon-button-size: 1.5rem;
 }
 
-.muxui-tag-select__tag-remove .muxui-icon-button-icon {
+.muxui-tag-select__tag-remove .muxui-icon-button__icon {
   width: 0.875rem;
   height: 0.875rem;
 }

@@ -205,7 +205,7 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     await page.waitForFunction(() => {
       const menu = document.querySelector('[data-testid="coordinate-popup"] .muxui-menu');
       const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
-      const items = [...(menu?.querySelectorAll('.muxui-menu-item') ?? [])];
+      const items = [...(menu?.querySelectorAll('.muxui-menu__item') ?? [])];
       return items.length === 2 && items.every((item) => item.getAttribute('aria-disabled') === 'true')
         && overlay?.hidden && getComputedStyle(overlay).display === 'none';
     });

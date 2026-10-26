@@ -1042,7 +1042,7 @@ test('HeaderNav and Sidebar mobile triggers open their accessible navigation dia
     root = createRoot(document.querySelector('#root'));
     await act(async () => root.render(React.createElement(Sidebar.Root, null,
       React.createElement(Sidebar.MobileTrigger, { logo: 'Mux' }, React.createElement(Sidebar.NavList, null, React.createElement(Sidebar.NavItem, { href: '/docs' }, 'Docs'))))));
-    const sidebarTrigger = document.querySelector('.muxui-sidebar__mobile-menu-btn');
+    const sidebarTrigger = document.querySelector('.muxui-sidebar__mobile-trigger');
     assert.ok(sidebarTrigger);
     await act(async () => sidebarTrigger.click());
     assert.ok(document.querySelector('.muxui-sidebar__mobile-dialog'));

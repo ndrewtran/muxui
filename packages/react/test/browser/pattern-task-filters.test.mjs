@@ -28,11 +28,11 @@ const tasks = [
 ];
 const named = (predicate) => tasks.filter(predicate).map(([name]) => name);
 
-const rowNames = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table-body [role="rowheader"]')].map((node) => node.textContent));
-const rowStatuses = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table-body .muxui-table-row')].map((node) => node.querySelectorAll('[role="gridcell"]')[1].textContent));
-const expectRows = (tab, expected, message) => pollUntil(tab, (names) => JSON.stringify([...document.querySelectorAll('.muxui-table-body [role="rowheader"]')].map((node) => node.textContent)) === JSON.stringify(names), expected, {
+const rowNames = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table__body [role="rowheader"]')].map((node) => node.textContent));
+const rowStatuses = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table__body .muxui-table__row')].map((node) => node.querySelectorAll('[role="gridcell"]')[1].textContent));
+const expectRows = (tab, expected, message) => pollUntil(tab, (names) => JSON.stringify([...document.querySelectorAll('.muxui-table__body [role="rowheader"]')].map((node) => node.textContent)) === JSON.stringify(names), expected, {
   message,
-  report: () => [...document.querySelectorAll('.muxui-table-body [role="rowheader"]')].map((node) => node.textContent),
+  report: () => [...document.querySelectorAll('.muxui-table__body [role="rowheader"]')].map((node) => node.textContent),
 });
 const expectCount = (tab, text) => pollUntil(tab, (expected) => document.querySelector('[role="status"]').textContent === expected, text, {
   message: `the result count reads ${text}`,
@@ -172,16 +172,16 @@ async function statusButtonsTests(t, browser, url) {
 /** The filter bar variant's subtests, run against its served page. */
 async function filterBarTests(t, browser, url) {
   const search = (tab) => tab.getByRole('searchbox', { name: 'Search tasks', exact: true });
-  const trigger = (tab) => tab.locator('.tasks-status .muxui-select-trigger');
+  const trigger = (tab) => tab.locator('.tasks-status .muxui-select__trigger');
   const clearButton = (tab) => tab.getByRole('button', { name: 'Clear filters', exact: true });
-  const tags = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-tag')].map((node) => node.textContent));
-  const expectTags = (tab, expected, message) => pollUntil(tab, (labels) => JSON.stringify([...document.querySelectorAll('.muxui-tag')].map((node) => node.textContent)) === JSON.stringify(labels), expected, {
+  const tags = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-tag-group__tag')].map((node) => node.textContent));
+  const expectTags = (tab, expected, message) => pollUntil(tab, (labels) => JSON.stringify([...document.querySelectorAll('.muxui-tag-group__tag')].map((node) => node.textContent)) === JSON.stringify(labels), expected, {
     message,
-    report: () => [...document.querySelectorAll('.muxui-tag')].map((node) => node.textContent),
+    report: () => [...document.querySelectorAll('.muxui-tag-group__tag')].map((node) => node.textContent),
   });
-  const expectTrigger = (tab, text) => pollUntil(tab, (expected) => document.querySelector('.tasks-status .muxui-select-trigger').textContent === expected, text, {
+  const expectTrigger = (tab, text) => pollUntil(tab, (expected) => document.querySelector('.tasks-status .muxui-select__trigger').textContent === expected, text, {
     message: `the status select reads ${text}`,
-    report: () => document.querySelector('.tasks-status .muxui-select-trigger').textContent,
+    report: () => document.querySelector('.tasks-status .muxui-select__trigger').textContent,
   });
   const expectFocusIn = (tab, selector, message) => pollUntil(tab, (css) => document.activeElement?.matches(css), selector, { message, report: () => document.activeElement?.outerHTML.slice(0, 160) });
   const choose = async (tab, option) => {
@@ -275,11 +275,11 @@ async function filterBarTests(t, browser, url) {
       await expectTags(tab, ['Task: the', 'Status: To do'], 'two tags');
 
       // Backspace on a focused tag removes it, and focus moves to the remaining tag.
-      await tab.locator('.muxui-tag', { hasText: 'Task: the' }).focus();
+      await tab.locator('.muxui-tag-group__tag', { hasText: 'Task: the' }).focus();
       await tab.keyboard.press('Backspace');
       await expectTags(tab, ['Status: To do'], 'Backspace removes the focused tag');
       assert.equal(await search(tab).inputValue(), '', 'its text filter is cleared');
-      await expectFocusIn(tab, '.muxui-tag', 'focus moves to the remaining tag');
+      await expectFocusIn(tab, '.muxui-tag-group__tag', 'focus moves to the remaining tag');
       // Removing the last tag with its button hands focus to the search field, not to the page.
       await tab.getByRole('button', { name: 'Remove Status: To do', exact: true }).click();
       await expectTags(tab, [], 'the last tag is removed');
@@ -351,7 +351,7 @@ async function filterBarTests(t, browser, url) {
         await expectTags(tab, [`Task: ${query}`], `${scheme}: the long query becomes one tag with its whole text`);
         const { scrollWidth, innerWidth } = await tab.evaluate(measurePageFit);
         assert.ok(scrollWidth <= innerWidth, `${scheme}: the page scrolls horizontally with a long tag (${scrollWidth} > ${innerWidth})`);
-        const tag = await tab.locator('.muxui-tag').boundingBox();
+        const tag = await tab.locator('.muxui-tag-group__tag').boundingBox();
         assert.ok(tag.x >= 0 && tag.x + tag.width <= innerWidth, `${scheme}: the tag stays inside the viewport (${tag.x} to ${tag.x + tag.width})`);
         // The text is cut with an ellipsis, so it is narrower than its full width, and its title and DOM text keep the whole value.
         const text = await tab.evaluate(() => {

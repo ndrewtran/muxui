@@ -104,7 +104,7 @@ test('ColorSwatchPicker returns the chosen item in its own color space', async (
   ];
   const changes = [];
   await withRoot(React.createElement(ColorSwatchPicker, { 'aria-label': 'Palette', items, onChange: (next) => changes.push(next) }), async ({ container }) => {
-    for (const option of container.querySelectorAll('.muxui-color-swatch-picker-item')) await act(async () => option.click());
+    for (const option of container.querySelectorAll('.muxui-color-swatch-picker__item')) await act(async () => option.click());
     assert.deepEqual(changes, ['rgba(255, 0, 0, 1)', 'rgba(0, 255, 0, 1)', 'hsla(240, 100%, 50%, 1)', 'hsla(60, 100%, 50%, 1)']);
   });
 });
@@ -120,7 +120,7 @@ test('ColorPicker keeps its color in the space of its value after any nested edi
     const changes = [];
     await withRoot(picker({ key: defaultValue, defaultValue, onChange: (next) => changes.push(next) }, channel), async ({ container }) => {
       await nudgeWheel(wheelInput(container, 'Wheel'));
-      for (const option of container.querySelectorAll('.muxui-color-swatch-picker-item')) await act(async () => option.click());
+      for (const option of container.querySelectorAll('.muxui-color-swatch-picker__item')) await act(async () => option.click());
       await nudgeWheel(wheelInput(container, 'Wheel'));
       assert.equal(changes.length, 4, defaultValue);
       const notation = defaultValue.startsWith('#') ? rgba : hsla;

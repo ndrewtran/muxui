@@ -30,7 +30,7 @@ test('real browser RangeCalendar selects a start and end date with the keyboard'
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(`${url}/range-keyboard.html`, { waitUntil: 'networkidle' });
-    await page.locator('.muxui-range-calendar-cell[tabindex="0"]').focus();
+    await page.locator('.muxui-range-calendar__cell[tabindex="0"]').focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     // React Aria advances focus one day after a keyboard range start, to 12 March.
@@ -38,7 +38,7 @@ test('real browser RangeCalendar selects a start and end date with the keyboard'
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     assert.equal(await page.locator('#range').textContent(), '2026-03-11/2026-03-22');
-    const selected = await page.locator('.muxui-range-calendar-cell[data-muxui-state-selected="true"]').allTextContents();
+    const selected = await page.locator('.muxui-range-calendar__cell[data-muxui-state-selected="true"]').allTextContents();
     assert.equal(selected.length, 12);
     assert.equal(selected[0], '11');
     assert.equal(selected.at(-1), '22');

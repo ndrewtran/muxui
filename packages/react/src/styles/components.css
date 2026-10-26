@@ -1,28 +1,28 @@
 /* Mux UI-owned styling for the foundational component families. */
 
-.muxui-breadcrumbs-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
-.muxui-breadcrumbs-item:not(:last-child)::after { color: var(--muxui-semantic-content-muted); content: '/'; }
-.muxui-breadcrumbs-link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
-.muxui-breadcrumbs-link:hover, .muxui-link:hover { color: var(--muxui-semantic-content-link-hover); }
-.muxui-breadcrumbs-link[data-muxui-state-hovered], .muxui-link[data-muxui-state-hovered] { color: var(--muxui-semantic-content-link-hover); }
-.muxui-breadcrumbs-link[data-muxui-state-pressed], .muxui-link[data-muxui-state-pressed] { color: var(--muxui-semantic-content-link-pressed); }
-.muxui-breadcrumbs-link:focus-visible, .muxui-link:focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; }
-.muxui-breadcrumbs-current { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
-.muxui-breadcrumbs-item[data-muxui-state-current] .muxui-breadcrumbs-current,
-.muxui-breadcrumbs-item[data-muxui-state-current] .muxui-breadcrumbs-link { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
+.muxui-breadcrumbs__list { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
+.muxui-breadcrumbs__item:not(:last-child)::after { color: var(--muxui-semantic-content-muted); content: '/'; }
+.muxui-breadcrumbs__link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
+.muxui-breadcrumbs__link:hover, .muxui-link:hover { color: var(--muxui-semantic-content-link-hover); }
+.muxui-breadcrumbs__link[data-muxui-state-hovered], .muxui-link[data-muxui-state-hovered] { color: var(--muxui-semantic-content-link-hover); }
+.muxui-breadcrumbs__link[data-muxui-state-pressed], .muxui-link[data-muxui-state-pressed] { color: var(--muxui-semantic-content-link-pressed); }
+.muxui-breadcrumbs__link:focus-visible, .muxui-link:focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; }
+.muxui-breadcrumbs__current { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
+.muxui-breadcrumbs__item[data-muxui-state-current] .muxui-breadcrumbs__current,
+.muxui-breadcrumbs__item[data-muxui-state-current] .muxui-breadcrumbs__link { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
 .muxui-link[data-muxui-state-current] { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
 
-.muxui-checkbox-label { line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-checkbox-indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-component-checkbox-indicator-border); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-component-checkbox-indicator-background); color: var(--muxui-semantic-content-on-solid); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
-.muxui-checkbox-indicator[data-muxui-state-selected], .muxui-checkbox-indicator[data-muxui-state-indeterminate] { border-color: var(--muxui-component-checkbox-selected-background); background: var(--muxui-component-checkbox-selected-background); color: var(--muxui-semantic-action-foreground); }
+.muxui-checkbox__label { line-height: var(--muxui-semantic-typography-text-line-height); }
+.muxui-checkbox__indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-component-checkbox-indicator-border); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-component-checkbox-indicator-background); color: var(--muxui-semantic-content-on-solid); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
+.muxui-checkbox__indicator[data-muxui-state-selected], .muxui-checkbox__indicator[data-muxui-state-indeterminate] { border-color: var(--muxui-component-checkbox-selected-background); background: var(--muxui-component-checkbox-selected-background); color: var(--muxui-semantic-action-foreground); }
 .muxui-checkbox input { accent-color: var(--muxui-semantic-selection-track); }
-.muxui-checkbox[data-muxui-state-invalid] .muxui-checkbox-indicator { border-color: var(--muxui-semantic-feedback-invalid-border); }
+.muxui-checkbox[data-muxui-state-invalid] .muxui-checkbox__indicator { border-color: var(--muxui-semantic-feedback-invalid-border); }
 
 .muxui-disclosure-group { overflow: hidden; border: 1px solid var(--muxui-semantic-border-subtle); border-radius: var(--muxui-semantic-shape-container-radius); }
 .muxui-disclosure:last-child { border-block-end: 0; }
-.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-size-md); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing), color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
-.muxui-disclosure-trigger:hover:not([data-muxui-state-disabled]), .muxui-disclosure-trigger[data-muxui-state-pressed] { background: var(--muxui-semantic-surface-hover); color: var(--muxui-semantic-content-strong); }
-.muxui-disclosure-panel { margin-block-start: var(--muxui-semantic-layout-control-gap); padding: 0 var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small); }
+.muxui-disclosure__trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-size-md); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing), color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
+.muxui-disclosure__trigger:hover:not([data-muxui-state-disabled]), .muxui-disclosure__trigger[data-muxui-state-pressed] { background: var(--muxui-semantic-surface-hover); color: var(--muxui-semantic-content-strong); }
+.muxui-disclosure__panel { margin-block-start: var(--muxui-semantic-layout-control-gap); padding: 0 var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small); }
 .muxui-disclosure[data-muxui-state-disabled] { cursor: not-allowed; }
 
 .muxui-group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--muxui-semantic-layout-group-gap); }
@@ -35,32 +35,32 @@
   color: var(--muxui-semantic-typography-text-color);
 }
 .muxui-value-label { color: var(--muxui-progress-label-color); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-switch-label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-meter-track, .muxui-progress-bar-track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
-.muxui-meter-fill, .muxui-progress-bar-fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
-.muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar-fill {
+.muxui-switch__label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
+.muxui-meter__track, .muxui-progress-bar__track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
+.muxui-meter__fill, .muxui-progress-bar__fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
+.muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar__fill {
   inline-size: 40%;
   margin-inline-start: 30%;
   background: var(--muxui-semantic-selection-track);
 }
 .muxui-separator { border: 0; background: var(--muxui-semantic-color-neutral-20); }
-.muxui-separator-horizontal { block-size: 1px; inline-size: 100%; }
-.muxui-separator-vertical { block-size: auto; inline-size: 1px; min-block-size: auto; }
+.muxui-separator--horizontal { block-size: 1px; inline-size: 100%; }
+.muxui-separator--vertical { block-size: auto; inline-size: 1px; min-block-size: auto; }
 
 @media (prefers-reduced-motion: reduce) {
-  .muxui-breadcrumbs-link, .muxui-link, .muxui-disclosure-trigger, .muxui-disclosure-trigger-icon, .muxui-meter-fill, .muxui-progress-bar-fill { animation: none; transition: none; }
+  .muxui-breadcrumbs__link, .muxui-link, .muxui-disclosure__trigger, .muxui-disclosure__trigger-icon, .muxui-meter__fill, .muxui-progress-bar__fill { animation: none; transition: none; }
 }
 
 @media (forced-colors: active) {
-  .muxui-breadcrumbs-item:not(:last-child)::after, .muxui-separator { color: ButtonText; background: ButtonText; }
-  .muxui-checkbox-indicator, .muxui-disclosure-group { border-color: ButtonText; background: Canvas; color: CanvasText; }
-  .muxui-checkbox-indicator[data-muxui-state-selected], .muxui-checkbox-indicator[data-muxui-state-indeterminate] { border-color: Highlight; background: Highlight; color: HighlightText; }
-  .muxui-meter-fill, .muxui-progress-bar-fill { background: Highlight; }
+  .muxui-breadcrumbs__item:not(:last-child)::after, .muxui-separator { color: ButtonText; background: ButtonText; }
+  .muxui-checkbox__indicator, .muxui-disclosure-group { border-color: ButtonText; background: Canvas; color: CanvasText; }
+  .muxui-checkbox__indicator[data-muxui-state-selected], .muxui-checkbox__indicator[data-muxui-state-indeterminate] { border-color: Highlight; background: Highlight; color: HighlightText; }
+  .muxui-meter__fill, .muxui-progress-bar__fill { background: Highlight; }
 }
 
 @media (prefers-contrast: more) {
-  .muxui-checkbox-indicator, .muxui-disclosure-group { border-width: 2px; }
-  .muxui-meter-track, .muxui-progress-bar-track { outline: 1px solid currentColor; outline-offset: 1px; }
+  .muxui-checkbox__indicator, .muxui-disclosure-group { border-width: 2px; }
+  .muxui-meter__track, .muxui-progress-bar__track { outline: 1px solid currentColor; outline-offset: 1px; }
 }
 
 /* MuxUI parity declarations take precedence over generic component defaults. */
@@ -119,21 +119,21 @@
 
 /* The wrapper is a flex row so a leading or trailing icon and its label share
    one cross-axis center, spaced by the size recipe's gap that the Button sets. */
-.muxui-button-content {
+.muxui-button__label {
   display: inline-flex;
   align-items: center;
   gap: inherit;
 }
 
-.muxui-button[data-muxui-state-pending] .muxui-button-content {
+.muxui-button[data-muxui-state-pending] .muxui-button__label {
   opacity: 0;
 }
 
-.muxui-button[data-muxui-state-pending] .muxui-button-content--with-spinner {
+.muxui-button[data-muxui-state-pending] .muxui-button__label--with-spinner {
   opacity: 1;
 }
 
-.muxui-button-spinner {
+.muxui-button__spinner {
   position: absolute;
   inset: 0;
   width: 1rem;
@@ -142,18 +142,18 @@
   animation: muxui-button-spinner-rotate var(--muxui-semantic-motion-progress-spin-duration) var(--muxui-semantic-motion-constant-easing) infinite;
 }
 
-.muxui-button-spinner-track {
+.muxui-button__spinner-track {
   stroke: currentColor;
   opacity: 0.3;
 }
 
-.muxui-button-spinner-arc {
+.muxui-button__spinner-arc {
   stroke: currentColor;
   stroke-dasharray: 44, 63;
   animation: muxui-button-spinner-dash var(--muxui-semantic-motion-progress-sweep-duration) var(--muxui-semantic-motion-progress-easing) infinite;
 }
 
-.muxui-button-spinner--inline {
+.muxui-button__spinner--inline {
   position: static;
   width: 0.875rem;
   height: 0.875rem;
@@ -211,13 +211,13 @@
   line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
-.muxui-breadcrumbs-item {
+.muxui-breadcrumbs__item {
   gap: 0;
   display: inline-flex;
   align-items: center;
 }
 
-.muxui-breadcrumbs-item:not(:last-child)::after {
+.muxui-breadcrumbs__item:not(:last-child)::after {
   content: '/';
   display: inline-block;
   margin: 0 var(--muxui-semantic-layout-control-gap);
@@ -226,12 +226,12 @@
   pointer-events: none;
 }
 
-.muxui-breadcrumbs-item[data-muxui-state-current] {
+.muxui-breadcrumbs__item[data-muxui-state-current] {
   font-weight: var(--muxui-semantic-typography-label-weight);
   color: var(--muxui-semantic-content-inverse);
 }
 
-.muxui-breadcrumbs-link {
+.muxui-breadcrumbs__link {
   color: var(--muxui-semantic-content-default);
   text-decoration: none;
   outline: none;
@@ -240,36 +240,36 @@
   cursor: pointer;
 }
 
-.muxui-breadcrumbs-link[data-muxui-state-hovered] {
+.muxui-breadcrumbs__link[data-muxui-state-hovered] {
   color: var(--muxui-semantic-content-link-hover);
   text-decoration: underline;
 }
 
-.muxui-breadcrumbs-link[data-muxui-state-pressed] {
+.muxui-breadcrumbs__link[data-muxui-state-pressed] {
   color: var(--muxui-semantic-content-link-hover);
 }
 
-.muxui-breadcrumbs-link[data-muxui-state-focus-visible] {
+.muxui-breadcrumbs__link[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-breadcrumbs-link[data-muxui-state-current] {
+.muxui-breadcrumbs__link[data-muxui-state-current] {
   color: var(--muxui-semantic-content-strong);
   font-weight: var(--muxui-semantic-typography-label-weight);
   cursor: default;
   pointer-events: none;
 }
 
-.muxui-breadcrumbs-link[data-muxui-state-disabled] {
+.muxui-breadcrumbs__link[data-muxui-state-disabled] {
   color: var(--muxui-semantic-content-default);
   opacity: 0.7;
   pointer-events: none;
   cursor: not-allowed;
 }
 
-.muxui-breadcrumbs-current[data-muxui-state-disabled] {
+.muxui-breadcrumbs__current[data-muxui-state-disabled] {
   color: var(--muxui-semantic-content-default);
 }
 
@@ -290,7 +290,7 @@
 .muxui-checkbox[data-muxui-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
 .muxui-checkbox[data-muxui-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
-.muxui-checkbox-indicator,
+.muxui-checkbox__indicator,
 .muxui-checkbox-field__indicator {
   display: inline-flex;
   align-items: center;
@@ -310,32 +310,32 @@
   outline-offset: 0px;
 }
 
-.muxui-checkbox[data-muxui-state-focus-visible] .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-focus-visible] .muxui-checkbox__indicator,
 .muxui-checkbox-field__button[data-muxui-state-focus-visible] .muxui-checkbox-field__indicator {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-focus-ring-color);
 }
 
-.muxui-checkbox[data-muxui-state-selected] .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-selected] .muxui-checkbox__indicator,
 .muxui-checkbox-field__button[data-muxui-state-selected] .muxui-checkbox-field__indicator {
   background-color: var(--muxui-component-checkbox-selected-background);
   border-color: var(--muxui-component-checkbox-selected-background);
 }
 
-.muxui-checkbox[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-checkbox__indicator,
 .muxui-checkbox-field__button[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-checkbox-field__indicator {
   background-color: var(--muxui-semantic-color-color-50);
   border-color: var(--muxui-semantic-color-color-50);
 }
 
-.muxui-checkbox[data-muxui-state-indeterminate] .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-indeterminate] .muxui-checkbox__indicator,
 .muxui-checkbox-field__button[data-muxui-state-indeterminate] .muxui-checkbox-field__indicator {
   background-color: var(--muxui-component-checkbox-selected-background);
   border-color: var(--muxui-component-checkbox-selected-background);
 }
 
-.muxui-checkbox[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox__indicator,
 .muxui-checkbox-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate])
   .muxui-checkbox-field__indicator {
   border-color: var(--muxui-component-checkbox-indicator-border-hover);
@@ -345,19 +345,19 @@
 /* The invalid edge wins in every state. The selected hovered selectors match
    the selected hover rules' specificity and follow them in source order; the
    unselected hovered selectors outrank the unselected hover rules. */
-.muxui-checkbox[data-muxui-state-invalid] .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-invalid] .muxui-checkbox__indicator,
 .muxui-checkbox-field[data-muxui-state-invalid] .muxui-checkbox-field__indicator {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-checkbox[data-muxui-state-invalid]:is([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator,
-.muxui-checkbox[data-muxui-state-invalid][data-muxui-state-hovered]:is([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-invalid]:is([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox__indicator,
+.muxui-checkbox[data-muxui-state-invalid][data-muxui-state-hovered]:is([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox__indicator,
 .muxui-checkbox-field[data-muxui-state-invalid] :is([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-field__indicator,
 .muxui-checkbox-field[data-muxui-state-invalid] [data-muxui-state-hovered]:is([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-field__indicator {
   border-color: var(--muxui-component-checkbox-selected-invalid-border);
 }
 
-.muxui-checkbox[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator,
+.muxui-checkbox[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox__indicator,
 .muxui-checkbox-field[data-muxui-state-invalid] [data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-field__indicator {
   border-color: var(--muxui-component-checkbox-invalid-border-hover);
 }
@@ -367,7 +367,7 @@
   cursor: not-allowed;
 }
 
-.muxui-checkbox-indicator svg,
+.muxui-checkbox__indicator svg,
 .muxui-checkbox-field__indicator svg {
   width: 0.75rem;
   height: 0.75rem;
@@ -376,22 +376,22 @@
   display: block;
 }
 
-.muxui-checkbox[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-checkbox-indicator svg,
+.muxui-checkbox[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-checkbox__indicator svg,
 .muxui-checkbox-field__button[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-checkbox-field__indicator svg {
   color: var(--muxui-component-checkbox-selected-foreground-hover);
 }
 
-.muxui-checkbox.muxui-checkbox--sm .muxui-checkbox-indicator {
+.muxui-checkbox.muxui-checkbox--sm .muxui-checkbox__indicator {
   inline-size: 0.875rem;
   block-size: 0.875rem;
 }
 
-.muxui-checkbox.muxui-checkbox--sm .muxui-checkbox-indicator svg {
+.muxui-checkbox.muxui-checkbox--sm .muxui-checkbox__indicator svg {
   inline-size: 0.5625rem;
   block-size: 0.5625rem;
 }
 
-.muxui-checkbox:not([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator svg {
+.muxui-checkbox:not([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox__indicator svg {
   visibility: hidden;
 }
 
@@ -409,7 +409,7 @@
   align-items: flex-end;
 }
 
-.muxui-disclosure-trigger {
+.muxui-disclosure__trigger {
   position: relative;
   box-sizing: border-box;
   display: inline-flex;
@@ -442,21 +442,21 @@
   width: fit-content;
 }
 
-.muxui-disclosure[data-muxui-align='end'] .muxui-disclosure-trigger {
+.muxui-disclosure[data-muxui-align='end'] .muxui-disclosure__trigger {
   align-self: flex-end;
 }
 
 .muxui-disclosure:not([data-muxui-state-disabled])
-  .muxui-disclosure-trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
+  .muxui-disclosure__trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-color: var(--muxui-semantic-action-neutral-background-hover);
 }
 
 .muxui-disclosure:not([data-muxui-state-disabled])
-  .muxui-disclosure-trigger:active:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
+  .muxui-disclosure__trigger:active:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-color: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
-.muxui-disclosure-trigger:focus-visible {
+.muxui-disclosure__trigger:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
   box-shadow:
@@ -464,13 +464,13 @@
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure-trigger,
-.muxui-disclosure-trigger[data-muxui-state-disabled] {
+.muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure__trigger,
+.muxui-disclosure__trigger[data-muxui-state-disabled] {
   pointer-events: none;
   cursor: not-allowed;
 }
 
-.muxui-disclosure-panel-host {
+.muxui-disclosure__panel-host {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -478,7 +478,7 @@
   padding: 0;
 }
 
-.muxui-disclosure-panel {
+.muxui-disclosure__panel {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -486,30 +486,30 @@
   padding: 0;
 }
 
-.muxui-disclosure-motion-panel {
+.muxui-disclosure__motion-panel {
   box-sizing: border-box;
   width: 100%;
 }
 
 /* Keep panel spacing inside the measured height, including child margins. */
-.muxui-disclosure-motion-content {
+.muxui-disclosure__motion-content {
   display: flow-root;
 }
 
-.muxui-disclosure-motion-content::before {
+.muxui-disclosure__motion-content::before {
   content: '';
   display: block;
   margin-block-end: var(--muxui-semantic-layout-control-gap);
 }
 
-.muxui-disclosure-header {
+.muxui-disclosure__header {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
 }
 
 /* DisclosureGroup uses full-width accordion trigger geometry. */
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-header > .muxui-disclosure-trigger {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger {
   align-self: stretch;
   width: 100%;
   justify-content: space-between;
@@ -578,8 +578,8 @@
   width: 100%;
 }
 
-.muxui-meter-header,
-.muxui-progress-bar-header {
+.muxui-meter__header,
+.muxui-progress-bar__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -604,16 +604,16 @@
   }
 }
 
-.muxui-progress-bar-fill { transition: width var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-progress-bar__fill { transition: width var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-interaction-easing); }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-meter-track, .muxui-progress-bar-track) {
+  :scope :where(.muxui-meter__track, .muxui-progress-bar__track) {
     background-color: var(--muxui-semantic-color-neutral-default-24);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-meter-fill, .muxui-progress-bar-fill) {
+  :scope :where(.muxui-meter__fill, .muxui-progress-bar__fill) {
     background-color: var(--muxui-semantic-color-neutral-default-100);
   }
 }
@@ -631,13 +631,13 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-meter-track, .muxui-progress-bar-track) {
+  :scope :where(.muxui-meter__track, .muxui-progress-bar__track) {
     background-color: var(--muxui-semantic-color-neutral-default-84);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-meter-fill, .muxui-progress-bar-fill) {
+  :scope :where(.muxui-meter__fill, .muxui-progress-bar__fill) {
     background-color: var(--muxui-semantic-color-neutral-default-5);
   }
 }
@@ -664,14 +664,14 @@
   flex-shrink: 0;
 }
 
-.muxui-separator-vertical,
+.muxui-separator--vertical,
 .muxui-separator[aria-orientation='vertical'] {
   width: 1px;
   height: auto;
   align-self: stretch;
 }
 
-.muxui-separator.muxui-separator-vertical,
+.muxui-separator.muxui-separator--vertical,
 .muxui-separator[aria-orientation='vertical'] {
   block-size: auto;
   min-block-size: auto;
@@ -821,7 +821,7 @@
   transition: none;
 }
 
-.muxui-toggle-button-group-motion-indicator {
+.muxui-toggle-button-group__motion-indicator {
   position: absolute;
   z-index: 0;
   pointer-events: none;
@@ -830,7 +830,7 @@
   box-sizing: border-box;
 }
 
-.muxui-toggle-button-group-motion-foreground {
+.muxui-toggle-button-group__motion-foreground {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -838,7 +838,7 @@
   pointer-events: none;
 }
 
-.muxui-toggle-button-group-motion-label {
+.muxui-toggle-button-group__motion-label {
   position: absolute !important;
   z-index: 0;
   margin: 0;
@@ -853,8 +853,8 @@
 }
 
 @media (forced-colors: active) {
-  .muxui-toggle-button-group-motion-indicator,
-  .muxui-toggle-button-group-motion-foreground {
+  .muxui-toggle-button-group__motion-indicator,
+  .muxui-toggle-button-group__motion-foreground {
     display: none;
   }
 
@@ -908,20 +908,20 @@
 }
 
 @media (forced-colors: active) {
-  .muxui-checkbox[data-muxui-state-focus-visible] .muxui-checkbox-indicator,
+  .muxui-checkbox[data-muxui-state-focus-visible] .muxui-checkbox__indicator,
   .muxui-checkbox-field__button[data-muxui-state-focus-visible] .muxui-checkbox-field__indicator {
     box-shadow: none;
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
 
-  :is(.muxui-checkbox-indicator, .muxui-checkbox-field__indicator) {
+  :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator) {
     border-color: ButtonText !important;
     background: Canvas !important;
     color: CanvasText !important;
   }
 
-  :is(.muxui-checkbox-indicator, .muxui-checkbox-field__indicator) svg {
+  :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator) svg {
     color: CanvasText !important;
   }
 }
@@ -1037,17 +1037,17 @@
     transition-duration: 0s !important;
   }
 
-  :where(.muxui-button-spinner, .muxui-button-spinner-arc) {
+  :where(.muxui-button__spinner, .muxui-button__spinner-arc) {
     animation: none !important;
   }
 }
 
-:where([data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-disclosure-trigger-icon, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
+:where([data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-disclosure__trigger-icon, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
   animation: none !important;
   transition-duration: 0s !important;
 }
 
-:where([data-muxui-motion='reduced']) :where(.muxui-button-spinner, .muxui-button-spinner-arc) {
+:where([data-muxui-motion='reduced']) :where(.muxui-button__spinner, .muxui-button__spinner-arc) {
   animation: none !important;
 }
 
@@ -1066,11 +1066,11 @@
   content: none;
 }
 
-.muxui-breadcrumbs-item[data-muxui-state-current] {
+.muxui-breadcrumbs__item[data-muxui-state-current] {
   font-weight: var(--muxui-semantic-typography-label-weight);
 }
 
-.muxui-breadcrumbs-item[data-muxui-state-disabled]:not([data-muxui-state-current]) {
+.muxui-breadcrumbs__item[data-muxui-state-disabled]:not([data-muxui-state-current]) {
   cursor: not-allowed;
   color: var(--muxui-semantic-content-default);
 }
@@ -1135,39 +1135,39 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-disclosure-trigger {
+  :scope .muxui-disclosure__trigger {
     color: var(--muxui-semantic-color-neutral-default-18);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-disclosure-panel {
+  :scope .muxui-disclosure__panel {
     color: var(--muxui-semantic-color-neutral-default-28);
   }
 }
 
-.muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar-fill,
-.muxui-progress-bar-fill[data-muxui-state-indeterminate] {
+.muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar__fill,
+.muxui-progress-bar__fill[data-muxui-state-indeterminate] {
   width: 40% !important;
   margin-inline-start: 0;
   animation: muxui-progress-bar-indeterminate var(--muxui-semantic-motion-progress-travel-duration) var(--muxui-semantic-motion-progress-easing) infinite;
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar-fill,
-  :scope .muxui-progress-bar-fill[data-muxui-state-indeterminate] {
+  :scope .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar__fill,
+  :scope .muxui-progress-bar__fill[data-muxui-state-indeterminate] {
     background-color: var(--muxui-semantic-color-neutral-default-100);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar-fill,
-  :scope .muxui-progress-bar-fill[data-muxui-state-indeterminate] {
+  :scope .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar__fill,
+  :scope .muxui-progress-bar__fill[data-muxui-state-indeterminate] {
     background-color: var(--muxui-semantic-color-neutral-default-5);
   }
 }
 
-.muxui-progress-bar-header {
+.muxui-progress-bar__header {
   margin-block-end: var(--muxui-semantic-layout-control-gap);
 }
 
@@ -1176,8 +1176,8 @@
 .muxui-toggle-button:focus-visible,
 .muxui-link[data-muxui-state-focus-visible],
 .muxui-link:focus-visible,
-.muxui-disclosure-trigger[data-muxui-state-focus-visible],
-.muxui-disclosure-trigger:focus-visible {
+.muxui-disclosure__trigger[data-muxui-state-focus-visible],
+.muxui-disclosure__trigger:focus-visible {
   box-shadow:
     0 0 0 1px var(--muxui-focus-ring-inner),
     0 0 0 1px var(--muxui-focus-ring-outer);
@@ -1247,7 +1247,7 @@
 }
 
 @media (forced-colors: none) {
-  .muxui-checkbox[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator,
+  .muxui-checkbox[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox__indicator,
   .muxui-checkbox-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate])
     .muxui-checkbox-field__indicator {
     background-color: var(--muxui-component-checkbox-indicator-background);
@@ -1259,45 +1259,45 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label {
+  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group__field) .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-breadcrumbs-link {
+  :scope .muxui-breadcrumbs__link {
     color: var(--muxui-semantic-content-muted);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-breadcrumbs-item[data-muxui-state-current] .muxui-breadcrumbs-link,
-  :scope .muxui-breadcrumbs-current {
+  :scope .muxui-breadcrumbs__item[data-muxui-state-current] .muxui-breadcrumbs__link,
+  :scope .muxui-breadcrumbs__current {
     color: var(--muxui-semantic-color-neutral-90);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-breadcrumbs-item:not(:last-child)::after {
+  :scope .muxui-breadcrumbs__item:not(:last-child)::after {
     color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-breadcrumbs-link {
+  :scope .muxui-breadcrumbs__link {
     color: var(--muxui-semantic-color-neutral-default-50);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-breadcrumbs-item[data-muxui-state-current] .muxui-breadcrumbs-link,
-  :scope .muxui-breadcrumbs-current {
+  :scope .muxui-breadcrumbs__item[data-muxui-state-current] .muxui-breadcrumbs__link,
+  :scope .muxui-breadcrumbs__current {
     color: var(--muxui-semantic-color-neutral-default-20);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-breadcrumbs-item:not(:last-child)::after {
+  :scope .muxui-breadcrumbs__item:not(:last-child)::after {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
@@ -1305,7 +1305,7 @@
 /* RAC marks the current breadcrumb link disabled. MuxUI keeps current items
    as a semantic span, so carry the matching disabled-link paint to that span
    without changing its accessible current-page contract. */
-.muxui-breadcrumbs-current[aria-current='page'] {
+.muxui-breadcrumbs__current[aria-current='page'] {
   opacity: 0.7;
 }
 
@@ -1342,7 +1342,7 @@
 
 /* Feed the same compiled component spring to MotionHeight without changing
    the motion roles of unrelated controls inside the panel. */
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-panel-host > .muxui-disclosure-motion-panel {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__panel-host > .muxui-disclosure__motion-panel {
   --muxui-semantic-motion-content-resize-transition-duration: var(--muxui-component-disclosuregroup-transition-duration);
   --muxui-semantic-motion-content-resize-transition-easing: var(--muxui-component-disclosuregroup-transition-easing);
   --muxui-semantic-motion-content-resize-transition-spring-visual-duration: var(--muxui-component-disclosuregroup-transition-spring-visual-duration);
@@ -1373,11 +1373,11 @@
   z-index: 1;
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-header {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header {
   border-radius: inherit;
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-header > .muxui-disclosure-trigger {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -1398,11 +1398,11 @@
   white-space: normal;
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-header > .muxui-disclosure-trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-color: var(--muxui-semantic-action-neutral-background);
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-header > .muxui-disclosure-trigger > .muxui-disclosure-trigger-icon {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger > .muxui-disclosure__trigger-icon {
   width: var(--muxui-component-disclosuregroup-icon-size);
   height: var(--muxui-component-disclosuregroup-icon-size);
   flex: 0 0 auto;
@@ -1414,11 +1414,11 @@
   --muxui-semantic-motion-content-resize-transition-spring-bounce: var(--muxui-component-disclosuregroup-transition-spring-bounce);
 }
 
-.muxui-disclosure-group > .muxui-disclosure[data-muxui-state-expanded] > .muxui-disclosure-header > .muxui-disclosure-trigger > .muxui-disclosure-trigger-icon {
+.muxui-disclosure-group > .muxui-disclosure[data-muxui-state-expanded] > .muxui-disclosure__header > .muxui-disclosure__trigger > .muxui-disclosure__trigger-icon {
   transform: rotate(180deg);
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-panel-host > .muxui-disclosure-motion-panel > .muxui-disclosure-panel {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__panel-host > .muxui-disclosure__motion-panel > .muxui-disclosure__panel {
   --muxui-semantic-motion-content-resize-transition-duration: var(--muxui-disclosure-parent-resize-duration);
   --muxui-semantic-motion-content-resize-transition-easing: var(--muxui-disclosure-parent-resize-easing);
   --muxui-semantic-motion-content-resize-transition-spring-visual-duration: var(--muxui-disclosure-parent-resize-visual-duration);
@@ -1431,11 +1431,11 @@
   color: var(--muxui-semantic-content-muted);
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-panel-host > .muxui-disclosure-motion-panel > .muxui-disclosure-motion-content::before {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__panel-host > .muxui-disclosure__motion-panel > .muxui-disclosure__motion-content::before {
   display: none;
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure-panel-host > .muxui-disclosure-motion-panel > .muxui-disclosure-motion-content::after {
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__panel-host > .muxui-disclosure__motion-panel > .muxui-disclosure__motion-content::after {
   content: '';
   display: block;
   padding-block-end: calc(var(--muxui-semantic-control-padding-block) * 1.5);
@@ -1463,18 +1463,18 @@
 /* Disabled affordances dim the complete control paint. Keep this
    scoped to the families whose shared rules apply at the root, so field and
    collection controls can retain their own contrast adaptations. */
-:is(.muxui-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-muxui-state-disabled],
-.muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure-trigger,
-.muxui-disclosure-trigger[data-muxui-state-disabled],
+:is(.muxui-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio-group__radio, .muxui-switch)[data-muxui-state-disabled],
+.muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure__trigger,
+.muxui-disclosure__trigger[data-muxui-state-disabled],
 .muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
   opacity: 0.45;
 }
 
 @media (forced-colors: active) {
   /* System colors provide the disabled affordance in high contrast mode. */
-  :is(.muxui-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-muxui-state-disabled],
-  .muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure-trigger,
-  .muxui-disclosure-trigger[data-muxui-state-disabled],
+  :is(.muxui-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio-group__radio, .muxui-switch)[data-muxui-state-disabled],
+  .muxui-disclosure[data-muxui-state-disabled] .muxui-disclosure__trigger,
+  .muxui-disclosure__trigger[data-muxui-state-disabled],
   .muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
     opacity: 1;
   }

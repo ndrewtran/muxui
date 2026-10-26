@@ -139,9 +139,9 @@ export const TokenField: ForwardRefExoticComponent<TokenFieldProps & RefAttribut
   };
   return React.createElement(AriaTokenField, { key: resetVersion, ref, value: currentFieldValue, onChange: handleChange, onSubmit: handleSubmit, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
     // React Aria calls children for token segments only, with the text between them rendered as text (TokenInput in react-aria-components 1.20.0).
-    React.createElement(AriaTokenInput, { ref: inputRef, className: 'muxui-token-input', children: (segment) => React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) }),
+    React.createElement(AriaTokenInput, { ref: inputRef, className: 'muxui-token-field__input', children: (segment) => React.createElement(AriaToken, { className: 'muxui-token-field__token' }, segment.text) }),
     React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }),
     name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null,
-    showPlaceholder ? React.createElement('span', { className: 'muxui-token-placeholder', 'aria-hidden': 'true' }, placeholder) : null);
+    showPlaceholder ? React.createElement('span', { className: 'muxui-token-field__placeholder', 'aria-hidden': 'true' }, placeholder) : null);
 });
 TokenField.displayName = 'TokenField';

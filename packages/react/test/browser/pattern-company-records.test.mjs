@@ -20,19 +20,19 @@ const byContact = ['Sample Logistics', 'Example Holdings', 'Placeholder Studio',
 // Dormant, New, Developing, then Established; equal levels keep the source order.
 const byRelationship = ['Example Holdings', 'Sample Logistics', 'Placeholder Studio', 'Generic Supply', 'Demo Partners', 'Sample Company'];
 
-const rowNames = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table-body [role="rowheader"]')].map((node) => node.textContent));
-const selectedNames = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table-row[aria-selected="true"] [role="rowheader"]')].map((node) => node.textContent));
+const rowNames = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table__body [role="rowheader"]')].map((node) => node.textContent));
+const selectedNames = (tab) => tab.evaluate(() => [...document.querySelectorAll('.muxui-table__row[aria-selected="true"] [role="rowheader"]')].map((node) => node.textContent));
 const status = (tab) => tab.getByRole('status').textContent();
 const header = (tab, name) => tab.getByRole('columnheader', { name });
-const row = (tab, name) => tab.locator('.muxui-table-row', { has: tab.getByRole('rowheader', { name, exact: true }) });
+const row = (tab, name) => tab.locator('.muxui-table__row', { has: tab.getByRole('rowheader', { name, exact: true }) });
 
-const expectRows = (tab, expected, message) => pollUntil(tab, (names) => JSON.stringify([...document.querySelectorAll('.muxui-table-body [role="rowheader"]')].map((node) => node.textContent)) === JSON.stringify(names), expected, {
+const expectRows = (tab, expected, message) => pollUntil(tab, (names) => JSON.stringify([...document.querySelectorAll('.muxui-table__body [role="rowheader"]')].map((node) => node.textContent)) === JSON.stringify(names), expected, {
   message,
-  report: () => [...document.querySelectorAll('.muxui-table-body [role="rowheader"]')].map((node) => node.textContent),
+  report: () => [...document.querySelectorAll('.muxui-table__body [role="rowheader"]')].map((node) => node.textContent),
 });
-const expectSelected = (tab, expected, message) => pollUntil(tab, (names) => JSON.stringify([...document.querySelectorAll('.muxui-table-row[aria-selected="true"] [role="rowheader"]')].map((node) => node.textContent)) === JSON.stringify(names), expected, {
+const expectSelected = (tab, expected, message) => pollUntil(tab, (names) => JSON.stringify([...document.querySelectorAll('.muxui-table__row[aria-selected="true"] [role="rowheader"]')].map((node) => node.textContent)) === JSON.stringify(names), expected, {
   message,
-  report: () => [...document.querySelectorAll('.muxui-table-row[aria-selected="true"] [role="rowheader"]')].map((node) => node.textContent),
+  report: () => [...document.querySelectorAll('.muxui-table__row[aria-selected="true"] [role="rowheader"]')].map((node) => node.textContent),
 });
 const expectStatus = (tab, text) => pollUntil(tab, (expected) => document.querySelector('[role="status"]').textContent === expected, text, {
   message: `the count reads ${text}`,
@@ -67,7 +67,7 @@ for (const engine of browserEngines()) {
           assert.deepEqual(await selectedNames(tab), ['Example Holdings', 'Placeholder Studio']);
           assert.equal(await status(tab), '2 selected');
           // Selected rows are highlighted by a background the other rows lack, so colour is not the only cue (aria-selected also marks them).
-          const backgrounds = await tab.evaluate(() => Object.fromEntries([...document.querySelectorAll('.muxui-table-row')].map((node) => [node.querySelector('[role="rowheader"]').textContent, getComputedStyle(node).backgroundColor])));
+          const backgrounds = await tab.evaluate(() => Object.fromEntries([...document.querySelectorAll('.muxui-table__row')].map((node) => [node.querySelector('[role="rowheader"]').textContent, getComputedStyle(node).backgroundColor])));
           assert.notEqual(backgrounds['Example Holdings'], backgrounds['Demo Partners'], 'a selected row paints a background');
           assert.equal(backgrounds['Example Holdings'], backgrounds['Placeholder Studio']);
           assert.equal(backgrounds['Demo Partners'], backgrounds['Generic Supply']);

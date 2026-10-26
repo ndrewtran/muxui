@@ -80,7 +80,7 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
     },
     React.createElement(TabsMotion, { orientation, variant: resolvedVariant, disabled }, React.createElement(AriaTabList<NormalizedItem>, {
       items: normalized,
-      className: 'muxui-tab-list',
+      className: 'muxui-tabs__list',
       // A render function is a child of React Aria's collection parts, which TypeScript accepts as a prop here and not as a createElement child.
       children: (item) => React.createElement(AriaTab, {
         id: item.id,
@@ -89,13 +89,13 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
           'data-muxui-state-disabled': (disabled ? disabled : item.disabled) || undefined,
           'aria-disabled': (disabled ? disabled : item.disabled) || undefined,
         },
-        className: 'muxui-tab',
-      }, React.createElement('span', { className: 'muxui-tab-label' }, item.label)),
+        className: 'muxui-tabs__tab',
+      }, React.createElement('span', { className: 'muxui-tabs__tab-label' }, item.label)),
     })),
     React.createElement(AriaTabPanels<NormalizedItem>, {
       items: normalized,
-      className: 'muxui-tab-panels',
-      children: (item) => React.createElement(AriaTabPanel, { id: item.id, className: 'muxui-tab-panel' }, item.panel as ReactNode),
+      className: 'muxui-tabs__panels',
+      children: (item) => React.createElement(AriaTabPanel, { id: item.id, className: 'muxui-tabs__panel' }, item.panel as ReactNode),
     }),
     );
   });

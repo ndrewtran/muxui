@@ -28,7 +28,7 @@ test('IconButton renders one named button and decorative icon with Button defaul
   assert.equal(button.dataset.muxuiSize, 'md');
   assert.ok(button.classList.contains('consumer-class'));
   assert.ok(button.classList.contains('muxui-button'));
-  assert.equal(button.querySelector('.muxui-icon-button-icon').getAttribute('aria-hidden'), 'true');
+  assert.equal(button.querySelector('.muxui-icon-button__icon').getAttribute('aria-hidden'), 'true');
 });
 
 test('IconButton preserves its name, native form props, and pending/disabled states', () => {
@@ -46,8 +46,8 @@ test('IconButton preserves its name, native form props, and pending/disabled sta
     assert.equal(button.getAttribute('type'), 'submit');
     assert.equal(button.getAttribute('name'), 'action');
     assert.equal(button.getAttribute('value'), 'save');
-    assert.ok(button.querySelector('.muxui-button-spinner'));
-    assert.equal(button.querySelector('.muxui-button-content').style.visibility, 'hidden');
+    assert.ok(button.querySelector('.muxui-button__spinner'));
+    assert.equal(button.querySelector('.muxui-button__label').style.visibility, 'hidden');
   }
   const submitHtml = renderToStaticMarkup(React.createElement(IconButton, { 'aria-label': 'Save', type: 'submit' }, icon));
   assert.equal(new JSDOM(submitHtml).window.document.querySelector('button').type, 'submit');
@@ -58,8 +58,8 @@ test('IconButton preserves its name, native form props, and pending/disabled sta
 test('IconButton inherits slot-provided NumberField names and disabled state', () => {
   const html = renderToStaticMarkup(React.createElement(NumberField, { label: 'Quantity', defaultValue: 2, disabled: true }));
   const document = new JSDOM(html).window.document;
-  const decrement = document.querySelector('.muxui-number-stepper-decrement');
-  const increment = document.querySelector('.muxui-number-stepper-increment');
+  const decrement = document.querySelector('.muxui-number-field__decrement');
+  const increment = document.querySelector('.muxui-number-field__increment');
   for (const [button, action] of [[decrement, 'Decrease'], [increment, 'Increase']]) {
     assert.equal(button.disabled, true);
     assert.equal(button.getAttribute('aria-label'), action);

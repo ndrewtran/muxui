@@ -82,7 +82,7 @@ async function assertNoAxeViolations(scope, label) {
 async function readChoiceFocusStyles(root) {
   return root.evaluate((node) => {
     const input = node.querySelector('input');
-    const indicator = node.querySelector('.muxui-checkbox-indicator, .muxui-radio-indicator');
+    const indicator = node.querySelector('.muxui-checkbox__indicator, .muxui-radio-group__indicator');
     const rootStyle = getComputedStyle(node);
     const inputStyle = input ? getComputedStyle(input) : null;
     const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
@@ -196,7 +196,7 @@ test('R1.4 React component browser and axe matrix', async () => {
       if (expected === expectedProfiles[0]) {
         for (const [label, rootSelector, keyboardAction] of [
           ['Checkbox', '[data-component="checkbox"] .muxui-checkbox', 'Tab'],
-          ['Radio', '[data-component="radio-group"] .muxui-radio', 'ArrowDown'],
+          ['Radio', '[data-component="radio-group"] .muxui-radio-group__radio', 'ArrowDown'],
         ]) {
           const choices = profile.locator(rootSelector);
           if (await choices.count() < 2) throw new Error(`${label} focus fixture must expose at least two choices`);
@@ -235,7 +235,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const autocompleteInput = profile.locator('[data-component="autocomplete"] .muxui-autocomplete input');
         const autocompleteArticle = profile.locator('[data-component="autocomplete"]');
         const contentBelowAutocomplete = autocompleteArticle.locator('xpath=following-sibling::*[1]');
-        const autocompletePopover = page.locator('.muxui-autocomplete-popover');
+        const autocompletePopover = page.locator('.muxui-autocomplete__popover');
         await autocompleteInput.scrollIntoViewIfNeeded();
         const contentBefore = await contentBelowAutocomplete.boundingBox();
         if (!contentBefore) throw new Error('Autocomplete geometry proof requires following content before opening');
@@ -258,7 +258,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const contentAfterOpen = await contentBelowAutocomplete.boundingBox();
         if (!contentAfterOpen || Math.abs(contentAfterOpen.y - contentBefore.y) > 1) throw new Error('Autocomplete overlay must not move following content');
         const localPortalDetails = await profile.evaluate((profileNode) => {
-          const popover = document.querySelector('.muxui-autocomplete-popover');
+          const popover = document.querySelector('.muxui-autocomplete__popover');
           return {
             containsPopover: Boolean(popover && profileNode.contains(popover)),
             position: popover ? getComputedStyle(popover).position : '',
@@ -281,8 +281,8 @@ test('R1.4 React component browser and axe matrix', async () => {
         await autocompleteInput.fill('Syd');
         await autocompleteInput.press('ArrowDown');
         await autocompletePopover.waitFor({ state: 'visible' });
-        if (await page.locator('.muxui-autocomplete-option').count() !== 1) throw new Error('Autocomplete input must filter options');
-        await page.locator('.muxui-autocomplete-option').click();
+        if (await page.locator('.muxui-autocomplete__option').count() !== 1) throw new Error('Autocomplete input must filter options');
+        await page.locator('.muxui-autocomplete__option').click();
         if (await autocompleteInput.inputValue() !== 'Sydney') throw new Error('Autocomplete click selection must update the Mux UI input value');
         await autocompletePopover.waitFor({ state: 'detached' });
         await autocompleteInput.fill('');
@@ -328,7 +328,7 @@ test('R1.4 React component browser and axe matrix', async () => {
             throw new Error('RTL Autocomplete overlay must align to the input width and physical position');
           }
           const scopedPortalDetails = await scopedProfile.evaluate((profileNode) => {
-            const popover = document.querySelector('.muxui-autocomplete-popover');
+            const popover = document.querySelector('.muxui-autocomplete__popover');
             const style = popover ? getComputedStyle(popover) : null;
             const profileStyle = getComputedStyle(profileNode);
             const overlayProbe = document.createElement('span');
@@ -409,14 +409,14 @@ test('R1.4 React component browser and axe matrix', async () => {
         const toast = page.locator('.muxui-toast').filter({ hasText: 'Your changes are saved.' });
         if (await toast.count() !== 1 || !await toast.isVisible()) throw new Error('useToast must announce a visible toast');
         if (await toast.locator('[role="alert"]').count() !== 1) throw new Error('Toast must expose an announcement region');
-        await toast.locator('.muxui-toast-dismiss').click();
+        await toast.locator('.muxui-toast__dismiss').click();
         await toast.waitFor({ state: 'detached' });
 
         const declarativeToastTrigger = profile.locator('[data-r1-4-control="toast-declarative"]');
         await declarativeToastTrigger.click();
         const declarativeToast = page.locator('.muxui-toast').filter({ hasText: 'A declarative notification is visible.' });
         if (await declarativeToast.count() !== 1 || !await declarativeToast.isVisible()) throw new Error('Toast component must render through ToastProvider');
-        await declarativeToast.locator('.muxui-toast-dismiss').click();
+        await declarativeToast.locator('.muxui-toast__dismiss').click();
         await declarativeToast.waitFor({ state: 'detached' });
       }
     }

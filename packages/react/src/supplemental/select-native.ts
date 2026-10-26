@@ -129,7 +129,7 @@ export const SelectNative: ForwardRefExoticComponent<SelectNativeProps & RefAttr
     'data-muxui-state-invalid': isInvalid ? '' : undefined,
   }, children);
   return h('div', {
-    className: classNames('muxui-select-native-field', isInvalid && 'muxui-select-native-field--invalid'),
+    className: classNames('muxui-select-native__field', isInvalid && 'muxui-select-native__field--invalid'),
     'data-muxui-size': resolvedSize.visual,
     'data-muxui-state-disabled': disabled ? '' : undefined,
     'data-muxui-state-required': required ? '' : undefined,

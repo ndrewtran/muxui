@@ -54,7 +54,7 @@ test('R1.4 families are SSR and hydration safe and reject missing accessible con
   const server = renderToString(closedOverlayTree());
   assert.match(server, /muxui-drop-zone/u);
   assert.match(server, /muxui-file-trigger/u);
-  assert.doesNotMatch(server, /muxui-dialog-backdrop|muxui-popover|muxui-preview-trigger|muxui-tooltip|muxui-toast/u);
+  assert.doesNotMatch(server, /muxui-dialog__backdrop|muxui-popover(?!__trigger)|muxui-preview-trigger|muxui-tooltip|muxui-toast/u);
   assert.throws(() => renderToString(React.createElement(Dialog, { title: ' ' })), /Dialog requires a title or accessible name/u);
   assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': ' ', trigger: React.createElement('button', null, 'Open') }, 'Body')), /Popover requires an accessible name/u);
   assert.throws(() => renderToString(React.createElement(PreviewTrigger, { trigger: React.createElement('button', null, 'Preview') }, 'Body')), /PreviewTrigger requires an accessible name/u);
@@ -97,7 +97,7 @@ test('PreviewTrigger names RAC\'s own non-modal dialog popover and cleans up its
     assert.equal(dialogs[0], outer);
     assert.equal(outer.getAttribute('aria-label'), 'Preview details');
     assert.equal(outer.hasAttribute('aria-modal'), false);
-    const content = outer.querySelector('.muxui-preview-content');
+    const content = outer.querySelector('.muxui-preview-trigger__content');
     assert.ok(content);
     assert.equal(content.hasAttribute('role'), false);
     assert.equal(content.textContent, 'Preview body');
@@ -135,7 +135,7 @@ test('Dialog and Toast close controls use decorative Lucide X icons', async () =
     await act(async () => root.render(React.createElement(ToastProvider, null,
       React.createElement(CaptureManager),
       React.createElement(Dialog, { title: 'Details', defaultOpen: true }, 'Dialog body'))));
-    const dialogClose = document.body.querySelector('.muxui-dialog-close');
+    const dialogClose = document.body.querySelector('.muxui-dialog__close');
     assert.ok(dialogClose);
     assert.equal(dialogClose.getAttribute('aria-label'), 'Close dialog');
     assert.equal(dialogClose.querySelector('svg')?.classList.contains('lucide-x'), true);
@@ -143,7 +143,7 @@ test('Dialog and Toast close controls use decorative Lucide X icons', async () =
     assert.equal(dialogClose.querySelector('svg')?.getAttribute('focusable'), 'false');
 
     await act(async () => manager.add('Saved', { duration: 60000 }));
-    const toastDismiss = document.body.querySelector('.muxui-toast-dismiss');
+    const toastDismiss = document.body.querySelector('.muxui-toast__dismiss');
     assert.ok(toastDismiss);
     assert.equal(toastDismiss.getAttribute('aria-label'), 'Dismiss notification');
     assert.equal(toastDismiss.querySelector('svg')?.classList.contains('lucide-x'), true);
@@ -434,7 +434,7 @@ test('Popover dismissable false rejects hidden dismiss buttons and trigger toggl
   }, 'Popover body');
   try {
     await act(async () => root.render(popover({ defaultOpen: true })));
-    const dismissButtons = [...document.body.querySelectorAll('.muxui-popover-positioner button')].filter((button) => button.getAttribute('aria-label') === 'Dismiss');
+    const dismissButtons = [...document.body.querySelectorAll('.muxui-popover__positioner button')].filter((button) => button.getAttribute('aria-label') === 'Dismiss');
     assert.equal(dismissButtons.length, 2, 'RAC renders its visually hidden dismiss buttons');
     for (const button of dismissButtons) await act(async () => button.click());
     assert.ok(document.body.querySelector('.muxui-popover'));
@@ -677,10 +677,10 @@ test('title-less useToast notifications have an accessible RAC name', async () =
     assert.ok(labelledBy);
     const title = document.getElementById(labelledBy);
     assert.ok(title);
-    assert.equal(title.classList.contains('muxui-toast-title-fallback'), true);
+    assert.equal(title.classList.contains('muxui-toast__title-fallback'), true);
     assert.equal(title.textContent, 'Notification');
-    const content = toast.querySelector('.muxui-toast-content');
-    const dismiss = toast.querySelector('.muxui-toast-dismiss');
+    const content = toast.querySelector('.muxui-toast__content');
+    const dismiss = toast.querySelector('.muxui-toast__dismiss');
     assert.ok(content);
     assert.ok(dismiss);
     assert.equal(content.parentElement, toast);
@@ -691,11 +691,11 @@ test('title-less useToast notifications have an accessible RAC name', async () =
     assert.equal(dismiss.querySelector('svg')?.getAttribute('aria-hidden'), 'true');
     assert.equal(dismiss.querySelector('svg')?.getAttribute('focusable'), 'false');
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-    assert.match(styles, /:where\([\s\S]*\.muxui-toast-dismiss[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
-    assert.match(styles, /\.muxui-toast-dismiss\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-inset-tight\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
-    assert.match(styles, /\.muxui-dialog-close\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-inset-tight\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
+    assert.match(styles, /:where\([\s\S]*\.muxui-toast__dismiss[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
+    assert.match(styles, /\.muxui-toast__dismiss\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-inset-tight\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
+    assert.match(styles, /\.muxui-dialog__close\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-inset-tight\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
     assert.match(styles, /\.muxui-toast\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/u);
-    assert.match(styles, /\.muxui-toast-content\s*\{[^}]*display:\s*grid/u);
+    assert.match(styles, /\.muxui-toast__content\s*\{[^}]*display:\s*grid/u);
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -736,7 +736,7 @@ test('declarative Toast teardown cancels its timer without settling onDismiss', 
     assert.ok(labelledBy);
     const title = document.getElementById(labelledBy);
     assert.ok(title);
-    assert.equal(title.classList.contains('muxui-toast-title-fallback'), true);
+    assert.equal(title.classList.contains('muxui-toast__title-fallback'), true);
     assert.equal(title.textContent, 'Notification');
 
     await act(async () => root.unmount());
@@ -838,7 +838,7 @@ test('declarative Toast updates in place across parent renders without re-enqueu
     assert.match(toast.textContent, /Saved again/u, 'new content updates in place');
     assert.equal(toastTimers, timersAfterMount);
 
-    await act(async () => toast.querySelector('.muxui-toast-dismiss').click());
+    await act(async () => toast.querySelector('.muxui-toast__dismiss').click());
     assert.deepEqual(dismissals, [2], 'the latest onDismiss settles once');
   } finally {
     globalThis.setTimeout = originalSetTimeout;

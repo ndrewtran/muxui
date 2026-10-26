@@ -12,10 +12,10 @@ const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffec
 const TAB_SELECTOR = '[role="tab"]';
 
 function selectedTab(root) {
-  const tab = root.querySelector(`.muxui-tab-list ${TAB_SELECTOR}[aria-selected="true"]`)
+  const tab = root.querySelector(`.muxui-tabs__list ${TAB_SELECTOR}[aria-selected="true"]`)
     ?? root.querySelector(`${TAB_SELECTOR}[aria-selected="true"]`);
   if (!tab) return null;
-  return { tab, label: tab.querySelector('.muxui-tab-label') ?? tab };
+  return { tab, label: tab.querySelector('.muxui-tabs__tab-label') ?? tab };
 }
 
 function sameEdges(previous, next) {
@@ -23,7 +23,7 @@ function sameEdges(previous, next) {
 }
 
 function readTarget(root, host, orientation, variant) {
-  const list = root.querySelector('.muxui-tab-list') ?? root.querySelector('[role="tablist"]');
+  const list = root.querySelector('.muxui-tabs__list') ?? root.querySelector('[role="tablist"]');
   const selected = selectedTab(root);
   if (!list || !selected || !host) return null;
   const hostRect = host.getBoundingClientRect();
@@ -111,7 +111,7 @@ function applyLayers(indicator, foreground, geometry, radius) {
 function refreshForeground(foreground, list, host) {
   if (!foreground || !list || !host) return;
   const hostRect = host.getBoundingClientRect();
-  const labels = Array.from(list.querySelectorAll('.muxui-tab-label'), (label) => {
+  const labels = Array.from(list.querySelectorAll('.muxui-tabs__tab-label'), (label) => {
     const rect = label.getBoundingClientRect();
     const tab = label.closest(TAB_SELECTOR);
     const style = getComputedStyle(label);
@@ -131,7 +131,7 @@ function refreshForeground(foreground, list, host) {
     const copy = label.cloneNode(true);
     copy.removeAttribute('id');
     for (const child of copy.querySelectorAll('[id]')) child.removeAttribute('id');
-    copy.classList.add('muxui-tabs-motion-label');
+    copy.classList.add('muxui-tabs__motion-label');
     Object.assign(copy.style, {
       left: `${left}px`,
       top: `${top}px`,
@@ -204,7 +204,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
     let indicatorAnimationId = 0;
     const viewport = viewportRef.current;
     const host = contentRef.current ?? root;
-    const list = root.querySelector('.muxui-tab-list') ?? root.querySelector('[role="tablist"]');
+    const list = root.querySelector('.muxui-tabs__list') ?? root.querySelector('[role="tablist"]');
     const indicator = indicatorRef.current;
     const foreground = foregroundRef.current;
     const scrollIsVertical = orientation === 'vertical';
@@ -452,7 +452,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
   const beforeButton = variant === 'overflow' && edges.overflow
     ? React.createElement(IconButton, {
       type: 'button',
-      className: `muxui-tabs-motion-edge muxui-tabs-motion-edge--${orientation === 'vertical' ? 'before' : 'left'}`,
+      className: `muxui-tabs__motion-edge muxui-tabs__motion-edge--${orientation === 'vertical' ? 'before' : 'left'}`,
       'aria-label': orientation === 'vertical' ? 'Scroll tabs up' : 'Scroll tabs left',
       'aria-controls': `${instanceId}-viewport`,
       'aria-disabled': disabled || !edges.before || undefined,
@@ -463,7 +463,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
   const afterButton = variant === 'overflow' && edges.overflow
     ? React.createElement(IconButton, {
       type: 'button',
-      className: `muxui-tabs-motion-edge muxui-tabs-motion-edge--${orientation === 'vertical' ? 'after' : 'right'}`,
+      className: `muxui-tabs__motion-edge muxui-tabs__motion-edge--${orientation === 'vertical' ? 'after' : 'right'}`,
       'aria-label': orientation === 'vertical' ? 'Scroll tabs down' : 'Scroll tabs right',
       'aria-controls': `${instanceId}-viewport`,
       'aria-disabled': disabled || !edges.after || undefined,
@@ -474,26 +474,26 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
 
   const indicator = React.createElement('span', {
     ref: indicatorRef,
-    className: 'muxui-tabs-motion-underline',
+    className: 'muxui-tabs__motion-underline',
     'data-muxui-tabs-underline': 'true',
     'aria-hidden': 'true',
     style: { opacity: 0 },
   });
   const foreground = variant === 'underline' ? null : React.createElement('span', {
     ref: foregroundRef,
-    className: 'muxui-tabs-motion-foreground',
+    className: 'muxui-tabs__motion-foreground',
     'aria-hidden': true,
     inert: true,
     style: { opacity: 0 },
   });
   const content = variant === 'overflow'
-    ? React.createElement('div', { ref: viewportRef, id: `${instanceId}-viewport`, className: 'muxui-tabs-motion-overflow-viewport' },
-      React.createElement('div', { ref: contentRef, className: 'muxui-tabs-motion-overflow-content' }, children, indicator, foreground))
+    ? React.createElement('div', { ref: viewportRef, id: `${instanceId}-viewport`, className: 'muxui-tabs__motion-overflow-viewport' },
+      React.createElement('div', { ref: contentRef, className: 'muxui-tabs__motion-overflow-content' }, children, indicator, foreground))
     : React.createElement(React.Fragment, null, children, indicator, foreground);
 
   return React.createElement('div', {
     ref: setRoot,
-    className: 'muxui-tabs-motion',
+    className: 'muxui-tabs__motion',
     'data-muxui-state-orientation': orientation,
     'data-muxui-tabs-variant': variant,
     'data-muxui-tabs-overflow': edges.overflow || undefined,

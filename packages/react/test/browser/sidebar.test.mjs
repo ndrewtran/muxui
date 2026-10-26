@@ -670,7 +670,7 @@ for (const engine of browserEngines()) {
 
           await tab.locator('aside a[href="#home"]').focus();
           await tab.setViewportSize(narrow);
-          await focusIs('.muxui-sidebar__mobile-menu-btn', `${engine}: narrowing moves focus from the hidden column to the menu button`);
+          await focusIs('.muxui-sidebar__mobile-trigger', `${engine}: narrowing moves focus from the hidden column to the menu button`);
         } finally {
           await context.close();
         }
@@ -720,7 +720,7 @@ for (const engine of browserEngines()) {
         try {
           assert.ok(await hasFocus(early.tab, '#root-input'), `${engine}: the column's autofocus input holds focus`);
           await early.tab.setViewportSize(narrow);
-          await pollUntil(early.tab, () => document.activeElement === document.querySelector('.muxui-sidebar__mobile-menu-btn'), undefined, { message: `${engine}: focus that arrived by autofocus still moves to the menu button`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          await pollUntil(early.tab, () => document.activeElement === document.querySelector('.muxui-sidebar__mobile-trigger'), undefined, { message: `${engine}: focus that arrived by autofocus still moves to the menu button`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
         } finally {
           await early.context.close();
         }
@@ -1512,7 +1512,7 @@ for (const engine of browserEngines()) {
           assert.ok(Math.abs(geometry.left - geometry.cardLeft) < 1.5, label(`the menu lines up with the card's start edge (${geometry.left} against ${geometry.cardLeft})`));
           assert.ok(geometry.width >= geometry.cardWidth - 1, label(`the menu is at least as wide as the card (${geometry.width} against ${geometry.cardWidth})`));
           assert.ok(geometry.bottom <= geometry.cardTop + 1, label('the menu opens above the card at the foot of the column'));
-          await tab.waitForFunction(() => document.querySelector('[role="menu"]')?.closest('.muxui-menu-popup') && getComputedStyle(document.querySelector('[role="menu"]')).opacity === '1');
+          await tab.waitForFunction(() => document.querySelector('[role="menu"]')?.closest('.muxui-menu__popup') && getComputedStyle(document.querySelector('[role="menu"]')).opacity === '1');
           assert.ok(await focusInMenu(), label('focus moves into the open menu'));
           await tab.keyboard.press('Escape');
           await menu.waitFor({ state: 'detached', timeout: 5000 });

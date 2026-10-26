@@ -227,7 +227,8 @@ test('every family root class is selected by a style rule except the recorded ga
 test('the class naming function agrees with every BEM part class that exists, and the public shared classes are in use', () => {
   assert.equal(partClass('button', 'root'), 'muxui-button');
   assert.equal(partClass('text-editor', 'color-popup'), 'muxui-text-editor__color-popup');
-  const mapped = new Map(mappedParts.map(([family, part, name]) => [`${family}.${part}`, name]));
+  // Rows the map files under shared (a class two families use) count too: radio-group.radio is both.
+  const mapped = new Map([...mappedParts, ...sharedParts].map(([family, part, name]) => [`${family}.${part}`, name]));
   for (const [family, list] of catalog.anatomy) {
     for (const part of list.filter((name) => name !== 'root' && selected.has(partClass(family, name)))) {
       assert.equal(mapped.get(`${family}.${part}`), partClass(family, part), `${family}.${part} is already the BEM class`);

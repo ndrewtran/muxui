@@ -472,7 +472,7 @@ export const LightboxTrigger: ForwardRefExoticComponent<LightboxTriggerProps & R
     ...props,
     ref,
     disabled: disabled || !enabled,
-    className: cx('muxui-lightbox-trigger', className),
+    className: cx('muxui-lightbox__trigger', className),
     onActivate: (event) => {
       onActivate?.(event);
       // An enabled trigger has the context, since its item is in the context's list.
@@ -496,7 +496,7 @@ export function LightboxBackdrop({ children, dismissable = true, className, ...p
     isOpen: value.visible,
     isExiting: value.isExiting,
     isDismissable: dismissable,
-    className: cx('muxui-lightbox-backdrop', className),
+    className: cx('muxui-lightbox__backdrop', className),
     onOpenChange: (next) => { if (!next && value.top()) value.close(); },
   }, children);
 }
@@ -555,7 +555,7 @@ export function LightboxPopup({ children, className, onKeyDown, onTouchStart, on
     React.createElement(Dialog, {
       ...props,
       ref: setRef,
-      className: cx('muxui-dialog', 'muxui-lightbox-popup', className),
+      className: cx('muxui-dialog', 'muxui-lightbox__popup', className),
       'aria-label': ariaLabel ?? (ariaLabelledBy ? undefined : value.popupLabel),
       'aria-labelledby': ariaLabelledBy,
     } as DialogProps & RefAttributes<HTMLElement>, children),
@@ -729,11 +729,11 @@ export function LightboxContent({ renderContent, children, className, ...props }
   }, []);
 
   if (!value?.present) return null;
-  return React.createElement('div', { ...props, ref: contentRef, className: cx('muxui-lightbox-content', className) },
+  return React.createElement('div', { ...props, ref: contentRef, className: cx('muxui-lightbox__content', className) },
     renderedLayers.map(({ token: layerToken, body: layerBody }) => React.createElement('div', {
       key: `layer-${layerToken}`,
       ref: getLayerRef(layerToken),
-      className: cx('muxui-lightbox-content-layer', layerToken === currentToken ? 'muxui-lightbox-content-layer--current' : 'muxui-lightbox-content-layer--outgoing'),
+      className: cx('muxui-lightbox__content-layer', layerToken === currentToken ? 'muxui-lightbox__content-layer--current' : 'muxui-lightbox__content-layer--outgoing'),
       'aria-hidden': layerToken === currentToken ? undefined : 'true',
       inert: layerToken === currentToken ? undefined : true,
     }, layerBody)),
@@ -742,7 +742,7 @@ export function LightboxContent({ renderContent, children, className, ...props }
 
 export const LightboxCaption: ForwardRefExoticComponent<HTMLAttributes<HTMLParagraphElement> & RefAttributes<HTMLParagraphElement>> = React.forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(function LightboxCaption({ className, children, ...props }, ref) {
   const value = React.useContext(Context);
-  return React.createElement('p', { ...props, ref, className: cx('muxui-lightbox-caption', className) }, children === undefined ? value?.selected?.label : children);
+  return React.createElement('p', { ...props, ref, className: cx('muxui-lightbox__caption', className) }, children === undefined ? value?.selected?.label : children);
 });
 
 function NavButton({ direction: delta, children, disabled = false, onActivate, className, ...props }: LightboxControlProps & { direction: number }): ReactElement {
@@ -753,7 +753,7 @@ function NavButton({ direction: delta, children, disabled = false, onActivate, c
     ...props,
     disabled: disabled || unavailable,
     variant: 'ghost' as const,
-    className: cx(delta < 0 ? 'muxui-lightbox-previous' : 'muxui-lightbox-next', className),
+    className: cx(delta < 0 ? 'muxui-lightbox__previous' : 'muxui-lightbox__next', className),
     'aria-label': props['aria-label'] ?? (delta < 0 ? 'Previous' : 'Next'),
     onActivate: (event: LightboxControlActivation) => { onActivate?.(event); value?.navigate(delta); },
   };
@@ -769,7 +769,7 @@ export function LightboxClose({ onActivate, className, children, ...props }: Lig
     ...props,
     size: 'sm' as const,
     variant: 'ghost' as const,
-    className: cx('muxui-dialog-close', 'muxui-lightbox-close', className),
+    className: cx('muxui-dialog__close', 'muxui-lightbox__close', className),
     'aria-label': props['aria-label'] ?? 'Close',
     disabled: props.disabled || !value?.visible,
     onActivate: (event: LightboxControlActivation) => { onActivate?.(event); value?.close(); },

@@ -5,7 +5,7 @@ import { sameGeometry } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-const RANGE_CELL_SELECTOR = '.muxui-range-calendar-cell';
+const RANGE_CELL_SELECTOR = '.muxui-range-calendar__cell';
 
 function dateKey(value) {
   return value ? String(value) : null;
@@ -228,7 +228,7 @@ export function RangeSelectionMotion({ children }) {
         let band = bandsRef.current.get(target.key);
         if (!band) {
           band = root.ownerDocument.createElement('div');
-          band.className = 'muxui-range-selection-band';
+          band.className = 'muxui-range-calendar__selection-band';
           band.setAttribute('data-muxui-range-band', 'true');
           band.setAttribute('aria-hidden', 'true');
           layer.appendChild(band);
@@ -297,7 +297,7 @@ export function RangeSelectionMotion({ children }) {
     });
     const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
     resizeObserver?.observe(root);
-    root.querySelector('.muxui-calendar-grid') && resizeObserver?.observe(root.querySelector('.muxui-calendar-grid'));
+    root.querySelector('.muxui-calendar__grid') && resizeObserver?.observe(root.querySelector('.muxui-calendar__grid'));
     root.addEventListener('pointerover', markPointerMode, true);
     root.addEventListener('pointerenter', markPointerMode, true);
     root.addEventListener('pointermove', markPointerMode, true);
@@ -337,10 +337,10 @@ export function RangeSelectionMotion({ children }) {
 
   return React.createElement('div', {
     ref: setRoot,
-    className: 'muxui-range-selection-motion',
+    className: 'muxui-range-calendar__selection-motion',
   }, React.createElement('div', {
     ref: layerRef,
-    className: 'muxui-range-selection-bands',
+    className: 'muxui-range-calendar__selection-bands',
     'aria-hidden': 'true',
   }), children);
 }

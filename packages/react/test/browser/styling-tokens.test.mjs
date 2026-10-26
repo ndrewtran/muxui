@@ -54,9 +54,9 @@ test('calendar, field and collection hooks respond independently to gap and inse
     // covered by the component tests. Keep this fixture focused on CSS inheritance.
     await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>
       <div class="muxui-calendar">Calendar</div><div class="muxui-range-calendar">Range calendar</div>
-      <input class="muxui-input" aria-label="Name"><div class="muxui-list-box-item">Item</div>
+      <input class="muxui-input" aria-label="Name"><div class="muxui-list-box__item">Item</div>
     </body></html>`);
-    const observe = () => page.evaluate(() => Object.fromEntries(['.muxui-calendar', '.muxui-range-calendar', '.muxui-input', '.muxui-list-box-item'].map((selector) => {
+    const observe = () => page.evaluate(() => Object.fromEntries(['.muxui-calendar', '.muxui-range-calendar', '.muxui-input', '.muxui-list-box__item'].map((selector) => {
       const style = getComputedStyle(document.querySelector(selector));
       return [selector, { padding: style.padding, gap: style.gap, color: style.color, radius: style.borderRadius }];
     })));
@@ -168,7 +168,7 @@ test('immediate action labels and selection marks retain contrast in every inter
     React.createElement(CheckboxField.Root, { defaultChecked: true },
       React.createElement(CheckboxField.Button, null,
         React.createElement(CheckboxField.Indicator), 'Selected field choice')),
-    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-muxui-color': 'brand', 'data-muxui-state-selected': true }, 'Selected tag')));
+    React.createElement('span', { id: 'selected-tag', className: 'muxui-tag-group__tag', 'data-muxui-color': 'brand', 'data-muxui-state-selected': true }, 'Selected tag')));
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
@@ -196,32 +196,32 @@ test('immediate action labels and selection marks retain contrast in every inter
       await page.mouse.move(880, 580);
       await page.evaluate((scheme) => document.documentElement.setAttribute('data-muxui-color-scheme', scheme), mode);
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.selection.track');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'rest');
+      await waitForTokenProperty(page, '#action .muxui-button__label', 'color', 'semantic.action.foreground');
+      await assertTextContrast('#action .muxui-button__label', '#action', 'primary Button', mode, 'rest');
 
       await action.hover();
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-hover');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'hover');
+      await waitForTokenProperty(page, '#action .muxui-button__label', 'color', 'semantic.action.foreground');
+      await assertTextContrast('#action .muxui-button__label', '#action', 'primary Button', mode, 'hover');
 
       await page.mouse.down();
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-pressed');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'pressed');
+      await waitForTokenProperty(page, '#action .muxui-button__label', 'color', 'semantic.action.foreground');
+      await assertTextContrast('#action .muxui-button__label', '#action', 'primary Button', mode, 'pressed');
       await page.mouse.up();
       await page.mouse.move(880, 580);
 
       await action.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-hover');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-muxui-state-hovered');
+      await waitForTokenProperty(page, '#action .muxui-button__label', 'color', 'semantic.action.foreground');
+      await assertTextContrast('#action .muxui-button__label', '#action', 'primary Button', mode, 'data-muxui-state-hovered');
       await action.evaluate((element) => {
         element.removeAttribute('data-muxui-state-hovered');
         element.setAttribute('data-muxui-state-pressed', '');
       });
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-pressed');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-muxui-state-pressed');
+      await waitForTokenProperty(page, '#action .muxui-button__label', 'color', 'semantic.action.foreground');
+      await assertTextContrast('#action .muxui-button__label', '#action', 'primary Button', mode, 'data-muxui-state-pressed');
       await action.evaluate((element) => element.removeAttribute('data-muxui-state-pressed'));
 
       await disabledAction.evaluate((element) => {
@@ -229,14 +229,14 @@ test('immediate action labels and selection marks retain contrast in every inter
         element.setAttribute('data-muxui-state-pressed', '');
       });
       await waitForTokenProperty(page, '#disabled-action', 'background-color', 'semantic.selection.track');
-      await waitForTokenProperty(page, '#disabled-action .muxui-button-content', 'color', 'semantic.action.foreground');
-      await assertTextContrast('#disabled-action .muxui-button-content', '#disabled-action', 'disabled Button', mode, 'hover and pressed attributes');
+      await waitForTokenProperty(page, '#disabled-action .muxui-button__label', 'color', 'semantic.action.foreground');
+      await assertTextContrast('#disabled-action .muxui-button__label', '#disabled-action', 'disabled Button', mode, 'hover and pressed attributes');
 
       await checkbox.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
-      await checkbox.locator('.muxui-checkbox-indicator svg').evaluate(async (element) => {
+      await checkbox.locator('.muxui-checkbox__indicator svg').evaluate(async (element) => {
         await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
       });
-      await assertTextContrast('.muxui-checkbox-indicator svg', '.muxui-checkbox-indicator', 'selected Checkbox mark', mode, 'hover');
+      await assertTextContrast('.muxui-checkbox__indicator svg', '.muxui-checkbox__indicator', 'selected Checkbox mark', mode, 'hover');
 
       await checkboxFieldButton.evaluate((element) => element.setAttribute('data-muxui-state-hovered', ''));
       await waitForTokenProperty(page, '.muxui-checkbox-field__indicator svg', 'color', 'component.checkbox.selected-foreground-hover');
@@ -285,14 +285,14 @@ test('immediate action labels and selection marks retain contrast in every inter
 
     await page.evaluate(() => {
       const tagList = document.createElement('div');
-      tagList.className = 'muxui-tag-list';
+      tagList.className = 'muxui-tag-group__list';
       tagList.tabIndex = 0;
       tagList.setAttribute('data-muxui-state-focus-visible', '');
       document.body.append(tagList);
       const tag = document.getElementById('selected-tag');
       tag.setAttribute('data-muxui-state-hovered', '');
     });
-    assert.equal(await page.locator('.muxui-tag-list').last().evaluate((element) => getComputedStyle(element).outlineColor),
+    assert.equal(await page.locator('.muxui-tag-group__list').last().evaluate((element) => getComputedStyle(element).outlineColor),
       await page.evaluate(() => { const probe = document.createElement('span'); probe.style.outlineColor = 'Highlight'; document.body.append(probe); const color = getComputedStyle(probe).outlineColor; probe.remove(); return color; }),
       'TagGroup keyboard focus uses the forced-colors highlight');
     const highlightColors = await page.evaluate(() => {
@@ -415,7 +415,7 @@ test('focus, choice geometry, and validation text have independent semantic over
   try {
     const page = await browser.newPage();
     await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>
-      <label class="muxui-radio muxui-radio--sm" data-muxui-state-focus-visible><span class="muxui-radio-indicator"></span></label>
+      <label class="muxui-radio-group__radio muxui-radio-group__radio--sm" data-muxui-state-focus-visible><span class="muxui-radio-group__indicator"></span></label>
       <div class="muxui-radio-field muxui-radio-field--sm"><label class="muxui-radio-field__button" data-muxui-state-focus-visible><span class="muxui-radio-field__indicator"></span></label></div>
       <div class="muxui-text-editor" data-muxui-state-invalid><label class="muxui-text-editor__label">Label</label><p class="muxui-text-editor__description">Validation</p></div>
     </body></html>`);
@@ -429,7 +429,7 @@ test('focus, choice geometry, and validation text have independent semantic over
         root.style.setProperty('--muxui-semantic-feedback-invalid-border', '#00ff00');
         root.style.setProperty('--muxui-semantic-feedback-invalid', '#ff8000');
       }, mode);
-      for (const selector of ['.muxui-radio-indicator', '.muxui-radio-field__indicator']) {
+      for (const selector of ['.muxui-radio-group__indicator', '.muxui-radio-field__indicator']) {
         const style = await page.locator(selector).evaluate(async (element) => {
           await Promise.all(element.getAnimations().map((animation) => animation.finished));
           const computed = getComputedStyle(element);

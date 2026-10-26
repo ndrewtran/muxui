@@ -41,8 +41,8 @@ const page = (url) => pageShell({
 /** Reads one header's chevron and label geometry; runs in the page. */
 function readHeader({ table, name }) {
   const header = [...document.querySelector(`[aria-label="${table}"]`).querySelectorAll('[role="columnheader"]')].find((node) => node.textContent === name);
-  const content = header.querySelector('.muxui-table-column-content');
-  const icon = header.querySelector('.muxui-table-sort-icon');
+  const content = header.querySelector('.muxui-table__column-content');
+  const icon = header.querySelector('.muxui-table__sort-icon');
   const text = [...(content ?? header).childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
   const range = document.createRange();
   range.selectNodeContents(text);
@@ -242,7 +242,7 @@ for (const engine of browserEngines()) {
           await tab.locator('[role="columnheader"]').first().waitFor({ timeout: 15_000 });
           const colors = await tab.evaluate(() => {
             const header = document.querySelector('[role="columnheader"][aria-sort="ascending"]');
-            return [getComputedStyle(header.querySelector('.muxui-table-sort-icon')).color, getComputedStyle(header).color];
+            return [getComputedStyle(header.querySelector('.muxui-table__sort-icon')).color, getComputedStyle(header).color];
           });
           assert.equal(colors[0], colors[1], `${engine} forced colors: the sorted chevron uses the header's system color`);
         } finally {

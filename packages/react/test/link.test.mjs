@@ -162,7 +162,7 @@ test('Breadcrumbs links keep their disabled and current states inside a disabled
     h(GridList, { 'aria-label': 'Cards' }, h(GridList.Item, { id: 'blocked', textValue: 'Blocked', disabled: true }, h(Breadcrumbs, { 'aria-label': 'Nested trail', items })))));
   try {
     const [plain, nested] = [...view.container.querySelectorAll('.muxui-breadcrumbs')];
-    const summary = (nav) => [...nav.querySelectorAll('.muxui-breadcrumbs-item')].map((item) => [item.querySelector('a,span').localName, item.hasAttribute('data-muxui-state-current')]);
+    const summary = (nav) => [...nav.querySelectorAll('.muxui-breadcrumbs__item')].map((item) => [item.querySelector('a,span').localName, item.hasAttribute('data-muxui-state-current')]);
     assert.deepEqual(summary(plain), [['a', false], ['a', false], ['span', true]]);
     assert.deepEqual(summary(nested), summary(plain), 'a Breadcrumbs trail resolves its own link state, with the current item still a plain span');
   } finally {

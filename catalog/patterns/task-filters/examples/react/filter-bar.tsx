@@ -76,7 +76,7 @@ export function TaskFiltersFilterBarExample() {
           max-inline-size: 100%;
         }
 
-        .tasks-tags .muxui-tag {
+        .tasks-tags .muxui-tag-group__tag {
           max-inline-size: 100%;
         }
 

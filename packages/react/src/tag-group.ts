@@ -120,18 +120,18 @@ export const TagGroup: ForwardRefExoticComponent<TagGroupProps & RefAttributes<H
   label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(AriaTagList<NormalizedItem>, {
     items: normalized,
-    className: 'muxui-tag-list',
+    className: 'muxui-tag-group__list',
     children: (item) => React.createElement(AriaTag, {
       id: item.id,
       textValue: item.textValue,
       isDisabled: disabled ? disabled : item.disabled,
-      className: 'muxui-tag',
+      className: 'muxui-tag-group__tag',
       // React Aria's Tag props name neither data-muxui-color nor data-muxui-variant, the hooks the styles read.
       ...{ 'data-muxui-color': tagColor(item), 'data-muxui-variant': resolvedVariant },
     }, item.label, onRemove ? React.createElement(IconButton, {
       slot: 'remove',
       disabled: disabled ? disabled : item.disabled,
-      className: 'muxui-tag-remove',
+      className: 'muxui-tag-group__remove',
       // React Aria's ButtonContext names the remove button through its slot, which IconButtonProps, requiring an aria-label or aria-labelledby, cannot express.
     } as IconButtonProps, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null),
   }));

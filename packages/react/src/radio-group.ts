@@ -79,7 +79,7 @@ export const RadioGroup: ForwardRefExoticComponent<RadioGroupProps & RefAttribut
         key: String(option.id ?? option.value),
         value: String(option.value ?? option.id),
         isDisabled: disabled ? disabled : option.disabled,
-        className: classNames('muxui-radio', resolvedSize === undefined || resolvedSize === 'md' ? undefined : `muxui-radio--${resolvedSize}`),
+        className: classNames('muxui-radio-group__radio', resolvedSize === undefined || resolvedSize === 'md' ? undefined : `muxui-radio-group__radio--${resolvedSize}`),
         // React Aria's overloads take a render function as the children prop, not as a third argument.
         children: (renderProps) => React.createElement(React.Fragment, null,
           React.createElement(RadioMotionIndicator, { renderProps }),
@@ -105,11 +105,11 @@ export const RadioGroup: ForwardRefExoticComponent<RadioGroupProps & RefAttribut
     }, radioContent,
     // Inside the group, so RAC wires it into the group's aria-describedby and shows it only while the group is invalid.
     // It is always mounted: without errorMessage it shows the server or browser validation message, as CheckboxGroup does.
-    React.createElement(AriaFieldError, { className: 'muxui-field-error muxui-radio-group-error' }, errorMessage));
+    React.createElement(AriaFieldError, { className: 'muxui-field-error muxui-radio-group__error' }, errorMessage));
     const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref, children: group });
     const content = label === undefined
       ? motionGroup
-      : React.createElement('div', { className: 'muxui-radio-group-field', ...{ 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-invalid': invalid ? invalid : undefined } },
+      : React.createElement('div', { className: 'muxui-radio-group__field', ...{ 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-invalid': invalid ? invalid : undefined } },
         React.createElement('span', { id: generatedLabelledby, className: 'muxui-field-label' }, label),
         motionGroup);
     return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, content);

@@ -9,14 +9,14 @@ window.mount=(props={})=>flushSync(()=>root.render(React.createElement(PromptCom
 async function selectModel(page, label) {
   await page.getByRole('button', { name: /Model/u }).click();
   await page.getByRole('option', { name: label, exact: true }).click();
-  await page.locator('.muxui-select-popover').waitFor({ state: 'detached' });
+  await page.locator('.muxui-select__popup').waitFor({ state: 'detached' });
 }
 // React Aria restores focus a frame after the popup unmounts, so wait for it instead of reading when the node detaches.
 async function assertTriggerFocused(page, trigger) {
   await page.waitForFunction((node) => document.activeElement === node, await trigger.elementHandle(), { timeout: 5000 }).catch(() => {});
   assert.equal(await trigger.evaluate((node) => node === document.activeElement), true);
 }
-const modelValue = (page) => page.locator('.muxui-prompt-composer-model .muxui-select-value');
+const modelValue = (page) => page.locator('.muxui-prompt-composer__model .muxui-select__value');
 const fixture = pageShell({ attributes: 'data-muxui-color-scheme="light"', head: '<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css">', bodyAttributes:'style="margin:0;padding:24px;background:var(--muxui-semantic-surface-canvas)"',body:'<main style="max-width:560px;margin:auto;padding-top:280px"><div id="root"></div></main>',entry:'/prompt-entry.mjs' });
 
 test('PromptComposer native validation/reset, multiline/IME, caret menus, file/model actions and pending work by keyboard', { timeout: 120_000 }, async () => {
@@ -37,8 +37,8 @@ test('PromptComposer native validation/reset, multiline/IME, caret menus, file/m
     await input.fill('@');await page.evaluate(()=>window.mount({inputProps:{name:'message',required:true,maxLength:3}}));await page.keyboard.press('Enter');assert.equal(await input.inputValue(),'@');
     await page.evaluate(()=>window.mount());await selectModel(page,'Detailed');assert.ok((await page.evaluate(()=>window.events)).some(e=>e[0]==='model'&&e[1]==='b'));
     await page.locator('input[type=file]').setInputFiles({name:'local.txt',mimeType:'text/plain',buffer:Buffer.from('local')});assert.ok((await page.evaluate(()=>window.events)).some(e=>e[0]==='files'&&e[1][0]==='local.txt'));await page.getByRole('button',{name:'Remove notes.txt'}).click();assert.ok((await page.evaluate(()=>window.events)).some(e=>e[0]==='remove'&&e[1]==='file'));
-    await page.evaluate(()=>document.querySelector('form').reset());await page.waitForFunction(()=>document.querySelector('.muxui-select-value').textContent==='Standard');assert.equal(await input.inputValue(),'Initial');assert.equal(await modelValue(page).textContent(),'Standard');
-    await page.evaluate(()=>window.mount({defaultSelectedModel:'b'}));await page.evaluate(()=>document.querySelector('form').reset());await page.waitForFunction(()=>document.querySelector('.muxui-select-value').textContent==='Detailed');assert.equal(await modelValue(page).textContent(),'Detailed');
+    await page.evaluate(()=>document.querySelector('form').reset());await page.waitForFunction(()=>document.querySelector('.muxui-select__value').textContent==='Standard');assert.equal(await input.inputValue(),'Initial');assert.equal(await modelValue(page).textContent(),'Standard');
+    await page.evaluate(()=>window.mount({defaultSelectedModel:'b'}));await page.evaluate(()=>document.querySelector('form').reset());await page.waitForFunction(()=>document.querySelector('.muxui-select__value').textContent==='Detailed');assert.equal(await modelValue(page).textContent(),'Detailed');
     await page.evaluate(()=>window.mount({value:'Caller draft',selectedModel:'b'}));await page.waitForFunction(()=>document.querySelector('textarea').value==='Caller draft');await page.evaluate(()=>document.querySelector('form').reset());assert.equal(await input.inputValue(),'Caller draft');assert.equal(await modelValue(page).textContent(),'Detailed');
     await page.evaluate(()=>window.mount({pending:true,onStop:()=>window.events.push(['stop'])}));await page.getByRole('button',{name:'Stop response'}).click();assert.equal(await input.getAttribute('readonly'),'');assert.ok((await page.evaluate(()=>window.events)).some(e=>e[0]==='stop'));
     await page.evaluate(()=>window.mount({disabled:true,error:'Request failed'}));await page.waitForFunction(()=>document.querySelector('textarea').disabled);assert.equal(await input.isDisabled(),true);assert.equal(await page.getByRole('alert').textContent(),'Request failed');
@@ -59,7 +59,7 @@ test('PromptComposer invalidates external draft ranges, follows native external 
     await page.waitForFunction(()=>document.querySelector('textarea').form?.id==='external' && document.querySelector('textarea').minLength===3);
     await input.fill('Hi');await page.getByRole('button',{name:'Send message'}).click();await input.press('Enter');assert.equal(await input.evaluate(n=>n.validity.tooShort),true);assert.deepEqual((await page.evaluate(()=>window.events)).filter(e=>['submit','external-submit','send'].includes(e[0])),[]);
     await input.fill('Hello');await page.getByRole('button',{name:'Send message'}).click();await input.press('Enter');assert.deepEqual((await page.evaluate(()=>window.events)).filter(e=>['submit','external-submit','send'].includes(e[0])),[['external-submit','Hello'],['external-submit','Hello']]);
-    await selectModel(page,'Detailed');await input.fill('Edited draft');const valuesBeforeReset=(await page.evaluate(()=>window.events)).filter(e=>e[0]==='value');await page.evaluate(()=>document.querySelector('form.muxui-prompt-composer').reset());await page.waitForFunction(()=>document.querySelector('.muxui-select-value').textContent==='Standard');assert.equal(await input.inputValue(),'Edited draft');assert.equal(await modelValue(page).textContent(),'Standard');assert.deepEqual((await page.evaluate(()=>window.events)).filter(e=>e[0]==='value'),valuesBeforeReset);
+    await selectModel(page,'Detailed');await input.fill('Edited draft');const valuesBeforeReset=(await page.evaluate(()=>window.events)).filter(e=>e[0]==='value');await page.evaluate(()=>document.querySelector('form.muxui-prompt-composer').reset());await page.waitForFunction(()=>document.querySelector('.muxui-select__value').textContent==='Standard');assert.equal(await input.inputValue(),'Edited draft');assert.equal(await modelValue(page).textContent(),'Standard');assert.deepEqual((await page.evaluate(()=>window.events)).filter(e=>e[0]==='value'),valuesBeforeReset);
     await selectModel(page,'Detailed');await page.evaluate(()=>document.querySelector('#external').reset());await page.waitForFunction(()=>document.querySelector('textarea').value==='Initial');assert.equal(await modelValue(page).textContent(),'Detailed');assert.equal((await page.evaluate(()=>window.events)).filter(e=>e[0]==='reset').length,1);
     await page.evaluate(()=>window.mount({value:'Caller draft',inputProps:{form:'external',name:'message',required:true,minLength:3}}));await page.waitForFunction(()=>document.querySelector('textarea').value==='Caller draft');await page.evaluate(()=>document.querySelector('#external').reset());assert.equal(await input.inputValue(),'Caller draft');
     await page.evaluate(()=>window.mount({inputProps:{form:'external',name:'message',required:true,minLength:3}}));await input.fill('Keep this draft');await page.evaluate(()=>{const form=document.querySelector('#external');form.addEventListener('reset',e=>e.preventDefault(),{once:true});form.reset();});assert.equal(await input.inputValue(),'Keep this draft');
@@ -80,7 +80,7 @@ test('PromptComposer model Select preserves keyboard focus, caller state, reset 
     await page.goto(server.url + '/prompt.html');
     const input = page.getByRole('textbox', { name: 'Draft' });
     const trigger = page.getByRole('button', { name: /Model/u });
-    const popup = page.locator('.muxui-select-popover');
+    const popup = page.locator('.muxui-select__popup');
     const modelEvents = () => page.evaluate(() => window.events.filter((event) => event[0] === 'model'));
     await input.fill('@'); await page.getByRole('listbox', { name: 'Sources' }).waitFor();
     await trigger.click(); await popup.waitFor();
@@ -139,7 +139,7 @@ test('PromptComposer model Select preserves keyboard focus, caller state, reset 
     await page.evaluate(() => window.mount({ models: [{ id: 'a', label: 'A very long model label with additional detail for narrow layouts' }, { id: 'b', label: 'Detailed' }] }));
     assert.equal(await trigger.evaluate((node) => node.getBoundingClientRect().height), 32);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    assert.equal(await page.locator('.muxui-select-value').evaluate((node) => node.scrollWidth > node.clientWidth), true);
+    assert.equal(await page.locator('.muxui-select__value').evaluate((node) => node.scrollWidth > node.clientWidth), true);
     await trigger.click(); await popup.waitFor();
     assert.equal(await popup.evaluate((node) => { const rect = node.getBoundingClientRect(); return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight; }), true);
     await page.keyboard.press('Escape'); await popup.waitFor({ state: 'detached' });
@@ -259,14 +259,14 @@ test('PromptComposer keeps the error alert at full opacity and contrast while di
       await page.evaluate(() => window.mount({ disabled: true, error: 'Request failed' }));
       await page.waitForFunction(() => document.querySelector('textarea').disabled);
       const alert = await page.evaluate(visibilityOf, '[role="alert"]');
-      const field = await page.evaluate(visibilityOf, '.muxui-prompt-composer-field');
+      const field = await page.evaluate(visibilityOf, '.muxui-prompt-composer__field');
       assert.equal(alert.opacity, 1, `${scheme}: the disabled composer's alert is not faded (${alert.opacity})`);
       assert.ok(alert.contrast >= 4.5, `${scheme}: the alert text keeps 4.5:1 contrast while disabled (${alert.contrast.toFixed(2)}:1)`);
       assert.equal(field.opacity, 0.45, `${scheme}: the disabled controls are still faded (${field.opacity})`);
       // Without an error the same treatment applies to the controls alone.
       await page.evaluate(() => window.mount({ disabled: true }));
       await page.waitForFunction(() => !document.querySelector('[role="alert"]'));
-      assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer-field')).opacity, 0.45, `${scheme}: a disabled composer without an error fades its controls`);
+      assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer__field')).opacity, 0.45, `${scheme}: a disabled composer without an error fades its controls`);
       // The box paints canonical tokens, opaque: the hover surface disabled fields use and the ordinary border, not a translucent mix.
       const paint = await page.evaluate(() => {
         const token = (name) => { const probe = document.createElement('span'); probe.style.color = `var(${name})`; document.body.append(probe); const { color } = getComputedStyle(probe); probe.remove(); return color; };
@@ -278,7 +278,7 @@ test('PromptComposer keeps the error alert at full opacity and contrast while di
       // An enabled composer is not faded at all.
       await page.evaluate(() => window.mount({ error: 'Request failed' }));
       await page.waitForFunction(() => document.querySelector('[role="alert"]'));
-      assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer-field')).opacity, 1, `${scheme}: an enabled composer is not faded`);
+      assert.equal((await page.evaluate(visibilityOf, '.muxui-prompt-composer__field')).opacity, 1, `${scheme}: an enabled composer is not faded`);
     }
     assert.deepEqual(errors, []);
   } finally { await browser.close(); await server.close(); }

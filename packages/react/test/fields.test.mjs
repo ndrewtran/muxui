@@ -86,8 +86,8 @@ test('R1.2 fields preserve MuxUI labels, errors, SSR, hydration, and state callb
     assert.equal(document.querySelector('.muxui-switch input')?.checked, false);
     assert.equal(document.querySelector('.muxui-switch-field')?.getAttribute('data-muxui-state-invalid'), 'true');
     assert.match(document.querySelector('.muxui-switch-field')?.textContent ?? '', /Apply changes.*Choose a setting/u);
-    assert.equal(document.querySelector('.muxui-search-clear svg')?.getAttribute('aria-hidden'), 'true');
-    assert.equal(document.querySelector('.muxui-search-clear svg')?.getAttribute('focusable'), 'false');
+    assert.equal(document.querySelector('.muxui-search-field__clear svg')?.getAttribute('aria-hidden'), 'true');
+    assert.equal(document.querySelector('.muxui-search-field__clear svg')?.getAttribute('focusable'), 'false');
     await act(async () => root.unmount());
   } finally {
     restore();
@@ -207,18 +207,18 @@ test('SearchField keeps its clear action in the input control grid with supporti
     invalid: true,
   }));
   const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
-  const control = dom.window.document.querySelector('.muxui-search-control');
+  const control = dom.window.document.querySelector('.muxui-search-field__control');
   assert.ok(control);
   assert.equal(control.querySelector('input')?.parentElement, control);
-  const clear = control.querySelector('.muxui-search-clear');
+  const clear = control.querySelector('.muxui-search-field__clear');
   assert.equal(clear?.parentElement, control);
   assert.equal(clear?.querySelector('svg')?.getAttribute('aria-hidden'), 'true');
   assert.equal(clear?.querySelector('svg')?.getAttribute('focusable'), 'false');
   assert.equal(clear?.getAttribute('aria-label'), 'Clear search');
   assert.match(dom.window.document.querySelector('.muxui-search-field')?.textContent ?? '', /Find a result.*No result found/u);
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.muxui-search-control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/u);
-  assert.match(css, /\.muxui-search-control \.muxui-field-input\s*\{[^}]*padding-inline-end:/u);
+  assert.match(css, /\.muxui-search-field__control\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/u);
+  assert.match(css, /\.muxui-search-field__control \.muxui-field-input\s*\{[^}]*padding-inline-end:/u);
   dom.window.close();
 });
 
@@ -235,7 +235,7 @@ test('SearchField clear control keeps RAC clearing and the MuxUI callback', asyn
       onClear: () => { clears += 1; },
     })));
     const input = host.querySelector('.muxui-search-field input');
-    const clear = host.querySelector('.muxui-search-clear');
+    const clear = host.querySelector('.muxui-search-field__clear');
     assert.equal(host.querySelector('.muxui-search-field').hasAttribute('data-muxui-state-empty'), false);
     assert.equal(input.value, 'MuxUI');
     await act(async () => clear.click());
@@ -334,23 +334,23 @@ test('ComboBox keeps its inner input neutral while the shell owns field states',
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input\s*\{[\s\S]*transition:/u);
   assert.doesNotMatch(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
   assert.doesNotMatch(comboCss, /^\.muxui-field-input\s*\{/mu);
-  assert.match(css, /\.muxui-combo-control:focus-within\s*\{[\s\S]*var\(--muxui-field-focus-glow\)/u);
+  assert.match(css, /\.muxui-combo-box__control:focus-within\s*\{[\s\S]*var\(--muxui-field-focus-glow\)/u);
   assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\)/u);
 });
 
 test('NumberField steppers expose stable direction hooks and edge geometry', async () => {
   const markup = renderToString(React.createElement(NumberField, { label: 'Quantity', defaultValue: 2 }));
   const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
-  const decrement = dom.window.document.querySelector('.muxui-number-stepper-decrement');
-  const increment = dom.window.document.querySelector('.muxui-number-stepper-increment');
+  const decrement = dom.window.document.querySelector('.muxui-number-field__decrement');
+  const increment = dom.window.document.querySelector('.muxui-number-field__increment');
   assert.ok(decrement);
   assert.ok(increment);
   assert.equal(decrement.getAttribute('slot'), 'decrement');
   assert.equal(increment.getAttribute('slot'), 'increment');
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
-  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*var\(--muxui-semantic-control-radius\) 0 0 var\(--muxui-semantic-control-radius\)/u);
-  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*0 var\(--muxui-semantic-control-radius\) var\(--muxui-semantic-control-radius\) 0/u);
+  assert.match(css, /:where\([\s\S]*\.muxui-number-field__stepper[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
+  assert.match(css, /\.muxui-number-field__decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*var\(--muxui-semantic-control-radius\) 0 0 var\(--muxui-semantic-control-radius\)/u);
+  assert.match(css, /\.muxui-number-field__increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*0 var\(--muxui-semantic-control-radius\) var\(--muxui-semantic-control-radius\) 0/u);
   assert.match(css, /--muxui-reference-color-neutral-22:\s*#d5d2d1;/u);
   dom.window.close();
 });
@@ -368,8 +368,8 @@ test('NumberField steps by keyboard, clamps to bounds, preserves empty input, an
       React.createElement(NumberField, { label: 'Formatted amount', defaultValue: 1234.5, step: 0.1, formatOptions: { style: 'decimal', useGrouping: false } }))));
     const fields = [...host.querySelectorAll('.muxui-number-field')];
     const input = fields[0].querySelector('input');
-    const increment = fields[0].querySelector('.muxui-number-stepper-increment');
-    const decrement = fields[0].querySelector('.muxui-number-stepper-decrement');
+    const increment = fields[0].querySelector('.muxui-number-field__increment');
+    const decrement = fields[0].querySelector('.muxui-number-field__decrement');
     assert.equal(input.value, '2');
     await act(async () => {
       input.focus();
@@ -484,8 +484,8 @@ test('DateRangePicker popover uses range calendar cells for contiguous selection
     await act(async () => trigger.click());
     const popup = document.body.querySelector('.muxui-date-popover');
     assert.ok(popup);
-    assert.ok(popup.querySelector('.muxui-range-calendar-cell'));
-    assert.equal(popup.querySelector('.muxui-calendar-cell'), null);
+    assert.ok(popup.querySelector('.muxui-range-calendar__cell'));
+    assert.equal(popup.querySelector('.muxui-calendar__cell'), null);
   } finally {
     await act(async () => root?.unmount());
     restore();
@@ -533,8 +533,8 @@ test('date picker calendar triggers retain icon wrapper sizing and scoped popove
   assert.match(styles, /\.muxui-icon\s*\{[^}]*width:\s*1\.5rem;[^}]*height:\s*1\.5rem;/u);
   assert.match(styles, /\.muxui-icon--sm\s*\{[^}]*width:\s*1rem;[^}]*height:\s*1rem;/u);
   assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-border-faint\)/u);
-  assert.match(styles, /\.muxui-date-picker-popover,\s*\.muxui-date-range-picker-popover\s*\{[^}]*box-shadow:\s*0 4px 16px var\(--muxui-component-datepicker-popover-shadow-color\)/u);
-  assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+:where\(\.muxui-date-picker-popover,\s*\.muxui-date-range-picker-popover\)/u);
+  assert.match(styles, /\.muxui-date-picker__popover,\s*\.muxui-date-range-picker__popover\s*\{[^}]*box-shadow:\s*0 4px 16px var\(--muxui-component-datepicker-popover-shadow-color\)/u);
+  assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+:where\(\.muxui-date-picker__popover,\s*\.muxui-date-range-picker__popover\)/u);
 });
 
 test('DateRangePicker renders its visual separator without exposing it to assistive technology', async () => {
@@ -543,14 +543,14 @@ test('DateRangePicker renders its visual separator without exposing it to assist
     defaultValue: { start: '2026-08-26', end: '2026-09-01' },
   }));
   const dom = new JSDOM(`<!doctype html>${markup}`);
-  const separator = dom.window.document.querySelector('.muxui-date-range-separator');
+  const separator = dom.window.document.querySelector('.muxui-date-range-picker__separator');
   assert.ok(separator);
   assert.equal(separator.textContent, '–');
   assert.equal(separator.getAttribute('aria-hidden'), 'true');
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*auto;[^}]*font-size:\s*var\(--muxui-semantic-typography-body-size\);/u);
-  assert.doesNotMatch(styles, /\.muxui-date-range-separator\s*\{[^}]*font-size:\s*0/u);
-  assert.doesNotMatch(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*0/u);
+  assert.match(styles, /\.muxui-date-range-picker__separator\s*\{[^}]*inline-size:\s*auto;[^}]*font-size:\s*var\(--muxui-semantic-typography-body-size\);/u);
+  assert.doesNotMatch(styles, /\.muxui-date-range-picker__separator\s*\{[^}]*font-size:\s*0/u);
+  assert.doesNotMatch(styles, /\.muxui-date-range-picker__separator\s*\{[^}]*inline-size:\s*0/u);
   dom.window.close();
 });
 
@@ -626,7 +626,7 @@ test('temporal enrichment parses strict values, preserves invalid bounds, and se
     assert.equal(host.querySelector('.muxui-date-picker input[type="text"]')?.value, '2026-01-01');
     assert.equal(host.querySelector('.muxui-date-range-picker input[type="text"]')?.value, '2026-01-01');
     await act(async () => host.querySelector('.muxui-date-range-picker .muxui-date-trigger').click());
-    const firstRangeCell = document.body.querySelector('.muxui-range-calendar-cell');
+    const firstRangeCell = document.body.querySelector('.muxui-range-calendar__cell');
     assert.ok(firstRangeCell);
     await act(async () => firstRangeCell.click());
     assert.equal(seenDateValues.length > 0, true);
@@ -672,7 +672,7 @@ test('temporal bounds and reversed ranges stay visible and use built-in Form val
     const datePicker = host.querySelector('.muxui-date-picker');
     const timeField = host.querySelector('.muxui-time-field');
     const ranges = host.querySelectorAll('.muxui-date-range-picker');
-    const serializedInput = (field) => field?.querySelector('input[type="hidden"]:not(.muxui-form-reset-anchor)');
+    const serializedInput = (field) => field?.querySelector('input[type="hidden"]:not(.muxui-form__reset-anchor)');
     assert.equal(host.querySelector('form')?.noValidate, true);
     assert.equal(serializedInput(dateField)?.value, '2026-01-01');
     assert.equal(serializedInput(datePicker)?.value, '2026-04-01');
@@ -690,8 +690,8 @@ test('temporal bounds and reversed ranges stay visible and use built-in Form val
       assert.equal(range?.getAttribute('data-muxui-state-invalid'), 'true');
       assert.equal(range?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), 'true');
     }
-    assert.deepEqual([...ranges[0].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form-reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
-    assert.deepEqual([...ranges[1].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form-reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
+    assert.deepEqual([...ranges[0].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form__reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
+    assert.deepEqual([...ranges[1].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form__reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
     assert.equal(ranges[2]?.getAttribute('data-muxui-state-invalid'), null);
     assert.equal(ranges[2]?.querySelector('.muxui-field-error'), null);
     assert.equal(ranges[2]?.querySelector('[data-muxui-state-type="day"]')?.getAttribute('aria-invalid'), null);
@@ -973,7 +973,7 @@ test('R1.2 autocomplete is closed on SSR, filters while focused, and selects Mux
   assert.match(server, /role="combobox"/u);
   assert.match(server, /aria-expanded="false"/u);
   assert.doesNotMatch(server, /aria-controls/u);
-  assert.doesNotMatch(server, /muxui-autocomplete-popover|muxui-autocomplete-list/u);
+  assert.doesNotMatch(server, /muxui-autocomplete__popover|muxui-autocomplete__list/u);
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   let root;
@@ -985,13 +985,13 @@ test('R1.2 autocomplete is closed on SSR, filters while focused, and selects Mux
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'], onSelect: (item) => { selected.push(item?.value); selectedItems.push(item); } })));
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
-    const list = document.querySelector('.muxui-autocomplete-list');
+    const list = document.querySelector('.muxui-autocomplete__list');
     assert.ok(list);
-    assert.equal(list.parentElement?.classList.contains('muxui-autocomplete-popover'), true);
+    assert.equal(list.parentElement?.classList.contains('muxui-autocomplete__popover'), true);
     assert.equal(host.contains(list), false);
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', value: 'Mel', items: ['Melbourne', 'Sydney'], onSelect: (item) => { selected.push(item?.value); selectedItems.push(item); } })));
-    assert.equal(document.querySelectorAll('.muxui-autocomplete-option').length, 1);
-    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    assert.equal(document.querySelectorAll('.muxui-autocomplete__option').length, 1);
+    await act(async () => document.querySelector('.muxui-autocomplete__option').click());
     assert.deepEqual(selected, ['Melbourne']);
     assert.deepEqual(selectedItems, [{ id: 'Melbourne', label: 'Melbourne', value: 'Melbourne' }]);
     await act(async () => root.unmount());
@@ -1006,7 +1006,7 @@ test('Autocomplete keeps outside dismissal closed through trigger focus restorat
   const restore = installDom(dom);
   let root;
   const assertClosed = () => {
-    assert.equal(document.querySelector('.muxui-autocomplete-popover:not([data-muxui-state-exiting="true"])'), null);
+    assert.equal(document.querySelector('.muxui-autocomplete__popover:not([data-muxui-state-exiting="true"])'), null);
   };
   try {
     const host = document.querySelector('#root');
@@ -1017,7 +1017,7 @@ test('Autocomplete keeps outside dismissal closed through trigger focus restorat
     const input = host.querySelector('.muxui-autocomplete input');
 
     await act(async () => input.focus());
-    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+    assert.ok(document.querySelector('.muxui-autocomplete__popover'));
 
     await act(async () => {
       nonfocusable.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
@@ -1028,7 +1028,7 @@ test('Autocomplete keeps outside dismissal closed through trigger focus restorat
     assert.equal(document.activeElement, input);
 
     await act(async () => input.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })));
-    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+    assert.ok(document.querySelector('.muxui-autocomplete__popover'));
 
     await act(async () => {
       nonfocusable.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
@@ -1037,7 +1037,7 @@ test('Autocomplete keeps outside dismissal closed through trigger focus restorat
     });
     assertClosed();
     await act(async () => input.focus());
-    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+    assert.ok(document.querySelector('.muxui-autocomplete__popover'));
 
     await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     assertClosed();
@@ -1047,7 +1047,7 @@ test('Autocomplete keeps outside dismissal closed through trigger focus restorat
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
       input.focus();
     });
-    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+    assert.ok(document.querySelector('.muxui-autocomplete__popover'));
   } finally {
     await act(async () => root?.unmount());
     restore();
@@ -1066,7 +1066,7 @@ test('Autocomplete portals into the nearest scoped runtime profile', async () =>
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] })));
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
-    const popover = document.querySelector('.muxui-autocomplete-popover');
+    const popover = document.querySelector('.muxui-autocomplete__popover');
     assert.ok(popover);
     assert.equal(scope.contains(popover), true);
     assert.equal(host.contains(popover), false);
@@ -1080,7 +1080,7 @@ test('Autocomplete portals into the nearest scoped runtime profile', async () =>
 test('R1.2 autocomplete preserves rich labels for SSR and text filtering', async () => {
   const items = [{ id: 'mel', label: React.createElement('strong', null, 'Melbourne'), value: 'Melbourne' }];
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', items }));
-  assert.doesNotMatch(server, /muxui-autocomplete-list/u);
+  assert.doesNotMatch(server, /muxui-autocomplete__list/u);
   assert.doesNotMatch(server, /\[object Object\]/u);
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -1091,7 +1091,7 @@ test('R1.2 autocomplete preserves rich labels for SSR and text filtering', async
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', value: 'Mel', items })));
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
-    const option = document.querySelector('.muxui-autocomplete-option');
+    const option = document.querySelector('.muxui-autocomplete__option');
     assert.ok(option);
     assert.match(option.innerHTML, /<strong>Melbourne<\/strong>/u);
   } finally {
@@ -1123,7 +1123,7 @@ test('Autocomplete disabled items map to inert options and suppress callbacks', 
     })));
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
-    const options = [...document.querySelectorAll('.muxui-autocomplete-option')];
+    const options = [...document.querySelectorAll('.muxui-autocomplete__option')];
     assert.equal(options.length, 3);
     assert.deepEqual(options.map((option) => option.getAttribute('data-muxui-state-disabled')), ['true', null, 'true']);
     assert.deepEqual(options.map((option) => option.getAttribute('aria-disabled')), ['true', null, 'true']);
@@ -1160,13 +1160,13 @@ test('R1.2 readonly autocomplete only permits viewing suggestions', async () => 
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
     assert.equal(input.readOnly, true);
-    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
+    assert.equal(document.querySelector('.muxui-autocomplete__list')?.hidden, false);
     input.value = 'Sydney';
     await act(async () => input.dispatchEvent(new Event('input', { bubbles: true })));
-    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    await act(async () => document.querySelector('.muxui-autocomplete__option').click());
     assert.deepEqual(changes, []);
     assert.deepEqual(selected, []);
-    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
+    assert.equal(document.querySelector('.muxui-autocomplete__list')?.hidden, false);
     await act(async () => root.render(renderAutocomplete()));
     assert.equal(input.value, 'Melbourne');
     await act(async () => root.unmount());
@@ -1205,12 +1205,12 @@ test('Autocomplete ignores choosing and typing once disabled or read-only, and t
     await act(async () => root.render(renderField()));
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
-    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
+    assert.equal(document.querySelector('.muxui-autocomplete__list')?.hidden, false);
     await act(async () => root.render(renderField({ readOnly: true })));
     await act(async () => typeInto(input, 'Syd'));
     assert.deepEqual(changes, [], 'a read-only field reports no typing');
     await act(async () => root.render(renderField({ disabled: true })));
-    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    await act(async () => document.querySelector('.muxui-autocomplete__option').click());
     assert.deepEqual(changes, [], 'a disabled field reports no choice');
     assert.deepEqual(selected, [], 'a disabled field selects nothing');
 
@@ -1269,12 +1269,12 @@ test('Autocomplete preserves the compact size axis and part hooks', async () => 
       items: ['Melbourne'],
     })));
     await act(async () => host.querySelector('.muxui-autocomplete input').focus());
-    const list = document.querySelector('.muxui-autocomplete-list');
+    const list = document.querySelector('.muxui-autocomplete__list');
     assert.ok(list);
-    assert.match(list.className, /muxui-autocomplete-list--sm/u);
+    assert.match(list.className, /muxui-autocomplete__list--sm/u);
     assert.equal(list.getAttribute('data-muxui-size'), 'sm');
     assert.equal(list.getAttribute('data-muxui-part'), 'list');
-    assert.equal(document.querySelector('.muxui-autocomplete-option')?.getAttribute('data-muxui-part'), 'option');
+    assert.equal(document.querySelector('.muxui-autocomplete__option')?.getAttribute('data-muxui-part'), 'option');
     await act(async () => root.unmount());
   } finally {
     restore();
@@ -1541,8 +1541,8 @@ test('Autocomplete exposes combobox popup state and submits label-only items as 
     assert.equal(input.hasAttribute('aria-controls'), false);
     await act(async () => input.focus());
     assert.equal(input.getAttribute('aria-expanded'), 'true');
-    assert.equal(input.getAttribute('aria-controls'), document.querySelector('.muxui-autocomplete-list').id);
-    const hobart = [...document.querySelectorAll('.muxui-autocomplete-option')].find((option) => option.textContent === 'Hobart');
+    assert.equal(input.getAttribute('aria-controls'), document.querySelector('.muxui-autocomplete__list').id);
+    const hobart = [...document.querySelectorAll('.muxui-autocomplete__option')].find((option) => option.textContent === 'Hobart');
     await act(async () => hobart.click());
     assert.equal(input.getAttribute('aria-expanded'), 'false');
     assert.equal(new dom.window.FormData(host.querySelector('form')).get('city'), 'Hobart', 'label-only items submit their text, not an index');
@@ -1606,7 +1606,7 @@ test('Autocomplete shows the selected label while FormData, onChange, and reset 
     await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
     await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
     await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })));
-    const australia = [...document.querySelectorAll('.muxui-autocomplete-option')].find((option) => option.textContent === 'Australia');
+    const australia = [...document.querySelectorAll('.muxui-autocomplete__option')].find((option) => option.textContent === 'Australia');
     await act(async () => australia.click());
     assert.equal(input.value, 'Australia');
     assert.equal(changes.at(-1), 'AU');
@@ -1631,11 +1631,11 @@ test('Autocomplete shows name-keyed server errors until a selection', async () =
     root = createRoot(host);
     await act(async () => root.render(React.createElement(Form, { validationBehavior: 'aria', validationErrors: { city: 'City is unavailable' } },
       React.createElement(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'] }))));
-    const field = host.querySelector('.muxui-autocomplete-search');
+    const field = host.querySelector('.muxui-autocomplete__search');
     assert.equal(field.getAttribute('data-muxui-state-invalid'), 'true');
     assert.match(field.querySelector('.muxui-field-error')?.textContent ?? '', /City is unavailable/u);
     await act(async () => host.querySelector('input[role="combobox"]').focus());
-    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    await act(async () => document.querySelector('.muxui-autocomplete__option').click());
     assert.equal(field.getAttribute('data-muxui-state-invalid'), null);
     assert.deepEqual(new dom.window.FormData(host.querySelector('form')).getAll('city'), ['Melbourne']);
   } finally {

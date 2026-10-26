@@ -1,6 +1,7 @@
-// The inventory checks for the provisional styling contract (src/styling-contract.ts and styling-parts.ts). They prove the contract
-// covers every catalog state and anatomy entry. They do not prove a class is emitted on the right element;
-// that proof comes with the class scheme PR.
+// The inventory checks for the styling contract: the states in src/styling-contract.ts and the part map. They prove the contract
+// covers every catalog state and anatomy entry and that each part row has the shape its disposition needs. They do not prove a class
+// is emitted on the right element; the emission test does. This module names neither the part map file nor its readers: other tests
+// import it for `guardedPrefixes`, and the planner follows a text mention of a file name to every test that imports this module.
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { styleRuleClasses } from './scan-surface.mjs';
@@ -46,6 +47,18 @@ export const catalogStateKinds = {
   // TextEditor derives these from its selection and its selection request flow and shows them as which control renders.
   ...kinds('derived', ['selection', 'selection-collapsed', 'selection-request-error', 'selection-request-pending', 'selection-request-review']),
 };
+
+/**
+ * Class names that tests assert are absent, or that a guard keys on. A guard on a prefix nothing spells passes vacuously, as the
+ * muxui-code-block-token- guards did after the part classes became BEM, so the class vocabulary test requires each of these to
+ * match a class the sources spell.
+ */
+export const guardedPrefixes = Object.freeze({
+  // CodeBlock marks a highlighted token with muxui-code-block__token-<role>; an unhighlighted render must carry none.
+  codeBlockToken: 'muxui-code-block__token-',
+  // Families whose parts paint mode-aware tokens: Figma variables hold one value per mode, so no scheme-scoped rule may style them.
+  modeAwareFamilies: Object.freeze(['checkbox', 'checkbox-field', 'switch', 'switch-field', 'text-field', 'tabs', 'tag-group', 'select-native']),
+});
 
 /** The anatomy parts and state names of every component in the catalog. */
 export async function readCatalog(repositoryRoot) {

@@ -65,7 +65,7 @@ export function syntheticAnatomy() {
     parts: [
       { id: 'root', node: 'FRAME', selector: '.muxui-button', bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'size', 'shadow'], layout: { direction: 'HORIZONTAL', align: 'CENTER', justify: 'CENTER', centerInMinHeight: true } },
       { id: 'icon', parent: 'root', node: 'GLYPH', selector: '.muxui-button svg', bind: ['size', 'text'], glyph: () => 'lucide-check' },
-      { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-button-content', bind: ['text'] },
+      { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-button__label', bind: ['text'] },
     ],
     preview: ['variant=primary,state=rest', 'variant=ghost,state=focus-visible'],
     notes: [],

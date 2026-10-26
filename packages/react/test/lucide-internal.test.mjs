@@ -125,18 +125,18 @@ test('MuxUI affordances render the Lucide glyph mapping as decorative SVGs', () 
   ));
   const dom = new JSDOM(`<!doctype html>${markup}`);
   const iconCases = [
-    ['.muxui-checkbox-indicator[data-muxui-state-selected] svg', 'lucide-check', null],
-    ['.muxui-checkbox-indicator[data-muxui-state-indeterminate] svg', 'lucide-minus', null],
-    ['.muxui-search-clear svg', 'lucide-x', 'Clear search'],
-    ['.muxui-number-stepper-decrement svg', 'lucide-minus', 'Decrease'],
-    ['.muxui-number-stepper-increment svg', 'lucide-plus', 'Increase'],
+    ['.muxui-checkbox__indicator[data-muxui-state-selected] svg', 'lucide-check', null],
+    ['.muxui-checkbox__indicator[data-muxui-state-indeterminate] svg', 'lucide-minus', null],
+    ['.muxui-search-field__clear svg', 'lucide-x', 'Clear search'],
+    ['.muxui-number-field__decrement svg', 'lucide-minus', 'Decrease'],
+    ['.muxui-number-field__increment svg', 'lucide-plus', 'Increase'],
     ['.muxui-date-trigger svg', 'muxui-icon--sm', 'Open calendar'],
-    ['.muxui-calendar-previous svg', 'lucide-chevron-left', 'Previous month'],
-    ['.muxui-calendar-next svg', 'lucide-chevron-right', 'Next month'],
-    ['.muxui-combo-box-arrow', 'lucide-chevron-down', 'Show options'],
-    ['.muxui-select-arrow', 'lucide-chevron-down', null],
-    ['.muxui-tag-remove svg', 'lucide-x', 'Remove'],
-    ['.muxui-tree-toggle svg', 'lucide-chevron-right', 'Toggle'],
+    ['.muxui-calendar__previous svg', 'lucide-chevron-left', 'Previous month'],
+    ['.muxui-calendar__next svg', 'lucide-chevron-right', 'Next month'],
+    ['.muxui-combo-box__arrow', 'lucide-chevron-down', 'Show options'],
+    ['.muxui-select__arrow', 'lucide-chevron-down', null],
+    ['.muxui-tag-group__remove svg', 'lucide-x', 'Remove'],
+    ['.muxui-tree__toggle svg', 'lucide-chevron-right', 'Toggle'],
   ];
   for (const [selector, className, label] of iconCases) {
     const icon = dom.window.document.querySelector(selector);
@@ -146,13 +146,13 @@ test('MuxUI affordances render the Lucide glyph mapping as decorative SVGs', () 
     assert.equal(icon.getAttribute('focusable'), 'false');
     if (label !== null) assert.equal(icon.closest('button')?.getAttribute('aria-label'), label);
   }
-  for (const selector of ['.muxui-calendar-previous svg', '.muxui-calendar-next svg']) {
+  for (const selector of ['.muxui-calendar__previous svg', '.muxui-calendar__next svg']) {
     const icon = dom.window.document.querySelector(selector);
     assert.equal(icon?.classList.contains('muxui-icon'), true);
     assert.equal(icon?.classList.contains('muxui-icon--sm'), true);
   }
   // Disclosure's trigger is named by its visible title, not an aria-label.
-  const disclosureIcon = dom.window.document.querySelector('.muxui-disclosure-trigger svg');
+  const disclosureIcon = dom.window.document.querySelector('.muxui-disclosure__trigger svg');
   assert.ok(disclosureIcon, 'missing icon lucide-chevron-down');
   assert.equal(disclosureIcon.classList.contains('lucide-chevron-down'), true);
   assert.equal(disclosureIcon.getAttribute('aria-hidden'), 'true');
@@ -173,7 +173,7 @@ test('MuxUI affordances render the Lucide glyph mapping as decorative SVGs', () 
     assert.ok(input);
     assert.equal(input.getAttribute('aria-label'), null);
   }
-  const treeIcon = dom.window.document.querySelector('.muxui-tree-toggle svg');
+  const treeIcon = dom.window.document.querySelector('.muxui-tree__toggle svg');
   assert.equal(treeIcon?.getAttribute('fill'), 'currentColor');
   assert.equal(treeIcon?.getAttribute('stroke-width'), '0');
   const calendarIcons = dom.window.document.querySelectorAll('.muxui-date-trigger svg');
@@ -215,7 +215,7 @@ const r16IconCases = [
     ['lucide-menu', 'Open navigation'],
     ['lucide-x', 'Close navigation'],
   ]],
-  ['Sidebar', () => h(Sidebar.Root, null, h(Sidebar.Search), h(Sidebar.NavList, null, h(Sidebar.NavItem, { href: '/docs', items: [{ href: '/docs/a', label: 'A' }] }, 'Docs'), h(Sidebar.NavItem, { href: 'https://example.com', external: true }, 'External')), h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, h(Sidebar.AccountMenu, { items: ['Profile'] })), h(Sidebar.MobileTrigger, null, 'Menu')), ['.muxui-sidebar__mobile-menu-btn'], [
+  ['Sidebar', () => h(Sidebar.Root, null, h(Sidebar.Search), h(Sidebar.NavList, null, h(Sidebar.NavItem, { href: '/docs', items: [{ href: '/docs/a', label: 'A' }] }, 'Docs'), h(Sidebar.NavItem, { href: 'https://example.com', external: true }, 'External')), h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }, h(Sidebar.AccountMenu, { items: ['Profile'] })), h(Sidebar.MobileTrigger, null, 'Menu')), ['.muxui-sidebar__mobile-trigger'], [
     ['lucide-search', null],
     ['lucide-chevron-down', 'Docs'],
     ['lucide-external-link', 'External'],
@@ -303,7 +303,7 @@ test('R1.6 Lucide roots keep icons decorative and take accessible names from the
 test('Tabs overflow scroll buttons render the Lucide chevrons as decorative SVGs', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom, { layoutStubs: true });
-  const viewportClass = 'muxui-tabs-motion-overflow-viewport';
+  const viewportClass = 'muxui-tabs__motion-overflow-viewport';
   for (const [property, value] of [['scrollWidth', 400], ['clientWidth', 100], ['scrollHeight', 400], ['clientHeight', 100]]) {
     Object.defineProperty(dom.window.HTMLElement.prototype, property, {
       configurable: true,
@@ -317,10 +317,10 @@ test('Tabs overflow scroll buttons render the Lucide chevrons as decorative SVGs
       React.createElement(Tabs, { 'aria-label': 'Horizontal', variant: 'overflow', items }),
       React.createElement(Tabs, { 'aria-label': 'Vertical', variant: 'overflow', orientation: 'vertical', items }))));
     const iconCases = [
-      ['.muxui-tabs-motion-edge--left svg', 'lucide-chevron-left', 'Scroll tabs left'],
-      ['.muxui-tabs-motion-edge--right svg', 'lucide-chevron-right', 'Scroll tabs right'],
-      ['.muxui-tabs-motion-edge--before svg', 'lucide-chevron-up', 'Scroll tabs up'],
-      ['.muxui-tabs-motion-edge--after svg', 'lucide-chevron-down', 'Scroll tabs down'],
+      ['.muxui-tabs__motion-edge--left svg', 'lucide-chevron-left', 'Scroll tabs left'],
+      ['.muxui-tabs__motion-edge--right svg', 'lucide-chevron-right', 'Scroll tabs right'],
+      ['.muxui-tabs__motion-edge--before svg', 'lucide-chevron-up', 'Scroll tabs up'],
+      ['.muxui-tabs__motion-edge--after svg', 'lucide-chevron-down', 'Scroll tabs down'],
     ];
     for (const [selector, className, label] of iconCases) {
       const icon = document.querySelector(selector);

@@ -6,7 +6,7 @@ import { SwitchMotionFixture } from '../fixtures/switch-motion-fixture.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function indicatorState(page, selector = '#primary-switch') {
-  return page.locator(`${selector} .muxui-switch-indicator`).evaluate((node) => {
+  return page.locator(`${selector} .muxui-switch__indicator`).evaluate((node) => {
     const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
     return {
       transform: getComputedStyle(node).transform,
@@ -22,7 +22,7 @@ function indicatorState(page, selector = '#primary-switch') {
 function switchGeometry(page, selector = '#primary-switch') {
   return page.locator(`${selector} .muxui-switch`).evaluate((node) => {
     const track = getComputedStyle(node, '::before');
-    const indicator = node.querySelector('.muxui-switch-indicator');
+    const indicator = node.querySelector('.muxui-switch__indicator');
     const thumb = indicator ? getComputedStyle(indicator) : null;
     return {
       trackWidth: Number.parseFloat(track.width),
@@ -37,7 +37,7 @@ function switchGeometry(page, selector = '#primary-switch') {
 
 async function waitForSettled(page, expectedSelected, selector = '#primary-switch') {
   await page.waitForFunction(({ target, expected }) => {
-    const node = document.querySelector(`${target} .muxui-switch-indicator`);
+    const node = document.querySelector(`${target} .muxui-switch__indicator`);
     const switchNode = document.querySelector(`${target} .muxui-switch`);
     return node && switchNode && switchNode.hasAttribute('data-muxui-state-selected') === expected
       && !node.style.transform && node.getAnimations().every((animation) => animation.playState === 'finished');
@@ -80,7 +80,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     await page.keyboard.down('Space');
     await page.waitForFunction(() => document.querySelector('#primary-switch .muxui-switch')?.hasAttribute('data-muxui-state-pressed'));
     await page.waitForFunction(() => {
-      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const node = document.querySelector('#primary-switch .muxui-switch__indicator');
       if (!node) return false;
       const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
       return Math.hypot(matrix.m11, matrix.m12) > 1.02 && Math.hypot(matrix.m21, matrix.m22) < 0.98;
@@ -89,7 +89,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     assert.ok(pressed.scaleX > 1.02 && pressed.scaleY < 0.98, `press state compresses the thumb: ${JSON.stringify(pressed)}`);
     await page.keyboard.up('Space');
     await page.waitForFunction(() => {
-      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const node = document.querySelector('#primary-switch .muxui-switch__indicator');
       return node?.style.transform && node.getAnimations().some((animation) => animation.playState === 'running');
     });
     const moving = await indicatorState(page);
@@ -103,12 +103,12 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     await page.keyboard.down('Space');
     await page.waitForFunction(() => document.querySelector('#primary-switch .muxui-switch')?.hasAttribute('data-muxui-state-pressed'));
     await page.waitForFunction(() => {
-      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const node = document.querySelector('#primary-switch .muxui-switch__indicator');
       return node?.hasAttribute('data-muxui-motion-pressed')
         && node.getAnimations().some((animation) => animation.playState === 'running'
           && animation.effect?.getKeyframes().some((frame) => frame.transform !== undefined));
     });
-    const pressedAnimation = await page.locator('#primary-switch .muxui-switch-indicator').evaluate((node) => {
+    const pressedAnimation = await page.locator('#primary-switch .muxui-switch__indicator').evaluate((node) => {
       const animation = node.getAnimations().find((candidate) => candidate.playState === 'running'
         && candidate.effect?.getKeyframes().some((frame) => frame.transform !== undefined));
       if (!animation) return null;
@@ -126,7 +126,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     assert.equal(await page.evaluate(() => window.__switchPressAnimationOutcome), 'cancelled',
       'system reduced motion cancels the active press animation instead of allowing it to finish');
     const systemReducedPressHandle = await page.waitForFunction(() => {
-      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const node = document.querySelector('#primary-switch .muxui-switch__indicator');
       if (!node) {
         window.__switchReducedStableFrames = 0;
         return false;
@@ -178,13 +178,13 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     await primaryInput.focus();
     await page.keyboard.press('Space');
     await page.waitForFunction(() => {
-      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const node = document.querySelector('#primary-switch .muxui-switch__indicator');
       const switchNode = document.querySelector('#primary-switch .muxui-switch');
       return switchNode && !switchNode.hasAttribute('data-muxui-state-selected') && node?.style.transform
         && node.getAnimations().some((animation) => animation.playState === 'running');
     });
     await page.evaluate(() => document.getElementById('switch-motion-fixture').setAttribute('data-muxui-motion', 'reduced'));
-    const explicitReducedPress = await page.locator('#primary-switch .muxui-switch-indicator').evaluate((node) => {
+    const explicitReducedPress = await page.locator('#primary-switch .muxui-switch__indicator').evaluate((node) => {
       node.setAttribute('data-muxui-motion-pressed', '');
       const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
       const result = {
@@ -198,7 +198,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
       `explicit reduced motion overrides an active press marker: ${JSON.stringify(explicitReducedPress)}`);
     await page.waitForFunction(() => {
       const switchNode = document.querySelector('#primary-switch .muxui-switch');
-      const indicator = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const indicator = document.querySelector('#primary-switch .muxui-switch__indicator');
       return switchNode && !switchNode.hasAttribute('data-muxui-state-selected') && indicator && !indicator.style.transform;
     });
     const reducedOff = await indicatorState(page);
@@ -209,7 +209,7 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     await page.keyboard.press('Space');
     await page.waitForFunction(() => {
       const switchNode = document.querySelector('#primary-switch .muxui-switch');
-      const indicator = document.querySelector('#primary-switch .muxui-switch-indicator');
+      const indicator = document.querySelector('#primary-switch .muxui-switch__indicator');
       return switchNode?.hasAttribute('data-muxui-state-selected') && indicator && !indicator.style.transform;
     });
     const reducedOn = await indicatorState(page);

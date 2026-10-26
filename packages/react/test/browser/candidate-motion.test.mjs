@@ -24,7 +24,7 @@ ${content.toString()}
 const root=hydrateRoot(document.querySelector('#root'),content(),{onRecoverableError:error=>window.hydrationErrors.push(error.message)});
 window.mount=state=>flushSync(()=>root.render(content(state))); window.unmount=()=>flushSync(()=>root.unmount());
 window.flush=fn=>flushSync(fn); window.ready=true;`;
-const selector = '.muxui-code-block-copy-icon, .muxui-prompt-composer-suggestions, .muxui-prompt-composer-send .muxui-icon-button-icon, .muxui-message-sources-chevron, .muxui-message-sources, .muxui-activity-items, .muxui-activity-mark, .muxui-activity-status, .muxui-activity-details, .muxui-data-diff-totals, .muxui-data-diff-apply-label';
+const selector = '.muxui-code-block__copy-icon, .muxui-prompt-composer__suggestions, .muxui-prompt-composer__send .muxui-icon-button__icon, .muxui-message__sources-chevron, .muxui-message__sources, .muxui-activity__items, .muxui-activity__mark, .muxui-activity__status, .muxui-activity__details, .muxui-data-diff__totals, .muxui-data-diff__apply-label';
 const fixture = pageShell({
   attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"',
   head: `<meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><style>:root { --muxui-semantic-motion-state-transition-duration: 500ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 500ms; --muxui-semantic-motion-reveal-transition-duration: 500ms; --muxui-semantic-motion-reveal-transition-spring-visual-duration: 500ms; --muxui-semantic-motion-interaction-transition-duration: 500ms; --muxui-semantic-motion-interaction-transition-spring-visual-duration: 500ms; }</style>`,
@@ -70,13 +70,13 @@ async function setup() {
 
 async function settled(page) {
   await page.waitForFunction(selector => [...document.querySelectorAll(selector)].every(node => node.getAnimations().length === 0 && !node.style.transform && !node.style.opacity), selector, { timeout: 5_000 }).catch(async () => { assert.fail(JSON.stringify(await page.locator(selector).evaluateAll(nodes => nodes.map(node => ({ className: node.className.baseVal ?? node.className, animations: node.getAnimations().map(animation => animation.playState), transform: node.style.transform, opacity: node.style.opacity }))))); });
-  await page.waitForFunction(() => [...document.querySelectorAll('.muxui-activity-motion-panel')].every(panel => (panel.hasAttribute('aria-hidden') ? panel.parentElement.hasAttribute('hidden') : panel.style.height === '') && panel.firstElementChild.getAnimations().length === 0));
+  await page.waitForFunction(() => [...document.querySelectorAll('.muxui-activity__motion-panel')].every(panel => (panel.hasAttribute('aria-hidden') ? panel.parentElement.hasAttribute('hidden') : panel.style.height === '') && panel.firstElementChild.getAnimations().length === 0));
 }
 async function activate(page) {
   await page.evaluate(() => {
-    document.querySelector('.muxui-message-sources-trigger').click();
-    document.querySelector('.muxui-activity-trigger').click();
-    document.querySelector('.muxui-data-diff-row input').click();
+    document.querySelector('.muxui-message__sources-trigger').click();
+    document.querySelector('.muxui-activity__trigger').click();
+    document.querySelector('.muxui-data-diff__row input').click();
   });
   await page.waitForTimeout(30);
   await page.evaluate(() => window.mount({ pending: true, status: 'completed' }));
@@ -89,15 +89,15 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays fin
     assert.equal(await page.evaluate(() => window.motionStarts.length), 0, 'SSR hydration has no entry replay');
     const nativeButton = await page.getByRole('button', { name: 'Copy code' }).evaluateHandle(node => node);
     await page.getByRole('button', { name: 'Copy code' }).focus();
-    await page.evaluate(() => document.querySelector('.muxui-code-block-copy').click());
+    await page.evaluate(() => document.querySelector('.muxui-code-block__copy').click());
     assert.equal(await page.evaluate(() => window.motionStarts.length), 0, 'clipboard pending stays still');
     await page.evaluate(() => window.finishCopy());
     await page.waitForFunction(() => window.motionStarts.some(entry => entry.target.includes('copy-icon')));
-    assert.equal(await nativeButton.evaluate(node => node === document.querySelector('.muxui-code-block-copy')), true);
-    assert.equal(await page.locator('.muxui-code-block-copy-icon').evaluate(node => node.getAnimations().some(animation => animation.effect.getKeyframes()[0].opacity !== undefined && animation.effect.getComputedTiming().duration === 500)), true, 'authored state timing override reaches WAAPI');
+    assert.equal(await nativeButton.evaluate(node => node === document.querySelector('.muxui-code-block__copy')), true);
+    assert.equal(await page.locator('.muxui-code-block__copy-icon').evaluate(node => node.getAnimations().some(animation => animation.effect.getKeyframes()[0].opacity !== undefined && animation.effect.getComputedTiming().duration === 500)), true, 'authored state timing override reaches WAAPI');
     await settled(page);
-    assert.equal(await page.locator('.muxui-code-block-copy-icon .lucide-check').count(), 1);
-    await page.evaluate(() => document.querySelector('.muxui-code-block-copy').click());
+    assert.equal(await page.locator('.muxui-code-block__copy-icon .lucide-check').count(), 1);
+    await page.evaluate(() => document.querySelector('.muxui-code-block__copy').click());
     await page.evaluate(() => window.rejectCopy(new Error('Unavailable')));
     await page.waitForFunction(() => document.querySelector('.muxui-code-block').dataset.muxuiCopyState === 'error');
     await settled(page);
@@ -114,9 +114,9 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays fin
     assert.equal(await page.getByRole('listbox').count(), 0, 'suggestions close immediately');
     assert.equal(await input.getAttribute('aria-controls'), null);
     await activate(page);
-    await page.waitForFunction(() => window.motionStarts.some(entry => entry.target.includes('activity-motion-content')));
+    await page.waitForFunction(() => window.motionStarts.some(entry => entry.target.includes('activity__motion-content')));
     await settled(page);
-    assert.equal(await page.evaluate(() => ['muxui-message-sources-chevron','muxui-activity-motion-content','muxui-data-diff-totals','muxui-data-diff-apply-label','muxui-icon-button-icon'].every(target => window.motionStarts.some(entry => entry.target.includes(target)))), true, 'each planned state/disclosure feedback runs');
+    assert.equal(await page.evaluate(() => ['muxui-message__sources-chevron','muxui-activity__motion-content','muxui-data-diff__totals','muxui-data-diff__apply-label','muxui-icon-button__icon'].every(target => window.motionStarts.some(entry => entry.target.includes(target)))), true, 'each planned state/disclosure feedback runs');
     assert.equal(await page.getByRole('checkbox', { name: 'Select all proposed changes' }).evaluate(node => node.indeterminate), true);
     assert.equal(await page.getByRole('checkbox', { name: 'Select One (added)' }).isDisabled(), true);
     const pendingStarts = await page.evaluate(() => window.motionStarts.filter(entry => entry.target.includes('data-diff')).length);
@@ -126,14 +126,14 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays fin
     await page.evaluate(() => window.mount({ status: 'completed' }));
     const summary = page.locator('.muxui-activity summary');
     await summary.focus(); await page.keyboard.press('Space');
-    await page.waitForFunction(() => document.querySelector('.muxui-activity-details-host .muxui-activity-motion-content').getAnimations().length > 0);
+    await page.waitForFunction(() => document.querySelector('.muxui-activity__details-host .muxui-activity__motion-content').getAnimations().length > 0);
     assert.equal(await page.locator('.muxui-activity details').getAttribute('open'), '');
     await settled(page);
     await page.keyboard.press('Space');
     assert.equal(await summary.getAttribute('aria-expanded'), 'false');
     await settled(page);
     assert.equal(await page.locator('.muxui-activity details').getAttribute('open'), null);
-    await page.evaluate(() => document.querySelector('.muxui-message-sources-trigger').click());
+    await page.evaluate(() => document.querySelector('.muxui-message__sources-trigger').click());
     assert.equal(await page.getByRole('link', { name: 'Source link' }).count(), 0, 'closed source is immediately inaccessible');
     await settled(page);
     const idleStarts = await page.evaluate(() => window.motionStarts.length);
@@ -188,17 +188,17 @@ test('CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced an
 test('CodeBlock, PromptComposer, Message, Activity and DataDiff clean up rapid reversals, animations and observers', { timeout: 120_000 }, async () => {
   const context = await setup(); const { page, errors } = context;
   try {
-    await page.evaluate(() => document.querySelector('.muxui-message-sources-trigger').click());
-    await page.waitForFunction(() => document.querySelector('.muxui-message-sources-chevron').getAnimations().length > 0);
+    await page.evaluate(() => document.querySelector('.muxui-message__sources-trigger').click());
+    await page.waitForFunction(() => document.querySelector('.muxui-message__sources-chevron').getAnimations().length > 0);
     await page.waitForTimeout(100);
     const reversal = await page.evaluate(() => {
-      const chevron = document.querySelector('.muxui-message-sources-chevron');
+      const chevron = document.querySelector('.muxui-message__sources-chevron');
       const before = getComputedStyle(chevron).transform;
-      window.flush(() => document.querySelector('.muxui-message-sources-trigger').click());
+      window.flush(() => document.querySelector('.muxui-message__sources-trigger').click());
       return { before, after: getComputedStyle(chevron).transform };
     });
     assert.equal(reversal.after, reversal.before, 'no snap before reversing');
-    await page.evaluate(() => { document.querySelector('.muxui-message-sources-trigger').click(); document.querySelector('.muxui-activity-trigger').click(); window.mount({ pending: true, status: 'failed' }); });
+    await page.evaluate(() => { document.querySelector('.muxui-message__sources-trigger').click(); document.querySelector('.muxui-activity__trigger').click(); window.mount({ pending: true, status: 'failed' }); });
     await page.waitForFunction(() => window.observers.size > 0);
     const unmounted = await page.evaluate(selector => {
       const nodes = [...document.querySelectorAll(selector)];

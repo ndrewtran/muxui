@@ -88,7 +88,7 @@ function normalizeSortDescriptor(value: unknown, columns: NormalizedColumn[]): M
 // direction and reveals it for the sorted column, hover, and keyboard focus;
 // aria-sort from React Aria carries the real state.
 function sortChevron() {
-  return React.createElement(ChevronDownIcon, { className: 'muxui-icon muxui-icon--sm muxui-table-sort-icon', 'aria-hidden': 'true', focusable: 'false' });
+  return React.createElement(ChevronDownIcon, { className: 'muxui-icon muxui-icon--sm muxui-table__sort-icon', 'aria-hidden': 'true', focusable: 'false' });
 }
 
 export const Table: ForwardRefExoticComponent<TableProps & RefAttributes<HTMLTableElement>> = React.forwardRef<HTMLTableElement, TableRenderProps>(function Table({ columns, rows, selectedIds, defaultSelectedIds, onSelectionChange, onRowAction, sortDescriptor, onSortChange, selectionMode = 'none', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, ...props }, ref) {
@@ -130,20 +130,20 @@ export const Table: ForwardRefExoticComponent<TableProps & RefAttributes<HTMLTab
   },
   React.createElement(AriaTableHeader<NormalizedColumn>, {
     columns: normalizedColumns,
-    className: 'muxui-table-header',
+    className: 'muxui-table__header',
     // A render function is a child of React Aria's collection parts, which TypeScript accepts as a prop here and not as a createElement child.
     children: (column) => React.createElement(AriaColumn, {
       id: column.id,
       textValue: column.textValue,
       isRowHeader: column.isRowHeader,
       allowsSorting: column.sortable,
-      className: 'muxui-table-column',
-    }, column.sortable ? React.createElement('span', { className: 'muxui-table-column-content' }, column.label, sortChevron()) : column.label),
+      className: 'muxui-table__column',
+    }, column.sortable ? React.createElement('span', { className: 'muxui-table__column-content' }, column.label, sortChevron()) : column.label),
   }),
   React.createElement(AriaTableBody<NormalizedRow>, {
     items: normalizedRows,
-    className: 'muxui-table-body',
-    children: (row) => React.createElement(AriaRow, { id: row.id, className: 'muxui-table-row' }, normalizedColumns.map((column) => React.createElement(AriaCell, { key: column.id, className: 'muxui-table-cell' }, row.values?.[column.id] ?? (sourceRows.get(row.id)?.[column.id] as ReactNode) ?? ''))),
+    className: 'muxui-table__body',
+    children: (row) => React.createElement(AriaRow, { id: row.id, className: 'muxui-table__row' }, normalizedColumns.map((column) => React.createElement(AriaCell, { key: column.id, className: 'muxui-table__cell' }, row.values?.[column.id] ?? (sourceRows.get(row.id)?.[column.id] as ReactNode) ?? ''))),
   }));
 });
 Table.displayName = 'Table';

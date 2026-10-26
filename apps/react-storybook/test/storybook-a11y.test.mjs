@@ -244,8 +244,8 @@ function storyFamily(entry) {
 const INTERACTION_OPEN_LOCATORS = Object.freeze({
   DatePicker: { trigger: '.muxui-date-trigger', overlay: '.muxui-date-popover' },
   DateRangePicker: { trigger: '.muxui-date-trigger', overlay: '.muxui-date-popover' },
-  ComboBox: { trigger: '.muxui-combo-box-trigger', overlay: '.muxui-combo-box-popover' },
-  Select: { trigger: '.muxui-select-trigger', overlay: '.muxui-select-popover' },
+  ComboBox: { trigger: '.muxui-combo-box__trigger', overlay: '.muxui-combo-box__popover' },
+  Select: { trigger: '.muxui-select__trigger', overlay: '.muxui-select__popup' },
   // Its trigger does not announce expansion, so the open state waits for the popup alone.
   CommandPalette: { trigger: '.muxui-command-palette__trigger', overlay: '.muxui-command-palette__popup', announcesExpanded: false },
 });
@@ -466,10 +466,10 @@ async function assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme) 
   const input = page.locator('.muxui-autocomplete input');
   await input.focus();
   await page.waitForFunction(() => {
-    const list = document.querySelector('.muxui-autocomplete-list');
-    return Boolean(list && !list.hasAttribute('hidden') && document.querySelectorAll('.muxui-autocomplete-option').length === 3);
+    const list = document.querySelector('.muxui-autocomplete__list');
+    return Boolean(list && !list.hasAttribute('hidden') && document.querySelectorAll('.muxui-autocomplete__option').length === 3);
   });
-  const disabled = page.locator('.muxui-autocomplete-option[data-muxui-state-disabled="true"]').first();
+  const disabled = page.locator('.muxui-autocomplete__option[data-muxui-state-disabled="true"]').first();
   assert.equal(await disabled.getAttribute('aria-disabled'), 'true');
   await disabled.evaluate((node) => node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
   assert.equal(await input.inputValue(), '', 'disabled options do not select on pointer activation');
@@ -604,7 +604,7 @@ async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
   const forcedContrastStyle = await page.evaluate(() => {
     const selected = [...document.querySelectorAll('.muxui-storybook-state')]
       .find((section) => section.querySelector('h3')?.textContent === 'selected');
-    const indicator = selected?.querySelector('.muxui-checkbox-indicator');
+    const indicator = selected?.querySelector('.muxui-checkbox__indicator');
     if (!indicator) throw new Error('Checkbox selected indicator missing from high-contrast proof');
     const style = getComputedStyle(indicator);
     return { borderWidth: style.borderTopWidth, borderColor: style.borderTopColor, backgroundColor: style.backgroundColor };
@@ -616,7 +616,7 @@ async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
   const standardContrastStyle = await page.evaluate(() => {
     const selected = [...document.querySelectorAll('.muxui-storybook-state')]
       .find((section) => section.querySelector('h3')?.textContent === 'selected');
-    const indicator = selected?.querySelector('.muxui-checkbox-indicator');
+    const indicator = selected?.querySelector('.muxui-checkbox__indicator');
     if (!indicator) throw new Error('Checkbox selected indicator missing from standard-contrast proof');
     const style = getComputedStyle(indicator);
     return { borderWidth: style.borderTopWidth, borderColor: style.borderTopColor, backgroundColor: style.backgroundColor };
@@ -684,21 +684,21 @@ async function assertDialogLifecycleDismissal(page, baseUrl, story, scheme) {
 
   const waitForOpen = (selector) => page.waitForFunction((dialogSelector) => {
     const dialog = document.querySelector(dialogSelector);
-    const backdrop = dialog?.closest('.muxui-dialog-backdrop');
+    const backdrop = dialog?.closest('.muxui-dialog__backdrop');
     if (!backdrop || backdrop.hasAttribute('data-muxui-state-exiting')) return false;
     const style = getComputedStyle(backdrop);
     return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
   }, selector, { timeout: storyTimeoutMs });
   const waitForClosed = () => page.waitForFunction(
-    () => document.querySelector('.muxui-dialog-backdrop') === null,
+    () => document.querySelector('.muxui-dialog__backdrop') === null,
     undefined,
     { timeout: storyTimeoutMs },
   );
   // A lifecycle row's Dialog opens on its own, closes from its button, reopens from its trigger, and closes on Escape.
   const dismissAndReopen = async (state, cycles) => {
     const dialog = `.muxui-dialog.muxui-storybook-lifecycle-dialog-${state}`;
-    const trigger = page.locator(`[data-muxui-storybook-lifecycle="${state}"] .muxui-dialog-trigger`);
-    const close = page.locator(`${dialog} .muxui-dialog-close`);
+    const trigger = page.locator(`[data-muxui-storybook-lifecycle="${state}"] .muxui-dialog__trigger`);
+    const close = page.locator(`${dialog} .muxui-dialog__close`);
     await waitForOpen(dialog);
     await close.click();
     await waitForClosed();
@@ -1470,15 +1470,15 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
           if (story.exportName === 'Controlled' && ['PromptComposer', 'Message'].includes(family)) {
             const output = page.locator(`[data-muxui-controlled-values="${family}"]`);
             if (family === 'PromptComposer') {
-              await page.locator('.muxui-prompt-composer-input').fill('Edited controlled draft');
+              await page.locator('.muxui-prompt-composer__input').fill('Edited controlled draft');
               await page.waitForFunction(() => JSON.parse(document.querySelector('[data-muxui-controlled-values="PromptComposer"]').textContent).value === 'Edited controlled draft');
               await page.getByRole('button', { name: /Model/u }).click();
               await page.getByRole('option', { name: 'Detailed', exact: true }).click();
               assert.deepEqual(JSON.parse(await output.textContent()), { value: 'Edited controlled draft', selectedModel: 'detailed' });
             } else {
-              await page.locator('.muxui-message-sources-trigger').click();
+              await page.locator('.muxui-message__sources-trigger').click();
               await page.waitForFunction(() => JSON.parse(document.querySelector('[data-muxui-controlled-values="Message"]').textContent).sourcesExpanded === true);
-              assert.equal(await page.locator('.muxui-message-sources a').first().isVisible(), true);
+              assert.equal(await page.locator('.muxui-message__sources a').first().isVisible(), true);
             }
             coverage.push(`${scheme}:controlled-callbacks:${story.id}`);
           }

@@ -52,7 +52,7 @@ test('IconButton hydrates, activates by keyboard, preserves pending focus/name/s
       }
       assert.ok(widths[0] < widths[1] && widths[1] < widths[2]);
     }
-    assert.equal(await action.locator('.muxui-button-spinner').evaluate((node) => getComputedStyle(node).animationName), 'none');
+    assert.equal(await action.locator('.muxui-button__spinner').evaluate((node) => getComputedStyle(node).animationName), 'none');
     await page.getByRole('button', { name: 'Save form', exact: true }).click();
     assert.equal(await page.locator('#submitted').textContent(), 'save');
     assert.deepEqual(errors, [], errors.join('\n'));

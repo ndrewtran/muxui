@@ -55,7 +55,7 @@ export const ColorArea: ForwardRefExoticComponent<ColorAreaProps & RefAttributes
       event.stopPropagation();
     }
   };
-  return React.createElement('div', { className: 'muxui-color-area-field', ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'data-muxui-state-read-only': effectiveReadOnly || undefined }, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+  return React.createElement('div', { className: 'muxui-color-area__field', ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'data-muxui-state-read-only': effectiveReadOnly || undefined }, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
     label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
     // The area writes its edit to the picker itself, so it clears the context.
     React.createElement(ColorAreaContext.Provider, { value: null }, React.createElement(AriaColorArea, {
@@ -87,7 +87,7 @@ export const ColorArea: ForwardRefExoticComponent<ColorAreaProps & RefAttributes
       },
       className: classNames('muxui-color-area', className),
     }, React.createElement(AriaColorThumb, {
-      className: 'muxui-color-area-thumb',
+      className: 'muxui-color-area__thumb',
       ...{
         'data-muxui-color-paint': 'sample',
         'data-muxui-state-read-only': effectiveReadOnly || undefined,

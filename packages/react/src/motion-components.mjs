@@ -337,7 +337,7 @@ export function useDisclosureIconMotion(ref, isOpen, grouped = false) {
 }
 
 /** Animate a disclosure's measured content height without scaling its contents. */
-export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, contentClassName = 'muxui-disclosure-panel muxui-disclosure-motion-content', onCloseComplete, grouped = false, ...props }) {
+export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, contentClassName = 'muxui-disclosure__panel muxui-disclosure__motion-content', onCloseComplete, grouped = false, ...props }) {
   const panelRef = React.useRef(null);
   const contentRef = React.useRef(null);
   const controlsRef = React.useRef(null);

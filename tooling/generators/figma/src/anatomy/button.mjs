@@ -15,7 +15,7 @@ export default {
       bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'gap', 'size', 'shadow'],
       layout: { direction: 'HORIZONTAL', align: 'CENTER', justify: 'CENTER', centerInMinHeight: true },
     },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-button-content', bind: ['text'] },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-button__label', bind: ['text'] },
   ],
   preview: [
     'variant=primary,size=md,state=rest',

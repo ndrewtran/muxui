@@ -101,7 +101,7 @@ export const Breadcrumbs: ForwardRefExoticComponent<BreadcrumbsProps & RefAttrib
     'aria-label': resolvedAriaLabel,
   }, React.createElement(AriaBreadcrumbs<BreadcrumbEntry>, {
     items: collectionItems,
-    className: 'muxui-breadcrumbs-list',
+    className: 'muxui-breadcrumbs__list',
     'aria-label': resolvedAriaLabel,
     onAction: navigate,
     children: (item) => {
@@ -109,10 +109,10 @@ export const Breadcrumbs: ForwardRefExoticComponent<BreadcrumbsProps & RefAttrib
       return React.createElement(AriaBreadcrumb, {
         id: item.id,
         ...{ isDisabled: item.disabled, 'data-muxui-state-current': current || undefined, 'data-muxui-state-disabled': item.disabled || undefined },
-        className: 'muxui-breadcrumbs-item',
+        className: 'muxui-breadcrumbs__item',
       }, item.href && !current
-        ? React.createElement(AriaLink, { href: item.href, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined }, className: 'muxui-breadcrumbs-link' }, item.label)
-        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'aria-disabled': item.disabled || undefined, 'data-muxui-state-disabled': item.disabled || undefined }, item.label));
+        ? React.createElement(AriaLink, { href: item.href, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined }, className: 'muxui-breadcrumbs__link' }, item.label)
+        : React.createElement('span', { className: 'muxui-breadcrumbs__current', 'aria-current': current ? 'page' : undefined, 'aria-disabled': item.disabled || undefined, 'data-muxui-state-disabled': item.disabled || undefined }, item.label));
     },
   }));
 });
@@ -189,14 +189,14 @@ export const Checkbox: ForwardRefExoticComponent<CheckboxProps & RefAttributes<H
     onChange,
     children: ({ isSelected, isIndeterminate }) => React.createElement(React.Fragment, null,
       React.createElement('span', {
-        className: 'muxui-checkbox-indicator',
+        className: 'muxui-checkbox__indicator',
         'aria-hidden': 'true',
         'data-muxui-state-selected': isSelected || undefined,
         'data-muxui-state-indeterminate': isIndeterminate || undefined,
       }, isIndeterminate || isSelected
         ? React.createElement(isIndeterminate ? MinusIcon : CheckIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })
         : null),
-      React.createElement('span', { className: 'muxui-checkbox-label' }, children)),
+      React.createElement('span', { className: 'muxui-checkbox__label' }, children)),
   });
 });
 
@@ -253,7 +253,7 @@ DisclosureGroup.displayName = 'DisclosureGroup';
 function DisclosureChevron({ isOpen, grouped }: { isOpen: boolean; grouped: boolean }) {
   const ref = React.useRef<SVGSVGElement>(null);
   useDisclosureIconMotion(ref, isOpen, grouped);
-  return React.createElement(ChevronDownIcon, { ref, className: 'muxui-disclosure-trigger-icon', 'aria-hidden': 'true', focusable: 'false' });
+  return React.createElement(ChevronDownIcon, { ref, className: 'muxui-disclosure__trigger-icon', 'aria-hidden': 'true', focusable: 'false' });
 }
 
 /**
@@ -307,16 +307,16 @@ export const Disclosure: ForwardRefExoticComponent<DisclosureProps & RefAttribut
       isDisabled: disabled,
       onExpandedChange,
       children: ({ isExpanded }) => {
-        const trigger = React.createElement(AriaButton, { ref: triggerRef, slot: 'trigger', className: 'muxui-disclosure-trigger' }, title, grouped
+        const trigger = React.createElement(AriaButton, { ref: triggerRef, slot: 'trigger', className: 'muxui-disclosure__trigger' }, title, grouped
           ? React.createElement(DisclosureChevron, { isOpen: isExpanded, grouped })
           : null);
         return React.createElement(React.Fragment, null,
-          grouped ? React.createElement('div', { className: 'muxui-disclosure-header' }, trigger) : trigger,
+          grouped ? React.createElement('div', { className: 'muxui-disclosure__header' }, trigger) : trigger,
           React.createElement(AriaDisclosurePanel, {
             ref: panelHostRef,
             role: 'region',
-            className: 'muxui-disclosure-panel-host',
-            children: React.createElement(MotionHeight, { isOpen: isExpanded, triggerRef, hostRef: panelHostRef, className: 'muxui-disclosure-motion-panel', grouped }, children),
+            className: 'muxui-disclosure__panel-host',
+            children: React.createElement(MotionHeight, { isOpen: isExpanded, triggerRef, hostRef: panelHostRef, className: 'muxui-disclosure__motion-panel', grouped }, children),
           }));
       },
     });
@@ -489,11 +489,11 @@ export const Meter: ForwardRefExoticComponent<MeterProps & RefAttributes<HTMLDiv
     'aria-valuemin': minValue,
     'aria-valuemax': maxValue,
     'aria-valuetext': valueText,
-  }, React.createElement('div', { className: 'muxui-meter-header' }, !externalLabel && !externalLabelledby
+  }, React.createElement('div', { className: 'muxui-meter__header' }, !externalLabel && !externalLabelledby
     ? React.createElement(AriaLabel, { id: labelId, elementType: 'span', className: 'muxui-value-label' }, label)
     : null,
   React.createElement('span', { className: 'muxui-value-output' }, valueText)),
-  React.createElement('div', { className: 'muxui-meter-track' }, React.createElement('div', { className: 'muxui-meter-fill', style: { inlineSize: `${percentage}%` } })),
+  React.createElement('div', { className: 'muxui-meter__track' }, React.createElement('div', { className: 'muxui-meter__fill', style: { inlineSize: `${percentage}%` } })),
   );
 });
 
@@ -539,8 +539,8 @@ export const ProgressBar: ForwardRefExoticComponent<ProgressBarProps & RefAttrib
     ...{ 'data-muxui-state-indeterminate': value === undefined || undefined, 'data-muxui-complete': complete || undefined },
     className: classNames('muxui-progress-bar', className),
     children: ({ percentage }) => React.createElement(React.Fragment, null,
-      React.createElement('div', { className: 'muxui-progress-bar-header' }, React.createElement(AriaLabel, { className: 'muxui-value-label' }, label), React.createElement('span', { className: 'muxui-value-output' }, value === undefined ? 'Loading' : `${percentage}%`)),
-      React.createElement('div', { className: 'muxui-progress-bar-track' }, React.createElement('div', { className: 'muxui-progress-bar-fill', style: percentage === undefined ? undefined : { inlineSize: `${percentage}%` } }))),
+      React.createElement('div', { className: 'muxui-progress-bar__header' }, React.createElement(AriaLabel, { className: 'muxui-value-label' }, label), React.createElement('span', { className: 'muxui-value-output' }, value === undefined ? 'Loading' : `${percentage}%`)),
+      React.createElement('div', { className: 'muxui-progress-bar__track' }, React.createElement('div', { className: 'muxui-progress-bar__fill', style: percentage === undefined ? undefined : { inlineSize: `${percentage}%` } }))),
   });
 });
 
@@ -569,7 +569,7 @@ export const Separator: ForwardRefExoticComponent<SeparatorProps & RefAttributes
     ...props,
     ref,
     orientation,
-    className: classNames(`muxui-separator muxui-separator-${orientation}`, className),
+    className: classNames(`muxui-separator muxui-separator--${orientation}`, className),
   });
 });
 

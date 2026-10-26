@@ -49,8 +49,8 @@ function observe() {
     };
     const item = getComputedStyle(root.querySelector('.muxui-disclosure-group > .muxui-disclosure'));
     return {
-      group: panel('.muxui-disclosure-motion-panel'),
-      activity: panel('.muxui-activity-motion-panel'),
+      group: panel('.muxui-disclosure__motion-panel'),
+      activity: panel('.muxui-activity__motion-panel'),
       item: { duration: item.transitionDuration, easing: item.transitionTimingFunction },
     };
   };

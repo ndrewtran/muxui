@@ -114,7 +114,7 @@ function refreshForeground(foreground, root) {
     copy.removeAttribute('data-muxui-state-pressed');
     copy.removeAttribute('disabled');
     copy.removeAttribute('aria-disabled');
-    copy.classList.add('muxui-toggle-button-group-motion-label');
+    copy.classList.add('muxui-toggle-button-group__motion-label');
     copy.setAttribute('aria-hidden', 'true');
     copy.setAttribute('inert', '');
     Object.assign(copy.style, {
@@ -138,8 +138,8 @@ function observeToggleButtonSelection(root, selectionMode) {
   const view = document.defaultView;
   const indicator = document.createElement('span');
   const foreground = document.createElement('span');
-  indicator.className = 'muxui-toggle-button-group-motion-indicator';
-  foreground.className = 'muxui-toggle-button-group-motion-foreground';
+  indicator.className = 'muxui-toggle-button-group__motion-indicator';
+  foreground.className = 'muxui-toggle-button-group__motion-foreground';
   indicator.setAttribute('aria-hidden', 'true');
   foreground.setAttribute('aria-hidden', 'true');
   foreground.setAttribute('inert', '');

@@ -5,8 +5,8 @@ import { useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-const RADIO_INDICATOR_SELECTOR = '.muxui-radio-indicator, .muxui-radio-field__indicator';
-const SELECTED_INDICATOR_SELECTOR = '.muxui-radio[data-muxui-state-selected] .muxui-radio-indicator, .muxui-radio-field[data-muxui-state-selected] .muxui-radio-field__indicator';
+const RADIO_INDICATOR_SELECTOR = '.muxui-radio-group__indicator, .muxui-radio-field__indicator';
+const SELECTED_INDICATOR_SELECTOR = '.muxui-radio-group__radio[data-muxui-state-selected] .muxui-radio-group__indicator, .muxui-radio-field[data-muxui-state-selected] .muxui-radio-field__indicator';
 
 const RadioMotionContext = React.createContext({
   reduced: false,
@@ -16,7 +16,7 @@ const RadioMotionContext = React.createContext({
 function selectedIndicator(root) {
   const checkedInput = [...root.querySelectorAll('input[type="radio"]:checked')]
     .find((input) => input.closest('[role="radiogroup"]') === root);
-  const radio = checkedInput?.closest('.muxui-radio, .muxui-radio-field__button');
+  const radio = checkedInput?.closest('.muxui-radio-group__radio, .muxui-radio-field__button');
   const directIndicator = radio?.querySelector(RADIO_INDICATOR_SELECTOR);
   if (directIndicator) return directIndicator;
   return [...root.querySelectorAll(SELECTED_INDICATOR_SELECTOR)]
@@ -93,11 +93,11 @@ export function RadioGroupMotion({ children, rootRef }) {
     ? createPortal(reduced
       ? React.createElement('span', {
         'aria-hidden': 'true',
-        className: 'muxui-radio-motion-dot',
+        className: 'muxui-radio-group__motion-dot',
       })
       : React.createElement(motion.span, {
         'aria-hidden': 'true',
-        className: 'muxui-radio-motion-dot',
+        className: 'muxui-radio-group__motion-dot',
         layoutId: 'radio-dot',
         initial: false,
         transition: { layout: travelTransition },
@@ -118,7 +118,7 @@ export function RadioMotionIndicator({ children, renderProps }) {
   return React.createElement(motion.span, {
     'aria-hidden': 'true',
     animate: { scale: pressed ? 0.92 : 1 },
-    className: 'muxui-radio-indicator',
+    className: 'muxui-radio-group__indicator',
     initial: false,
     transition: { scale: pressTransition },
   }, children);

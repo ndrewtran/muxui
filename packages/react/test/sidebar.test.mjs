@@ -221,7 +221,7 @@ test('a link group pairs the link with a toggle that names and controls its list
   assert.ok(controls && html.includes(`<ul id="${controls}"`), 'the toggle points at the nested list');
   const named = /aria-labelledby="([^"]+)"/u.exec(toggle)?.[1];
   assert.ok(named && row.includes(`<span id="${named}" class="muxui-sidebar__nav-label">Catalog</span>`), 'the toggle is named by the rendered label');
-  assert.match(toggle, /class="muxui-sidebar__nav-btn muxui-sidebar__nav-toggle/u);
+  assert.match(toggle, /class="muxui-sidebar__nav-button muxui-sidebar__nav-toggle/u);
   // The block group nests under the category list with its own row, and the current variant carries the marker.
   assert.equal([...html.matchAll(/muxui-sidebar__nav-row/gu)].length, 2);
   assert.match(html, /aria-current="page"[^>]*>Primary<\/a>/u);

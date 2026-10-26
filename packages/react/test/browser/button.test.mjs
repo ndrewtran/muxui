@@ -293,7 +293,7 @@ for (const engine of browserEngines()) {
       for (const size of ['sm', 'md', 'lg']) {
         for (const kind of ['leading', 'trailing', 'pending']) {
           const m = await tab.locator(`#${size}-${kind}`).evaluate((button) => {
-            const content = button.querySelector('.muxui-button-content');
+            const content = button.querySelector('.muxui-button__label');
             const box = (node) => node.getBoundingClientRect();
             const [first, second] = [...content.children];
             const [iconBox, labelBox] = first.localName === 'svg' ? [box(first), box(second)] : [box(second), box(first)];

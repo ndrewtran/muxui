@@ -38,7 +38,7 @@ const HeaderNavRoot = /*#__PURE__*/ React.forwardRef<HTMLElement, HeaderNavRootP
   function HeaderNavRoot({ ...props }, ref) { return nativePart('header', 'muxui-header-nav', props, ref); },
 );
 const HeaderNavLogo = /*#__PURE__*/ React.forwardRef<HTMLDivElement, HeaderNavLogoProps>(function HeaderNavLogo({ href, children, className, ...props }, ref) { return nativePart('div', 'muxui-header-nav__logo', { ...props, className }, ref, href ? h('a', { href, className: 'muxui-header-nav__logo-link' }, children) : children); });
-const HeaderNavButton = /*#__PURE__*/ React.forwardRef<HTMLAnchorElement, HeaderNavNavButtonProps>(function HeaderNavButton({ href, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, className: cx('muxui-header-nav__nav-btn', current && 'muxui-header-nav__nav-btn--current', className), 'aria-current': current ? 'page' : undefined }); });
+const HeaderNavButton = /*#__PURE__*/ React.forwardRef<HTMLAnchorElement, HeaderNavNavButtonProps>(function HeaderNavButton({ href, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, className: cx('muxui-header-nav__nav-button', current && 'muxui-header-nav__nav-button--current', className), 'aria-current': current ? 'page' : undefined }); });
 const HeaderNavActions = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PartProps<HTMLDivElement>>(function HeaderNavActions(props, ref) { return nativePart('div', 'muxui-header-nav__actions', props, ref); });
 const HeaderNavSecondary = /*#__PURE__*/ React.forwardRef<HTMLElement, PartProps<HTMLElement>>(function HeaderNavSecondary(props, ref) { return nativePart('nav', 'muxui-header-nav__secondary', props, ref); });
 

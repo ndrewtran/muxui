@@ -8,8 +8,8 @@ const ROW_SELECTOR = '[role="row"]';
 const READY_ATTRIBUTE = 'data-muxui-grid-list-motion-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-grid-list-motion-reduced';
 const RIPPLE_READY_ATTRIBUTE = 'data-muxui-grid-list-ripple-ready';
-const RIPPLE_HOST_CLASS = 'muxui-grid-list-ripple-host';
-const RIPPLE_CLASS = 'muxui-grid-list-ripple';
+const RIPPLE_HOST_CLASS = 'muxui-grid-list__ripple-host';
+const RIPPLE_CLASS = 'muxui-grid-list__ripple';
 const RIPPLE_BLOCKED_SELECTOR = '[data-muxui-state-disabled], [aria-disabled="true"], [data-muxui-state-dragging], [data-muxui-state-drop-target]';
 const RIPPLE_CONTROL_SELECTOR = 'button, a[href], input, select, textarea, [contenteditable="true"], [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"]';
 const INELIGIBLE_SELECTOR = /*#__PURE__*/ [
@@ -56,7 +56,7 @@ function geometryStyle(target) {
 
 function createHoverLayer(root) {
   const layer = root.ownerDocument.createElement('span');
-  layer.className = 'muxui-grid-list-hover';
+  layer.className = 'muxui-grid-list__hover';
   layer.setAttribute('aria-hidden', 'true');
   layer.setAttribute('data-muxui-grid-list-hover', 'true');
   root.appendChild(layer);

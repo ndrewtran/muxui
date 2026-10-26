@@ -57,7 +57,7 @@ test('real browser TokenField keeps typed text, reconciles controlled tokens, an
     assert.equal(await page.locator('#changes').textContent(), '[]', 'only the token removal reports a change');
     assert.deepEqual(await formTokens(), []);
     assert.equal(await field.getAttribute('aria-placeholder'), 'Add tag');
-    assert.equal(await page.locator('#form .muxui-token-placeholder').isVisible(), true);
+    assert.equal(await page.locator('#form .muxui-token-field__placeholder').isVisible(), true);
 
     // Enter commits the trimmed draft as a token; an empty draft does nothing.
     await page.keyboard.press('Enter');
@@ -65,7 +65,7 @@ test('real browser TokenField keeps typed text, reconciles controlled tokens, an
     await page.keyboard.type('  beta ');
     await page.keyboard.press('Enter');
     assert.equal(await page.locator('#changes').textContent(), '[],["beta"]');
-    assert.deepEqual(await page.locator('#form .muxui-token').allTextContents(), ['beta']);
+    assert.deepEqual(await page.locator('#form .muxui-token-field__token').allTextContents(), ['beta']);
     assert.equal(await text(field), 'beta', 'the draft is cleared');
     assert.deepEqual(await formTokens(), ['beta']);
     await page.keyboard.type('gamma');

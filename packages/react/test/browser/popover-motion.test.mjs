@@ -80,14 +80,14 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     await page.goto(`${url}/popover-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiPopoverMotionHydrated === 'true');
     assert.deepEqual(errors, []);
-    assert.equal(await page.locator('.muxui-menu-popup, .muxui-select-popover, .muxui-combo-box-popover, .muxui-autocomplete-popover').count(), 0, 'SSR and hydration begin popovers closed');
+    assert.equal(await page.locator('.muxui-menu__popup, .muxui-select__popup, .muxui-combo-box__popover, .muxui-autocomplete__popover').count(), 0, 'SSR and hydration begin popovers closed');
     assert.match(await page.locator('html').getAttribute('data-muxui-popover-refs'), /DIV/u);
 
     await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-transition-duration', '800ms'); });
     const cases = [
-      { trigger: '#motion-menu-trigger', popup: '.muxui-menu-popup' },
-      { trigger: '.muxui-select-trigger', popup: '.muxui-select-popover' },
-      { trigger: '.muxui-combo-box-trigger', popup: '.muxui-combo-box-popover' },
+      { trigger: '#motion-menu-trigger', popup: '.muxui-menu__popup' },
+      { trigger: '.muxui-select__trigger', popup: '.muxui-select__popup' },
+      { trigger: '.muxui-combo-box__trigger', popup: '.muxui-combo-box__popover' },
     ];
     for (const { trigger, popup } of cases) {
       await page.locator(trigger).click();
@@ -103,7 +103,7 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
 
     const autocompleteInput = page.locator('.muxui-autocomplete .muxui-field-input');
     await autocompleteInput.focus();
-    const autocompletePopup = '.muxui-autocomplete-popover';
+    const autocompletePopup = '.muxui-autocomplete__popover';
     await page.locator(autocompletePopup).waitFor();
     await waitForEntry(page, autocompletePopup);
     await waitForSettled(page, autocompletePopup);
@@ -150,20 +150,20 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
       document.documentElement.setAttribute('data-muxui-motion', 'full');
     });
     await page.locator('#motion-menu-trigger').click();
-    await page.locator('.muxui-menu-popup').waitFor();
-    assert.equal(await page.locator('.muxui-menu-popup').evaluate((node) => !node.closest('#root')), true, 'menu popup remains portalled outside the React root');
-    await waitForEntry(page, '.muxui-menu-popup');
+    await page.locator('.muxui-menu__popup').waitFor();
+    assert.equal(await page.locator('.muxui-menu__popup').evaluate((node) => !node.closest('#root')), true, 'menu popup remains portalled outside the React root');
+    await waitForEntry(page, '.muxui-menu__popup');
     const reducedStarted = Date.now();
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
-      const node = document.querySelector('.muxui-menu-popup');
+      const node = document.querySelector('.muxui-menu__popup');
       if (!node) return false;
       const style = getComputedStyle(node);
       return node.hasAttribute('data-muxui-motion-reduced') && Number(style.opacity) >= 0.99 && /^(?:none|0px(?: 0px)?)$/u.test(style.translate);
     }, undefined, { timeout: 300 });
     assert.ok(Date.now() - reducedStarted < 300, 'explicit reduced mode settles a popover during entry');
     await page.keyboard.press('Escape');
-    await page.locator('.muxui-menu-popup').waitFor({ state: 'detached' });
+    await page.locator('.muxui-menu__popup').waitFor({ state: 'detached' });
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
@@ -175,10 +175,10 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     });
 
     await page.locator('#motion-menu-trigger').click();
-    const menuPopup = page.locator('.muxui-menu-popup').first();
+    const menuPopup = page.locator('.muxui-menu__popup').first();
     await menuPopup.waitFor();
     await page.waitForFunction(() => {
-      const popups = [...document.querySelectorAll('.muxui-menu-popup')];
+      const popups = [...document.querySelectorAll('.muxui-menu__popup')];
       return popups.length === 1 && popups.every((node) => node.hasAttribute('data-muxui-motion-reduced'));
     });
     await page.getByRole('menuitem', { name: 'One', exact: true }).focus();
@@ -192,19 +192,19 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     assert.equal(await menuPopup.evaluate((node) => node.hasAttribute('data-muxui-motion-reduced')), true);
 
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
-    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu-popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
+    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu__popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
     await waitForMenuOverlay(page, 'Two', { aligned: true, identity: true });
     await page.keyboard.press('ArrowDown');
     await waitForMenuTravel(page, 'Three');
 
     const motionReducedAt = Date.now();
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
-    await page.waitForFunction(() => document.querySelector('.muxui-menu-popup')?.hasAttribute('data-muxui-motion-reduced'));
+    await page.waitForFunction(() => document.querySelector('.muxui-menu__popup')?.hasAttribute('data-muxui-motion-reduced'));
     await waitForMenuOverlay(page, 'Three', { aligned: true, identity: true, timeout: 300 });
     assert.ok(Date.now() - motionReducedAt < 300, 'trigger-local reduced mode settles the nested Menu overlay during travel');
 
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
-    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu-popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
+    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu__popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
     await page.keyboard.press('ArrowUp');
     await waitForMenuTravel(page, 'Two');
 
@@ -216,7 +216,7 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
       window.__muxuiPopoverUnmount();
     });
     await page.locator('#popover-unmounted').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('.muxui-menu-popup, .muxui-select-popover, .muxui-combo-box-popover, .muxui-autocomplete-popover').count(), 0, 'unmount removes all popup shells');
+    assert.equal(await page.locator('.muxui-menu__popup, .muxui-select__popup, .muxui-combo-box__popover, .muxui-autocomplete__popover').count(), 0, 'unmount removes all popup shells');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();

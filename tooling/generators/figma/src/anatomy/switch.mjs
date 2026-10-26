@@ -35,8 +35,8 @@ export default {
         paddingFrom: { part: 'thumb', longhand: 'left' },
       },
     },
-    { id: 'thumb', parent: 'track', node: 'FRAME', selector: '.muxui-switch-indicator', bind: ['fill', 'radius', 'size', 'shadow', 'inset'] },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-switch-label', bind: ['text'] },
+    { id: 'thumb', parent: 'track', node: 'FRAME', selector: '.muxui-switch__indicator', bind: ['fill', 'radius', 'size', 'shadow', 'inset'] },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-switch__label', bind: ['text'] },
   ],
   preview: [
     'size=md,selected=off,state=rest',

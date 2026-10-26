@@ -138,7 +138,7 @@ test('the Button example scanner reports every form of consumed topology', () =>
   assert.deepEqual(classes("<Button className={'muxui-button'} />"), ['muxui-button']);
   assert.deepEqual(classes('<div class="a b" id="x" />'), ['a', 'b']);
   assert.deepEqual(classes('<Button className="a"/>'), ['a']);
-  assert.deepEqual(classes("<Button {...{ className: 'muxui-button-content' }} />"), ['muxui-button-content']);
+  assert.deepEqual(classes("<Button {...{ className: 'muxui-button__label' }} />"), ['muxui-button__label']);
   assert.deepEqual(classes("<Button {...{ className: 'a', id: 'x' }} />"), ['a']);
   assert.deepEqual(classes('const props = { "className": `a b` };'), ['a', 'b']);
   assert.deepEqual(classes("const props = { 'class': 'a' };"), ['a']);
@@ -164,7 +164,7 @@ test('the Button example scanner reports every form of consumed topology', () =>
   assert.deepEqual(selectors('root?.querySelector (selector)'), ['selector']);
   assert.deepEqual(selectors("document.querySelector('.a' + suffix)"), ["'.a' + suffix"]);
   // An optional call is a call.
-  assert.deepEqual(selectors("document.querySelector?.('.muxui-button-content')"), ["'.muxui-button-content'"]);
+  assert.deepEqual(selectors("document.querySelector?.('.muxui-button__label')"), ["'.muxui-button__label'"]);
   assert.deepEqual(selectors('root?.querySelectorAll?.(selector)'), ['selector']);
   assert.deepEqual(selectors('root.querySelector ?. (`.${slot}`)'), ['`.${slot}`']);
   // So is the name without a plain call.
