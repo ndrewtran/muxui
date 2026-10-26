@@ -88,19 +88,28 @@ function schemeScopedSelectors(css) {
   return selectors;
 }
 
+// Figma variables hold one value per mode, so these families must not switch tokens by selector. The pattern matches the root and
+// every part class of the listed families (`.muxui-tabs`, `.muxui-tabs__tab`), and Button outside the Toolbar.
+const migrated = new RegExp(`\\.muxui-(?:${guardedPrefixes.modeAwareFamilies.join('|')})(?:__[a-z0-9-]+)?(?![\\w-])|(?<!\\.muxui-toolbar > |:not\\()\\.muxui-button(?![\\w-])`, 'u');
+const modeOffenders = (css) => schemeScopedSelectors(css)
+  .map(({ scheme, selector }) => `${scheme} ${selector}`)
+  .filter((rule) => migrated.test(rule));
+
 test('migrated families paint mode-aware tokens instead of colour-scheme overrides', async () => {
   const combined = (await Promise.all(sourceFiles.map((url) => readFile(url, 'utf8')))).join('\n');
   const selectors = schemeScopedSelectors(combined);
   for (const scheme of ['light', 'dark']) {
     assert.ok(selectors.some((rule) => rule.scheme === scheme), `other families still author ${scheme}-scheme rules`);
   }
-  // Figma variables hold one value per mode, so these families must not switch tokens by selector.
-  // The root and every part class of the listed families (`.muxui-tabs`, `.muxui-tabs__tab`), and Button outside the Toolbar.
-  const migrated = new RegExp(`\\.muxui-(?:${guardedPrefixes.modeAwareFamilies.join('|')})(?:__[a-z0-9-]+)?(?![\\w-])|(?<!\\.muxui-toolbar > |:not\\()\\.muxui-button(?![\\w-])`, 'u');
-  const offenders = selectors
-    .map(({ scheme, selector }) => `${scheme} ${selector}`)
-    .filter((rule) => migrated.test(rule));
-  assert.deepEqual(offenders, []);
+  assert.deepEqual(modeOffenders(combined), []);
+});
+
+test('the mode-aware guard reads the renamed part classes of the migrated families', () => {
+  const scoped = (scheme, selector) => `@scope ([data-muxui-color-scheme='${scheme}']) to (.muxui-nested) { ${selector} { color: red; } }`;
+  assert.deepEqual(modeOffenders(scoped('dark', '.muxui-checkbox__indicator')), ['dark .muxui-checkbox__indicator']);
+  assert.deepEqual(modeOffenders(scoped('light', '.muxui-tabs__tab')), ['light .muxui-tabs__tab']);
+  assert.deepEqual(modeOffenders(scoped('dark', '.muxui-tag-group .muxui-tag-group__tag')), ['dark .muxui-tag-group .muxui-tag-group__tag']);
+  assert.deepEqual(modeOffenders(scoped('dark', '.muxui-calendar__cell')), []);
 });
 
 // Every `!important` declaration Mux UI ships, pinned by category and identity (file, enclosing rules, property,

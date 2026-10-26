@@ -105,26 +105,98 @@ export function stateFailures(catalogStates, classification = catalogStateKinds)
 }
 
 /**
- * What is wrong with a part map: an anatomy entry that is not mapped exactly once, a family or part the catalog
- * lacks, a class that is not established, or a no-element entry without a reason. `parts` holds the
- * three row lists; each row is [family, part, class or reason].
+ * What is wrong with the part map, as one message per problem. `contract` carries the closed sets of the part map module, passed in
+ * so that this helper does not import it; `selected` is the set of classes an authored rule selects and `isEstablished` says whether a class is selected or spelled.
+ *
+ * Every anatomy entry has one row and every row names a real family and part. Each disposition has the shape its meaning needs
+ * (a class hook is `partClass(family, part)` unless the row says why, a field hook is one of the four shared classes, a `none`
+ * row has a reason and no hook), a `selector` uses only the hook, the family root, one of the five scope classes and the recorded
+ * element predicates, and the rows the plan names carry their exception or qualifier. Every documented hook is selected by an
+ * authored rule unless its row is `hookOnly`, and a `hookOnly` hook no rule selects (a stale one fails).
  */
-export function partFailures(anatomy, parts, isEstablished) {
+export function partFailures(anatomy, rows, contract, { selected, isEstablished }) {
+  const { partClass, publicSharedClasses, scopeClasses, elementQualifiers, noElementReasons, dispositions } = contract;
   const failures = [];
-  const seen = new Map();
-  for (const [kind, rows] of Object.entries(parts)) {
-    for (const [family, part, value] of rows) {
-      const key = `${family}.${part}`;
-      if (!anatomy.has(family)) failures.push(`${key}: unknown family`);
-      else if (!anatomy.get(family).includes(part)) failures.push(`${key}: unknown part`);
-      if (seen.has(key)) failures.push(`${key}: listed as ${seen.get(key)} and ${kind}`);
-      seen.set(key, kind);
-      if ((kind === 'mapped' || kind === 'shared') && !isEstablished(value)) failures.push(`${key}: ${value} is not an established class`);
-      if (kind === 'noElement' && !value) failures.push(`${key}: ${kind} without a reason`);
-    }
+  const keyOf = (row) => `${row.family}.${row.part}`;
+  const seen = new Set();
+  for (const row of rows) {
+    const key = keyOf(row);
+    if (!anatomy.has(row.family)) failures.push(`${key}: unknown family`);
+    else if (!anatomy.get(row.family).includes(row.part)) failures.push(`${key}: unknown part`);
+    if (seen.has(key)) failures.push(`${key}: listed twice`);
+    seen.add(key);
   }
   for (const [family, list] of anatomy) {
     for (const part of list) if (!seen.has(`${family}.${part}`)) failures.push(`${family}.${part}: not mapped`);
+  }
+  const byKey = new Map(rows.map((row) => [keyOf(row), row]));
+  const documented = ['class', 'root-element', 'field', 'composed'];
+  const documentedHooks = new Set(rows.filter((row) => documented.includes(row.disposition) && row.disposition !== 'composed').map((row) => row.hook));
+  const rootHook = (family) => byKey.get(`${family}.root`)?.hook ?? partClass(family, 'root');
+
+  for (const row of rows) {
+    const key = keyOf(row);
+    const { disposition, hook, selector, exception, hookOnly, reason, composedOf, callerSupplied } = row;
+    if (!dispositions.includes(disposition)) { failures.push(`${key}: unknown disposition ${disposition}`); continue; }
+    if (disposition === 'none') {
+      if (hook !== undefined || selector !== undefined || hookOnly !== undefined || composedOf !== undefined || callerSupplied !== undefined) failures.push(`${key}: a none row names no element`);
+      if (!noElementReasons.includes(reason)) failures.push(`${key}: none without a reason from ${noElementReasons.join(', ')}`);
+      continue;
+    }
+    if (reason !== undefined) failures.push(`${key}: only a none row has a reason`);
+    if (!hook) { failures.push(`${key}: ${disposition} without a hook`); continue; }
+    if (!isEstablished(hook)) failures.push(`${key}: ${hook} is not an established class`);
+    if (disposition === 'class') {
+      const expected = partClass(row.family, row.part);
+      if (hook !== expected && !exception) failures.push(`${key}: ${hook} is not ${expected} and the row records no exception`);
+      if (hook === expected && exception) failures.push(`${key}: exception on a row whose hook is ${expected}`);
+    } else if (exception) failures.push(`${key}: only a class row records an exception`);
+    if (disposition === 'root-element' && hook !== partClass(row.family, 'root')) failures.push(`${key}: a root-element row's hook is the family root ${partClass(row.family, 'root')}, not ${hook}`);
+    if (disposition === 'field') {
+      if (!publicSharedClasses.includes(hook)) failures.push(`${key}: ${hook} is not one of the shared field classes`);
+      else if (hook !== `muxui-field-${row.part}`) failures.push(`${key}: ${hook} does not match the part`);
+    }
+    if (disposition === 'composed' && !rows.some((other) => other.family !== row.family && ['class', 'root-element'].includes(other.disposition) && other.hook === hook)) {
+      failures.push(`${key}: ${hook} is not a documented hook of another family`);
+    }
+    if (disposition === 'internal' && (documentedHooks.has(hook) || publicSharedClasses.includes(hook))) failures.push(`${key}: ${hook} is documented elsewhere, so it is not internal`);
+    if (composedOf !== undefined && !anatomy.has(composedOf)) failures.push(`${key}: composedOf ${composedOf} is not a family`);
+    if (callerSupplied !== undefined && (composedOf === undefined || !callerSupplied)) failures.push(`${key}: callerSupplied qualifies composedOf, so it needs both a composedOf and a reason`);
+    if (selector !== undefined) failures.push(...selectorFailures(key, row, rootHook(row.family), { scopeClasses, elementQualifiers }));
+    if (documented.includes(disposition)) {
+      const isSelected = selected.has(hook);
+      if (hookOnly !== undefined && !hookOnly) failures.push(`${key}: hookOnly without a reason`);
+      if (!isSelected && hookOnly === undefined) failures.push(`${key}: no authored rule selects ${hook} and the row is not hookOnly`);
+      if (isSelected && hookOnly !== undefined) failures.push(`${key}: hookOnly, but an authored rule now selects ${hook}`);
+    } else if (hookOnly !== undefined) failures.push(`${key}: hookOnly applies to a documented hook`);
+  }
+
+  // The rows that carry a qualifier or an exception by decision, so the decision is asserted and not only documented.
+  const need = (key, condition, message) => { const row = byKey.get(key); if (row && !condition(row)) failures.push(`${key}: ${message}`); };
+  for (const key of ['code-block.status', 'prompt-composer.status']) need(key, (row) => row.selector?.includes('[role="status"]'), 'a shared status class needs the [role="status"] qualifier');
+  need('sidebar.nav-button', (row) => /(^|\s)a\./u.test(row.selector ?? ''), 'a shared class on three elements needs the anchor qualifier');
+  need('card.button', (row) => row.disposition === 'root-element' && row.hook === 'muxui-card' && row.selector === 'button.muxui-card', 'must be a root-element row with hook muxui-card and selector button.muxui-card');
+  for (const key of ['input.root', 'input.input', 'menu.root']) need(key, (row) => Boolean(row.exception), 'a root or control exception must be recorded');
+  return failures;
+}
+
+// A selector is compounds joined by spaces: [tag] .class... [attribute]. The hook is in the last compound; the other classes are the
+// family root or a scope class, and a tag or attribute is one of the recorded element predicates.
+function selectorFailures(key, row, root, { scopeClasses, elementQualifiers }) {
+  const failures = [];
+  const compounds = row.selector.trim().split(/\s+/u);
+  const pattern = /^(?<tag>[a-z]+)?(?<classes>(?:\.[a-z0-9_-]+)+)(?<attributes>(?:\[[^\]]+\])*)$/u;
+  const parsed = compounds.map((compound) => pattern.exec(compound)?.groups);
+  if (parsed.some((groups) => groups === undefined)) return [`${key}: selector ${row.selector} is not a compound-selector chain of classes with an optional tag and attributes`];
+  const classes = parsed.flatMap(({ classes: list }) => list.slice(1).split('.'));
+  if (!classes.includes(row.hook)) failures.push(`${key}: selector ${row.selector} does not contain .${row.hook}`);
+  else if (!parsed.at(-1).classes.slice(1).split('.').includes(row.hook)) failures.push(`${key}: the hook is not in the last compound of ${row.selector}`);
+  for (const name of classes) {
+    if (name !== row.hook && name !== root && !scopeClasses.includes(name)) failures.push(`${key}: selector class ${name} is neither the hook, the family root nor a scope class`);
+  }
+  for (const { tag, attributes } of parsed) {
+    if (tag && !elementQualifiers.includes(tag)) failures.push(`${key}: selector tag ${tag} is not a recorded element predicate`);
+    for (const attribute of attributes.match(/\[[^\]]+\]/gu) ?? []) if (!elementQualifiers.includes(attribute)) failures.push(`${key}: selector attribute ${attribute} is not a recorded element predicate`);
   }
   return failures;
 }

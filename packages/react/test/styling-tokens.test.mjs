@@ -6,9 +6,12 @@ import test from 'node:test';
 import React from 'react';
 import * as RAC from 'react-aria-components';
 import { compilePureTokenGraph, cssDeclaration } from '@muxui/tokens/core';
-import { catalogStateKinds, establishedClasses, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
+import { classGrammar, cssClassNames, emittedFindings, vocabularyFindings } from './support/class-vocabulary.mjs';
+import { classTokens, hasClassToken } from './support/class-tokens.mjs';
+import { topLevelConstructs } from './support/scan-surface.mjs';
+import { catalogStateKinds, establishedClasses, guardedPrefixes, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
 import { booleanStates, enumeratedStates, stateAttribute, substrateStateAttributes } from '../src/styling-contract.ts';
-import { mappedParts, noElementParts, partClass, publicSharedClasses, sharedParts } from './support/styling-parts.ts';
+import { dispositions, elementQualifiers, noElementReasons, partClass, partRow, partRows, publicSharedClasses, scopeClasses, selectorOf } from './support/styling-parts.ts';
 import {
   attributeFindingsIn, auditedReactAria, booleanValueSelectors, foreignAttributes, historicalPaths, listSources, probePaths, renamedPropAttributes, racStateWriters, reactAriaImportProblems, reactAriaVersionProblems, reviewedRacImports, reviewedRacWriters,
   scriptAttributeFindings, styleAttributeFindings, substrateWrappers,
@@ -141,11 +144,13 @@ test('semantic styling roles compile across all declared mode combinations', () 
   }
 });
 
-// The styling contract inventory (CSS Stage 2). It proves the contract covers every catalog state and anatomy
-// entry, not that a class is emitted on the right element; that proof comes with the class scheme PR.
+// The styling contract inventory (CSS Stage 2). It proves the contract covers every catalog state and anatomy entry and that each
+// row has the shape its disposition needs; styling-emission.test.mjs proves the class is emitted on the right element.
 const catalog = await readCatalog(resolve(packageRoot, '../..'));
 const { selected, isEstablished } = await establishedClasses(packageRoot, styles.map(({ css }) => css));
-const parts = { mapped: mappedParts, shared: sharedParts, noElement: noElementParts };
+const contract = { partClass, publicSharedClasses, scopeClasses, elementQualifiers, noElementReasons, dispositions };
+const rowKey = (row) => `${row.family}.${row.part}`;
+const rowFailures = (rows = partRows) => partFailures(catalog.anatomy, rows, contract, { selected, isEstablished });
 
 // React Aria spells every state data-<name> except read-only (data-readonly); the Mux spelling replaces it.
 const reactAriaName = (state) => `data-${state === 'read-only' ? 'readonly' : state}`;
@@ -195,48 +200,223 @@ test('the state classification refuses an unclassified name, a stale entry and a
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, error: ['status'] }).join(), /error is a status without the attribute it names/u);
 });
 
-test('every catalog anatomy entry is in the part map exactly once with an established class or a reason', () => {
-  assert.deepEqual(partFailures(catalog.anatomy, parts, isEstablished), []);
-  assert.equal(mappedParts.length + sharedParts.length + noElementParts.length, [...catalog.anatomy.values()].flat().length);
+test('every catalog anatomy entry has one part-map row with a disposition, and every documented hook is selected or hookOnly', () => {
+  assert.deepEqual(rowFailures(), []);
+  assert.equal(partRows.length, [...catalog.anatomy.values()].flat().length);
 });
 
-test('the part map check refuses a bogus class, a duplicate, a missing entry and keys the catalog lacks', () => {
-  const failures = (changes) => partFailures(catalog.anatomy, { ...parts, ...changes }, isEstablished).join('\n');
-  const withValue = (rows, family, part, value) => rows.map((row) => row[0] === family && row[1] === part ? [family, part, value] : row);
-  const without = (rows, family, part) => rows.filter((row) => row[0] !== family || row[1] !== part);
+test('the part map check refuses a missing row, a duplicate, an unknown key and a row that breaks its disposition', () => {
+  const find = (key) => partRows.find((row) => `${row.family}.${row.part}` === key);
+  const change = (key, changes) => rowFailures(partRows.map((row) => row === find(key) ? { ...row, ...changes } : row)).join('\n');
+  const add = (row) => rowFailures([...partRows, row]).join('\n');
+  assert.match(rowFailures(partRows.filter((row) => row !== find('activity.header'))).join('\n'), /activity\.header: not mapped/u);
+  assert.match(add({ ...find('button.root') }), /button\.root: listed twice/u);
+  assert.match(add({ ...find('button.root'), family: 'nope' }), /nope\.root: unknown family/u);
+  assert.match(add({ ...find('button.root'), part: 'nope' }), /button\.nope: unknown part/u);
+  assert.match(change('button.root', { disposition: 'maybe' }), /button\.root: unknown disposition maybe/u);
   // A mapping is not a hook because its key exists: the class must be selected by a rule or spelled in source.
   assert.equal(isEstablished('muxui-button__bogus'), false);
-  assert.match(failures({ mapped: withValue(mappedParts, 'button', 'root', 'muxui-button__bogus') }), /button\.root: muxui-button__bogus is not an established class/u);
-  assert.match(failures({ shared: withValue(sharedParts, 'autocomplete', 'label', 'muxui-field-bogus') }), /autocomplete\.label: muxui-field-bogus is not an established class/u);
-  assert.match(failures({ noElement: [...noElementParts, ['button', 'root', 'Both.']] }), /button\.root: listed as mapped and noElement/u);
-  assert.match(failures({ mapped: without(mappedParts, 'activity', 'header') }), /activity\.header: not mapped/u);
-  assert.match(failures({ mapped: [...mappedParts, ['nope', 'root', 'muxui-button']] }), /nope\.root: unknown family/u);
-  assert.match(failures({ mapped: [...mappedParts, ['button', 'nope', 'muxui-button']] }), /button\.nope: unknown part/u);
-  assert.match(failures({ noElement: withValue(noElementParts, 'alert-dialog', 'root', '') }), /alert-dialog\.root: noElement without a reason/u);
+  assert.match(change('button.root', { hook: 'muxui-button__bogus', exception: 'x' }), /button\.root: muxui-button__bogus is not an established class/u);
+  assert.match(change('activity.header', { hook: 'muxui-activity__headline' }), /activity\.header: muxui-activity__headline is not muxui-activity__header and the row records no exception/u);
+  assert.match(change('activity.header', { exception: 'because' }), /activity\.header: exception on a row whose hook is muxui-activity__header/u);
+  // none rows carry a reason from the closed set and name no element.
+  assert.match(change('alert-dialog.root', { reason: undefined }), /alert-dialog\.root: none without a reason/u);
+  assert.match(change('alert-dialog.root', { reason: 'because' }), /alert-dialog\.root: none without a reason/u);
+  assert.match(change('alert-dialog.root', { hook: 'muxui-alert-dialog' }), /alert-dialog\.root: a none row names no element/u);
+  assert.match(change('button.root', { reason: 'caller' }), /button\.root: only a none row has a reason/u);
+  // A field row is one of the four shared classes, named for its part; a root-element row is the family root.
+  assert.match(change('select.label', { hook: 'muxui-field-bogus' }), /select\.label: muxui-field-bogus is not one of the shared field classes/u);
+  assert.match(change('select.label', { hook: 'muxui-field-input' }), /select\.label: muxui-field-input does not match the part/u);
+  assert.match(change('tooltip.tooltip', { hook: 'muxui-tooltip__bogus' }), /tooltip\.tooltip: a root-element row's hook is the family root muxui-tooltip/u);
+  assert.match(change('range-calendar.grid', { hook: 'muxui-range-calendar' }), /range-calendar\.grid: muxui-range-calendar is not a documented hook of another family/u);
+  assert.match(change('meter.label', { hook: 'muxui-field-label' }), /meter\.label: muxui-field-label is documented elsewhere, so it is not internal/u);
+  // A documented hook with no authored rule is hookOnly with a reason; a hookOnly hook a rule selects is stale.
+  assert.ok(!selected.has('muxui-menu__list'));
+  assert.match(change('menu.list', { hookOnly: undefined }), /menu\.list: no authored rule selects muxui-menu__list and the row is not hookOnly/u);
+  assert.match(change('menu.list', { hookOnly: '' }), /menu\.list: hookOnly without a reason/u);
+  assert.match(change('button.root', { hookOnly: 'x' }), /button\.root: hookOnly, but an authored rule now selects muxui-button/u);
+  // A selector names the hook, the family root, one of the five scope classes and the recorded element predicates, and nothing else.
+  assert.match(change('switch.description', { selector: '.muxui-switch-field .muxui-field-label' }), /switch\.description: selector \.muxui-switch-field \.muxui-field-label does not contain \.muxui-field-description/u);
+  assert.match(change('switch.description', { selector: '.muxui-switch__label .muxui-field-description' }), /switch\.description: selector class muxui-switch__label is neither the hook, the family root nor a scope class/u);
+  assert.match(change('date-picker.calendar', { selector: '.muxui-calendar .muxui-date-picker__popover' }), /date-picker\.calendar: the hook is not in the last compound/u);
+  assert.match(change('card.button', { selector: 'span.muxui-card' }), /card\.button: selector tag span is not a recorded element predicate/u);
+  assert.match(change('code-block.status', { selector: '.muxui-code-block__status[aria-live]' }), /code-block\.status: selector attribute \[aria-live\] is not a recorded element predicate/u);
+  // The qualifiers and exceptions the plan decided are asserted, not only documented.
+  assert.match(change('code-block.status', { selector: undefined }), /code-block\.status: a shared status class needs the \[role="status"\] qualifier/u);
+  assert.match(change('prompt-composer.status', { selector: '.muxui-prompt-composer__status' }), /prompt-composer\.status: a shared status class needs the \[role="status"\] qualifier/u);
+  assert.match(change('sidebar.nav-button', { selector: undefined }), /sidebar\.nav-button: a shared class on three elements needs the anchor qualifier/u);
+  assert.match(change('card.button', { selector: undefined }), /card\.button: must be a root-element row with hook muxui-card and selector button\.muxui-card/u);
+  assert.match(change('card.button', { disposition: 'class', hook: 'muxui-card--button', exception: 'x', selector: undefined }), /card\.button: must be a root-element row/u);
+  for (const key of ['input.root', 'input.input', 'menu.root']) assert.match(change(key, { exception: undefined }), new RegExp(`${key.replace('.', '\\.')}: a root or control exception must be recorded`, 'u'));
 });
 
-test('every family root class is selected by a style rule except the recorded gaps', () => {
-  const roots = mappedParts.filter(([, part]) => part === 'root');
-  // AlertDialog.Root renders no element. Lightbox and Text emit the root class and no rule selects it.
-  assert.deepEqual(noElementParts.filter(([, part]) => part === 'root').map(([family]) => family), ['alert-dialog']);
-  assert.deepEqual(roots.filter(([, , name]) => !selected.has(name)).map(([family]) => family), ['lightbox', 'text']);
-  // Input and Menu roots differ from the class their control carries, which the root rule of the same name styles.
-  assert.deepEqual(roots.filter(([family, , name]) => name !== `muxui-${family}`).map(([family]) => family), ['input', 'menu']);
+// A documented hook no authored rule selects is `hookOnly`, which is a description of the hook and not an exemption from item 19's
+// CSS proof: support/hook-only.css holds one consumer rule per such row, and test/browser/hook-only-reach.test.mjs shows each
+// reaches the element with the shipped styles loaded. This is the static half: the rules and the rows are the same set, each rule
+// is unlayered and only paints the probe colour, so it is a consumer's rule and nothing else.
+const probeRule = /^outline-color: rgb\(1, 2, 3\);$/u;
+function hookOnlyRuleFailures(css, rows) {
+  const failures = [];
+  const rules = topLevelConstructs(css).filter(({ kind }) => kind === 'block');
+  const selectors = rules.map(({ prelude }) => prelude);
+  for (const selector of selectors) if (selector.startsWith('@')) failures.push(`${selector} wraps a rule in an at-rule, so it is not a consumer's rule`);
+  const expected = rows.filter((row) => row.hookOnly !== undefined).map(selectorOf);
+  for (const selector of expected) if (!selectors.includes(selector)) failures.push(`${selector}: a hookOnly row without a fixture rule`);
+  for (const selector of selectors) if (!expected.includes(selector) && !selector.startsWith('@')) failures.push(`${selector}: a fixture rule for a row that is not hookOnly`);
+  if (new Set(selectors).size !== selectors.length) failures.push('a selector has two fixture rules');
+  for (const body of css.replace(/\/\*[\s\S]*?\*\//gu, '').matchAll(/\{([^}]*)\}/gu)) if (!probeRule.test(body[1].trim())) failures.push(`rule body ${body[1].trim()} is not the probe colour`);
+  return failures;
+}
+
+test('the hookOnly fixture stylesheet has one unlayered consumer rule for each hookOnly row and no other', async () => {
+  const css = await readFile(new URL('./support/hook-only.css', import.meta.url), 'utf8');
+  assert.deepEqual(hookOnlyRuleFailures(css, partRows), []);
+  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 12);
+  // Controls: a missing rule, an extra one, a layered one, a duplicate and a rule that paints something else each fail.
+  const failures = (changed, rows = partRows) => hookOnlyRuleFailures(changed, rows).join('\n');
+  assert.match(failures(css.replace('.muxui-menu__list { outline-color: rgb(1, 2, 3); }\n', '')), /\.muxui-menu__list: a hookOnly row without a fixture rule/u);
+  assert.match(failures(`${css}.muxui-button { outline-color: rgb(1, 2, 3); }\n`), /\.muxui-button: a fixture rule for a row that is not hookOnly/u);
+  assert.match(failures(`@layer muxui.components { ${css} }`), /wraps a rule in an at-rule/u);
+  assert.match(failures(`${css}.muxui-menu__list { outline-color: rgb(1, 2, 3); }\n`), /a selector has two fixture rules/u);
+  assert.match(failures(css.replace('.muxui-text { outline-color: rgb(1, 2, 3); }', '.muxui-text { color: red; }')), /rule body color: red; is not the probe colour/u);
+  assert.match(failures(css, partRows.map((row) => rowKey(row) === 'menu.list' ? { ...row, hookOnly: undefined } : row)), /\.muxui-menu__list: a fixture rule for a row that is not hookOnly/u);
+});
+
+test('every family root is selected, hookOnly, or renders no element, and the rows say which', () => {
+  const roots = partRows.filter(({ part }) => part === 'root');
+  // Toast and Tooltip have no root part: the part named for the family is the root element (a root-element row).
+  assert.deepEqual([...catalog.anatomy].filter(([, parts]) => !parts.includes('root')).map(([family]) => family), ['toast', 'tooltip']);
+  assert.equal(roots.length, catalog.anatomy.size - 2, 'every other family has a root row');
+  // A root that is not selected names why (Lightbox and Text emit the class and style only the parts or modifiers); one with no
+  // element is a provider (AlertDialog.Root renders nothing).
+  for (const row of roots) {
+    if (row.disposition === 'none') assert.equal(row.reason, 'provider', `${row.family} root`);
+    else assert.ok(selected.has(row.hook) || row.hookOnly, `${row.family} root ${row.hook} is selected or hookOnly`);
+  }
+  // Input and Menu roots differ from the class their control carries; the rows record why and no other family needs to.
+  assert.deepEqual(roots.filter((row) => row.disposition === 'class' && row.hook !== `muxui-${row.family}`).map((row) => row.family), ['input', 'menu']);
 });
 
 test('the class naming function agrees with every BEM part class that exists, and the public shared classes are in use', () => {
   assert.equal(partClass('button', 'root'), 'muxui-button');
   assert.equal(partClass('text-editor', 'color-popup'), 'muxui-text-editor__color-popup');
-  // Rows the map files under shared (a class two families use) count too: radio-group.radio is both.
-  const mapped = new Map([...mappedParts, ...sharedParts].map(([family, part, name]) => [`${family}.${part}`, name]));
+  const hooks = new Map(partRows.map((row) => [`${row.family}.${row.part}`, row.hook]));
   for (const [family, list] of catalog.anatomy) {
-    for (const part of list.filter((name) => name !== 'root' && selected.has(partClass(family, name)))) {
-      assert.equal(mapped.get(`${family}.${part}`), partClass(family, part), `${family}.${part} is already the BEM class`);
+    // A field row's hook is the shared muxui-field-* class; the family's own BEM alias beside it (muxui-select__label) stays internal.
+    for (const part of list.filter((name) => name !== 'root' && selected.has(partClass(family, name)) && partRow(family, name).disposition !== 'field')) {
+      assert.equal(hooks.get(`${family}.${part}`), partClass(family, part), `${family}.${part} is already the BEM class`);
     }
   }
   for (const name of publicSharedClasses) {
-    assert.ok(selected.has(name) && sharedParts.some(([, , shared]) => shared === name), `${name} is styled and shared`);
+    assert.ok(selected.has(name) && partRows.some((row) => row.hook === name && row.disposition === 'field'), `${name} is styled and has field rows`);
   }
+  // Every scope class is real: spelled in source, and no row names one as a part hook. muxui-switch-field is also the root of the
+  // SwitchField family, which Switch renders as the wrapper around its label, description and error.
+  for (const name of scopeClasses) {
+    assert.ok(isEstablished(name), `${name} is established`);
+    assert.deepEqual(partRows.filter((row) => row.hook === name).map((row) => `${row.family}.${row.part}`), name === 'muxui-switch-field' ? ['switch-field.root'] : [], `${name} is a scope, not a part`);
+  }
+});
+
+// The class vocabulary is closed (Decision 0031 item 16): a class is muxui-<family>, muxui-<family>--<modifier>,
+// muxui-<family>__<part> or muxui-<family>__<part>--<modifier>, or one of 13 shared helpers. The scan reads every selector and
+// at-rule prelude of authored CSS and every muxui- token and every name-building site of React source; styling-emission.test.mjs
+// applies the same grammar to the classes rendered fixtures carry, which is the half that sees a name built at run time.
+const slugs = [...catalog.anatomy.keys()];
+const cssFiles = Object.fromEntries(styles.map(({ path, css }) => [path.replace(/^src\//u, ''), css]));
+const sourceFiles = Object.fromEntries(await Promise.all((await listSources(sourceRoot, ['.ts', '.mjs']))
+  .filter((file) => file !== 'generate.mjs')
+  .map(async (file) => [file, await readFile(resolve(sourceRoot, file), 'utf8')])));
+const vocabulary = vocabularyFindings({ css: cssFiles, sources: sourceFiles, slugs });
+const vocabularyWith = ({ css = {}, sources = {} }) => vocabularyFindings({
+  css: { ...cssFiles, ...Object.fromEntries(Object.entries(css).map(([file, text]) => [file, `${cssFiles[file]}\n${text}\n`])) },
+  sources: { ...sourceFiles, ...Object.fromEntries(Object.entries(sources).map(([file, text]) => [file, `${sourceFiles[file]}\n${text}\n`])) },
+  slugs,
+}).findings;
+
+test('every Mux class in authored CSS and React source is in the closed vocabulary', () => {
+  assert.deepEqual(vocabulary.findings, []);
+  // The scan reads what it should: the authored sheets, the sources, and a vocabulary as large as the part map's.
+  assert.ok(Object.keys(cssFiles).length >= 17 && Object.keys(sourceFiles).length > 100);
+  for (const row of partRows) if (row.hook) assert.ok(vocabulary.spelled.has(row.hook), `${row.family}.${row.part}: ${row.hook} is spelled`);
+});
+
+test('the vocabulary guard refuses a dash-form class, a malformed name, a dynamic builder and a pinned token used as a class', () => {
+  const fails = (changes, pattern) => assert.match(vocabularyWith(changes).join('\n'), pattern);
+  // A name built at run time: the head muxui-separator- plus a variable is neither a class prefix nor pinned.
+  fails({ sources: { 'components.ts': 'const probe = (orientation: string) => `muxui-separator-${orientation}`;' } }, /components\.ts: a name built from muxui-separator- is neither a class prefix nor pinned/u);
+  // A non-class token (an id suffix) is pinned to its file and count, and is never a class in CSS.
+  fails({ sources: { 'button.ts': "const again = 'muxui-button-label';" } }, /button\.ts: non-class token muxui-button-label appears 2 times, pinned 1/u);
+  fails({ sources: { 'components.ts': "const stray = 'muxui-input-tags-label';" } }, /components\.ts: non-class token muxui-input-tags-label appears 1 times, pinned 0/u);
+  fails({ css: { 'styles/base.css': '.muxui-button-label { color: red; }' } }, /css styles\/base\.css: muxui-button-label is not in the class vocabulary/u);
+  // The whole name is checked: a modifier before a part, a part inside a part, a legacy dash form.
+  fails({ sources: { 'components.ts': "const a = 'muxui-button--x__y';" } }, /components\.ts: muxui-button--x__y is not in the class vocabulary/u);
+  fails({ sources: { 'components.ts': "const a = 'muxui-text__a__b';" } }, /components\.ts: muxui-text__a__b is not in the class vocabulary/u);
+  fails({ sources: { 'components.ts': "const a = 'muxui-tab-label-new';" } }, /components\.ts: muxui-tab-label-new is not in the class vocabulary/u);
+  fails({ sources: { 'components.ts': "const a = 'muxui-tabs-motion-edge';" } }, /components\.ts: muxui-tabs-motion-edge is not in the class vocabulary/u);
+  // At-rule preludes count: a class in @scope is a class node, and a :not() argument is read.
+  fails({ css: { 'styles/base.css': '@scope (.muxui-tab-list) { :scope { color: red; } }' } }, /css styles\/base\.css: muxui-tab-list is not in the class vocabulary/u);
+  fails({ css: { 'styles/base.css': '.muxui-button:not(.muxui-button-content) { color: red; }' } }, /muxui-button-content is not in the class vocabulary/u);
+  // Comments and strings are not classes.
+  assert.deepEqual(cssClassNames("/* .muxui-tab-list */ [class*='muxui-tab-list'] { content: '.muxui-tab-list'; } .muxui-tabs__list {}"), ['muxui-tabs__list']);
+  // The emitted-DOM check, which no source scan can replace: a rendered legacy class, and a class no CSS or source spells.
+  const spelled = vocabulary.spelled;
+  assert.deepEqual(emittedFindings(['muxui-tabs__list', 'muxui-button--md'], { spelled, slugs }), []);
+  assert.match(emittedFindings(['muxui-separator-vertical'], { spelled, slugs }).join(), /emitted muxui-separator-vertical is not a valid class/u);
+  assert.match(emittedFindings(['muxui-tabs__ghost'], { spelled, slugs }).join(), /emitted muxui-tabs__ghost is not spelled by CSS or source/u);
+  assert.deepEqual(emittedFindings(['muxui-number-field-sizing-case'], { spelled, slugs, owned: new Set(['muxui-number-field-sizing-case']) }), []);
+});
+
+// Canonical examples are what consumers copy, so they rely on no internal hook: every Mux class an example spells is a documented
+// hook of the part map, or one the example defines for itself (the number-field sizing example styles four names of its own).
+const exampleFiles = [];
+for await (const path of glob('catalog/{components,patterns}/*/examples/react/*.tsx', { cwd: resolve(packageRoot, '../..') })) exampleFiles.push(path);
+const documentedHooks = new Set(partRows.filter((row) => ['class', 'root-element', 'field', 'composed'].includes(row.disposition)).map((row) => row.hook));
+const isMuxClass = classGrammar(slugs);
+/** The Mux classes an example spells that are neither documented hooks nor its own: the internal hooks it relies on. */
+function internalHooksOf(text) {
+  const spelled = new Set([...text.matchAll(/(?<![\w-])muxui-[a-z0-9]+(?:(?:__|--|-)[a-z0-9]+)*(?![\w-])/gu)]
+    .filter((match) => text.slice(Math.max(0, match.index - 2), match.index) !== '--').map(([name]) => name));
+  return [...spelled].filter((name) => !documentedHooks.has(name)
+    && (isMuxClass(name) || !text.includes(`.${name}`)));
+}
+
+test('canonical examples rely on no internal hook', async () => {
+  assert.ok(exampleFiles.length > 217, `the scan reaches the component and pattern examples (${exampleFiles.length})`);
+  const offenders = [];
+  for (const file of exampleFiles) {
+    const internal = internalHooksOf(await readFile(resolve(packageRoot, '../..', file), 'utf8'));
+    if (internal.length > 0) offenders.push(`${file}: ${internal.join(', ')}`);
+  }
+  assert.deepEqual(offenders, []);
+  // The scan sees what it should: an internal class or modifier, a legacy dash class and an undefined Mux-prefixed name each count; a documented
+  // hook, a custom property and a class the example styles for itself do not.
+  assert.deepEqual(internalHooksOf('<i className="muxui-calendar__next" />'), ['muxui-calendar__next']);
+  assert.deepEqual(internalHooksOf('<i className="muxui-tag" />'), ['muxui-tag']);
+  assert.deepEqual(internalHooksOf('<i className="muxui-button muxui-button--sm" />'), ['muxui-button--sm']);
+  assert.deepEqual(internalHooksOf('<i className="muxui-tabs__list muxui-button muxui-field-label" style={{ color: "var(--muxui-semantic-text)" }} />'), []);
+  assert.deepEqual(internalHooksOf('<i className="muxui-sizing-case" /><style>{`.muxui-sizing-case { gap: 1rem }`}</style>'), []);
+  assert.deepEqual(internalHooksOf('<i className="muxui-sizing-case" />'), ['muxui-sizing-case']);
+});
+
+test('the prefixes the guards key on are spelled by the sources, so none is vacuous', () => {
+  const spelled = (prefix) => [...vocabulary.spelled].some((name) => name.startsWith(prefix));
+  assert.ok(spelled(guardedPrefixes.codeBlockToken), `${guardedPrefixes.codeBlockToken} is spelled`);
+  for (const family of guardedPrefixes.modeAwareFamilies) {
+    assert.ok(catalog.anatomy.has(family), `${family} is a catalog family`);
+    assert.ok(vocabulary.spelled.has(`muxui-${family}`), `${family} root is spelled`);
+  }
+  // The control: the spelling the rename left behind in three guards matches nothing, which is how they passed vacuously.
+  assert.ok(!spelled('muxui-code-block-token-'));
+  assert.ok(!spelled('muxui-tab-'));
+});
+
+test('the class-token check proves a root class and not a part class that contains its name', () => {
+  assert.equal(hasClassToken('<ul class="muxui-tag-group__list">', 'muxui-tag-group'), false);
+  assert.equal(hasClassToken('<div class="muxui-radio-group__field muxui-radio-group__radio--lg">', 'muxui-radio-group'), false);
+  assert.equal(hasClassToken('<div data-x="class=\'muxui-tag-group\'" classes="muxui-tag-group">', 'muxui-tag-group'), false);
+  assert.equal(hasClassToken('<div class="muxui-tag-group muxui-tag-group--md"><ul class="muxui-tag-group__list">', 'muxui-tag-group'), true);
+  assert.deepEqual([...classTokens('<a class=" one  two"><b class="three">')], ['one', 'two', 'three']);
 });
 
 // The substrate adapter (src/substrate.ts) is the one place React Aria components are wrapped. A component left raw
@@ -361,6 +541,29 @@ test('the README discloses the date segments\' data-placeholder and the hidden p
   assert.match(readme, /Date and time field segments keep `data-placeholder` beside `data-muxui-state-placeholder`/u);
   assert.match(readme, /The hidden form input inside DatePicker and DateRangePicker keeps `data-disabled`/u);
   assert.match(readme, /No Mux UI style selects either one/u);
+});
+
+// The README's class paragraph is written in src/generate.mjs and says what the part map says: the same shared classes, the same five
+// scope classes, the same wrapper exceptions and the same Card.Button selector, and every class it names exists.
+test('the README class hooks section agrees with the part map', async () => {
+  const readme = await readFile(resolve(packageRoot, 'README.md'), 'utf8');
+  const section = /^## Class hooks\n([\s\S]*?)(?=^## )/mu.exec(readme)?.[1];
+  assert.ok(section, 'the README has a Class hooks section');
+  for (const name of publicSharedClasses) assert.ok(section.includes(`\`${name}\``), `${name} is named`);
+  for (const name of scopeClasses) assert.ok(section.includes(name), `${name} is named`);
+  for (const row of partRows.filter((candidate) => candidate.exception)) assert.ok(section.includes(`\`${row.hook}\``), `${row.family}.${row.part}: ${row.hook} is named, since the row records an exception`);
+  assert.ok(section.includes(`\`${partRows.find((row) => row.family === 'card' && row.part === 'button').selector}\``), 'Card.Button is named with its selector');
+  assert.ok(section.includes('`muxui-menu__root`') && section.includes('`muxui-input__root`'), 'both wrapper roots are named');
+  assert.ok(partRows.filter((row) => row.selector && (row.disposition === 'field' || row.disposition === 'composed')).length === 6, 'six parts have another scope');
+  assert.match(section, /Six parts have another scope/u);
+  assert.match(section, /there is no alias/u);
+  assert.match(section, /the server and client markup of one page must come from the same installed version/u);
+  // Every class the section names is real: spelled by CSS or source, or the one dash form it gives as the old spelling.
+  for (const [, name] of section.matchAll(/(?<![\w-])(muxui-[a-z0-9]+(?:(?:__|--|-)[a-z0-9]+)*)/gu)) {
+    if (name === 'muxui-tab-list') continue;
+    assert.ok(isEstablished(name), `${name} is a class`);
+  }
+  assert.ok(!section.includes('muxui-<family>--'), 'no claim the package does not make');
 });
 
 // The static scans cannot see a component that renders another one (DateInput renders a Group and an Input), so the

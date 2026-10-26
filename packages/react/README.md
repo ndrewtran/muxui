@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:0418abadd92fc29b417f90c84b759d4a40dec366ff574ca22f35c94304c4c1fd -->
+<!-- @generated-content-sha256: sha256:02425c95d5e5b3e4404384f881a75185b53fcf1b893a079660d2c8a2107fbf4e -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -53,6 +53,14 @@ Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme 
 Components mark their state with `data-muxui-state-<name>` attributes (`data-muxui-state-disabled`, `data-muxui-state-selected`, `data-muxui-state-focus-visible`, ...). Boolean states are presence-only, so select `[data-muxui-state-disabled]` and never compare its value; enumerated states carry theirs (`data-muxui-state-orientation="vertical"`). React Aria's unprefixed state names are not emitted, apart from the two below, and there is no alias.
 
 Two attributes are React Aria's own and are not part of this contract. Date and time field segments keep `data-placeholder` beside `data-muxui-state-placeholder`, because React Aria reads it to decide which segment a press in the padding of the field focuses. The hidden form input inside DatePicker and DateRangePicker keeps `data-disabled`, which React Aria sets below anything Mux UI can wrap. No Mux UI style selects either one, and neither should be relied on.
+
+## Class hooks
+
+A component's root element carries `muxui-<family>` (`muxui-tabs`), and a documented part carries `muxui-<family>__<part>` (`muxui-tabs__list`, `muxui-select__popup`). Two roots differ: `Input.Root` renders the wrapper `muxui-input__root` around the control `muxui-input`, and `Menu.Root` renders the wrapper `muxui-menu__root` around the list `muxui-menu`. `AlertDialog.Root` is a provider and renders no element, and `Card.Button` is the card root as a native button, `button.muxui-card`.
+
+Modifiers (`muxui-checkbox--sm`, `muxui-card--outlined`) and every class not named as a part are internal and can change without notice; select state through the `data-muxui-state-*` attributes above. Four classes are shared by the form families and are documented only under a scope, normally the family root (`.muxui-select .muxui-field-label`): `muxui-field-label`, `muxui-field-input`, `muxui-field-description` and `muxui-field-error`. Six parts have another scope. The CheckboxGroup and RadioGroup labels sit under `.muxui-checkbox-group__field` and `.muxui-radio-group__field`, the Switch description and error sit under `.muxui-switch-field`, and the DatePicker and DateRangePicker calendars sit in their popovers, as `.muxui-date-picker__popover .muxui-calendar` and `.muxui-date-range-picker__popover .muxui-calendar`.
+
+Part classes were dash forms before (`muxui-tab-list` is now `muxui-tabs__list`) and there is no alias, so update selectors to the BEM name. This package is pre-release: class names can change between versions, and the server and client markup of one page must come from the same installed version.
 
 ## Local tarball usage
 
