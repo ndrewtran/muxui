@@ -581,7 +581,7 @@ test('state-only :is alternatives inherit the anchored owner for the real Autoco
 
   const result = analyzeReactStyleChange({ records, sourcePath, before, after });
   assert.deepEqual(result.families, ['Autocomplete']);
-  assert.match(result.reason, /\.muxui-autocomplete-search\[data-invalid\].*\.muxui-field-input:is\(:focus,\[data-focused\]\)/u);
+  assert.match(result.reason, /\.muxui-autocomplete-search\[data-muxui-state-invalid\].*\.muxui-field-input:is\(:focus,\[data-muxui-state-focused\]\)/u);
 });
 
 test('shared date popover styles resolve through each picker family selector', async () => {

@@ -49,21 +49,21 @@
   background: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-calendar-cell:hover:not([data-selected], [data-outside-month], [data-disabled], [data-unavailable]) {
+.muxui-calendar-cell:hover:not([data-muxui-state-selected], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
-.muxui-calendar-cell[data-selected] {
+.muxui-calendar-cell[data-muxui-state-selected] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
-.muxui-calendar-cell[data-selected]:hover {
+.muxui-calendar-cell[data-muxui-state-selected]:hover {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
-.muxui-calendar-cell:has(> .muxui-calendar-selection)[data-selected] {
+.muxui-calendar-cell:has(> .muxui-calendar-selection)[data-muxui-state-selected] {
   position: relative;
   background: transparent;
   color: var(--muxui-semantic-action-foreground);
@@ -91,46 +91,46 @@
   z-index: 1;
 }
 
-.muxui-calendar-cell:has(> .muxui-calendar-selection)[data-selected]:hover > .muxui-calendar-selection > .muxui-calendar-selection-paint {
+.muxui-calendar-cell:has(> .muxui-calendar-selection)[data-muxui-state-selected]:hover > .muxui-calendar-selection > .muxui-calendar-selection-paint {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
-.muxui-calendar-cell[data-today] {
+.muxui-calendar-cell[data-muxui-state-today] {
   font-weight: var(--muxui-semantic-typography-control-weight);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.muxui-calendar-cell[data-outside-month] {
+.muxui-calendar-cell[data-muxui-state-outside-month] {
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-calendar-cell[data-disabled] {
+.muxui-calendar-cell[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-calendar-cell[data-unavailable] {
+.muxui-calendar-cell[data-muxui-state-unavailable] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
 }
 
-.muxui-calendar[data-disabled] .muxui-calendar-previous svg,
-.muxui-calendar[data-disabled] .muxui-calendar-next svg,
-.muxui-range-calendar[data-disabled] .muxui-calendar-previous svg,
-.muxui-range-calendar[data-disabled] .muxui-calendar-next svg {
+.muxui-calendar[data-muxui-state-disabled] .muxui-calendar-previous svg,
+.muxui-calendar[data-muxui-state-disabled] .muxui-calendar-next svg,
+.muxui-range-calendar[data-muxui-state-disabled] .muxui-calendar-previous svg,
+.muxui-range-calendar[data-muxui-state-disabled] .muxui-calendar-next svg {
   opacity: 0.45;
 }
 
-.muxui-calendar-cell[data-focus-visible] {
+.muxui-calendar-cell[data-muxui-state-focus-visible] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
 @media (forced-colors: active) {
-  .muxui-calendar-cell[data-selected] {
+  .muxui-calendar-cell[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
   }
@@ -139,7 +139,7 @@
     display: none;
   }
 
-  .muxui-calendar-cell:has(> .muxui-calendar-selection)[data-selected] {
+  .muxui-calendar-cell:has(> .muxui-calendar-selection)[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
   }
@@ -153,8 +153,8 @@
   flex-shrink: 0;
 }
 
-.muxui-color-area[data-disabled],
-.muxui-color-area-thumb[data-disabled] {
+.muxui-color-area[data-muxui-state-disabled],
+.muxui-color-area-thumb[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 /* MuxUI component source: color-field.css */
@@ -189,24 +189,24 @@
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-color-field .muxui-field-input[data-focused] {
+.muxui-color-field .muxui-field-input[data-muxui-state-focused] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-color-field .muxui-field-input:hover:not(:focus, [data-focused], [data-disabled], [data-invalid]) {
+.muxui-color-field .muxui-field-input:hover:not(:focus, [data-muxui-state-focused], [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-color-field .muxui-field-input[data-invalid] {
+.muxui-color-field .muxui-field-input[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-color-field .muxui-field-input[data-invalid]:is(:focus, [data-focused]) {
+.muxui-color-field .muxui-field-input[data-muxui-state-invalid]:is(:focus, [data-muxui-state-focused]) {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-color-field .muxui-field-input[data-disabled] {
+.muxui-color-field .muxui-field-input[data-muxui-state-disabled] {
   color: var(--muxui-field-color);
   cursor: not-allowed;
   background-color: var(--muxui-semantic-surface-hover);
@@ -291,8 +291,8 @@
   opacity: 0;
 }
 
-.muxui-color-slider[data-disabled],
-.muxui-color-slider-thumb[data-disabled] {
+.muxui-color-slider[data-muxui-state-disabled],
+.muxui-color-slider-thumb[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 /* MuxUI component source: color-swatch.css */
@@ -324,7 +324,7 @@
   outline: none;
 }
 
-.muxui-color-swatch-picker[data-focus-visible],
+.muxui-color-swatch-picker[data-muxui-state-focus-visible],
 .muxui-color-swatch-picker:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
@@ -339,27 +339,27 @@
   transition: box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-color-swatch-picker-item[data-focus-visible] {
+.muxui-color-swatch-picker-item[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-color-swatch-picker-item[data-selected] {
+.muxui-color-swatch-picker-item[data-muxui-state-selected] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-selection-track);
 }
 
-.muxui-color-swatch-picker-item[data-selected][data-focus-visible] {
+.muxui-color-swatch-picker-item[data-muxui-state-selected][data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-selection-track),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-color-swatch-picker-item[data-hovered]:not([data-selected]) {
+.muxui-color-swatch-picker-item[data-muxui-state-hovered]:not([data-muxui-state-selected]) {
   box-shadow: 0 0 0 2px var(--muxui-semantic-border-indicator);
 }
 
-.muxui-color-swatch-picker-item[data-disabled] {
+.muxui-color-swatch-picker-item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
@@ -369,8 +369,8 @@
   position: relative;
 }
 
-.muxui-color-wheel[data-disabled],
-.muxui-color-wheel-thumb[data-disabled] {
+.muxui-color-wheel[data-muxui-state-disabled],
+.muxui-color-wheel-thumb[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 
@@ -419,7 +419,7 @@
   gap: var(--muxui-semantic-layout-tight-gap);
 }
 
-.muxui-combo-box-option[data-selected] {
+.muxui-combo-box-option[data-muxui-state-selected] {
   color: var(--muxui-semantic-selection-track);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
@@ -435,7 +435,7 @@
   outline: none;
 }
 
-.muxui-grid-list[data-focus-visible] {
+.muxui-grid-list[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -457,39 +457,39 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-grid-list-item[data-hovered]:not([data-selected], [data-disabled], [data-dragging], [data-drop-target]) {
+.muxui-grid-list-item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled], [data-muxui-state-dragging], [data-muxui-state-drop-target]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent)
   );
 }
 
-.muxui-grid-list-item[data-hovered]:not([data-selected], [data-drop-target]):where([data-disabled], [data-dragging]) {
+.muxui-grid-list-item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-drop-target]):where([data-muxui-state-disabled], [data-muxui-state-dragging]) {
   background-color: var(--muxui-semantic-surface-subtle);
   background-image: none;
 }
 
-.muxui-grid-list-item[data-selected] {
+.muxui-grid-list-item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
 }
 
-.muxui-grid-list-item[data-focus-visible] {
+.muxui-grid-list-item[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-grid-list-item[data-disabled] {
+.muxui-grid-list-item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-grid-list-item[data-dragging] {
+.muxui-grid-list-item[data-muxui-state-dragging] {
   opacity: 0.6;
 }
 
-.muxui-grid-list-item[data-drop-target] {
+.muxui-grid-list-item[data-muxui-state-drop-target] {
   background-color: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   outline: 2px solid var(--muxui-semantic-selection-track);
@@ -499,17 +499,17 @@
 /* Layouts: stack is the default list; grid fills auto-fill columns. Horizontal
    orientation scrolls along the inline axis. Items in a grid or horizontal root
    draw an inset focus ring so no ancestor overflow can clip it. */
-.muxui-grid-list[data-layout='stack'][data-orientation='horizontal'] {
+.muxui-grid-list[data-muxui-state-layout='stack'][data-muxui-state-orientation='horizontal'] {
   flex-direction: row;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
-.muxui-grid-list[data-layout='stack'][data-orientation='horizontal'] > .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-state-layout='stack'][data-muxui-state-orientation='horizontal'] > .muxui-grid-list-item {
   flex: 0 0 auto;
 }
 
-.muxui-grid-list[data-layout='grid'] {
+.muxui-grid-list[data-muxui-state-layout='grid'] {
   display: grid;
   padding: var(--muxui-semantic-layout-inset-tight);
   overflow: visible;
@@ -517,18 +517,18 @@
 
 /* Default column tracks. No specificity, so any plain class sets its own tracks
    without matching selectors or stylesheet order. */
-:where(.muxui-grid-list[data-layout='grid']) {
+:where(.muxui-grid-list[data-muxui-state-layout='grid']) {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
 }
 
 /* The one spacing owner. Its specificity is one class, so a consumer class
    overrides it only when it loads after this stylesheet; an inline style always
    does. Only the column tracks above have no specificity. */
-.muxui-grid-list:where([data-layout='grid']) {
+.muxui-grid-list:where([data-muxui-state-layout='grid']) {
   gap: var(--muxui-semantic-layout-content-gap);
 }
 
-.muxui-grid-list[data-layout='grid'][data-orientation='horizontal'] {
+.muxui-grid-list[data-muxui-state-layout='grid'][data-muxui-state-orientation='horizontal'] {
   grid-auto-flow: column;
   grid-auto-columns: minmax(10rem, 1fr);
   grid-template-columns: none;
@@ -536,7 +536,7 @@
   overflow-y: hidden;
 }
 
-.muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item,
+.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item,
 .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item {
   flex-direction: column;
   align-items: stretch;
@@ -545,8 +545,8 @@
   overflow-wrap: anywhere;
 }
 
-.muxui-grid-list:where([data-layout='grid'], [data-orientation='horizontal']) > .muxui-grid-list-item[data-focus-visible],
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-focus-visible] {
+.muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list-item[data-muxui-state-focus-visible],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
   box-shadow: inset 0 0 0 4px var(--muxui-semantic-focus-inner);
@@ -556,15 +556,15 @@
    fill, so default text and nested links and buttons keep their own colors and
    contrast. A focused selected item shows the focus ring, its halo, then the
    selection ring. */
-.muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected],
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected] {
+.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-background);
   color: var(--muxui-semantic-content-strong);
   box-shadow: inset 0 0 0 2px var(--muxui-semantic-selection-track);
 }
 
-.muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected][data-focus-visible],
-.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected][data-focus-visible] {
+.muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible] {
   box-shadow:
     inset 0 0 0 4px var(--muxui-semantic-focus-inner),
     inset 0 0 0 6px var(--muxui-semantic-selection-track);
@@ -574,7 +574,7 @@
    space between items and at the edges, so the root takes no padding. RAC wraps
    each row in boxes it positions and measures; rows fill the wrapper so items in
    one row share its height, and measure as their content when the wrapper resets. */
-.muxui-grid-list[data-layout='grid'][data-muxui-virtualized] {
+.muxui-grid-list[data-muxui-state-layout='grid'][data-muxui-virtualized] {
   display: block;
   padding: 0;
   overflow-x: hidden;
@@ -661,15 +661,15 @@
 }
 
 .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
-  [data-selected],
+  [data-muxui-state-selected],
   [aria-selected='true'],
-  [data-disabled],
+  [data-muxui-state-disabled],
   [aria-disabled='true'],
-  [data-dragging],
-  [data-drop-target],
-  [data-pressed],
+  [data-muxui-state-dragging],
+  [data-muxui-state-drop-target],
+  [data-muxui-state-pressed],
   [aria-pressed='true'],
-  [data-focus-visible],
+  [data-muxui-state-focus-visible],
   :focus-visible
 ) {
   background-color: transparent;
@@ -677,15 +677,15 @@
 }
 
 .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
-  [data-selected],
+  [data-muxui-state-selected],
   [aria-selected='true'],
-  [data-disabled],
+  [data-muxui-state-disabled],
   [aria-disabled='true'],
-  [data-dragging],
-  [data-drop-target],
-  [data-pressed],
+  [data-muxui-state-dragging],
+  [data-muxui-state-drop-target],
+  [data-muxui-state-pressed],
   [aria-pressed='true'],
-  [data-focus-visible],
+  [data-muxui-state-focus-visible],
   :focus-visible
 ) {
   background-color: transparent;
@@ -710,64 +710,64 @@
   }
 
   .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
-    [data-selected],
+    [data-muxui-state-selected],
     [aria-selected='true'],
-    [data-disabled],
+    [data-muxui-state-disabled],
     [aria-disabled='true'],
-    [data-dragging],
-    [data-drop-target],
-    [data-pressed],
+    [data-muxui-state-dragging],
+    [data-muxui-state-drop-target],
+    [data-muxui-state-pressed],
     [aria-pressed='true'],
-    [data-focus-visible],
+    [data-muxui-state-focus-visible],
     :focus-visible
   ) {
     background: Canvas;
   }
 
   .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
-    [data-selected],
+    [data-muxui-state-selected],
     [aria-selected='true'],
-    [data-disabled],
+    [data-muxui-state-disabled],
     [aria-disabled='true'],
-    [data-dragging],
-    [data-drop-target],
-    [data-pressed],
+    [data-muxui-state-dragging],
+    [data-muxui-state-drop-target],
+    [data-muxui-state-pressed],
     [aria-pressed='true'],
-    [data-focus-visible],
+    [data-muxui-state-focus-visible],
     :focus-visible
   ) {
     background: Canvas;
   }
 
-  .muxui-grid-list:where([data-layout='grid'], [data-orientation='horizontal']) > .muxui-grid-list-item[data-focus-visible],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-focus-visible] {
+  .muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list-item[data-muxui-state-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-focus-visible] {
     outline-color: Highlight;
     box-shadow: none;
   }
 
-  .muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected] {
+  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
     box-shadow: none;
   }
 
-  .muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected][data-focus-visible],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected][data-focus-visible] {
+  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected][data-muxui-state-focus-visible] {
     outline-color: HighlightText;
     box-shadow: none;
   }
 
   /* LinkText is only guaranteed legible on Canvas, so nested links follow the selected text color. */
-  .muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected] a,
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected] a {
+  .muxui-grid-list[data-muxui-state-layout='grid'] > .muxui-grid-list-item[data-muxui-state-selected] a,
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-selected] a {
     color: HighlightText;
   }
 }
 
 @media (prefers-contrast: more) {
-  .muxui-grid-list:where([data-layout='grid'], [data-orientation='horizontal']) > .muxui-grid-list-item[data-focus-visible],
-  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-focus-visible] {
+  .muxui-grid-list:where([data-muxui-state-layout='grid'], [data-muxui-state-orientation='horizontal']) > .muxui-grid-list-item[data-muxui-state-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-muxui-state-focus-visible] {
     outline-width: 3px;
     outline-offset: -3px;
   }
@@ -794,13 +794,13 @@
   background-color: transparent;
 }
 
-.muxui-list-box-item[data-selected],
+.muxui-list-box-item[data-muxui-state-selected],
 .muxui-list-box-item[aria-selected='true'] {
   background-color: var(--muxui-semantic-color-neutral-90);
   color: var(--muxui-semantic-color-neutral-5);
 }
 
-.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box-item[data-selected],
+.muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box-item[data-muxui-state-selected],
 .muxui-list-box[data-muxui-list-box-selection-ready='true'] .muxui-list-box-item[aria-selected='true'] {
   background-color: transparent;
 }
@@ -813,19 +813,19 @@
   transition-duration: 0s !important;
 }
 
-.muxui-list-box .muxui-list-box-item[data-focused]:not([data-selected]):not([aria-selected='true']):not([data-disabled]):not(:hover):not([data-hovered]) {
+.muxui-list-box .muxui-list-box-item[data-muxui-state-focused]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not(:hover):not([data-muxui-state-hovered]) {
   background-color: transparent;
   color: var(--muxui-item-color);
   transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-list-box .muxui-list-box-item:hover:not([data-selected]):not([aria-selected='true']):not([data-disabled]):not([aria-disabled='true']),
-.muxui-list-box .muxui-list-box-item[data-hovered]:not([data-selected]):not([aria-selected='true']):not([data-disabled]):not([aria-disabled='true']) {
+.muxui-list-box .muxui-list-box-item:hover:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']),
+.muxui-list-box .muxui-list-box-item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-list-box-item[data-focus-visible],
+.muxui-list-box-item[data-muxui-state-focus-visible],
 .muxui-list-box-item:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 1px;
@@ -848,30 +848,30 @@
   visibility: hidden;
 }
 
-.muxui-list-box[data-focus-visible] {
+.muxui-list-box[data-muxui-state-focus-visible] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-list-box[data-layout='stack'][data-orientation='horizontal'] {
+.muxui-list-box[data-muxui-state-layout='stack'][data-muxui-state-orientation='horizontal'] {
   flex-direction: row;
 }
 
-.muxui-list-box[data-layout='grid'] {
+.muxui-list-box[data-muxui-state-layout='grid'] {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
 }
 
-.muxui-list-box[data-layout='grid'][data-orientation='horizontal'] {
+.muxui-list-box[data-muxui-state-layout='grid'][data-muxui-state-orientation='horizontal'] {
   grid-auto-flow: column;
   grid-auto-columns: minmax(4rem, 1fr);
   grid-template-columns: none;
 }
 
-.muxui-list-box[data-layout='grid'] > .muxui-list-box-section {
+.muxui-list-box[data-muxui-state-layout='grid'] > .muxui-list-box-section {
   display: contents;
 }
 
-.muxui-list-box[data-layout='grid'] .muxui-list-box-section-header {
+.muxui-list-box[data-muxui-state-layout='grid'] .muxui-list-box-section-header {
   grid-column: 1 / -1;
 }
 
@@ -880,12 +880,12 @@
   display: inline-block;
 }
 
-/* The trigger draws the same keyboard ring as Button, from React Aria's modality-aware data-focus-visible alone: native :focus-visible also matches the first pointer click on a trigger that stays closed, so the browser's own outline is cleared. The transparent outline stays visible in forced colors. */
+/* The trigger draws the same keyboard ring as Button, from React Aria's modality-aware data-muxui-state-focus-visible alone: native :focus-visible also matches the first pointer click on a trigger that stays closed, so the browser's own outline is cleared. The transparent outline stays visible in forced colors. */
 .muxui-menu-trigger {
   outline: none;
 }
 
-.muxui-menu-trigger[data-focus-visible] {
+.muxui-menu-trigger[data-muxui-state-focus-visible] {
   outline: 2px solid transparent;
   outline-offset: 2px;
   box-shadow:
@@ -946,7 +946,7 @@
   transform-origin: 0 0;
 }
 
-.muxui-menu-item[data-focused]:not([data-disabled]):not([aria-disabled='true']) {
+.muxui-menu-item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
   background-color: transparent;
   color: var(--muxui-item-focus-color);
 }
@@ -956,7 +956,7 @@
     display: none;
   }
 
-  .muxui-menu-item[data-focused]:not([data-disabled]):not([aria-disabled='true']) {
+  .muxui-menu-item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
     background-color: Highlight;
     color: HighlightText;
   }
@@ -1026,16 +1026,16 @@
   outline: none;
 }
 
-.muxui-radio[data-selected] .muxui-radio-indicator {
+.muxui-radio[data-muxui-state-selected] .muxui-radio-indicator {
   border-color: var(--muxui-semantic-selection-track);
   background-color: var(--muxui-semantic-surface-raised);
 }
 
-.muxui-radio[data-selected][data-hovered]:not([data-disabled]) .muxui-radio-indicator {
+.muxui-radio[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-indicator {
   border-color: var(--muxui-semantic-color-color-50);
 }
 
-.muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
+.muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
   border-color: var(--muxui-semantic-border-indicator-hover);
   background-color: var(--muxui-semantic-surface-hover);
 }
@@ -1044,17 +1044,17 @@
    selected hover rule's specificity, outranks the unselected hover rule, and
    follows both in source order. :where() names the owning RadioGroup without
    adding specificity. */
-.muxui-radio[data-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
-.muxui-radio[data-invalid][data-hovered]:not([data-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
+.muxui-radio[data-muxui-state-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
+.muxui-radio[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-radio[data-disabled] {
+.muxui-radio[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-radio[data-selected] .muxui-radio-indicator::after {
+.muxui-radio[data-muxui-state-selected] .muxui-radio-indicator::after {
   transform: scale(1);
   opacity: 1;
 }
@@ -1093,63 +1093,63 @@
   background: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-range-calendar-cell:hover:not([data-selected], [data-selection-start], [data-selection-end], [data-outside-month], [data-disabled], [data-unavailable]) {
+.muxui-range-calendar-cell:hover:not([data-muxui-state-selected], [data-muxui-state-selection-start], [data-muxui-state-selection-end], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-range-calendar-cell[data-today] {
+.muxui-range-calendar-cell[data-muxui-state-today] {
   font-weight: var(--muxui-semantic-typography-control-weight);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.muxui-range-calendar-cell[data-outside-month] {
+.muxui-range-calendar-cell[data-muxui-state-outside-month] {
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-range-calendar-cell[data-disabled] {
+.muxui-range-calendar-cell[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-range-calendar-cell[data-unavailable] {
+.muxui-range-calendar-cell[data-muxui-state-unavailable] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
 }
 
-.muxui-range-calendar-cell[data-focus-visible] {
+.muxui-range-calendar-cell[data-muxui-state-focus-visible] {
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
-.muxui-range-calendar-cell[data-selected] {
+.muxui-range-calendar-cell[data-muxui-state-selected] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   border-radius: 0;
 }
 
-.muxui-range-calendar-cell[data-selection-start] {
+.muxui-range-calendar-cell[data-muxui-state-selection-start] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-calendar-cell[data-selection-end] {
+.muxui-range-calendar-cell[data-muxui-state-selection-end] {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
   border-radius: 0 var(--muxui-semantic-shape-pill-radius) var(--muxui-semantic-shape-pill-radius) 0;
 }
 
-.muxui-range-calendar-cell[data-selection-start]:hover,
-.muxui-range-calendar-cell[data-selection-end]:hover {
+.muxui-range-calendar-cell[data-muxui-state-selection-start]:hover,
+.muxui-range-calendar-cell[data-muxui-state-selection-end]:hover {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
-.muxui-range-calendar-cell[data-selected]:hover {
+.muxui-range-calendar-cell[data-muxui-state-selected]:hover {
   background: var(--muxui-semantic-selection-background-strong);
 }
 
@@ -1191,34 +1191,34 @@
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-selected]:not([data-disabled], [data-unavailable]) {
+.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background: transparent;
   color: var(--muxui-semantic-content-default);
   border-radius: 0;
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-range-anchor]:not([data-disabled], [data-unavailable]) {
+.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-range-anchor]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
   font-weight: var(--muxui-semantic-typography-control-weight);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-selected][data-muxui-range-provisional-endpoint]:not([data-disabled], [data-unavailable]) {
+.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   background: transparent;
   color: var(--muxui-semantic-content-default);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-selected][data-muxui-range-provisional-endpoint][data-selection-start]:not([data-disabled], [data-unavailable]) {
+.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-start]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-selected][data-muxui-range-provisional-endpoint][data-selection-end]:not([data-disabled], [data-unavailable]) {
+.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-end]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   border-radius: 0 var(--muxui-semantic-shape-pill-radius) var(--muxui-semantic-shape-pill-radius) 0;
 }
 
-.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-selected][data-muxui-range-provisional-endpoint][data-selection-start][data-selection-end]:not([data-disabled], [data-unavailable]) {
+.muxui-range-selection-motion[data-muxui-range-selecting] .muxui-range-calendar-cell[data-muxui-state-selected][data-muxui-range-provisional-endpoint][data-muxui-state-selection-start][data-muxui-state-selection-end]:not([data-muxui-state-disabled], [data-muxui-state-unavailable]) {
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
@@ -1332,63 +1332,63 @@
 }
 
 /* Standard Mux interaction states remain visible around the moving shape. */
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:hover:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:hover:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:hover:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab[data-hovered]:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab[data-hovered]:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab[data-hovered]:not([data-disabled]) {
+.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:hover:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:hover:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:hover:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background: var(--muxui-semantic-action-neutral-background-hover);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:active:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:active:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:active:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab[data-pressed]:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab[data-pressed]:not([data-disabled]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab[data-pressed]:not([data-disabled]) {
+.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:active:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:active:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:active:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
+.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
   background: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
 /* Selected tabs start clear so hover and RAC keyboard focus can compose with
    the moving shape without inheriting a native focus shadow. */
-.muxui-tabs-motion .muxui-tab:is([data-selected], [aria-selected='true']) {
+.muxui-tabs-motion .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']) {
   outline: none;
   box-shadow: none;
 }
 
 /* Selected hover feedback stays in the background so the moving fill and
    inverse foreground remain intact; active and pressed keep their own fill. */
-.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]),
-.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]),
-.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]) {
+.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
+.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
+.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-hover) 12%, transparent);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]) {
+.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
   background-color: var(--muxui-semantic-action-neutral-background-hover);
 }
 
-.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is(:hover, [data-hovered]):not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true'], :active, [data-pressed]) {
+.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true'], :active, [data-muxui-state-pressed]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is(:focus-visible, [data-focus-visible]):not([data-selected], [aria-selected='true']),
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is(:focus-visible, [data-focus-visible]):not([data-selected], [aria-selected='true']),
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is(:focus-visible, [data-focus-visible]):not([data-selected], [aria-selected='true']) {
+.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
+.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
+.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']) {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
   box-shadow: none;
 }
 
 /* The selected tab's accent ring is reserved for keyboard-visible focus. */
-.muxui-tabs-motion .muxui-tab:is([data-selected], [aria-selected='true'])[data-focus-visible]:not([data-disabled], [aria-disabled='true']) {
+.muxui-tabs-motion .muxui-tab:is([data-muxui-state-selected], [aria-selected='true'])[data-muxui-state-focus-visible]:not([data-muxui-state-disabled], [aria-disabled='true']) {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
 /* The selected state is also visible before hydration measures the shape. */
-.muxui-tabs-motion:not([data-muxui-tabs-ready]):not([data-muxui-tabs-variant='underline']) .muxui-tab[data-selected] {
+.muxui-tabs-motion:not([data-muxui-tabs-ready]):not([data-muxui-tabs-variant='underline']) .muxui-tab[data-muxui-state-selected] {
   background: var(--muxui-semantic-surface-emphasis);
   color: var(--muxui-semantic-content-on-solid);
 }
@@ -1480,14 +1480,14 @@
 }
 
 .muxui-tabs-motion-edge:hover:not(:disabled),
-.muxui-tabs-motion-edge[data-hovered]:not(:disabled) {
+.muxui-tabs-motion-edge[data-muxui-state-hovered]:not(:disabled) {
   background-color: transparent;
   background-image: linear-gradient(var(--muxui-semantic-action-neutral-background-hover), var(--muxui-semantic-action-neutral-background-hover));
   color: var(--muxui-semantic-content-strong);
 }
 
 .muxui-tabs-motion-edge:active:not(:disabled),
-.muxui-tabs-motion-edge[data-pressed]:not(:disabled) {
+.muxui-tabs-motion-edge[data-muxui-state-pressed]:not(:disabled) {
   background-color: transparent;
   background-image: linear-gradient(var(--muxui-semantic-action-neutral-background-pressed), var(--muxui-semantic-action-neutral-background-pressed));
   color: var(--muxui-semantic-content-strong);
@@ -1551,7 +1551,7 @@
   clip-path: inset(0 var(--muxui-semantic-control-size-md));
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion-overflow-viewport {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion-overflow-viewport {
   block-size: 100%;
   max-block-size: 100%;
   overflow-x: hidden;
@@ -1561,11 +1561,11 @@
   padding-inline: 0;
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-overflow] .muxui-tabs-motion-overflow-viewport {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-overflow] .muxui-tabs-motion-overflow-viewport {
   clip-path: inset(var(--muxui-semantic-control-size-md) 0);
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion-overflow-content {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion-overflow-content {
   inline-size: 100%;
   min-block-size: 100%;
   block-size: max-content;
@@ -1577,14 +1577,14 @@
     display: none;
   }
 
-  .muxui-tabs-motion:not([data-muxui-tabs-variant='underline']) .muxui-tab[data-selected] {
+  .muxui-tabs-motion:not([data-muxui-tabs-variant='underline']) .muxui-tab[data-muxui-state-selected] {
     background: Highlight;
     color: HighlightText;
     forced-color-adjust: none;
   }
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab-list {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab-list {
   inline-size: 100%;
   min-block-size: max-content;
 }
@@ -1609,13 +1609,13 @@
 }
 
 :where(
-  .muxui-select:not([data-invalid]) > .muxui-select-trigger,
-  .muxui-select-trigger:not([data-invalid])
-):hover:not(:focus, :focus-visible, [data-focus-visible], [data-open], [data-disabled]) {
+  .muxui-select:not([data-muxui-state-invalid]) > .muxui-select-trigger,
+  .muxui-select-trigger:not([data-muxui-state-invalid])
+):hover:not(:focus, :focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open], [data-muxui-state-disabled]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-select-trigger[data-disabled] {
+.muxui-select-trigger[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   outline-color: var(--muxui-field-border-color);
   color: var(--muxui-field-color);
@@ -1623,13 +1623,13 @@
   pointer-events: none;
 }
 
-.muxui-select[data-invalid] > .muxui-select-trigger,
-.muxui-select-trigger[data-invalid] {
+.muxui-select[data-muxui-state-invalid] > .muxui-select-trigger,
+.muxui-select-trigger[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-select[data-invalid] > .muxui-select-trigger:is(:focus-visible, [data-focus-visible], [data-open]),
-.muxui-select-trigger[data-invalid]:is(:focus-visible, [data-focus-visible], [data-open]) {
+.muxui-select[data-muxui-state-invalid] > .muxui-select-trigger:is(:focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open]),
+.muxui-select-trigger[data-muxui-state-invalid]:is(:focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open]) {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
@@ -1642,7 +1642,7 @@
   white-space: nowrap;
 }
 
-.muxui-select-value[data-placeholder] {
+.muxui-select-value[data-muxui-state-placeholder] {
   color: var(--muxui-semantic-color-neutral-50);
 }
 
@@ -1661,7 +1661,7 @@
   outline: none;
 }
 
-.muxui-select-option[data-selected] {
+.muxui-select-option[data-muxui-state-selected] {
   color: var(--muxui-semantic-selection-track);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
@@ -1685,7 +1685,7 @@
   top: 1px;
 }
 
-.muxui-slider[data-orientation='vertical'] .muxui-slider-header {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-header {
   width: max-content;
   justify-content: flex-start;
   gap: var(--muxui-semantic-layout-control-content-gap);
@@ -1699,17 +1699,17 @@
   cursor: pointer;
 }
 
-.muxui-slider[data-orientation='vertical'] .muxui-slider-control {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-control {
   flex-direction: column;
   width: 1.25rem;
   height: 10rem;
 }
 
-.muxui-slider[data-disabled] .muxui-slider-control {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider-control {
   cursor: not-allowed;
 }
 
-.muxui-slider[data-orientation='vertical'] {
+.muxui-slider[data-muxui-state-orientation='vertical'] {
   align-items: flex-start;
   width: fit-content;
   max-width: 100%;
@@ -1724,7 +1724,7 @@
   background-color: var(--muxui-semantic-surface-track);
 }
 
-.muxui-slider[data-orientation='vertical'] .muxui-slider-track {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-track {
   width: 0.25rem;
   height: 100%;
   flex: 1;
@@ -1740,14 +1740,14 @@
   transition: background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-slider[data-orientation='vertical'] .muxui-slider-fill {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-fill {
   width: 100%;
   height: auto;
   bottom: 0;
   top: auto;
 }
 
-.muxui-slider[data-disabled] .muxui-slider-fill {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider-fill {
   background-color: var(--muxui-semantic-surface-disabled);
 }
 
@@ -1783,44 +1783,44 @@
   pointer-events: none;
 }
 
-.muxui-slider:not([data-orientation='vertical']) .muxui-slider-thumb {
+.muxui-slider:not([data-muxui-state-orientation='vertical']) .muxui-slider-thumb {
   top: 50%;
   transform: translateY(-50%);
 }
 
-.muxui-slider[data-orientation='vertical'] .muxui-slider-thumb {
+.muxui-slider[data-muxui-state-orientation='vertical'] .muxui-slider-thumb {
   left: 50%;
   transform: translateX(-50%);
 }
 
 .muxui-slider-thumb:focus-visible,
-.muxui-slider-thumb[data-focus-visible] {
+.muxui-slider-thumb[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-slider-thumb[data-dragging] {
+.muxui-slider-thumb[data-muxui-state-dragging] {
   cursor: grabbing;
 }
 
-.muxui-slider-thumb[data-dragging] .muxui-slider-thumb-face {
+.muxui-slider-thumb[data-muxui-state-dragging] .muxui-slider-thumb-face {
   border-color: var(--muxui-semantic-border-dragging);
 }
 
-.muxui-slider[data-disabled] {
+.muxui-slider[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 
-.muxui-slider[data-disabled] .muxui-slider-track {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider-track {
   background-color: var(--muxui-semantic-surface-track);
 }
 
-.muxui-slider[data-disabled] .muxui-slider-thumb {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider-thumb {
   cursor: not-allowed;
 }
 
-.muxui-slider[data-disabled] .muxui-slider-thumb-face {
+.muxui-slider[data-muxui-state-disabled] .muxui-slider-thumb-face {
   background-color: var(--muxui-semantic-surface-canvas);
   border-color: var(--muxui-semantic-border-indicator);
 }
@@ -1869,13 +1869,13 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider[data-disabled] .muxui-slider-fill {
+  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider-fill {
     background-color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider[data-disabled] .muxui-slider-thumb-face {
+  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider-thumb-face {
     border-color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
@@ -1890,7 +1890,7 @@
   outline: none;
 }
 
-.muxui-table[data-focus-visible] {
+.muxui-table[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -1912,7 +1912,7 @@
   cursor: default;
 }
 
-.muxui-table-column[data-focus-visible] {
+.muxui-table-column[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -1931,16 +1931,16 @@
   transform: rotate(180deg);
 }
 
-.muxui-table-column[data-sort-direction] .muxui-table-sort-icon {
+.muxui-table-column[data-muxui-state-sort-direction] .muxui-table-sort-icon {
   visibility: visible;
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-table-column[data-sort-direction='descending'] .muxui-table-sort-icon {
+.muxui-table-column[data-muxui-state-sort-direction='descending'] .muxui-table-sort-icon {
   transform: none;
 }
 
-.muxui-table:not([data-disabled]) .muxui-table-column[data-allows-sorting]:is([data-hovered], [data-focus-visible]) .muxui-table-sort-icon {
+.muxui-table:not([data-muxui-state-disabled]) .muxui-table-column[data-muxui-state-allows-sorting]:is([data-muxui-state-hovered], [data-muxui-state-focus-visible]) .muxui-table-sort-icon {
   visibility: visible;
 }
 
@@ -1956,22 +1956,22 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-table-row[data-hovered] {
+.muxui-table-row[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-table-row[data-selected] {
+.muxui-table-row[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-background);
 }
 
-.muxui-table-row[data-focus-visible] {
+.muxui-table-row[data-muxui-state-focus-visible] {
   box-shadow:
     inset 0 -1px var(--muxui-table-row-separator, transparent),
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
-.muxui-table-row[data-disabled] {
+.muxui-table-row[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -1984,7 +1984,7 @@
   outline: none;
 }
 
-.muxui-table-cell[data-focus-visible] {
+.muxui-table-cell[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -1996,7 +1996,7 @@
   gap: 0;
 }
 
-.muxui-tabs[data-orientation='vertical'] {
+.muxui-tabs[data-muxui-state-orientation='vertical'] {
   flex-direction: row;
 }
 
@@ -2008,7 +2008,7 @@
   gap: 0;
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tab-list {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tab-list {
   flex-direction: column;
   border-bottom: none;
   border-inline-end: 2px solid var(--muxui-component-tabs-vertical-list-border);
@@ -2039,28 +2039,28 @@
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tab {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tab {
   justify-content: flex-start;
   text-align: left;
 }
 
-.muxui-tab:hover:not([data-disabled], [data-selected]) {
+.muxui-tab:hover:not([data-muxui-state-disabled], [data-muxui-state-selected]) {
   color: var(--muxui-semantic-content-default);
   background-color: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-tab:focus-visible:not([data-selected], [aria-selected='true']) {
+.muxui-tab:focus-visible:not([data-muxui-state-selected], [aria-selected='true']) {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
-.muxui-tab[data-selected] {
+.muxui-tab[data-muxui-state-selected] {
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-tab[data-disabled] {
+.muxui-tab[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
@@ -2077,12 +2077,12 @@
 
 /* React Aria makes a panel focusable only when it has no tabbable content, so this ring marks that focus stop. */
 .muxui-tab-panel:focus-visible,
-.muxui-tab-panel[data-focus-visible] {
+.muxui-tab-panel[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
 
-.muxui-tabs[data-orientation='vertical'] .muxui-tab-panel {
+.muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tab-panel {
   padding: 0 calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
 }
 
@@ -2104,7 +2104,7 @@
   outline: none;
 }
 
-.muxui-tag-list[data-focus-visible],
+.muxui-tag-list[data-muxui-state-focus-visible],
 .muxui-tag-list:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
@@ -2444,36 +2444,36 @@
   --muxui-tag-fill-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 20%, transparent);
 }
 
-.muxui-tag[data-hovered]:not([data-selected], [data-disabled]) {
+.muxui-tag[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled]) {
   background-color: var(--muxui-tag-fill-hover);
 }
 
-.muxui-tag[data-pressed]:not([data-selected], [data-disabled]) {
+.muxui-tag[data-muxui-state-pressed]:not([data-muxui-state-selected], [data-muxui-state-disabled]) {
   background-color: var(--muxui-tag-fill-pressed);
 }
 
-.muxui-tag[data-selected]:not([data-disabled]) {
+.muxui-tag[data-muxui-state-selected]:not([data-muxui-state-disabled]) {
   --muxui-tag-dot: currentcolor;
   background-color: var(--muxui-tag-selected-background);
   box-shadow: none;
   color: var(--muxui-tag-selected-text);
 }
 
-.muxui-tag[data-selected][data-hovered]:not([data-disabled]) {
+.muxui-tag[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 10%, transparent),
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 10%, transparent)
   );
 }
 
-.muxui-tag[data-selected][data-pressed]:not([data-disabled]) {
+.muxui-tag[data-muxui-state-selected][data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 18%, transparent),
     color-mix(in srgb, var(--muxui-tag-selected-overlay) 18%, transparent)
   );
 }
 
-.muxui-tag[data-disabled] {
+.muxui-tag[data-muxui-state-disabled] {
   --muxui-tag-dot: currentcolor;
   background-color: var(--muxui-semantic-surface-hover);
   box-shadow: none;
@@ -2482,7 +2482,7 @@
   pointer-events: none;
 }
 
-.muxui-tag[data-focus-visible],
+.muxui-tag[data-muxui-state-focus-visible],
 .muxui-tag:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
@@ -2508,7 +2508,7 @@
   transition: background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing), color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tag-remove:hover:not([data-disabled]) {
+.muxui-tag-remove:hover:not([data-muxui-state-disabled]) {
   background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
 }
 
@@ -2517,7 +2517,7 @@
   outline-offset: 2px;
 }
 
-.muxui-tag-remove[data-disabled] {
+.muxui-tag-remove[data-muxui-state-disabled] {
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -2583,12 +2583,12 @@
   box-shadow: none;
 }
 
-.muxui-toolbar > .muxui-button:hover:not([data-disabled], [data-pending]) {
+.muxui-toolbar > .muxui-button:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
 }
 
-.muxui-toolbar > .muxui-button:active:not([data-disabled], [data-pending]),
-.muxui-toolbar > .muxui-button[data-pressed]:not([data-disabled], [data-pending]) {
+.muxui-toolbar > .muxui-button:active:not([data-muxui-state-disabled], [data-muxui-state-pending]),
+.muxui-toolbar > .muxui-button[data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
 }
 
@@ -2604,7 +2604,7 @@
   outline: none;
 }
 
-.muxui-tree[data-focus-visible] {
+.muxui-tree[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -2619,11 +2619,11 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-tree-item[data-hovered] {
+.muxui-tree-item[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
-.muxui-tree[data-muxui-tree-motion-ready='true'] > .muxui-tree-item[data-hovered]:not([data-selected]):not([aria-selected='true']) {
+.muxui-tree[data-muxui-tree-motion-ready='true'] > .muxui-tree-item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']) {
   background-color: transparent;
 }
 
@@ -2650,18 +2650,18 @@
   transition: none;
 }
 
-.muxui-tree-item[data-selected] {
+.muxui-tree-item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-selection-background);
 }
 
-.muxui-tree-item[data-focus-visible] {
+.muxui-tree-item[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
   border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
-.muxui-tree-item[data-disabled] {
+.muxui-tree-item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -2720,14 +2720,14 @@
 
 /* Keep the actual RAC chevron button over the visible indicator
    so pointer and keyboard expansion use the same control. */
-.muxui-tree-item[data-has-child-items] .muxui-tree-item-content::before {
+.muxui-tree-item[data-muxui-state-has-child-items] .muxui-tree-item-content::before {
   content: '\25B6';
   display: inline-block;
   font-size: 0.6em;
   transition: transform var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-tree-item[data-expanded] .muxui-tree-item-content::before {
+.muxui-tree-item[data-muxui-state-expanded] .muxui-tree-item-content::before {
   transform: rotate(90deg);
 }
 
@@ -2740,9 +2740,9 @@
   pointer-events: none;
 }
 
-.muxui-list-box-item[data-disabled],
+.muxui-list-box-item[data-muxui-state-disabled],
 .muxui-list-box-item[aria-disabled='true'],
-.muxui-menu-item[data-disabled],
+.muxui-menu-item[data-muxui-state-disabled],
 .muxui-menu-item[aria-disabled='true'] {
   opacity: 0.45;
   background-color: transparent;
@@ -2785,7 +2785,7 @@
 	  background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-token-field:hover:not(:focus-within, [data-disabled], [aria-disabled='true']) {
+.muxui-token-field:hover:not(:focus-within, [data-muxui-state-disabled], [aria-disabled='true']) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
@@ -2814,7 +2814,7 @@
 	vertical-align: middle;
 }
 
-.muxui-token-field[data-disabled],
+.muxui-token-field[data-muxui-state-disabled],
 .muxui-token-field[aria-disabled='true'] {
   cursor: not-allowed;
   outline-color: var(--muxui-field-border-color);
@@ -2826,14 +2826,14 @@
   outline: none;
 }
 
-.muxui-token-field[data-disabled] .muxui-token-input,
+.muxui-token-field[data-muxui-state-disabled] .muxui-token-input,
 .muxui-token-field[aria-disabled='true'] .muxui-token-input {
   cursor: not-allowed;
   color: var(--muxui-semantic-content-strong);
   pointer-events: none;
 }
 
-.muxui-token-field[data-disabled] .muxui-token-placeholder,
+.muxui-token-field[data-muxui-state-disabled] .muxui-token-placeholder,
 .muxui-token-field[aria-disabled='true'] .muxui-token-placeholder {
   color: var(--muxui-semantic-content-default);
 }
@@ -2859,28 +2859,28 @@
   }
 
   :where(
-    .muxui-color-area[data-disabled],
-    .muxui-color-area-thumb[data-disabled],
-    .muxui-color-slider[data-disabled],
-    .muxui-color-slider-thumb[data-disabled],
-    .muxui-color-swatch-picker-item[data-disabled],
-    .muxui-color-wheel[data-disabled],
-    .muxui-color-wheel-thumb[data-disabled],
-    .muxui-grid-list-item[data-disabled],
-    .muxui-list-box-item[data-disabled],
+    .muxui-color-area[data-muxui-state-disabled],
+    .muxui-color-area-thumb[data-muxui-state-disabled],
+    .muxui-color-slider[data-muxui-state-disabled],
+    .muxui-color-slider-thumb[data-muxui-state-disabled],
+    .muxui-color-swatch-picker-item[data-muxui-state-disabled],
+    .muxui-color-wheel[data-muxui-state-disabled],
+    .muxui-color-wheel-thumb[data-muxui-state-disabled],
+    .muxui-grid-list-item[data-muxui-state-disabled],
+    .muxui-list-box-item[data-muxui-state-disabled],
     .muxui-list-box-item[aria-disabled='true'],
-    .muxui-menu-item[data-disabled],
+    .muxui-menu-item[data-muxui-state-disabled],
     .muxui-menu-item[aria-disabled='true'],
-    .muxui-radio[data-disabled],
-    .muxui-slider[data-disabled],
-    .muxui-table-row[data-disabled],
-    .muxui-tree-item[data-disabled],
-    .muxui-tab[data-disabled]
+    .muxui-radio[data-muxui-state-disabled],
+    .muxui-slider[data-muxui-state-disabled],
+    .muxui-table-row[data-muxui-state-disabled],
+    .muxui-tree-item[data-muxui-state-disabled],
+    .muxui-tab[data-muxui-state-disabled]
   ) {
     opacity: 1;
   }
 
-  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[data-selected],
+  :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[data-muxui-state-selected],
   :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row)[aria-selected='true'] {
     background: Highlight;
     color: HighlightText;
@@ -2891,7 +2891,7 @@
     outline-offset: 1px;
   }
 
-  .muxui-tag-list[data-focus-visible],
+  .muxui-tag-list[data-muxui-state-focus-visible],
   .muxui-tag-list:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
@@ -2908,22 +2908,22 @@
     forced-color-adjust: none;
   }
 
-  .muxui-tag[data-selected] {
+  .muxui-tag[data-muxui-state-selected] {
     background: Highlight !important;
     color: HighlightText !important;
   }
 
-  .muxui-tag[data-selected][data-variant='dot']::before {
+  .muxui-tag[data-muxui-state-selected][data-variant='dot']::before {
     background-color: HighlightText;
   }
 
-  .muxui-tag[data-focus-visible],
+  .muxui-tag[data-muxui-state-focus-visible],
   .muxui-tag:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
   }
 
-  .muxui-list-box-item[data-selected],
+  .muxui-list-box-item[data-muxui-state-selected],
   .muxui-list-box-item[aria-selected='true'] {
     background: Highlight !important;
     color: HighlightText !important;
@@ -2934,11 +2934,11 @@
   }
 
   .muxui-table-column .muxui-table-sort-icon,
-  .muxui-table-column[data-sort-direction] .muxui-table-sort-icon {
+  .muxui-table-column[data-muxui-state-sort-direction] .muxui-table-sort-icon {
     color: CanvasText;
   }
 
-  .muxui-radio[data-focus-visible] .muxui-radio-indicator {
+  .muxui-radio[data-muxui-state-focus-visible] .muxui-radio-indicator {
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
@@ -2965,26 +2965,26 @@
 }
 
 @media (forced-colors: active) {
-  .muxui-list-box-item[data-focus-visible] {
+  .muxui-list-box-item[data-muxui-state-focus-visible] {
     outline: 2px solid Highlight;
     outline-color: Highlight;
   }
 }
 
 @media (prefers-contrast: more) {
-  .muxui-list-box-item[data-focus-visible] {
+  .muxui-list-box-item[data-muxui-state-focus-visible] {
     outline-width: 3px;
   }
 }
 
 /* Calendar cells keep the transparent disabled/outside-month treatment. */
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-calendar-cell[data-disabled],
-  :scope .muxui-calendar-cell[data-outside-month],
-  :scope .muxui-calendar-cell[data-unavailable],
-  :scope .muxui-range-calendar-cell[data-disabled],
-  :scope .muxui-range-calendar-cell[data-outside-month],
-  :scope .muxui-range-calendar-cell[data-unavailable] {
+  :scope .muxui-calendar-cell[data-muxui-state-disabled],
+  :scope .muxui-calendar-cell[data-muxui-state-outside-month],
+  :scope .muxui-calendar-cell[data-muxui-state-unavailable],
+  :scope .muxui-range-calendar-cell[data-muxui-state-disabled],
+  :scope .muxui-range-calendar-cell[data-muxui-state-outside-month],
+  :scope .muxui-range-calendar-cell[data-muxui-state-unavailable] {
     background-color: transparent;
     color: var(--muxui-semantic-content-default);
     opacity: 0.35;
@@ -2992,25 +2992,25 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-calendar-cell[data-disabled],
-  :scope .muxui-calendar-cell[data-outside-month],
-  :scope .muxui-calendar-cell[data-unavailable],
-  :scope .muxui-range-calendar-cell[data-disabled],
-  :scope .muxui-range-calendar-cell[data-outside-month],
-  :scope .muxui-range-calendar-cell[data-unavailable] {
+  :scope .muxui-calendar-cell[data-muxui-state-disabled],
+  :scope .muxui-calendar-cell[data-muxui-state-outside-month],
+  :scope .muxui-calendar-cell[data-muxui-state-unavailable],
+  :scope .muxui-range-calendar-cell[data-muxui-state-disabled],
+  :scope .muxui-range-calendar-cell[data-muxui-state-outside-month],
+  :scope .muxui-range-calendar-cell[data-muxui-state-unavailable] {
     background-color: transparent;
     color: var(--muxui-semantic-content-default);
     opacity: 0.35;
   }
 }
 
-/* RAC exposes keyboard focus on calendar controls as data-focus-visible. Keep
+/* RAC exposes keyboard focus on calendar controls as data-muxui-state-focus-visible. Keep
    the two-ring focus treatment on the equivalent navigation controls and
-   cells without styling programmatic data-focused state. */
-.muxui-calendar-previous[data-focus-visible],
-.muxui-calendar-next[data-focus-visible],
-.muxui-calendar-cell[data-focus-visible],
-.muxui-range-calendar-cell[data-focus-visible] {
+   cells without styling programmatic data-muxui-state-focused state. */
+.muxui-calendar-previous[data-muxui-state-focus-visible],
+.muxui-calendar-next[data-muxui-state-focus-visible],
+.muxui-calendar-cell[data-muxui-state-focus-visible],
+.muxui-range-calendar-cell[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
@@ -3043,33 +3043,33 @@
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toolbar > .muxui-button:hover:not([data-disabled], [data-pending]) {
+  :scope .muxui-toolbar > .muxui-button:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
     background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toolbar > .muxui-button:hover:not([data-disabled], [data-pending]) {
+  :scope .muxui-toolbar > .muxui-button:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
     background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toolbar > .muxui-button:active:not([data-disabled], [data-pending]),
-  :scope .muxui-toolbar > .muxui-button[data-pressed]:not([data-disabled], [data-pending]) {
+  :scope .muxui-toolbar > .muxui-button:active:not([data-muxui-state-disabled], [data-muxui-state-pending]),
+  :scope .muxui-toolbar > .muxui-button[data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
     background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toolbar > .muxui-button:active:not([data-disabled], [data-pending]),
-  :scope .muxui-toolbar > .muxui-button[data-pressed]:not([data-disabled], [data-pending]) {
+  :scope .muxui-toolbar > .muxui-button:active:not([data-muxui-state-disabled], [data-muxui-state-pending]),
+  :scope .muxui-toolbar > .muxui-button[data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
     background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input:not(:hover, :focus, [data-focused], [data-disabled], [data-invalid]) {
+  :scope .muxui-color-field .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-disabled], [data-muxui-state-invalid]) {
     background-color: var(--muxui-field-bg);
     outline-color: var(--muxui-field-border-color);
     color: var(--muxui-field-color);
@@ -3084,10 +3084,10 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select:not([data-disabled], [data-invalid]) > .muxui-select-trigger:not(:hover, :focus, :focus-visible, [data-focus-visible], [data-open], [data-disabled], [data-invalid]),
-  :scope .muxui-combo-box:not([data-disabled], [data-invalid]) .muxui-combo-control:not(:hover, :focus-within, [data-disabled], [data-invalid]),
-  :scope .muxui-combo-control:not(:hover, :focus-within, [data-disabled], [data-invalid]),
-  :scope .muxui-combo-box .muxui-field-input:not(:hover, :focus, [data-focused], [data-disabled], [data-invalid]) {
+  :scope .muxui-select:not([data-muxui-state-disabled], [data-muxui-state-invalid]) > .muxui-select-trigger:not(:hover, :focus, :focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
+  :scope .muxui-combo-box:not([data-muxui-state-disabled], [data-muxui-state-invalid]) .muxui-combo-control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
+  :scope .muxui-combo-control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
+  :scope .muxui-combo-box .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-disabled], [data-muxui-state-invalid]) {
     background-color: var(--muxui-field-bg);
     outline-color: var(--muxui-field-border-color);
     color: var(--muxui-field-color);
@@ -3095,11 +3095,11 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input[data-disabled],
-  :scope .muxui-select-trigger[data-disabled],
-  :scope .muxui-combo-control[data-disabled],
-  :scope .muxui-combo-box[data-disabled] .muxui-combo-control,
-  :scope .muxui-token-field[data-disabled],
+  :scope .muxui-color-field .muxui-field-input[data-muxui-state-disabled],
+  :scope .muxui-select-trigger[data-muxui-state-disabled],
+  :scope .muxui-combo-control[data-muxui-state-disabled],
+  :scope .muxui-combo-box[data-muxui-state-disabled] .muxui-combo-control,
+  :scope .muxui-token-field[data-muxui-state-disabled],
   :scope .muxui-token-field[aria-disabled='true'] {
     background-color: var(--muxui-semantic-color-neutral-default-96);
   }
@@ -3150,16 +3150,16 @@
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 
-  :scope .muxui-combo-box[data-disabled] > .muxui-field-label,
-  :scope .muxui-select[data-disabled] > .muxui-field-label {
+  :scope .muxui-combo-box[data-muxui-state-disabled] > .muxui-field-label,
+  :scope .muxui-select[data-muxui-state-disabled] > .muxui-field-label {
     color: var(--muxui-semantic-content-default);
     opacity: 0.45;
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-combo-box[data-disabled] > .muxui-field-label,
-  :scope .muxui-select[data-disabled] > .muxui-field-label {
+  :scope .muxui-combo-box[data-muxui-state-disabled] > .muxui-field-label,
+  :scope .muxui-select[data-muxui-state-disabled] > .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-40);
     opacity: 0.45;
   }
@@ -3167,7 +3167,7 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
-    .muxui-select-value[data-placeholder],
+    .muxui-select-value[data-muxui-state-placeholder],
     .muxui-select-arrow,
     .muxui-combo-box-trigger
   ) {
@@ -3176,8 +3176,8 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-trigger[data-placeholder],
-  :scope .muxui-select-trigger [data-placeholder] {
+  :scope .muxui-select-trigger[data-muxui-state-placeholder],
+  :scope .muxui-select-trigger [data-muxui-state-placeholder] {
     color: var(--muxui-semantic-color-neutral-default-60);
   }
 }
@@ -3198,27 +3198,27 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-select-option, .muxui-combo-box-option)[data-focused] {
+  :scope :where(.muxui-select-option, .muxui-combo-box-option)[data-muxui-state-focused] {
     background-color: var(--muxui-semantic-color-neutral-default-96);
     color: var(--muxui-semantic-color-neutral-default-20);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-value[data-placeholder] {
+  :scope .muxui-select-value[data-muxui-state-placeholder] {
     color: var(--muxui-semantic-color-neutral-50);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-value[data-placeholder] {
+  :scope .muxui-select-value[data-muxui-state-placeholder] {
     color: var(--muxui-semantic-color-neutral-50);
   }
 }
 
 /* Enabled placeholder text needs the local neutral-60 contrast correction;
    disabled controls retain neutral-50 plus disabled treatment. */
-.muxui-select:not([data-disabled], [aria-disabled='true']) .muxui-select-value[data-placeholder] {
+.muxui-select:not([data-muxui-state-disabled], [aria-disabled='true']) .muxui-select-value[data-muxui-state-placeholder] {
   color: var(--muxui-semantic-color-neutral-60);
 }
 
@@ -3234,7 +3234,7 @@
     border-color: var(--muxui-semantic-color-neutral-18);
   }
 
-  :scope .muxui-tab:not([data-selected], [aria-selected='true']) {
+  :scope .muxui-tab:not([data-muxui-state-selected], [aria-selected='true']) {
     color: var(--muxui-component-tabs-tab-foreground);
   }
 }
@@ -3277,10 +3277,10 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-grid-list-item:not(
-    [data-selected],
-    [data-disabled],
-    [data-dragging],
-    [data-drop-target]
+    [data-muxui-state-selected],
+    [data-muxui-state-disabled],
+    [data-muxui-state-dragging],
+    [data-muxui-state-drop-target]
   ) {
     background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
     color: var(--muxui-semantic-color-neutral-default-20);
@@ -3295,15 +3295,15 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
-    [data-selected],
+    [data-muxui-state-selected],
     [aria-selected='true'],
-    [data-disabled],
+    [data-muxui-state-disabled],
     [aria-disabled='true'],
-    [data-dragging],
-    [data-drop-target],
-    [data-pressed],
+    [data-muxui-state-dragging],
+    [data-muxui-state-drop-target],
+    [data-muxui-state-pressed],
     [aria-pressed='true'],
-    [data-focus-visible],
+    [data-muxui-state-focus-visible],
     :focus-visible
   ) {
     background-color: transparent;
@@ -3312,15 +3312,15 @@
 }
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
-    [data-selected],
+    [data-muxui-state-selected],
     [aria-selected='true'],
-    [data-disabled],
+    [data-muxui-state-disabled],
     [aria-disabled='true'],
-    [data-dragging],
-    [data-drop-target],
-    [data-pressed],
+    [data-muxui-state-dragging],
+    [data-muxui-state-drop-target],
+    [data-muxui-state-pressed],
     [aria-pressed='true'],
-    [data-focus-visible],
+    [data-muxui-state-focus-visible],
     :focus-visible
   ) {
     background-color: transparent;
@@ -3357,14 +3357,14 @@
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-table[data-focus-visible],
-  :scope .muxui-table-column[data-focus-visible],
-  :scope .muxui-table-row[data-focus-visible],
-  :scope .muxui-table-cell[data-focus-visible],
-  :scope .muxui-tabs .muxui-tab:focus-visible:not([data-selected], [aria-selected='true']),
-  :scope .muxui-tabs .muxui-tab[data-focus-visible]:not([data-selected], [aria-selected='true']),
-  :scope .muxui-grid-list[data-focus-visible],
-  :scope .muxui-list-box[data-focus-visible] {
+  :scope .muxui-table[data-muxui-state-focus-visible],
+  :scope .muxui-table-column[data-muxui-state-focus-visible],
+  :scope .muxui-table-row[data-muxui-state-focus-visible],
+  :scope .muxui-table-cell[data-muxui-state-focus-visible],
+  :scope .muxui-tabs .muxui-tab:focus-visible:not([data-muxui-state-selected], [aria-selected='true']),
+  :scope .muxui-tabs .muxui-tab[data-muxui-state-focus-visible]:not([data-muxui-state-selected], [aria-selected='true']),
+  :scope .muxui-grid-list[data-muxui-state-focus-visible],
+  :scope .muxui-list-box[data-muxui-state-focus-visible] {
     box-shadow:
       inset 0 -1px var(--muxui-table-row-separator, transparent),
       0 0 0 2px var(--muxui-focus-ring-inner),
@@ -3458,14 +3458,14 @@
   user-select: none;
 }
 
-.muxui-virtualizer-item[data-disabled],
+.muxui-virtualizer-item[data-muxui-state-disabled],
 .muxui-virtualizer-item[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-virtualizer-item[data-focused] {
+.muxui-virtualizer-item[data-muxui-state-focused] {
   background-color: var(--muxui-item-focus-bg);
   color: var(--muxui-item-focus-color);
 }
@@ -3477,7 +3477,7 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-virtualizer-item[data-focused] {
+  :scope .muxui-virtualizer-item[data-muxui-state-focused] {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     color: var(--muxui-semantic-color-neutral-default-18);
   }
@@ -3492,7 +3492,7 @@
   }
 }
 
-.muxui-virtualizer[data-focus-visible] {
+.muxui-virtualizer[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
@@ -3503,8 +3503,8 @@
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tree[data-focus-visible],
-  :scope .muxui-tree-item[data-focus-visible] {
+  :scope .muxui-tree[data-muxui-state-focus-visible],
+  :scope .muxui-tree-item[data-muxui-state-focus-visible] {
     box-shadow:
       0 0 0 2px var(--muxui-focus-ring-inner),
       0 0 0 4px var(--muxui-focus-ring-outer);
@@ -3522,7 +3522,7 @@
   }
 }
 
-.muxui-radio[data-focus-visible] .muxui-radio-indicator {
+.muxui-radio[data-muxui-state-focus-visible] .muxui-radio-indicator {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -3536,13 +3536,13 @@
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select[data-invalid] > .muxui-field-label {
+  :scope .muxui-select[data-muxui-state-invalid] > .muxui-field-label {
     color: var(--muxui-semantic-feedback-invalid);
   }
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-combo-box[data-invalid] > .muxui-field-label {
+  :scope .muxui-combo-box[data-muxui-state-invalid] > .muxui-field-label {
     color: var(--muxui-semantic-feedback-invalid);
   }
 }
@@ -3560,20 +3560,20 @@
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-radio-group[data-invalid], .muxui-radio-group-field[data-invalid]) .muxui-field-label {
+  :scope :where(.muxui-radio-group[data-muxui-state-invalid], .muxui-radio-group-field[data-muxui-state-invalid]) .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }
 
-.muxui-color-swatch-picker-item[data-focus-visible],
+.muxui-color-swatch-picker-item[data-muxui-state-focus-visible],
 .muxui-color-swatch-picker-item:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-color-swatch-picker-item[data-selected][data-focus-visible],
-.muxui-color-swatch-picker-item[data-selected]:focus-visible {
+.muxui-color-swatch-picker-item[data-muxui-state-selected][data-muxui-state-focus-visible],
+.muxui-color-swatch-picker-item[data-muxui-state-selected]:focus-visible {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-selection-track),
     0 0 0 4px var(--muxui-focus-ring-outer);
@@ -3594,13 +3594,13 @@
 /* The disabled slider track uses the dark neutral-22 surface. The
    disabled-track rule above otherwise wins over the dark track token. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-slider[data-disabled] .muxui-slider-track {
+  :scope .muxui-slider[data-muxui-state-disabled] .muxui-slider-track {
     background-color: var(--muxui-semantic-color-neutral-default-88);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-list-box-item[data-focused] {
+  :scope .muxui-list-box-item[data-muxui-state-focused] {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     color: var(--muxui-semantic-color-neutral-default-18);
   }
@@ -3632,7 +3632,7 @@
     top: 1px;
   }
 
-  :scope .muxui-color-field[data-disabled] > .muxui-field-label {
+  :scope .muxui-color-field[data-muxui-state-disabled] > .muxui-field-label {
     color: var(--muxui-semantic-content-default);
     opacity: 0.45;
   }
@@ -3644,27 +3644,27 @@
     top: 1px;
   }
 
-  :scope .muxui-color-field[data-disabled] > .muxui-field-label {
+  :scope .muxui-color-field[data-muxui-state-disabled] > .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-40);
     opacity: 0.45;
   }
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field[data-invalid] > .muxui-field-label {
+  :scope .muxui-color-field[data-muxui-state-invalid] > .muxui-field-label {
     color: var(--muxui-semantic-feedback-invalid);
   }
 }
 
-.muxui-range-calendar-cell[data-selection-start] {
+.muxui-range-calendar-cell[data-muxui-state-selection-start] {
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
 
-.muxui-range-calendar-cell[data-selection-end] {
+.muxui-range-calendar-cell[data-muxui-state-selection-end] {
   border-radius: 0 var(--muxui-semantic-shape-pill-radius) var(--muxui-semantic-shape-pill-radius) 0;
 }
 
-.muxui-range-calendar-cell[data-selection-start][data-selection-end] {
+.muxui-range-calendar-cell[data-muxui-state-selection-start][data-muxui-state-selection-end] {
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
@@ -3689,21 +3689,21 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-selected] .muxui-radio-indicator {
+  :scope .muxui-radio[data-muxui-state-selected] .muxui-radio-indicator {
     background-color: var(--muxui-semantic-color-neutral-default-98);
     border-color: var(--muxui-semantic-action-selection-background);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
+  :scope .muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     border-color: var(--muxui-semantic-color-neutral-default-40);
   }
 }
 
 @media (forced-colors: none) {
-  .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
+  .muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
     background-color: var(--muxui-semantic-surface-raised);
     background-image: linear-gradient(
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
@@ -3712,7 +3712,7 @@
   }
 
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
+    :scope .muxui-radio[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected]) .muxui-radio-indicator {
       background-color: var(--muxui-semantic-color-neutral-default-98);
       background-image: linear-gradient(
         color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
@@ -3726,16 +3726,16 @@
    ties the dark selected rule and must stay after it; the hovered selector
    outranks the dark hover rule. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
-  :scope .muxui-radio[data-invalid][data-hovered]:not([data-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
+  :scope .muxui-radio[data-muxui-state-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
+  :scope .muxui-radio[data-muxui-state-invalid][data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
     border-color: var(--muxui-semantic-feedback-invalid-border);
   }
 }
 
 /* Range endpoints keep selection paint when they fall outside this month. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-range-calendar-cell[data-selection-start],
-  :scope .muxui-range-calendar-cell[data-selection-end] {
+  :scope .muxui-range-calendar-cell[data-muxui-state-selection-start],
+  :scope .muxui-range-calendar-cell[data-muxui-state-selection-end] {
     background-color: var(--muxui-semantic-selection-track);
     color: var(--muxui-semantic-action-foreground);
   }
@@ -3747,9 +3747,9 @@
 }
 
 @media (forced-colors: active) {
-  .muxui-color-swatch-picker[data-focus-visible],
+  .muxui-color-swatch-picker[data-muxui-state-focus-visible],
   .muxui-color-swatch-picker:focus-visible,
-  .muxui-color-swatch-picker-item[data-focus-visible],
+  .muxui-color-swatch-picker-item[data-muxui-state-focus-visible],
   .muxui-color-swatch-picker-item:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;

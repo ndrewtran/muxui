@@ -1,10 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
-import {
-  Modal as AriaModal,
-  OverlayTriggerStateContext,
-  PopoverContext,
-} from 'react-aria-components';
+import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-components';
+import { AriaModal } from './substrate.ts';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const DIALOG_REDUCED_ATTRIBUTE = 'data-muxui-dialog-reduced';

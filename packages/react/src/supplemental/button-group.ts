@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, ReactNode, RefAttributes } from 'react';
-import { Group as AriaGroup } from 'react-aria-components';
+import { AriaGroup } from '../substrate.ts';
 import { h, cx, dataState } from './part-utils.ts';
 
 /**
@@ -42,7 +42,7 @@ export const ButtonGroup: ForwardRefExoticComponent<ButtonGroupProps & RefAttrib
     'aria-label': resolvedRole === 'presentation' ? undefined : ariaLabel,
     'aria-labelledby': resolvedRole === 'presentation' ? undefined : ariaLabelledby,
     isDisabled: disabled,
-    ...{ 'data-orientation': orientation === 'vertical' ? 'vertical' : 'horizontal', 'data-attached': dataState(attached) },
+    ...{ 'data-muxui-state-orientation': orientation === 'vertical' ? 'vertical' : 'horizontal', 'data-attached': dataState(attached) },
     className: cx('muxui-button-group', `muxui-button-group--${orientation === 'vertical' ? 'vertical' : 'horizontal'}`, attached && 'muxui-button-group--attached', className),
   }, typeof children === 'function' ? null : children);
 });

@@ -38,7 +38,7 @@ test('real browser RangeCalendar selects a start and end date with the keyboard'
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
     assert.equal(await page.locator('#range').textContent(), '2026-03-11/2026-03-22');
-    const selected = await page.locator('.muxui-range-calendar-cell[data-selected="true"]').allTextContents();
+    const selected = await page.locator('.muxui-range-calendar-cell[data-muxui-state-selected="true"]').allTextContents();
     assert.equal(selected.length, 12);
     assert.equal(selected[0], '11');
     assert.equal(selected.at(-1), '22');

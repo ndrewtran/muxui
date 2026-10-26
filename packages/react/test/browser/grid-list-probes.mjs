@@ -28,7 +28,7 @@ export function measureFocusRing() {
     if ((overflowX !== 'visible' || overflowY !== 'visible') && !within(node)) clippedBy.push(node.tagName.toLowerCase() + (node.className ? `.${node.className}` : ''));
   }
   return {
-    focusVisible: row.hasAttribute('data-focus-visible'),
+    focusVisible: row.hasAttribute('data-muxui-state-focus-visible'),
     painted: styles.outlineStyle !== 'none' || styles.boxShadow !== 'none',
     insideRoot: within(root),
     clippedBy,

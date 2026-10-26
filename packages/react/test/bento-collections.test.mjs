@@ -25,7 +25,7 @@ test('compound ListBox hydrates sections, controls selection, and keeps root-dis
     assert.deepEqual(recoverable, []);
     assert.equal(itemRef.current.tagName, 'DIV');
     assert.equal(container.querySelector('header').textContent, 'Numbers');
-    assert.equal(container.querySelector('[role="listbox"]').dataset.layout, 'grid');
+    assert.equal(container.querySelector('[role="listbox"]').dataset.muxuiStateLayout, 'grid');
     const options = [...container.querySelectorAll('[role="option"]')];
     await act(async () => options[1].click());
     assert.deepEqual(selected, [['two']]);

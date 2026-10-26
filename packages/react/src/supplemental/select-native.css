@@ -14,7 +14,7 @@
   line-height: var(--muxui-semantic-typography-compact-line-height);
 }
 
-.muxui-select-native-field[data-required] > .muxui-select-native__label::after {
+.muxui-select-native-field[data-muxui-state-required] > .muxui-select-native__label::after {
   content: ' *';
   color: var(--muxui-semantic-selection-track);
 }
@@ -48,19 +48,19 @@
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-select-native:hover:not(:focus, :focus-visible, [data-disabled], [data-invalid], :disabled) {
+.muxui-select-native:hover:not(:focus, :focus-visible, [data-muxui-state-disabled], [data-muxui-state-invalid], :disabled) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-select-native[data-invalid] {
+.muxui-select-native[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-select-native[data-invalid]:focus-visible {
+.muxui-select-native[data-muxui-state-invalid]:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-select-native[data-disabled],
+.muxui-select-native[data-muxui-state-disabled],
 .muxui-select-native:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -76,12 +76,12 @@
 
 .muxui-select-native__description { color: var(--muxui-field-description-color); }
 .muxui-select-native__error { color: var(--muxui-field-error-color); }
-.muxui-select-native-field[data-disabled] > .muxui-select-native__label {
+.muxui-select-native-field[data-muxui-state-disabled] > .muxui-select-native__label {
   color: var(--muxui-component-selectnative-disabled-label);
   opacity: 0.45;
 }
-.muxui-select-native-field[data-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
-.muxui-select-native-field[data-disabled][data-invalid] > .muxui-select-native__label {
+.muxui-select-native-field[data-muxui-state-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
+.muxui-select-native-field[data-muxui-state-disabled][data-muxui-state-invalid] > .muxui-select-native__label {
   color: var(--muxui-component-selectnative-disabled-invalid-label);
 }
 
@@ -100,13 +100,13 @@
     box-shadow: none;
   }
 
-  .muxui-select-native[data-disabled],
+  .muxui-select-native[data-muxui-state-disabled],
   .muxui-select-native:disabled {
     opacity: 1 !important;
     color: GrayText !important;
   }
 
-  .muxui-select-native-field[data-disabled] > .muxui-select-native__label {
+  .muxui-select-native-field[data-muxui-state-disabled] > .muxui-select-native__label {
     opacity: 1 !important;
   }
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { animate, LazyMotion, domAnimation, useMotionValue, useTransform } from 'motion/react';
 import { span as MotionSpan } from 'motion/react-m';
-import { SliderFill, SliderThumb, SliderTrack } from 'react-aria-components';
+import { AriaSliderFill as SliderFill, AriaSliderThumb as SliderThumb, AriaSliderTrack as SliderTrack } from './substrate.ts';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -96,7 +96,7 @@ export function SliderMotionTrack({ orientation, readOnly, name }) {
         // The thumb owns the native range input, so it carries the form name.
         name,
         className: 'muxui-slider-thumb',
-        'data-readonly': readOnly || undefined,
+        'data-muxui-state-read-only': readOnly || undefined,
       }, (renderProps) => React.createElement(SliderMotionThumb, { ...renderProps, orientation, readOnly, trackRef, thumbRef })),
     ),
   );

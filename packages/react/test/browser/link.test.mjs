@@ -111,7 +111,7 @@ for (const engine of browserEngines()) {
           return {
             tag: link.localName,
             ariaDisabled: link.getAttribute('aria-disabled'),
-            dataDisabled: link.getAttribute('data-disabled'),
+            dataDisabled: link.getAttribute('data-muxui-state-disabled'),
             pointerEvents: getComputedStyle(link).pointerEvents,
             opacity: getComputedStyle(link).opacity,
             buttonOpacity: getComputedStyle(button).opacity,

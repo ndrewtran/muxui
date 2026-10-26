@@ -1,10 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, RefAttributes } from 'react';
-import {
-  FieldError as AriaFieldError,
-  SwitchField as AriaSwitchField,
-  SwitchButton as AriaSwitchButton,
-} from 'react-aria-components';
+import { FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaSwitchField, AriaSwitchButton } from '../substrate.ts';
 import type { SwitchButtonProps as AriaSwitchButtonProps, SwitchFieldProps as AriaSwitchFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx, nativePart } from './part-utils.ts';

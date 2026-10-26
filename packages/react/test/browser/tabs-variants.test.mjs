@@ -135,18 +135,18 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
             };
           };
           const base = read();
-          node.setAttribute('data-hovered', '');
+          node.setAttribute('data-muxui-state-hovered', '');
           const hovered = read();
-          node.removeAttribute('data-hovered');
-          node.setAttribute('data-pressed', '');
+          node.removeAttribute('data-muxui-state-hovered');
+          node.setAttribute('data-muxui-state-pressed', '');
           const pressed = read();
-          node.removeAttribute('data-pressed');
-          node.setAttribute('data-focus-visible', '');
+          node.removeAttribute('data-muxui-state-pressed');
+          node.setAttribute('data-muxui-state-focus-visible', '');
           const focused = read();
-          node.removeAttribute('data-focus-visible');
-          node.setAttribute('data-disabled', '');
+          node.removeAttribute('data-muxui-state-focus-visible');
+          node.setAttribute('data-muxui-state-disabled', '');
           const disabled = read();
-          node.removeAttribute('data-disabled');
+          node.removeAttribute('data-muxui-state-disabled');
           return { base, hovered, pressed, focused, disabled };
         });
         assert.notEqual(states.hovered.background, states.base.background, `${scheme} ${variant} hover state is visible`);
@@ -177,16 +177,16 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
             };
           };
           const base = read();
-          node.setAttribute('data-hovered', '');
+          node.setAttribute('data-muxui-state-hovered', '');
           const hovered = read();
-          node.setAttribute('data-focus-visible', '');
+          node.setAttribute('data-muxui-state-focus-visible', '');
           const focusHovered = read();
-          node.removeAttribute('data-hovered');
+          node.removeAttribute('data-muxui-state-hovered');
           const focused = read();
-          node.removeAttribute('data-focus-visible');
-          node.setAttribute('data-disabled', '');
+          node.removeAttribute('data-muxui-state-focus-visible');
+          node.setAttribute('data-muxui-state-disabled', '');
           const disabled = read();
-          node.removeAttribute('data-disabled');
+          node.removeAttribute('data-muxui-state-disabled');
           return { base, hovered, focused, focusHovered, disabled };
         });
         assert.equal(states.base.boxShadow, 'none', `${scheme} ${variant} selected tab starts without a focus or hover shadow`);
@@ -254,12 +254,12 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
         return { background: style.backgroundColor, image: style.backgroundImage, outline: style.outlineWidth };
       };
       const base = read();
-      node.setAttribute('data-hovered', '');
+      node.setAttribute('data-muxui-state-hovered', '');
       const hovered = read();
-      node.removeAttribute('data-hovered');
-      node.setAttribute('data-pressed', '');
+      node.removeAttribute('data-muxui-state-hovered');
+      node.setAttribute('data-muxui-state-pressed', '');
       const pressed = read();
-      node.removeAttribute('data-pressed');
+      node.removeAttribute('data-muxui-state-pressed');
       node.focus();
       const focused = read();
       return { base, hovered, pressed, focused };
@@ -441,7 +441,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       outline: getComputedStyle(tab).outlineWidth,
       outlineStyle: getComputedStyle(tab).outlineStyle,
       active: document.activeElement === tab,
-      focusVisible: tab.hasAttribute('data-focus-visible'),
+      focusVisible: tab.hasAttribute('data-muxui-state-focus-visible'),
       selected: tab.getAttribute('aria-selected'),
     }));
     assert.equal(selectedAfterFocusMove.selected, 'true', 'moving keyboard focus keeps the selected tab selected');
@@ -453,7 +453,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       outline: getComputedStyle(tab).outlineWidth,
       offset: getComputedStyle(tab).outlineOffset,
       boxShadow: getComputedStyle(tab).boxShadow,
-      focusVisible: tab.hasAttribute('data-focus-visible'),
+      focusVisible: tab.hasAttribute('data-muxui-state-focus-visible'),
     }));
     assert.equal(selectedKeyboardFocus.focusVisible, true, 'keyboard navigation exposes focus-visible on the selected tab');
     assert.equal(selectedKeyboardFocus.outline, '2px', 'selected keyboard focus uses the accent ring');
@@ -476,7 +476,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const selectedAfterSecondFocusMove = await pillTabs.nth(1).evaluate((tab) => ({
       outline: getComputedStyle(tab).outlineWidth,
       outlineStyle: getComputedStyle(tab).outlineStyle,
-      focusVisible: tab.hasAttribute('data-focus-visible'),
+      focusVisible: tab.hasAttribute('data-muxui-state-focus-visible'),
       selected: tab.getAttribute('aria-selected'),
     }));
     assert.equal(selectedAfterSecondFocusMove.selected, 'true', 'manual activation keeps the previous selection while focus moves again');
@@ -495,7 +495,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const clickedSelected = await selectedSettings.evaluate((tab) => ({
       active: document.activeElement === tab,
       selected: tab.getAttribute('aria-selected'),
-      focusVisible: tab.hasAttribute('data-focus-visible'),
+      focusVisible: tab.hasAttribute('data-muxui-state-focus-visible'),
       outline: getComputedStyle(tab).outlineWidth,
       boxShadow: getComputedStyle(tab).boxShadow,
       background: getComputedStyle(tab).backgroundColor,
@@ -511,7 +511,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const blurredSelected = await selectedSettings.evaluate((tab) => ({
       active: document.activeElement === tab,
       selected: tab.getAttribute('aria-selected'),
-      focusVisible: tab.hasAttribute('data-focus-visible'),
+      focusVisible: tab.hasAttribute('data-muxui-state-focus-visible'),
       outline: getComputedStyle(tab).outlineWidth,
       outlineStyle: getComputedStyle(tab).outlineStyle,
     }));

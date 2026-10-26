@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
-import { ToggleButtonGroup as AriaToggleButtonGroup } from 'react-aria-components';
+import { AriaToggleButtonGroup } from './substrate.ts';
 import type { Key } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { ToggleButtonGroupMotion } from './toggle-button-group-motion.mjs';

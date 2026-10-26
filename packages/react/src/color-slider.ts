@@ -1,7 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes, SyntheticEvent } from 'react';
 import { ColorSliderMotionTrack } from './color-slider-motion.mjs';
-import { ColorSlider as AriaColorSlider, Label as AriaLabel } from 'react-aria-components';
+import { Label as AriaLabel } from 'react-aria-components';
+import { AriaColorSlider } from './substrate.ts';
 import type { Color } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
 import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
@@ -72,7 +73,7 @@ export const ColorSlider: ForwardRefExoticComponent<ColorSliderProps & RefAttrib
       }
     };
     const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-    return React.createElement('div', { ...{ 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined }, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly), onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+    return React.createElement('div', { ...{ 'aria-disabled': effectiveDisabled || undefined, 'data-muxui-state-disabled': effectiveDisabled || undefined, 'data-muxui-state-read-only': effectiveReadOnly || undefined }, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly), onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
       React.createElement(AriaColorSlider, {
         ref: assignSliderRef,
         channel,
@@ -82,8 +83,8 @@ export const ColorSlider: ForwardRefExoticComponent<ColorSliderProps & RefAttrib
         onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
         isDisabled: effectiveDisabled,
         orientation,
-        // React Aria's props do not name the data-readonly hook the styles read, and TypeScript accepts such a key in a call only from a spread.
-        ...{ 'data-readonly': effectiveReadOnly || undefined },
+        // React Aria's props do not name the data-muxui-state-read-only hook the styles read, and TypeScript accepts such a key in a call only from a spread.
+        ...{ 'data-muxui-state-read-only': effectiveReadOnly || undefined },
         className: classNames('muxui-color-slider', className),
         'aria-label': ariaLabel,
         'aria-labelledby': ariaLabelledby,

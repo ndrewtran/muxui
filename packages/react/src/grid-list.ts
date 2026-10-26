@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CSSProperties, ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import { GridListMotion } from './grid-list-motion.mjs';
-import { GridList as AriaGridList, GridListItem as AriaGridListItem } from 'react-aria-components';
+import { AriaGridList, AriaGridListItem } from './substrate.ts';
 import type { GridListProps as AriaGridListProps, Key } from 'react-aria-components';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
@@ -231,7 +231,7 @@ export const GridList: GridListComponent = /*#__PURE__*/ (() => {
       ref, id, style,
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
-      ...{ 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
+      ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-grid-list-item', className),
     }, React.createElement(GridListItemDisabledContext.Provider, { value: effectiveDisabled }, children));
   });

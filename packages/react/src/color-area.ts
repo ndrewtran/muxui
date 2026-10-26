@@ -1,11 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes, SyntheticEvent } from 'react';
-import {
-  ColorArea as AriaColorArea,
-  ColorAreaContext,
-  ColorPickerStateContext,
-  ColorThumb as AriaColorThumb,
-} from 'react-aria-components';
+import { ColorAreaContext, ColorPickerStateContext } from 'react-aria-components';
+import { AriaColorArea, AriaColorThumb } from './substrate.ts';
 import { classNames, accessibleName } from './control-utils.ts';
 import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
 import { colorValue, ColorPickerContext, useRememberedEdit } from './color-context.ts';
@@ -59,7 +55,7 @@ export const ColorArea: ForwardRefExoticComponent<ColorAreaProps & RefAttributes
       event.stopPropagation();
     }
   };
-  return React.createElement('div', { className: 'muxui-color-area-field', ...{ 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined }, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+  return React.createElement('div', { className: 'muxui-color-area-field', ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'data-muxui-state-read-only': effectiveReadOnly || undefined }, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
     label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
     // The area writes its edit to the picker itself, so it clears the context.
     React.createElement(ColorAreaContext.Provider, { value: null }, React.createElement(AriaColorArea, {
@@ -80,7 +76,7 @@ export const ColorArea: ForwardRefExoticComponent<ColorAreaProps & RefAttributes
       'aria-labelledby': labelledby,
       // React Aria's props do not name the data-* hooks the styles read or every capture handler, and TypeScript accepts such a key in a call only from a spread.
       ...{
-        'data-readonly': effectiveReadOnly || undefined,
+        'data-muxui-state-read-only': effectiveReadOnly || undefined,
         'data-muxui-color-paint': 'area',
         onPointerDownCapture: preventReadOnlyInteraction,
         onMouseDownCapture: preventReadOnlyInteraction,
@@ -94,7 +90,7 @@ export const ColorArea: ForwardRefExoticComponent<ColorAreaProps & RefAttributes
       className: 'muxui-color-area-thumb',
       ...{
         'data-muxui-color-paint': 'sample',
-        'data-readonly': effectiveReadOnly || undefined,
+        'data-muxui-state-read-only': effectiveReadOnly || undefined,
       },
     }))),
   );

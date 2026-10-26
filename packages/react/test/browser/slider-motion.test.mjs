@@ -87,7 +87,7 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
       await page.keyboard.down('ArrowRight');
       await waitForScale(page, 'pressed');
       assert.equal(await input(page).inputValue(), '61');
-      assert.equal(await thumb(page).getAttribute('data-focus-visible'), 'true');
+      assert.equal(await thumb(page).getAttribute('data-muxui-state-focus-visible'), 'true');
       assert.notEqual(await thumb(page).evaluate((node) => getComputedStyle(node).boxShadow), 'none');
       await page.keyboard.up('ArrowRight');
       await waitForScale(page, 'rest');

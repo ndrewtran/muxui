@@ -1,12 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
-import {
-  TagGroup as AriaTagGroup,
-  TagList as AriaTagList,
-  Tag as AriaTag,
-  Label as AriaLabel,
-} from 'react-aria-components';
+import { TagGroup as AriaTagGroup, Label as AriaLabel } from 'react-aria-components';
+import { AriaTagList, AriaTag } from './substrate.ts';
 import type { Key, Selection } from 'react-aria-components';
 import { IconButton } from './supplemental/icon-button.ts';
 import type { IconButtonProps } from './supplemental/icon-button.ts';

@@ -470,29 +470,29 @@
 }
 
 .muxui-text-area__textarea { min-block-size: 5rem; }
-.muxui-select-trigger[data-disabled] {
+.muxui-select-trigger[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
-.muxui-select[data-disabled] > .muxui-select-trigger[data-disabled] {
+.muxui-select[data-muxui-state-disabled] > .muxui-select-trigger[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
 }
-.muxui-select-trigger[data-focus-visible],
+.muxui-select-trigger[data-muxui-state-focus-visible],
 .muxui-select-trigger:focus-visible,
-.muxui-select-trigger[data-open],
+.muxui-select-trigger[data-muxui-state-open],
 .muxui-field-input:focus,
-.muxui-field-input[data-open],
-.muxui-date-input[data-focused],
-.muxui-field-input[data-focused],
+.muxui-field-input[data-muxui-state-open],
+.muxui-date-input[data-muxui-state-focused],
+.muxui-field-input[data-muxui-state-focused],
 .muxui-input:focus,
-.muxui-input[data-focused],
+.muxui-input[data-muxui-state-focused],
 .muxui-text-area__textarea:focus,
-.muxui-text-area__textarea[data-focused],
+.muxui-text-area__textarea[data-muxui-state-focused],
 .muxui-payment-input__input:focus,
-.muxui-payment-input__input[data-focused],
+.muxui-payment-input__input[data-muxui-state-focused],
 .muxui-command-palette__input:focus,
-.muxui-command-palette__input[data-focused],
+.muxui-command-palette__input[data-muxui-state-focused],
 .muxui-date-field > .muxui-date-input:focus-within,
 .muxui-time-field > .muxui-date-input:focus-within {
   outline-color: var(--muxui-field-focus-border);
@@ -544,9 +544,9 @@
   outline: none;
 }
 
-.muxui-select-trigger[data-open] .muxui-select-arrow,
+.muxui-select-trigger[data-muxui-state-open] .muxui-select-arrow,
 .muxui-select-trigger[aria-expanded='true'] .muxui-select-arrow,
-.muxui-combo-control[data-open] .muxui-combo-box-arrow,
+.muxui-combo-control[data-muxui-state-open] .muxui-combo-box-arrow,
 .muxui-combo-box-trigger[aria-expanded='true'] .muxui-combo-box-arrow {
   transform: rotate(180deg);
 }
@@ -590,18 +590,18 @@
   line-height: var(--muxui-semantic-typography-compact-line-height);
   cursor: default;
 }
-:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-token-field, .muxui-color-area-field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-disabled] .muxui-field-label {
+:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-token-field, .muxui-color-area-field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-muxui-state-disabled] .muxui-field-label {
   color: var(--muxui-semantic-content-default);
 }
-:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-color-field, .muxui-token-field)[data-disabled] .muxui-field-label {
+:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-color-field, .muxui-token-field)[data-muxui-state-disabled] .muxui-field-label {
   opacity: 0.45;
 }
 
-.muxui-autocomplete-search[data-disabled] > .muxui-field-label {
+.muxui-autocomplete-search[data-muxui-state-disabled] > .muxui-field-label {
   color: var(--muxui-semantic-content-default);
   opacity: 0.45;
 }
-:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-slider, .muxui-radio-group)[data-invalid] .muxui-field-label {
+:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-slider, .muxui-radio-group)[data-muxui-state-invalid] .muxui-field-label {
   color: var(--muxui-semantic-feedback-invalid);
 }
 
@@ -612,7 +612,7 @@
   .muxui-multi-select,
   .muxui-tag-select,
   .muxui-payment-input
-)[data-disabled] :where(
+)[data-muxui-state-disabled] :where(
   .muxui-input__label,
   .muxui-text-area__label,
   .muxui-input-tags__label,
@@ -631,7 +631,7 @@
   .muxui-multi-select,
   .muxui-tag-select,
   .muxui-payment-input
-)[data-invalid] :where(
+)[data-muxui-state-invalid] :where(
   .muxui-input__label,
   .muxui-text-area__label,
   .muxui-input-tags__label,
@@ -655,16 +655,16 @@
   margin-bottom: 0;
 }
 
-.muxui-select[data-required] > .muxui-field-label::after,
-.muxui-combo-box[data-required] > .muxui-field-label::after,
-.muxui-slider[data-required] > .muxui-field-label::after,
-.muxui-color-slider[data-required] > .muxui-field-label::after {
+.muxui-select[data-muxui-state-required] > .muxui-field-label::after,
+.muxui-combo-box[data-muxui-state-required] > .muxui-field-label::after,
+.muxui-slider[data-muxui-state-required] > .muxui-field-label::after,
+.muxui-color-slider[data-muxui-state-required] > .muxui-field-label::after {
   content: ' *';
   color: var(--muxui-semantic-selection-track);
 }
 
-.muxui-slider[data-invalid] > .muxui-field-label,
-.muxui-color-slider[data-invalid] > .muxui-field-label {
+.muxui-slider[data-muxui-state-invalid] > .muxui-field-label,
+.muxui-color-slider[data-muxui-state-invalid] > .muxui-field-label {
   color: var(--muxui-semantic-feedback-invalid);
 }
 
@@ -675,8 +675,8 @@
   text-align: right;
 }
 
-.muxui-slider[data-disabled] > .muxui-field-label,
-.muxui-slider[data-disabled] .muxui-slider-output {
+.muxui-slider[data-muxui-state-disabled] > .muxui-field-label,
+.muxui-slider[data-muxui-state-disabled] .muxui-slider-output {
   color: var(--muxui-semantic-content-default);
 }
 
@@ -773,26 +773,26 @@
   user-select: none;
 }
 
-.muxui-select-option[data-focused],
-.muxui-combo-box-option[data-focused],
-.muxui-autocomplete-option[data-focused],
-.muxui-list-box-item[data-focused],
-.muxui-menu-item[data-focused],
-.muxui-command-palette__item[data-focused],
-.muxui-multi-select__item[data-focused],
-.muxui-tag-select__item[data-focused] {
+.muxui-select-option[data-muxui-state-focused],
+.muxui-combo-box-option[data-muxui-state-focused],
+.muxui-autocomplete-option[data-muxui-state-focused],
+.muxui-list-box-item[data-muxui-state-focused],
+.muxui-menu-item[data-muxui-state-focused],
+.muxui-command-palette__item[data-muxui-state-focused],
+.muxui-multi-select__item[data-muxui-state-focused],
+.muxui-tag-select__item[data-muxui-state-focused] {
   background-color: var(--muxui-item-focus-bg);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-select-option[data-disabled],
-.muxui-combo-box-option[data-disabled],
-.muxui-autocomplete-option[data-disabled],
-.muxui-list-box-item[data-disabled],
-.muxui-menu-item[data-disabled],
-.muxui-command-palette__item[data-disabled],
-.muxui-multi-select__item[data-disabled],
-.muxui-tag-select__item[data-disabled] {
+.muxui-select-option[data-muxui-state-disabled],
+.muxui-combo-box-option[data-muxui-state-disabled],
+.muxui-autocomplete-option[data-muxui-state-disabled],
+.muxui-list-box-item[data-muxui-state-disabled],
+.muxui-menu-item[data-muxui-state-disabled],
+.muxui-command-palette__item[data-muxui-state-disabled],
+.muxui-multi-select__item[data-muxui-state-disabled],
+.muxui-tag-select__item[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
@@ -861,20 +861,20 @@
   gap: 0;
 }
 
-.muxui-date-input[data-invalid] {
+.muxui-date-input[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-field-input[data-invalid] {
+.muxui-field-input[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-date-field[data-invalid] > .muxui-date-input:focus-within,
-.muxui-time-field[data-invalid] > .muxui-date-input:focus-within {
+.muxui-date-field[data-muxui-state-invalid] > .muxui-date-input:focus-within,
+.muxui-time-field[data-muxui-state-invalid] > .muxui-date-input:focus-within {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-date-input[data-disabled] {
+.muxui-date-input[data-muxui-state-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
@@ -918,23 +918,23 @@
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-date-control:hover:not(:focus-within, [data-disabled], [data-invalid]),
-.muxui-date-range-control:hover:not(:focus-within, [data-disabled], [data-invalid]) {
+.muxui-date-control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
+.muxui-date-range-control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-date-picker[data-invalid] .muxui-date-control,
-.muxui-date-range-picker[data-invalid] .muxui-date-range-control {
+.muxui-date-picker[data-muxui-state-invalid] .muxui-date-control,
+.muxui-date-range-picker[data-muxui-state-invalid] .muxui-date-range-control {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-date-picker[data-invalid] .muxui-date-control:focus-within,
-.muxui-date-range-picker[data-invalid] .muxui-date-range-control:focus-within {
+.muxui-date-picker[data-muxui-state-invalid] .muxui-date-control:focus-within,
+.muxui-date-range-picker[data-muxui-state-invalid] .muxui-date-range-control:focus-within {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-date-picker[data-disabled] .muxui-date-control,
-.muxui-date-range-picker[data-disabled] .muxui-date-range-control {
+.muxui-date-picker[data-muxui-state-disabled] .muxui-date-control,
+.muxui-date-range-picker[data-muxui-state-disabled] .muxui-date-range-control {
   background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
@@ -975,25 +975,25 @@
   outline: none;
 }
 
-.muxui-date-segment[data-placeholder] {
+.muxui-date-segment[data-muxui-state-placeholder] {
   color: var(--muxui-semantic-content-faint);
   font-style: italic;
 }
 
-.muxui-date-segment[data-disabled] {
+.muxui-date-segment[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 
-.muxui-date-segment[data-readonly] {
+.muxui-date-segment[data-muxui-state-read-only] {
   color: var(--muxui-semantic-color-neutral-60);
 }
 
-.muxui-date-segment[data-type='literal'] {
+.muxui-date-segment[data-muxui-state-type='literal'] {
   padding: 0 0.03125rem;
   color: var(--muxui-semantic-content-muted);
 }
 
-.muxui-date-segment[data-focused] {
+.muxui-date-segment[data-muxui-state-focused] {
   background: var(--muxui-semantic-surface-emphasis);
   color: var(--muxui-semantic-content-on-solid);
 }
@@ -1009,7 +1009,7 @@
   font-size: var(--muxui-semantic-typography-body-size);
 }
 
-.muxui-date-trigger[data-disabled] {
+.muxui-date-trigger[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
@@ -1029,12 +1029,12 @@
   height: 1rem;
 }
 
-.muxui-date-trigger:hover:not([data-disabled]) {
+.muxui-date-trigger:hover:not([data-muxui-state-disabled]) {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-date-trigger[data-focus-visible] {
+.muxui-date-trigger[data-muxui-state-focus-visible] {
   border-color: var(--muxui-semantic-focus-ring);
   box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
   z-index: 1;
@@ -1138,30 +1138,30 @@
   background: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-calendar-cell[data-today],
-.muxui-range-calendar-cell[data-today] {
+.muxui-calendar-cell[data-muxui-state-today],
+.muxui-range-calendar-cell[data-muxui-state-today] {
   font-weight: var(--muxui-semantic-typography-control-weight);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.muxui-calendar-cell[data-outside-month],
-.muxui-range-calendar-cell[data-outside-month] {
+.muxui-calendar-cell[data-muxui-state-outside-month],
+.muxui-range-calendar-cell[data-muxui-state-outside-month] {
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-calendar-cell[data-disabled],
-.muxui-calendar-cell[data-unavailable],
-.muxui-range-calendar-cell[data-disabled],
-.muxui-range-calendar-cell[data-unavailable] {
+.muxui-calendar-cell[data-muxui-state-disabled],
+.muxui-calendar-cell[data-muxui-state-unavailable],
+.muxui-range-calendar-cell[data-muxui-state-disabled],
+.muxui-range-calendar-cell[data-muxui-state-unavailable] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-calendar-cell[data-focus-visible],
-.muxui-range-calendar-cell[data-focus-visible] {
+.muxui-calendar-cell[data-muxui-state-focus-visible],
+.muxui-range-calendar-cell[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
@@ -1181,17 +1181,17 @@
   color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-calendar-previous:hover:not([data-disabled]),
-.muxui-calendar-next:hover:not([data-disabled]),
-.muxui-calendar-previous[data-hovered]:not([data-disabled]),
-.muxui-calendar-next[data-hovered]:not([data-disabled]) {
+.muxui-calendar-previous:hover:not([data-muxui-state-disabled]),
+.muxui-calendar-next:hover:not([data-muxui-state-disabled]),
+.muxui-calendar-previous[data-muxui-state-hovered]:not([data-muxui-state-disabled]),
+.muxui-calendar-next[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-color: var(--muxui-semantic-action-neutral-background-hover);
 }
 
-.muxui-calendar-previous:active:not([data-disabled]),
-.muxui-calendar-next:active:not([data-disabled]),
-.muxui-calendar-previous[data-pressed]:not([data-disabled]),
-.muxui-calendar-next[data-pressed]:not([data-disabled]) {
+.muxui-calendar-previous:active:not([data-muxui-state-disabled]),
+.muxui-calendar-next:active:not([data-muxui-state-disabled]),
+.muxui-calendar-previous[data-muxui-state-pressed]:not([data-muxui-state-disabled]),
+.muxui-calendar-next[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
   background-color: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
@@ -1239,22 +1239,22 @@
   transition: box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-color-area-thumb[data-focus-visible],
-.muxui-color-slider-thumb[data-focus-visible],
-.muxui-color-wheel-thumb[data-focus-visible] {
+.muxui-color-area-thumb[data-muxui-state-focus-visible],
+.muxui-color-slider-thumb[data-muxui-state-focus-visible],
+.muxui-color-wheel-thumb[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-.muxui-color-slider-thumb[data-dragging],
-.muxui-color-wheel-thumb[data-dragging] {
+.muxui-color-slider-thumb[data-muxui-state-dragging],
+.muxui-color-wheel-thumb[data-muxui-state-dragging] {
   cursor: grabbing;
 }
 
-.muxui-color-area[data-disabled],
-.muxui-color-slider[data-disabled],
-.muxui-color-wheel[data-disabled] {
+.muxui-color-area[data-muxui-state-disabled],
+.muxui-color-slider[data-muxui-state-disabled],
+.muxui-color-wheel[data-muxui-state-disabled] {
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -1321,17 +1321,17 @@
 }
 
 :where(
-  .muxui-alert-dialog__backdrop[data-entering],
-  .muxui-alert-dialog__backdrop[data-exiting],
-  .muxui-command-palette__backdrop[data-entering],
-  .muxui-command-palette__backdrop[data-exiting]
+  .muxui-alert-dialog__backdrop[data-muxui-state-entering],
+  .muxui-alert-dialog__backdrop[data-muxui-state-exiting],
+  .muxui-command-palette__backdrop[data-muxui-state-entering],
+  .muxui-command-palette__backdrop[data-muxui-state-exiting]
 ) {
   opacity: 0;
 }
 
 :where(
-  .muxui-alert-dialog__backdrop[data-exiting],
-  .muxui-command-palette__backdrop[data-exiting]
+  .muxui-alert-dialog__backdrop[data-muxui-state-exiting],
+  .muxui-command-palette__backdrop[data-muxui-state-exiting]
 ) {
   transition: opacity var(--muxui-semantic-motion-modal-dismiss-transition-duration) var(--muxui-semantic-motion-modal-dismiss-transition-easing);
 }
@@ -1362,10 +1362,10 @@
   z-index: 100;
   transition: opacity var(--muxui-semantic-motion-modal-transition-duration) var(--muxui-semantic-motion-modal-transition-easing);
 }
-.muxui-dialog-backdrop[data-entering] {
+.muxui-dialog-backdrop[data-muxui-state-entering] {
   opacity: 0;
 }
-.muxui-dialog-backdrop[data-exiting] {
+.muxui-dialog-backdrop[data-muxui-state-exiting] {
   opacity: 0;
   transition: opacity var(--muxui-semantic-motion-modal-dismiss-transition-duration) var(--muxui-semantic-motion-modal-dismiss-transition-easing);
 }
@@ -1431,15 +1431,15 @@
 
 .muxui-checkbox-group { width: max-content; }
 
-.muxui-checkbox-group[data-orientation='horizontal'],
-.muxui-radio-group[data-orientation='horizontal'] {
+.muxui-checkbox-group[data-muxui-state-orientation='horizontal'],
+.muxui-radio-group[data-muxui-state-orientation='horizontal'] {
   flex-direction: row;
   flex-wrap: wrap;
   gap: var(--muxui-semantic-layout-content-gap);
 }
 
 /* A horizontal group wraps its options, so the group error takes a row of its own. */
-.muxui-radio-group[data-orientation='horizontal'] > .muxui-radio-group-error {
+.muxui-radio-group[data-muxui-state-orientation='horizontal'] > .muxui-radio-group-error {
   flex-basis: 100%;
 }
 
@@ -1464,32 +1464,32 @@
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-combo-control[data-open] {
+.muxui-combo-control[data-muxui-state-open] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-combo-control:hover:not(:focus-within, [data-disabled], [data-invalid]) {
+.muxui-combo-control:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-combo-box[data-invalid] .muxui-combo-control,
-.muxui-combo-control[data-invalid] {
+.muxui-combo-box[data-muxui-state-invalid] .muxui-combo-control,
+.muxui-combo-control[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-combo-box[data-invalid] .muxui-combo-control:focus-within,
-.muxui-combo-control[data-invalid]:focus-within {
+.muxui-combo-box[data-muxui-state-invalid] .muxui-combo-control:focus-within,
+.muxui-combo-control[data-muxui-state-invalid]:focus-within {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-combo-control[data-disabled] {
+.muxui-combo-control[data-muxui-state-disabled] {
   background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }
 
-.muxui-combo-box[data-disabled] .muxui-combo-control {
+.muxui-combo-box[data-muxui-state-disabled] .muxui-combo-control {
   background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;

@@ -4,19 +4,8 @@ import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import { CalendarSelectionCell, CalendarSelectionMotion } from './calendar-selection-motion.mjs';
 import ChevronLeftIcon from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
-import {
-  Calendar as AriaCalendar,
-  CalendarCell as AriaCalendarCell,
-  CalendarGrid as AriaCalendarGrid,
-  CalendarGridBody as AriaCalendarGridBody,
-  CalendarGridHeader as AriaCalendarGridHeader,
-  CalendarHeaderCell as AriaCalendarHeaderCell,
-  CalendarHeading as AriaCalendarHeading,
-  CalendarStateContext,
-  RangeCalendarStateContext,
-  RangeCalendar as AriaRangeCalendar,
-  Label as AriaLabel,
-} from 'react-aria-components';
+import { CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, CalendarStateContext, RangeCalendarStateContext, Label as AriaLabel } from 'react-aria-components';
+import { AriaCalendar, AriaCalendarCell, AriaRangeCalendar } from './substrate.ts';
 import type { DateValue, RangeValue } from 'react-aria-components';
 import { parseDate } from '@internationalized/date';
 import type { CalendarDate } from '@internationalized/date';

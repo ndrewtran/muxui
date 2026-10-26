@@ -11,18 +11,8 @@ import type {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { MenuMotion } from './menu-motion.mjs';
-import {
-  Menu as AriaMenu,
-  MenuItem as AriaMenuItem,
-  MenuSection as AriaMenuSection,
-  MenuTrigger as AriaMenuTrigger,
-  SubmenuTrigger as AriaSubmenuTrigger,
-  Separator as AriaSeparator,
-  Header as AriaHeader,
-  PopoverContext,
-  RootMenuTriggerStateContext,
-  useSlottedContext,
-} from 'react-aria-components';
+import { MenuSection as AriaMenuSection, MenuTrigger as AriaMenuTrigger, SubmenuTrigger as AriaSubmenuTrigger, Separator as AriaSeparator, Header as AriaHeader, PopoverContext, RootMenuTriggerStateContext, useSlottedContext } from 'react-aria-components';
+import { AriaMenu, AriaMenuItem } from './substrate.ts';
 import type {
   Key,
   MenuItemProps as AriaMenuItemProps,
@@ -229,7 +219,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       React.createElement(AriaMenuTrigger, {
         isOpen: currentOpen,
         onOpenChange: setOpen,
-        children: React.createElement('div', { ...props, ref, className: classNames('muxui-menu-root', className), 'data-open': currentOpen || undefined, 'data-disabled': disabled ? disabled : undefined }, children),
+        children: React.createElement('div', { ...props, ref, className: classNames('muxui-menu-root', className), 'data-muxui-state-open': currentOpen || undefined, 'data-muxui-state-disabled': disabled ? disabled : undefined }, children),
       }));
   });
 
@@ -297,7 +287,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
         }
       },
       // React Aria's props do not name aria-disabled or the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
+      ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames(standalone ? 'muxui-menu' : 'muxui-menu muxui-menu-list', className),
       children: hasChildren ? children : (item: NormalizedItem) => React.createElement(MenuItem, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label),
     });
@@ -316,7 +306,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       // Forwarded as given: left unset, React Aria applies the menu's setting.
       shouldCloseOnSelect,
       onAction: onAction ? () => { if (!effectiveDisabled) onAction(); } : undefined,
-      ...{ 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
+      ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-menu-item', className),
     }, children);
   });

@@ -1,10 +1,7 @@
 import React from 'react';
 import type { Dispatch, ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, RefObject, RefAttributes, SetStateAction } from 'react';
-import {
-  RadioField as AriaRadioField,
-  RadioButton as AriaRadioButton,
-  RadioGroupStateContext as AriaRadioGroupStateContext,
-} from 'react-aria-components';
+import { RadioGroupStateContext as AriaRadioGroupStateContext } from 'react-aria-components';
+import { AriaRadioField, AriaRadioButton } from '../substrate.ts';
 import type { RadioButtonProps as AriaRadioButtonProps, RadioFieldProps as AriaRadioFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
 import { h, cx, nativePart } from './part-utils.ts';

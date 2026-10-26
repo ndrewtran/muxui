@@ -1,6 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
-import { OverlayTriggerStateContext, Popover as AriaPopover, PopoverContext } from 'react-aria-components';
+import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-components';
+import { AriaPopover } from './substrate.ts';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const DATE_POPOVER_INITIAL_Y = -4;

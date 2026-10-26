@@ -1,11 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, InputHTMLAttributes, RefAttributes } from 'react';
-import {
-  FieldError as AriaFieldError,
-  Input as AriaInput,
-  Label as AriaLabel,
-  TextField as AriaTextField,
-} from 'react-aria-components';
+import { FieldError as AriaFieldError, Label as AriaLabel } from 'react-aria-components';
+import { AriaInput, AriaTextField } from '../substrate.ts';
 import type { InputProps as AriaInputProps, TextFieldProps as AriaTextFieldProps } from 'react-aria-components';
 import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';

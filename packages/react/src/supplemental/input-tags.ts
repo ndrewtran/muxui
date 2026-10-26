@@ -1,12 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, KeyboardEvent, ReactNode, RefAttributes } from 'react';
-import {
-  Group as AriaGroup,
-  Input as AriaInput,
-  Tag as AriaTag,
-  TagGroup as AriaTagGroup,
-  TagList as AriaTagList,
-} from 'react-aria-components';
+import { TagGroup as AriaTagGroup } from 'react-aria-components';
+import { AriaGroup, AriaInput, AriaTag, AriaTagList } from '../substrate.ts';
 import type { Key } from 'react-aria-components';
 import { h, cx, dataState } from './part-utils.ts';
 
@@ -151,7 +146,7 @@ const InputTagsRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, InputTagsPr
       tagsInDom?.[tagsInDom.length - 1]?.focus();
     }
   };
-  return h('div', { ...props, ref, className: cx('muxui-input-tags', size !== 'md' && `muxui-input-tags--${size}`, tagPlacement === 'below' && 'muxui-input-tags--below', className), 'data-size': size, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('label', { id: labelId, htmlFor: inputId, className: 'muxui-input-tags__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), h(AriaGroup, { isDisabled: disabled, isInvalid: invalid, 'aria-labelledby': labelId, 'aria-required': required ? required : undefined, className: 'muxui-input-tags__group' }, tagPlacement === 'inline' && tagsNode, h(AriaInput, { ...inputAriaProps, id: inputId, ref: inputRef, value: inputValue, placeholder: entries.length === 0 || tagPlacement === 'below' ? placeholder : undefined, onChange: (event) => setInputValue(event.target.value), onKeyDown: handleInputKeyDown, className: 'muxui-input-tags__input', disabled, 'aria-describedby': describedby, 'aria-invalid': ariaInvalid ?? (invalid ? invalid : undefined), 'aria-required': ariaRequired ?? (required ? required : undefined) })), tagPlacement === 'below' && tagsNode ? h('div', { className: 'muxui-input-tags__tags' }, tagsNode) : null, supportingText ? h('span', { id: supportingText.id, className: supportingText.className }, supportingText.children) : null);
+  return h('div', { ...props, ref, className: cx('muxui-input-tags', size !== 'md' && `muxui-input-tags--${size}`, tagPlacement === 'below' && 'muxui-input-tags--below', className), 'data-size': size, 'data-muxui-state-disabled': dataState(disabled), 'data-muxui-state-invalid': dataState(invalid) }, label && h('label', { id: labelId, htmlFor: inputId, className: 'muxui-input-tags__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), h(AriaGroup, { isDisabled: disabled, isInvalid: invalid, 'aria-labelledby': labelId, 'aria-required': required ? required : undefined, className: 'muxui-input-tags__group' }, tagPlacement === 'inline' && tagsNode, h(AriaInput, { ...inputAriaProps, id: inputId, ref: inputRef, value: inputValue, placeholder: entries.length === 0 || tagPlacement === 'below' ? placeholder : undefined, onChange: (event) => setInputValue(event.target.value), onKeyDown: handleInputKeyDown, className: 'muxui-input-tags__input', disabled, 'aria-describedby': describedby, 'aria-invalid': ariaInvalid ?? (invalid ? invalid : undefined), 'aria-required': ariaRequired ?? (required ? required : undefined) })), tagPlacement === 'below' && tagsNode ? h('div', { className: 'muxui-input-tags__tags' }, tagsNode) : null, supportingText ? h('span', { id: supportingText.id, className: supportingText.className }, supportingText.children) : null);
 });
 
 export const InputTags: { Root: ForwardRefExoticComponent<InputTagsProps & RefAttributes<HTMLDivElement>> } = /*#__PURE__*/ Object.freeze({

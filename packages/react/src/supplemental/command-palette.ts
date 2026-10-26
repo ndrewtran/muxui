@@ -1,22 +1,7 @@
 import React from 'react';
 import type { ButtonHTMLAttributes, ChangeEvent, ContextType, ForwardRefExoticComponent, HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode, RefAttributes, RefObject } from 'react';
-import {
-  Autocomplete as AriaAutocomplete,
-  Button as AriaButton,
-  Collection as AriaCollection,
-  Dialog as AriaDialog,
-  FieldInputContext as AriaFieldInputContext,
-  Header as AriaHeader,
-  Heading as AriaHeading,
-  Input as AriaInput,
-  InputContext as AriaInputContext,
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  ListBoxSection as AriaListBoxSection,
-  SearchField as AriaSearchField,
-  useFilter,
-  useLocale,
-} from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, Collection as AriaCollection, Dialog as AriaDialog, FieldInputContext as AriaFieldInputContext, Header as AriaHeader, Heading as AriaHeading, InputContext as AriaInputContext, ListBoxSection as AriaListBoxSection, useFilter, useLocale } from 'react-aria-components';
+import { AriaButton, AriaInput, AriaListBox, AriaListBoxItem, AriaSearchField } from '../substrate.ts';
 import type {
   ButtonProps as AriaButtonProps,
   DialogProps as AriaDialogProps,
@@ -301,7 +286,7 @@ const CommandPaletteRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, Comman
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const currentOpen = controlled ? open : internalOpen;
   const setOpen = (next: boolean) => { if (!controlled) setInternalOpen(next); onOpenChange?.(next); };
-  return h(CommandPaletteContext.Provider, { value: { open: currentOpen, setOpen, size: resolvedSize, closeOnSelect, triggerRef } }, h('div', { ...props, ref, className: cx('muxui-command-palette', resolvedSize !== 'md' && `muxui-command-palette--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-open': dataState(currentOpen) }, children));
+  return h(CommandPaletteContext.Provider, { value: { open: currentOpen, setOpen, size: resolvedSize, closeOnSelect, triggerRef } }, h('div', { ...props, ref, className: cx('muxui-command-palette', resolvedSize !== 'md' && `muxui-command-palette--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-muxui-state-open': dataState(currentOpen) }, children));
 });
 const CommandPaletteTrigger = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, CommandPaletteTriggerProps>(function CommandPaletteTrigger({ disabled = false, onActivate, className, ...props }, ref) {
   const { setOpen, size, triggerRef } = useCommandPart('Trigger');

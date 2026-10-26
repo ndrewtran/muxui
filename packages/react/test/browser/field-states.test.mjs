@@ -152,7 +152,7 @@ async function focusDateTrigger(page, anchorId, testId, selector) {
       return {
         focused: active === element,
         visible: Boolean(active === element && style.display !== 'none' && style.visibility !== 'hidden' && rect && rect.width > 0 && rect.height > 0),
-        focusVisible: element.matches(':focus-visible, [data-focus-visible]'),
+        focusVisible: element.matches(':focus-visible, [data-muxui-state-focus-visible]'),
         activeTag: active?.tagName,
         activeClass: active?.className,
         activeLabel: active?.getAttribute('aria-label'),

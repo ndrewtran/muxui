@@ -57,7 +57,7 @@ function statusOf(items: readonly ActivityItem[]) {
   return (['failed', 'running', 'queued', 'cancelled'] as const).find((status) => items.some((item) => item.status === status)) ?? (items.length ? 'completed' : undefined);
 }
 function actionsOf(actions: readonly ActivityAction[] | undefined, key: string) {
-  return actions != null && actions.length > 0 && e('div', { className: 'muxui-activity-actions', key, role: 'group', 'aria-label': 'Activity actions' }, actions.map((action) => e('button', { key: action.id, 'data-size': 'sm', 'data-variant': 'neutral', className: 'muxui-button', type: 'button', disabled: action.disabled, 'data-disabled': action.disabled || undefined, onClick: action.onAction }, action.label)));
+  return actions != null && actions.length > 0 && e('div', { className: 'muxui-activity-actions', key, role: 'group', 'aria-label': 'Activity actions' }, actions.map((action) => e('button', { key: action.id, 'data-size': 'sm', 'data-variant': 'neutral', className: 'muxui-button', type: 'button', disabled: action.disabled, 'data-muxui-state-disabled': action.disabled || undefined, onClick: action.onAction }, action.label)));
 }
 // Retain native details during exit; the requested state owns accessibility. defaultExpanded seeds both states at mount only.
 function ActivityDetails({ item, summary }: { item: ActivityItem; summary: ReactNode[] }) {

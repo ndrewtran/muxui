@@ -1,14 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import {
-  Table as AriaTable,
-  TableBody as AriaTableBody,
-  TableHeader as AriaTableHeader,
-  Column as AriaColumn,
-  Row as AriaRow,
-  Cell as AriaCell,
-} from 'react-aria-components';
+import { AriaTable, AriaTableBody, AriaTableHeader, AriaColumn, AriaRow, AriaCell } from './substrate.ts';
 import type { Key } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems, keySet, keyList } from './collection-items.ts';
@@ -45,7 +38,7 @@ export type TableOwnProps = {
   defaultSelectedIds?: MuxUISelection;
   /** The sorted column and its direction. A sort shows only when the application passes it back. `column` must be the id of a column with `sortable: true`, or Table throws a TypeError. */
   sortDescriptor?: MuxUITableSortDescriptor;
-  /** Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-disabled`. */
+  /** Disables the table: rows cannot be selected or acted on, sort changes are ignored, and the root carries `data-muxui-state-disabled`. */
   disabled?: boolean;
   /** How many rows can be selected. */
   selectionMode?: 'none' | 'single' | 'multiple';
@@ -132,7 +125,7 @@ export const Table: ForwardRefExoticComponent<TableProps & RefAttributes<HTMLTab
       },
     } : {}),
     'aria-label': ariaLabel,
-    ...{ 'aria-disabled': disabled ? disabled : undefined, 'data-disabled': disabled ? disabled : undefined },
+    ...{ 'aria-disabled': disabled ? disabled : undefined, 'data-muxui-state-disabled': disabled ? disabled : undefined },
     className: classNames('muxui-table', className),
   },
   React.createElement(AriaTableHeader<NormalizedColumn>, {

@@ -111,7 +111,7 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
       const menu = item?.closest('.muxui-menu');
       const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
       const transform = overlay && getComputedStyle(overlay).transform;
-      return item?.textContent?.trim() === 'Share' && item.hasAttribute('data-focused')
+      return item?.textContent?.trim() === 'Share' && item.hasAttribute('data-muxui-state-focused')
         && overlay && !overlay.hidden && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
     }, null, { timeout: 3000 });
     await page.waitForFunction(() => {
@@ -150,9 +150,9 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     assert.equal(forcedColors.overlay, 'none');
     assert.notEqual(forcedColors.background, 'rgba(0, 0, 0, 0)');
     await page.emulateMedia({ forcedColors: 'none' });
-    assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).getAttribute('data-has-submenu'), 'true');
+    assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).getAttribute('data-muxui-state-has-submenu'), 'true');
     await page.keyboard.press('ArrowRight');
-    assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).getAttribute('data-open'), 'true');
+    assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).getAttribute('data-muxui-state-open'), 'true');
     await page.getByRole('menuitem', { name: 'Email', exact: true }).waitFor();
     assert.equal(await page.getByRole('menuitem', { name: 'Email', exact: true }).evaluate((node) => document.activeElement === node), true);
     await page.keyboard.press('ArrowLeft');

@@ -56,7 +56,7 @@ async function closeCalendarWithEscape(page) {
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => {
     const node = document.querySelector('.muxui-date-popover');
-    return node?.hasAttribute('data-exiting') && node.getAnimations().length === 2;
+    return node?.hasAttribute('data-muxui-state-exiting') && node.getAnimations().length === 2;
   });
   const exit = await readEntryMotion(page);
   assert.equal(exit.animationName, 'none', 'Motion owns exit without a CSS keyframe');
@@ -206,7 +206,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assert.match(darkShadow.actualShadow, /0px 4px 16px 0px$/u, 'dark popover shadow retains its offset and blur');
     await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'light'; });
     await page.keyboard.press('ArrowRight');
-    await page.waitForFunction(() => document.activeElement?.matches('.muxui-calendar-cell[data-focus-visible]'));
+    await page.waitForFunction(() => document.activeElement?.matches('.muxui-calendar-cell[data-muxui-state-focus-visible]'));
     const muxFocus = await page.evaluate(() => {
       const style = getComputedStyle(document.activeElement);
       return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow };
@@ -249,7 +249,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     }, SLOWED);
     await page.waitForFunction(() => {
       const node = document.querySelector('.muxui-date-popover');
-      return node?.hasAttribute('data-exiting') && node.getAnimations().length === 2;
+      return node?.hasAttribute('data-muxui-state-exiting') && node.getAnimations().length === 2;
     });
     await page.evaluate(async () => {
       const node = document.querySelector('.muxui-date-popover');
@@ -259,13 +259,13 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       animations[0].finish();
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
-    assert.equal(await page.locator('.muxui-date-popover[data-exiting]').count(), 1, 'one completed channel cannot release the retained popup');
+    assert.equal(await page.locator('.muxui-date-popover[data-muxui-state-exiting]').count(), 1, 'one completed channel cannot release the retained popup');
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
       document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration');
       window.__muxuiDatePopoverSetOpen(true);
     });
-    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting'));
+    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-muxui-state-exiting'));
     await settleEntry(page);
     assert.equal(await page.evaluate(() => document.querySelector('.muxui-date-popover') === window.__muxuiRetainedDatePopover), true, 'cancelled exit callbacks cannot remove or replace the reopened node');
     await closeCalendarWithEscape(page);
@@ -276,7 +276,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       window.setTimeout(() => window.__muxuiDatePopoverSetOpen(true), 24);
     });
     await page.locator('.muxui-date-popover').waitFor();
-    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting') && document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 400));
+    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-muxui-state-exiting') && document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 400));
     const rapidStarted = await readEntryMotion(page);
     assertEntryMotion(rapidStarted);
     const rapidSettled = await settleEntry(page);
@@ -384,7 +384,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       }, SLOWED);
       await page.waitForFunction(() => {
         const node = document.querySelector('.muxui-date-popover');
-        return node?.hasAttribute('data-exiting') && Number(getComputedStyle(node).opacity) < 0.99;
+        return node?.hasAttribute('data-muxui-state-exiting') && Number(getComputedStyle(node).opacity) < 0.99;
       });
       const exiting = await readEntryMotion(page);
       assert.equal(exiting.animations.length, 2, 'both Motion exit channels remain attached');

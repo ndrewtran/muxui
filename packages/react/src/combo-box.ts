@@ -1,16 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import {
-  ComboBox as AriaComboBox,
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  Group as AriaGroup,
-  Label as AriaLabel,
-  Input as AriaInput,
-  Text as AriaText,
-  FieldError as AriaFieldError,
-} from 'react-aria-components';
+import { Label as AriaLabel, Text as AriaText, FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaComboBox, AriaListBox, AriaListBoxItem, AriaGroup, AriaInput } from './substrate.ts';
 import type { Key } from 'react-aria-components';
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
@@ -108,7 +100,7 @@ export const ComboBox: ForwardRefExoticComponent<ComboBoxProps & RefAttributes<H
           React.createElement(ChevronDownIcon, { className: 'muxui-combo-box-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
       description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
       errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', ...{ 'data-size': resolvedSize } }, React.createElement(AriaListBox<NormalizedItem>, { items: normalized, className: 'muxui-combo-box-list', ...{ 'data-size': resolvedSize }, children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, ...{ 'data-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined }, className: 'muxui-combo-box-option' }, item.label) })),
+      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', ...{ 'data-size': resolvedSize } }, React.createElement(AriaListBox<NormalizedItem>, { items: normalized, className: 'muxui-combo-box-list', ...{ 'data-size': resolvedSize }, children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined }, className: 'muxui-combo-box-option' }, item.label) })),
     );
   });
   component.displayName = 'ComboBox';

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
-import { Toolbar as AriaToolbar } from 'react-aria-components';
+import { AriaToolbar } from './substrate.ts';
 import { classNames, accessibleName } from './control-utils.ts';
 import type { MuxUIAriaAccessibleName } from './fields.ts';
 

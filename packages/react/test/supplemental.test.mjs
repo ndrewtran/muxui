@@ -525,7 +525,7 @@ test('ProgressCircle delegates accessible range semantics to React Aria', () => 
   assert.match(under, /aria-valuenow="0"/u);
   assert.match(over, /aria-valuenow="100"/u);
   for (const indeterminate of [nullValue, undefinedValue, nan]) {
-    assert.match(indeterminate, /data-indeterminate=""/u);
+    assert.match(indeterminate, /data-muxui-state-indeterminate=""/u);
     assert.doesNotMatch(indeterminate, /aria-valuenow=/u);
     assert.doesNotMatch(indeterminate, /aria-valuetext=/u);
   }
@@ -1141,7 +1141,7 @@ test('Input retains its supplied error-message slot outside validation state', (
     React.createElement(Input.Root, { 'aria-label': 'Name' }, React.createElement(Input.Input), React.createElement(Input.Error, null, 'Name guidance')),
   ));
   assert.match(html, /Name guidance/u);
-  assert.doesNotMatch(html, /data-invalid/u);
+  assert.doesNotMatch(html, /data-muxui-state-invalid/u);
 });
 
 test('Input links mounted description and error IDs without caller references', async () => {

@@ -10,13 +10,13 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-s-font-size);
 }
-.muxui-prompt-composer:hover:not(:focus-within, [data-disabled], [data-invalid]) { border-color: var(--muxui-semantic-border-indicator); }
+.muxui-prompt-composer:hover:not(:focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]) { border-color: var(--muxui-semantic-border-indicator); }
 .muxui-prompt-composer:focus-within { border-color: var(--muxui-field-focus-border); box-shadow: var(--muxui-field-focus-glow); }
-.muxui-prompt-composer[data-invalid], .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid) { border-color: var(--muxui-semantic-feedback-invalid-border); }
-.muxui-prompt-composer[data-invalid]:focus-within, .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid):focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent); }
+.muxui-prompt-composer[data-muxui-state-invalid], .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid) { border-color: var(--muxui-semantic-feedback-invalid-border); }
+.muxui-prompt-composer[data-muxui-state-invalid]:focus-within, .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid):focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent); }
 /* The disabled treatment fades the controls, not the error alert, which keeps full contrast. The box takes the hover surface and keeps its border, as disabled fields do. */
-.muxui-prompt-composer[data-disabled] { background: var(--muxui-semantic-surface-hover); cursor: not-allowed; }
-.muxui-prompt-composer[data-disabled] > :is(.muxui-prompt-composer-attachments, .muxui-prompt-composer-field) { opacity: 0.45; }
+.muxui-prompt-composer[data-muxui-state-disabled] { background: var(--muxui-semantic-surface-hover); cursor: not-allowed; }
+.muxui-prompt-composer[data-muxui-state-disabled] > :is(.muxui-prompt-composer-attachments, .muxui-prompt-composer-field) { opacity: 0.45; }
 .muxui-prompt-composer-field { display: flex; align-items: flex-end; gap: var(--muxui-semantic-layout-action-gap); padding: var(--muxui-semantic-layout-inset-tight); }
 .muxui-prompt-composer-input {
   box-sizing: border-box;
@@ -47,7 +47,7 @@
 .muxui-prompt-composer-attachments li { display: inline-flex; align-items: center; min-inline-size: 0; max-inline-size: 100%; padding-inline-start: var(--muxui-semantic-layout-inset-small); border: 1px solid var(--muxui-semantic-border-default); border-radius: var(--muxui-semantic-shape-radius-s); }
 .muxui-prompt-composer-attachments li > span { overflow-wrap: anywhere; }
 .muxui-prompt-composer-suggestions { position: absolute; box-sizing: border-box; inset-inline: 0; inset-block-end: calc(100% + var(--muxui-semantic-layout-inset-tight)); z-index: 1; max-block-size: 16rem; overflow-y: auto; padding: var(--muxui-semantic-layout-inset-tight); border: 1px solid var(--muxui-semantic-border-default); border-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-surface-raised); color: var(--muxui-semantic-content-default); }
-.muxui-prompt-composer-suggestions[data-placement='below'] { inset-block-end: auto; inset-block-start: calc(100% + var(--muxui-semantic-layout-inset-tight)); }
+.muxui-prompt-composer-suggestions[data-muxui-placement='below'] { inset-block-end: auto; inset-block-start: calc(100% + var(--muxui-semantic-layout-inset-tight)); }
 .muxui-prompt-composer-option { display: flex; gap: var(--muxui-semantic-layout-action-gap); padding: var(--muxui-semantic-layout-inset-small); border-radius: var(--muxui-semantic-shape-radius-s); cursor: pointer; overflow-wrap: anywhere; }
 .muxui-prompt-composer-option:hover:not([aria-selected='true']) { background: var(--muxui-semantic-surface-hover); }
 .muxui-prompt-composer-option:active { background: var(--muxui-semantic-surface-pressed); }
@@ -65,7 +65,7 @@
 @media (forced-colors: active) {
   .muxui-prompt-composer { border-color: CanvasText; }
   .muxui-prompt-composer:focus-within { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
-  .muxui-prompt-composer[data-disabled] { color: GrayText; }
-  .muxui-prompt-composer[data-disabled] > :is(.muxui-prompt-composer-attachments, .muxui-prompt-composer-field) { opacity: 1; }
+  .muxui-prompt-composer[data-muxui-state-disabled] { color: GrayText; }
+  .muxui-prompt-composer[data-muxui-state-disabled] > :is(.muxui-prompt-composer-attachments, .muxui-prompt-composer-field) { opacity: 1; }
   .muxui-prompt-composer-option[aria-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
 }

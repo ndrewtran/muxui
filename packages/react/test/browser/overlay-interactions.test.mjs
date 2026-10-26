@@ -464,11 +464,11 @@ test('DropZone exposes its drop target state during a drag and reports the drop'
     });
     await dropZone.dispatchEvent('dragenter', { dataTransfer });
     await dropZone.dispatchEvent('dragover', { dataTransfer });
-    await page.waitForFunction(() => document.querySelector('.muxui-drop-zone')?.hasAttribute('data-drop-target'));
+    await page.waitForFunction(() => document.querySelector('.muxui-drop-zone')?.hasAttribute('data-muxui-state-drop-target'));
     await dropZone.dispatchEvent('drop', { dataTransfer });
     await page.waitForFunction(() => window.drops.length === 1);
     assert.deepEqual(await page.evaluate(() => window.drops), [['Dragged text']]);
-    assert.equal(await dropZone.getAttribute('data-drop-target'), null);
+    assert.equal(await dropZone.getAttribute('data-muxui-state-drop-target'), null);
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await page.close();

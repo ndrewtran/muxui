@@ -54,10 +54,10 @@ function updateReadOnlyTargets(scope: Element | null, readOnly: boolean, selecto
   for (const target of targets) {
     if (readOnly) {
       target.setAttribute('aria-readonly', 'true');
-      target.setAttribute('data-readonly', 'true');
+      target.setAttribute('data-muxui-state-read-only', 'true');
     } else {
       target.removeAttribute('aria-readonly');
-      target.removeAttribute('data-readonly');
+      target.removeAttribute('data-muxui-state-read-only');
     }
     setReadOnlyTargetGuard(target, readOnly);
   }

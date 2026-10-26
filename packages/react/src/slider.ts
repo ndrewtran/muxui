@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes, SyntheticEvent } from 'react';
-import { Slider as AriaSlider, SliderOutput as AriaSliderOutput, Label as AriaLabel } from 'react-aria-components';
+import { Label as AriaLabel } from 'react-aria-components';
+import { AriaSlider, AriaSliderOutput } from './substrate.ts';
 import { SliderMotionTrack } from './slider-motion.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
 import { readOnlyKeyGuard, useReadOnlyTargets } from './read-only-guard.ts';
@@ -71,9 +72,9 @@ export const Slider: ForwardRefExoticComponent<SliderProps & RefAttributes<HTMLD
       step,
       isDisabled: disabled,
       orientation,
-      // React Aria's props do not name the data-readonly hook the styles read, nor the capture handlers for a key press
+      // React Aria's props do not name the data-muxui-state-read-only hook the styles read, nor the capture handlers for a key press
       // or a change, and TypeScript accepts such a key in a call only from a spread.
-      ...{ 'data-readonly': readOnly ? readOnly : undefined },
+      ...{ 'data-muxui-state-read-only': readOnly ? readOnly : undefined },
       onMouseDownCapture: preventReadOnlyInteraction,
       onTouchStartCapture: preventReadOnlyInteraction,
       onPointerDownCapture: preventReadOnlyInteraction,

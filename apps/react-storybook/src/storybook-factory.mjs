@@ -468,10 +468,10 @@ const INTERACTION_OPEN_SELECTORS = Object.freeze({
   CommandPalette: '.muxui-command-palette__trigger',
 });
 const LIFECYCLE_ATTRIBUTES = Object.freeze({
-  entering: 'data-entering',
-  opening: 'data-entering',
-  exiting: 'data-exiting',
-  closing: 'data-exiting',
+  entering: 'data-muxui-state-entering',
+  opening: 'data-muxui-state-entering',
+  exiting: 'data-muxui-state-exiting',
+  closing: 'data-muxui-state-exiting',
 });
 
 /**
@@ -2026,8 +2026,8 @@ const CANONICAL_PART_SELECTORS = Object.freeze({
   Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
   Link: { label: ['.muxui-link'] },
   ListBox: { header: ['.muxui-list-box-section-header'] },
-  // Menu.Submenu renders no element of its own: its item is the one that carries data-has-submenu.
-  Menu: { header: ['.muxui-menu-section-header'], submenu: ['.muxui-menu-item[data-has-submenu]'] },
+  // Menu.Submenu renders no element of its own: its item is the one that carries data-muxui-state-has-submenu.
+  Menu: { header: ['.muxui-menu-section-header'], submenu: ['.muxui-menu-item[data-muxui-state-has-submenu]'] },
   Image: { root: ['.muxui-image'] },
   CodeBlock: { status: ['.muxui-code-block [role="status"]'] },
   PromptComposer: { status: ['.muxui-prompt-composer [role="status"]'] },
@@ -2543,7 +2543,7 @@ const BROWSER_PROOF_PLANS = {
   CheckboxGroup: activationPlan('CheckboxGroup', '.muxui-checkbox input', 'change'),
   DateField: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-date-field', 'DateField');
-    const segment = root.querySelector('[data-type="day"], .muxui-date-segment');
+    const segment = root.querySelector('[data-muxui-state-type="day"], .muxui-date-segment');
     assertBrowser(segment, 'date segment');
     segment.focus();
     segment.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', code: 'ArrowUp', bubbles: true }));
@@ -2593,12 +2593,12 @@ const BROWSER_PROOF_PLANS = {
   Switch: activationPlan('Switch', '.muxui-switch input[type="checkbox"]', 'change'),
   TextField: inputChangePlan('TextField', 'input', 'proof'),
   TimeField: async ({ canvasElement }) => {
-    assertBrowser(browserProofElement(canvasElement, '.muxui-time-field', 'TimeField').querySelector('[data-type="hour"]'), 'time segment');
+    assertBrowser(browserProofElement(canvasElement, '.muxui-time-field', 'TimeField').querySelector('[data-muxui-state-type="hour"]'), 'time segment');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 1500));
     await repeatBrowserInteractionUntilEvent(canvasElement, 'change', 'TimeField', () => {
       return new Promise((resolvePromise) => setTimeout(() => {
         const root = browserProofElement(canvasElement, '.muxui-time-field', 'TimeField');
-        const segment = root.querySelector('[data-type="hour"]');
+        const segment = root.querySelector('[data-muxui-state-type="hour"]');
         assertBrowser(segment, 'time segment');
         segment.focus();
         segment.textContent = '10';
@@ -2612,7 +2612,7 @@ const BROWSER_PROOF_PLANS = {
   },
   Calendar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-calendar', 'Calendar');
-    const cell = root.querySelector('[data-type="day"]:not([aria-disabled="true"]):not([data-selected="true"]), .muxui-calendar-cell:not([aria-disabled="true"])');
+    const cell = root.querySelector('[data-muxui-state-type="day"]:not([aria-disabled="true"]):not([data-muxui-state-selected="true"]), .muxui-calendar-cell:not([aria-disabled="true"])');
     assertBrowser(cell, 'calendar day cell');
     cell.click();
     await waitForBrowserEvent(canvasElement, 'change', 'Calendar');
@@ -2680,7 +2680,7 @@ const BROWSER_PROOF_PLANS = {
   RadioGroup: activationPlan('RadioGroup', '.muxui-radio', 'change'),
   RangeCalendar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-range-calendar', 'RangeCalendar');
-    const cells = [...root.querySelectorAll('.muxui-range-calendar-cell:not([aria-disabled="true"]):not([data-selected="true"])')];
+    const cells = [...root.querySelectorAll('.muxui-range-calendar-cell:not([aria-disabled="true"]):not([data-muxui-state-selected="true"])')];
     assertBrowser(cells.length >= 2, 'range calendar has two unselected day cells');
     cells[0].click();
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));

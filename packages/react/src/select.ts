@@ -11,15 +11,8 @@ import type {
   RefObject,
 } from 'react';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import {
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  Select as AriaSelect,
-  SelectValue as AriaSelectValue,
-  Label as AriaLabel,
-  Text as AriaText,
-  FieldError as AriaFieldError,
-} from 'react-aria-components';
+import { Label as AriaLabel, Text as AriaText, FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaListBox, AriaListBoxItem, AriaSelect, AriaSelectValue } from './substrate.ts';
 import type {
   Key,
   ListBoxItemProps as AriaListBoxItemProps,
@@ -224,7 +217,7 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
         onSelectionChange: handleSelection, isDisabled: disabled, isRequired: required,
         isInvalid: invalid ? invalid : undefined, name, placeholder,
         // React Aria's props do not name the data-* hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
-        ...{ 'data-readonly': readOnly ? readOnly : undefined },
+        ...{ 'data-muxui-state-read-only': readOnly ? readOnly : undefined },
         className: classNames('muxui-select', className),
         ...{ 'data-size': resolvedSize },
         'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
@@ -271,7 +264,7 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
       // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and the item's own text is none.
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
-      ...{ 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
+      ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-select-option', className),
     }, children);
   });

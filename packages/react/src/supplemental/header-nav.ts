@@ -1,11 +1,7 @@
 import React from 'react';
 import type { AnchorHTMLAttributes, ComponentType, ForwardRefExoticComponent, HTMLAttributes, ReactNode, RefAttributes } from 'react';
-import {
-  Dialog as AriaDialog,
-  DialogTrigger as AriaDialogTrigger,
-  Modal as AriaModal,
-  ModalOverlay as AriaModalOverlay,
-} from 'react-aria-components';
+import { Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger } from 'react-aria-components';
+import { AriaModal, AriaModalOverlay } from '../substrate.ts';
 import type { DialogTriggerProps as AriaDialogTriggerProps } from 'react-aria-components';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import MenuIcon from 'lucide-react/dist/esm/icons/menu.mjs';

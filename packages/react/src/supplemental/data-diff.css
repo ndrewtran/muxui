@@ -50,14 +50,14 @@
 .muxui-data-diff-head .muxui-data-diff-selection { z-index: 2; background: var(--muxui-semantic-surface-subtle); }
 /* Composite translucent change paint over an opaque surface before pinning it. */
 .muxui-data-diff-row > .muxui-data-diff-selection { background: linear-gradient(var(--muxui-data-diff-row-background), var(--muxui-data-diff-row-background)) var(--muxui-semantic-surface-raised); box-shadow: inherit; }
-.muxui-data-diff-row[data-selected] > .muxui-data-diff-selection::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; border-inline-start: 2px solid var(--muxui-semantic-selection-track); pointer-events: none; }
+.muxui-data-diff-row[data-muxui-state-selected] > .muxui-data-diff-selection::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; border-inline-start: 2px solid var(--muxui-semantic-selection-track); pointer-events: none; }
 .muxui-data-diff-selection .muxui-checkbox { position: relative; justify-content: center; inline-size: var(--muxui-control-size-sm); vertical-align: middle; }
 /* Hit-test the native input across the label target, so activation bubbles once. */
 .muxui-data-diff-selection .muxui-checkbox input[type='checkbox'] { position: absolute; inset: 0; z-index: 1; inline-size: 100%; block-size: 100%; margin: 0; padding: 0; border: 0; opacity: 0; clip-path: none; pointer-events: auto; appearance: auto; cursor: inherit; }
 .muxui-data-diff-selection .muxui-checkbox:has(input:focus-visible) .muxui-checkbox-indicator { box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-focus-ring-color); }
-.muxui-data-diff-selection .muxui-checkbox:hover:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator { border-color: var(--muxui-component-checkbox-indicator-border-hover); background-color: var(--muxui-semantic-surface-hover); }
-.muxui-data-diff-selection .muxui-checkbox[data-selected]:hover:not([data-disabled]) .muxui-checkbox-indicator { border-color: var(--muxui-semantic-color-color-50); background-color: var(--muxui-semantic-color-color-50); }
-.muxui-data-diff-selection .muxui-checkbox[data-selected]:hover:not([data-disabled]) .muxui-checkbox-indicator svg { color: var(--muxui-component-checkbox-selected-foreground-hover); }
+.muxui-data-diff-selection .muxui-checkbox:hover:not([data-muxui-state-disabled], [data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-indicator { border-color: var(--muxui-component-checkbox-indicator-border-hover); background-color: var(--muxui-semantic-surface-hover); }
+.muxui-data-diff-selection .muxui-checkbox[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) .muxui-checkbox-indicator { border-color: var(--muxui-semantic-color-color-50); background-color: var(--muxui-semantic-color-color-50); }
+.muxui-data-diff-selection .muxui-checkbox[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) .muxui-checkbox-indicator svg { color: var(--muxui-component-checkbox-selected-foreground-hover); }
 .muxui-data-diff-row[data-selectable]:hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent); }
 .muxui-data-diff-row[data-selectable]:active { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent); }
 .muxui-data-diff-empty { padding: var(--muxui-semantic-layout-inset-medium); text-align: center; color: var(--muxui-semantic-content-default); }
@@ -74,7 +74,7 @@
   .muxui-data-diff-row .muxui-data-diff-change { color: CanvasText; }
   .muxui-data-diff-selection,
   .muxui-data-diff-row > .muxui-data-diff-selection { background: Canvas; }
-  .muxui-data-diff-row[data-selected] > .muxui-data-diff-selection::before { border-inline-start-color: Highlight; forced-color-adjust: none; }
+  .muxui-data-diff-row[data-muxui-state-selected] > .muxui-data-diff-selection::before { border-inline-start-color: Highlight; forced-color-adjust: none; }
   .muxui-data-diff-apply { border-color: ButtonText; background: ButtonFace; color: ButtonText; }
   .muxui-data-diff-apply:disabled { color: GrayText; }
   .muxui-data-diff-viewport:focus-visible { outline-color: Highlight; }

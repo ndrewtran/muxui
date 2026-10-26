@@ -23,7 +23,7 @@ test('var() chains resolve through local custom properties and fallbacks to the 
 
 test('the cascade honours order, !important, shorthands, inheritance, and the instance boundary', () => {
   const element = `.muxui-x { border: 1.5px solid var(--muxui-semantic-focus-ring); color: var(--muxui-semantic-surface-raised) !important; }
-    .muxui-x[data-hovered] { border-top-color: var(--muxui-semantic-focus-inner); color: var(--muxui-semantic-content-strong); }`;
+    .muxui-x[data-muxui-state-hovered] { border-top-color: var(--muxui-semantic-focus-inner); color: var(--muxui-semantic-content-strong); }`;
   assert.equal(resolveCss('border-top-color', element).token, 'semantic.focus.inner');
   assert.equal(resolveCss('border-left-color', element).token, 'semantic.focus.ring');
   assert.equal(resolveCss('border-top-width', element).value, '1.5px');
@@ -173,6 +173,6 @@ test('the mode audit compares computed pixels only where the spec uses them', ()
 });
 
 test('border-radius expands to all four corners, logical corners included', () => {
-  const element = '.muxui-x { border-radius: 8px 4px 0; } .muxui-x[data-pressed] { border-end-start-radius: 2px; }';
+  const element = '.muxui-x { border-radius: 8px 4px 0; } .muxui-x[data-muxui-state-pressed] { border-end-start-radius: 2px; }';
   assert.deepEqual(['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((corner) => resolveCss(`border-${corner}-radius`, element).value), ['8px', '4px', '0', '2px']);
 });

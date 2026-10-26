@@ -40,7 +40,7 @@ document.addEventListener('click', (event) => {
   if (control && row) window.__events.push([control.tagName.toLowerCase(), window.__card(row)]);
   else if (row) window.__cardClicks.push(window.__card(row));
 }, true);
-// Records every React Aria press start, keyboard presses included (data-pressed appears on the pressed element).
+// Records every React Aria press start, keyboard presses included (data-muxui-state-pressed appears on the pressed element).
 // A press can end before the next poll, so the attribute's mutations are the signal, not its presence.
 new MutationObserver((records) => {
   for (const { target, oldValue } of records) {
@@ -48,7 +48,7 @@ new MutationObserver((records) => {
     const row = target.closest('[role="row"]');
     window.__presses.push([target === row ? 'row' : target.tagName.toLowerCase(), row ? window.__card(row) : 0]);
   }
-}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-pressed'], attributeOldValue: true });
+}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-muxui-state-pressed'], attributeOldValue: true });
 
 window.__card = (row) => Number(/#(\\d+) /u.exec(row.textContent)?.[1]);
 // Names the focused card, plus the nested control when focus is inside one.
@@ -139,7 +139,7 @@ for (const engine of browserEngines()) {
               assert.ok(activations.length > 0, `${key} on ${expected.text} activated nothing: ${JSON.stringify(signals)}`);
               assert.deepEqual([...new Set(activations)], [JSON.stringify([expected.tag, expected.card])], `${key} on ${expected.text} activated only that control: ${JSON.stringify(signals)}`);
               assert.deepEqual(signals.cardClicks, [], `${key} on ${expected.text} never clicks its card: ${JSON.stringify(signals)}`);
-              await pollUntil(tab, () => document.querySelector('[data-pressed]') === null, undefined, { message: `the press from ${key} ends`, report: () => document.querySelector('[data-pressed]')?.outerHTML.slice(0, 120) });
+              await pollUntil(tab, () => document.querySelector('[data-muxui-state-pressed]') === null, undefined, { message: `the press from ${key} ends`, report: () => document.querySelector('[data-muxui-state-pressed]')?.outerHTML.slice(0, 120) });
             };
             const press = async (keys) => {
               for (const [key, destination] of keys) {

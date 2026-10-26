@@ -40,5 +40,5 @@ test('ColorSwatch rejects invalid shape/secondary colour and retains picker disa
   assert.throws(() => swatch({ color: '#ff0000', secondaryColor: 'not-a-color' }), /secondaryColor values must be valid/);
   assert.throws(() => swatch({ color: '#ff0000', shape: 'triangle' }), /shape must be square or circle/);
   const html = renderToStaticMarkup(h(ColorPicker, { label: 'Theme', disabled: true }, h(ColorSwatch, { color: '#ff0000', secondaryColor: '#0000ff' })));
-  assert.equal(new JSDOM(html).window.document.querySelector('.muxui-color-swatch').getAttribute('data-disabled'), 'true');
+  assert.equal(new JSDOM(html).window.document.querySelector('.muxui-color-swatch').getAttribute('data-muxui-state-disabled'), 'true');
 });

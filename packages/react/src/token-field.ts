@@ -1,12 +1,7 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
-import {
-  TokenField as AriaTokenField,
-  TokenInput as AriaTokenInput,
-  Token as AriaToken,
-  Label as AriaLabel,
-  TokenFieldValue,
-} from 'react-aria-components';
+import { Label as AriaLabel, TokenFieldValue } from 'react-aria-components';
+import { AriaTokenField, AriaTokenInput, AriaToken } from './substrate.ts';
 import { classNames, accessibleName } from './control-utils.ts';
 import type { MuxUIAccessibleName } from './fields.ts';
 

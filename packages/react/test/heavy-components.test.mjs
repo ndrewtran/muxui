@@ -1440,7 +1440,7 @@ test('Resizable does not restore over sizes a controlled parent substituted, eve
 
 test('Resizable rejects simultaneous controlled and default sizes at runtime', () => {
   const html = renderToStaticMarkup(React.createElement(Resizable, { sizes: { left: 50, right: 50 }, defaultSizes: { left: 40, right: 60 } }, React.createElement(ResizablePanel, { id: 'left' }), React.createElement(ResizableHandle, { id: 'split', before: 'left', after: 'right', 'aria-label': 'Resize' }), React.createElement(ResizablePanel, { id: 'right' })));
-  assert.match(html, /data-invalid="true"/u);
+  assert.match(html, /data-muxui-state-invalid="true"/u);
 });
 
 test('Lightbox derives its dialog label, selects the first default item, navigates, and restores focus', async () => {

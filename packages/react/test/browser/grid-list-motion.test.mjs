@@ -116,7 +116,7 @@ test('GridList hover overlay travels between rows and falls back for motion pref
         && !root.hasAttribute('data-muxui-grid-list-motion-ready');
     }, secondary);
     await moveToRow(page, 'Secondary Two');
-    await page.waitForFunction(() => document.querySelector('#secondary-list [role="row"][data-hovered]'));
+    await page.waitForFunction(() => document.querySelector('#secondary-list [role="row"][data-muxui-state-hovered]'));
     assert.equal(await page.getByRole('row', { name: 'Secondary Two', exact: true }).evaluate((row) => getComputedStyle(row).backgroundImage.includes('linear-gradient')), true);
 
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));

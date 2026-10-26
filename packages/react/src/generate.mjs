@@ -543,6 +543,12 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
+## State attributes
+
+Components mark their state with \`data-muxui-state-<name>\` attributes (\`data-muxui-state-disabled\`, \`data-muxui-state-selected\`, \`data-muxui-state-focus-visible\`, ...). Boolean states are presence-only, so select \`[data-muxui-state-disabled]\` and never compare its value; enumerated states carry theirs (\`data-muxui-state-orientation="vertical"\`). React Aria's unprefixed state names are not emitted, apart from the two below, and there is no alias.
+
+Two attributes are React Aria's own and are not part of this contract. Date and time field segments keep \`data-placeholder\` beside \`data-muxui-state-placeholder\`, because React Aria reads it to decide which segment a press in the padding of the field focuses. The hidden form input inside DatePicker and DateRangePicker keeps \`data-disabled\`, which React Aria sets below anything Mux UI can wrap. No Mux UI style selects either one, and neither should be relied on.
+
 ## Local tarball usage
 
 To develop against an unpublished build, install the versioned local candidate from the package directory instead:

@@ -103,7 +103,7 @@ test('DataDiff native keyboard selection, Apply, narrow/long data, and forced co
 
     await page.setViewportSize({ width: 360, height: 700 });
     await page.evaluate(() => window.mountDataDiff());
-    await page.locator('.muxui-data-diff:not([data-disabled])').waitFor();
+    await page.locator('.muxui-data-diff:not([data-muxui-state-disabled])').waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.equal(await page.locator('.muxui-data-diff-viewport').evaluate((node) => node.scrollWidth > node.clientWidth), true);
     const viewport = page.getByRole('region', { name: 'Proposed token cleanup' });

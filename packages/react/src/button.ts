@@ -7,7 +7,7 @@ import type {
   ReactNode,
   RefAttributes,
 } from 'react';
-import { Button as AriaButton } from 'react-aria-components';
+import { AriaButton } from './substrate.ts';
 import type { ButtonProps as AriaButtonProps, PressEvent } from 'react-aria-components';
 
 export type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;

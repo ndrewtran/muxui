@@ -42,9 +42,9 @@ async function verifyPreviewColours(page, url) {
         };
         const checks = [
           ['.muxui-button[data-variant="primary"]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
-          ['.muxui-checkbox-indicator[data-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
-          ['.muxui-switch[data-selected]', '::before', 'backgroundColor', '--muxui-semantic-selection-track'],
-          ['.muxui-grid-list-item[data-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-checkbox-indicator[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-switch[data-muxui-state-selected]', '::before', 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-grid-list-item[data-muxui-state-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
           ['.muxui-calendar', null, 'backgroundColor', '--muxui-semantic-surface-raised'],
           ['.muxui-menu', null, 'backgroundColor', '--muxui-semantic-surface-raised'],
         ].map(([selector, pseudo, property, token]) => {
@@ -53,10 +53,10 @@ async function verifyPreviewColours(page, url) {
           return { selector, actual: getComputedStyle(node, pseudo)[property], expected: resolveColour(token) };
         });
         // Exercise the endpoint/outside-month cascade using the renderer's exact state hooks.
-        for (const endpoint of ['data-selection-start', 'data-selection-end']) {
+        for (const endpoint of ['data-muxui-state-selection-start', 'data-muxui-state-selection-end']) {
           const cell = document.createElement('button');
           cell.className = 'muxui-range-calendar-cell';
-          for (const attribute of [endpoint, 'data-selected', 'data-outside-month']) cell.setAttribute(attribute, 'true');
+          for (const attribute of [endpoint, 'data-muxui-state-selected', 'data-muxui-state-outside-month']) cell.setAttribute(attribute, 'true');
           canvas.append(cell);
           for (const [property, token] of [['backgroundColor', '--muxui-semantic-selection-track'], ['color', '--muxui-semantic-action-foreground']]) {
             checks.push({ selector: `RangeCalendar ${endpoint} outside-month ${property}`, actual: getComputedStyle(cell)[property], expected: resolveColour(token) });

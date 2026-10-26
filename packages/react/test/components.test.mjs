@@ -58,7 +58,7 @@ test('R1.1 RAC-backed component slice preserves SSR, hydration, semantics, and i
     await act(async () => { hydrated = hydrateRoot(root, allComponents()); });
     assert.equal(root.querySelector('nav[aria-label="Breadcrumb"]') !== null, true);
     assert.equal(root.querySelector('input[type="checkbox"]').checked, true);
-    assert.equal(root.querySelector('.muxui-checkbox-indicator[data-selected]') !== null, true);
+    assert.equal(root.querySelector('.muxui-checkbox-indicator[data-muxui-state-selected]') !== null, true);
     assert.equal(root.querySelector('.muxui-disclosure > button').getAttribute('aria-expanded'), 'true');
     assert.equal(root.querySelector('.muxui-disclosure-panel-host[role="region"]') !== null, true);
     assert.equal(root.querySelector('.muxui-disclosure-panel-host .muxui-disclosure-panel') !== null, true);
@@ -146,7 +146,7 @@ test('choice controls expose compact size variants through direct and group APIs
     orientation: 'horizontal',
     size: 'sm',
   }, React.createElement(Checkbox, null, 'Compact')));
-  assert.match(checkboxGroup, /data-orientation="horizontal"/u);
+  assert.match(checkboxGroup, /data-muxui-state-orientation="horizontal"/u);
   assert.match(checkboxGroup, /muxui-checkbox--sm/u);
 
   const radioGroup = renderToString(React.createElement(RadioGroup, {
@@ -283,7 +283,7 @@ test('RadioGroup shows its group error once, only while invalid, and links it to
     assert.equal(errors[0].textContent, 'Choose a plan');
     assert.ok(group.contains(errors[0]), 'the error sits inside the group');
     assert.ok(group.getAttribute('aria-describedby')?.split(' ').includes(errors[0].id), 'the group is described by its error');
-    assert.equal(group.getAttribute('data-invalid'), 'true');
+    assert.equal(group.getAttribute('data-muxui-state-invalid'), 'true');
 
     await act(async () => root.render(renderGroup({ invalid: false })));
     assert.equal(host.querySelector('.muxui-field-error'), null, 'the error leaves with the invalid state');
@@ -343,9 +343,9 @@ test('R1.1 MuxUI labels, checkbox indicator states, and breadcrumb current norma
     assert.equal(root.querySelector('nav[aria-label="Breadcrumbs"]') !== null, true);
     assert.equal(root.querySelectorAll('[aria-current="page"]').length, 1);
     assert.equal(root.querySelector('[aria-current="page"]').textContent, 'Docs');
-    assert.equal(root.querySelector('.muxui-checkbox-indicator[data-indeterminate]') !== null, true);
-    assert.equal(root.querySelector('.muxui-checkbox[data-invalid]') !== null, true);
-    assert.equal(root.querySelector('.muxui-checkbox[data-disabled]') !== null, true);
+    assert.equal(root.querySelector('.muxui-checkbox-indicator[data-muxui-state-indeterminate]') !== null, true);
+    assert.equal(root.querySelector('.muxui-checkbox[data-muxui-state-invalid]') !== null, true);
+    assert.equal(root.querySelector('.muxui-checkbox[data-muxui-state-disabled]') !== null, true);
     const labelledComponents = [...root.querySelectorAll('.muxui-meter, .muxui-progress-bar')];
     assert.deepEqual(labelledComponents.map((component) => component.getAttribute('aria-label')), [null, null, null, null]);
     assert.deepEqual(labelledComponents.map((component) => {
@@ -383,11 +383,11 @@ test('R1.1 Breadcrumbs disabled items and ProgressBar completion stay within the
       React.createElement(ProgressBar, { label: 'Indeterminate' }),
       React.createElement(ProgressBar, { label: 'Zero width', value: 20, minValue: 20, maxValue: 20 }),
     )));
-    const disabledLink = root.querySelector('.muxui-breadcrumbs-link[data-disabled]');
+    const disabledLink = root.querySelector('.muxui-breadcrumbs-link[data-muxui-state-disabled]');
     assert.ok(disabledLink);
     assert.equal(disabledLink.getAttribute('aria-disabled'), 'true');
     await act(async () => disabledLink.click());
-    const disabledSpans = [...root.querySelectorAll('.muxui-breadcrumbs-current[data-disabled]')];
+    const disabledSpans = [...root.querySelectorAll('.muxui-breadcrumbs-current[data-muxui-state-disabled]')];
     assert.equal(disabledSpans.length, 2);
     assert.deepEqual(disabledSpans.map((item) => item.getAttribute('aria-disabled')), ['true', 'true']);
     const currentItem = root.querySelector('.muxui-breadcrumbs-current[aria-current="page"]');
@@ -417,15 +417,15 @@ test('Checkbox and Radio focus rings stay on indicators with shared keyline geom
     readFile(new URL('../src/styles/collections.css', import.meta.url), 'utf8'),
     readFile(new URL('../generated/styles.css', import.meta.url), 'utf8'),
   ]);
-  const rootFocusOutline = /\.muxui-(?:checkbox|radio)(?::focus-within|\[data-focus-visible\])\s*\{[^}]*outline:/u;
+  const rootFocusOutline = /\.muxui-(?:checkbox|radio)(?::focus-within|\[data-muxui-state-focus-visible\])\s*\{[^}]*outline:/u;
   const focusRules = [
-    ['Checkbox and CheckboxField focus-visible indicators', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator,\s*\.muxui-checkbox-field__button\[data-focus-visible\] \.muxui-checkbox-field__indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-color\)[^}]*\}/u],
-    ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
-    ['Radio mode-aware focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-focus-ring-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-outer\)[^}]*\}/u],
+    ['Checkbox and CheckboxField focus-visible indicators', /\.muxui-checkbox\[data-muxui-state-focus-visible\] \.muxui-checkbox-indicator,\s*\.muxui-checkbox-field__button\[data-muxui-state-focus-visible\] \.muxui-checkbox-field__indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-color\)[^}]*\}/u],
+    ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-muxui-state-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Radio mode-aware focus-visible indicator', /\.muxui-radio\[data-muxui-state-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-focus-ring-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-outer\)[^}]*\}/u],
   ];
   const forcedColorsFocusRules = [
-    ['Checkbox and CheckboxField forced-colors indicators', components, /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator,\s*\.muxui-checkbox-field__button\[data-focus-visible\] \.muxui-checkbox-field__indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
-    ['Radio forced-colors indicator', collections, /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
+    ['Checkbox and CheckboxField forced-colors indicators', components, /\.muxui-checkbox\[data-muxui-state-focus-visible\] \.muxui-checkbox-indicator,\s*\.muxui-checkbox-field__button\[data-muxui-state-focus-visible\] \.muxui-checkbox-field__indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
+    ['Radio forced-colors indicator', collections, /\.muxui-radio\[data-muxui-state-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
   ];
 
   assert.doesNotMatch(components, /\.muxui-checkbox:focus-within/u);
@@ -446,10 +446,10 @@ test('Checkbox and Radio focus rings stay on indicators with shared keyline geom
 test('RadioGroup has a visible selected indicator, and collection focus has forced-colors and high-contrast treatment', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   assert.match(styles, /\.muxui-radio-indicator\b/u, 'RadioGroup needs a Mux UI-owned visible indicator');
-  assert.match(styles, /\.muxui-radio\[data-selected\] \.muxui-radio-indicator/u, 'RadioGroup needs selected indicator styling');
-  assert.match(styles, /\.muxui-radio\[data-focus-visible\]/u, 'RadioGroup needs a focus-visible affordance');
-  assert.match(styles, /@media \(forced-colors: active\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-color: Highlight/u, 'collection focus needs forced-colors treatment');
-  assert.match(styles, /@media \(prefers-contrast: more\)[\s\S]*\.muxui-list-box-item\[data-focus-visible\][\s\S]*outline-width: 3px/u, 'collection focus needs high-contrast treatment');
+  assert.match(styles, /\.muxui-radio\[data-muxui-state-selected\] \.muxui-radio-indicator/u, 'RadioGroup needs selected indicator styling');
+  assert.match(styles, /\.muxui-radio\[data-muxui-state-focus-visible\]/u, 'RadioGroup needs a focus-visible affordance');
+  assert.match(styles, /@media \(forced-colors: active\)[\s\S]*\.muxui-list-box-item\[data-muxui-state-focus-visible\][\s\S]*outline-color: Highlight/u, 'collection focus needs forced-colors treatment');
+  assert.match(styles, /@media \(prefers-contrast: more\)[\s\S]*\.muxui-list-box-item\[data-muxui-state-focus-visible\][\s\S]*outline-width: 3px/u, 'collection focus needs high-contrast treatment');
 });
 
 test('Checkbox and Radio generated CSS suppresses native input outlines', async () => {
@@ -486,7 +486,7 @@ test('DisclosureGroup uses soft accordion geometry without changing standalone D
   assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure-panel-host > \.muxui-disclosure-motion-panel > \.muxui-disclosure-panel\s*\{[^}]*padding-inline:\s*calc\(var\(--muxui-semantic-control-padding-inline\) \* 1\.25\)/u);
   assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\s*\{[^}]*background-color:\s*var\(--muxui-component-disclosuregroup-background\)/u);
   assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\s*\{[^}]*transition:[^}]*margin-block-start var\(--muxui-component-disclosuregroup-transition-duration\) var\(--muxui-component-disclosuregroup-transition-easing\)[^}]*border-radius var\(--muxui-component-disclosuregroup-transition-duration\) var\(--muxui-component-disclosuregroup-transition-easing\)/u);
-  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\[data-expanded\]:not\(:first-child\)[\s\S]*margin-block-start:\s*var\(--muxui-semantic-layout-group-gap\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\[data-muxui-state-expanded\]:not\(:first-child\)[\s\S]*margin-block-start:\s*var\(--muxui-semantic-layout-group-gap\)/u);
   assert.doesNotMatch(styles, /\.muxui-disclosure-group\s+\.muxui-disclosure-trigger\s*\{/u, 'grouped trigger styles stay scoped to direct children');
   assert.match(styles, /\.muxui-disclosure-trigger\s*\{[\s\S]*width:\s*fit-content/u);
   dom.window.close();
@@ -499,7 +499,7 @@ test('Group read-only state stays data-only for its supported roles', () => {
       readOnly: true,
       'aria-label': `${role} actions`,
     }, React.createElement('button', { type: 'button' }, 'Save')));
-    assert.match(markup, /data-readonly="true"/u, role);
+    assert.match(markup, /data-muxui-state-read-only="true"/u, role);
     assert.doesNotMatch(markup, /aria-readonly=/u, role);
   }
 });

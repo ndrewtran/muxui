@@ -23,7 +23,7 @@ async function readShell(page) {
       opacity: Number(style.opacity),
       translate: style.translate,
       transform: style.transform,
-      exiting: node.hasAttribute('data-exiting'),
+      exiting: node.hasAttribute('data-muxui-state-exiting'),
       reduced: node.hasAttribute('data-muxui-lightbox-reduced'),
       centeredX: rect.left + rect.width / 2,
       centeredY: rect.top + rect.height / 2,
@@ -100,7 +100,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
 
     const exitRecording = await recordFrames(page, () => {
       const node = document.querySelector('.muxui-lightbox-popup');
-      if (!node || !document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-exiting')) return null;
+      if (!node || !document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-muxui-state-exiting')) return null;
       const style = getComputedStyle(node);
       return { opacity: Number(style.opacity), translate: style.translate };
     });
@@ -130,7 +130,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
       if (!node) return null;
       const style = getComputedStyle(node);
       const frame = { opacity: Number(style.opacity), translate: style.translate };
-      const exiting = document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-exiting') === true;
+      const exiting = document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-muxui-state-exiting') === true;
       if (!state.reopened) {
         if (!exiting) return null;
         state.exitStartOpacity ??= frame.opacity;
@@ -141,7 +141,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
       }
       return exiting ? null : { phase: 'reopened', ...frame };
     });
-    await page.waitForFunction(() => document.querySelector('.muxui-lightbox-popup') && !document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-exiting'), undefined, { timeout: 1_000 });
+    await page.waitForFunction(() => document.querySelector('.muxui-lightbox-popup') && !document.querySelector('.muxui-lightbox-backdrop')?.hasAttribute('data-muxui-state-exiting'), undefined, { timeout: 1_000 });
     await waitForShellSettled(page);
     const interruptFrames = await interruptRecording.stop();
     const midExit = interruptFrames.find(({ phase }) => phase === 'midExit');

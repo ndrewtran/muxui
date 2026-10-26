@@ -350,10 +350,10 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
       'switch-unchecked': ['[data-testid="switch-unchecked"] .muxui-switch, [data-testid="switch-unchecked"].muxui-switch', null],
       'switch-field-selected': ['[data-testid="switch-field-selected"] .muxui-switch-field__button', null],
       'switch-field-unchecked': ['[data-testid="switch-field-unchecked"] .muxui-switch-field__button', null],
-      'radio-selected': ['[data-testid="radio"] .muxui-radio[data-selected]', '.muxui-radio-indicator'],
-      'radio-unchecked': ['[data-testid="radio"] .muxui-radio:not([data-selected])', '.muxui-radio-indicator'],
-      'radio-field-selected': ['[data-testid="radio-field"] .muxui-radio-field__button[data-selected]', '.muxui-radio-field__indicator'],
-      'radio-field-unchecked': ['[data-testid="radio-field"] .muxui-radio-field__button:not([data-selected])', '.muxui-radio-field__indicator'],
+      'radio-selected': ['[data-testid="radio"] .muxui-radio[data-muxui-state-selected]', '.muxui-radio-indicator'],
+      'radio-unchecked': ['[data-testid="radio"] .muxui-radio:not([data-muxui-state-selected])', '.muxui-radio-indicator'],
+      'radio-field-selected': ['[data-testid="radio-field"] .muxui-radio-field__button[data-muxui-state-selected]', '.muxui-radio-field__indicator'],
+      'radio-field-unchecked': ['[data-testid="radio-field"] .muxui-radio-field__button:not([data-muxui-state-selected])', '.muxui-radio-field__indicator'],
     };
     const host = (name) => page.locator(parts[name][0]).first();
     const paint = (name) => host(name).evaluate((element, part) => {
@@ -361,7 +361,7 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
       const style = getComputedStyle(node, part ? null : '::before');
       const glyph = part ? node.querySelector('svg') : null;
       return {
-        hovered: element.hasAttribute('data-hovered'),
+        hovered: element.hasAttribute('data-muxui-state-hovered'),
         backgroundColor: style.backgroundColor,
         borderColor: style.borderColor,
         glyph: glyph ? getComputedStyle(glyph).color : null,

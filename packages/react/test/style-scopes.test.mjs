@@ -136,7 +136,7 @@ test('the authored !important declarations are exactly the pinned ones, by categ
   });
   assert.deepEqual(found, importantPin);
   // The structural ones are internal parts, not accessibility adaptations.
-  assert.ok(found.structural.every((identity) => /\.muxui-toggle-button-group-motion-label \{|\.muxui-progress-bar\[data-indeterminate\]/u.test(identity)));
+  assert.ok(found.structural.every((identity) => /\.muxui-toggle-button-group-motion-label \{|\.muxui-progress-bar\[data-muxui-state-indeterminate\]/u.test(identity)));
 });
 
 test('the generated stylesheets keep every !important declaration in muxui.components', () => {

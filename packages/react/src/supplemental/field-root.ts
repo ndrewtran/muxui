@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Context, Dispatch, ForwardedRef, ReactElement, ReactNode, SetStateAction } from 'react';
-import { TextField as AriaTextField } from 'react-aria-components';
+import { AriaTextField } from '../substrate.ts';
 import type { TextFieldProps as AriaTextFieldProps, TextFieldRenderProps as AriaTextFieldRenderProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx } from './part-utils.ts';

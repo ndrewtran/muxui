@@ -14,39 +14,8 @@ import type {
 } from 'react';
 import { animate } from 'motion/react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
-import {
-  Autocomplete as AriaAutocomplete,
-  Calendar as AriaCalendar,
-  CalendarCell as AriaCalendarCell,
-  CalendarGrid as AriaCalendarGrid,
-  CalendarGridBody as AriaCalendarGridBody,
-  CalendarGridHeader as AriaCalendarGridHeader,
-  CalendarHeaderCell as AriaCalendarHeaderCell,
-  CalendarHeading as AriaCalendarHeading,
-  CheckboxGroup as AriaCheckboxGroup,
-  DateField as AriaDateField,
-  DateInput as AriaDateInput,
-  DatePicker as AriaDatePicker,
-  DateRangePicker as AriaDateRangePicker,
-  DateSegment as AriaDateSegment,
-  Dialog as AriaDialog,
-  FieldError as AriaFieldError,
-  Form as AriaForm,
-  Group as AriaGroup,
-  Input as AriaInput,
-  InputContext as AriaInputContext,
-  Label as AriaLabel,
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  NumberField as AriaNumberField,
-  RangeCalendar as AriaRangeCalendar,
-  SearchField as AriaSearchField,
-  SwitchButton as AriaSwitchButton,
-  SwitchField as AriaSwitchField,
-  Text as AriaText,
-  TextField as AriaTextField,
-  TimeField as AriaTimeField,
-} from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, Dialog as AriaDialog, FieldError as AriaFieldError, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
+import { AriaCalendar, AriaCalendarCell, AriaCheckboxGroup, AriaDateField, AriaDateInput, AriaDatePicker, AriaDateRangePicker, AriaDateSegment, AriaGroup, AriaInput, AriaListBox, AriaListBoxItem, AriaNumberField, AriaRangeCalendar, AriaSearchField, AriaSwitchButton, AriaSwitchField, AriaTextField, AriaTimeField } from './substrate.ts';
 import type { DateValue, FormProps as AriaFormProps, InputProps as AriaInputProps, Key, TimeValue } from 'react-aria-components';
 import { parseDate, parseTime } from '@internationalized/date';
 import type { CalendarDate, Time } from '@internationalized/date';
@@ -673,7 +642,7 @@ function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }
     ref: indicatorRef,
     className: 'muxui-switch-indicator',
     'aria-hidden': 'true',
-    'data-selected': isSelected || undefined,
+    'data-muxui-state-selected': isSelected || undefined,
     'data-motion-pressed': isPressed && !blocked && !reduced ? '' : undefined,
   });
 }
@@ -1232,7 +1201,7 @@ export const CheckboxGroup: ForwardRefExoticComponent<CheckboxGroupProps & RefAt
     // checkbox, including fragments and wrapper components.
     name,
     className: classNames('muxui-checkbox-group', className),
-    ...{ 'data-orientation': orientation, 'data-size': resolvedSize },
+    ...{ 'data-muxui-state-orientation': orientation, 'data-size': resolvedSize },
     'aria-label': ariaLabel,
     // The visible label sits outside the options' flex layout, so name the
     // group by id rather than through RAC's label slot.
@@ -1903,11 +1872,11 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
             event.preventDefault();
             event.stopPropagation();
           }
-          if (event.key === 'Enter' && suggestionsOpen && popoverRef.current?.querySelector('[role="option"][data-focused]')) {
+          if (event.key === 'Enter' && suggestionsOpen && popoverRef.current?.querySelector('[role="option"][data-muxui-state-focused]')) {
             // RAC selects the active option but leaves the browser's implicit
             // form submission. Cancel only the native default so the synthetic
             // event still reaches RAC's selection handler through FieldInput.
-            // The option's data-focused leads aria-activedescendant, which RAC
+            // The option's data-muxui-state-focused leads aria-activedescendant, which RAC
             // delays while the user types.
             event.nativeEvent.preventDefault();
           }
@@ -1939,7 +1908,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
       ...{ 'data-part': 'list', 'data-size': resolvedSize },
       selectionMode: readOnly ? 'none' : 'single',
       onAction: handleSelect,
-      children: (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, ...{ 'data-disabled': item.disabled || undefined, 'data-part': 'option' }, className: 'muxui-autocomplete-option' }, item.label),
+      children: (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'data-part': 'option' }, className: 'muxui-autocomplete-option' }, item.label),
     }))));
   });
 

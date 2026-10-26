@@ -140,7 +140,7 @@ const css = `
 .rwd-column { display: none; }
 @container (min-width: 40rem) { .rwd-mobile { display: none; } .rwd-column { display: flex; } }
 @keyframes rwd-slow-exit { from { opacity: 1; } to { opacity: 0; } }
-html[data-slow-exit] .muxui-sidebar__mobile-overlay[data-exiting] { animation: rwd-slow-exit 600ms linear forwards; }
+html[data-slow-exit] .muxui-sidebar__mobile-overlay[data-muxui-state-exiting] { animation: rwd-slow-exit 600ms linear forwards; }
 `;
 
 const page = (url) => pageShell({
@@ -707,7 +707,7 @@ for (const engine of browserEngines()) {
           await slow.tab.locator('.muxui-sidebar__mobile-dialog a[href="#home"]').focus();
           await slow.tab.setViewportSize(wide);
           // Only once the drawer is really exiting can the user focus elsewhere.
-          await slow.tab.locator('.muxui-sidebar__mobile-overlay[data-exiting]').waitFor({ state: 'attached', timeout: 5000 });
+          await slow.tab.locator('.muxui-sidebar__mobile-overlay[data-muxui-state-exiting]').waitFor({ state: 'attached', timeout: 5000 });
           await slow.tab.locator('#outside').focus();
           await slow.tab.waitForTimeout(1000);
           assert.ok(await hasFocus(slow.tab, '#outside'), `${engine}: focus moved during the drawer's exit animation is not pulled back to the column`);

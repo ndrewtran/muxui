@@ -16,8 +16,8 @@ test('tsc keeps the pure annotation on Disclosure\'s wrapper', () => {
   assert.match(emitted, /^export const Disclosure = \/\*#__PURE__\*\/ \(\(\) => \{$/mu);
 });
 
-/** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/ with the bytes each renders. */
-async function bundledModuleSizes(name, module = 'components.js') {
+/** The chunks of a bundle of `import { <name> } from <module>`; packages stay external, so only the package's own modules are under test. */
+async function bundleOf(name, module) {
   mkdirSync(resolve(packageRoot, 'build'), { recursive: true });
   const directory = mkdtempSync(join(packageRoot, 'build', 'tree-shaking-'));
   try {
@@ -31,18 +31,21 @@ async function bundledModuleSizes(name, module = 'components.js') {
         write: false,
         minify: false,
         lib: { entry, formats: ['es'], fileName: 'bundle' },
-        // Packages are not under test: only which of the package's own modules the bundle keeps.
         rollupOptions: { external: [/^[^./]/u] },
       },
     });
-    return [bundle].flat().flatMap(({ output }) => output)
-      .filter(({ type }) => type === 'chunk')
-      .flatMap(({ modules }) => Object.entries(modules))
-      .filter(([, { renderedLength }]) => renderedLength > 0)
-      .map(([id, { renderedLength }]) => [relative(generated, id).replaceAll('\\', '/'), renderedLength]);
+    return [bundle].flat().flatMap(({ output }) => output).filter(({ type }) => type === 'chunk');
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+/** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/ with the bytes each renders. */
+async function bundledModuleSizes(name, module = 'components.js') {
+  return (await bundleOf(name, module))
+    .flatMap(({ modules }) => Object.entries(modules))
+    .filter(([, { renderedLength }]) => renderedLength > 0)
+    .map(([id, { renderedLength }]) => [relative(generated, id).replaceAll('\\', '/'), renderedLength]);
 }
 
 /** The package modules a bundle of `import { <name> } from <module>` keeps, as paths under generated/. */
@@ -181,7 +184,7 @@ test('a bundle that uses one collections family keeps its own module and only th
 // Both calendars live in calendar.js, so either one keeps the module, the icon button its month buttons use,
 // and the three calendar motion modules. Through the barrel, a bundle keeps exactly these package modules.
 test('a bundle that uses Calendar or RangeCalendar keeps its own module, the icon button, and the calendar motion modules', async () => {
-  const kept = ['button.js', 'calendar-height-motion.mjs', 'calendar-selection-motion.mjs', 'calendar.js', 'control-utils.js', 'icon-button.js', 'motion-geometry.mjs', 'motion.mjs', 'range-selection-motion.mjs'];
+  const kept = ['button.js', 'calendar-height-motion.mjs', 'calendar-selection-motion.mjs', 'calendar.js', 'control-utils.js', 'icon-button.js', 'motion-geometry.mjs', 'motion.mjs', 'range-selection-motion.mjs', 'styling-contract.js', 'substrate.js'];
   for (const name of ['Calendar', 'RangeCalendar']) {
     assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), kept, name);
   }
@@ -190,7 +193,7 @@ test('a bundle that uses Calendar or RangeCalendar keeps its own module, the ico
 // ListBox keeps its own module, the item helpers it normalizes with, the shared class and name helper, and its selection
 // motion. Through the barrel or the index, a bundle keeps exactly these package modules and no other family's.
 test('a bundle that uses ListBox keeps its own module, the collection item helpers, and the list motion modules', async () => {
-  const kept = ['collection-items.js', 'control-utils.js', 'list-box.js', 'listbox-motion.mjs', 'motion-geometry.mjs', 'motion.mjs'];
+  const kept = ['collection-items.js', 'control-utils.js', 'list-box.js', 'listbox-motion.mjs', 'motion-geometry.mjs', 'motion.mjs', 'styling-contract.js', 'substrate.js'];
   assert.deepEqual((await bundledModules('ListBox', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('ListBox', 'index.mjs')).sort(), kept);
 });
@@ -199,7 +202,7 @@ test('a bundle that uses ListBox keeps its own module, the collection item helpe
 // and its menu and popup motion. Through the barrel or the index, a bundle keeps exactly these package modules and no
 // other family's, which the three contexts and the geometry constant at the module's top level must not change.
 test('a bundle that uses Menu keeps its own module, the collection helpers, and the menu and popup motion modules', async () => {
-  const kept = ['collection-items.js', 'collection-trigger.js', 'control-utils.js', 'menu-motion.mjs', 'menu.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs'];
+  const kept = ['collection-items.js', 'collection-trigger.js', 'control-utils.js', 'menu-motion.mjs', 'menu.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'styling-contract.js', 'substrate.js'];
   assert.deepEqual((await bundledModules('Menu', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('Menu', 'index.mjs')).sort(), kept);
 });
@@ -208,7 +211,7 @@ test('a bundle that uses Menu keeps its own module, the collection helpers, and 
 // the choice size and overlay geometry helpers, and the popup motion. Through the barrel or the index, a bundle keeps exactly
 // these package modules and no other family's, which the context and the geometry constant at the module's top level must not change.
 test('a bundle that uses Select keeps its own module, the collection helpers, and the popup motion modules', async () => {
-  const kept = ['choice-context.mjs', 'collection-items.js', 'collection-trigger.js', 'control-utils.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'select.js'];
+  const kept = ['choice-context.mjs', 'collection-items.js', 'collection-trigger.js', 'control-utils.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'select.js', 'styling-contract.js', 'substrate.js'];
   assert.deepEqual((await bundledModules('Select', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('Select', 'index.mjs')).sort(), kept);
 });
@@ -216,7 +219,7 @@ test('a bundle that uses Select keeps its own module, the collection helpers, an
 // ComboBox keeps its own module, the item helper it normalizes with, the icon button its trigger renders, the shared class and name
 // helper, the choice size helper, and the popup motion. Through the barrel or the index, a bundle keeps exactly these package modules.
 test('a bundle that uses ComboBox keeps its own module, the collection helper, the icon button, and the popup motion modules', async () => {
-  const kept = ['button.js', 'choice-context.mjs', 'collection-items.js', 'combo-box.js', 'control-utils.js', 'icon-button.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'popover-motion.mjs'];
+  const kept = ['button.js', 'choice-context.mjs', 'collection-items.js', 'combo-box.js', 'control-utils.js', 'icon-button.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'popover-motion.mjs', 'styling-contract.js', 'substrate.js'];
   assert.deepEqual((await bundledModules('ComboBox', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('ComboBox', 'index.mjs')).sort(), kept);
 });
@@ -224,11 +227,11 @@ test('a bundle that uses ComboBox keeps its own module, the collection helper, t
 // The color families share three modules, and each takes only the ones it uses: a swatch needs no read-only
 // guard and a picker no motion. Through the barrel, a bundle keeps exactly these package modules.
 test('a bundle that uses one color family keeps its own module and only the shared and motion modules it needs', async () => {
-  const wheel = ['color-context.js', 'color-wheel-motion.mjs', 'color-wheel.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
-  const slider = ['color-context.js', 'color-slider-motion.mjs', 'color-slider.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js'];
+  const wheel = ['color-context.js', 'color-wheel-motion.mjs', 'color-wheel.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'styling-contract.js', 'substrate.js'];
+  const slider = ['color-context.js', 'color-slider-motion.mjs', 'color-slider.js', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'styling-contract.js', 'substrate.js'];
   const kept = {
-    ColorArea: ['color-area.js', 'color-context.js', 'control-utils.js', 'read-only-guard.js'],
-    ColorField: ['choice-context.mjs', 'color-context.js', 'color-field.js', 'control-utils.js'],
+    ColorArea: ['color-area.js', 'color-context.js', 'control-utils.js', 'read-only-guard.js', 'styling-contract.js', 'substrate.js'],
+    ColorField: ['choice-context.mjs', 'color-context.js', 'color-field.js', 'control-utils.js', 'styling-contract.js', 'substrate.js'],
     ColorPicker: ['color-context.js', 'color-picker.js', 'control-utils.js'],
     ColorSlider: slider,
     ColorSwatch: ['color-context.js', 'color-swatch.js', 'control-utils.js'],
@@ -243,11 +246,11 @@ test('a bundle that uses one color family keeps its own module and only the shar
 // a toolbar needs nothing else, and no bundle pulls in another family's module.
 test('a bundle that uses one control family keeps its own module and only the shared and motion modules it needs', async () => {
   const kept = {
-    RadioGroup: ['choice-context.mjs', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'radio-group.js', 'radio-motion.mjs'],
-    Slider: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'slider-motion.mjs', 'slider.js'],
-    TokenField: ['control-utils.js', 'token-field.js'],
-    ToggleButtonGroup: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
-    Toolbar: ['control-utils.js', 'toolbar.js'],
+    RadioGroup: ['choice-context.mjs', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'radio-group.js', 'radio-motion.mjs', 'styling-contract.js', 'substrate.js'],
+    Slider: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'slider-motion.mjs', 'slider.js', 'styling-contract.js', 'substrate.js'],
+    TokenField: ['control-utils.js', 'styling-contract.js', 'substrate.js', 'token-field.js'],
+    ToggleButtonGroup: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'styling-contract.js', 'substrate.js', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
+    Toolbar: ['control-utils.js', 'styling-contract.js', 'substrate.js', 'toolbar.js'],
   };
   for (const [name, expected] of Object.entries(kept)) {
     assert.deepEqual((await bundledModules(name, 'collections.mjs')).sort(), expected, name);
@@ -387,7 +390,18 @@ test('tsc keeps the pure annotation on TextEditor\'s wrapper, and a bundle of it
   const helperOnly = await bundledModuleSizes('isTextEditorDocument', 'text-editor.js');
   const withEditor = await bundledModuleSizes('TextEditor', 'text-editor.js');
   assert.deepEqual(helperOnly.map(([id]) => id), ['text-editor.js']);
-  assert.deepEqual(withEditor.map(([id]) => id).sort(), ['button.js', 'icon-button.js', 'text-editor.js']);
+  assert.deepEqual(withEditor.map(([id]) => id).sort(), ['button.js', 'icon-button.js', 'styling-contract.js', 'substrate.js', 'text-editor.js']);
   const size = (sizes) => sizes.find(([id]) => id === 'text-editor.js')[1];
   assert.ok(size(helperOnly) < size(withEditor) / 2, 'the helper keeps a small part of the module');
+});
+
+// The substrate wraps 81 React Aria components in pure-annotated calls. A call left unannotated, or one whose argument
+// is a bare `RAC.<Name>` read, survives as a statement such as `RAC.DateInput;`, and a consumer who bundles
+// react-aria-components then ships the code of every component the substrate names (about 120 KB for a Button).
+test('a bundle that uses one component leaves no stray read of a React Aria export', async () => {
+  for (const [name, module] of [['Button', 'button.js'], ['Tabs', 'tabs.js'], ['Table', 'table.js'], ['TextField', 'fields.js']]) {
+    const code = (await bundleOf(name, module)).map((chunk) => chunk.code).join('\n');
+    assert.match(code, /\bwithMuxState\(/u, `${name}: the substrate is in the bundle`);
+    assert.doesNotMatch(code, /^[\w$]+\.[\w$]+;$/mu, `${name}: a bare member read stays in the bundle`);
+  }
 });

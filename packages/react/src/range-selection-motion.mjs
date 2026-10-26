@@ -58,8 +58,8 @@ function measureSegments(root, selecting) {
       let leftCap = false;
       let rightCap = false;
       run.forEach((cell, index) => {
-        if (!cell.hasAttribute('data-selection-start')
-          && !cell.hasAttribute('data-selection-end')
+        if (!cell.hasAttribute('data-muxui-state-selection-start')
+          && !cell.hasAttribute('data-muxui-state-selection-end')
           && !cell.hasAttribute('data-muxui-range-provisional-endpoint')) return;
         const rect = rects[index];
         if (run.length === 1 || Math.abs(rect.left - rootRect.left - left) < 0.5) leftCap = true;
@@ -79,7 +79,7 @@ function measureSegments(root, selecting) {
       run = [];
     };
     for (const cell of ordered) {
-      if (cell.hasAttribute('data-selected') || cell.getAttribute('aria-selected') === 'true') run.push(cell);
+      if (cell.hasAttribute('data-muxui-state-selected') || cell.getAttribute('aria-selected') === 'true') run.push(cell);
       else flush();
     }
     flush();
@@ -99,9 +99,9 @@ function markProvisionalCells(root, state) {
     return map;
   }, new Map());
   const isSelectable = (cell) => cell
-    && !cell.hasAttribute('data-disabled')
-    && !cell.hasAttribute('data-unavailable')
-    && (cell.hasAttribute('data-selected') || cell.getAttribute('aria-selected') === 'true');
+    && !cell.hasAttribute('data-muxui-state-disabled')
+    && !cell.hasAttribute('data-muxui-state-unavailable')
+    && (cell.hasAttribute('data-muxui-state-selected') || cell.getAttribute('aria-selected') === 'true');
   const anchorCell = cells.get(anchor);
   if (!isSelectable(anchorCell)) return false;
   root.setAttribute('data-muxui-range-selecting', 'true');
@@ -293,7 +293,7 @@ export function RangeSelectionMotion({ children }) {
     mutationObserver?.observe(root, {
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-selected', 'aria-selected', 'data-disabled', 'data-unavailable'],
+      attributeFilter: ['data-muxui-state-selected', 'aria-selected', 'data-muxui-state-disabled', 'data-muxui-state-unavailable'],
     });
     const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
     resizeObserver?.observe(root);

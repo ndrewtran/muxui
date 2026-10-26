@@ -54,7 +54,7 @@ function measureContrast({ colours: measured, states }) {
     const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
     return (light + 0.05) / (dark + 0.05);
   };
-  const stateAttributes = { rest: [], hover: ['data-hovered'], pressed: ['data-hovered', 'data-pressed'] };
+  const stateAttributes = { rest: [], hover: ['data-muxui-state-hovered'], pressed: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] };
   const results = [];
   for (const tag of document.querySelectorAll('.muxui-tag')) {
     const colour = tag.getAttribute('data-color');
@@ -72,7 +72,7 @@ function measureContrast({ colours: measured, states }) {
       const text = parse(style.color);
       for (const name of stateAttributes[state]) tag.removeAttribute(name);
       results.push({
-        label: `${surface.getAttribute('data-surface')} ${tag.hasAttribute('data-selected') ? 'selected ' : ''}${tag.getAttribute('data-variant')} ${colour} ${state}`,
+        label: `${surface.getAttribute('data-surface')} ${tag.hasAttribute('data-muxui-state-selected') ? 'selected ' : ''}${tag.getAttribute('data-variant')} ${colour} ${state}`,
         ratio: ratio(text, fill),
       });
     }
@@ -140,14 +140,14 @@ test('TagGroup tags focus with an offset outline, keep the outline edge off the 
     const outlined = tag('outline', 'One');
     assert.equal(await read(outlined, 'outlineStyle'), 'none', 'an unfocused tag draws no outline');
     assert.match(await read(outlined, 'boxShadow'), /inset/u, 'the outline variant paints its edge as an inset shadow');
-    await outlined.evaluate((element) => element.setAttribute('data-focus-visible', ''));
+    await outlined.evaluate((element) => element.setAttribute('data-muxui-state-focus-visible', ''));
     assert.equal(await read(outlined, 'outlineStyle'), 'solid');
     assert.equal(await read(outlined, 'outlineWidth'), '2px');
     assert.equal(await read(outlined, 'outlineOffset'), '2px');
     assert.equal(await read(outlined, 'outlineColor'), await probe('outlineColor', 'var(--muxui-semantic-focus-ring)'), 'focus uses the focus ring colour');
     assert.match(await read(outlined, 'boxShadow'), /inset/u, 'focus leaves the edge in place');
     const soft = tag('soft', 'One');
-    await soft.evaluate((element) => element.setAttribute('data-focus-visible', ''));
+    await soft.evaluate((element) => element.setAttribute('data-muxui-state-focus-visible', ''));
     assert.equal(await read(soft, 'boxShadow'), 'none', 'focus adds no two-tone shadow ring');
 
     await page.emulateMedia({ forcedColors: 'active' });
@@ -187,7 +187,7 @@ test('TagGroup fills and outline edges use the specified weights in each scheme'
     const neutral = { soft: [8, 12, 16], outline: [8, 12, 16], dot: [8, 12, 16], strong: [12, 16, 20], edge: 20 };
     const measure = () => page.evaluate(() => {
       const alpha = (value) => Number(/\/\s*([\d.]+)\)/u.exec(value)?.[1] ?? 1) * 100;
-      const states = { rest: [], hover: ['data-hovered'], pressed: ['data-hovered', 'data-pressed'] };
+      const states = { rest: [], hover: ['data-muxui-state-hovered'], pressed: ['data-muxui-state-hovered', 'data-muxui-state-pressed'] };
       const found = {};
       for (const tag of document.querySelectorAll('.muxui-tag')) {
         const key = `${tag.dataset.color} ${tag.dataset.variant}`;

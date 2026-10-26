@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, LabelHTMLAttributes, RefAttributes } from 'react';
-import { Switch as AriaSwitch } from 'react-aria-components';
+import { AriaSwitch } from '../substrate.ts';
 import type { SwitchProps as AriaSwitchProps } from 'react-aria-components';
 import { h, cx } from './part-utils.ts';
 

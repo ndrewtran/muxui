@@ -14,12 +14,12 @@ function directMenuItems(root) {
 
 function activeMenuItem(root) {
   const items = directMenuItems(root).filter((item) => (
-    !item.hasAttribute('data-disabled')
+    !item.hasAttribute('data-muxui-state-disabled')
     && item.getAttribute('aria-disabled') !== 'true'
     && !item.matches(':disabled')
   ));
-  return items.find((item) => item.hasAttribute('data-focused'))
-    ?? items.find((item) => item.hasAttribute('data-hovered'))
+  return items.find((item) => item.hasAttribute('data-muxui-state-focused'))
+    ?? items.find((item) => item.hasAttribute('data-muxui-state-hovered'))
     ?? items.find((item) => item.matches(':hover'))
     ?? null;
 }
@@ -195,7 +195,7 @@ function observeMenuFocus(root, triggerNode) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['aria-disabled', 'data-disabled', 'data-focused', 'data-hovered'],
+    attributeFilter: ['aria-disabled', 'data-muxui-state-disabled', 'data-muxui-state-focused', 'data-muxui-state-hovered'],
   });
 
   resizeObserver?.observe(root);

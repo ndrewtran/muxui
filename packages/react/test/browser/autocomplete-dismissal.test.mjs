@@ -165,7 +165,7 @@ for (const engine of browserEngines()) {
         await slowExit();
         await open({ activate: true });
         await tab.evaluate(() => document.dispatchEvent(new Event('scroll')));
-        await tab.locator('.muxui-autocomplete-popover[data-exiting]').waitFor();
+        await tab.locator('.muxui-autocomplete-popover[data-muxui-state-exiting]').waitFor();
         const scheduledBefore = await tab.evaluate(() => window.__guardFramesScheduled());
         await tab.mouse.click(4, 4);
         assert.ok(await tab.evaluate(() => window.__guardFramesScheduled()) > scheduledBefore, 'the blur schedules the focus check');
@@ -177,7 +177,7 @@ for (const engine of browserEngines()) {
         await slowExit();
         await open();
         await tab.evaluate(() => document.dispatchEvent(new Event('scroll')));
-        await tab.locator('.muxui-autocomplete-popover[data-exiting]').waitFor();
+        await tab.locator('.muxui-autocomplete-popover[data-muxui-state-exiting]').waitFor();
         await tab.mouse.click(4, 4);
         await staysClosed('a scroll close keeps the list closed');
         assert.equal(await active(), 'body');
@@ -204,7 +204,7 @@ for (const engine of browserEngines()) {
         await slowExit();
         await open({ activate: true });
         await tab.frameLocator('#frame').locator('input').focus();
-        await tab.locator('.muxui-autocomplete-popover[data-exiting]').waitFor();
+        await tab.locator('.muxui-autocomplete-popover[data-muxui-state-exiting]').waitFor();
         await frames(2);
         assert.deepEqual(await guard(), idle, 'iframe focus leaves the guard unarmed');
         await reopens('refocus from an iframe during the exit reopens the list');

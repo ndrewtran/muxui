@@ -99,7 +99,7 @@
 }
 
 .muxui-alert-dialog__trigger:focus-visible,
-.muxui-alert-dialog__trigger[data-focus-visible] {
+.muxui-alert-dialog__trigger[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: 2px;
 }
@@ -115,7 +115,7 @@
 
 @media (forced-colors: active) {
   .muxui-alert-dialog__trigger:focus-visible,
-  .muxui-alert-dialog__trigger[data-focus-visible] {
+  .muxui-alert-dialog__trigger[data-muxui-state-focus-visible] {
     outline-color: Highlight;
   }
 }
@@ -275,18 +275,18 @@
   user-select: none;
 }
 
-.muxui-card--button[data-focus-visible] {
+.muxui-card--button[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-focus-ring-color);
   outline-offset: 2px;
 }
 
-.muxui-card--button[data-disabled] {
+.muxui-card--button[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.muxui-card--button[data-pending] {
+.muxui-card--button[data-muxui-state-pending] {
   opacity: 0.7;
   cursor: progress;
 }
@@ -323,7 +323,7 @@
 
 
 
-.muxui-card--button.muxui-card--outlined[data-hovered]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--outlined[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 3%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 3%, transparent)
@@ -331,7 +331,7 @@
   border-color: var(--muxui-semantic-color-neutral-30);
 }
 
-.muxui-card--button.muxui-card--elevated[data-hovered]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--elevated[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent)
@@ -339,15 +339,15 @@
   box-shadow: var(--muxui-semantic-elevation-modal);
 }
 
-.muxui-card--button.muxui-card--filled[data-hovered]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--filled[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent)
   );
 }
 
-.muxui-card--button.muxui-card--outlined[data-pressed]:not([data-disabled], [data-pending]),
-.muxui-card--button.muxui-card--filled[data-pressed]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--outlined[data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]),
+.muxui-card--button.muxui-card--filled[data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
@@ -355,7 +355,7 @@
   border-color: var(--muxui-semantic-color-neutral-40);
 }
 
-.muxui-card--button.muxui-card--elevated[data-pressed]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--elevated[data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 6%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 6%, transparent)
@@ -363,30 +363,30 @@
   box-shadow: var(--muxui-semantic-elevation-floating);
 }
 
-.muxui-card--button.muxui-card--outlined[data-selected] {
+.muxui-card--button.muxui-card--outlined[data-muxui-state-selected] {
   border-color: var(--muxui-semantic-color-color-60);
   box-shadow: inset 0 0 0 1px var(--muxui-semantic-color-color-60);
 }
 
-.muxui-card--button.muxui-card--elevated[data-selected] {
+.muxui-card--button.muxui-card--elevated[data-muxui-state-selected] {
   box-shadow:
     var(--muxui-semantic-elevation-overlay),
     inset 0 0 0 2px var(--muxui-semantic-color-color-60);
 }
 
-.muxui-card--button.muxui-card--elevated[data-selected][data-hovered]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--elevated[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   box-shadow:
     var(--muxui-semantic-elevation-modal),
     inset 0 0 0 2px var(--muxui-semantic-color-color-60);
 }
 
-.muxui-card--button.muxui-card--elevated[data-selected][data-pressed]:not([data-disabled], [data-pending]) {
+.muxui-card--button.muxui-card--elevated[data-muxui-state-selected][data-muxui-state-pressed]:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   box-shadow:
     var(--muxui-semantic-elevation-floating),
     inset 0 0 0 2px var(--muxui-semantic-color-color-60);
 }
 
-.muxui-card--button.muxui-card--filled[data-selected] {
+.muxui-card--button.muxui-card--filled[data-muxui-state-selected] {
   box-shadow: inset 0 0 0 2px var(--muxui-semantic-color-color-60);
 }
 
@@ -453,13 +453,13 @@
 
 
 
-.muxui-checkbox-field[data-disabled] .muxui-checkbox-field__button {
+.muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
   cursor: not-allowed;
 }
 
 
 
-.muxui-checkbox-field__button:not([data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator svg {
+.muxui-checkbox-field__button:not([data-muxui-state-selected], [data-muxui-state-indeterminate]) .muxui-checkbox-field__indicator svg {
   visibility: hidden;
 }
 
@@ -517,21 +517,21 @@
 
 
 
-.muxui-color-mode-toggle[data-selected]::before {
+.muxui-color-mode-toggle[data-muxui-state-selected]::before {
   box-shadow: inset calc(var(--size) * 0.33) calc(var(--size) * -0.25) 0;
   transform: scale(1);
 }
 
 
 
-.muxui-color-mode-toggle[data-focus-visible] {
+.muxui-color-mode-toggle[data-muxui-state-focus-visible] {
   outline: 2px solid var(--muxui-semantic-color-neutral-100);
   outline-offset: 4px;
 }
 
 
 
-.muxui-color-mode-toggle[data-disabled] {
+.muxui-color-mode-toggle[data-muxui-state-disabled] {
   opacity: 0.45;
   pointer-events: none;
   cursor: not-allowed;
@@ -558,7 +558,7 @@
 
 /* The trigger draws the same keyboard ring as Button. */
 .muxui-command-palette__trigger:focus-visible,
-.muxui-command-palette__trigger[data-focus-visible] {
+.muxui-command-palette__trigger[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -688,14 +688,14 @@
 }
 
 .muxui-command-palette__search-field--inline
-  .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+  .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   border-color: transparent;
   background-color: var(--muxui-semantic-color-neutral-12);
 }
 
 .muxui-command-palette__popup--translucent
   .muxui-command-palette__search-field--inline
-  .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+  .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-12) 34%, transparent);
 }
 
@@ -712,7 +712,7 @@
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+.muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   border-color: var(--muxui-semantic-color-neutral-40);
 }
 
@@ -724,7 +724,7 @@
   flex: 0 0 auto;
 }
 
-.muxui-command-palette__search-field[data-empty] .muxui-command-palette__clear {
+.muxui-command-palette__search-field[data-muxui-state-empty] .muxui-command-palette__clear {
   display: none;
 }
 
@@ -840,69 +840,69 @@
   margin-block-end: var(--muxui-semantic-layout-tight-gap);
 }
 
-.muxui-command-palette__item[data-hovered] {
+.muxui-command-palette__item[data-muxui-state-hovered] {
   color: var(--muxui-semantic-color-neutral-90);
 }
 
-.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-hovered]:not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-hovered] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-18) 44%, transparent);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-focused] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-focused] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-20) 50%, transparent);
 }
 
-.muxui-command-palette__item[data-pressed] {
+.muxui-command-palette__item[data-muxui-state-pressed] {
   color: var(--muxui-semantic-color-neutral-100);
 }
 
-.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-pressed]:not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-pressed]:not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-pressed] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-pressed] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-22) 56%, transparent);
 }
 
-.muxui-command-palette__item[data-focus-visible] {
+.muxui-command-palette__item[data-muxui-state-focus-visible] {
   box-shadow: inset 0 0 0 1px var(--muxui-focus-ring-color);
 }
 
-.muxui-command-palette__item[data-selected] {
+.muxui-command-palette__item[data-muxui-state-selected] {
   background-color: var(--muxui-semantic-color-color-10);
   color: var(--muxui-semantic-color-color-60);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-selected] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-selected] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-color-10) 48%, transparent);
 }
 
-.muxui-command-palette__item[data-hovered][data-selected],
-.muxui-command-palette__item[data-focused][data-selected] {
+.muxui-command-palette__item[data-muxui-state-hovered][data-muxui-state-selected],
+.muxui-command-palette__item[data-muxui-state-focused][data-muxui-state-selected] {
   background-color: var(--muxui-semantic-color-color-20);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-hovered][data-selected] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-hovered][data-muxui-state-selected] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-color-20) 56%, transparent);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-focused][data-selected] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-focused][data-muxui-state-selected] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-color-30) 60%, transparent);
 }
 
-.muxui-command-palette__item[data-pressed][data-selected] {
+.muxui-command-palette__item[data-muxui-state-pressed][data-muxui-state-selected] {
   background-color: var(--muxui-semantic-color-color-30);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-pressed][data-selected] {
+.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-pressed][data-muxui-state-selected] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-color-30) 64%, transparent);
 }
 
-.muxui-command-palette__item[data-disabled] {
+.muxui-command-palette__item[data-muxui-state-disabled] {
   background-color: transparent;
 }
 
@@ -916,11 +916,11 @@
   color: var(--muxui-semantic-color-neutral-60);
 }
 
-.muxui-command-palette__item[data-hovered] .muxui-command-palette__item-icon {
+.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__item-icon {
   color: var(--muxui-semantic-color-neutral-70);
 }
 
-.muxui-command-palette__item[data-focused] .muxui-command-palette__item-icon {
+.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-icon {
   color: currentcolor;
 }
 
@@ -955,15 +955,15 @@
   white-space: nowrap;
 }
 
-.muxui-command-palette__item[data-focused] .muxui-command-palette__item-description {
+.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-description {
   color: var(--muxui-semantic-color-neutral-70);
 }
 
-.muxui-command-palette__item[data-hovered] .muxui-command-palette__item-description {
+.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__item-description {
   color: var(--muxui-semantic-color-neutral-70);
 }
 
-.muxui-command-palette__item[data-selected] .muxui-command-palette__item-description {
+.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__item-description {
   color: var(--muxui-semantic-color-color-70);
 }
 
@@ -1000,37 +1000,37 @@
   line-height: 1;
 }
 
-.muxui-command-palette__item[data-focused] .muxui-command-palette__shortcut,
-.muxui-command-palette__item[data-focused] .muxui-command-palette__item-meta {
+.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__shortcut,
+.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-meta {
   color: var(--muxui-semantic-color-neutral-70);
 }
 
-.muxui-command-palette__item[data-hovered] .muxui-command-palette__shortcut,
-.muxui-command-palette__item[data-hovered] .muxui-command-palette__item-meta {
+.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__shortcut,
+.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__item-meta {
   color: var(--muxui-semantic-color-neutral-70);
 }
 
-.muxui-command-palette__item[data-selected] .muxui-command-palette__shortcut,
-.muxui-command-palette__item[data-selected] .muxui-command-palette__item-meta {
+.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__shortcut,
+.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__item-meta {
   color: var(--muxui-semantic-color-color-70);
 }
 
-.muxui-command-palette__item[data-hovered] .muxui-command-palette__shortcut-key,
-.muxui-command-palette__item[data-focused] .muxui-command-palette__shortcut-key {
+.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__shortcut-key,
+.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__shortcut-key {
   border-color: var(--muxui-semantic-color-neutral-28);
   background-color: var(--muxui-semantic-color-neutral-18);
 }
 
-.muxui-command-palette__item[data-selected] .muxui-command-palette__shortcut-key {
+.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__shortcut-key {
   border-color: var(--muxui-semantic-color-color-20);
   background-color: var(--muxui-semantic-color-color-20);
   color: var(--muxui-semantic-color-color-70);
 }
 
-.muxui-command-palette__item[data-disabled] .muxui-command-palette__item-icon,
-.muxui-command-palette__item[data-disabled] .muxui-command-palette__item-description,
-.muxui-command-palette__item[data-disabled] .muxui-command-palette__item-meta,
-.muxui-command-palette__item[data-disabled] .muxui-command-palette__shortcut {
+.muxui-command-palette__item[data-muxui-state-disabled] .muxui-command-palette__item-icon,
+.muxui-command-palette__item[data-muxui-state-disabled] .muxui-command-palette__item-description,
+.muxui-command-palette__item[data-muxui-state-disabled] .muxui-command-palette__item-meta,
+.muxui-command-palette__item[data-muxui-state-disabled] .muxui-command-palette__shortcut {
   color: var(--muxui-semantic-color-neutral-50);
 }
 
@@ -1300,27 +1300,27 @@
 }
 
 
-.muxui-input-tags__group:not([data-focus-within], [data-disabled], [data-invalid]):hover {
+.muxui-input-tags__group:not([data-muxui-state-focus-within], [data-muxui-state-disabled], [data-muxui-state-invalid]):hover {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
 
-.muxui-input-tags__group[data-focus-within] {
+.muxui-input-tags__group[data-muxui-state-focus-within] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 
-.muxui-input-tags__group[data-invalid] {
+.muxui-input-tags__group[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-input-tags__group[data-invalid][data-focus-within] {
+.muxui-input-tags__group[data-muxui-state-invalid][data-muxui-state-focus-within] {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 
-.muxui-input-tags__group[data-disabled] {
+.muxui-input-tags__group[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   background-color: var(--muxui-semantic-surface-hover);
@@ -1369,7 +1369,7 @@
     outline-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-input-tags__tag[data-hovered]:not([data-disabled]) {
+.muxui-input-tags__tag[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent)
@@ -1377,13 +1377,13 @@
   outline-color: var(--muxui-semantic-color-neutral-30);
 }
 
-.muxui-input-tags__tag[data-focus-visible] {
+.muxui-input-tags__tag[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-focus-ring-color);
 }
 
-.muxui-input-tags__tag[data-disabled] {
+.muxui-input-tags__tag[data-muxui-state-disabled] {
   opacity: 0.45;
 }
 
@@ -1491,7 +1491,7 @@
 
 
 
-.muxui-input-tags[data-disabled] .muxui-input-tags__label {
+.muxui-input-tags[data-muxui-state-disabled] .muxui-input-tags__label {
   opacity: 0.45;
 }
 
@@ -1516,31 +1516,31 @@
 
 
 
-.muxui-input:hover:not(:focus, [data-disabled], [data-invalid]) {
+.muxui-input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
 
 .muxui-input:focus,
-.muxui-input[data-focused] {
+.muxui-input[data-muxui-state-focused] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 
 
-.muxui-input[data-invalid] {
+.muxui-input[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-input[data-invalid]:focus,
-.muxui-input[data-invalid][data-focused] {
+.muxui-input[data-muxui-state-invalid]:focus,
+.muxui-input[data-muxui-state-invalid][data-muxui-state-focused] {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 
 
-.muxui-input[data-disabled],
+.muxui-input[data-muxui-state-disabled],
 .muxui-input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -1589,32 +1589,32 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-multi-select__trigger:hover:not(:focus, :focus-visible, [data-disabled], [data-focus-visible], [data-pressed], .muxui-multi-select__trigger--invalid) {
+.muxui-multi-select__trigger:hover:not(:focus, :focus-visible, [data-muxui-state-disabled], [data-muxui-state-focus-visible], [data-muxui-state-pressed], .muxui-multi-select__trigger--invalid) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-multi-select__trigger[data-focus-visible] {
+.muxui-multi-select__trigger[data-muxui-state-focus-visible] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-multi-select__trigger[data-pressed] {
+.muxui-multi-select__trigger[data-muxui-state-pressed] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 .muxui-multi-select__trigger--invalid,
-.muxui-multi-select__trigger--invalid[data-focus-visible],
-.muxui-multi-select__trigger--invalid[data-pressed] {
+.muxui-multi-select__trigger--invalid[data-muxui-state-focus-visible],
+.muxui-multi-select__trigger--invalid[data-muxui-state-pressed] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-multi-select__trigger--invalid[data-focus-visible],
-.muxui-multi-select__trigger--invalid[data-pressed] {
+.muxui-multi-select__trigger--invalid[data-muxui-state-focus-visible],
+.muxui-multi-select__trigger--invalid[data-muxui-state-pressed] {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-multi-select__trigger[data-disabled] {
+.muxui-multi-select__trigger[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   background-color: var(--muxui-semantic-surface-hover);
@@ -1696,11 +1696,11 @@
   z-index: 100;
 }
 
-.muxui-multi-select__popup[data-entering] {
+.muxui-multi-select__popup[data-muxui-state-entering] {
   animation: muxui-popup-in var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
 }
 
-.muxui-multi-select__popup[data-exiting] {
+.muxui-multi-select__popup[data-muxui-state-exiting] {
   animation: muxui-popup-out var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing);
 }
 
@@ -1751,7 +1751,7 @@
   background-color: var(--muxui-field-bg);
 }
 
-.muxui-multi-select__search[data-focused] {
+.muxui-multi-select__search[data-muxui-state-focused] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
@@ -1813,23 +1813,23 @@
   user-select: none;
 }
 
-.muxui-multi-select__item[data-hovered],
-.muxui-multi-select__item[data-focused] {
+.muxui-multi-select__item[data-muxui-state-hovered],
+.muxui-multi-select__item[data-muxui-state-focused] {
   background-color: var(--muxui-item-focus-bg);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-multi-select__item:is(:hover, [data-hovered]):not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+.muxui-multi-select__item:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-multi-select__item[data-disabled] {
+.muxui-multi-select__item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-multi-select__item[data-focus-visible] {
+.muxui-multi-select__item[data-muxui-state-focus-visible] {
   box-shadow: inset 0 0 0 2px var(--muxui-focus-ring-color);
 }
 
@@ -1851,7 +1851,7 @@
     border-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
-.muxui-multi-select__item[data-selected] .muxui-multi-select__item-check {
+.muxui-multi-select__item[data-muxui-state-selected] .muxui-multi-select__item-check {
   background-color: var(--muxui-semantic-color-color-60);
   border-color: var(--muxui-semantic-color-color-60);
 }
@@ -1961,7 +1961,7 @@
 
 
 
-.muxui-multi-select[data-disabled] .muxui-multi-select__label {
+.muxui-multi-select[data-muxui-state-disabled] .muxui-multi-select__label {
   opacity: 0.45;
 }
 
@@ -1996,20 +1996,20 @@
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-payment-input__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+.muxui-payment-input__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-payment-input__input[data-invalid] {
+.muxui-payment-input__input[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-payment-input__input[data-invalid]:focus,
-.muxui-payment-input__input[data-invalid][data-focused] {
+.muxui-payment-input__input[data-muxui-state-invalid]:focus,
+.muxui-payment-input__input[data-muxui-state-invalid][data-muxui-state-focused] {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-payment-input__input[data-disabled],
+.muxui-payment-input__input[data-muxui-state-disabled],
 .muxui-payment-input__input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -2038,7 +2038,7 @@
 
 
 
-.muxui-payment-input[data-disabled] .muxui-payment-input__card-icon {
+.muxui-payment-input[data-muxui-state-disabled] .muxui-payment-input__card-icon {
   opacity: 0.45;
 }
 
@@ -2084,24 +2084,24 @@
 
 
 
-.muxui-progress-circle[data-indeterminate] .muxui-progress-circle__track {
+.muxui-progress-circle[data-muxui-state-indeterminate] .muxui-progress-circle__track {
   animation: muxui-progress-circle-rotate var(--muxui-semantic-motion-progress-spin-duration) var(--muxui-semantic-motion-constant-easing) infinite;
 }
 
-.muxui-progress-circle__indicator[data-indeterminate] {
+.muxui-progress-circle__indicator[data-muxui-state-indeterminate] {
   animation: muxui-progress-circle-dash var(--muxui-semantic-motion-progress-sweep-duration) var(--muxui-semantic-motion-progress-easing) infinite;
   transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate] {
+  .muxui-progress-circle .muxui-progress-circle__indicator[data-muxui-state-indeterminate] {
     stroke-dasharray: 70, 100;
     stroke-dashoffset: -25;
   }
 }
 
 :where([data-muxui-motion='reduced'])
-  :where(.muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate]) {
+  :where(.muxui-progress-circle .muxui-progress-circle__indicator[data-muxui-state-indeterminate]) {
   stroke-dasharray: 70, 100;
   stroke-dashoffset: -25;
 }
@@ -2200,7 +2200,7 @@
   pointer-events: none;
 }
 
-.muxui-radio-field__button[data-focus-visible] .muxui-radio-field__indicator {
+.muxui-radio-field__button[data-muxui-state-focus-visible] .muxui-radio-field__indicator {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-focus-ring-color);
@@ -2208,19 +2208,19 @@
 
 
 
-.muxui-radio-field__button[data-selected] .muxui-radio-field__indicator {
+.muxui-radio-field__button[data-muxui-state-selected] .muxui-radio-field__indicator {
   border-color: var(--muxui-semantic-color-color-60);
   background-color: var(--muxui-semantic-color-neutral-10);
 }
 
-.muxui-radio-field__button[data-selected][data-hovered]:not([data-disabled])
+.muxui-radio-field__button[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled])
   .muxui-radio-field__indicator {
   border-color: var(--muxui-semantic-color-color-50);
 }
 
 
 
-.muxui-radio-field__button[data-hovered]:not([data-disabled], [data-selected])
+.muxui-radio-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected])
   .muxui-radio-field__indicator {
   border-color: var(--muxui-semantic-color-neutral-60);
   background-color: var(--muxui-semantic-color-neutral-14);
@@ -2231,14 +2231,14 @@
 /* The invalid edge wins in every state. The hovered selector matches the
    selected hover rule's specificity, outranks the unselected hover rule, and
    follows both in source order. */
-.muxui-radio-field[data-invalid] .muxui-radio-field__indicator,
-.muxui-radio-field[data-invalid] [data-hovered]:not([data-disabled]) .muxui-radio-field__indicator {
+.muxui-radio-field[data-muxui-state-invalid] .muxui-radio-field__indicator,
+.muxui-radio-field[data-muxui-state-invalid] [data-muxui-state-hovered]:not([data-muxui-state-disabled]) .muxui-radio-field__indicator {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 
 
-.muxui-radio-field[data-disabled] .muxui-radio-field__button {
+.muxui-radio-field[data-muxui-state-disabled] .muxui-radio-field__button {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -2257,7 +2257,7 @@
   opacity: 0;
 }
 
-.muxui-radio-field__button[data-selected] .muxui-radio-field__dot {
+.muxui-radio-field__button[data-muxui-state-selected] .muxui-radio-field__dot {
   transform: scale(1);
   opacity: 1;
 }
@@ -2684,7 +2684,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 /* Match the shared Button state specificity for the enabled account action. */
 .muxui-sidebar__account-trigger:hover,
-.muxui-sidebar__account-trigger:hover:not([data-disabled], [data-pending]) {
+.muxui-sidebar__account-trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
   background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
   color: var(--muxui-semantic-color-neutral-90);
 }
@@ -2696,7 +2696,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     color: ButtonText !important;
   }
 
-  .muxui-sidebar__account-trigger[data-disabled] {
+  .muxui-sidebar__account-trigger[data-muxui-state-disabled] {
     color: GrayText !important;
   }
 }
@@ -3372,19 +3372,19 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 @media (forced-colors: none) {
   .muxui-command-palette__search-field--inline
-    .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+    .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
     background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
   }
 
   .muxui-command-palette__popup--translucent
     .muxui-command-palette__search-field--inline
-    .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+    .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
     background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   }
 }
 
 @media (forced-colors: none) {
-  .muxui-radio-field__button[data-hovered]:not([data-disabled], [data-selected])
+  .muxui-radio-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected])
     .muxui-radio-field__indicator {
     background-color: var(--muxui-semantic-color-neutral-10);
     background-image: linear-gradient(
@@ -3448,7 +3448,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     box-shadow var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
 }
 
-.muxui-switch-field__button[data-focus-visible]::before {
+.muxui-switch-field__button[data-muxui-state-focus-visible]::before {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-focus-ring-color);
@@ -3456,25 +3456,25 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 
 
-.muxui-switch-field__button[data-selected]::before {
+.muxui-switch-field__button[data-muxui-state-selected]::before {
   background-color: var(--muxui-semantic-color-color-60);
   border-color: var(--muxui-semantic-color-color-60);
 }
 
-.muxui-switch-field__button[data-selected][data-hovered]:not([data-disabled])::before {
+.muxui-switch-field__button[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled])::before {
   background-color: var(--muxui-semantic-color-color-50);
   border-color: var(--muxui-semantic-color-color-50);
 }
 
 
 
-.muxui-switch-field__button[data-hovered]:not([data-disabled], [data-selected])::before {
+.muxui-switch-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected])::before {
   border-color: var(--muxui-semantic-color-neutral-50);
   background-color: var(--muxui-semantic-color-neutral-26);
 }
 
 @media (forced-colors: none) {
-  .muxui-switch-field__button[data-hovered]:not([data-disabled], [data-selected])::before {
+  .muxui-switch-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected])::before {
     background-color: var(--muxui-semantic-color-neutral-20);
     background-image: linear-gradient(
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
@@ -3488,14 +3488,14 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 /* The invalid edge wins in every state. The hovered selector matches the
    selected hover rule's specificity, outranks the unselected hover rule, and
    follows both in source order. */
-.muxui-switch-field[data-invalid] .muxui-switch-field__button::before,
-.muxui-switch-field[data-invalid] .muxui-switch-field__button[data-hovered]::before {
+.muxui-switch-field[data-muxui-state-invalid] .muxui-switch-field__button::before,
+.muxui-switch-field[data-muxui-state-invalid] .muxui-switch-field__button[data-muxui-state-hovered]::before {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 
 
-.muxui-switch-field[data-disabled] .muxui-switch-field__button {
+.muxui-switch-field[data-muxui-state-disabled] .muxui-switch-field__button {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -3520,7 +3520,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   pointer-events: none;
 }
 
-.muxui-switch-field__button[data-selected] .muxui-switch-field__thumb {
+.muxui-switch-field__button[data-muxui-state-selected] .muxui-switch-field__thumb {
   transform: translate(
     calc(
       var(--muxui-switch-field-track-width) - (var(--muxui-switch-field-thumb-offset) * 1.2) -
@@ -3569,11 +3569,11 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   cursor: text;
 }
 
-.muxui-tag-select__group:not(:focus-within, [data-focus-within], [data-disabled], .muxui-tag-select__group--invalid):hover {
+.muxui-tag-select__group:not(:focus-within, [data-muxui-state-focus-within], [data-muxui-state-disabled], .muxui-tag-select__group--invalid):hover {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-tag-select__group[data-focus-within] {
+.muxui-tag-select__group[data-muxui-state-focus-within] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
@@ -3582,12 +3582,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-tag-select__group--invalid[data-focus-within] {
+.muxui-tag-select__group--invalid[data-muxui-state-focus-within] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-tag-select__group[data-disabled] {
+.muxui-tag-select__group[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
@@ -3737,11 +3737,11 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   z-index: 100;
 }
 
-.muxui-tag-select__popup[data-entering] {
+.muxui-tag-select__popup[data-muxui-state-entering] {
   animation: muxui-popup-in var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
 }
 
-.muxui-tag-select__popup[data-exiting] {
+.muxui-tag-select__popup[data-muxui-state-exiting] {
   animation: muxui-popup-out var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing);
 }
 
@@ -3771,23 +3771,23 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   user-select: none;
 }
 
-.muxui-tag-select__item[data-hovered],
-.muxui-tag-select__item[data-focused] {
+.muxui-tag-select__item[data-muxui-state-hovered],
+.muxui-tag-select__item[data-muxui-state-focused] {
   background-color: var(--muxui-item-focus-bg);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-tag-select__item:is(:hover, [data-hovered]):not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+.muxui-tag-select__item:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
-.muxui-tag-select__item[data-disabled] {
+.muxui-tag-select__item[data-muxui-state-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.muxui-tag-select__item[data-focus-visible] {
+.muxui-tag-select__item[data-muxui-state-focus-visible] {
   box-shadow: inset 0 0 0 2px var(--muxui-focus-ring-color);
 }
 
@@ -3795,7 +3795,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 
 
-.muxui-tag-select[data-disabled] .muxui-tag-select__label {
+.muxui-tag-select[data-muxui-state-disabled] .muxui-tag-select__label {
   opacity: 0.45;
 }
 
@@ -3836,25 +3836,25 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-text-area__textarea:focus,
-.muxui-text-area__textarea[data-focused] {
+.muxui-text-area__textarea[data-muxui-state-focused] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-text-area__textarea:hover:not(:focus, [data-disabled], [data-invalid]) {
+.muxui-text-area__textarea:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
-.muxui-text-area__textarea[data-invalid] {
+.muxui-text-area__textarea[data-muxui-state-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-text-area__textarea[data-invalid]:focus,
-.muxui-text-area__textarea[data-invalid][data-focused] {
+.muxui-text-area__textarea[data-muxui-state-invalid]:focus,
+.muxui-text-area__textarea[data-muxui-state-invalid][data-muxui-state-focused] {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
-.muxui-text-area__textarea[data-disabled],
+.muxui-text-area__textarea[data-muxui-state-disabled],
 .muxui-text-area__textarea:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -3864,15 +3864,15 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
-    .muxui-input[data-disabled],
+    .muxui-input[data-muxui-state-disabled],
     .muxui-input:disabled,
-    .muxui-text-area__textarea[data-disabled],
+    .muxui-text-area__textarea[data-muxui-state-disabled],
     .muxui-text-area__textarea:disabled,
-    .muxui-input-tags__group[data-disabled],
-    .muxui-multi-select__trigger[data-disabled],
-    .muxui-payment-input__input[data-disabled],
+    .muxui-input-tags__group[data-muxui-state-disabled],
+    .muxui-multi-select__trigger[data-muxui-state-disabled],
+    .muxui-payment-input__input[data-muxui-state-disabled],
     .muxui-payment-input__input:disabled,
-    .muxui-tag-select__group[data-disabled]
+    .muxui-tag-select__group[data-muxui-state-disabled]
   ) {
     background-color: var(--muxui-semantic-color-neutral-default-96);
   }
@@ -3894,35 +3894,35 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   .muxui-input:focus,
   .muxui-text-area__textarea:focus,
   .muxui-input-tags__group:focus-within,
-  .muxui-input-tags__group[data-focus-within],
+  .muxui-input-tags__group[data-muxui-state-focus-within],
   .muxui-multi-select__trigger:focus-visible,
-  .muxui-multi-select__trigger[data-focus-visible],
+  .muxui-multi-select__trigger[data-muxui-state-focus-visible],
   .muxui-payment-input__input:focus,
   .muxui-tag-select__group:focus-within,
-  .muxui-tag-select__group[data-focus-within] {
+  .muxui-tag-select__group[data-muxui-state-focus-within] {
     outline: 2px solid Highlight !important;
     outline-offset: 2px !important;
     box-shadow: none !important;
   }
 
-  .muxui-input__root[data-disabled] .muxui-input__label,
-  .muxui-text-area[data-disabled] .muxui-text-area__label,
-  .muxui-input-tags[data-disabled] .muxui-input-tags__label,
-  .muxui-multi-select[data-disabled] .muxui-multi-select__label,
-  .muxui-tag-select[data-disabled] .muxui-tag-select__label,
-  .muxui-payment-input[data-disabled] .muxui-payment-input__label {
+  .muxui-input__root[data-muxui-state-disabled] .muxui-input__label,
+  .muxui-text-area[data-muxui-state-disabled] .muxui-text-area__label,
+  .muxui-input-tags[data-muxui-state-disabled] .muxui-input-tags__label,
+  .muxui-multi-select[data-muxui-state-disabled] .muxui-multi-select__label,
+  .muxui-tag-select[data-muxui-state-disabled] .muxui-tag-select__label,
+  .muxui-payment-input[data-muxui-state-disabled] .muxui-payment-input__label {
     opacity: 1 !important;
   }
 
-  .muxui-input[data-disabled],
+  .muxui-input[data-muxui-state-disabled],
   .muxui-input:disabled,
-  .muxui-text-area__textarea[data-disabled],
+  .muxui-text-area__textarea[data-muxui-state-disabled],
   .muxui-text-area__textarea:disabled,
-  .muxui-input-tags__group[data-disabled],
-  .muxui-multi-select__trigger[data-disabled],
-  .muxui-payment-input__input[data-disabled],
+  .muxui-input-tags__group[data-muxui-state-disabled],
+  .muxui-multi-select__trigger[data-muxui-state-disabled],
+  .muxui-payment-input__input[data-muxui-state-disabled],
   .muxui-payment-input__input:disabled,
-  .muxui-tag-select__group[data-disabled] {
+  .muxui-tag-select__group[data-muxui-state-disabled] {
     opacity: 1 !important;
     color: GrayText !important;
   }
@@ -3935,7 +3935,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     color: CanvasText;
   }
 
-  .muxui-checkbox-field[data-disabled] .muxui-checkbox-field__button {
+  .muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
     opacity: 1;
   }
 }

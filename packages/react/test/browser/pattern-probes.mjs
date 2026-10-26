@@ -99,7 +99,7 @@ export function paintSnapshot([element, group]) {
   const owner = group && element.matches('input, textarea') ? element.closest(group) : null;
   // A radio or checkbox paints its ring on an indicator inside the label, and a number field on the group
   // around its input, so each scope's descendants count too.
-  const scopes = [element, element.closest('label'), element.closest('[data-focus-within]'), owner].filter(Boolean);
+  const scopes = [element, element.closest('label'), element.closest('[data-muxui-state-focus-within]'), owner].filter(Boolean);
   const paint = [...new Set(scopes.flatMap((node) => [node, ...node.querySelectorAll('*')]))].filter((node) => !clipped(node)).flatMap((node) => [null, '::before', '::after'].map((pseudo) => {
     const styles = getComputedStyle(node, pseudo);
     return `${styles.outlineStyle} ${styles.outlineWidth} ${styles.outlineColor} ${styles.outlineOffset} ${styles.boxShadow}`;
@@ -107,13 +107,13 @@ export function paintSnapshot([element, group]) {
   return owner ? `${paint} | ${getComputedStyle(owner).borderColor}` : paint;
 }
 
-/** Whether keyboard focus is visible on the element: `:focus-visible`, or React Aria's `data-focus-visible` on it or its label. */
+/** Whether keyboard focus is visible on the element: `:focus-visible`, or React Aria's `data-muxui-state-focus-visible` on it or its label. */
 export function isFocusVisible(element) {
-  return element.matches(':focus-visible') || element.hasAttribute('data-focus-visible') || element.closest('label')?.hasAttribute('data-focus-visible') === true;
+  return element.matches(':focus-visible') || element.hasAttribute('data-muxui-state-focus-visible') || element.closest('label')?.hasAttribute('data-muxui-state-focus-visible') === true;
 }
 
 /** The node whose subtree holds the focus-ring paint `paintSnapshot` reads: the group, else the control's label or focus group when it has one. Runs in the page. */
-const paintScope = ([element, group]) => (group && element.matches('input, textarea') ? element.closest(group) : null) ?? element.closest('label') ?? element.closest('[data-focus-within]') ?? element;
+const paintScope = ([element, group]) => (group && element.matches('input, textarea') ? element.closest(group) : null) ?? element.closest('label') ?? element.closest('[data-muxui-state-focus-within]') ?? element;
 
 /**
  * `paintSnapshot` once the control's motion has ended. A read taken sooner can land on a
@@ -133,7 +133,7 @@ async function settledPaint(tab, handle, group) {
  * Proves each keyboard stop paints a focus ring, against its own rest state. A box
  * shadow alone proves nothing: a primary Button rests on its elevation shadow. Call
  * `land(name)` right after Tab reaches a control, and `finish()` after focus has left
- * the last one. Each stop must match `:focus-visible` (or `data-focus-visible`) and
+ * the last one. Each stop must match `:focus-visible` (or `data-muxui-state-focus-visible`) and
  * paint something different focused than after focus moves on. `group` is passed to
  * `paintSnapshot` for text entries.
  */

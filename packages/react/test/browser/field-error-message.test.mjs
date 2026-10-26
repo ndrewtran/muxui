@@ -40,7 +40,7 @@ test('real browser errorMessage stays hidden for valid fields and replaces faile
     await page.locator('#submit').click();
     assert.equal(await page.locator('#submitted').textContent(), JSON.stringify([['select', 'red'], ['combo', 'red'], ['colour', '#FF0000']]));
     assert.deepEqual(await shown(), []);
-    assert.equal(await page.locator('[data-invalid]').count(), 0);
+    assert.equal(await page.locator('[data-muxui-state-invalid]').count(), 0);
 
     await page.goto(`${url}/field-error.html?mode=empty`, { waitUntil: 'networkidle' });
     await page.locator('#submit').click();

@@ -95,6 +95,15 @@ test('date segments keep data-placeholder for React Aria, and the date input gro
   assert.match(attributes(field(RAC.DateInput, { isDisabled: true }), 'class="group"'), / data-disabled="true"/u, 'control: a raw DateInput leaks the React Aria name');
 });
 
+test('the hidden input a date input renders is renamed through the field input context', () => {
+  const field = (Input) => renderToString(h(AriaDateField, { 'aria-label': 'Date', isDisabled: true },
+    h(Input, { children: (segment) => h(AriaDateSegment, { segment }) })));
+  const hiddenInput = (markup) => /<input type="text"[^>]*hidden[^>]*>/u.exec(markup)?.[0] ?? '';
+  assert.match(hiddenInput(field(AriaDateInput)), / data-muxui-state-disabled="true"/u);
+  assert.doesNotMatch(hiddenInput(field(AriaDateInput)), / data-disabled=/u);
+  assert.match(hiddenInput(field(RAC.DateInput)), / data-disabled="true"/u, 'control: a raw DateInput leaks the React Aria name on its hidden input');
+});
+
 test('the ColorSwatchPicker root is renamed through the ListBox context', () => {
   const picker = (Picker) => renderToString(h(Picker, { 'aria-label': 'Swatches', defaultValue: '#f00' },
     h(Picker === RAC.ColorSwatchPicker ? RAC.ColorSwatchPickerItem : AriaColorSwatchPickerItem, { color: '#f00' })));

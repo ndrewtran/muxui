@@ -1,13 +1,7 @@
 import React from 'react';
 import type { CSSProperties, ForwardRefExoticComponent, ReactElement, RefAttributes, UIEvent, UIEventHandler } from 'react';
-import {
-  ListBox as AriaListBox,
-  ListBoxItem as AriaListBoxItem,
-  Virtualizer as AriaVirtualizer,
-  ListLayout,
-  GridLayout,
-  Size,
-} from 'react-aria-components';
+import { Virtualizer as AriaVirtualizer, ListLayout, GridLayout, Size } from 'react-aria-components';
+import { AriaListBox, AriaListBoxItem } from './substrate.ts';
 import type { GridLayoutOptions, Key, ListLayoutOptions, Rect } from 'react-aria-components';
 import { classNames, accessibleName } from './control-utils.ts';
 import { normalizeItems } from './collection-items.ts';

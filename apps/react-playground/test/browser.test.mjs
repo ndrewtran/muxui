@@ -88,7 +88,7 @@ async function readChoiceFocusStyles(root) {
     const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
     return {
       active: document.activeElement === input,
-      focusVisible: node.hasAttribute('data-focus-visible'),
+      focusVisible: node.hasAttribute('data-muxui-state-focus-visible'),
       rootOutlineStyle: rootStyle.outlineStyle,
       inputOutlineStyle: inputStyle?.outlineStyle,
       indicatorBoxShadow: indicatorStyle?.boxShadow,
@@ -362,7 +362,7 @@ test('R1.4 React component browser and axe matrix', async () => {
 
         const dropZone = profile.locator('[data-r1-4-control="drop-zone"]');
         await dropZone.hover();
-        if (await dropZone.getAttribute('data-hovered') !== 'true') throw new Error('DropZone hover must expose its active state');
+        if (await dropZone.getAttribute('data-muxui-state-hovered') !== 'true') throw new Error('DropZone hover must expose its active state');
 
         const fileTrigger = profile.locator('[data-component="file-trigger"]');
         const fileInput = fileTrigger.locator('input[type="file"]');

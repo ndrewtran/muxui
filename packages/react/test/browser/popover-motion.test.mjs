@@ -17,7 +17,7 @@ async function readMotion(page, selector) {
       opacity: Number(style.opacity),
       translate: style.translate,
       transform: style.transform,
-      exiting: node.hasAttribute('data-exiting'),
+      exiting: node.hasAttribute('data-muxui-state-exiting'),
       reduced: node.hasAttribute('data-muxui-motion-reduced'),
     };
   });
@@ -45,7 +45,7 @@ async function waitForMenuOverlay(page, label, { aligned = false, identity = fal
   await page.waitForFunction(({ expectedLabel, shouldAlign, shouldBeIdentity }) => {
     const item = document.activeElement;
     const overlay = item?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
-    if (item?.textContent?.trim() !== expectedLabel || !item.hasAttribute('data-focused') || !overlay || overlay.hidden) return false;
+    if (item?.textContent?.trim() !== expectedLabel || !item.hasAttribute('data-muxui-state-focused') || !overlay || overlay.hidden) return false;
     const transform = getComputedStyle(overlay).transform;
     if (shouldBeIdentity && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)') return false;
     if (!shouldAlign) return true;
@@ -63,7 +63,7 @@ async function waitForMenuTravel(page, label) {
     const item = document.activeElement;
     const overlay = item?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
     const transform = overlay && getComputedStyle(overlay).transform;
-    return item?.textContent?.trim() === expectedLabel && item.hasAttribute('data-focused')
+    return item?.textContent?.trim() === expectedLabel && item.hasAttribute('data-muxui-state-focused')
       && overlay && !overlay.hidden && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
   }, label, { timeout: 1500 });
 }
@@ -121,7 +121,7 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     await page.keyboard.press('ArrowDown');
     assert.ok(await autocompleteInput.getAttribute('aria-activedescendant'), 'Autocomplete ArrowDown activates an option');
     await page.evaluate(() => document.dispatchEvent(new Event('scroll')));
-    await page.locator(`${autocompletePopup}[data-exiting]`).waitFor();
+    await page.locator(`${autocompletePopup}[data-muxui-state-exiting]`).waitFor();
     await page.mouse.click(4, 4);
     await page.locator(autocompletePopup).waitFor({ state: 'detached' });
     await page.waitForFunction(() => document.activeElement?.matches('.muxui-autocomplete .muxui-field-input'));

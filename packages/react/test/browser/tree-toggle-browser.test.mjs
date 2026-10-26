@@ -126,12 +126,12 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.equal(await toggle.getAttribute('aria-label'), 'Toggle');
     assert.equal(await toggle.getAttribute('aria-disabled'), null);
-    assert.equal(await parent.getAttribute('data-expanded'), null);
+    assert.equal(await parent.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await page.locator('[aria-level="2"]').count(), 0);
     await parentLabel.click();
     // Negative check: the click must not expand the item, which has no event to await.
     await page.waitForTimeout(50);
-    assert.equal(await parent.getAttribute('data-expanded'), null);
+    assert.equal(await parent.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await page.locator('[aria-level="2"]').count(), 0);
 
     const geometry = await page.evaluate(() => {
@@ -169,7 +169,7 @@ test('real browser expands Tree from the visible caret and preserves disabled be
 
     await page.mouse.click(geometry.x, geometry.y);
     await page.locator('[aria-level="2"]').first().waitFor();
-    assert.equal(await parent.getAttribute('data-expanded'), 'true');
+    assert.equal(await parent.getAttribute('data-muxui-state-expanded'), 'true');
 
     await toggle.focus();
     assert.equal(
@@ -178,22 +178,22 @@ test('real browser expands Tree from the visible caret and preserves disabled be
       'Tree toggle button receives keyboard focus',
     );
     await toggle.press('Enter');
-    await page.waitForFunction(() => document.querySelector('.muxui-tree-item')?.getAttribute('data-expanded') !== 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-tree-item')?.getAttribute('data-muxui-state-expanded') !== 'true');
     assert.equal(await page.locator('[aria-level="2"]').count(), 0);
     await toggle.press(' ');
     await page.locator('[aria-level="2"]').first().waitFor();
-    assert.equal(await parent.getAttribute('data-expanded'), 'true');
+    assert.equal(await parent.getAttribute('data-muxui-state-expanded'), 'true');
 
     const disabledParent = page.locator('.muxui-tree-item[data-key="disabled-parent"]');
     const disabledToggle = disabledParent.locator('.muxui-tree-toggle');
     await disabledToggle.waitFor({ state: 'attached' });
-    assert.equal(await disabledToggle.getAttribute('data-disabled'), 'true');
+    assert.equal(await disabledToggle.getAttribute('data-muxui-state-disabled'), 'true');
     const disabledGeometry = await disabledToggle.boundingBox();
     assert.ok(disabledGeometry && disabledGeometry.width >= 12 && disabledGeometry.height > 0);
     await disabledToggle.click({ force: true });
     // Negative check: the click must not expand the item, which has no event to await.
     await page.waitForTimeout(50);
-    assert.equal(await disabledParent.getAttribute('data-expanded'), null);
+    assert.equal(await disabledParent.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await disabledParent.locator('[aria-level="2"]').count(), 0);
 
     const fixtureUrl = `${url}/tree-toggle.html`;
@@ -202,16 +202,16 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     const rowParent = rowTree.locator('.muxui-tree-item[data-key="row-parent"]');
     const rowParentLabel = rowParent.locator('.muxui-tree-item-label');
     await rowParentLabel.waitFor();
-    assert.equal(await rowParent.getAttribute('data-expanded'), null);
+    assert.equal(await rowParent.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await rowTree.locator('[data-key="row-child"]').count(), 0);
 
     await rowParentLabel.click();
     await rowTree.locator('[data-key="row-child"]').waitFor();
-    assert.equal(await rowParent.getAttribute('data-expanded'), 'true');
+    assert.equal(await rowParent.getAttribute('data-muxui-state-expanded'), 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '1');
 
     await rowParentLabel.click();
-    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-expanded') !== 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-muxui-state-expanded') !== 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '2');
 
     const rowBox = await rowParent.boundingBox();
@@ -223,21 +223,21 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '3');
 
     await rowParent.locator('.muxui-tree-toggle').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-expanded') !== 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-muxui-state-expanded') !== 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '4');
 
     const portalRow = rowTree.locator('.muxui-tree-item[data-key="row-portal-parent"]');
     const portalSurface = page.locator('.portal-surface');
     await portalSurface.waitFor();
     await portalSurface.click();
-    assert.equal(await portalRow.getAttribute('data-expanded'), null);
+    assert.equal(await portalRow.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '4');
     await portalRow.locator('.muxui-tree-item-label').click();
     await rowTree.locator('[data-key="row-portal-child"]').waitFor();
-    assert.equal(await portalRow.getAttribute('data-expanded'), 'true');
+    assert.equal(await portalRow.getAttribute('data-muxui-state-expanded'), 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '5');
     await portalRow.locator('.muxui-tree-toggle').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-portal-parent"]')?.getAttribute('data-expanded') !== 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-portal-parent"]')?.getAttribute('data-muxui-state-expanded') !== 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '6');
 
     const leaf = rowTree.locator('.muxui-tree-item[data-key="row-leaf"]');
@@ -246,30 +246,30 @@ test('real browser expands Tree from the visible caret and preserves disabled be
 
     const disabledRow = rowTree.locator('.muxui-tree-item[data-key="row-disabled-parent"]');
     await disabledRow.locator('.muxui-tree-item-content').click({ force: true });
-    assert.equal(await disabledRow.getAttribute('data-expanded'), null);
+    assert.equal(await disabledRow.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '6');
 
     const controlsRow = rowTree.locator('.muxui-tree-item[data-key="row-controls"]');
     await controlsRow.locator('.nested-button').click();
-    assert.equal(await controlsRow.getAttribute('data-expanded'), null);
+    assert.equal(await controlsRow.getAttribute('data-muxui-state-expanded'), null);
     await controlsRow.locator('.nested-link').click();
-    assert.equal(await controlsRow.getAttribute('data-expanded'), null);
+    assert.equal(await controlsRow.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '6');
 
     await rowParent.focus();
     await rowParent.press('ArrowRight');
     await rowTree.locator('[data-key="row-child"]').waitFor();
-    assert.equal(await rowParent.getAttribute('data-expanded'), 'true');
+    assert.equal(await rowParent.getAttribute('data-muxui-state-expanded'), 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '7');
     await rowParent.press('ArrowLeft');
-    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-expanded') !== 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-muxui-state-expanded') !== 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '8');
 
     await page.goto(`${fixtureUrl}?mode=row-disabled-tree`, { waitUntil: 'networkidle' });
     const disabledTree = page.locator('.muxui-tree');
     const disabledTreeParent = disabledTree.locator('.muxui-tree-item[data-key="row-parent"]');
     await disabledTreeParent.locator('.muxui-tree-item-label').click({ force: true });
-    assert.equal(await disabledTreeParent.getAttribute('data-expanded'), null);
+    assert.equal(await disabledTreeParent.getAttribute('data-muxui-state-expanded'), null);
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '0');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-selection-change-count'), '0');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-action-count'), '0');
@@ -281,7 +281,7 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     await controlledTree.locator('[data-key="row-child"]').waitFor();
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '1');
     await controlledParent.locator('.muxui-tree-item-label').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-expanded') !== 'true');
+    await page.waitForFunction(() => document.querySelector('.muxui-tree-item[data-key="row-parent"]')?.getAttribute('data-muxui-state-expanded') !== 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-expanded-change-count'), '2');
 
     await page.goto(`${fixtureUrl}?mode=row-multiple`, { waitUntil: 'networkidle' });
@@ -289,7 +289,7 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     const multipleParent = multipleTree.locator('.muxui-tree-item[data-key="row-parent"]');
     await multipleParent.locator('.muxui-tree-item-label').click();
     await multipleTree.locator('[data-key="row-child"]').waitFor();
-    assert.equal(await multipleParent.getAttribute('data-expanded'), 'true');
+    assert.equal(await multipleParent.getAttribute('data-muxui-state-expanded'), 'true');
     assert.equal(await multipleParent.getAttribute('aria-selected'), 'true');
     assert.equal(await page.locator('#row-fixture').getAttribute('data-selection-change-count'), '1');
 

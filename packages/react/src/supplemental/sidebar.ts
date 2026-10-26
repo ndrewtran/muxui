@@ -1,15 +1,7 @@
 import React from 'react';
 import type { AnchorHTMLAttributes, ChangeEventHandler, ComponentType, ForwardRefExoticComponent, HTMLAttributes, ReactElement, ReactNode, RefAttributes, RefObject } from 'react';
-import {
-  Button as AriaButton,
-  Dialog as AriaDialog,
-  DialogTrigger as AriaDialogTrigger,
-  Focusable as AriaFocusable,
-  Link as AriaLink,
-  MenuTrigger as AriaMenuTrigger,
-  Modal as AriaModal,
-  ModalOverlay as AriaModalOverlay,
-} from 'react-aria-components';
+import { Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Focusable as AriaFocusable, MenuTrigger as AriaMenuTrigger } from 'react-aria-components';
+import { AriaButton, AriaLink, AriaModal, AriaModalOverlay } from '../substrate.ts';
 import type { DialogTriggerProps as AriaDialogTriggerProps } from 'react-aria-components';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import SearchIcon from 'lucide-react/dist/esm/icons/search.mjs';

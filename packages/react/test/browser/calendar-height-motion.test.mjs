@@ -133,7 +133,7 @@ test('calendar month height interpolates without changing semantics or reduced m
         await page.locator('.muxui-date-trigger').click();
         await page.locator('.muxui-calendar-grid').waitFor();
         await page.waitForFunction(() => document.querySelector('.muxui-date-popover').getAnimations().every((animation) => animation.playState === 'finished'));
-        assert.match(await page.locator('.muxui-date-popover').getAttribute('data-placement'), kind === 'range-picker' ? /top/u : /bottom/u);
+        assert.match(await page.locator('.muxui-date-popover').getAttribute('data-muxui-state-placement'), kind === 'range-picker' ? /top/u : /bottom/u);
       }
       if (kind === 'calendar') {
         await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-content-resize-transition-spring-visual-duration', '2s'));

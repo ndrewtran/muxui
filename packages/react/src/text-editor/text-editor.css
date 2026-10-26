@@ -6,7 +6,7 @@
  * inside the .muxui-text-editor__content wrapper.
  *
  * State data-attributes:
- *   Root: [data-disabled] [data-invalid]
+ *   Root: [data-muxui-state-disabled] [data-muxui-state-invalid]
  */
 
 /* ─── Root ─────────────────────────────────────────────────────────────────── */
@@ -29,11 +29,11 @@
   cursor: default;
 }
 
-.muxui-text-editor[data-disabled] .muxui-text-editor__label {
+.muxui-text-editor[data-muxui-state-disabled] .muxui-text-editor__label {
   opacity: 0.45;
 }
 
-.muxui-text-editor[data-invalid] .muxui-text-editor__label {
+.muxui-text-editor[data-muxui-state-invalid] .muxui-text-editor__label {
   color: var(--muxui-semantic-feedback-invalid);
 }
 
@@ -195,7 +195,7 @@
 }
 
 /* Disabled */
-.muxui-text-editor[data-disabled] .muxui-text-editor__content .ProseMirror {
+.muxui-text-editor[data-muxui-state-disabled] .muxui-text-editor__content .ProseMirror {
   opacity: 0.45;
   cursor: not-allowed;
   background-color: var(--muxui-semantic-color-neutral-18);
@@ -203,11 +203,11 @@
 }
 
 /* Invalid */
-.muxui-text-editor[data-invalid] .muxui-text-editor__content .ProseMirror {
+.muxui-text-editor[data-muxui-state-invalid] .muxui-text-editor__content .ProseMirror {
   box-shadow: 0 0 0 1px var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-text-editor[data-invalid] .muxui-text-editor__content .ProseMirror:focus {
+.muxui-text-editor[data-muxui-state-invalid] .muxui-text-editor__content .ProseMirror:focus {
   box-shadow:
     0 0 0 1px var(--muxui-semantic-feedback-invalid-border),
     0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
@@ -300,7 +300,7 @@
   outline-offset: 2px;
 }
 
-.muxui-text-editor__btn[data-disabled='true'],
+.muxui-text-editor__btn[data-muxui-state-disabled],
 .muxui-text-editor__btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -658,7 +658,7 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-text-editor[data-disabled] .muxui-text-editor__content .ProseMirror {
+  :scope .muxui-text-editor[data-muxui-state-disabled] .muxui-text-editor__content .ProseMirror {
     background-color: var(--muxui-semantic-color-neutral-12);
     box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-18);
   }
@@ -679,21 +679,21 @@
   color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-text-editor[data-invalid] .muxui-text-editor__description {
+.muxui-text-editor[data-muxui-state-invalid] .muxui-text-editor__description {
   color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-text-editor[data-readonly] .muxui-text-editor__content .ProseMirror {
+.muxui-text-editor[data-muxui-state-read-only] .muxui-text-editor__content .ProseMirror {
   cursor: default;
 }
 
-.muxui-text-editor[data-required] .muxui-text-editor__label::after {
+.muxui-text-editor[data-muxui-state-required] .muxui-text-editor__label::after {
   content: ' *';
   color: var(--muxui-semantic-selection-track);
 }
 
 @media (forced-colors: none) {
-  .muxui-text-editor__toolbar .muxui-text-editor__btn--active:hover:not([data-disabled='true'], :disabled) {
+  .muxui-text-editor__toolbar .muxui-text-editor__btn--active:hover:not([data-muxui-state-disabled], :disabled) {
     background-color: var(--muxui-semantic-color-neutral-94);
     background-image: linear-gradient(
       color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 6%, transparent),
@@ -701,7 +701,7 @@
     );
   }
 
-  .muxui-text-editor__bubble-menu .muxui-text-editor__btn--active:hover:not([data-disabled='true'], :disabled) {
+  .muxui-text-editor__bubble-menu .muxui-text-editor__btn--active:hover:not([data-muxui-state-disabled], :disabled) {
     background-color: var(--muxui-semantic-color-neutral-22);
     background-image: linear-gradient(
       color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 6%, transparent),
@@ -710,8 +710,8 @@
   }
 
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-text-editor__toolbar .muxui-text-editor__btn--active:hover:not([data-disabled='true'], :disabled),
-    :scope .muxui-text-editor__bubble-menu .muxui-text-editor__btn--active:hover:not([data-disabled='true'], :disabled) {
+    :scope .muxui-text-editor__toolbar .muxui-text-editor__btn--active:hover:not([data-muxui-state-disabled], :disabled),
+    :scope .muxui-text-editor__bubble-menu .muxui-text-editor__btn--active:hover:not([data-muxui-state-disabled], :disabled) {
       background-color: var(--muxui-semantic-color-neutral-22);
       background-image: linear-gradient(
         color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 6%, transparent),

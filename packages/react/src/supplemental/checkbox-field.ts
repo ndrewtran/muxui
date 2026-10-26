@@ -2,11 +2,8 @@ import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, ReactNode, RefAttributes } from 'react';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
-import {
-  CheckboxField as AriaCheckboxField,
-  CheckboxButton as AriaCheckboxButton,
-  FieldError as AriaFieldError,
-} from 'react-aria-components';
+import { FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaCheckboxField, AriaCheckboxButton } from '../substrate.ts';
 import type { CheckboxButtonProps as AriaCheckboxButtonProps, CheckboxButtonRenderProps, CheckboxFieldProps as AriaCheckboxFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx, nativePart } from './part-utils.ts';

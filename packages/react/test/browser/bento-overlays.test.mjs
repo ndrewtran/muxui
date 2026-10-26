@@ -65,7 +65,7 @@ function OverlayFixture() {
 const fixtureCss = `
   body { margin: 0; }
   .muxui-popover, .muxui-tooltip, .muxui-preview-trigger { box-sizing: border-box; width: 180px; height: 80px; }
-  .muxui-popover-positioner[data-placement='bottom'] .muxui-popover { margin-block-start: 0; }
+  .muxui-popover-positioner[data-muxui-state-placement='bottom'] .muxui-popover { margin-block-start: 0; }
   .muxui-dialog, .muxui-dialog-backdrop, .muxui-alert-dialog__popup, .muxui-tooltip, .muxui-preview-trigger { transition: none; }
   .consumer-frameless { background: transparent; border: 0; box-shadow: none; padding: 0; }
 `;
@@ -154,7 +154,7 @@ test('anchored overlays position on every logical alignment, use independent anc
         await page.locator('#trigger').click();
         const popup = page.locator('.muxui-popover-positioner');
         await popup.waitFor();
-        await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.hasAttribute('data-placement'));
+        await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.hasAttribute('data-muxui-state-placement'));
         await waitForOverlayMotionSettled(page, '.muxui-popover-positioner');
         assertPlacement(await popup.boundingBox(), await page.locator('#trigger').boundingBox(), placement, 11, 3, direction === 'rtl');
         await page.keyboard.press('Escape');
@@ -171,7 +171,7 @@ test('anchored overlays position on every logical alignment, use independent anc
       }
       const selector = kind === 'popover' ? '.muxui-popover-positioner' : '.muxui-tooltip';
       await page.locator(selector).waitFor();
-      await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-placement'), selector);
+      await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-muxui-state-placement'), selector);
       if (kind === 'popover') await waitForOverlayMotionSettled(page, selector);
       assertPlacement(await page.locator(selector).boundingBox(), await page.locator('#anchor').boundingBox(), 'bottom-end', 6, 0, false);
       if (kind === 'tooltip') {
@@ -183,7 +183,7 @@ test('anchored overlays position on every logical alignment, use independent anc
     }
     await configure(page, { kind: 'popover', placement: 'bottom-start', shouldFlip: true, nearEdge: true, containerPadding: 20 });
     await page.locator('#trigger').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.placement === 'top');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiStatePlacement === 'top');
     await waitForOverlayMotionSettled(page, '.muxui-popover-positioner');
     const box = await page.locator('.muxui-popover-positioner').boundingBox();
     const anchor = await page.locator('#trigger').boundingBox();
@@ -192,7 +192,7 @@ test('anchored overlays position on every logical alignment, use independent anc
     await page.keyboard.press('Escape');
     await configure(page, { kind: 'popover', placement: 'bottom-start', shouldFlip: false, nearEdge: true });
     await page.locator('#trigger').click();
-    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.placement === 'bottom');
+    await page.waitForFunction(() => document.querySelector('.muxui-popover-positioner')?.dataset.muxuiStatePlacement === 'bottom');
     await waitForOverlayMotionSettled(page, '.muxui-popover-positioner');
     await page.keyboard.press('Escape');
     await configure(page, { kind: 'preview', placement: 'end-bottom' });

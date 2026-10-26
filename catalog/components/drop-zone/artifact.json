@@ -26,7 +26,7 @@
         "Clicks on controls inside DropZone, such as a FileTrigger, do not call onActivate.",
         "DropZone reads no browser globals during server rendering."
       ],
-      "accessibility": ["Expose a keyboard drop affordance alongside pointer and clipboard input.", "Expose disabled state on the drop button and visible-focus state, and preserve the consumer-provided accessible name; a disabled root carries data-disabled for styling and aria-disabled=\"true\"."],
+      "accessibility": ["Expose a keyboard drop affordance alongside pointer and clipboard input.", "Expose disabled state on the drop button and visible-focus state, and preserve the consumer-provided accessible name; a disabled root carries data-muxui-state-disabled for styling and aria-disabled=\"true\"."],
       "tokenRecipe": { "source": "muxui:token:default-theme", "requirements": [
         { "token": "semantic.control.radius", "requirement": "required" },
         { "token": "semantic.control.padding-inline", "requirement": "required" },

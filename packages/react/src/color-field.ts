@@ -1,14 +1,8 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  ColorField as AriaColorField,
-  ColorFieldStateContext as AriaColorFieldStateContext,
-  Label as AriaLabel,
-  Input as AriaInput,
-  Text as AriaText,
-  FieldError as AriaFieldError,
-} from 'react-aria-components';
+import { ColorFieldStateContext as AriaColorFieldStateContext, Label as AriaLabel, Text as AriaText, FieldError as AriaFieldError } from 'react-aria-components';
+import { AriaColorField, AriaInput } from './substrate.ts';
 import { normalizeChoiceControlSize } from './choice-context.mjs';
 import { classNames, accessibleName } from './control-utils.ts';
 import { colorValue, ColorPickerContext } from './color-context.ts';

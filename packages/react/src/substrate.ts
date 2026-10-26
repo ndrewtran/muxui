@@ -10,8 +10,9 @@ import { substrateStateAttributes } from './styling-contract.ts';
 // the way React Aria does; a shared renamer prevents a rename-specific divergence, not every hydration mismatch.
 //
 // Every React Aria component Mux renders that can set a closed-list attribute is wrapped here, including one that
-// delegates its element to another (DateInput renders a Group). styling-tokens.test.mjs checks the wrapper
-// definitions and the audited React Aria versions.
+// delegates its element to another (DateInput renders a Group and a hidden Input, ColorSwatchPicker a ListBox).
+// styling-tokens.test.mjs checks the wrapper definitions, every import that could bypass them, the writers in the
+// installed React Aria Components and the audited React Aria versions, and renders families to see the markup.
 
 type DomProps = Record<string, unknown>;
 type Values = Record<string, unknown> | undefined;
@@ -66,6 +67,21 @@ function withMuxListBoxState<C>(component: C): C {
   return Wrapped as unknown as C;
 }
 
+/**
+ * DateInput renders a hidden form Input of its own, which reads InputContext (the date field supplies it) and takes no
+ * `render` from us. A provider that adds a `render` to the field's own context value gives that input the Mux names too.
+ * This reaches a DateInput inside a DateField or TimeField. In a DatePicker or DateRangePicker, DateInput builds its own
+ * InputContext below this provider, so that hidden input keeps `data-disabled` (see state-matrix.mjs).
+ */
+function withMuxInputState<C>(component: C): C {
+  const Wrapped = (props: object) => {
+    const parent = RAC.useSlottedContext(RAC.InputContext);
+    const value = { ...parent, render: (domProps: object) => createElement('input', renameState(domProps, [])) } as ContextType<typeof RAC.InputContext>;
+    return createElement(RAC.InputContext.Provider, { value }, createElement(component as ComponentType<object>, props));
+  };
+  return Wrapped as unknown as C;
+}
+
 /** @internal */
 export const AriaBreadcrumb = /*#__PURE__*/ withMuxState(RAC.Breadcrumb, 'li');
 /** @internal */
@@ -102,8 +118,12 @@ export const AriaColorSwatchPicker = /*#__PURE__*/ withMuxListBoxState(RAC.Color
 export const AriaColorSwatchPickerItem = /*#__PURE__*/ withMuxState(RAC.ColorSwatchPickerItem, 'div');
 /** @internal */
 export const AriaComboBox = /*#__PURE__*/ withMuxState(RAC.ComboBox, 'div');
-/** @internal */
-export const AriaDateInput = /*#__PURE__*/ withMuxState(RAC.DateInput, 'div');
+/**
+ * @internal
+ * Both calls are annotated: with only the outer one a bundler keeps `RAC.DateInput` (and React Aria's date code with it)
+ * in every bundle that imports the substrate.
+ */
+export const AriaDateInput = /*#__PURE__*/ withMuxInputState(/*#__PURE__*/ withMuxState(RAC.DateInput, 'div'));
 /** @internal */
 export const AriaDateField = /*#__PURE__*/ withMuxState(RAC.DateField, 'div');
 /** @internal */

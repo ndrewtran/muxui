@@ -134,12 +134,12 @@ function deleteBeforeInput(node) {
 
 test('R1.3 collection source preserves glyph alignment state selectors', async () => {
   const styles = await readFile(resolve(import.meta.dirname, '../src/styles/collections.css'), 'utf8');
-  assert.match(styles, /\.muxui-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
-  assert.match(styles, /\.muxui-range-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
+  assert.match(styles, /\.muxui-calendar\[data-muxui-state-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
+  assert.match(styles, /\.muxui-range-calendar\[data-muxui-state-disabled\] \.muxui-calendar-(?:previous|next) svg[\s\S]*?opacity: 0\.45;/u);
   assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-block: max\(0px, calc\(\(var\(--muxui-control-target-size/u);
   assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-inline: var\(--muxui-semantic-layout-inset-large\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
+  assert.match(styles, /\.muxui-tree-item\[data-muxui-state-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-transition-duration\) var\(--muxui-semantic-motion-interaction-transition-easing\);/u);
+  assert.match(styles, /\.muxui-tree-item\[data-muxui-state-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
   assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
   assert.match(styles, /\.muxui-token\s*\{[\s\S]*?display:\s*inline-flex;[\s\S]*?padding-inline:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?background-color:\s*var\(--muxui-semantic-surface-subtle\);/u, 'TokenField tokens need a visible, separated affordance');
   const baseStyles = await readFile(resolve(import.meta.dirname, '../src/styles/base.css'), 'utf8');
@@ -241,15 +241,15 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     React.createElement(ColorSwatchPicker, { 'aria-label': 'SSR swatches', items: [{ id: 'red', color: '#ff0000' }], readOnly: true }),
     React.createElement(Slider, { 'aria-label': 'SSR numeric slider', readOnly: true }),
   ))).window.document;
-  assert.equal(ssr.querySelector('.muxui-color-area')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-area-thumb')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-slider')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-slider-thumb')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-wheel')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-wheel-thumb')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-color-swatch-picker[role="listbox"]')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-slider')?.getAttribute('data-readonly'), 'true');
-  assert.equal(ssr.querySelector('.muxui-slider-thumb')?.getAttribute('data-readonly'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-area')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-area-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-slider')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-slider-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-wheel')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-wheel-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-color-swatch-picker[role="listbox"]')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-slider')?.getAttribute('data-muxui-state-read-only'), 'true');
+  assert.equal(ssr.querySelector('.muxui-slider-thumb')?.getAttribute('data-muxui-state-read-only'), 'true');
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
@@ -278,7 +278,7 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     await act(async () => root.render(React.createElement(ColorSwatchPicker, { 'aria-label': 'Disabled palette', disabled: true, items: [{ id: 'red', color: '#ff0000' }], onChange: (value) => disabledChanges.push(value) })));
     const disabledItem = container.querySelector('.muxui-color-swatch-picker-item');
     assert.equal(disabledItem.getAttribute('aria-disabled'), 'true');
-    assert.equal(disabledItem.getAttribute('data-disabled'), 'true');
+    assert.equal(disabledItem.getAttribute('data-muxui-state-disabled'), 'true');
     await act(async () => disabledItem.click());
     assert.deepEqual(disabledChanges, []);
 
@@ -296,11 +296,11 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     assert.equal(container.querySelector('.muxui-color-field input').disabled, true);
     const disabledNestedAreaField = disabledNestedArea.closest('.muxui-color-area-field');
     assert.equal(disabledNestedAreaField.getAttribute('aria-disabled'), 'true');
-    assert.equal(disabledNestedAreaField.getAttribute('data-disabled'), 'true');
+    assert.equal(disabledNestedAreaField.getAttribute('data-muxui-state-disabled'), 'true');
     assert.equal(container.querySelector('.muxui-color-slider input')?.disabled, true);
     assert.equal(container.querySelector('.muxui-color-wheel input')?.disabled, true);
     assert.equal(container.querySelector('.muxui-color-swatch-picker-item')?.getAttribute('aria-disabled'), 'true');
-    assert.equal(container.querySelector('.muxui-color-swatch')?.getAttribute('data-disabled'), 'true');
+    assert.equal(container.querySelector('.muxui-color-swatch')?.getAttribute('data-muxui-state-disabled'), 'true');
     await act(async () => disabledNestedArea.click());
     assert.deepEqual(pickerChanges, []);
 
@@ -318,20 +318,20 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
     assert.equal(readOnlyNestedField.readOnly, true);
     const readOnlyNestedAreaField = readOnlyNestedArea.closest('.muxui-color-area-field');
     assert.equal(readOnlyNestedAreaField.hasAttribute('aria-readonly'), false);
-    assert.equal(readOnlyNestedAreaField.getAttribute('data-readonly'), 'true');
+    assert.equal(readOnlyNestedAreaField.getAttribute('data-muxui-state-read-only'), 'true');
     const readOnlyPicker = container.querySelector('.muxui-color-picker');
     const readOnlySliderWrapper = container.querySelector('.muxui-color-slider')?.parentElement;
     const readOnlyWheelWrapper = container.querySelector('.muxui-color-wheel')?.parentElement;
     const readOnlySwatchPicker = container.querySelector('.muxui-color-swatch-picker');
     const readOnlySwatchPickerWrapper = readOnlySwatchPicker?.parentElement;
     const readOnlyColorSwatch = [...container.querySelectorAll('.muxui-color-swatch')]
-      .find((swatch) => swatch.getAttribute('data-readonly') === 'true');
+      .find((swatch) => swatch.getAttribute('data-muxui-state-read-only') === 'true');
     for (const wrapper of [readOnlyPicker, readOnlySliderWrapper, readOnlyWheelWrapper, readOnlySwatchPickerWrapper, readOnlyColorSwatch]) {
       assert.ok(wrapper);
       assert.equal(wrapper.hasAttribute('aria-readonly'), false);
-      assert.equal(wrapper.getAttribute('data-readonly'), 'true');
+      assert.equal(wrapper.getAttribute('data-muxui-state-read-only'), 'true');
     }
-    const hasReadOnlyMarkers = (target) => target?.getAttribute('aria-readonly') === 'true' && target?.getAttribute('data-readonly') === 'true';
+    const hasReadOnlyMarkers = (target) => target?.getAttribute('aria-readonly') === 'true' && target?.getAttribute('data-muxui-state-read-only') === 'true';
     const readOnlyAreaTargets = [...container.querySelectorAll('.muxui-color-area input[type="range"]')];
     const readOnlySliderTargets = [...container.querySelectorAll('.muxui-color-slider input[type="range"]')];
     const readOnlyWheelTargets = [...container.querySelectorAll('.muxui-color-wheel input[type="range"]')];
@@ -367,7 +367,7 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
       ...container.querySelectorAll('.muxui-color-swatch-picker [role="listbox"]'),
     ];
     assert.ok(editableTargets.length > 0);
-    assert.equal(editableTargets.every((target) => !target.hasAttribute('aria-readonly') && !target.hasAttribute('data-readonly')), true);
+    assert.equal(editableTargets.every((target) => !target.hasAttribute('aria-readonly') && !target.hasAttribute('data-muxui-state-read-only')), true);
   } finally {
     await act(async () => {
       document.activeElement?.blur();
@@ -424,7 +424,7 @@ test('R1.3 colour controls name swatches, reject duplicate colours, and keep ups
     assert.equal(labelledPicker.getAttribute('aria-disabled'), 'true');
     assert.equal(plainPicker.hasAttribute('role'), false);
     assert.equal(plainPicker.hasAttribute('aria-disabled'), false);
-    assert.equal(plainPicker.getAttribute('data-disabled'), 'true');
+    assert.equal(plainPicker.getAttribute('data-muxui-state-disabled'), 'true');
   } finally {
     document.activeElement?.blur();
     await act(async () => root.unmount());
@@ -469,8 +469,8 @@ test('R1.3 null keeps date and colour values controlled and empty', async () => 
     React.createElement(ColorSwatchPicker, { 'aria-label': 'Swatches', value: props.swatch, items: swatches, onChange: (value) => changes.push(['swatch', value]) }),
     React.createElement(ColorField, { label: 'Colour', value: props.color, onChange: (value) => changes.push(['color', value]) }))));
   const selected = () => ({
-    date: [...container.querySelectorAll('.muxui-calendar-cell[data-selected="true"]')].map((cell) => cell.textContent),
-    range: [...container.querySelectorAll('.muxui-range-calendar-cell[data-selected="true"]')].map((cell) => cell.textContent),
+    date: [...container.querySelectorAll('.muxui-calendar-cell[data-muxui-state-selected="true"]')].map((cell) => cell.textContent),
+    range: [...container.querySelectorAll('.muxui-range-calendar-cell[data-muxui-state-selected="true"]')].map((cell) => cell.textContent),
     swatch: [...container.querySelectorAll('.muxui-color-swatch-picker [aria-selected="true"]')].length,
     color: container.querySelector('.muxui-color-field input').value,
   });
@@ -955,7 +955,7 @@ test('R1.3 errorMessage shows only while Select, ComboBox, or ColorField is inva
     await act(async () => root.render(fields({ select: { defaultValue: 'red' }, combo: { defaultSelectedId: 'red' }, color: { defaultValue: '#ff0000' } })));
     assert.equal(form.checkValidity(), true);
     assert.deepEqual(errors(), []);
-    assert.equal(container.querySelectorAll('[data-invalid]').length, 0);
+    assert.equal(container.querySelectorAll('[data-muxui-state-invalid]').length, 0);
 
     // The failed required direction is proven in test/browser/field-error-message.test.mjs;
     // native invalid events do not commit React Aria validation in this jsdom setup.
@@ -980,7 +980,7 @@ test('Slider exposes disabled state on its labelled group while preserving thumb
     const input = slider?.querySelector('input[type="range"]');
     assert.equal(slider?.getAttribute('role'), 'group');
     assert.equal(slider?.getAttribute('aria-disabled'), 'true');
-    assert.equal(slider?.getAttribute('data-disabled'), 'true');
+    assert.equal(slider?.getAttribute('data-muxui-state-disabled'), 'true');
     assert.equal(slider?.querySelector('.muxui-field-label')?.textContent, 'Disabled volume');
     assert.equal(slider?.querySelector('.muxui-slider-output')?.textContent, '1');
     assert.equal(input?.disabled, true);
@@ -1012,7 +1012,7 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
     const radios = [...container.querySelectorAll('.muxui-radio')];
     assert.equal(radios.length, 3);
     assert.equal(container.querySelectorAll('.muxui-radio-indicator').length, 3);
-    assert.equal(radios[1].getAttribute('data-selected'), 'true');
+    assert.equal(radios[1].getAttribute('data-muxui-state-selected'), 'true');
     assert.equal(radios[1].querySelector('.muxui-radio-indicator')?.getAttribute('aria-hidden'), 'true');
     assert.equal(radios[0].querySelector('input').disabled, false);
     assert.equal(radios[2].querySelector('input').disabled, true);
@@ -1023,7 +1023,7 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
       selectedInput.focus();
     });
     assert.equal(document.activeElement, selectedInput);
-    assert.equal(radios[1].getAttribute('data-focus-visible'), 'true');
+    assert.equal(radios[1].getAttribute('data-muxui-state-focus-visible'), 'true');
 
     const changes = [];
     await act(async () => root.render(null));
@@ -1037,7 +1037,7 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
     const readOnlyRadios = [...container.querySelectorAll('.muxui-radio')];
     const readOnlyInputs = readOnlyRadios.map((radio) => radio.querySelector('input'));
     assert.equal(readOnlyGroup.getAttribute('aria-readonly'), 'true');
-    assert.equal(readOnlyRadios.every((radio) => radio.getAttribute('data-readonly') === 'true'), true);
+    assert.equal(readOnlyRadios.every((radio) => radio.getAttribute('data-muxui-state-read-only') === 'true'), true);
     assert.equal(readOnlyInputs[0].disabled, false);
     assert.equal(readOnlyInputs[0].tabIndex, 0);
     assert.equal(readOnlyInputs[1].tabIndex, -1);
@@ -1054,7 +1054,7 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
     })));
     assert.equal(container.querySelector('[role="radiogroup"]').getAttribute('aria-disabled'), 'true');
     assert.equal([...container.querySelectorAll('.muxui-radio input')].every((input) => input.disabled), true);
-    assert.equal([...container.querySelectorAll('.muxui-radio')].every((radio) => radio.getAttribute('data-disabled') === 'true'), true);
+    assert.equal([...container.querySelectorAll('.muxui-radio')].every((radio) => radio.getAttribute('data-muxui-state-disabled') === 'true'), true);
   } finally {
     document.activeElement?.blur();
     await act(async () => root.unmount());
@@ -1189,7 +1189,7 @@ test('R1.3 TagGroup selects tags and reports the selected ids as a Set', async (
   const root = createRoot(container);
   const items = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }, { id: 'three', label: 'Three', disabled: true }];
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   // A new key remounts the group, so each scenario starts from its own defaults.
   const render = (key, props) => act(async () => root.render(React.createElement(TagGroup, { key, label: 'Tags', items, ...props })));
   const reports = [];
@@ -1238,7 +1238,7 @@ test('R1.3 TagGroup with onAction runs it while nothing is selected and selects 
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const log = [];
   try {
     await act(async () => root.render(React.createElement(TagGroup, {
@@ -1271,7 +1271,7 @@ test('R1.3 TagGroup drops a removed tag from its own selection', async () => {
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const log = [];
   // The application owns the items; the group owns the selection.
   function Filters() {
@@ -1344,7 +1344,7 @@ test('R1.3 TagGroup keeps React Aria range selection in an uncontrolled multiple
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   try {
     await act(async () => root.render(React.createElement(TagGroup, { label: 'Tags', items: ['One', 'Two', 'Three'], selectionMode: 'multiple' })));
     await act(async () => tag('One').click());
@@ -1365,7 +1365,7 @@ test('R1.3 TagGroup keeps select-all in an uncontrolled multiple group', async (
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const reports = [];
   const render = (items) => act(async () => root.render(React.createElement(TagGroup, {
     label: 'Tags', items, selectionMode: 'multiple', onSelectionChange: (keys) => reports.push([...keys]),
@@ -1394,7 +1394,7 @@ test('R1.3 TagGroup hands the application a copy of the selection', async () => 
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const reports = [];
   try {
     await act(async () => root.render(React.createElement(TagGroup, {
@@ -1416,7 +1416,7 @@ test('R1.3 TagGroup applies defaultSelectedKeys to items that arrive after mount
   const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const render = (items) => act(async () => root.render(React.createElement(TagGroup, {
     label: 'Tags', items, selectionMode: 'multiple', defaultSelectedKeys: new Set(['One']),
   })));
@@ -1435,7 +1435,7 @@ test('R1.3 TagGroup forgets a removed tag that was only a range anchor', async (
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const tag = (name) => [...container.querySelectorAll('.muxui-tag')].find((node) => node.textContent === name);
-  const selected = () => [...container.querySelectorAll('.muxui-tag[data-selected]')].map((node) => node.textContent);
+  const selected = () => [...container.querySelectorAll('.muxui-tag[data-muxui-state-selected]')].map((node) => node.textContent);
   const render = (items) => act(async () => root.render(React.createElement(TagGroup, { label: 'Tags', items, selectionMode: 'multiple' })));
   try {
     await render(['One', 'Two', 'Three', 'Four']);
@@ -1469,8 +1469,8 @@ test('R1.3 collections keep disabled items inert and preserve composite anatomy'
     })));
     assert.equal(container.querySelectorAll('[role="option"]').length, 2);
     assert.equal(container.querySelector('[role="option"]').textContent, 'Active');
-    assert.equal(container.querySelector('[role="option"][data-disabled]')?.getAttribute('aria-disabled'), 'true');
-    await act(async () => container.querySelector('[role="option"][data-disabled]').click());
+    assert.equal(container.querySelector('[role="option"][data-muxui-state-disabled]')?.getAttribute('aria-disabled'), 'true');
+    await act(async () => container.querySelector('[role="option"][data-muxui-state-disabled]').click());
     assert.deepEqual(actions, []);
 
     await act(async () => root.render(React.createElement(Tabs, {
@@ -1519,7 +1519,7 @@ test('R1.3 collection items expose keyboard focus-visible state when unselected'
         target.focus();
       });
       assert.equal(document.activeElement, target);
-      assert.equal(target.getAttribute('data-focus-visible'), 'true');
+      assert.equal(target.getAttribute('data-muxui-state-focus-visible'), 'true');
     }
   } finally {
     await act(async () => document.activeElement?.blur());
@@ -1559,7 +1559,7 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
       onChange: (value) => changes.push(value),
     })));
     const readOnlyTrigger = container.querySelector('.muxui-select-trigger');
-    assert.equal(container.querySelector('.muxui-select')?.getAttribute('data-readonly'), 'true');
+    assert.equal(container.querySelector('.muxui-select')?.getAttribute('data-muxui-state-read-only'), 'true');
     await act(async () => readOnlyTrigger.click());
     await act(async () => document.querySelector('.muxui-select-option')?.click());
     assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Blue');
@@ -1805,7 +1805,7 @@ test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a boun
     })));
     await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
     const viewport = container.querySelector('.muxui-virtualizer');
-    assert.equal(viewport.getAttribute('data-layout'), 'stack');
+    assert.equal(viewport.getAttribute('data-muxui-state-layout'), 'stack');
     assert.equal(viewport.querySelector('[role="presentation"]').style.height, '4000px');
     assert.equal(container.querySelector('[role="option"]').textContent, 'Item 0');
     assert.deepEqual([...container.querySelectorAll('[role="option"]')].map((node) => node.textContent), ['Item 0', 'Item 1', 'Item 2', 'Item 3', 'Item 4']);
@@ -1884,7 +1884,7 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
     assert.equal(container.querySelectorAll('[role="row"]').length, 2);
     assert.equal(container.querySelector('[role="row"] .muxui-tree-item-label').textContent, 'Parent');
     const child = [...container.querySelectorAll('[role="row"]')].find((row) => row.getAttribute('aria-label') === 'Child');
-    assert.equal(child?.getAttribute('data-disabled'), 'true');
+    assert.equal(child?.getAttribute('data-muxui-state-disabled'), 'true');
     const parent = [...container.querySelectorAll('[role="row"]')].find((row) => row.getAttribute('aria-label') === 'Parent');
     const toggle = parent?.querySelector('.muxui-tree-toggle');
     const content = parent?.querySelector('.muxui-tree-item-content');
@@ -1898,8 +1898,8 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
     assert.equal(toggle?.querySelector('svg')?.getAttribute('focusable'), 'false');
     assert.equal(toggle?.querySelector('svg')?.classList.contains('lucide-chevron-right'), true);
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-    assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
-    assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
+    assert.match(styles, /\.muxui-tree-item\[data-muxui-state-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
+    assert.match(styles, /\.muxui-tree-item\[data-muxui-state-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
     assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
     await act(async () => child.click());
     assert.deepEqual(actions, []);
@@ -1923,7 +1923,7 @@ test('R1.3 unavailable calendar dates stay focusable but never select', async ()
     })));
     const cell = container.querySelector('[aria-label="Thursday, January 2, 2025"]');
     assert.ok(cell);
-    assert.equal(cell.getAttribute('data-unavailable'), 'true');
+    assert.equal(cell.getAttribute('data-muxui-state-unavailable'), 'true');
     assert.equal(cell.getAttribute('aria-disabled'), 'true');
     assert.equal(cell.tabIndex, -1);
     await act(async () => cell.focus());
@@ -1941,7 +1941,7 @@ test('R1.3 unavailable calendar dates stay focusable but never select', async ()
       onFocusChange: (date) => rangeFocus.push(date),
     })));
     const rangeCell = container.querySelector('[aria-label="Thursday, January 2, 2025"]');
-    assert.equal(rangeCell.getAttribute('data-unavailable'), 'true');
+    assert.equal(rangeCell.getAttribute('data-muxui-state-unavailable'), 'true');
     await act(async () => rangeCell.click());
     await act(async () => container.querySelector('.muxui-calendar-next').click());
     assert.deepEqual(rangeChanges, []);
@@ -1952,8 +1952,8 @@ test('R1.3 unavailable calendar dates stay focusable but never select', async ()
   }
 });
 
-const calendarDay = (container, text) => [...container.querySelectorAll('.muxui-calendar-cell, .muxui-range-calendar-cell')].find((cell) => cell.textContent === text && !cell.hasAttribute('data-outside-month'));
-const selectedDays = (container) => [...container.querySelectorAll('[data-selected="true"]')].map((cell) => cell.textContent);
+const calendarDay = (container, text) => [...container.querySelectorAll('.muxui-calendar-cell, .muxui-range-calendar-cell')].find((cell) => cell.textContent === text && !cell.hasAttribute('data-muxui-state-outside-month'));
+const selectedDays = (container) => [...container.querySelectorAll('[data-muxui-state-selected="true"]')].map((cell) => cell.textContent);
 
 // React Aria merges a context's props under the component's own, and an explicit false overrides an inherited
 // isDisabled or isReadOnly. Calendar sends disabled and readOnly as given, so a parameter default of false would
@@ -2070,7 +2070,7 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
       ], rows: [{ id: 'ada', name: 'Ada', age: 10 }, { id: 'bob', name: 'Bob', age: 2 }],
       onSortChange: (next) => sortCalls.push(next),
     })));
-    await act(async () => container.querySelector('[role="columnheader"][data-allows-sorting="true"]').click());
+    await act(async () => container.querySelector('[role="columnheader"][data-muxui-state-allows-sorting="true"]').click());
     await act(async () => container.querySelector('[role="columnheader"]:nth-child(2)').click());
     assert.deepEqual(sortCalls, [{ column: 'name', direction: 'ascending' }]);
     assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => row.textContent), ['Ada10', 'Bob2']);
@@ -2124,9 +2124,9 @@ test('R1.3 Table sortable headers carry aria-sort and a decorative sort chevron'
   for (const direction of ['ascending', 'descending']) {
     const { Name, Role, Age } = headers(render({ sortDescriptor: { column: 'name', direction } }));
     assert.equal(Name.getAttribute('aria-sort'), direction);
-    assert.equal(Name.getAttribute('data-sort-direction'), direction);
+    assert.equal(Name.getAttribute('data-muxui-state-sort-direction'), direction);
     assert.equal(Role.getAttribute('aria-sort'), 'none');
-    assert.equal(Role.getAttribute('data-sort-direction'), null);
+    assert.equal(Role.getAttribute('data-muxui-state-sort-direction'), null);
     assert.equal(Age.getAttribute('aria-sort'), null);
     for (const header of [Name, Role]) {
       const chevron = header.querySelector('svg.muxui-table-sort-icon');
@@ -2139,8 +2139,8 @@ test('R1.3 Table sortable headers carry aria-sort and a decorative sort chevron'
     // The label stays the header's whole accessible text; non-sortable headers get no wrapper or chevron.
     assert.equal(Age.querySelector('svg, .muxui-table-column-content'), null);
   }
-  assert.equal(render({}).querySelector('.muxui-table').hasAttribute('data-disabled'), false);
-  assert.equal(render({ disabled: true }).querySelector('.muxui-table').hasAttribute('data-disabled'), true);
+  assert.equal(render({}).querySelector('.muxui-table').hasAttribute('data-muxui-state-disabled'), false);
+  assert.equal(render({ disabled: true }).querySelector('.muxui-table').hasAttribute('data-muxui-state-disabled'), true);
 });
 
 test('R1.3 ToggleButtonGroup bounds IDs and Toolbar keeps child-owned state', async () => {
@@ -2176,7 +2176,7 @@ test('R1.3 ToggleButtonGroup bounds IDs and Toolbar keeps child-owned state', as
     const toolbar = container.querySelector('.muxui-toolbar');
     assert.ok(toolbar);
     assert.equal(toolbar.hasAttribute('aria-disabled'), false);
-    assert.equal(toolbar.hasAttribute('data-disabled'), false);
+    assert.equal(toolbar.hasAttribute('data-muxui-state-disabled'), false);
     assert.equal(toolbar.querySelector('button').disabled, false);
   } finally {
     await act(async () => root.unmount());
@@ -2205,7 +2205,7 @@ test('R1.3 direct readOnly controls retain focus while blocking mutation', async
     ];
     const readOnlyListbox = container.querySelector('.muxui-color-swatch-picker[role="listbox"]');
     assert.ok(targets.length >= 5);
-    assert.equal(container.querySelectorAll('[data-readonly="true"]').length > 0, true);
+    assert.equal(container.querySelectorAll('[data-muxui-state-read-only="true"]').length > 0, true);
     await act(async () => {
       for (const target of targets) {
         target.focus();
@@ -2478,7 +2478,7 @@ test('R1.3 Menu ordering and GridList disabled hooks stay canonical', async () =
     await act(async () => menuItems[0].click());
     await act(async () => menuItems[1].click());
     assert.deepEqual(eventsSeen, [['action', 'enabled'], ['select', 'enabled']]);
-    const blocked = container.querySelector('[role="row"][data-disabled="true"]');
+    const blocked = container.querySelector('[role="row"][data-muxui-state-disabled="true"]');
     assert.equal(blocked?.getAttribute('aria-disabled'), 'true');
   } finally {
     await act(async () => root.unmount());
@@ -2494,9 +2494,9 @@ test('R1.3 GridList layout and orientation reach the root and reject unsupported
   const dataset = () => ({ ...container.querySelector('[role="grid"]').dataset });
   try {
     await act(async () => root.render(React.createElement(GridList, { 'aria-label': 'Files', items })));
-    assert.deepEqual([dataset().layout, dataset().orientation], ['stack', 'vertical']);
+    assert.deepEqual([dataset().muxuiStateLayout, dataset().muxuiStateOrientation], ['stack', 'vertical']);
     await act(async () => root.render(React.createElement(GridList, { 'aria-label': 'Files', items, layout: 'grid', orientation: 'horizontal' })));
-    assert.deepEqual([dataset().layout, dataset().orientation], ['grid', 'horizontal']);
+    assert.deepEqual([dataset().muxuiStateLayout, dataset().muxuiStateOrientation], ['grid', 'horizontal']);
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -2594,7 +2594,7 @@ test('R1.3 GridList.Item disabled items and a disabled GridList stay inert and o
   try {
     await act(async () => root.render(fixture()));
     const [open, blocked] = rows();
-    assert.deepEqual([blocked.getAttribute('data-disabled'), blocked.getAttribute('aria-disabled')], ['true', 'true']);
+    assert.deepEqual([blocked.getAttribute('data-muxui-state-disabled'), blocked.getAttribute('aria-disabled')], ['true', 'true']);
     await act(async () => blocked.click());
     assert.deepEqual(seen, [], 'a disabled item takes no press');
     await act(async () => open.click());
@@ -2943,7 +2943,7 @@ test('R1.3 a GridList nested in a virtualized grid item is not itself virtualize
     assert.equal(nested.length, 2, 'each card holds a nested list');
     for (const grid of nested) {
       assert.equal(grid.hasAttribute('data-muxui-virtualized'), false, 'a nested list is not virtualized');
-      assert.equal(grid.dataset.layout, 'stack');
+      assert.equal(grid.dataset.muxuiStateLayout, 'stack');
       assert.deepEqual([...grid.querySelectorAll('[role="row"]')].map((row) => row.textContent), ['Tag x', 'Tag y'], 'a nested list mounts all of its own rows');
     }
     assert.deepEqual(errors, []);

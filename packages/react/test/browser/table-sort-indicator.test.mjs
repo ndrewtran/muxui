@@ -54,8 +54,8 @@ function readHeader({ table, name }) {
   const iconBox = icon?.getBoundingClientRect();
   return {
     ariaSort: header.getAttribute('aria-sort'),
-    hovered: header.hasAttribute('data-hovered'),
-    focusVisible: header.hasAttribute('data-focus-visible'),
+    hovered: header.hasAttribute('data-muxui-state-hovered'),
+    focusVisible: header.hasAttribute('data-muxui-state-focus-visible'),
     hasIcon: icon !== null,
     visible: style?.visibility === 'visible',
     points: !style ? null : turned ? 'up' : 'down',
@@ -217,7 +217,7 @@ for (const engine of browserEngines()) {
 
           // A disabled Table cannot sort, so neither hover nor keyboard-modality focus on its headers hints anything.
           const disabledGrid = tab.getByRole('grid', { name: 'Disabled people', exact: true });
-          assert.deepEqual([await people.getAttribute('data-disabled'), await disabledGrid.getAttribute('data-disabled')], [null, 'true'], label('only the disabled Table carries data-disabled'));
+          assert.deepEqual([await people.getAttribute('data-muxui-state-disabled'), await disabledGrid.getAttribute('data-muxui-state-disabled')], [null, 'true'], label('only the disabled Table carries data-muxui-state-disabled'));
           const disabledHeader = disabledGrid.getByRole('columnheader', { name: 'Role', exact: true });
           await disabledHeader.hover();
           await settle('Role', { hovered: true, visible: false }, 'a hovered disabled Table header shows no hint', 'Disabled people');

@@ -10,21 +10,8 @@ import type {
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import {
-  Breadcrumb as AriaBreadcrumb,
-  Breadcrumbs as AriaBreadcrumbs,
-  Checkbox as AriaCheckbox,
-  Disclosure as AriaDisclosure,
-  DisclosureGroup as AriaDisclosureGroup,
-  DisclosurePanel as AriaDisclosurePanel,
-  Group as AriaGroup,
-  Link as AriaLink,
-  Label as AriaLabel,
-  ProgressBar as AriaProgressBar,
-  Separator as AriaSeparator,
-  ToggleButton as AriaToggleButton,
-  Button as AriaButton,
-} from 'react-aria-components';
+import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel, Label as AriaLabel, ProgressBar as AriaProgressBar, Separator as AriaSeparator } from 'react-aria-components';
+import { AriaBreadcrumb, AriaCheckbox, AriaDisclosure, AriaDisclosureGroup, AriaGroup, AriaLink, AriaToggleButton, AriaButton } from './substrate.ts';
 import type { CheckboxProps as AriaCheckboxProps, LinkProps as AriaLinkProps, PressEvent, ToggleButtonProps as AriaToggleButtonProps } from 'react-aria-components';
 import type { ButtonPointerType } from './button.ts';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
@@ -121,11 +108,11 @@ export const Breadcrumbs: ForwardRefExoticComponent<BreadcrumbsProps & RefAttrib
       const current = item.id === collectionItems.at(-1)?.id;
       return React.createElement(AriaBreadcrumb, {
         id: item.id,
-        ...{ isDisabled: item.disabled, 'data-current': current || undefined, 'data-disabled': item.disabled || undefined },
+        ...{ isDisabled: item.disabled, 'data-muxui-state-current': current || undefined, 'data-muxui-state-disabled': item.disabled || undefined },
         className: 'muxui-breadcrumbs-item',
       }, item.href && !current
-        ? React.createElement(AriaLink, { href: item.href, isDisabled: item.disabled, ...{ 'data-disabled': item.disabled || undefined }, className: 'muxui-breadcrumbs-link' }, item.label)
-        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'aria-disabled': item.disabled || undefined, 'data-disabled': item.disabled || undefined }, item.label));
+        ? React.createElement(AriaLink, { href: item.href, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined }, className: 'muxui-breadcrumbs-link' }, item.label)
+        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'aria-disabled': item.disabled || undefined, 'data-muxui-state-disabled': item.disabled || undefined }, item.label));
     },
   }));
 });
@@ -204,8 +191,8 @@ export const Checkbox: ForwardRefExoticComponent<CheckboxProps & RefAttributes<H
       React.createElement('span', {
         className: 'muxui-checkbox-indicator',
         'aria-hidden': 'true',
-        'data-selected': isSelected || undefined,
-        'data-indeterminate': isIndeterminate || undefined,
+        'data-muxui-state-selected': isSelected || undefined,
+        'data-muxui-state-indeterminate': isIndeterminate || undefined,
       }, isIndeterminate || isSelected
         ? React.createElement(isIndeterminate ? MinusIcon : CheckIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })
         : null),
@@ -549,7 +536,7 @@ export const ProgressBar: ForwardRefExoticComponent<ProgressBarProps & RefAttrib
     minValue,
     maxValue,
     isIndeterminate: value === undefined,
-    ...{ 'data-indeterminate': value === undefined || undefined, 'data-complete': complete || undefined },
+    ...{ 'data-muxui-state-indeterminate': value === undefined || undefined, 'data-complete': complete || undefined },
     className: classNames('muxui-progress-bar', className),
     children: ({ percentage }) => React.createElement(React.Fragment, null,
       React.createElement('div', { className: 'muxui-progress-bar-header' }, React.createElement(AriaLabel, { className: 'muxui-value-label' }, label), React.createElement('span', { className: 'muxui-value-output' }, value === undefined ? 'Loading' : `${percentage}%`)),
