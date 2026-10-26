@@ -27,6 +27,7 @@ import {
   needsStorybookGeneration,
   normalizeCommand,
   parseCliArguments,
+  partMapPath,
   planStorybookCommands,
   preparedCommandRunner,
   prepareStorybookMetadata,
@@ -4558,4 +4559,60 @@ test('a manifest bin change is a runtime boundary change', async () => {
   const scriptsOnly = JSON.stringify({ name: '@muxui/tooling', bin: { muxui: './bin/muxui.mjs' }, scripts: { check: 'new' } });
   const unchanged = await plan([path], { packages: workspacePackages, textSnapshots: { [path]: { before, after: scriptsOnly } } });
   assert.equal(unchanged.policy, false);
+});
+
+// Files under packages/react/test/support that a source names by path, whatever the import form.
+function supportFilesNamedBy(text) {
+  return [...new Set([...text.matchAll(/packages\/react\/test\/support\/([\w-]+(?:\.[\w-]+)*)/gu)].map(([, file]) => `packages/react/test/support/${file}`))];
+}
+
+// The filled part map is imported by relative path by Storybook's anatomy proof and the Figma anatomy specs. The React tests that
+// reference it are found by text, those consumers are not, and only the React package check typechecks it.
+test('a change to the part map runs the Storybook anatomy proof, the Figma checks and the React typecheck', async () => {
+  const reactTestReferenceSources = await reactTestTexts();
+  const result = await plan([partMapPath], { ...edited(partMapPath), reactTestReferenceSources });
+  // Only the test that reads it by name. types.test.tsx imports it as `.js` and the test tsconfig does not name it, so the text
+  // scan does not follow a tsconfig into the five tests that mention one.
+  assert.deepEqual(result.reactTestFiles, ['test/styling-tokens.test.mjs']);
+  assert.equal(result.storyTooling, true);
+  assert.deepEqual(result.storyUnitTests, [{ file: 'test/storybook.test.mjs' }]);
+  assert.ok(result.packageChecks.includes('@muxui/figma'));
+  assert.ok(result.packageChecks.includes('@muxui/react'));
+  assert.equal(result.reactPackageFull, false);
+  const commands = executionCommands(result, { packages }).map(({ args }) => args.join(' '));
+  for (const expected of [
+    '--filter @muxui/figma run check',
+    '--filter @muxui/react run check',
+    '--filter @muxui/react-storybook exec node --test test/storybook.test.mjs',
+  ]) assert.ok(commands.includes(expected), expected);
+  assert.deepEqual(result.notices, []);
+
+  // Narrow: another support helper that the same test imports plans neither consumer.
+  const sibling = 'packages/react/test/support/styling-inventory.mjs';
+  const other = await plan([sibling], { ...edited(sibling), reactTestReferenceSources });
+  assert.ok(other.reactTestFiles.includes('test/styling-tokens.test.mjs'));
+  assert.equal(other.storyTooling, false);
+  assert.deepEqual(other.storyUnitTests, []);
+  assert.ok(!other.packageChecks.includes('@muxui/figma'));
+
+  // Drift: a Storybook or Figma source that imports another React test support file reaches that file with no route, because the
+  // planner routes only the part map to those consumers. A literal-path text scan of three directories, nothing more. It runs when
+  // the policy suite runs (a policy or planner change), not on an edit of a consumer alone; a reader outside these directories (the
+  // docs reader PR 4 plans) must be added to the list when it lands; a path assembled from pieces or an alias escapes it. The
+  // protection that holds on a consumer-only edit is that the consumers' own tests read the part map and fail when it breaks.
+  const consumers = spawnSync('git', ['ls-files', '-z', 'apps/react-storybook/src', 'apps/react-storybook/.storybook', 'tooling/generators/figma'], { cwd: repositoryRoot, encoding: 'utf8' })
+    .stdout.split('\0').filter((file) => /\.[cm]?[jt]sx?$/u.test(file));
+  // The scan must keep reaching the sources that read the part map, or it would pass vacuously.
+  assert.ok(consumers.includes('apps/react-storybook/src/storybook-factory.mjs'));
+  assert.ok(consumers.includes('tooling/generators/figma/test/support.mjs'));
+  for (const file of consumers) {
+    for (const imported of supportFilesNamedBy(readFileSync(resolve(repositoryRoot, file), 'utf8'))) {
+      assert.equal(imported, partMapPath, `${file} imports ${imported}, which no route plans for it`);
+    }
+  }
+  assert.deepEqual(supportFilesNamedBy([
+    "import { x } from '../../../packages/react/test/support/dom.mjs';",
+    "new URL('../../../../packages/react/test/support/state-matrix.mjs', import.meta.url)",
+    '// see packages/react/test/support/attribute-guard.mjs.',
+  ].join('\n')), ['dom.mjs', 'state-matrix.mjs', 'attribute-guard.mjs'].map((file) => `packages/react/test/support/${file}`));
 });

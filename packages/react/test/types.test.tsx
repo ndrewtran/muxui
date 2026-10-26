@@ -63,6 +63,10 @@ import {
   useToast,
 } from '@muxui/react';
 import type { TextEditorDocument } from '@muxui/react/text-editor';
+// The part map is test data that nothing in this program imports, and `tsc` checks only files it reaches. Importing it here puts
+// it in the compiler's file set without naming it in the test tsconfig, whose text the CI planner would follow into every test
+// that mentions a tsconfig. Keep the `.js` spelling: the planner's text scan matches the `.ts` name.
+import './support/styling-parts.js';
 
 const schema: Readonly<Record<string, unknown>> = reactCompatibility;
 void schema;
