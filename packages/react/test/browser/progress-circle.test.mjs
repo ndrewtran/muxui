@@ -97,11 +97,7 @@ test('ProgressCircle consumer fixture hydrates with native refs, states, dimensi
     await assertReducedMotion('OS reduced-motion');
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
-    await assertReducedMotion('data-reduced-motion');
-
     await page.evaluate(() => {
-      document.documentElement.removeAttribute('data-reduced-motion');
       document.documentElement.setAttribute('data-muxui-motion', 'reduced');
     });
     await assertReducedMotion('data-muxui-motion=reduced');

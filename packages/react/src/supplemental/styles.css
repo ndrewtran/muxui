@@ -2100,7 +2100,7 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced'])
+:where([data-muxui-motion='reduced'])
   :where(.muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate]) {
   stroke-dasharray: 70, 100;
   stroke-dashoffset: -25;
@@ -2981,8 +2981,8 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-sidebar[data-foldable],
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
+:where([data-muxui-motion='reduced']) .muxui-sidebar[data-foldable],
+:where([data-muxui-motion='reduced']) .muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
   transition-duration: 0s !important;
 }
 

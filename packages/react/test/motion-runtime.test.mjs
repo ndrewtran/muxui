@@ -162,3 +162,14 @@ test('system reduced motion takes precedence before spring settings are consumed
     dom.window.close();
   }
 });
+
+test('a reduced scope is data-muxui-motion="reduced" on an ancestor; data-reduced-motion no longer reduces motion', () => {
+  const resolveUnder = (attributes) => {
+    const { dom, node } = shippedMotionNode();
+    for (const [name, value] of Object.entries(attributes)) dom.window.document.body.setAttribute(name, value);
+    return withWindow(dom, () => resolvedMotionTransition(node, null));
+  };
+  assert.notEqual(resolveUnder({}), null, 'without a scope the transition resolves');
+  assert.notEqual(resolveUnder({ 'data-reduced-motion': '' }), null, 'the removed attribute does not reduce');
+  assert.equal(resolveUnder({ 'data-muxui-motion': 'reduced' }), null);
+});

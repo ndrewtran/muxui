@@ -248,7 +248,7 @@ test('immediate action labels and selection marks retain contrast in every inter
     }
 
     await page.evaluate(() => {
-      document.documentElement.setAttribute('data-reduced-motion', 'true');
+      document.documentElement.setAttribute('data-muxui-motion', 'reduced');
       // Dark once painted the pressed primary fill over the forced-colors system colours.
       document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
     });

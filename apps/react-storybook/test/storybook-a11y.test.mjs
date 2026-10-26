@@ -282,7 +282,7 @@ async function waitForStory(page, scheme) {
 
 async function waitForDocumentAnimations(page) {
   await page.evaluate(async () => {
-    document.documentElement.setAttribute('data-reduced-motion', 'true');
+    document.documentElement.setAttribute('data-muxui-motion', 'reduced');
     await document.fonts.ready;
     await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
     // Finish finite transitions so motion reaches its settled styles. Cancel

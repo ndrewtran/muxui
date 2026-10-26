@@ -2950,7 +2950,7 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag, .muxui-virtualizer) {
+:where([data-muxui-motion='reduced']) :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag, .muxui-virtualizer) {
   animation: none !important;
   transition-duration: 0s !important;
 }

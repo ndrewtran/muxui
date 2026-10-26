@@ -85,7 +85,7 @@ test('every TagGroup colour and variant keeps 4.5:1 text contrast on every surfa
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
-    await page.setContent(`<!doctype html><html data-reduced-motion="true"><head><style>${css}</style></head><body>${markup()}</body></html>`);
+    await page.setContent(`<!doctype html><html data-muxui-motion="reduced"><head><style>${css}</style></head><body>${markup()}</body></html>`);
     const measurements = [];
     const check = async (scope, measured, states) => {
       const results = await page.evaluate(measureContrast, { colours: measured, states });
@@ -125,7 +125,7 @@ test('TagGroup tags focus with an offset outline, keep the outline edge off the 
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.setContent(`<!doctype html><html data-muxui-color-scheme="light" data-reduced-motion="true"><head><style>${css}</style></head><body>${renderToString(h('main', null, ...variants.map(group)))}</body></html>`);
+    await page.setContent(`<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="reduced"><head><style>${css}</style></head><body>${renderToString(h('main', null, ...variants.map(group)))}</body></html>`);
     const tag = (variant, name) => page.locator(`.muxui-tag[data-variant="${variant}"]`, { hasText: name });
     const read = (locator, property) => locator.evaluate((element, name) => getComputedStyle(element)[name], property);
     const probe = (property, value) => page.evaluate(([name, next]) => {
@@ -180,7 +180,7 @@ test('TagGroup fills and outline edges use the specified weights in each scheme'
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.setContent(`<!doctype html><html data-reduced-motion="true"><head><style>${css}</style></head><body>${renderToString(h('main', null,
+    await page.setContent(`<!doctype html><html data-muxui-motion="reduced"><head><style>${css}</style></head><body>${renderToString(h('main', null,
       ...variants.map((variant) => h(TagGroup, { key: variant, 'aria-label': variant, variant, items, selectionMode: 'multiple' }))))}</body></html>`);
     // Percent alpha of the fill at rest, hovered, and pressed (hovering adds 6 points, pressing 12), and of the outline edge.
     const hue = { light: { soft: 12, outline: 8, dot: 10, strong: 24, edge: 32 }, dark: { soft: 20, outline: 14, dot: 16, strong: 34, edge: 40 } };

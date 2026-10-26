@@ -1,6 +1,6 @@
 import { observeAncestorAttributes } from './motion-geometry.mjs';
 
-const MOTION_SCOPE_ATTRIBUTES = Object.freeze(['data-reduced-motion', 'data-muxui-motion']);
+const MOTION_SCOPE_ATTRIBUTES = Object.freeze(['data-muxui-motion']);
 const CSS_EASINGS = Object.freeze({
   ease: [0.25, 0.1, 0.25, 1],
   'ease-in': [0.42, 0, 1, 1],
@@ -72,7 +72,7 @@ function readSpringSettings(style, durationRole, easingRole) {
 function hasReducedScope(node) {
   let current = node;
   while (current) {
-    if (current.hasAttribute('data-reduced-motion') || current.getAttribute('data-muxui-motion') === 'reduced') return true;
+    if (current.getAttribute('data-muxui-motion') === 'reduced') return true;
     current = current.parentElement;
   }
   return false;

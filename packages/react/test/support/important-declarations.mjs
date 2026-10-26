@@ -56,7 +56,7 @@ export function importantDeclarations(css) {
 export function importantCategory({ chain }) {
   if (chain.some((prelude) => /^@media[^{]*forced-colors/u.test(prelude))) return 'forced-colors';
   if (chain.some((prelude) => /^@media[^{]*prefers-reduced-motion/u.test(prelude))) return 'reduced-motion-media';
-  if (chain.some((prelude) => /data-reduced-motion|data-muxui-motion=['"]reduced['"]|data-muxui-[a-z-]*reduced\b/u.test(prelude))) return 'reduced-motion-attribute';
+  if (chain.some((prelude) => /data-muxui-motion=['"]reduced['"]|data-muxui-[a-z-]*reduced\b/u.test(prelude))) return 'reduced-motion-attribute';
   return 'structural';
 }
 

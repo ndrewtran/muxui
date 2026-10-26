@@ -666,14 +666,14 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-dialog, .muxui-popover, .muxui-preview-trigger, .muxui-toast, .muxui-tooltip, .muxui-drop-zone) {
+:where([data-muxui-motion='reduced']) :where(.muxui-dialog, .muxui-popover, .muxui-preview-trigger, .muxui-toast, .muxui-tooltip, .muxui-drop-zone) {
   animation: none !important;
   transition-duration: 0s !important;
 }
 
 /* Match the reduced-motion contract: animations are settled immediately
    while retaining its measurable 1ms duration and transition reset. */
-:where([data-reduced-motion], [data-muxui-motion='reduced']) * {
+:where([data-muxui-motion='reduced']) * {
   animation-delay: -1ms !important;
   animation-duration: 1ms !important;
   animation-iteration-count: 1 !important;

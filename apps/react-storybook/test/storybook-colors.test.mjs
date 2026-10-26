@@ -161,7 +161,7 @@ test('selected Storybook pages paint only canonical Mux colours in light and dar
               && !visible(document.querySelector('.sb-preparing-story'));
           }, scheme);
           await page.evaluate(async () => {
-            document.documentElement.setAttribute('data-reduced-motion', 'true');
+            document.documentElement.setAttribute('data-muxui-motion', 'reduced');
             await document.fonts.ready;
             await new Promise(requestAnimationFrame);
             document.getAnimations().forEach((animation) => {

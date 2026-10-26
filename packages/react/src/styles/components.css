@@ -1042,12 +1042,12 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-disclosure-trigger-icon, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
+:where([data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-disclosure-trigger-icon, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
   animation: none !important;
   transition-duration: 0s !important;
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button-spinner, .muxui-button-spinner-arc) {
+:where([data-muxui-motion='reduced']) :where(.muxui-button-spinner, .muxui-button-spinner-arc) {
   animation: none !important;
 }
 
@@ -1441,7 +1441,7 @@
   padding-block-end: calc(var(--muxui-semantic-control-padding-block) * 1.5);
 }
 
-.muxui-disclosure:is([data-reduced-motion], [data-muxui-motion='reduced']) {
+.muxui-disclosure:is([data-muxui-motion='reduced']) {
   transition-duration: 0s !important;
 }
 

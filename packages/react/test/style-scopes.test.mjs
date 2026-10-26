@@ -17,6 +17,25 @@ test('authored stylesheets are all found', () => {
   }
 });
 
+// The reduced-motion scope is data-muxui-motion="reduced"; the older data-reduced-motion attribute is gone
+// from every authored stylesheet and script, so no rule or observer can still honor it.
+const authoredFiles = (await readdir(new URL('../src/', import.meta.url), { recursive: true }))
+  .filter((path) => /\.(?:css|mjs|ts|tsx)$/u.test(path))
+  .sort();
+const namesRemovedMotionAttribute = (text) => /data-reduced-motion/u.test(text);
+
+test('no authored stylesheet or script names the removed data-reduced-motion attribute', async () => {
+  const offenders = [];
+  for (const path of authoredFiles) {
+    if (namesRemovedMotionAttribute(await readFile(new URL(`../src/${path}`, import.meta.url), 'utf8'))) offenders.push(path);
+  }
+  assert.ok(authoredFiles.length > 100 && authoredFiles.includes('motion.mjs'), 'the scan reaches the sources');
+  assert.deepEqual(offenders, []);
+  assert.equal(namesRemovedMotionAttribute(":where([data-reduced-motion], [data-muxui-motion='reduced']) .a { transition-duration: 0s; }"), true);
+  assert.equal(namesRemovedMotionAttribute("current.hasAttribute('data-reduced-motion')"), true);
+  assert.equal(namesRemovedMotionAttribute(":where([data-muxui-motion='reduced']) .a { transition-duration: 0s; }"), false);
+});
+
 test('authored color-mode descendants use nearest explicit @scope boundaries', async () => {
   const sources = await Promise.all(sourceFiles.map((url) => readFile(url, 'utf8')));
   const combined = sources.join('\n');

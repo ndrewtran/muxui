@@ -157,8 +157,6 @@ function requestedModes(theme) {
 function applyRootAttributes(modes) {
   const root = document.documentElement;
   for (const axis of MODE_AXES) root.setAttribute(`data-muxui-${axis.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`, modes[axis]);
-  if (modes.motion === 'reduced') root.setAttribute('data-reduced-motion', '');
-  else root.removeAttribute('data-reduced-motion');
 }
 
 function removeAppliedStyle() {

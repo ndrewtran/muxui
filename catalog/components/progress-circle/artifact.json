@@ -54,7 +54,7 @@
         "Indeterminate progress treats null, undefined, and non-finite values as unknown and omits aria-valuenow and aria-valuetext.",
         "size selects 32px, 48px, or 64px Track dimensions; use Track className for a local compact size and motion policy because there is no built-in 16px size.",
         "Indeterminate progress uses a rotate and dash motion.",
-        "prefers-reduced-motion, and a data-reduced-motion or data-muxui-motion=\"reduced\" ancestor, settle both animations.",
+        "prefers-reduced-motion, and a data-muxui-motion=\"reduced\" ancestor, settle both animations.",
         "ProgressCircle holds no task state: the application sets value, with null while the length of the work is unknown, and renders any status text itself."
       ],
       "accessibility": [

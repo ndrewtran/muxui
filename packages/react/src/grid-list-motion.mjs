@@ -451,7 +451,7 @@ function observeGridListRipple(root) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['aria-disabled', 'data-disabled', 'data-dragging', 'data-drop-target', 'data-muxui-motion', 'data-reduced-motion'],
+    attributeFilter: ['aria-disabled', 'data-disabled', 'data-dragging', 'data-drop-target', 'data-muxui-motion'],
   });
 
   root.addEventListener('pointerdown', pointerDown);

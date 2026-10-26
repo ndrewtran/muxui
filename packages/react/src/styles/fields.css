@@ -563,14 +563,14 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch::before,
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator,
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
+:where([data-muxui-motion='reduced']) .muxui-switch::before,
+:where([data-muxui-motion='reduced']) .muxui-switch-indicator,
+:where([data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
   transition: none;
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator,
-:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
+:where([data-muxui-motion='reduced']) .muxui-switch-indicator,
+:where([data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
   --muxui-switch-indicator-scale-x: 1;
   --muxui-switch-indicator-scale-y: 1;
 }

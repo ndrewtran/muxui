@@ -187,10 +187,10 @@ test('calendar month height interpolates without changing semantics or reduced m
       await navigate(page, 'previous');
       assert.equal((await geometry(page)).height, '', 'system reduced motion changes height immediately');
       await page.emulateMedia({ reducedMotion: 'no-preference' });
-      await page.evaluate(() => document.getElementById('root').setAttribute('data-reduced-motion', ''));
+      await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
       await navigate(page, 'next');
-      assert.equal((await geometry(page)).height, '', 'legacy reduction is preserved');
-      await page.evaluate(() => document.getElementById('root').removeAttribute('data-reduced-motion'));
+      assert.equal((await geometry(page)).height, '', 'a reduced scope also changes the month without animating');
+      await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
 
       for (const theme of ['light', 'dark']) {
         await page.evaluate((theme) => document.documentElement.setAttribute('data-muxui-color-scheme', theme), theme);

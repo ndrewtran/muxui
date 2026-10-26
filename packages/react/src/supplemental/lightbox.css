@@ -14,7 +14,7 @@
 .muxui-lightbox-close { top: var(--muxui-semantic-layout-inset-medium); right: var(--muxui-semantic-layout-inset-medium); color: var(--muxui-semantic-content-muted); }
 .muxui-lightbox-trigger { cursor: zoom-in; }
 @media (prefers-reduced-motion: reduce) { .muxui-lightbox-backdrop, .muxui-lightbox-popup { transition: none; } }
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { animation: none !important; transition-duration: 0s !important; }
+:where([data-muxui-motion='reduced']) :where(.muxui-lightbox-backdrop, .muxui-lightbox-popup) { animation: none !important; transition-duration: 0s !important; }
 /* The Button content wrapper is display: contents. Keep the shared Mux
    Button behavior while preserving the Lightbox icon-control geometry. */
 .muxui-lightbox-previous .muxui-button-content,

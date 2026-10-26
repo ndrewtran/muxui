@@ -394,7 +394,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       const opacity = Number.parseFloat(getComputedStyle(content).opacity);
       return opacity > 0 && opacity < 1;
     }, undefined, { timeout: 1800 });
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
       const row = document.querySelector('[data-motion-id="group-first"]');
       const content = row?.querySelector('.muxui-disclosure-motion-content');
@@ -407,7 +407,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.equal(await page.locator('[data-motion-id="group-first"] .muxui-disclosure-motion-content').evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity)), 1, 'reduced motion snaps an in-flight grouped fade to readable content');
     await page.locator(firstGroupTrigger).click();
     await waitForDisclosureClosed(page, firstGroupPanel);
-    await page.evaluate(() => document.documentElement.removeAttribute('data-reduced-motion'));
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
 
     const group = page.locator('[data-motion-id="disclosure-group"]');
     await group.evaluate((node) => {
