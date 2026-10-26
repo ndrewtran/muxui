@@ -1,3 +1,5 @@
+import { partSelector } from '../../../../../packages/react/test/support/styling-parts.ts';
+
 /** @type {import('../anatomy.mjs').Anatomy} */
 export default {
   family: 'switch',
@@ -12,7 +14,7 @@ export default {
     {
       id: 'root',
       node: 'FRAME',
-      selector: '.muxui-switch',
+      selector: partSelector('switch', 'root'),
       bind: ['padding', 'gap', 'size'],
       layout: {
         direction: 'HORIZONTAL',
@@ -25,7 +27,7 @@ export default {
       id: 'track',
       parent: 'root',
       node: 'FRAME',
-      selector: '.muxui-switch',
+      selector: partSelector('switch', 'root'),
       pseudo: 'before',
       bind: ['fill', 'overlay', 'stroke', 'radius', 'size', 'shadow'],
       layout: {
@@ -35,8 +37,8 @@ export default {
         paddingFrom: { part: 'thumb', longhand: 'left' },
       },
     },
-    { id: 'thumb', parent: 'track', node: 'FRAME', selector: '.muxui-switch__indicator', bind: ['fill', 'radius', 'size', 'shadow', 'inset'] },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-switch__label', bind: ['text'] },
+    { id: 'thumb', parent: 'track', node: 'FRAME', selector: partSelector('switch', 'indicator'), bind: ['fill', 'radius', 'size', 'shadow', 'inset'] },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: partSelector('switch', 'label'), bind: ['text'] },
   ],
   preview: [
     'size=md,selected=off,state=rest',

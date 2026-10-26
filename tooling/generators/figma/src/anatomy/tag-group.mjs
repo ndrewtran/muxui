@@ -1,3 +1,5 @@
+import { partSelector } from '../../../../../packages/react/test/support/styling-parts.ts';
+
 const removable = (variant) => variant.selection === 'true';
 
 /** @type {import('../anatomy.mjs').Anatomy} */
@@ -12,23 +14,23 @@ export default {
   stateTarget: '.muxui-tag-group__tag',
   fixture: { label: 'Tags', items: ['Design'] },
   parts: [
-    { id: 'root', node: 'FRAME', selector: '.muxui-tag-group', bind: ['gap'], layout: { direction: 'VERTICAL' } },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-field-label', bind: ['text'] },
-    { id: 'list', parent: 'root', node: 'FRAME', selector: '.muxui-tag-group__list', bind: ['gap'], layout: { direction: 'HORIZONTAL' } },
+    { id: 'root', node: 'FRAME', selector: partSelector('tag-group', 'root'), bind: ['gap'], layout: { direction: 'VERTICAL' } },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: partSelector('tag-group', 'label'), bind: ['text'] },
+    { id: 'list', parent: 'root', node: 'FRAME', selector: partSelector('tag-group', 'list'), bind: ['gap'], layout: { direction: 'HORIZONTAL' } },
     {
       id: 'tag',
       parent: 'list',
       node: 'FRAME',
-      selector: '.muxui-tag-group__tag',
+      selector: partSelector('tag-group', 'tag'),
       bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'gap', 'size', 'shadow'],
       layout: { direction: 'HORIZONTAL', align: 'CENTER' },
     },
-    { id: 'tag-label', parent: 'tag', node: 'TEXT', selector: '.muxui-tag-group__tag', bind: ['text'] },
+    { id: 'tag-label', parent: 'tag', node: 'TEXT', selector: partSelector('tag-group', 'tag'), bind: ['text'] },
     {
       id: 'remove',
       parent: 'tag',
       node: 'FRAME',
-      selector: '.muxui-tag-group__remove',
+      selector: partSelector('tag-group', 'remove'),
       bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'size', 'shadow'],
       layout: { direction: 'HORIZONTAL', align: 'CENTER', justify: 'CENTER' },
       when: removable,

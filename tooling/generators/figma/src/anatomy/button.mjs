@@ -1,3 +1,5 @@
+import { partSelector } from '../../../../../packages/react/test/support/styling-parts.ts';
+
 /** @type {import('../anatomy.mjs').Anatomy} */
 export default {
   family: 'button',
@@ -11,11 +13,11 @@ export default {
     {
       id: 'root',
       node: 'FRAME',
-      selector: '.muxui-button',
+      selector: partSelector('button', 'root'),
       bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'gap', 'size', 'shadow'],
       layout: { direction: 'HORIZONTAL', align: 'CENTER', justify: 'CENTER', centerInMinHeight: true },
     },
-    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-button__label', bind: ['text'] },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: partSelector('button', 'label'), bind: ['text'] },
   ],
   preview: [
     'variant=primary,size=md,state=rest',

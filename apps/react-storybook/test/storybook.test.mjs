@@ -2174,36 +2174,115 @@ test('CommandPalette Events story opens from its trigger and closes from its pop
   }
 });
 
+/** Renders a family's anatomy story and returns one `{ part, status, proof, route }` per part row, in the binding's part order. */
+async function renderAnatomyRows(record, binding) {
+  if (!anatomyRowCache.has(record.family)) anatomyRowCache.set(record.family, await renderAnatomyRowsUncached(record, binding));
+  return anatomyRowCache.get(record.family);
+}
+const anatomyRowCache = new Map();
+
+async function renderAnatomyRowsUncached(record, binding) {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  try {
+    // Built from the factory so root-only families, whose pages omit Anatomy, still prove their parts.
+    const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding });
+    await act(async () => root.render(story.render(story.args)));
+    // Toast is queued by a declarative effect and rendered by RAC's region on
+    // the following task; allow that portal-like queue update to settle.
+    await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, record.family === 'Toast' ? 100 : 20)));
+    return [...host.querySelectorAll(`[data-muxui-storybook-api-parts="${record.family}"] > li`)].map((row) => ({
+      part: row.querySelector('code')?.textContent,
+      status: row.getAttribute('data-muxui-storybook-api-part-status'),
+      proof: row.getAttribute('data-muxui-storybook-api-part-proof'),
+      route: row.getAttribute('data-muxui-storybook-api-part-route'),
+    }));
+  } finally {
+    await act(async () => root.unmount());
+    // TextEditor destroys its editor on a timer one tick after unmount, which needs the window still installed.
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+    env.resolveAnimations();
+    env.restore();
+  }
+}
+
+const anatomyResolved = ({ status, proof }) => status === 'found' || status === 'no-element' || (status === 'executable' && proof === 'browser');
+
 test('anatomy proof resolves every canonical part to a live DOM or executable route', async () => {
   const unresolved = [];
   for (const record of historicalManifest.families) {
     const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
-    const env = installRuntimeDom();
-    const host = document.querySelector('#root');
-    const root = createRoot(host);
-    try {
-      // Built from the factory so root-only families, whose pages omit Anatomy, still prove their parts.
-      const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding });
-      await act(async () => root.render(story.render(story.args)));
-      // Toast is queued by a declarative effect and rendered by RAC's region on
-      // the following task; allow that portal-like queue update to settle.
-      await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, record.family === 'Toast' ? 100 : 20)));
-      const rows = [...host.querySelectorAll(`[data-muxui-storybook-api-parts="${record.family}"] > li`)];
-      assert.equal(rows.length, binding.api.parts.length, `${record.family} anatomy part rows`);
-      assert.ok(rows.every((row) => row.getAttribute('data-muxui-storybook-api-part-route')), `${record.family} anatomy routes`);
-      const missing = rows.filter((row) => {
-        const status = row.getAttribute('data-muxui-storybook-api-part-status');
-        if (status === 'found') return false;
-        return status !== 'executable' || row.getAttribute('data-muxui-storybook-api-part-proof') !== 'browser';
-      }).map((row) => row.querySelector('code')?.textContent);
-      if (missing.length) unresolved.push(`${record.family}: ${missing.join(', ')}`);
-    } finally {
-      await act(async () => root.unmount());
-      env.resolveAnimations();
-      env.restore();
-    }
+    const rows = await renderAnatomyRows(record, binding);
+    assert.equal(rows.length, binding.api.parts.length, `${record.family} anatomy part rows`);
+    assert.ok(rows.every(({ route }) => route), `${record.family} anatomy routes`);
+    const missing = rows.filter((row) => !anatomyResolved(row)).map(({ part }) => part);
+    if (missing.length) unresolved.push(`${record.family}: ${missing.join(', ')}`);
   }
   assert.deepEqual(unresolved, [], 'anatomy unresolved parts');
+});
+
+// The anatomy story is a static render, so these supplemental parts, which exist only after an overlay opens or a control is used,
+// stay unresolved in it. The React emission test (styling-emission.test.mjs) renders each one in a fixture that reaches it and proves
+// its class on the right element. The lists are exact: a part that starts to resolve here, or a new part that does not, fails.
+const reactEmissionOnly = Object.freeze({
+  Activity: ['actions'],
+  CommandPalette: ['clear-button', 'separator', 'item-icon', 'load-more-item', 'empty', 'footer', 'chips', 'chip', 'chip-remove'],
+  InputTags: ['description'],
+  Markdown: ['link', 'code'],
+  MultiSelect: ['popup', 'dialog', 'search', 'search-input', 'listbox', 'item', 'empty', 'footer'],
+  PromptComposer: ['attachments', 'suggestions'],
+  Sidebar: ['nav-button', 'account-menu'],
+  TagSelect: ['description'],
+  TextEditor: ['hint', 'color-popup', 'custom-color-field', 'image-picker', 'bubble-menu', 'selection-actions'],
+});
+
+test('anatomy proof extends to the supplemental bindings; the parts that need interaction are named and proven by the React emission test', async () => {
+  const supplemental = manifest.families.filter(({ family }) => !historicalFamilyNames.has(family));
+  assert.equal(supplemental.length, descriptorSource.bindings.length - historicalFamilyNames.size);
+  const drift = [];
+  for (const record of supplemental) {
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    const rows = await renderAnatomyRows(record, binding);
+    assert.equal(rows.length, binding.api.parts.length, `${record.family} anatomy part rows`);
+    assert.ok(rows.every(({ route }) => route), `${record.family} anatomy routes`);
+    const missing = rows.filter((row) => !anatomyResolved(row)).map(({ part }) => part.replace(/^.* \((.*)\)$/u, '$1'));
+    const named = reactEmissionOnly[record.family] ?? [];
+    if (missing.join() !== named.join()) drift.push(`${record.family}: unresolved ${JSON.stringify(missing)}, named ${JSON.stringify(named)}`);
+  }
+  assert.deepEqual(drift, [], 'supplemental anatomy matches the named React-emission-only parts');
+  for (const family of Object.keys(reactEmissionOnly)) assert.ok(supplemental.some((record) => record.family === family), `${family} is a supplemental family`);
+});
+
+test('anatomy readers take every row from the contract: roots are proven by their own row, none rows are no-element, an unknown part throws', async () => {
+  const find = (family) => ({
+    record: manifest.families.find((each) => each.family === family),
+    binding: descriptorSource.bindings.find(({ export: name }) => name === family),
+  });
+  // No root fast path: Input's root is the wrapper class, not the control's, and Menu's root is the Menu.Root wrapper.
+  for (const [family, selector] of [['Input', '.muxui-input__root'], ['Menu', '.muxui-menu__root']]) {
+    const { record, binding } = find(family);
+    const root = (await renderAnatomyRows(record, binding)).find(({ part }) => part.endsWith(' (root)'));
+    assert.equal(root.route, selector, `${family} root reads its own row`);
+  }
+  // The contract's 19 none rows are exactly the no-element rows, across the historical and supplemental bindings.
+  let noElement = 0;
+  for (const record of manifest.families) {
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    noElement += (await renderAnatomyRows(record, binding)).filter(({ status }) => status === 'no-element').length;
+  }
+  assert.equal(noElement, 19);
+  // A part the contract does not list never reads as "no element": the story fails to build.
+  const { record, binding } = find('Button');
+  const env = installRuntimeDom();
+  const root = createRoot(document.querySelector('#root'));
+  try {
+    const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding: { ...binding, api: { ...binding.api, parts: [...binding.api.parts, 'bogus'] } } });
+    await assert.rejects(async () => { await act(async () => root.render(story.render(story.args))); }, /bogus/u);
+  } finally {
+    env.resolveAnimations();
+    env.restore();
+  }
 });
 
 test('control inference and composition adapters preserve canonical values', () => {

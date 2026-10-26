@@ -1,3 +1,5 @@
+import { partSelector } from '../../../../../packages/react/test/support/styling-parts.ts';
+
 const filled = (variant) => variant.axes.variant !== 'underline';
 
 /** @type {import('../anatomy.mjs').Anatomy} */
@@ -15,7 +17,7 @@ export default {
   },
   parts: [
     { id: 'root', node: 'FRAME', selector: '.muxui-tabs__motion', bind: ['fill', 'radius'], layout: { direction: 'HORIZONTAL' } },
-    { id: 'list', parent: 'root', node: 'FRAME', selector: '.muxui-tabs__list', bind: ['fill', 'stroke', 'radius', 'padding', 'gap'], layout: { direction: 'HORIZONTAL' } },
+    { id: 'list', parent: 'root', node: 'FRAME', selector: partSelector('tabs', 'list'), bind: ['fill', 'stroke', 'radius', 'padding', 'gap'], layout: { direction: 'HORIZONTAL' } },
     {
       id: 'selected',
       parent: 'list',

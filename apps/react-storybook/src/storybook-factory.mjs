@@ -5,6 +5,7 @@ import { Markdown } from '../../../packages/react/generated/markdown.js';
 import { TextEditor } from '../../../packages/react/generated/text-editor.js';
 import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
 import selectNativeApi from '../../../packages/react/api/select-native.json' with { type: 'json' };
+import { partRow, selectorOf } from '../../../packages/react/test/support/styling-parts.ts';
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
@@ -2019,60 +2020,6 @@ function UncontrolledHarness({ record, args }) {
   );
 }
 
-const CANONICAL_PART_SELECTORS = Object.freeze({
-  Avatar: { image: ['.muxui-avatar__image'], fallback: ['.muxui-avatar__fallback'] },
-  Button: { label: ['.muxui-button__label'] },
-  IconButton: { icon: ['.muxui-icon-button__icon'] },
-  Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
-  Link: { label: ['.muxui-link'] },
-  ListBox: { header: ['.muxui-list-box__header'] },
-  // Menu.Submenu renders no element of its own: its item is the one that carries data-muxui-state-has-submenu.
-  Menu: { header: ['.muxui-menu__header'], submenu: ['.muxui-menu__item[data-muxui-state-has-submenu]'] },
-  Image: { root: ['.muxui-image'] },
-  CodeBlock: { status: ['.muxui-code-block [role="status"]'] },
-  PromptComposer: { status: ['.muxui-prompt-composer [role="status"]'] },
-  Message: { status: ['.muxui-message [role="status"]'] },
-  Activity: { status: ['.muxui-activity [role="status"]'] },
-  Select: { popup: ['.muxui-select__popup'] },
-  SelectNative: { select: ['.muxui-select-native'], label: ['.muxui-select-native__label'], description: ['.muxui-select-native__description'], error: ['.muxui-select-native__error'] },
-  Meter: { label: ['.muxui-value-label'] },
-  ProgressBar: { label: ['.muxui-value-label'] },
-  ToggleButton: { label: ['.muxui-toggle-button'] },
-  CheckboxGroup: { options: ['.muxui-checkbox-group .muxui-checkbox'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  DateField: { segment: ['.muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  DatePicker: { segment: ['.muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  DateRangePicker: {
-    start: ['.muxui-date-range-picker .muxui-date-input[slot="start"]', '.muxui-date-range-picker .muxui-date-input:first-of-type', '.muxui-date-range-picker .muxui-date-input'],
-    end: ['.muxui-date-range-picker .muxui-date-input[slot="end"]', '.muxui-date-range-picker .muxui-date-input:last-of-type', '.muxui-date-range-picker .muxui-date-input'],
-    description: ['.muxui-field-description'],
-    error: ['.muxui-field-error'],
-  },
-  Form: { content: ['.muxui-form > *'] },
-  NumberField: { decrement: ['.muxui-number-field__decrement'], increment: ['.muxui-number-field__increment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  SearchField: { clear: ['.muxui-search-field__clear'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  Switch: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  TextField: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  TimeField: { segment: ['.muxui-time-field .muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  Autocomplete: { popover: ['.muxui-autocomplete__popover'], list: ['.muxui-autocomplete__list'] },
-  Calendar: { label: ['.muxui-calendar__heading'] },
-  ColorArea: { area: ['.muxui-color-area'] },
-  ColorField: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
-  ColorPicker: { field: ['.muxui-color-picker .muxui-color-field'], area: ['.muxui-color-picker .muxui-color-area'], slider: ['.muxui-color-picker .muxui-color-slider'], swatch: ['.muxui-color-picker .muxui-color-swatch'] },
-  ColorSwatchPicker: { swatch: ['.muxui-color-swatch-picker .muxui-color-swatch'], selection: ['.muxui-color-swatch-picker [aria-selected="true"]', '.muxui-color-swatch-picker .muxui-color-swatch-picker__item'] },
-  RangeCalendar: { grid: ['.muxui-range-calendar .muxui-calendar__grid'] },
-  Tabs: { list: ['.muxui-tabs__list'], panels: ['.muxui-tabs__panels'], panel: ['.muxui-tabs__panel'] },
-  TagGroup: { list: ['.muxui-tag-group__list'], remove: ['.muxui-tag-group__remove'] },
-  ToggleButtonGroup: { button: ['.muxui-toggle-button-group .muxui-toggle-button'] },
-  Toolbar: { control: ['.muxui-toolbar button', '.muxui-toolbar [role="button"]'] },
-  Tree: { children: ['.muxui-tree .muxui-tree__item'] },
-  Virtualizer: { viewport: ['.muxui-virtualizer'], item: ['.muxui-virtualizer .muxui-virtualizer__item', '.muxui-virtualizer__item'] },
-  DropZone: { content: ['.muxui-drop-zone'] },
-  FileTrigger: { input: ['.muxui-file-trigger input[type="file"]', 'input[type="file"]'] },
-  Popover: { trigger: ['.muxui-popover__trigger', '.muxui-popover__positioner ~ button'], content: ['.muxui-popover > *'] },
-  PreviewTrigger: { content: ['.muxui-preview-trigger__content'] },
-  Tooltip: { trigger: ['.muxui-tooltip-trigger', '.muxui-tooltip ~ button', 'button'] },
-});
-
 const EXECUTABLE_ANATOMY_PARTS = Object.freeze({
   Autocomplete: new Set(['popover', 'list']),
   Virtualizer: new Set(['item']),
@@ -2082,26 +2029,21 @@ function executableAnatomyPart(family, part) {
   return EXECUTABLE_ANATOMY_PARTS[family]?.has(part) ?? false;
 }
 
+/** The part-map row of a binding's part. An unknown family or part throws, so a typo can never read as "no element". */
+function anatomyRow(binding, part) {
+  return partRow(familySlug(binding.export), part);
+}
+
+/** The selectors that find a part in the rendered anatomy: its row's selector, or none for a part that renders no element. */
 function partSelectors(binding, part) {
-  const root = binding.selector;
-  if (part === 'root') return [root];
-  const familySelectors = CANONICAL_PART_SELECTORS[binding.export]?.[part] ?? [];
-  const rootClass = root.replace(/^\./u, '');
-  const suffix = kebabCase(part);
-  const selectors = [
-    ...familySelectors,
-    `${root}__${suffix}`,
-    `.${rootClass}__${suffix}`,
-    `.muxui-${suffix}`,
-    `.muxui-field-${suffix}`,
-  ];
-  if (part === 'input') selectors.push(`${root} input`, `${root} textarea`);
-  if (part === 'label') selectors.push(`${root} label`, `${root} .muxui-field-label`, `${root} .muxui-value-label`);
-  if (part === 'trigger') selectors.push(`${root} button`, `${root} [role="button"]`);
-  if (part === 'item' || part === 'option' || part === 'cell' || part === 'row' || part === 'tab') {
-    selectors.push(`${root} [role="${part === 'item' ? 'option' : part}"]`);
-  }
-  return [...new Set(selectors)];
+  const selector = selectorOf(anatomyRow(binding, part));
+  return selector === undefined ? [] : [selector];
+}
+
+/** Why a part renders no element, from its row, or undefined for a part that has one. */
+function noElementReason(binding, part) {
+  const row = anatomyRow(binding, part);
+  return row.disposition === 'none' ? row.reason : undefined;
 }
 
 function anatomyArgsForBinding(record, sourceArgs) {
@@ -2112,6 +2054,8 @@ function anatomyArgsForBinding(record, sourceArgs) {
   // errorMessage renders only while invalid, so the anatomy shows the error part through invalid.
   if (props.has('errorMessage') && props.has('invalid')) args.invalid = true;
   if (record.family === 'ColorSwatchPicker') args.defaultValue = '#ff0000';
+  // The label part is the field label Calendar renders only when it has a label.
+  if (record.family === 'Calendar') args.label = 'Date';
   if (record.family === 'ListBox') {
     args.children = e(MuxUI.ListBox.Section, { title: 'Options' },
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
@@ -2171,12 +2115,16 @@ function AnatomyHarness({ record, args }) {
     : null;
   const anatomyStatus = e('div', { className: 'muxui-storybook-anatomy-status' },
     e('p', null, 'The state matrix renders the live component parts. Each row resolves its real DOM hook after mount.'),
-    e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => e('li', {
-      key: part,
-      'data-muxui-storybook-api-part-status': matches[part] > 0 ? 'found' : executableAnatomyPart(record.family, part) ? 'executable' : 'unresolved',
-      'data-muxui-storybook-api-part-proof': executableAnatomyPart(record.family, part) ? 'browser' : undefined,
-      'data-muxui-storybook-api-part-route': partSelectors(record.binding, part).join(' | '),
-    }, e('code', null, `${partSelectors(record.binding, part)[0]} (${part})`), `: ${matches[part] > 0 ? `${matches[part]} live node(s)` : executableAnatomyPart(record.family, part) ? 'executable Browser Proof route' : 'unresolved route'}`))),
+    e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => {
+      const reason = noElementReason(record.binding, part);
+      const executable = executableAnatomyPart(record.family, part);
+      return e('li', {
+        key: part,
+        'data-muxui-storybook-api-part-status': reason ? 'no-element' : matches[part] > 0 ? 'found' : executable ? 'executable' : 'unresolved',
+        'data-muxui-storybook-api-part-proof': executable ? 'browser' : undefined,
+        'data-muxui-storybook-api-part-route': reason ? `no element (${reason})` : partSelectors(record.binding, part).join(' | '),
+      }, e('code', null, `${partSelectors(record.binding, part)[0] ?? 'no element'} (${part})`), `: ${reason ? `renders no element (${reason})` : matches[part] > 0 ? `${matches[part]} live node(s)` : executable ? 'executable Browser Proof route' : 'unresolved route'}`);
+    })),
   );
   const content = e('div', {
     ref: hostRef,

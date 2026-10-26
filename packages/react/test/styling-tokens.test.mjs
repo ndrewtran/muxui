@@ -11,7 +11,7 @@ import { classTokens, hasClassToken } from './support/class-tokens.mjs';
 import { topLevelConstructs } from './support/scan-surface.mjs';
 import { catalogStateKinds, establishedClasses, guardedPrefixes, partFailures, readCatalog, stateFailures } from './support/styling-inventory.mjs';
 import { booleanStates, enumeratedStates, stateAttribute, substrateStateAttributes } from '../src/styling-contract.ts';
-import { dispositions, elementQualifiers, noElementReasons, partClass, partRow, partRows, publicSharedClasses, scopeClasses, selectorOf } from './support/styling-parts.ts';
+import { dispositions, elementQualifiers, noElementReasons, partClass, partRow, partRows, partSelector, publicSharedClasses, scopeClasses, selectorOf } from './support/styling-parts.ts';
 import {
   attributeFindingsIn, auditedReactAria, booleanValueSelectors, foreignAttributes, historicalPaths, listSources, probePaths, renamedPropAttributes, racStateWriters, reactAriaImportProblems, reactAriaVersionProblems, reviewedRacImports, reviewedRacWriters,
   scriptAttributeFindings, styleAttributeFindings, substrateWrappers,
@@ -203,6 +203,17 @@ test('the state classification refuses an unclassified name, a stale entry and a
 test('every catalog anatomy entry has one part-map row with a disposition, and every documented hook is selected or hookOnly', () => {
   assert.deepEqual(rowFailures(), []);
   assert.equal(partRows.length, [...catalog.anatomy.values()].flat().length);
+});
+
+test('the lookups the Storybook and Figma readers use return the contract selector and throw on a part it does not hold', () => {
+  assert.equal(partSelector('button', 'label'), '.muxui-button__label');
+  assert.equal(partSelector('text-field', 'label'), '.muxui-text-field .muxui-field-label');
+  assert.equal(partSelector('input', 'root'), '.muxui-input__root');
+  assert.throws(() => partRow('button', 'nope'), /button\.nope/u);
+  assert.throws(() => partRow('nope', 'root'), /nope\.root/u);
+  assert.throws(() => partSelector('button', 'nope'), /button\.nope/u);
+  const none = partRows.find((row) => row.disposition === 'none');
+  assert.throws(() => partSelector(none.family, none.part), /renders no element/u);
 });
 
 test('the part map check refuses a missing row, a duplicate, an unknown key and a row that breaks its disposition', () => {
