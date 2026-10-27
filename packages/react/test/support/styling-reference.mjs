@@ -26,8 +26,8 @@
 // conservative generator for the stylesheet that ships, and it is not the authority. The authority is the Chromium sweep
 // (test/browser/styling-recipes.test.mjs, in the `browser-chromium-only` group the planner runs for this module), which applies every
 // generated step to the real stylesheet in light and dark, fails when a step does not change its property, and fails when a step that
-// paints text or its surface leaves it under 3:1. The adversarial cases in `cascade-cases.mjs` are hypothetical future stylesheets; a
-// real stylesheet change that breaks a step is caught by the sweep.
+// paints text or its surface leaves the text under the WCAG rule for its size and weight. The adversarial cases in `cascade-cases.mjs`
+// are hypothetical future stylesheets; a real stylesheet change that breaks a step is caught by the sweep.
 //
 // Every selector, from the stylesheet, the part map or a reader, goes through one parser (`parseSelectorList`), which throws on syntax it
 // does not model, so a selector is read whole or not at all.
@@ -143,7 +143,8 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @property {string} markup The wrapper the tokens and rules are scoped to.
  * @property {'my-scope'} scope
  * @property {RecipeStep[]} steps
- * @property {string[]} notes One sentence for each step that has no candidate, and for roles the examples do not reach.
+ * @property {string[]} notes One sentence for each step that has no candidate (why: from what the Basic example renders), for roles the examples
+ *   do not reach, and for a color role left out because no palette color reads on what it paints.
  */
 
 /**
@@ -1390,14 +1391,35 @@ function importantOf({ rows, facts }) {
 
 const recipeScope = 'my-scope';
 /**
- * Colors a token step assigns. What a role paints decides which: a lone color is a mid-tone (relative luminance about 0.17), 3:1 or
- * more against the near-white and the near-black the shipped sheet paints text and surfaces with, so it reads against the example's own
- * text and surface in light and in dark. A text color and a surface color that the same example paints one on the other are assigned
- * together and get a pair that contrasts with each other in either scheme. The generator does not compute contrast: the Chromium sweep
- * measures it for every step that paints text or its surface, in light and dark, and fails under 3:1.
+ * Colors a token step assigns, chosen by the property a role paints and by what is drawn there. The Chromium sweep
+ * (test/browser/styling-recipes.test.mjs) measures every element a step paints in light and dark: text against the WCAG rule for its size
+ * and weight (4.5:1 under 24px, or 18.66px when bold; 3:1 above) with 1.5x to spare, a mark or fill that holds no text at 3:1, and never
+ * lower than it was before the recipe when it was under that already.
+ * - `pairs.text`: a surface and the text drawn on it, when the same recipe assigns both. White on this navy is 16:1 in either scheme.
+ * - `pairs.mark`: a fill and the mark drawn on it (a check, an icon), when neither holds text. The fill is what shows the control, so it has
+ *   to stand apart from the page in light and in dark, and the mark from the fill: that takes a mid-tone, a luminance between 0.115 and
+ *   0.183 (3:1 against the dark page; 4.5:1 for white on it). This violet is 4.69:1 under white, 4.16:1 on the light page and 4.05:1 on
+ *   the dark. Navy is 16:1 under white and 1.19:1 on the dark page.
+ * - `surfaces`: none. A surface under text the recipe does not set lowers that text's contrast in one scheme: every color is darker than
+ *   the light page, which lowers the dark text on it, or lighter than the dark page, which lowers the light text on it. Whether the text
+ *   can spare that is the example's, not the palette's (DisclosureGroup's open panel is muted text at 5.7:1 on the light page, and
+ *   DataDiff's + is 1.9:1).
+ * - `parts`: none. A part that holds no text and is not half of a pair can be drawn on a track or a fill that the recipe does not set
+ *   (Switch's thumb is, on a track that a pseudo-element paints), and its color has to stand apart from that, not from the page: the
+ *   mid-tone this once was is 1.7:1 on the light track and 1.3:1 on the dark.
+ * - `text`: none. Text on the page needs 4.5:1 on a light page (#f2f1f0) and on a dark one (#11100f), which asks for a luminance of 0.157 or
+ *   less on the first and 0.199 or more on the second. No fixed color is both (TextField's label read at 4.16:1 and 4.05:1 in the
+ *   palette it had). A color that follows the theme could be, and is not assigned here.
  */
-const recipeMidTones = Object.freeze(['#7e62c9', '#287f72', '#a06724']);
-const recipePair = Object.freeze({ surface: '#1e1b4b', text: '#ffffff' });
+export const recipePalette = Object.freeze({
+  pairs: Object.freeze({
+    text: Object.freeze({ surface: '#1e1b4b', text: '#ffffff' }),
+    mark: Object.freeze({ surface: '#7e62c9', text: '#ffffff' }),
+  }),
+  surfaces: Object.freeze([]),
+  parts: Object.freeze([]),
+  text: Object.freeze([]),
+});
 const recipeTokenLimit = 3;
 const recipePart = Object.freeze({ declaration: 'letter-spacing: 0.04em', property: 'letter-spacing' });
 const recipeState = Object.freeze({ declaration: 'text-decoration: line-through', property: 'text-decoration-line' });
@@ -1722,7 +1744,15 @@ const first = (parsed, selector) => selectObserved(parsed, selector)[0];
 const canBeStep = (row) => row.group === 'component' && row.policy === 'theme' && ['color', 'dimension'].includes(row.type) && row.readBy.kind === 'rules'
   && !neverStepped.test(row.token.split('.').at(-1)) && (row.type === 'color' || /^-?(?:\d+|\d*\.\d+)(?:px|rem|em)$/u.test(row.light));
 
-/** The wrapper-scoped token steps: at most three theme color and size roles that win on the first element the Basic example shows for their rule. */
+/** Which palette entry a color role takes: by the property it paints, and whether its target holds text. */
+const paletteKind = ({ property, element }) => (property === 'color' && hasText(element) ? 'text' : property === 'background-color' && hasText(element) ? 'surfaces' : 'parts');
+
+/**
+ * The wrapper-scoped token steps: at most three theme color and size roles that win on the first element the Basic example shows for their
+ * rule, and the color roles dropped because the palette has no color for what they paint (see `recipePalette`), each with the target and
+ * property it paints and the kind of palette entry it needed.
+ * @returns {{ steps: object[], dropped: { row: object, target: string, property: string, kind: 'text' | 'surfaces' | 'parts' }[] }}
+ */
 function tokenSteps({ tokenRows, basic, rootElements, facts }) {
   const inRoot = (element) => rootElements.includes(element) || insideAny(element, rootElements);
   const index = declarationIndex(facts);
@@ -1739,23 +1769,43 @@ function tokenSteps({ tokenRows, basic, rootElements, facts }) {
     // Every element the role paints, for pairing; the first is the step.
     if (found.length > 0) candidates.push({ ...found[0], paints: found });
   }
-  // One size when there is one (a radius first), and colors for the rest.
-  const size = candidates.find(({ row, property }) => row.type === 'dimension' && /radius/u.test(property)) ?? candidates.find(({ row }) => row.type === 'dimension');
-  const colors = candidates.filter(({ row }) => row.type === 'color').slice(0, recipeTokenLimit - (size ? 1 : 0));
   // A text color drawn on a surface color that this recipe also assigns: the two get a pair that contrasts.
-  const paired = new Map();
-  for (const surface of colors) {
+  const colorCandidates = candidates.filter(({ row }) => row.type === 'color');
+  const partner = new Map();
+  const pairRole = new Map();
+  /** Which pair a candidate takes its color from: text on a surface, or a mark (a check, an icon) on a fill. */
+  const pairKind = new Map();
+  for (const surface of colorCandidates) {
     const surfaces = surface.paints.filter(({ property }) => property === 'background-color').map(({ element }) => element);
-    const text = colors.find((candidate) => candidate !== surface && candidate.property === 'color' && !paired.has(candidate) && surfaces.some((element) => candidate.element === element || insideAny(candidate.element, [element])));
-    if (text && !paired.has(surface)) { paired.set(surface, recipePair.surface); paired.set(text, recipePair.text); }
+    const text = colorCandidates.find((candidate) => candidate !== surface && candidate.property === 'color' && !partner.has(candidate) && surfaces.some((element) => candidate.element === element || insideAny(candidate.element, [element])));
+    if (text && !partner.has(surface)) {
+      partner.set(surface, text).set(text, surface);
+      pairRole.set(surface, 'surface').set(text, 'text');
+      const kind = hasText(text.element) ? 'text' : 'mark';
+      pairKind.set(surface, kind).set(text, kind);
+    }
   }
-  let single = 0;
-  const colorValue = (candidate) => paired.get(candidate) ?? recipeMidTones[single++];
-  return [...colors, ...(size ? [size] : [])].map((candidate) => {
+  const dropped = colorCandidates.filter((candidate) => !partner.has(candidate) && recipePalette[paletteKind(candidate)].length === 0);
+  // One size when there is one (a radius first), and colors for the rest; a pair is taken whole or not at all.
+  const size = candidates.find(({ row, property }) => row.type === 'dimension' && /radius/u.test(property)) ?? candidates.find(({ row }) => row.type === 'dimension');
+  const taken = new Set();
+  for (const candidate of colorCandidates) {
+    const group = partner.has(candidate) ? [candidate, partner.get(candidate)] : [candidate];
+    if (dropped.includes(candidate) || taken.has(candidate) || taken.size + group.length > recipeTokenLimit - (size ? 1 : 0)) continue;
+    for (const member of group) taken.add(member);
+  }
+  const used = { text: 0, surfaces: 0, parts: 0 };
+  const colorValue = (candidate) => {
+    if (pairRole.has(candidate)) return recipePalette.pairs[pairKind.get(candidate)][pairRole.get(candidate)];
+    const kind = paletteKind(candidate);
+    return recipePalette[kind][used[kind]++];
+  };
+  const steps = [...colorCandidates.filter((candidate) => taken.has(candidate)), ...(size ? [size] : [])].map((candidate) => {
     const { row, target, property, element } = candidate;
     const value = row.type === 'color' ? colorValue(candidate) : /radius/u.test(property) ? '999px' : `calc(${row.light} + 0.5rem)`;
     return { kind: 'token', selector: `.${recipeScope}`, declaration: `${row.cssVar}: ${value}`, target, property, scope: 'wrapper', observedText: hasText(element) };
   });
+  return { steps, dropped: dropped.map((candidate) => ({ row: candidate.row, target: candidate.target, property: candidate.property, kind: paletteKind(candidate) })) };
 }
 
 /** The part step: the first part with text inside the root, else the root, else the first part inside the root. */
@@ -1791,9 +1841,28 @@ function partNote({ name, classRows, basic, rootElements, observed }) {
   return `No part step: the Basic example renders ${seen.join(', ')}, but ${unreached({ name, seen, rootElements, observed })}. A part rule is scoped to a wrapper around the component, so its target has to be inside the component's root to be reached.`;
 }
 
+/** Why the palette has no color for each kind of role (see `recipePalette`), as the rest of a note that names the roles. */
+const droppedReasons = Object.freeze({
+  text: (many) => `${many ? 'they paint' : 'it paints'} text on the page, and the recipe assigns fixed colors, none of which reads at 4.5:1 on both the light page and the dark page.`,
+  surfaces: (many) => `${many ? 'they paint' : 'it paints'} the surface under text, and a fixed color for it lowers that text's contrast on the light page or the dark page; the generator cannot tell how much the text has to spare, so it assigns none.`,
+  parts: (many) => `${many ? 'they paint' : 'it paints'} a part that holds no text, and the generator cannot tell what that part is drawn on (a track, a fill or the page), so it cannot choose a color that stands apart from it in both schemes.`,
+});
+
 /**
- * The note for a family with no token step and no role dropped for contrast: it has no role, none a rule reads, or the rules that read
- * its roles match nothing the Basic example renders or cannot be shown to win there.
+ * The notes for color roles the recipe leaves out, one per kind of reason. Each role is named with the property and element it paints,
+ * so a note says which paint it left out, not only which role.
+ */
+function droppedNotes(dropped) {
+  return Object.keys(droppedReasons).flatMap((kind) => {
+    const list = dropped.filter((entry) => entry.kind === kind);
+    if (list.length === 0) return [];
+    return [`No token step for ${list.map(({ row, property, target }) => `${row.cssVar} (${property} of ${target})`).join(', ')}: ${droppedReasons[kind](list.length > 1)}`];
+  });
+}
+
+/**
+ * The note for a family with no token step and no color role left out for contrast: it has no role, none a rule reads, or the rules
+ * that read its roles match nothing the Basic example renders or cannot be shown to win there.
  */
 function tokenNote({ name, tokenRows, basic }) {
   if (!tokenRows.some(({ group }) => group === 'component')) return `No token step: ${name} has no component roles.`;
@@ -1874,8 +1943,9 @@ function recipeFor({ name, states, tokenRows, classRows, stateRowList, observed,
   if (!basic) {
     notes.push('No steps: no example render was supplied, so the recipe cannot name an element the example shows.');
   } else {
-    const tokens = rootElements.length > 0 ? tokenSteps({ tokenRows, basic, rootElements, facts }) : [];
-    if (tokens.length === 0) notes.push(tokenNote({ name, tokenRows, basic }));
+    const { steps: tokens, dropped } = rootElements.length > 0 ? tokenSteps({ tokenRows, basic, rootElements, facts }) : { steps: [], dropped: [] };
+    if (dropped.length > 0) notes.push(...droppedNotes(dropped));
+    else if (tokens.length === 0) notes.push(tokenNote({ name, tokenRows, basic }));
     const part = partStep({ classRows, basic, rootElements, observed });
     if (!part) notes.push(partNote({ name, classRows, basic, rootElements, observed }));
     const { step: state, note } = stateStep({ name, states, stateRowList, classRows, basic, rootElements, observed, facts });

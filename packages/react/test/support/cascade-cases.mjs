@@ -22,7 +22,7 @@ const button = { family: 'button', role: '--muxui-component-button-radius', valu
 const checkbox = { family: 'checkbox', role: '--muxui-component-checkbox-selected-background', value: 'rgb(200, 0, 0)', target: '.muxui-checkbox__indicator[data-muxui-state-selected]', property: 'border-top-color' };
 const important = 'border-radius: 2px !important;';
 
-/** TextField's label role, read by `:where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label` and painted on the label's color. */
+/** TextField's label role, read by `:where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label` and painted on the label's color (a role the recipe leaves out: it is text on the page). */
 const field = { family: 'text-field', role: '--muxui-component-textfield-label', value: 'rgb(200, 0, 0)', target: '.muxui-field-label', property: 'color' };
 /** The reader rewritten to a selector that is unknown on the first label (`:first-child`) and known on one that has the class `known`. */
 const reader = ':where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label {';
@@ -88,11 +88,16 @@ export const cascadeCases = [
   // Which element of several decides: a reader that is unknown on an earlier element than the one it is known to match.
   { ...field, name: 'a reader that the first label may match through :first-child is unknown there, so a later label that matches it for sure is not a step', target: '.muxui-field-label:is(:first-child, .known)', change: overridesOthers, markup: knownLabelLast, claims: false, changes: false },
   { ...field, name: 'control: the same reader on a label that is known to match it, and nothing that beats it there, is a step', target: '.muxui-field-label:is(:first-child, .known)', change: overridesOthers, markup: knownLabel, claims: true, changes: true },
+  // A role the generator leaves out is a claim about the element it paints, not about every element: the label role paints the label.
+  { ...field, name: 'a role left out of the recipe is a claim about the element it paints: the label role does not paint the input', target: '.muxui-field-input', change: appended('.muxui-field-input', 'letter-spacing: 0.01em;'), claims: false, changes: false },
 ];
 
 /**
- * Whether the generator makes a token step for the case's role on the case's target and property (another reader of the role can still
- * make a step elsewhere), on the real repository with the case's stylesheet and markup.
+ * Whether the generator finds the case's role to paint the case's target and property (another reader of the role can still paint it
+ * elsewhere), on the real repository with the case's stylesheet and markup. A role it found is a token step, or a role it left out
+ * because no palette color suits what it paints (see `recipePalette`) and says so in a note; either way the cascade model decided that
+ * the role is what paints the target. A role left out is matched on the target and property its note names, as a step is: a role the
+ * generator found painting one element is no claim about another.
  * @param {CascadeCase} one
  * @param {{ root: string, artifact: object, observations: import('./styling-reference.mjs').Observation[] }} context
  */
@@ -100,6 +105,10 @@ export const claimsStep = ({ family, role, target, property, change, markup = (h
   const basic = observations.find((observation) => observation.family === family && observation.source.endsWith('/basic.tsx'));
   const swapped = observations.map((observation) => (observation === basic ? { ...observation, html: markup(observation.html) } : observation));
   const examples = observations.filter((observation) => observation.family === family).map(({ source }) => ({ source: { content: source } }));
-  return stylingFor({ slug: family, artifact, examples, facts: await readStylingFacts(directory), observations: swapped })
-    .recipe.steps.some((step) => step.declaration.startsWith(`${role}:`) && step.target === target && step.property === property);
+  const { steps, notes } = stylingFor({ slug: family, artifact, examples, facts: await readStylingFacts(directory), observations: swapped }).recipe;
+  // A note names each role it leaves out as `<role> (<property> of <target>)`, then `, ` or `: `; the parenthesis keeps `selected-track`
+  // apart from `selected-track-hover`.
+  const named = `${role} (${property} of ${target})`;
+  const leftOut = (note) => note.startsWith('No token step for ') && (note.includes(`${named}, `) || note.includes(`${named}: `));
+  return steps.some((step) => step.declaration.startsWith(`${role}:`) && step.target === target && step.property === property) || notes.some(leftOut);
 });
