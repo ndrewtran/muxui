@@ -1,0 +1,54 @@
+---
+import type { FamilyStyling } from '../../../../../packages/react/test/support/styling-reference.mjs';
+import { inlineHtml } from './inline.ts';
+
+interface Props {
+	name: string;
+	overrides: FamilyStyling['overrides'];
+}
+
+const { name, overrides } = Astro.props;
+const important = overrides.important;
+// The cause of a declaration is read from its selector and its at-rule chain, so Button's two attribute-driven reduced-motion
+// declarations are not counted as media queries.
+const causeLabels: Record<string, string> = {
+	'forced-colors': 'forced colors',
+	'reduced-motion-media': 'reduced motion by media query',
+	'reduced-motion-attribute': 'reduced motion by attribute',
+	other: 'other causes',
+};
+---
+
+<h3 id="styling-override-rules">Override rules</h3>
+<div class="styling-prose" data-styling-override-text>
+	{overrides.paragraphs.map((paragraph) => <p data-styling-readme><Fragment set:html={inlineHtml(paragraph)} /></p>)}
+	<p data-styling-readme><Fragment set:html={inlineHtml(overrides.layerIntro)} /></p>
+	<pre class="styling-pre" data-styling-layer-code data-styling-scroll="Layer order"><code>{overrides.layerCode}</code></pre>
+	<p data-styling-readme><Fragment set:html={inlineHtml(overrides.layerClosing)} /></p>
+	<p data-styling-motion><Fragment set:html={inlineHtml(overrides.motion)} /></p>
+</div>
+<h4 id="styling-what-wins">What wins</h4>
+<p class="styling-caption">Each row compares two declarations of the same property at the author origin, with the layer order shown above.</p>
+<div class="styling-scroll not-content" data-styling-scroll>
+	<table class="styling-table styling-who" data-styling-table="who-wins">
+		<caption class="visually-hidden">What wins</caption>
+		<thead>
+			<tr><th scope="col">Your declaration</th><th scope="col">Against</th><th scope="col">Winner</th></tr>
+		</thead>
+		<tbody>
+			{overrides.whoWins.map((row) => (
+				<tr data-styling-who={row.id}>
+					<th scope="row"><Fragment set:html={inlineHtml(row.declaration)} /></th>
+					<td><Fragment set:html={inlineHtml(row.against)} /></td>
+					<td class={row.winner === 'Mux' ? 'styling-mux' : undefined}>{row.winner}</td>
+				</tr>
+			))}
+		</tbody>
+	</table>
+</div>
+<p class="styling-note" data-styling-limit><Fragment set:html={inlineHtml(overrides.limit)} /></p>
+{important !== null && (
+	<p class="styling-note" data-styling-important={important.total}>
+		Mux marks {important.total} {important.total === 1 ? 'declaration' : 'declarations'} <code>!important</code> on {name}'s own hooks: {Object.entries(important.byCause).map(([cause, count], index) => <Fragment>{index > 0 && ', '}{count} for {causeLabels[cause] ?? cause}</Fragment>)}.
+	</p>
+)}

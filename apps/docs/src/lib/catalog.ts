@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { groupComponentNavigation } from '../../../component-navigation.mjs';
 import { readDeclarationReference, readReactPackageFacts, usageGuideId } from '../../../component-reference.mjs';
+import { readStylingFacts } from '../../../../packages/react/test/support/styling-reference.mjs';
 import { componentRecordCategory } from './component-categories.ts';
 
 export interface CatalogSummary {
@@ -56,6 +57,9 @@ export interface CatalogBinding {
 		parts: readonly string[];
 		defaults: Readonly<Record<string, unknown>>;
 		partApis?: Readonly<Record<string, CatalogPartApi>>;
+		/** What the derived API declares about each prop (its enum or type) and the named types it resolves; the Styling section reads a reflected prop's values from them. */
+		propDetails?: Readonly<Record<string, unknown>>;
+		types?: Readonly<Record<string, unknown>>;
 	};
 	behavior?: readonly string[];
 	accessibility?: readonly string[];
@@ -177,6 +181,17 @@ let declarationReference: ReturnType<typeof readDeclarationReference> | undefine
 export function getDeclarationReference() {
 	declarationReference ??= readDeclarationReference(canonicalRepositoryRoot);
 	return declarationReference;
+}
+
+let stylingFacts: ReturnType<typeof readStylingFacts> | undefined;
+/**
+ * The facts the Styling section of every component page is derived from (the part map, the built stylesheet, the token graph, the
+ * README's cascade text), read once per build from the repository root the catalog was found in. The page passes them to
+ * `componentReference` and prints what comes back; it derives nothing itself.
+ */
+export function getStylingFacts() {
+	stylingFacts ??= readStylingFacts(canonicalRepositoryRoot);
+	return stylingFacts;
 }
 
 export function requiredString(value: unknown, field: string): string {
@@ -379,6 +394,8 @@ function readBinding(value: unknown): CatalogBinding {
 			parts: stringArray(value.api.parts, 'binding.api.parts'),
 			defaults: Object.freeze({ ...defaults }),
 			...(value.api.partApis === undefined ? {} : { partApis: readPartApis(value.api.partApis) }),
+			...(isRecord(value.api.propDetails) ? { propDetails: Object.freeze({ ...value.api.propDetails }) } : {}),
+			...(isRecord(value.api.types) ? { types: Object.freeze({ ...value.api.types }) } : {}),
 		}),
 		...(value.behavior === undefined ? {} : { behavior: stringArray(value.behavior, 'binding.behavior') }),
 		...(value.accessibility === undefined ? {} : { accessibility: stringArray(value.accessibility, 'binding.accessibility') }),

@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getDeclarationReference, getReactPackageFacts } from '../../lib/catalog.ts';
+import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getDeclarationReference, getReactPackageFacts, getStylingFacts } from '../../lib/catalog.ts';
 import { componentReference } from '../../../../component-reference.mjs';
 import { buildApiReference, collapsePartsAbove } from '../../lib/api-reference.ts';
 import legacyPartAnchors from '../../lib/legacy-part-anchors.json';
@@ -14,12 +14,17 @@ import ExampleHost from '../../components/ExampleHost.tsx';
 import TimeFieldExampleHost from '../../components/TimeFieldExampleHost.tsx';
 import GuideProjection from '../../components/GuideProjection.astro';
 import CodeBlock from '../../components/CodeBlock.astro';
-import TokenInlineMarkup from '../../components/TokenInlineMarkup.astro';
 import ApiPart from '../../components/api/ApiPart.astro';
 import ApiExports from '../../components/api/ApiExports.astro';
 import ApiTypes from '../../components/api/ApiTypes.astro';
 import TypeText from '../../components/api/TypeText.astro';
 import ApiDisclosures from '../../components/api/ApiDisclosures.astro';
+import { observeExamples } from '../../components/styling/observations.ts';
+import StylingHooks from '../../components/styling/StylingHooks.astro';
+import StylingTokens from '../../components/styling/StylingTokens.astro';
+import StylingOverrides from '../../components/styling/StylingOverrides.astro';
+import StylingRecipe from '../../components/styling/StylingRecipe.astro';
+import StylingMeasure from '../../components/styling/StylingMeasure.astro';
 
 export const prerender = true;
 
@@ -48,11 +53,23 @@ const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
 const usedInBlocks = resolveUsedIn(page.usedIn);
 // Every fact below is projected from the catalog record; this page authors none.
 const packageFacts = getReactPackageFacts();
-const { imports, usage, behavior, accessibility, styling, sources: recordSources, declarations } = componentReference({ artifact, examples, packageFacts, declarations: getDeclarationReference() });
+// The Styling section is derived by the styling reference from the part map, the stylesheet, the token graph, the README and server
+// renders of this family's own examples; the page prints what comes back.
+const observations = await observeExamples(componentSlug, examples);
+const { imports, usage, behavior, accessibility, styling, sources: recordSources, declarations } = componentReference({ artifact, examples, packageFacts, declarations: getDeclarationReference(), stylingFacts: await getStylingFacts(), observations });
+const { hooks, tokens, overrides, recipe, sources: stylingSources } = styling;
+if (hooks === undefined || tokens === undefined || overrides === undefined || recipe === undefined || stylingSources === undefined) {
+	throw new Error(`The styling reference returned no Styling section for ${summary.id}.`);
+}
 // The types come from the declarations the package ships; the catalog adds each default and which prop reports which event.
 if (declarations === undefined) throw new Error(`The declaration reference has no share for ${summary.id}.`);
 // The declarations the tables were read from follow the other sources, as they do in Storybook.
-const sources = [...recordSources, { label: 'Declarations', paths: [declarations.source, ...Object.values(declarations.sources)] }];
+// The files behind the Styling section follow them: the part map and the reference, the stylesheets that select this family's hooks, the token record and the README.
+const sources = [
+	...recordSources,
+	{ label: 'Declarations', paths: [declarations.source, ...Object.values(declarations.sources)] },
+	{ label: 'Styling', paths: stylingSources },
+];
 const legacyAnchorsByPage: Readonly<Record<string, Readonly<Record<string, string>>>> = legacyPartAnchors.anchors;
 const api = buildApiReference({
 	packageName: packageFacts.packageName,
@@ -100,7 +117,11 @@ const headings = [
 	...(api.types.length > 0 ? [{ depth: 3, text: 'Types', slug: 'api-reference-types' }] : []),
 	{ depth: 2, text: 'Events', slug: 'events' },
 	{ depth: 2, text: 'Accessibility', slug: 'accessibility' },
-	{ depth: 2, text: 'Anatomy and styling', slug: 'anatomy-and-styling' },
+	{ depth: 2, text: 'Styling', slug: 'styling' },
+	{ depth: 3, text: 'Hooks', slug: 'styling-hooks' },
+	{ depth: 3, text: 'Tokens', slug: 'styling-tokens' },
+	{ depth: 3, text: 'Override rules', slug: 'styling-override-rules' },
+	{ depth: 3, text: 'Recipe', slug: 'styling-recipe' },
 	{ depth: 2, text: 'Sources', slug: 'sources' },
 ];
 ---
@@ -262,30 +283,14 @@ const headings = [
 		)}
 	</section>
 
-	<section id="anatomy-and-styling" class="docs-section">
-		<h2>Anatomy and styling</h2>
-		<h3>Anatomy</h3>
-		<p data-fact="anatomy">{styling.anatomy.map((part) => <code class="inline-code">{part}</code>)}</p>
-		<h3>States</h3>
-		<p data-fact="states">{styling.states.map((state) => <code class="inline-code">{state}</code>)}</p>
-		<h3>Token requirements</h3>
-		<p data-fact="tokenRecipe.source">Token source: <code>{styling.tokenSource}</code></p>
-		<TokenInlineMarkup>
-			{styling.tokenGroups.map((group) => (
-				<Fragment>
-					{group.prefix && <h4 class="token-group">{group.prefix}</h4>}
-					<ul class="token-list" data-fact="tokenRecipe.requirements">
-						{group.tokens.map(({ token, requirement, profiles }) => (
-							<li>
-								<code>{token}</code>
-								{requirement !== 'required' && <span class="token-requirement">{[requirement, ...(profiles ?? [])].join(', ')}</span>}
-							</li>
-						))}
-					</ul>
-				</Fragment>
-			))}
-		</TokenInlineMarkup>
+	<section id="styling" class="docs-section">
+		<h2><a id="anatomy-and-styling" data-styling-legacy></a>Styling</h2>
+		<StylingHooks name={summary.name} hooks={hooks} />
+		<StylingTokens name={summary.name} tokens={tokens} />
+		<StylingOverrides name={summary.name} overrides={overrides} />
+		<StylingRecipe name={summary.name} slug={componentSlug} styling={{ hooks, tokens, recipe }} source={basicSource} />
 	</section>
+	<StylingMeasure />
 
 	<ApiDisclosures />
 

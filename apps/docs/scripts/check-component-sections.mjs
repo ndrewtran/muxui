@@ -6,6 +6,7 @@ import { linkedFamilies } from '../../guide-links.mjs';
 import { renderedEventGroups, expectedEventGroups } from './event-groups.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 import { collapsePartsAbove, compareComponent, comparePackageExports, compareSources, expectedComponent, expectedPackageExports, expectedSources as expectedSourcesOf, loadReference, renderedComponent, renderedEvents, renderedPackageExports, renderedSources, routeExists, routeFile } from './typed-reference.mjs';
+import { checkStyling, expectedStylingSources, loadStylingSources, measuredScript, previewHeightsPath, renderedStyling } from './styling-expectation.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
 // The catalog query API and the package files are read here directly, not through the docs loader or the shared projection.
@@ -27,10 +28,9 @@ const sections = [
 	['api-reference', 'API reference'],
 	['events', 'Events'],
 	['accessibility', 'Accessibility'],
-	['anatomy-and-styling', 'Anatomy and styling'],
+	['styling', 'Styling'],
 	['sources', 'Sources'],
 ];
-const tokenGroupThreshold = 8;
 
 function assert(condition, message) {
 	if (!condition) throw new Error(message);
@@ -55,6 +55,13 @@ function listComponents() {
 
 const manifest = readJson('packages/react/package.json');
 const reference = loadReference(resolve(repositoryRoot, 'packages/react/reference'));
+// The Styling section is checked against the part map, the token record, the README, the stylesheet and the page's own examples.
+const stylingSources = await loadStylingSources(repositoryRoot);
+const sameList = (left, right) => left.length === right.length && left.every((value, index) => value === right[index]);
+/** The families whose page shows previews: the recorded preview heights hold exactly these. */
+const previewSlugs = [];
+/** The page script of the Styling section as the build has it: every page has to load this URL. */
+const measure = measuredScript(docsDist);
 const descriptor = readJson('packages/react/generated/descriptor.json');
 // The generated contract carries two marker comment lines ahead of its JSON; it names the runtime file of every family.
 const contract = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
@@ -86,10 +93,6 @@ function assertList(section, name, expected, route) {
 	}
 	assert(lists.length === 1, `${route} must render ${name} exactly once.`);
 	assert(JSON.stringify(items(lists[0])) === JSON.stringify(expected), `${route} ${name} differs from the catalog.`);
-}
-
-function codeTexts(root) {
-	return elements(root).filter((node) => node.tagName === 'code').map((node) => textContent(node));
 }
 
 let routes = 0;
@@ -220,37 +223,24 @@ for (const component of listComponents()) {
 	apiCounts.types += expectedApi.types.length;
 	apiCounts.events += expectedApi.events.reduce((total, group) => total + group.events.length, 0);
 
-	// Anatomy and styling: parts, states and every token requirement, with no class names or selectors.
-	const styling = section('anatomy-and-styling');
-	for (const [name, expected] of [['anatomy', artifact.anatomy], ['states', artifact.states]]) {
-		const [container] = facts(styling, name);
-		assert(container !== undefined && JSON.stringify(codeTexts(container)) === JSON.stringify(expected), `${route} ${name} differs from the catalog.`);
-	}
+	// Styling: hooks, tokens, override rules and the recipe, from the sources and the page's own examples, never from the projection.
 	const requirements = binding.tokenRecipe.requirements;
-	const annotation = ({ requirement, profiles }) => requirement === 'required' ? null : [requirement, ...(profiles ?? [])].join(', ');
-	const tokenSource = facts(styling, 'tokenRecipe.source');
-	assert(tokenSource.length === 1 && textContent(tokenSource[0]) === `Token source: ${binding.tokenRecipe.source}`, `${route} token source differs from the recipe.`);
-	// Each token row carries its path and, unless it is plainly required, its requirement and profiles.
-	const renderedTokens = facts(styling, 'tokenRecipe.requirements').flatMap((list) => elements(list).filter((node) => node.tagName === 'li').map((item) => {
-		const note = elements(item).find((node) => node.tagName === 'span' && classNames(node).has('token-requirement'));
-		return [textContent(elements(item).find((node) => node.tagName === 'code')), note === undefined ? null : textContent(note)];
-	}));
-	const byToken = ([left], [right]) => left < right ? -1 : left > right ? 1 : 0;
-	assert(
-		JSON.stringify([...renderedTokens].sort(byToken)) === JSON.stringify(requirements.map((entry) => [entry.token, annotation(entry)]).sort(byToken)),
-		`${route} token requirements or their annotations differ from the recipe.`,
-	);
-	const groupLabels = elements(styling).filter((node) => node.tagName === 'h4' && classNames(node).has('token-group')).map((node) => textContent(node));
-	const expectedGroups = requirements.length > tokenGroupThreshold ? [...new Set(requirements.map(({ token }) => token.split('.').slice(0, 2).join('.')))] : [];
-	assert(JSON.stringify(groupLabels) === JSON.stringify(expectedGroups), `${route} token groups differ from the token prefixes.`);
-	assert(!/\.muxui-|data-muxui|\[data-/u.test(textContent(styling)), `${route} anatomy and styling shows a class name or selector.`);
+	problems.push(...checkStyling({ sources: stylingSources, slug, artifact, root, route, measureUrl: measure.url }));
+	if (renderedStyling(root)?.previews.panes.length > 0) previewSlugs.push(slug);
+	for (const [id, label] of [['styling-hooks', 'Hooks'], ['styling-tokens', 'Tokens'], ['styling-override-rules', 'Override rules'], ['styling-recipe', 'Recipe']]) {
+		if (!outline.some(([outlineId, outlineLabel]) => outlineId === id && outlineLabel === label)) problems.push(`${route} outline does not list ${label} (#${id}).`);
+	}
 
 	// Sources: the record, the canonical examples, the family's runtime file, the package manifest and the declarations the tables were read from.
 	const runtime = contract.components.find((entry) => entry.slug === slug)?.source;
 	assert(runtime !== undefined, `${route} has no runtime source in the renderer contract.`);
-	const expectedSources = expectedSourcesOf({ record: artifact.source.record, examples, runtime, reference, owner: expectedApi.owner });
+	// The Styling group lists only tracked files, so a link never reaches a file the repository does not have.
+	const expectedSources = expectedSourcesOf({ record: artifact.source.record, examples, runtime, reference, owner: expectedApi.owner, styling: expectedStylingSources(stylingSources, { slug, root }) });
 	problems.push(...compareSources(expectedSources, renderedSources(section('sources')), route));
 	for (const path of expectedSources.flatMap(({ paths }) => paths)) assert(existsSync(resolve(repositoryRoot, path)), `${route} links a missing source: ${path}.`);
+	for (const path of expectedSources.find(({ label }) => label === 'Styling').paths) {
+		if (!stylingSources.tracked.has(path)) problems.push(`${route} Styling sources list ${path}, which the repository does not track.`);
+	}
 
 	projectedStrings += partApis.length + (artifact.intent?.useWhen?.length ?? 0) + (artifact.intent?.avoidWhen?.length ?? 0) + (binding.behavior?.length ?? 0)
 		+ binding.api.events.length + artifact.accessibility.obligations.length + bindingAccessibility.length + requirements.length + expectedSources.flatMap(({ paths }) => paths).length;
@@ -323,6 +313,21 @@ for (const { route, href } of apiLinks) {
 		continue;
 	}
 	if (fragment !== undefined && !ids.has(fragment)) problems.push(`${route} links to ${href}, which is not on that page.`);
+}
+
+// The recorded heights of the previews are those of the families that have previews, whole pixels, nothing else.
+const recordedSlugs = Object.keys(stylingSources.previewHeights).sort();
+if (!sameList(recordedSlugs, [...previewSlugs].sort())) problems.push(`${previewHeightsPath} holds ${JSON.stringify(recordedSlugs.filter((slug) => !previewSlugs.includes(slug)))} that have no previews and lacks ${JSON.stringify(previewSlugs.filter((slug) => !recordedSlugs.includes(slug)))} that do: run apps/scale/test/browser/record-preview-heights.mjs.`);
+for (const [slug, heights] of Object.entries(stylingSources.previewHeights)) {
+	if (!Object.keys(heights).sort().every((key, index) => key === ['narrow', 'wide'][index]) || ![heights.narrow, heights.wide].every((value) => Number.isInteger(value) && value > 0)) problems.push(`${previewHeightsPath} records ${JSON.stringify(heights)} for ${slug}, expected a whole number of pixels for narrow and wide.`);
+}
+
+// The page script every component page loads is built once, named for the hash of its content, and reads the attributes the Styling section prints.
+problems.push(...measure.problems);
+if (measure.url !== null) {
+	for (const name of ['data-styling-scroll', 'data-styling-table', 'data-styling-pane', 'data-measure', 'data-step-target', 'stepTarget', 'stepProperty', 'stepScope', 'stepText']) {
+		if (!measure.content.includes(name)) problems.push(`${measure.url} never reads ${name}, which the Styling section prints for it.`);
+	}
 }
 
 if (problems.length > 0) {

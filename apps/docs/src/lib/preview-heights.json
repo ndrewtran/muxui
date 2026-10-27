@@ -1,0 +1,310 @@
+{
+	"activity": {
+		"narrow": 344,
+		"wide": 257
+	},
+	"autocomplete": {
+		"narrow": 62,
+		"wide": 62
+	},
+	"avatar": {
+		"narrow": 34,
+		"wide": 34
+	},
+	"breadcrumbs": {
+		"narrow": 26,
+		"wide": 26
+	},
+	"button": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"button-group": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"calendar": {
+		"narrow": 281,
+		"wide": 281
+	},
+	"card": {
+		"narrow": 162,
+		"wide": 162
+	},
+	"checkbox": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"checkbox-field": {
+		"narrow": 64,
+		"wide": 64
+	},
+	"checkbox-group": {
+		"narrow": 102,
+		"wide": 102
+	},
+	"code-block": {
+		"narrow": 167,
+		"wide": 167
+	},
+	"color-area": {
+		"narrow": 122,
+		"wide": 122
+	},
+	"color-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"color-mode-toggle": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"color-picker": {
+		"narrow": 255,
+		"wide": 255
+	},
+	"color-slider": {
+		"narrow": 31,
+		"wide": 31
+	},
+	"color-swatch": {
+		"narrow": 24,
+		"wide": 24
+	},
+	"color-swatch-picker": {
+		"narrow": 24,
+		"wide": 24
+	},
+	"color-wheel": {
+		"narrow": 194,
+		"wide": 194
+	},
+	"combo-box": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"command-palette": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"data-diff": {
+		"narrow": 413,
+		"wide": 413
+	},
+	"date-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"date-picker": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"date-range-picker": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"disclosure": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"disclosure-group": {
+		"narrow": 584,
+		"wide": 453
+	},
+	"drop-zone": {
+		"narrow": 126,
+		"wide": 126
+	},
+	"file-trigger": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"form": {
+		"narrow": 130,
+		"wide": 130
+	},
+	"grid-list": {
+		"narrow": 156,
+		"wide": 156
+	},
+	"group": {
+		"narrow": 84,
+		"wide": 84
+	},
+	"header-nav": {
+		"narrow": 67,
+		"wide": 67
+	},
+	"icon-button": {
+		"narrow": 42,
+		"wide": 42
+	},
+	"image": {
+		"narrow": 182,
+		"wide": 182
+	},
+	"input": {
+		"narrow": 106,
+		"wide": 86
+	},
+	"input-tags": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"lightbox": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"link": {
+		"narrow": 26,
+		"wide": 26
+	},
+	"list-box": {
+		"narrow": 133,
+		"wide": 133
+	},
+	"markdown": {
+		"narrow": 81,
+		"wide": 81
+	},
+	"message": {
+		"narrow": 263,
+		"wide": 263
+	},
+	"meter": {
+		"narrow": 45,
+		"wide": 45
+	},
+	"multi-select": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"number-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"payment-input": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"progress-bar": {
+		"narrow": 45,
+		"wide": 45
+	},
+	"progress-circle": {
+		"narrow": 101,
+		"wide": 101
+	},
+	"prompt-composer": {
+		"narrow": 47,
+		"wide": 47
+	},
+	"radio-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"radio-group": {
+		"narrow": 143,
+		"wide": 143
+	},
+	"range-calendar": {
+		"narrow": 281,
+		"wide": 281
+	},
+	"resizable": {
+		"narrow": 26,
+		"wide": 26
+	},
+	"search-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"select": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"select-native": {
+		"narrow": 86,
+		"wide": 86
+	},
+	"separator": {
+		"narrow": 3,
+		"wide": 3
+	},
+	"sidebar": {
+		"narrow": 482,
+		"wide": 482
+	},
+	"slider": {
+		"narrow": 55,
+		"wide": 55
+	},
+	"switch": {
+		"narrow": 64,
+		"wide": 64
+	},
+	"switch-field": {
+		"narrow": 84,
+		"wide": 84
+	},
+	"table": {
+		"narrow": 216,
+		"wide": 216
+	},
+	"tabs": {
+		"narrow": 122,
+		"wide": 122
+	},
+	"tag-group": {
+		"narrow": 82,
+		"wide": 52
+	},
+	"tag-select": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"text": {
+		"narrow": 182,
+		"wide": 158
+	},
+	"text-area": {
+		"narrow": 158,
+		"wide": 158
+	},
+	"text-editor": {
+		"narrow": 262,
+		"wide": 262
+	},
+	"text-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"time-field": {
+		"narrow": 61,
+		"wide": 61
+	},
+	"toggle-button": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"toggle-button-group": {
+		"narrow": 40,
+		"wide": 40
+	},
+	"token-field": {
+		"narrow": 87,
+		"wide": 61
+	},
+	"toolbar": {
+		"narrow": 51,
+		"wide": 51
+	},
+	"tree": {
+		"narrow": 38,
+		"wide": 38
+	},
+	"virtualizer": {
+		"narrow": 242,
+		"wide": 242
+	}
+}

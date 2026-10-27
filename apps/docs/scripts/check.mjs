@@ -25,6 +25,8 @@ try {
 	runNode('Typed API reference view', ['--test', resolve(docsRoot, 'test/api-reference.test.mjs')]);
 	runNode('Guide links to other families', ['--test', resolve(docsRoot, 'test/guide-links.test.mjs')]);
 	runNode('Installation tested profile', ['--test', resolve(docsRoot, 'test/compatibility-profile.test.mjs')]);
+	runNode('Independence of the Styling reading', ['--test', resolve(docsRoot, 'test/styling-independence.test.mjs')]);
+	runNode('Versioned Styling page script', ['--test', resolve(docsRoot, 'test/styling-script-version.test.mjs')]);
 	runNode('Blocks loader parity and drift guard', ['--test', resolve(docsRoot, 'test/blocks-loader.test.mjs'), resolve(docsRoot, 'test/authored-pattern-reference.test.mjs')]);
 	runNode('Astro build', [astroCli, 'build', '--outDir', outputDirectory]);
 	runNode('Rendered source contract', [resolve(import.meta.dirname, 'check-rendered-source.mjs'), outputDirectory]);

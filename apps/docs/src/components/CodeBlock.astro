@@ -5,11 +5,13 @@ import { muxCodeTheme, muxTokenPathTransformer } from './code-theme.ts';
 interface Props {
 	id: string;
 	code: string;
-	lang: 'bash' | 'tsx';
+	lang: 'bash' | 'tsx' | 'css';
 	label: string;
+	/** Print the code unhighlighted (a few plain lines, where highlighting would cost more markup than it explains). */
+	plain?: boolean;
 }
 
-const { id, code, lang, label } = Astro.props;
+const { id, code, lang, label, plain = false } = Astro.props;
 const highlightedCode = code.endsWith('\n') ? `${code}\n` : code;
 ---
 
@@ -19,7 +21,9 @@ const highlightedCode = code.endsWith('\n') ? `${code}\n` : code;
 		<button type="button" data-copy-code={id}>Copy</button>
 	</div>
 	<div class="code-block-content" id={id}>
-		<Code code={highlightedCode} lang={lang} theme={muxCodeTheme} transformers={[muxTokenPathTransformer]} wrap={false} />
+		{plain
+			? <pre class="astro-code" tabindex="0" data-language={lang}><code>{code}</code></pre>
+			: <Code code={highlightedCode} lang={lang} theme={muxCodeTheme} transformers={[muxTokenPathTransformer]} wrap={false} />}
 	</div>
 </div>
 

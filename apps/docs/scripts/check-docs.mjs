@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { authoredPatternReference } from './authored-pattern-reference.mjs';
 import { componentReference, readReactPackageFacts } from '../../component-reference.mjs';
 import { linkedFamilies } from '../../guide-links.mjs';
+import { readStylingFacts } from '../../../packages/react/test/support/styling-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
@@ -166,12 +167,19 @@ assert(routeSource.includes('componentReference('), 'Component pages do not proj
 
 // Component reference: every family projects from its catalog record, and the rendered section order is proved in check-component-sections.mjs.
 const packageFacts = readReactPackageFacts(repositoryRoot);
+// The Styling section is derived by the styling reference. Without observations it must still carry every token requirement of the recipe and
+// every row of the part map, so a family can never print a shorter table than its sources.
+const stylingFacts = await readStylingFacts(repositoryRoot);
+let tokenRows = 0;
 for (const component of components) {
 	const detail = canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full' });
 	const examples = canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value;
-	const reference = componentReference({ artifact: detail.data.artifact, examples, packageFacts });
+	const reference = componentReference({ artifact: detail.data.artifact, examples, packageFacts, stylingFacts });
 	const requirements = detail.data.artifact.bindings['web.react'].tokenRecipe.requirements;
 	assert(reference.styling.tokenGroups.flatMap(({ tokens }) => tokens).length === requirements.length, `The token groups of ${component.id} drop a requirement.`);
+	const styledRows = reference.styling.tokens.groups.flatMap(({ rows }) => rows);
+	assert(styledRows.length === requirements.length && requirements.every(({ token }) => styledRows.some((row) => row.token === token)), `The Styling tokens of ${component.id} drop or add a requirement.`);
+	tokenRows += styledRows.length;
 	for (const { paths } of reference.sources) {
 		for (const path of paths) assert(existsSync(resolve(repositoryRoot, path)), `The source ${path} of ${component.id} is missing.`);
 	}
@@ -212,4 +220,4 @@ for (const pattern of blockPatterns) {
 	}
 }
 
-console.log(`Docs contract passed: ${components.length} enabled web.react component pages, ${guides.length} canonical guides, and ${components.reduce((count, component) => count + (canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value?.length ?? 0), 0)} canonical examples, and ${blockPatterns.length} enabled block ${blockPatterns.length === 1 ? 'pattern' : 'patterns'}.`);
+console.log(`Docs contract passed: ${components.length} enabled web.react component pages (${tokenRows} Styling token rows, one for each requirement of the recipes), ${guides.length} canonical guides, and ${components.reduce((count, component) => count + (canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value?.length ?? 0), 0)} canonical examples, and ${blockPatterns.length} enabled block ${blockPatterns.length === 1 ? 'pattern' : 'patterns'}.`);
