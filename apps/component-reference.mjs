@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { stylingFor } from '../packages/react/test/support/styling-reference.mjs';
 
 /**
  * Component reference facts, projected from one canonical component record.
@@ -17,6 +18,10 @@ import { resolve } from 'node:path';
  * carries that share as `declarations` only when its caller passes the reference in.
  * The data is exposed as the reader wrote it: printed type text, referenced ids, and the
  * alternatives of a props type. An application renders it and never re-reads a type string.
+ *
+ * The styling projection (hooks, tokens, override rules) is derived by the React package's styling reference
+ * (`packages/react/test/support/styling-reference.mjs`) and carried as `styling` only when a caller passes the
+ * facts it read (`stylingFacts`), so an application that has not opted in sees `styling` as it always was.
  */
 
 const manifestPath = 'packages/react/package.json';
@@ -356,11 +361,19 @@ function partReferences(exportName, partApis, anatomy) {
 }
 
 /**
- * @param {{ artifact: ComponentRecord, examples: readonly { source: { content: string } }[], packageFacts: ReactPackageFacts, declarations?: DeclarationReference }} input
+ * @typedef {import('../packages/react/test/support/styling-reference.mjs').StylingFacts} StylingFacts
+ * @typedef {import('../packages/react/test/support/styling-reference.mjs').Observation} Observation
+ */
+
+/**
+ * @param {{ artifact: ComponentRecord, examples: readonly { source: { content: string } }[], packageFacts: ReactPackageFacts, declarations?: DeclarationReference, stylingFacts?: StylingFacts, observations?: readonly Observation[] }} input
  * `declarations` is opt-in: pass it to receive the component's declarations (`componentDeclarations`) as `declarations`;
  * without it the result is what it was before the declaration reference existed.
+ * `stylingFacts` is opt-in too (`readStylingFacts` of the styling reference): pass it to receive the hooks, tokens, override
+ * rules and sources of the component in `styling`, beside the four fields `styling` always had. `observations` are server
+ * renders of the catalog's examples (support/catalog-example-renders.mjs); without them the observed fields are empty.
  */
-export function componentReference({ artifact, examples, packageFacts, declarations }) {
+export function componentReference({ artifact, examples, packageFacts, declarations, stylingFacts, observations }) {
   const binding = artifact.bindings['web.react'];
   const ref = `${artifact.id}#web.react`;
   const exported = packageFacts.bindings.get(ref);
@@ -397,6 +410,7 @@ export function componentReference({ artifact, examples, packageFacts, declarati
       states: artifact.states,
       tokenSource: binding.tokenRecipe.source,
       tokenGroups: groupTokens(binding.tokenRecipe.requirements),
+      ...(stylingFacts !== undefined && stylingFor({ slug, artifact, examples, facts: stylingFacts, observations })),
     }),
     ...(declarations !== undefined && { declarations: componentDeclarations({ artifact, packageFacts, declarations }) }),
     sources: [
