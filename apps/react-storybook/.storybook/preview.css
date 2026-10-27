@@ -253,19 +253,95 @@ main.muxui-storybook-surface {
   margin: 0 0 var(--muxui-semantic-layout-tight-gap);
 }
 
-.muxui-storybook-anatomy-status > ul {
-  display: grid;
-  gap: var(--muxui-semantic-layout-tight-gap);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+/* The hooks table: Hook, On, Live, Notes. Fixed columns that wrap long hooks, so the table never scrolls. */
+.muxui-storybook-hooks {
+  inline-size: 100%;
+  margin-block: var(--muxui-semantic-layout-tight-gap);
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--muxui-semantic-content-strong);
 }
 
-.muxui-storybook-anatomy-status > ul > li {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-action-gap);
+.muxui-storybook-hooks th,
+.muxui-storybook-hooks td {
+  padding: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-action-gap) var(--muxui-semantic-layout-tight-gap) 0;
+  border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+  font-weight: inherit;
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.muxui-storybook-hooks thead th {
+  border-block-end-color: var(--muxui-semantic-border-default);
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
+}
+
+.muxui-storybook-hooks thead th:nth-child(1) { inline-size: 34%; }
+.muxui-storybook-hooks thead th:nth-child(2) { inline-size: 17%; }
+.muxui-storybook-hooks thead th:nth-child(3) { inline-size: 4rem; }
+
+.muxui-storybook-hooks tbody th[scope='rowgroup'] {
+  padding-block-start: var(--muxui-semantic-layout-action-gap);
+  border-block-end-color: var(--muxui-semantic-border-default);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.muxui-storybook-hooks-sub,
+.muxui-storybook-hooks-none,
+.muxui-storybook-hooks-zero {
+  color: var(--muxui-semantic-content-muted);
+}
+
+.muxui-storybook-hooks-sub {
+  margin-inline-start: var(--muxui-semantic-layout-action-gap);
+  font-weight: inherit;
+}
+
+/* A narrow canvas stacks each row: the hook, then On and Live with their labels, then the note. The header row is read out only. */
+@media (max-width: 45rem) {
+  .muxui-storybook-hooks,
+  .muxui-storybook-hooks thead,
+  .muxui-storybook-hooks tbody,
+  .muxui-storybook-hooks tr,
+  .muxui-storybook-hooks th,
+  .muxui-storybook-hooks td {
+    display: block;
+  }
+
+  .muxui-storybook-hooks thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .muxui-storybook-hooks tbody tr {
+    padding-block: var(--muxui-semantic-layout-tight-gap);
+    border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+  }
+
+  .muxui-storybook-hooks tbody th,
+  .muxui-storybook-hooks td {
+    padding: 0;
+    border: 0;
+  }
+
+  .muxui-storybook-hooks td[data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--muxui-semantic-content-muted);
+  }
+
+  .muxui-storybook-hooks-sub {
+    display: block;
+    margin-inline-start: 0;
+  }
 }
 
 .muxui-storybook-anatomy-status code {

@@ -12,6 +12,9 @@ import { buildTheme } from '../.storybook/theme.mjs';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
 import { linkedFamilies } from '../../guide-links.mjs';
+import { componentReference, readReactPackageFacts } from '../../component-reference.mjs';
+import { renderCatalogExamples } from '../../../packages/react/test/support/catalog-example-renders.mjs';
+import { readStylingFacts } from '../../../packages/react/test/support/styling-reference.mjs';
 import { guideLinks, siteLinks } from '../src/component-docs.mjs';
 
 const h = React.createElement;
@@ -300,6 +303,25 @@ async function withStorybookBlocks(run, window = new JSDOM('<!doctype html><html
     }
   }
 }
+
+// The Anatomy story reads the hooks block of its family's `styling`; the Docs page above reads the four fields styling always had. Both come
+// from one embedded object, and the rest of the styling reference (tokens, override rules, recipe) is the docs site's and is not embedded.
+test('each story module embeds the four styling fields the Docs page reads, as they were, and the hooks block a fresh reference derives', async () => {
+  const all = await families();
+  const packageFacts = readReactPackageFacts(repositoryRoot);
+  const stylingFacts = await readStylingFacts(repositoryRoot);
+  const observations = (await renderCatalogExamples(all.map(({ slug }) => slug))).map(({ family, source, html }) => ({ family, source, html }));
+  for (const { family, meta, artifact, examples } of all) {
+    const embedded = meta.parameters.muxuiReference.styling;
+    assert.deepEqual(Object.keys(embedded).sort(), ['anatomy', 'hooks', 'states', 'tokenGroups', 'tokenSource'], `${family} embeds the four legacy fields and the hooks block, and nothing else`);
+    // Without the facts, `componentReference` returns `styling` as it was before the styling reference existed.
+    const legacy = componentReference({ artifact, examples, packageFacts }).styling;
+    for (const field of ['anatomy', 'states', 'tokenSource', 'tokenGroups']) assert.deepEqual(embedded[field], legacy[field], `${family} ${field}`);
+    const fresh = componentReference({ artifact, examples, packageFacts, stylingFacts, observations }).styling;
+    assert.deepEqual(embedded.hooks, JSON.parse(JSON.stringify(fresh.hooks)), `${family} hooks`);
+    assert.ok(embedded.hooks.groups.some(({ id }) => id === 'root'), `${family} hooks have a root row`);
+  }
+});
 
 test('a usage guide shows without its front matter or title, and its headings sit below the page sections', async () => {
   await withStorybookBlocks(async ({ Markdown }) => {

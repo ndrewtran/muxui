@@ -2080,30 +2080,228 @@ function anatomyArgsForBinding(record, sourceArgs) {
   return args;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------
+// The Anatomy hooks table (CSS Stage 2 PR 4c, mock D). Its rows are the family's `hooks` block of the styling reference, which
+// packages/react/test/support/styling-reference.mjs derives, apps/component-reference.mjs returns and the generator embeds in the
+// story module as `record.hooks`. This file ships to the browser, so it only reads that data and never imports the derivation. The
+// harness adds the Live column: how many distinct elements of this story carry each hook.
+// ---------------------------------------------------------------------------------------------------------------------------
+
+/** The `<tag>` text of the On cell: `<button>`, or `<div>, <span>` when the hook is on several tags. */
+const tagText = (tags) => tags.map((tag) => `<${tag}>`).join(', ');
+
+/** The On cell of a state or reflected row: the parts that carry it here, then the parts a rule selects it on that do not, marked `styled`. */
+function onText(shownOn, selectedOn) {
+  const styledOnly = selectedOn.filter((part) => !shownOn.includes(part));
+  return [...shownOn, ...styledOnly.map((part) => `${part} styled`)].join(', ') || '-';
+}
+
+const reactFiberKey = (node) => Object.keys(node).find((key) => key.startsWith('__reactFiber$'));
+
+/**
+ * The elements of this story that match `selector`: those inside its host, and those its React tree renders elsewhere (an overlay
+ * portaled to the document body or a theme scope). Not `document` wholesale: a second host, or another story's overlay, on the same
+ * page is not this story's. A portaled node is the story's when its fiber's ancestry passes through the host's fiber (the portal
+ * carries the React parent, which the DOM does not). React Aria 1.20 can hand a story its own portal container
+ * (`UNSAFE_PortalProvider` of `react-aria`), but the app does not declare that package, and `createPortal(..., document.body)`
+ * would escape it.
+ */
+function storyElements(host, selector) {
+  const hostKey = reactFiberKey(host);
+  if (!hostKey) throw new Error('The Anatomy host is not a React element, so its portals cannot be told from another story\'s.');
+  const owners = new Set([host[hostKey], host[hostKey].alternate]);
+  return [...host.ownerDocument.querySelectorAll(selector)].filter((node) => {
+    if (host.contains(node)) return true;
+    const key = reactFiberKey(node);
+    for (let fiber = key && node[key]; fiber; fiber = fiber.return) if (owners.has(fiber)) return true;
+    return false;
+  });
+}
+
+const unique = (list) => [...new Set(list)];
+
+/**
+ * What the canvas shows for a family's hooks table: the status of each part, and the Live count and On text of each row.
+ * `host` is the story's element (null before it mounts). Plain data, so an unchanged measure never re-renders the table.
+ */
+function measureHooks(record, host) {
+  const { hooks, binding } = record;
+  const classRows = hooks.groups.filter(({ id }) => id === 'root' || id === 'part').flatMap(({ rows }) => rows);
+  const rootPart = hooks.groups.find(({ id }) => id === 'root')?.rows[0]?.part;
+  // A part's elements are found by the part map's selector, the one the status proof uses, for every part including an internal one.
+  const elementsOf = (part) => {
+    const [selector] = partSelectors(binding, part);
+    return host === null || selector === undefined ? [] : storyElements(host, selector);
+  };
+  const nodesOf = new Map(classRows.map(({ part }) => [part, elementsOf(part)]));
+  const rootNodes = nodesOf.get(rootPart) ?? [];
+  const classes = {};
+  const statuses = {};
+  for (const row of classRows) {
+    const nodes = nodesOf.get(row.part);
+    statuses[row.part] = nodes.length;
+    if (row.hook === null) continue;
+    const tags = unique(nodes.map((node) => node.localName));
+    const inRoot = row.part !== rootPart && nodes.length > 0 && nodes.every((node) => rootNodes.some((root) => root !== node && root.contains(node)));
+    classes[row.part] = { live: nodes.length, on: tags.length > 0 && row.conditional === undefined ? `${tagText(tags)}${inRoot ? ' in root' : ''}` : row.on };
+  }
+  // A state or reflected attribute counts on any documented hook of the family, not only where a rule selects it.
+  const documented = unique(classRows.filter((row) => row.hook !== null).flatMap((row) => nodesOf.get(row.part)));
+  const attributes = {};
+  for (const row of hooks.groups.filter(({ id }) => id === 'state' || id === 'reflected').flatMap(({ rows }) => rows)) {
+    const carriers = documented.filter((node) => node.hasAttribute(row.hook));
+    const shownOn = classRows.filter((each) => each.hook !== null && nodesOf.get(each.part).some((node) => carriers.includes(node))).map(({ part }) => part);
+    attributes[row.hook] = { live: carriers.length, on: onText(shownOn, row.selectedOn) };
+  }
+  return { statuses, classes, attributes };
+}
+
+/**
+ * The catalog states and statuses that no documented hook shows in the Anatomy canvas, each with why. The list is what the Storybook
+ * test's jsdom render measures; a browser reaches three of them (Avatar's loaded and error once its image loads, Virtualizer's disabled
+ * once its rows are measured), and a row that is live prints its count with no reason. They stay in the table with a Live of 0 and
+ * this reason, and the test pins the list in both directions, so a state that starts to show, or a new one that does not, fails it.
+ * The reason is one of three, found by reading the family's source:
+ *   not-reached          a writer of this very attribute exists; this canvas does not show it on a documented hook
+ *   spelled-differently  the component expresses the state another way (named in the detail)
+ *   no-writer-found      no writer of this attribute in the source: a candidate catalog gap
+ * They are "not observed in the canvas", never "nothing sets them": Resizable's invalid has an explicit writer.
+ */
+export const NOT_OBSERVED_IN_CANVAS = Object.freeze({
+  Avatar: Object.freeze({
+    'data-muxui-loaded': Object.freeze(['not-reached', 'The image carries it once it has loaded.']),
+    'data-muxui-fallback': Object.freeze(['spelled-differently', 'The root carries data-muxui-image-state="fallback".']),
+    'data-muxui-error': Object.freeze(['not-reached', 'The image carries it when loading fails.']),
+  }),
+  Calendar: Object.freeze({ 'data-muxui-state-read-only': Object.freeze(['spelled-differently', 'The grid carries aria-readonly.']) }),
+  ColorSwatchPicker: Object.freeze({ 'data-muxui-state-selected': Object.freeze(['not-reached', 'The selected swatch carries it on its internal item, which has no documented hook.']) }),
+  DataDiff: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['spelled-differently', 'With no rows it renders the empty part (.muxui-data-diff__empty).']) }),
+  Form: Object.freeze({ 'data-muxui-state-invalid': Object.freeze(['no-writer-found']) }),
+  HeaderNav: Object.freeze({ 'data-muxui-state-current': Object.freeze(['spelled-differently', 'The current link carries aria-current and the class muxui-header-nav__nav-button--current.']) }),
+  Image: Object.freeze({
+    'data-muxui-fallback': Object.freeze(['not-reached', 'The image carries it while its fallback source is in use.']),
+    'data-muxui-error': Object.freeze(['not-reached', 'The image carries it when loading fails.']),
+  }),
+  Input: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['no-writer-found']) }),
+  ListBox: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['not-reached', 'The list carries it only when it has no items.']) }),
+  Markdown: Object.freeze({ 'data-muxui-state-invalid': Object.freeze(['spelled-differently', 'The root carries data-muxui-markdown-error with the failure code.']) }),
+  MultiSelect: Object.freeze({
+    'data-muxui-state-empty': Object.freeze(['not-reached', 'The option list carries it when empty, and the list is in the closed popup.']),
+    'data-muxui-state-selected': Object.freeze(['not-reached', 'A selected option carries it, and the options are in the closed popup.']),
+  }),
+  PaymentInput: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['no-writer-found']) }),
+  PromptComposer: Object.freeze({ 'data-muxui-error': Object.freeze(['spelled-differently', 'The error renders as an alert (.muxui-prompt-composer__error) and the form carries data-muxui-state-invalid.']) }),
+  RadioField: Object.freeze({ 'data-muxui-state-invalid': Object.freeze(['not-reached', 'The field carries it when its RadioGroup is invalid; this canvas marks only the field.']) }),
+  RangeCalendar: Object.freeze({ 'data-muxui-state-read-only': Object.freeze(['spelled-differently', 'The grid carries aria-readonly.']) }),
+  Resizable: Object.freeze({ 'data-muxui-state-invalid': Object.freeze(['not-reached', 'The root carries it when its configuration is not valid.']) }),
+  Select: Object.freeze({ 'data-muxui-state-selected': Object.freeze(['not-reached', 'The selected option carries it, and the options are in the closed popup.']) }),
+  SelectNative: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['no-writer-found']) }),
+  Separator: Object.freeze({ 'data-muxui-state-orientation': Object.freeze(['spelled-differently', 'The separator carries aria-orientation and the class muxui-separator--horizontal or --vertical.']) }),
+  Sidebar: Object.freeze({
+    'data-muxui-state-current': Object.freeze(['not-reached', 'The current link carries it on its internal nav link, which has no documented hook.']),
+    'data-muxui-state-expanded': Object.freeze(['spelled-differently', 'A group carries aria-expanded on its toggle and the open attribute of its details element.']),
+  }),
+  Slider: Object.freeze({ 'data-muxui-state-selected': Object.freeze(['no-writer-found']) }),
+  TagGroup: Object.freeze({ 'data-muxui-state-selected': Object.freeze(['not-reached', 'A selected tag carries it once selectionMode is single or multiple.']) }),
+  TagSelect: Object.freeze({
+    'data-muxui-state-empty': Object.freeze(['not-reached', 'The option list carries it when no option matches.']),
+    'data-muxui-state-selected': Object.freeze(['spelled-differently', 'Selected items render as tags, not as selected options.']),
+  }),
+  TextArea: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['no-writer-found']) }),
+  Virtualizer: Object.freeze({ 'data-muxui-state-disabled': Object.freeze(['not-reached', 'A disabled row carries it, and the rows render only with a measured viewport.']) }),
+});
+
+/** The sentence a pinned zero row prints after its note. */
+function notObservedNote(family, hook) {
+  const entry = NOT_OBSERVED_IN_CANVAS[family]?.[hook];
+  if (entry === undefined) return undefined;
+  const [reason, detail = 'No writer of this attribute found in the component source; a candidate catalog gap.'] = entry;
+  return { reason, text: `Not observed in the Anatomy canvas (${reason}). ${detail}` };
+}
+
+const HOOK_GROUPS = Object.freeze({
+  root: ['Root class'],
+  part: ['Part classes', 'from catalog anatomy'],
+  state: ['State attributes', 'presence only'],
+  reflected: ['Reflected prop attributes', 'the value the element carries; composed parts can carry their own'],
+});
+
+/** One hooks table row: Hook, On, Live, Notes. */
+function HookRow({ hook, part, on, live, note, ...attributes }) {
+  return e('tr', attributes,
+    e('th', { scope: 'row' }, hook === null ? e('span', { className: 'muxui-storybook-hooks-none' }, `(${part})`) : e('code', null, hook)),
+    e('td', { 'data-label': 'On' }, on),
+    e('td', { 'data-label': 'Live', className: live === 0 ? 'muxui-storybook-hooks-zero' : undefined }, live ?? '-'),
+    e('td', null, note));
+}
+
+function HooksTable({ record, measured, tableRef }) {
+  const { family, binding, hooks } = record;
+  const parts = hooks.groups.filter(({ id }) => id === 'root' || id === 'part').flatMap(({ rows }) => rows);
+  // The part map is the contract: a part it does not list, or a hooks block that omits one, is an error and never "no element".
+  for (const part of binding.api.parts) {
+    anatomyRow(binding, part);
+    if (!parts.some((row) => row.part === part)) throw new Error(`${family}.${part} has no row in its hooks block`);
+  }
+  if (parts.length !== binding.api.parts.length) throw new Error(`${family}'s hooks block has ${parts.length} part rows for ${binding.api.parts.length} parts`);
+  return e('table', { className: 'muxui-storybook-hooks', 'aria-label': `${family} hooks`, 'data-muxui-storybook-api-parts': family, ref: tableRef },
+    e('thead', null, e('tr', null, ['Hook', 'On', 'Live', 'Notes'].map((heading) => e('th', { key: heading, scope: 'col' }, heading)))),
+    hooks.groups.map((group) => e('tbody', { key: group.id, 'data-muxui-storybook-hooks-group': group.id },
+      e('tr', null, e('th', { scope: 'rowgroup', colSpan: 4 }, HOOK_GROUPS[group.id][0], e('span', { className: 'muxui-storybook-hooks-sub' }, HOOK_GROUPS[group.id][1]))),
+      group.rows.map((row) => {
+        if (row.kind === 'class') {
+          const reason = noElementReason(binding, row.part);
+          const executable = executableAnatomyPart(family, row.part);
+          const measuredClass = measured.classes[row.part];
+          return e(HookRow, {
+            key: `class:${row.part}`,
+            hook: row.hook,
+            part: row.part,
+            on: measuredClass?.on ?? row.on,
+            live: measuredClass?.live,
+            note: row.note,
+            'data-muxui-storybook-hook-part': row.part,
+            'data-muxui-storybook-api-part-status': reason ? 'no-element' : measured.statuses[row.part] > 0 ? 'found' : executable ? 'executable' : 'unresolved',
+            'data-muxui-storybook-api-part-proof': executable ? 'browser' : undefined,
+            'data-muxui-storybook-api-part-route': reason ? `no element (${reason})` : partSelectors(binding, row.part).join(' | '),
+          });
+        }
+        const shown = measured.attributes[row.hook];
+        const pinned = shown.live === 0 && row.kind === 'state' ? notObservedNote(family, row.hook) : undefined;
+        return e(HookRow, {
+          key: `${row.kind}:${row.hook}`,
+          hook: row.hook,
+          on: shown.on,
+          live: shown.live,
+          note: pinned ? [row.note, ' ', e('span', { key: 'reason', 'data-muxui-storybook-live-reason': pinned.reason }, pinned.text)] : row.note,
+          'data-muxui-storybook-hook-kind': row.kind,
+        });
+      }),
+      group.id === 'reflected' ? hooks.notSet.map((row) => e(HookRow, { key: `not-set:${row.hook}`, hook: row.hook, on: row.on, live: undefined, note: row.note, 'data-muxui-storybook-hook-kind': 'not-set' })) : null)),
+  );
+}
+
 function AnatomyHarness({ record, args }) {
   const hostRef = React.useRef(null);
-  const [matches, setMatches] = React.useState(() => Object.fromEntries(record.binding.api.parts.map((part) => [part, 0])));
+  const tableRef = React.useRef(null);
+  const [measured, setMeasured] = React.useState(() => measureHooks(record, null));
   React.useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
     const collect = () => {
-      const nextMatches = {};
-      for (const part of record.binding.api.parts) {
-        const nodes = partSelectors(record.binding, part).flatMap((selector) => [...host.querySelectorAll(selector), ...document.querySelectorAll(selector)]);
-        const uniqueNodes = [...new Set(nodes)];
-        nextMatches[part] = uniqueNodes.length;
-        uniqueNodes.forEach((node) => node.setAttribute('data-muxui-storybook-api-part', `${record.family}.${part}`));
-      }
-      setMatches(nextMatches);
+      const next = measureHooks(record, host);
+      // An unchanged measure keeps the same object, so React does not render the table again.
+      setMeasured((previous) => JSON.stringify(next) === JSON.stringify(previous) ? previous : next);
     };
-    // Overlay-backed families (notably Toast) mount their actual parts in a
-    // portal after the first render. Observe additions so the generated proof
-    // resolves those real hooks instead of freezing at the initial snapshot.
     collect();
-    const observer = typeof MutationObserver === 'function' && document.body
-      ? new MutationObserver(collect)
+    // Overlay-backed families (notably Toast) mount their actual parts in a portal after the first render, and a state such as hovered
+    // or a prop change only writes an attribute. Watch both: additions anywhere in the document (a portal's place), and the attributes
+    // the table lists, with `class`, which decides what a class row matches. The table's own updates are not input.
+    const attributes = unique(['class', ...record.hooks.groups.filter(({ id }) => id === 'state' || id === 'reflected').flatMap(({ rows }) => rows.map(({ hook }) => hook))]);
+    const observer = typeof MutationObserver === 'function' && host.ownerDocument.body
+      ? new MutationObserver((changes) => { if (changes.some(({ target }) => !tableRef.current?.contains(target))) collect(); })
       : undefined;
-    observer?.observe(document.body, { childList: true, subtree: true });
+    observer?.observe(host.ownerDocument.body, { childList: true, subtree: true, attributes: true, attributeFilter: attributes });
     return () => observer?.disconnect();
   }, [record]);
   const anatomyArgs = anatomyArgsForBinding(record, args);
@@ -2113,31 +2311,21 @@ function AnatomyHarness({ record, args }) {
       e(MuxUI.ColorSlider, { label: 'Red', channel: 'red', defaultValue: '#ff0000' }),
       e(MuxUI.ColorSwatch, { color: '#ff0000' }))
     : null;
-  const anatomyStatus = e('div', { className: 'muxui-storybook-anatomy-status' },
-    e('p', null, 'The state matrix renders the live component parts. Each row resolves its real DOM hook after mount.'),
-    e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => {
-      const reason = noElementReason(record.binding, part);
-      const executable = executableAnatomyPart(record.family, part);
-      return e('li', {
-        key: part,
-        'data-muxui-storybook-api-part-status': reason ? 'no-element' : matches[part] > 0 ? 'found' : executable ? 'executable' : 'unresolved',
-        'data-muxui-storybook-api-part-proof': executable ? 'browser' : undefined,
-        'data-muxui-storybook-api-part-route': reason ? `no element (${reason})` : partSelectors(record.binding, part).join(' | '),
-      }, e('code', null, `${partSelectors(record.binding, part)[0] ?? 'no element'} (${part})`), `: ${reason ? `renders no element (${reason})` : matches[part] > 0 ? `${matches[part]} live node(s)` : executable ? 'executable Browser Proof route' : 'unresolved route'}`);
-    })),
-  );
-  const content = e('div', {
+  const content = [
+    renderStateCoverage(record, anatomyArgs),
+    anatomySupport,
+    e('div', { key: 'hooks', className: 'muxui-storybook-anatomy-status' },
+      e(HooksTable, { record, measured, tableRef }),
+      e('p', null, 'Live counts the distinct elements of this story, its canvas and the overlays it renders, that carry the hook. On shows the tags and parts found there; a part marked styled is selected by a Mux rule but not shown by this canvas.')),
+  ];
+  // The host holds the Toast provider, so the region it portals out is part of this story.
+  return e('div', {
     ref: hostRef,
     className: 'muxui-storybook-proof',
     role: 'group',
     'aria-label': 'Anatomy and composition',
     'data-muxui-storybook-proof': 'anatomy',
-  },
-    renderStateCoverage(record, anatomyArgs),
-    anatomySupport,
-    anatomyStatus,
-  );
-  return record.family === 'Toast' ? e(MuxUI.ToastProvider, null, content) : content;
+  }, ...(record.family === 'Toast' ? [e(MuxUI.ToastProvider, null, ...content)] : content));
 }
 
 function waitForBrowserElement(selector, root = document, timeout = 2_000) {
