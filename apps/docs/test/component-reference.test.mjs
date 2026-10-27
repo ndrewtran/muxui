@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
@@ -8,6 +9,8 @@ import { expectedEventGroups, renderedEventGroups } from '../scripts/event-group
 import { attributeValue, elements } from '../scripts/html-tree.mjs';
 import { INVENTORY_SCHEMA, REFERENCE_SCHEMA } from '../../../packages/react/reference-reader/model.mjs';
 import { componentDeclarations, componentReference, readDeclarationReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
+import { withMirror } from '../../../packages/react/test/support/repository-mirror.mjs';
+import { readStylingFacts, stylingFor } from '../../../packages/react/test/support/styling-reference.mjs';
 
 const requirement = (token, extra = {}) => ({ token, requirement: 'required', ...extra });
 const record = ({ requirements = [requirement('component.card.background')], obligations = ['Expose state'], binding = obligations, intent } = {}) => ({
@@ -312,4 +315,82 @@ test('the declaration reference is refused when it is not what the inventory pro
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// The styling projection (CSS Stage 2 PR 4a). The derivation and its proofs live in @muxui/react (test/styling-reference.test.mjs);
+// these tests are the interface the docs and Storybook consume: opt-in, the legacy fields untouched, the frozen shape, the root.
+const stylingKeys = ['hooks', 'tokens', 'overrides', 'sources'];
+// The styling facts name real tokens and parts, so these tests use the real Card record, built as the React tests build theirs.
+const repositoryRecord = (slug) => {
+  const raw = JSON.parse(readFileSync(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8'));
+  const { api } = JSON.parse(readFileSync(resolve(repositoryRoot, `packages/react/api/${slug}.json`), 'utf8'));
+  return { ...raw, source: { record: `catalog/components/${slug}/artifact.json` }, bindings: { ...raw.bindings, 'web.react': { ...raw.bindings['web.react'], api } } };
+};
+const legacyStyling = ['anatomy', 'states', 'tokenSource', 'tokenGroups'];
+
+test('the styling projection is opt-in: without facts `styling` is what it was, with them the four legacy fields are unchanged and four fields arrive', async () => {
+  const artifact = repositoryRecord('card');
+  const without = componentReference({ artifact, examples, packageFacts: packageFacts() });
+  assert.deepEqual(Object.keys(without.styling), legacyStyling);
+  assert.deepEqual([without.styling.anatomy, without.styling.states, without.styling.tokenSource], [artifact.anatomy, artifact.states, artifact.bindings['web.react'].tokenRecipe.source], 'the legacy fields are the record\'s own');
+  const facts = await readStylingFacts(repositoryRoot);
+  const withFacts = componentReference({ artifact, examples, packageFacts: packageFacts(), stylingFacts: facts });
+  assert.deepEqual(Object.keys(withFacts.styling), [...legacyStyling, ...stylingKeys]);
+  for (const key of legacyStyling) assert.deepEqual(withFacts.styling[key], without.styling[key], `${key} is what the unchanged Storybook Docs page reads`);
+  const { styling: ignoredWith, ...restWith } = withFacts;
+  const { styling: ignoredWithout, ...restWithout } = without;
+  assert.deepEqual(restWith, restWithout, 'nothing else changes');
+  assert.ok(Object.isFrozen(withFacts.styling));
+  assert.deepEqual(withFacts.styling.hooks.groups.map(({ id }) => id).slice(0, 2), ['root', 'part']);
+  assert.ok(withFacts.styling.tokens.groups.every(({ rows }) => rows.length > 0));
+});
+
+test('observations are passed through: only the family\'s own renders are read, and they label what they show', async () => {
+  const facts = await readStylingFacts(repositoryRoot);
+  const observations = [
+    { family: 'card', source: 'catalog/components/card/examples/react/basic.tsx', html: '<div class="muxui-card" data-muxui-state-disabled=""><div class="muxui-card__body">Hi</div></div>' },
+    { family: 'button', source: 'catalog/components/button/examples/react/basic.tsx', html: '<button class="muxui-button"></button>' },
+  ];
+  const { styling } = componentReference({ artifact: repositoryRecord('card'), examples, packageFacts: packageFacts(), stylingFacts: facts, observations });
+  const root = styling.hooks.groups.find(({ id }) => id === 'root').rows[0];
+  assert.deepEqual([root.hook, root.tags, root.emittedOn, root.provenance], ['.muxui-card', ['div'], ['root'], ['catalog/components/card/examples/react/basic.tsx']]);
+  assert.match(styling.hooks.renderedDom.text, /^<div class="muxui-card" data-muxui-state-disabled>\n  <div class="muxui-card__body">Hi<\/div>\n<\/div>$/u);
+  // A render of another family is never read, and without renders the observed fields are empty and the object says so.
+  const bare = componentReference({ artifact: repositoryRecord('card'), examples, packageFacts: packageFacts(), stylingFacts: facts }).styling;
+  assert.equal(bare.hooks.renderedDom, null);
+  assert.equal(bare.hooks.observationNote, 'Not observed: no example render was supplied.');
+});
+
+test('every family of the compiled catalog gets its styling from the facts, the same as from the record the React tests build', async () => {
+  const catalog = createRequire(import.meta.url)('@muxui/catalog');
+  const facts = await readStylingFacts(repositoryRoot);
+  const packageReactFacts = readReactPackageFacts(repositoryRoot);
+  const slugs = readdirSync(resolve(repositoryRoot, 'catalog/components'), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  assert.equal(slugs.length, 84);
+  for (const slug of slugs) {
+    const response = catalog.getArtifact({ platform: 'web.react', detail: 'full', id: `muxui:component:${slug}` });
+    assert.equal(response.type, 'artifact.detail');
+    const { artifact } = response.data;
+    const reference = componentReference({ artifact, examples: [], packageFacts: packageReactFacts, stylingFacts: facts });
+    assert.deepEqual(Object.keys(reference.styling), [...legacyStyling, ...stylingKeys], slug);
+    // The React tests build their record from the raw catalog record and the package's derived API; the compiled one agrees.
+    const raw = JSON.parse(readFileSync(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8'));
+    const { api } = JSON.parse(readFileSync(resolve(repositoryRoot, `packages/react/api/${slug}.json`), 'utf8'));
+    const built = stylingFor({ slug, artifact: { ...raw, bindings: { 'web.react': { ...raw.bindings['web.react'], api } } }, facts });
+    const { anatomy, states, tokenSource, tokenGroups, ...projected } = reference.styling;
+    assert.deepEqual(JSON.parse(JSON.stringify(projected)), JSON.parse(JSON.stringify(built)), `${slug}: the compiled record and the raw record give one projection`);
+  }
+});
+
+test('the facts are read from the root they are given: a mirror with one README paragraph changed describes the mirror', async () => {
+  const paragraphs = (facts) => componentReference({ artifact: repositoryRecord('card'), examples, packageFacts: packageFacts(), stylingFacts: facts }).styling.overrides.paragraphs;
+  const base = await readStylingFacts(repositoryRoot);
+  assert.match(paragraphs(base)[1], /^For ordinary declarations, CSS outside a layer/u);
+  await withMirror(repositoryRoot, { 'packages/react/README.md': (text) => text.replace('For ordinary declarations, CSS outside a layer', 'For ordinary declarations, CSS outside any layer') }, async (destination) => {
+    const mirrored = await readStylingFacts(destination);
+    assert.equal(mirrored.root, destination);
+    assert.match(paragraphs(mirrored)[1], /^For ordinary declarations, CSS outside any layer/u);
+  });
+  // The facts read first still describe this repository.
+  assert.match(paragraphs(base)[1], /^For ordinary declarations, CSS outside a layer/u);
 });
