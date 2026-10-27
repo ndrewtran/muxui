@@ -9,7 +9,8 @@
 //   checkStyling({ sources, ... })      the problems of one page's Styling section (each starts with the route)
 //   expectedStylingSources(...)         the paths the page's Sources "Styling" group must list, in order
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseFragment } from 'parse5';
@@ -26,6 +27,25 @@ export const partMapPath = 'packages/react/test/support/styling-parts.ts';
 export const referencePath = 'packages/react/test/support/styling-reference.mjs';
 export const tokenRecordPath = 'catalog/tokens/default-theme.json';
 export const readmePath = 'packages/react/README.md';
+export const previewHeightsPath = 'apps/docs/src/lib/preview-heights.json';
+
+/**
+ * The page script of the Styling section as the build has it. The docs serve one file for every page, at a name that carries the first 12
+ * hexadecimal digits of the SHA-256 of its content (`/_muxui/styling-measure.<hash>.js`), so a cached copy can never be paired with the page
+ * of another build. Returns the URL every page must load (from the hash of the content, not from the name), the content, and the problems
+ * with the build's files: none or several copies, an unversioned copy, a name that is not its content's hash.
+ */
+export function measuredScript(dist) {
+	const names = readdirSync(resolve(dist, '_muxui')).filter((name) => name.startsWith('styling-measure'));
+	const named = names.filter((name) => /^styling-measure\.[0-9a-f]{12}\.js$/u.test(name));
+	const problems = [];
+	if (names.length !== 1 || named.length !== 1) problems.push(`_muxui holds ${JSON.stringify(names)} for the Styling page script, expected exactly one file named styling-measure.<12 hexadecimal digits>.js.`);
+	if (named.length === 0) return { url: null, content: '', problems };
+	const content = readFileSync(resolve(dist, '_muxui', named[0]), 'utf8');
+	const hash = createHash('sha256').update(content).digest('hex').slice(0, 12);
+	if (named[0] !== `styling-measure.${hash}.js`) problems.push(`_muxui/${named[0]} is named for another content than it holds: the hash of its content is ${hash}.`);
+	return { url: `/_muxui/styling-measure.${hash}.js`, content, problems };
+}
 
 /** The three families of property a family may or may not write, and the only attributes a "not set by" row may name. */
 const notSetNames = ['size', 'variant', 'color'];
@@ -175,6 +195,7 @@ export async function loadStylingSources(root) {
 		reads: readsByName(rules),
 		componentDeclarations: rules.filter(({ chain }) => chain.includes('@layer muxui.components')).map(({ body }) => body).join('\n'),
 		readme: readFileSync(resolve(root, readmePath), 'utf8'),
+		previewHeights: JSON.parse(readFileSync(resolve(root, previewHeightsPath), 'utf8')),
 		motion: readFileSync(resolve(root, 'packages/react/src/motion.mjs'), 'utf8'),
 		contract,
 		authored: authoredCss.map((path) => ({ path, rules: walkRules(readFileSync(resolve(root, path), 'utf8')) })),
@@ -563,6 +584,36 @@ export function recipeChanges(css) {
 	];
 }
 
+/** The two previews and the computed-change table of the Recipe block. */
+function renderedPreviews(section) {
+	const sourceOf = (island) => { try { return JSON.parse(attributeValue(island, 'props') ?? '{}').source?.[1] ?? null; } catch { return null; } };
+	const panes = byAttribute(section, 'data-styling-pane').map((pane) => ({
+		name: attributeValue(pane, 'data-styling-pane'),
+		islands: byTag(pane, 'astro-island').map((island) => ({ source: sourceOf(island), client: attributeValue(island, 'client'), scoped: ancestors(island).some((parent) => classNames(parent).has('my-scope')) })),
+		scopes: elements(pane).filter((node) => classNames(node).has('my-scope')).length,
+		styles: byTag(pane, 'style').map((node) => collapse(textContent(node))),
+	}));
+	const compare = byAttribute(section, 'data-styling-compare')[0];
+	const reserve = compare === undefined ? null : { narrow: Number(/--preview-h-narrow:\s*(\d+)px/u.exec(attributeValue(compare, 'style') ?? '')?.[1] ?? Number.NaN), wide: Number(/--preview-h-wide:\s*(\d+)px/u.exec(attributeValue(compare, 'style') ?? '')?.[1] ?? Number.NaN) };
+	const table = byAttribute(section, 'data-styling-table').find((node) => attributeValue(node, 'data-styling-table') === 'computed');
+	return {
+		panes,
+		reserve,
+		// How many examples each my-scope wrapper of the section holds.
+		scopeIslands: elements(section).filter((node) => classNames(node).has('my-scope')).map((scope) => byTag(scope, 'astro-island').length),
+		computed: table === undefined ? null : byTag(table, 'tbody').flatMap((tbody) => byTag(tbody, 'tr')).map((tr) => ({
+			kind: attributeValue(tr, 'data-step-kind'),
+			target: attributeValue(tr, 'data-step-target'),
+			property: attributeValue(tr, 'data-step-property'),
+			scope: attributeValue(tr, 'data-step-scope'),
+			stepText: attributeValue(tr, 'data-step-text'),
+			head: text(byTag(tr, 'th')[0]),
+			headCodes: byTag(byTag(tr, 'th')[0], 'code').map((node) => text(node)),
+			cells: byTag(tr, 'td').map((node) => ({ text: text(node), colspan: attributeValue(node, 'colspan') ?? null, measure: attributeValue(node, 'data-measure') ?? null, hidden: attributeValue(node, 'hidden') !== undefined })),
+		})),
+	};
+}
+
 function renderedRecipe(section) {
 	const block = (id) => elements(section).find((node) => attributeValue(node, 'id') === id);
 	const codeOf = (id) => { const node = block(id); const code = node === undefined ? undefined : byTag(node, 'code')[0]; return code === undefined ? null : textContent(code); };
@@ -592,8 +643,44 @@ export function renderedStyling(root) {
 		tokens: renderedTokens(section),
 		overrides: renderedOverrides(section),
 		recipe: renderedRecipe(section),
+		previews: renderedPreviews(section),
+		scripts: elements(root).filter((node) => node.tagName === 'script').map((node) => ({ src: attributeValue(node, 'src') ?? null, attributes: node.attrs.map(({ name }) => name).sort(), inline: textContent(node) })),
+		scopeClasses: elements(root).filter((node) => classNames(node).has('my-scope')).length,
 		text: text(section),
 	};
+}
+
+/** The longhands a browser reports for a property that a rule may declare as a shorthand or by its logical name. */
+const reported = {
+	background: ['background-color'],
+	border: ['border-top-color', 'border-top-width', 'border-top-style'],
+	'border-color': ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'],
+	'border-radius': ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'],
+	'inline-size': ['width'],
+	'block-size': ['height'],
+	'text-decoration': ['text-decoration-line'],
+};
+const reportedFor = (property) => reported[property] ?? [property];
+
+/**
+ * The rules of the components layer that read a custom property in a declaration: the selector each names and the property it sets. A role
+ * that a rule hands to a private custom property (`--x: var(--role)`) is followed to the rules that read that property, with their own
+ * selectors, because the value inherits to them.
+ */
+function readersOf(sources, cssVar, seen = new Set()) {
+	if (seen.has(cssVar)) return [];
+	seen.add(cssVar);
+	const readers = [];
+	for (const { selector, chain, body } of sources.rules) {
+		if (!chain.includes('@layer muxui.components')) continue;
+		for (const [, property, value] of body.matchAll(/(?:^|;)\s*([a-z-]+)\s*:\s*([^;]*)/gu)) {
+			if (!new RegExp(`var\\(\\s*${cssVar}(?![\\w-])`, 'u').test(value)) continue;
+			const selectors = splitTopLevel(selector, ',').map((part) => collapse(part));
+			if (property.startsWith('--')) readers.push(...selectors.map((part) => ({ selector: part, property, through: true })), ...readersOf(sources, property, seen));
+			else readers.push(...selectors.map((part) => ({ selector: part, property })));
+		}
+	}
+	return readers;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -604,7 +691,7 @@ export function renderedStyling(root) {
  * The differences between the Styling section of a built page and what its sources say. `root` is the parsed page: the examples it
  * rendered are where an observed tag or the Rendered DOM block must find its elements.
  */
-export function checkStyling({ sources, slug, artifact, root, route }) {
+export function checkStyling({ sources, slug, artifact, root, route, measureUrl }) {
 	const problems = [];
 	const report = (message) => problems.push(`${route} ${message}`);
 	const rendered = renderedStyling(root);
@@ -628,6 +715,13 @@ export function checkStyling({ sources, slug, artifact, root, route }) {
 	if (!same(rendered.h3, [['styling-hooks', 'Hooks'], ['styling-tokens', 'Tokens'], ['styling-override-rules', 'Override rules'], ['styling-recipe', 'Recipe']])) {
 		report(`Styling sub-blocks are ${JSON.stringify(rendered.h3)}, expected Hooks, Tokens, Override rules and Recipe with their ids.`);
 	}
+	// The page script is one shared, versioned file: the page names the build's copy with a single deferred script tag, and no page carries a copy of it.
+	const measureTags = rendered.scripts.filter(({ src }) => (src ?? '').includes('styling-measure'));
+	if (measureTags.length !== 1 || measureTags[0].src !== measureUrl || !same(measureTags[0].attributes, ['defer', 'src']) || measureTags[0].inline !== '') {
+		report(`must load ${measureUrl} (the hash of the script's content) with exactly one deferred script tag that holds nothing; it has ${JSON.stringify(measureTags)}.`);
+	}
+	const copies = rendered.scripts.filter(({ src, inline }) => src === null && /#styling|data-step-|data-styling-/u.test(inline));
+	if (copies.length > 0) report(`carries ${copies.length} inline script${copies.length === 1 ? '' : 's'} that read the Styling section; the docs serve that script once, at ${measureUrl}.`);
 	for (const pattern of bannedPhrases) if (pattern.test(rendered.text)) report(`Styling section prints "${pattern.exec(rendered.text)[0]}", which the sources do not support.`);
 
 	// Hooks: the rows of every group, their order, where each attribute is selected by a rule and where an example carries it, all derived
@@ -737,6 +831,7 @@ export function checkStyling({ sources, slug, artifact, root, route }) {
 	}
 
 	// Rendered DOM: every element and class it names is in the page's own Basic example, and so is every state or reflected attribute.
+	if (rendered.dom !== null && /[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/u.test(rendered.dom)) report('Rendered DOM prints an invisible character instead of its escape.');
 	if (rendered.dom !== null && !clientOnly) {
 		const basic = elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === 'basic');
 		const basicNodes = basic === undefined ? [] : elements(basic).filter(insideLive);
@@ -876,13 +971,84 @@ export function checkStyling({ sources, slug, artifact, root, route }) {
 			for (const pattern of neverAssigned) if (pattern.test(variable)) report(`Recipe assigns ${variable}, which is declared or structured and never a recipe step.`);
 		}
 		if (/@layer muxui\.utilities/u.test(rules) !== /\.muxui-[\w-]+/u.test(rules)) report('Recipe has part or state rules outside @layer muxui.utilities, or a layer with no rule.');
-		const claim = recipe.checks.find((line) => /^All \d+ names/u.test(line));
+		const claim = recipe.checks.find((line) => /^The recipe uses \d+ names? /u.test(line));
 		const count = recipe.css === '' ? 0 : names.size;
-		if (count > 0 && (claim === undefined || !claim.startsWith(`All ${count} names the recipe uses`))) report(`Recipe says "${claim ?? 'nothing'}" about its names, and it uses ${count}.`);
+		if (count > 0 && (claim === undefined || !claim.startsWith(`The recipe uses ${count} ${count === 1 ? 'name' : 'names'} (`))) report(`Recipe says "${claim ?? 'nothing'}" about its names, and it uses ${count}.`);
 		if (count === 0 && recipe.checks.length > 0) report('Recipe prints checks although it makes no change.');
 		if (recipe.ci.length !== 1 || !/Chromium test/u.test(recipe.ci[0])) report('Recipe does not say, once, which test proves the recipes in a browser.');
 	}
 	if (recipe.checks.some((line) => /browser/iu.test(line))) report('Recipe checks claim a browser result for every page, which only a sample proves.');
+
+	// Previews and the computed-change table: two panes that run the page's own Basic example, the recipe's own text in one of them, and a
+	// row for each change the recipe makes, bound to the recipe it prints and to the stylesheet that reads it; its cells say only what this page
+	// can say before a browser measures them.
+	const previews = rendered.previews;
+	const rulesText = recipe.css === null ? '' : recipe.css.slice(recipe.css.indexOf('\n\n') + 2);
+	const changes = recipe.css === null ? [] : recipeChanges(recipe.css);
+	const basicSection = elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === 'basic');
+	const basicSources = unique(basicSection === undefined ? [] : byTag(basicSection, 'astro-island').map((island) => { try { return JSON.parse(attributeValue(island, 'props') ?? '{}').source?.[1] ?? null; } catch { return null; } }));
+	if (changes.length === 0) {
+		if (previews.panes.length > 0 || previews.computed !== null) report('shows previews or a computed-change table although the recipe makes no change.');
+		if (rendered.scopeClasses !== 0) report('has a my-scope wrapper although the recipe makes no change.');
+	} else {
+		const [first, second, ...others] = previews.panes;
+		if (first?.name !== 'default' || second?.name !== 'recipe' || others.length > 0) report(`previews are ${JSON.stringify(previews.panes.map(({ name }) => name))}, expected Default then With the recipe.`);
+		for (const pane of previews.panes) {
+			if (pane.islands.length !== 1 || basicSources.length !== 1 || pane.islands[0].source !== basicSources[0]) report(`${pane.name} preview runs ${JSON.stringify(pane.islands.map(({ source }) => source))}, the page's Basic example is ${JSON.stringify(basicSources)}.`);
+		}
+		// The wrapper holds the example of the With-the-recipe preview, and only that one: an empty wrapper beside it would change nothing.
+		if (rendered.scopeClasses !== 1 || second?.scopes !== 1 || first?.scopes !== 0) report(`must put the my-scope wrapper on the With-the-recipe preview only; the page has it ${rendered.scopeClasses} times (${first?.scopes ?? 0} in Default, ${second?.scopes ?? 0} in With).`);
+		if (!same(previews.scopeIslands, [1]) || second?.islands.some(({ scoped }) => !scoped) || first?.islands.some(({ scoped }) => scoped)) report(`must run the With-the-recipe example inside the my-scope wrapper and the Default example outside it; the wrapper holds ${JSON.stringify(previews.scopeIslands)} examples.`);
+		if (!same(second?.styles ?? [], [collapse(rulesText)])) report('With-the-recipe preview does not run the recipe text it prints.');
+		// The height each preview reserves is the recorded one of the family, so the examples do not push the page when they render.
+		const recorded = sources.previewHeights[slug];
+		if (recorded === undefined || !same(previews.reserve, { narrow: recorded.narrow, wide: recorded.wide })) report(`reserves ${JSON.stringify(previews.reserve)} for its previews, the recorded heights (${previewHeightsPath}) say ${JSON.stringify(recorded ?? null)}.`);
+		const computed = previews.computed;
+		if (computed === null) {
+			report('has no computed-change table.');
+		} else {
+			if (computed.length !== changes.length) report(`computed-change table has ${computed.length} rows, the recipe makes ${changes.length} changes.`);
+			const basicNodes = basicSection === undefined ? [] : elements(basicSection).filter(insideLive);
+			for (const [index, row] of computed.entries()) {
+				const change = changes[index];
+				if (change === undefined) continue;
+				const at = `computed-change row ${index + 1}`;
+				if (row.kind !== change.kind) report(`${at} is a ${row.kind} step, the recipe's change ${index + 1} is a ${change.kind}.`);
+				// The row shows the measured property, the declaration the recipe makes (exactly) and the element it is measured on, and the script measures
+				// what the row says: the attributes it reads are the printed ones.
+				if (row.headCodes.length !== 3) report(`${at} shows ${row.headCodes.length} code values, expected the property, the declaration and the target.`);
+				const [printedProperty, printedDeclaration, printedTarget] = row.headCodes;
+				if (printedDeclaration !== change.declaration) report(`${at} shows the declaration ${JSON.stringify(printedDeclaration)}, the recipe makes ${JSON.stringify(change.declaration)}.`);
+				if (printedProperty !== row.property || printedTarget !== row.target) report(`${at} prints ${JSON.stringify([printedProperty, printedTarget])} and measures ${JSON.stringify([row.property, row.target])}.`);
+				if (change.kind === 'token') {
+					// A theme role is measured where a rule of the stylesheet reads it: on that rule's selector, as the property the rule sets.
+					const readers = readersOf(sources, change.property);
+					if (!readers.some((reader) => reader.selector === row.target && (reader.through || reportedFor(reader.property).includes(row.property))) || !readers.some((reader) => !reader.through && reportedFor(reader.property).includes(row.property))) report(`${at} measures ${row.property} on ${row.target}, and no rule of the stylesheet reads ${change.property} there (the readers are ${JSON.stringify(readers)}).`);
+				} else {
+					// A part or a state is measured on the selector the recipe prints, as the property it declares.
+					const wantTarget = change.selector.replace(/^\.my-scope /u, '');
+					if (row.target !== wantTarget) report(`${at} measures ${row.target}, the recipe's rule is on ${wantTarget}.`);
+					if (!reportedFor(change.property).includes(row.property)) report(`${at} measures ${row.property}, the recipe declares ${change.property}.`);
+				}
+				if (row.scope === 'unavailable') {
+					const [one, two, ...rest] = row.cells;
+					if (row.kind !== 'state' || rest.length > 0 || one?.colspan !== '2' || !/^needs the state/u.test(one?.text ?? '') || two?.hidden !== true || two?.text !== '') report(`${at} is unavailable and does not say "needs the state" in one cell over both columns, with its second cell hidden: ${JSON.stringify(row.cells)}.`);
+				} else if (row.scope === 'wrapper') {
+					if (row.cells.length !== 2 || row.cells.some((cell) => cell.measure === null || cell.hidden || cell.colspan !== null || cell.text !== 'Not measured yet.')) report(`${at} claims a measurement before a browser made one: ${JSON.stringify(row.cells.map(({ text: value }) => value))}.`);
+					const classesNamed = [...(row.target ?? '').matchAll(/\.(muxui-[\w-]+)/gu)].map(([, name]) => name);
+					if (!clientOnly && !classesNamed.every((name) => basicNodes.some((node) => classNames(node).has(name)))) report(`${at} reads ${row.target}, and the page's Basic example renders no such element.`);
+					// Whether the measured element holds text, where its selector is plain enough to find it in the page's own example: a change to an element
+					// with none is marked `computed only`, and one with some is not.
+					if (!clientOnly && /^[a-z]*(?:\.[\w-]+)+(?:\s+[a-z]*(?:\.[\w-]+)+)*$/u.test(row.target ?? '')) {
+						const element = basicNodes.find((node) => matchesHook(node, row.target));
+						if (element !== undefined && (row.stepText === 'text') !== (textContent(element).trim() !== '')) report(`${at} says ${row.target} holds ${row.stepText === 'text' ? 'text' : 'no text'}, and the first one in the page's Basic example holds ${textContent(element).trim() === '' ? 'none' : 'some'}.`);
+					}
+				} else {
+					report(`${at} has the scope ${JSON.stringify(row.scope)}.`);
+				}
+			}
+		}
+	}
 
 	return problems;
 }

@@ -15,6 +15,9 @@ const groupHints = { root: '', part: 'from the catalog anatomy', state: 'a boole
 // The last group of a family that writes a reflected attribute also lists what it does not write (bounded: size, variant, color).
 const notSetGroup = hooks.groups.some(({ id }) => id === 'reflected') ? 'reflected' : hooks.groups.at(-1)?.id;
 
+/** Invisible characters of an observed render (TimeField's bidirectional isolates, TokenField's zero-width space) print as escapes, so a copy carries nothing hidden. */
+const visible = (text: string) => text.replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/gu, (mark) => `\\u${mark.codePointAt(0)?.toString(16).padStart(4, '0')}`);
+
 /** A class row's On cell: the observed tags are code (`<span> in root`), anything else is plain text. */
 const tagRuns = (on: string) => on.split(/(<[a-z0-9-]+>)/u).filter((run) => run !== '').map((run) => ({ code: /^<[a-z0-9-]+>$/u.test(run), text: run }));
 
@@ -28,9 +31,9 @@ function evidence(row: Row) {
 ---
 
 <h3 id="styling-hooks">Hooks</h3>
-<div class="styling-scroll not-content" data-styling-scroll={`${name} hooks`}>
+<div class="styling-scroll not-content" data-styling-scroll>
 	<table class="styling-table styling-hooks" data-styling-table="hooks">
-		<caption class="visually-hidden">{name} hooks: classes, state attributes and reflected prop attributes</caption>
+		<caption class="visually-hidden">{name} hooks</caption>
 		<thead>
 			<tr><th scope="col">Hook</th><th scope="col">On</th><th scope="col">Notes</th></tr>
 		</thead>
@@ -79,6 +82,6 @@ function evidence(row: Row) {
 	<Fragment>
 		<h4 id="styling-rendered-dom">Rendered DOM, Basic example, at rest</h4>
 		<p class="styling-note" data-styling-dom-note>{hooks.renderedDom.note} Render of <code>{hooks.renderedDom.source}</code></p>
-		<pre class="styling-dom" data-styling-dom data-styling-scroll="Rendered DOM"><code>{hooks.renderedDom.text}</code></pre>
+		<pre class="styling-dom" data-styling-dom data-styling-scroll="Rendered DOM"><code>{visible(hooks.renderedDom.text)}</code></pre>
 	</Fragment>
 )}

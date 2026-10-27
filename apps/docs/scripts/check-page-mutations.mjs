@@ -12,7 +12,7 @@ import { resolve } from 'node:path';
 import { parse } from 'parse5';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 import { collapsePartsAbove, compareComponent, comparePackageExports, compareSources, expectedComponent, expectedPackageExports, expectedSources, loadReference, renderedComponent, renderedEvents, renderedPackageExports, renderedSources, routeFile } from './typed-reference.mjs';
-import { checkStyling, expectedStylingSources, loadStylingSources } from './styling-expectation.mjs';
+import { checkStyling, expectedStylingSources, loadStylingSources, measuredScript } from './styling-expectation.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const dist = process.argv[2] === undefined ? resolve(repositoryRoot, 'apps/docs/dist') : resolve(process.argv[2]);
@@ -24,6 +24,9 @@ const descriptor = readJson('packages/react/generated/descriptor.json');
 const contract = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
 const reference = loadReference(resolve(repositoryRoot, 'packages/react/reference'));
 const stylingSources = await loadStylingSources(repositoryRoot);
+/** The page script of the Styling section as the build has it. */
+const measure = measuredScript(dist);
+if (measure.problems.length > 0) throw new Error(`The build the page mutants start from is wrong: ${measure.problems.join(' ')}`);
 
 /** What the checker reports for a page, with the page parsed again each time so one change never reaches another. */
 function problemsOf(slug, change) {
@@ -43,7 +46,7 @@ function problemsOf(slug, change) {
 	return [
 		...compareComponent(expected, renderedComponent(root), renderedEvents(section('events')), `/components/${slug}/`, { collapseAbove: collapsePartsAbove }),
 		...compareSources(sources, renderedSources(section('sources')), `/components/${slug}/`),
-		...checkStyling({ sources: stylingSources, slug, artifact, root, route: `/components/${slug}/` }),
+		...checkStyling({ sources: stylingSources, slug, artifact, root, route: `/components/${slug}/`, measureUrl: measure.url }),
 	];
 }
 
@@ -60,6 +63,8 @@ function withoutSource(owner, module) {
 	return { ...reference, files: new Map([...reference.files, [owner, { ...reference.files.get(owner), sources }]]) };
 }
 
+/** The script tag that loads the page script of the Styling section. */
+const measureTag = (root) => elements(root).find((node) => node.tagName === 'script' && (attributeValue(node, 'src') ?? '').includes('styling-measure'));
 const detach = (node) => node.parentNode.childNodes.splice(node.parentNode.childNodes.indexOf(node), 1);
 const part = (root, heading) => elements(root).find((node) => node.tagName === 'details' && attributeValue(node, 'data-api-part') === heading);
 const group = (root, heading, label) => elements(part(root, heading)).find((node) => node.tagName === 'tbody' && attributeValue(node, 'data-api-group') === label);
@@ -658,7 +663,7 @@ const mutations = [
 		label: 'the recipe count of names is wrong (Button)',
 		slug: 'button',
 		expect: ['about its names'],
-		change: (root) => setAllText(elements(stylingOf(root)).find((node) => attributeValue(node, 'data-styling-checks') !== undefined).childNodes.find((node) => node.tagName === 'li'), 'All 9 names the recipe uses (4 classes, 4 attributes, 1 token) are rows of the tables above.'),
+		change: (root) => setAllText(elements(stylingOf(root)).find((node) => attributeValue(node, 'data-styling-checks') !== undefined).childNodes.find((node) => node.tagName === 'li'), 'The recipe uses 9 names (4 classes, 4 attributes, 1 token), and each is a row of the tables above.'),
 	},
 	{
 		label: 'a blanket "applied in a browser" line follows the recipe checks (Button)',
@@ -679,10 +684,155 @@ const mutations = [
 		change: (root) => { const code = elements(stylingOf(root)).find((node) => attributeValue(node, 'data-styling-dom') !== undefined); setAllText(code, textContent(code).replace('muxui-button__label', 'muxui-button__label-extra')); },
 	},
 	{
+		label: 'the Rendered DOM prints an invisible character (Button)',
+		slug: 'button',
+		expect: ['Rendered DOM prints an invisible character'],
+		change: (root) => { const code = elements(stylingOf(root)).find((node) => attributeValue(node, 'data-styling-dom') !== undefined); setAllText(code, textContent(code).replace('Delete', 'Delete\u2066')); },
+	},
+	{
 		label: 'the Rendered DOM block is missing (Button)',
 		slug: 'button',
 		expect: ['has no Rendered DOM block'],
 		change: (root) => detach(elements(stylingOf(root)).find((node) => attributeValue(node, 'data-styling-dom') !== undefined)),
+	},
+	{
+		label: 'the Default preview is missing (Button)',
+		slug: 'button',
+		expect: ['previews are ["recipe"], expected Default then With the recipe'],
+		change: (root) => detach(withAttribute(root, 'data-styling-pane').find((node) => attributeValue(node, 'data-styling-pane') === 'default')),
+	},
+	{
+		label: 'the With-the-recipe preview runs another example (Button)',
+		slug: 'button',
+		expect: ['recipe preview runs ["catalog/components/button/examples/react/form.tsx"]'],
+		change: (root) => {
+			const pane = withAttribute(root, 'data-styling-pane').find((node) => attributeValue(node, 'data-styling-pane') === 'recipe');
+			const island = elements(pane).find((node) => node.tagName === 'astro-island');
+			setAttribute(island, 'props', attributeValue(island, 'props').replace('basic.tsx', 'form.tsx'));
+		},
+	},
+	{
+		label: 'the preview runs other CSS than the recipe it prints (Button)',
+		slug: 'button',
+		expect: ['With-the-recipe preview does not run the recipe text it prints'],
+		change: (root) => appendText(elements(stylingOf(root)).find((node) => node.tagName === 'style'), ' .my-scope { color: red; }'),
+	},
+	{
+		label: 'the my-scope wrapper is on the Default preview too (Button)',
+		slug: 'button',
+		expect: ['must put the my-scope wrapper on the With-the-recipe preview only'],
+		change: (root) => {
+			const pane = withAttribute(root, 'data-styling-pane').find((node) => attributeValue(node, 'data-styling-pane') === 'default');
+			const frame = elements(pane).find((node) => attributeValue(node, 'data-styling-scroll') !== undefined);
+			setAttribute(frame, 'class', `${attributeValue(frame, 'class')} my-scope`);
+		},
+	},
+	{
+		label: 'a computed row claims a value before a browser measured it (Button radius)',
+		slug: 'button',
+		expect: ['claims a measurement before a browser made one'],
+		change: (root) => setAllText(elements(stylingOf(root)).find((node) => node.tagName === 'td' && attributeValue(node, 'data-measure') === 'after'), '999px'),
+	},
+	{
+		label: 'a computed row measures a shorthand while the table prints a longhand (Button radius)',
+		slug: 'button',
+		expect: ['prints ["border-top-left-radius",".muxui-button"] and measures ["border-radius",".muxui-button"]'],
+		change: (root) => setAttribute(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'border-top-left-radius'), 'data-step-property', 'border-radius'),
+	},
+	{
+		label: 'a computed row prints and measures a shorthand a browser does not report (Button radius)',
+		slug: 'button',
+		expect: ['measures border-radius on .muxui-button, and no rule of the stylesheet reads --muxui-component-button-radius there'],
+		change: (root) => {
+			const row = elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'border-top-left-radius');
+			setAttribute(row, 'data-step-property', 'border-radius');
+			setAllText(elements(row).find((node) => node.tagName === 'code'), 'border-radius');
+		},
+	},
+	{
+		label: 'a computed row is dropped (Button)',
+		slug: 'button',
+		expect: ['computed-change table has 2 rows, the recipe makes 3 changes'],
+		change: (root) => detach(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'letter-spacing')),
+	},
+	{
+		label: 'a step that needs a state is shown as measured (Button disabled)',
+		slug: 'button',
+		expect: ['is unavailable and does not say "needs the state" in one cell over both columns'],
+		change: (root) => setAllText(elements(stylingOf(root)).find((node) => node.tagName === 'td' && attributeValue(node, 'colspan') === '2'), 'unchanged'),
+	},
+	{
+		label: 'the second cell of a step that needs a state is shown (Button disabled)',
+		slug: 'button',
+		expect: ['is unavailable and does not say "needs the state" in one cell over both columns'],
+		change: (root) => { const cell = elements(stylingOf(root)).find((node) => node.tagName === 'td' && attributeValue(node, 'hidden') !== undefined); cell.attrs = cell.attrs.filter(({ name }) => name !== 'hidden'); },
+	},
+	{
+		label: 'a computed row reads an element the Basic example does not render (Button label)',
+		slug: 'button',
+		expect: ['reads .muxui-button__ghost, and the page\'s Basic example renders no such element'],
+		change: (root) => setAttribute(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'letter-spacing'), 'data-step-target', '.muxui-button__ghost'),
+	},
+	{
+		label: 'a target with no text is said to hold some (Separator)',
+		slug: 'separator',
+		expect: ['holds text, and the first one in the page\'s Basic example holds none'],
+		change: (root) => setAttribute(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-text') === 'no-text'), 'data-step-text', 'text'),
+	},
+	{
+		label: 'a target with text is said to hold none (Button label)',
+		slug: 'button',
+		expect: ['holds no text, and the first one in the page\'s Basic example holds some'],
+		change: (root) => setAttribute(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'letter-spacing'), 'data-step-text', 'no-text'),
+	},
+	{
+		label: 'DatePicker\'s example runs outside my-scope beside an empty wrapper',
+		slug: 'date-picker',
+		expect: ['must run the With-the-recipe example inside the my-scope wrapper and the Default example outside it'],
+		change: (root) => {
+			const pane = withAttribute(root, 'data-styling-pane').find((node) => attributeValue(node, 'data-styling-pane') === 'recipe');
+			const frame = elements(pane).find((node) => classNames(node).has('my-scope'));
+			setAttribute(frame, 'class', attributeValue(frame, 'class').replace('my-scope ', ''));
+			insertChild(pane, 'div', [{ name: 'class', value: 'my-scope' }], '');
+		},
+	},
+	{
+		label: 'a printed declaration gains a digit (Button radius 999px becomes 999px0)',
+		slug: 'button',
+		expect: ['shows the declaration "--muxui-component-button-radius: 999px0"'],
+		change: (root) => appendText(elements(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'border-top-left-radius')).filter((node) => node.tagName === 'code')[1], '0'),
+	},
+	{
+		label: 'the measured property changes while the printed declaration is kept (Button radius)',
+		slug: 'button',
+		expect: ['prints ["border-top-left-radius",".muxui-button"] and measures ["border-top-right-radius",".muxui-button"]'],
+		change: (root) => setAttribute(elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'border-top-left-radius'), 'data-step-property', 'border-top-right-radius'),
+	},
+	{
+		label: 'a token row prints and measures a property no rule sets from the role (Button radius as color)',
+		slug: 'button',
+		expect: ['measures color on .muxui-button, and no rule of the stylesheet reads --muxui-component-button-radius there'],
+		change: (root) => {
+			const row = elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'border-top-left-radius');
+			setAttribute(row, 'data-step-property', 'color');
+			setAllText(elements(row).find((node) => node.tagName === 'code'), 'color');
+		},
+	},
+	{
+		label: 'a part row is measured on another element than the recipe\'s rule (Button label measured on the root)',
+		slug: 'button',
+		expect: ['measures .muxui-button, the recipe\'s rule is on .muxui-button__label'],
+		change: (root) => {
+			const row = elements(stylingOf(root)).find((node) => node.tagName === 'tr' && attributeValue(node, 'data-step-property') === 'letter-spacing');
+			setAttribute(row, 'data-step-target', '.muxui-button');
+			setAllText(elements(row).filter((node) => node.tagName === 'code')[2], '.muxui-button');
+		},
+	},
+	{
+		label: 'the previews reserve another height than the recorded one (Calendar)',
+		slug: 'calendar',
+		expect: ['reserves {"narrow":100,"wide":100} for its previews'],
+		change: (root) => setAttribute(elements(stylingOf(root)).find((node) => attributeValue(node, 'data-styling-compare') !== undefined), 'style', '--preview-h-narrow:100px;--preview-h-wide:100px'),
 	},
 	{
 		label: 'the Styling group is missing from the Sources section (Button)',
@@ -703,6 +853,61 @@ const mutations = [
 			setAttribute(link, 'href', 'https://github.com/ndrewtran/muxui/blob/main/packages/react/src/styles/untracked.css');
 			setAllText(link, 'packages/react/src/styles/untracked.css');
 		},
+	},
+	{
+		label: 'the page does not load the shared Styling script (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => detach(measureTag(root)),
+	},
+	{
+		label: 'the page carries its own copy of the Styling script instead of loading the shared one (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag', 'carries 1 inline script that read the Styling section'],
+		change: (root) => {
+			const tag = measureTag(root);
+			tag.attrs = [];
+			tag.childNodes.push({ nodeName: '#text', value: 'for (const region of document.querySelectorAll(\'#styling [data-styling-scroll]\')) region.tabIndex = 0;', parentNode: tag });
+		},
+	},
+	{
+		label: 'the page loads the shared Styling script without defer (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => { measureTag(root).attrs = measureTag(root).attrs.filter(({ name }) => name !== 'defer'); },
+	},
+	{
+		label: 'the page loads the shared Styling script twice (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => {
+			const tag = measureTag(root);
+			tag.parentNode.childNodes.push({ ...tag, attrs: [...tag.attrs], childNodes: [] });
+		},
+	},
+	{
+		label: 'the page loads another file than the shared Styling script (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => setAttribute(measureTag(root), 'src', '/_muxui/styling-measure.v2.js'),
+	},
+	{
+		label: 'the page loads the script at the unversioned URL a cache could pair with another build (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => setAttribute(measureTag(root), 'src', '/_muxui/styling-measure.js'),
+	},
+	{
+		label: 'the page loads the script at a stale version (one digit of the hash changed, Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => setAttribute(measureTag(root), 'src', attributeValue(measureTag(root), 'src').replace(/\.([0-9a-f])/u, (_found, digit) => `.${digit === '0' ? '1' : '0'}`)),
+	},
+	{
+		label: 'the page loads the script with a version query instead of its name (Button)',
+		slug: 'button',
+		expect: ['with exactly one deferred script tag'],
+		change: (root) => setAttribute(measureTag(root), 'src', '/_muxui/styling-measure.js?v=1'),
 	},
 	{
 		label: 'the outline lost no heading but a sub-block is renamed (Button Tokens becomes Colours)',
@@ -733,4 +938,4 @@ for (const { label, slug, expect, change, expectedFrom } of mutations) {
 	if (problems.some((line) => !line.startsWith(`${route} `))) failures.push(`${label}: a problem does not name the page ${route}.`);
 }
 if (failures.length > 0) throw new Error(`The typed reference checker missed a change to a built page, or failed to report it on the page:\n${failures.map((line) => `- ${line}`).join('\n')}`);
-console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type or value without its source, with another module's or with a second note, a wrong link after the right one, a module the reference gives no source, and in the Styling section a missing section or alias, a dropped, misspelled or unsupported hook, a changed tag, a policy, a default, a reader or a collapsed group, another README paragraph or What-wins row, a claim no source supports, a recipe step that is not a row or a role no rule reads, a reader that names another family's rule or loses, gains, swaps or rewrites a reader or its condition, a state group that says presence only, a Rendered DOM element or attribute value the Basic example lacks, a deleted reflected, interaction or not-set row, a location that names the wrong part or an unqualified root, a default that gains digits, swaps its schemes or paints another swatch, an opening sentence that miscounts the recipe, a lost or untracked Styling source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);
+console.log(`Page mutation contract passed: ${mutations.length} changes to built pages (a reworded state, a closing row moved, two rows swapped, a type cell and a state cell lost, a state and its marker apart, a closing row removed, a closing row that spans too many or too few columns, an alias reworded, a declaration source missing, unlinked, misdirected or mislabelled, a shared or package-level type or value without its source, with another module's or with a second note, a wrong link after the right one, a module the reference gives no source, and in the Styling section a missing section or alias, a dropped, misspelled or unsupported hook, a changed tag, a policy, a default, a reader or a collapsed group, another README paragraph or What-wins row, a claim no source supports, a recipe step that is not a row or a role no rule reads, a reader that names another family's rule or loses, gains, swaps or rewrites a reader or its condition, a state group that says presence only, a Rendered DOM element or attribute value the Basic example lacks or an invisible character in it, a deleted reflected, interaction or not-set row, a location that names the wrong part or an unqualified root, a default that gains digits, swaps its schemes or paints another swatch, an opening sentence that miscounts the recipe, a preview that is missing, runs another example or other CSS, a wrapper on the wrong preview or an example outside it, reserved heights that are not the recorded ones, a printed declaration or measured property or target that is not the recipe's or the stylesheet's, a target said to hold text it does not, a computed row that claims a measurement, compares a shorthand, is dropped or reads an element the example lacks, a page script that is missing, inlined, not deferred, loaded twice, another file, unversioned, at a stale hash or with a version query, a lost or untracked Styling source) each fail the typed reference checker with a problem on their own page (${reported} problems reported, no crash).`);

@@ -39,9 +39,9 @@ const annotation = (row: Row) => row.requirement === 'required' ? null : [row.re
 </ul>
 {tokens.groups.map((group) => {
 	const table = (
-		<div class="styling-scroll not-content" data-styling-scroll={`${name} ${group.label.toLowerCase()}`}>
+		<div class="styling-scroll not-content" data-styling-scroll>
 			<table class="styling-table styling-tokens" data-styling-table={`tokens-${group.id}`}>
-				<caption class="visually-hidden">{name} {group.label.toLowerCase()}: {group.rows.length} roles</caption>
+				<caption class="visually-hidden">{name} {group.label.toLowerCase()}</caption>
 				<thead>
 					<tr><th scope="col">Role</th><th scope="col">Meaning</th><th scope="col">Policy</th><th scope="col">Default</th></tr>
 				</thead>
@@ -68,13 +68,15 @@ const annotation = (row: Row) => row.requirement === 'required' ? null : [row.re
 							<td class={row.policy === 'fixed' ? 'styling-fixed' : undefined}>{row.policy}</td>
 							<td>
 								{alias !== null && <span class="styling-alias">{alias}</span>}
-								{lines.map((entry) => (
-									<span class="styling-value">
-										{entry.scheme !== null && <span class="styling-scheme">{entry.scheme}</span>}
-										{entry.alias !== null && <span class="styling-alias">{entry.alias}</span>}
-										{swatch(row.type, entry.value) && <i class="styling-swatch" style={`--s:${entry.value}`} />}{entry.value}
-									</span>
-								))}
+								{lines.length === 1 && lines[0].scheme === null
+									? <Fragment>{swatch(row.type, lines[0].value) && <i class="styling-swatch" style={`--s:${lines[0].value}`} />}{lines[0].value}</Fragment>
+									: lines.map((entry) => (
+										<span class="styling-value">
+											<span class="styling-scheme">{entry.scheme}</span>
+											{entry.alias !== null && <span class="styling-alias">{entry.alias}</span>}
+											{swatch(row.type, entry.value) && <i class="styling-swatch" style={`--s:${entry.value}`} />}{entry.value}
+										</span>
+									))}
 							</td>
 						</tr>
 					);})}

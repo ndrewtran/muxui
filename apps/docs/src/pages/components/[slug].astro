@@ -288,7 +288,7 @@ const headings = [
 		<StylingHooks name={summary.name} hooks={hooks} />
 		<StylingTokens name={summary.name} tokens={tokens} />
 		<StylingOverrides name={summary.name} overrides={overrides} />
-		<StylingRecipe name={summary.name} styling={{ hooks, tokens, recipe }} />
+		<StylingRecipe name={summary.name} slug={componentSlug} styling={{ hooks, tokens, recipe }} source={basicSource} />
 	</section>
 	<StylingMeasure />
 

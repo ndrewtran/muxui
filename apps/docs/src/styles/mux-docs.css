@@ -1029,9 +1029,42 @@ pre code {
 
 .styling-checks li::before {
 	content: 'pass ';
-	color: var(--muxui-semantic-status-success);
 	font-weight: var(--muxui-semantic-typography-label-weight);
 }
+
+.styling-compare {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--muxui-reference-dimension-space-s);
+	margin-block-start: var(--muxui-reference-dimension-space-m);
+}
+
+@container styling (min-width: 40rem) {
+	.styling-compare { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.styling-compare .styling-frame { min-height: max(8rem, calc(var(--preview-h-wide, 0px) + 2 * var(--muxui-reference-dimension-space-m) + 2px)); }
+}
+
+.styling-compare > div { min-width: 0; }
+.styling-compare h4 { margin-block: 0 var(--muxui-reference-dimension-space-2xs); }
+
+.styling-frame {
+	display: grid;
+	/* The example's own height is reserved up front (the page sets --preview-h-narrow and --preview-h-wide), so a client-only example does not push what is below it down. */
+	min-height: max(8rem, calc(var(--preview-h-narrow, 0px) + 2 * var(--muxui-reference-dimension-space-m) + 2px));
+	padding: var(--muxui-reference-dimension-space-m);
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-shape-container-radius);
+	background: var(--muxui-semantic-surface-background);
+	overflow-x: auto;
+}
+
+.styling-frame:focus-visible {
+	outline: 2px solid var(--muxui-semantic-focus-ring);
+	outline-offset: 2px;
+}
+
+/* The example's frame fills the frame's reserved height and centers the example in it, so the example rendering moves nothing. */
+.styling-frame > .demo-frame { width: 100%; align-items: center; }
 
 @media print {
 	.styling-scroll { overflow: visible; }

@@ -6,7 +6,7 @@ import { linkedFamilies } from '../../guide-links.mjs';
 import { renderedEventGroups, expectedEventGroups } from './event-groups.mjs';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 import { collapsePartsAbove, compareComponent, comparePackageExports, compareSources, expectedComponent, expectedPackageExports, expectedSources as expectedSourcesOf, loadReference, renderedComponent, renderedEvents, renderedPackageExports, renderedSources, routeExists, routeFile } from './typed-reference.mjs';
-import { checkStyling, expectedStylingSources, loadStylingSources } from './styling-expectation.mjs';
+import { checkStyling, expectedStylingSources, loadStylingSources, measuredScript, previewHeightsPath, renderedStyling } from './styling-expectation.mjs';
 
 // Every rendered component route keeps one section order, and each projected string equals its catalog value.
 // The catalog query API and the package files are read here directly, not through the docs loader or the shared projection.
@@ -57,6 +57,11 @@ const manifest = readJson('packages/react/package.json');
 const reference = loadReference(resolve(repositoryRoot, 'packages/react/reference'));
 // The Styling section is checked against the part map, the token record, the README, the stylesheet and the page's own examples.
 const stylingSources = await loadStylingSources(repositoryRoot);
+const sameList = (left, right) => left.length === right.length && left.every((value, index) => value === right[index]);
+/** The families whose page shows previews: the recorded preview heights hold exactly these. */
+const previewSlugs = [];
+/** The page script of the Styling section as the build has it: every page has to load this URL. */
+const measure = measuredScript(docsDist);
 const descriptor = readJson('packages/react/generated/descriptor.json');
 // The generated contract carries two marker comment lines ahead of its JSON; it names the runtime file of every family.
 const contract = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
@@ -220,7 +225,8 @@ for (const component of listComponents()) {
 
 	// Styling: hooks, tokens, override rules and the recipe, from the sources and the page's own examples, never from the projection.
 	const requirements = binding.tokenRecipe.requirements;
-	problems.push(...checkStyling({ sources: stylingSources, slug, artifact, root, route }));
+	problems.push(...checkStyling({ sources: stylingSources, slug, artifact, root, route, measureUrl: measure.url }));
+	if (renderedStyling(root)?.previews.panes.length > 0) previewSlugs.push(slug);
 	for (const [id, label] of [['styling-hooks', 'Hooks'], ['styling-tokens', 'Tokens'], ['styling-override-rules', 'Override rules'], ['styling-recipe', 'Recipe']]) {
 		if (!outline.some(([outlineId, outlineLabel]) => outlineId === id && outlineLabel === label)) problems.push(`${route} outline does not list ${label} (#${id}).`);
 	}
@@ -307,6 +313,21 @@ for (const { route, href } of apiLinks) {
 		continue;
 	}
 	if (fragment !== undefined && !ids.has(fragment)) problems.push(`${route} links to ${href}, which is not on that page.`);
+}
+
+// The recorded heights of the previews are those of the families that have previews, whole pixels, nothing else.
+const recordedSlugs = Object.keys(stylingSources.previewHeights).sort();
+if (!sameList(recordedSlugs, [...previewSlugs].sort())) problems.push(`${previewHeightsPath} holds ${JSON.stringify(recordedSlugs.filter((slug) => !previewSlugs.includes(slug)))} that have no previews and lacks ${JSON.stringify(previewSlugs.filter((slug) => !recordedSlugs.includes(slug)))} that do: run apps/scale/test/browser/record-preview-heights.mjs.`);
+for (const [slug, heights] of Object.entries(stylingSources.previewHeights)) {
+	if (!Object.keys(heights).sort().every((key, index) => key === ['narrow', 'wide'][index]) || ![heights.narrow, heights.wide].every((value) => Number.isInteger(value) && value > 0)) problems.push(`${previewHeightsPath} records ${JSON.stringify(heights)} for ${slug}, expected a whole number of pixels for narrow and wide.`);
+}
+
+// The page script every component page loads is built once, named for the hash of its content, and reads the attributes the Styling section prints.
+problems.push(...measure.problems);
+if (measure.url !== null) {
+	for (const name of ['data-styling-scroll', 'data-styling-table', 'data-styling-pane', 'data-measure', 'data-step-target', 'stepTarget', 'stepProperty', 'stepScope', 'stepText']) {
+		if (!measure.content.includes(name)) problems.push(`${measure.url} never reads ${name}, which the Styling section prints for it.`);
+	}
 }
 
 if (problems.length > 0) {

@@ -1,32 +1,7 @@
-<script>
-	// The page script of the Styling section.
-	//
-	// Scroll regions: a table or a code block that is wider than its column scrolls, and a scroller must be reachable from the keyboard and
-	// have a name. Only one that overflows right now gets the region role, a name and a tab stop, so a section that fits adds no stop.
-	const regions = document.querySelectorAll<HTMLElement>('#styling [data-styling-scroll]');
+---
+// The page script of the Styling section is one static file the docs build serves at a name that carries the hash of its content (see
+// styling-measure.ts and astro.config.mjs), not a copy in every page and not an unversioned URL a cache could pair with another build's page.
+import { stylingMeasureUrl } from 'virtual:muxui-served-scripts';
+---
 
-	function labelRegion(region: HTMLElement) {
-		if (region.scrollWidth > region.clientWidth + 1) {
-			region.setAttribute('role', 'region');
-			region.setAttribute('aria-label', `${region.dataset.stylingScroll ?? 'Styling'} (scrollable)`);
-			region.tabIndex = 0;
-		} else {
-			region.removeAttribute('role');
-			region.removeAttribute('aria-label');
-			region.removeAttribute('tabindex');
-		}
-	}
-
-	const resizes = new ResizeObserver((entries) => {
-		for (const { target } of entries) {
-			const region = target instanceof HTMLElement && target.matches('[data-styling-scroll]') ? target : target.closest<HTMLElement>('[data-styling-scroll]');
-			if (region !== null) labelRegion(region);
-		}
-	});
-	for (const region of regions) {
-		labelRegion(region);
-		resizes.observe(region);
-		// The table inside grows without its scroller changing size, so it is watched too.
-		if (region.firstElementChild instanceof HTMLElement) resizes.observe(region.firstElementChild);
-	}
-</script>
+<script is:inline defer src={stylingMeasureUrl}></script>

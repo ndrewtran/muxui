@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import starlight from '@astrojs/starlight';
 import { buildSync } from 'esbuild';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -24,15 +25,28 @@ for (const sheet of ['layers.css', 'props.css', 'reset.css', 'util.css']) {
 		throw new Error(`@astrojs/starlight no longer ships style/${sheet} beside style/markdown.css (pinned at 0.42.0). Update the starlight-style alias in astro.config.mjs and the imports in BlocksLayout.astro.`);
 	}
 }
-const themePrepaintBundle = buildSync({
-	entryPoints: [resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/theme-prepaint-entry.mjs')],
-	bundle: true,
-	format: 'iife',
-	platform: 'browser',
-	target: 'es2022',
-	minify: true,
-	write: false,
-}).outputFiles[0].text;
+// Browser scripts the docs serve as static files under /_muxui/, each built once from its source. A page that loads one of them with a script tag
+// carries a line, not a copy of the script, and the browser caches the file across pages. A script with a `version` is served at a URL that
+// names its content (`/_muxui/styling-measure.<hash of the script>.js`), so a page and the script it was built with can never be paired with
+// another build's copy from a cache: the page reads its URL from the `virtual:muxui-served-scripts` module below.
+const servedScripts = Object.entries({
+	'theme-prepaint': { entry: 'src/theme-prepaint-entry.mjs', version: false },
+	'styling-measure': { entry: 'src/components/styling/styling-measure.ts', version: true },
+}).map(([name, { entry, version }]) => {
+	const source = buildSync({
+		entryPoints: [resolve(docsRoot, entry)],
+		bundle: true,
+		format: 'iife',
+		platform: 'browser',
+		target: 'es2022',
+		minify: true,
+		write: false,
+	}).outputFiles[0].text;
+	return { name, source, url: `/_muxui/${name}${version ? `.${createHash('sha256').update(source).digest('hex').slice(0, 12)}` : ''}.js` };
+});
+const servedScriptsModule = 'virtual:muxui-served-scripts';
+const stylingMeasureUrl = servedScripts.find(({ name }) => name === 'styling-measure')?.url;
+if (stylingMeasureUrl === undefined) throw new Error('astro.config.mjs no longer builds the Styling page script');
 
 /** @param {unknown} value @returns {value is Record<string, unknown>} */
 function isRecord(value) {
@@ -94,17 +108,24 @@ export default defineConfig({
 	devToolbar: { enabled: false },
 	vite: {
 		plugins: [{
-			name: 'muxui-theme-prepaint',
+			name: 'muxui-served-scripts',
+			resolveId(id) {
+				return id === servedScriptsModule ? `\0${servedScriptsModule}` : undefined;
+			},
+			load(id) {
+				return id === `\0${servedScriptsModule}` ? `export const stylingMeasureUrl = ${JSON.stringify(stylingMeasureUrl)};` : undefined;
+			},
 			configureServer(server) {
 				server.middlewares.use((request, response, next) => {
-					if (request.url !== '/_muxui/theme-prepaint.js') return next();
+					const served = servedScripts.find(({ url }) => url === request.url);
+					if (served === undefined) return next();
 					response.statusCode = 200;
 					response.setHeader('content-type', 'application/javascript; charset=utf-8');
-					response.end(themePrepaintBundle);
+					response.end(served.source);
 				});
 			},
 			generateBundle() {
-				this.emitFile({ type: 'asset', fileName: '_muxui/theme-prepaint.js', source: themePrepaintBundle });
+				for (const { url, source } of servedScripts) this.emitFile({ type: 'asset', fileName: url.slice(1), source });
 			},
 		}],
 		resolve: {
