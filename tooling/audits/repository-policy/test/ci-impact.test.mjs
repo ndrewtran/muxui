@@ -11,6 +11,7 @@ import {
   browserShardIndex,
   buildPullRequestImpact,
   callsBrowserEngines,
+  catalogExampleRendersPath,
   changedLockfileImporters,
   executeCommand,
   executeCommands,
@@ -4567,11 +4568,12 @@ function supportFilesNamedBy(text) {
   return [...new Set([...text.matchAll(/packages\/react\/test\/support\/([\w-]+(?:\.[\w-]+)*)/gu)].map(([, file]) => `packages/react/test/support/${file}`))];
 }
 
-// The support files that sources (path to text) name and the planner does not route to them: any but the part map and the styling
-// reference.
+// The support files that sources (path to text) name and the planner does not route to them: any but the part map, the styling
+// reference and the catalog example renders.
 function unroutedImports(sources) {
+  const routed = [partMapPath, stylingReferencePath, catalogExampleRendersPath];
   return Object.entries(sources).flatMap(([file, text]) => supportFilesNamedBy(text)
-    .filter((imported) => imported !== partMapPath && imported !== stylingReferencePath)
+    .filter((imported) => !routed.includes(imported))
     .map((imported) => `${file} imports ${imported}`));
 }
 
@@ -4648,6 +4650,39 @@ test('a change to the styling reference runs the docs check, the Docs page test 
   ]) assert.ok(commands.includes(expected), expected);
 });
 
+// The catalog example renders are imported by Storybook's generator and the Docs page test, which `reactTestFilesReferencing` cannot see.
+// The importing test here is a fake, so this holds whether or not a real one exists.
+test('a change to the catalog example renders runs Storybook generation, the Docs page test and the React tests that import it', async () => {
+  const importer = 'test/example-renders-importer.test.mjs';
+  const reactTestReferenceSources = { ...(await reactTestTexts()), [importer]: "import { renderCatalogExamples } from './support/catalog-example-renders.mjs';" };
+  const result = await plan([catalogExampleRendersPath], { ...edited(catalogExampleRendersPath), reactTestReferenceSources });
+  assert.equal(result.storyTooling, true);
+  assert.deepEqual(result.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }]);
+  assert.ok(result.reactTestFiles.includes(importer));
+  assert.equal(result.reactPackageFull, false);
+  // The docs site and the Figma checks do not read the renders, and the Anatomy factory test does not import them.
+  assert.equal(result.docs, false);
+  assert.ok(!result.packageChecks.includes('@muxui/figma'));
+  assert.deepEqual(result.notices, []);
+  const commands = executionCommands(result, { packages }).map(({ args }) => args.join(' '));
+  for (const expected of [
+    '--filter @muxui/react-storybook run generate:check',
+    '--filter @muxui/react-storybook exec node --test test/component-docs.test.mjs',
+  ]) assert.ok(commands.includes(expected), expected);
+
+  // No test names it: the zero-reference fallback widens to the full React proof and must not swallow the route.
+  const unreferenced = await plan([catalogExampleRendersPath], { ...edited(catalogExampleRendersPath), reactTestReferenceSources: {} });
+  assert.equal(unreferenced.reactPackageFull, true);
+  assert.equal(unreferenced.storyTooling, true);
+  assert.deepEqual(unreferenced.storyUnitTests, [{ file: 'test/component-docs.test.mjs' }]);
+
+  // Narrow: another support helper plans no Storybook work.
+  const sibling = 'packages/react/test/support/styling-inventory.mjs';
+  const other = await plan([sibling], { ...edited(sibling), reactTestReferenceSources });
+  assert.equal(other.storyTooling, false);
+  assert.deepEqual(other.storyUnitTests, []);
+});
+
 // The inputs of the styling projection and what each plans today. The README is the exception: it is generated, so the generator that
 // writes it is the route, and a README edit alone plans no docs.
 test('the styling inputs route as measured, and the README boundary is pinned', async () => {
@@ -4668,12 +4703,12 @@ test('the styling inputs route as measured, and the README boundary is pinned', 
   assert.equal((await plan([readme], { packages: workspacePackages, ...edited(readme) })).docs, false);
 });
 
-// Drift: a docs, Storybook or Figma source that imports a React test support file other than the part map and the styling reference
-// reaches it with no route, because the planner routes only those two to the consumers. A literal-path text scan of the files below,
-// nothing more, and not a dependency graph: it runs only when the policy suite runs (a policy or planner change), not on an edit of a
-// reader alone; it reads JavaScript and TypeScript files, not .astro or Markdown; a path assembled from pieces or an alias escapes it;
-// test directories are outside it; and it does not enforce that a reader of the part map or the reference is routed, only that no
-// reader names another support file. A reader elsewhere must be added to the list when it lands.
+// Drift: a docs, Storybook or Figma source that imports a React test support file other than the part map, the styling reference and
+// the catalog example renders reaches it with no route, because the planner routes only those three to the consumers. A literal-path
+// text scan of the files below, nothing more, and not a dependency graph: it runs only when the policy suite runs (a policy or planner
+// change), not on an edit of a reader alone; it reads JavaScript and TypeScript files, not .astro or Markdown; a path assembled from
+// pieces or an alias escapes it; test directories are outside it; and it does not enforce that a reader of a routed file is routed,
+// only that no reader names another support file. A reader elsewhere must be added to the list when it lands.
 test('no docs, Storybook or Figma source imports a React test support file the planner does not route', () => {
   const scanned = spawnSync('git', [
     'ls-files', '-z', 'apps/component-reference.mjs', 'apps/docs/src', 'apps/docs/scripts', 'apps/react-storybook/src', 'apps/react-storybook/.storybook',
@@ -4688,11 +4723,12 @@ test('no docs, Storybook or Figma source imports a React test support file the p
   ]) assert.ok(scanned.includes(reader), reader);
   assert.deepEqual(unroutedImports(Object.fromEntries(scanned.map((file) => [file, readFileSync(resolve(repositoryRoot, file), 'utf8')]))), []);
 
-  // The control: a reader of another support file is reported, readers of the two routed files are not.
+  // The control: a reader of another support file is reported, readers of the routed files are not.
   assert.deepEqual(unroutedImports({
     'apps/docs/scripts/fake-reader.mjs': "import { x } from '../../../packages/react/test/support/dom.mjs';",
     'apps/docs/scripts/part-map-reader.mjs': `import '../../../${partMapPath}';`,
     'apps/docs/scripts/reference-reader.mjs': `import '../../../${stylingReferencePath}';`,
+    'apps/docs/scripts/renders-reader.mjs': `import '../../../${catalogExampleRendersPath}';`,
   }), ['apps/docs/scripts/fake-reader.mjs imports packages/react/test/support/dom.mjs']);
   assert.deepEqual(supportFilesNamedBy([
     "import { x } from '../../../packages/react/test/support/dom.mjs';",
