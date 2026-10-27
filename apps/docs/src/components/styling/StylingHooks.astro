@@ -1,0 +1,84 @@
+---
+import type { FamilyStyling } from '../../../../../packages/react/test/support/styling-reference.mjs';
+
+interface Props {
+	name: string;
+	hooks: FamilyStyling['hooks'];
+}
+
+type Row = FamilyStyling['hooks']['groups'][number]['rows'][number];
+
+const { name, hooks } = Astro.props;
+const groupLabels = { root: 'Root class', part: 'Part classes', state: 'State attributes', reflected: 'Reflected prop attributes' } as const;
+// A boolean state is selected by its presence; an enumerated state (orientation, placement, layout, sort-direction, type) by the value it carries.
+const groupHints = { root: '', part: 'from the catalog anatomy', state: 'a boolean state by presence, an enumerated one by its value', reflected: 'the value is the prop value' } as const;
+// The last group of a family that writes a reflected attribute also lists what it does not write (bounded: size, variant, color).
+const notSetGroup = hooks.groups.some(({ id }) => id === 'reflected') ? 'reflected' : hooks.groups.at(-1)?.id;
+
+/** A class row's On cell: the observed tags are code (`<span> in root`), anything else is plain text. */
+const tagRuns = (on: string) => on.split(/(<[a-z0-9-]+>)/u).filter((run) => run !== '').map((run) => ({ code: /^<[a-z0-9-]+>$/u.test(run), text: run }));
+
+/** A state or reflected row's On cell: the parts a render showed the attribute on, then the parts only a rule selects it on, marked `styled`. */
+function evidence(row: Row) {
+	return {
+		emitted: row.emittedOn,
+		styledOnly: row.selectedOn.filter((part) => !row.emittedOn.includes(part)),
+	};
+}
+---
+
+<h3 id="styling-hooks">Hooks</h3>
+<div class="styling-scroll not-content" data-styling-scroll={`${name} hooks`}>
+	<table class="styling-table styling-hooks" data-styling-table="hooks">
+		<caption class="visually-hidden">{name} hooks: classes, state attributes and reflected prop attributes</caption>
+		<thead>
+			<tr><th scope="col">Hook</th><th scope="col">On</th><th scope="col">Notes</th></tr>
+		</thead>
+		{hooks.groups.map((group) => (
+			<tbody data-styling-group={group.id}>
+				<tr class="styling-group-row">
+					<th scope="rowgroup" colspan="3">{groupLabels[group.id]}{groupHints[group.id] !== '' && <span class="styling-hint">{groupHints[group.id]}</span>}</th>
+				</tr>
+				{group.rows.map((row) => (
+					<tr>
+						<th scope="row">
+							{row.hook !== null
+								? <code>{row.hook}</code>
+								: <Fragment><code data-styling-no-hook>{row.part}</code><span class="styling-hint">no hook</span></Fragment>}
+						</th>
+						<td>
+							{row.kind === 'class'
+								? tagRuns(row.on).map((run) => run.code ? <code>{run.text}</code> : run.text)
+								: row.on === '-'
+									? '-'
+									: (() => {
+										const { emitted, styledOnly } = evidence(row);
+										return <Fragment>{emitted.map((part, index) => <Fragment>{index > 0 && ', '}<code>{part}</code></Fragment>)}{emitted.length > 0 && styledOnly.length > 0 && ', '}{styledOnly.map((part, index) => <Fragment>{index > 0 && ', '}<code>{part}</code> <span class="styling-evidence">styled</span></Fragment>)}</Fragment>;
+									})()}
+						</td>
+						<td>{row.note}</td>
+					</tr>
+				))}
+				{group.id === notSetGroup && hooks.notSet.map((row) => (
+					<tr class="styling-not-set">
+						<th scope="row"><code>{row.hook}</code></th>
+						<td>-</td>
+						<td>{row.note}</td>
+					</tr>
+				))}
+			</tbody>
+		))}
+	</table>
+</div>
+<ul class="styling-legend">
+	<li>Style only the hooks listed here. A class or attribute that is not a row is not a documented hook.</li>
+	<li><strong>On</strong> lists the parts whose element carried the attribute in a render of a catalog example. <span class="styling-evidence">styled</span> marks a part that a Mux rule selects it on although no example showed it there. Neither is a guarantee: a part can carry more or fewer attributes with other props and state.</li>
+	<li>{hooks.observationNote}</li>
+</ul>
+{hooks.renderedDom !== null && (
+	<Fragment>
+		<h4 id="styling-rendered-dom">Rendered DOM, Basic example, at rest</h4>
+		<p class="styling-note" data-styling-dom-note>{hooks.renderedDom.note} Render of <code>{hooks.renderedDom.source}</code></p>
+		<pre class="styling-dom" data-styling-dom data-styling-scroll="Rendered DOM"><code>{hooks.renderedDom.text}</code></pre>
+	</Fragment>
+)}

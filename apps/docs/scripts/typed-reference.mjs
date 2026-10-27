@@ -563,14 +563,15 @@ export function declarationSources(reference, owner) {
 	return [`packages/react/reference/${reference.inventory.owners[owner]}`, ...Object.values(reference.files.get(owner).sources)];
 }
 
-/** What a component page's Sources section must list, in order: the record, its examples, the runtime file, the manifest and the declarations. */
-export function expectedSources({ record, examples, runtime, reference, owner }) {
+/** What a component page's Sources section must list, in order: the record, its examples, the runtime file, the manifest, the declarations and the files behind the Styling section. */
+export function expectedSources({ record, examples, runtime, reference, owner, styling }) {
 	return [
 		{ label: 'Component record', paths: [record] },
 		{ label: 'Examples', paths: examples.map(({ source }) => source.content) },
 		{ label: 'Runtime', paths: [runtime] },
 		{ label: 'Package imports', paths: ['packages/react/package.json'] },
 		{ label: 'Declarations', paths: declarationSources(reference, owner) },
+		{ label: 'Styling', paths: styling },
 	];
 }
 

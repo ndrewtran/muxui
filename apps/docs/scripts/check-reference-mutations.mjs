@@ -1,5 +1,6 @@
 // A copy of the declaration reference with a part, a hook, a helper, a ref, an import, a type, a declaration source and a requirement taken away
-// or changed must fail the typed reference checks.
+// or changed must fail the typed reference checks. So must a copy of one source of the Styling section (the part map, its state classification, the
+// stylesheet, the token record, the README) with one fact changed: the page is derived from the sources of the repository it is built from.
 //
 //   node scripts/check-reference-mutations.mjs [--show]
 //
@@ -17,24 +18,87 @@ const docsRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(docsRoot, '../..');
 const astroCli = resolve(docsRoot, 'node_modules/astro/bin/astro.mjs');
 
-/** A mirror of the repository that links everything but `packages/react/reference/`, which is a copy to change. */
-function mirrorRepository(destination) {
-	const link = (from, to) => symlinkSync(from, to);
-	const linkAllBut = (directory, target, except) => {
+/**
+ * A mirror of the repository that links everything but `packages/react/reference/`, which is a copy to change, and the files `edits` change.
+ * Every directory on the way to a changed file is a real directory of links, so a write never goes through a link into the repository, and the
+ * changed file is a copy: the docs build reads the changed README, part map, stylesheet or token record from the mirror's own path.
+ * `edits` is a list of [repository-relative path, function from the file's text to its new text]; several edits of one file apply in order.
+ */
+function mirrorRepository(destination, edits = []) {
+	const real = new Set();
+	const realize = (relative) => {
+		if (real.has(relative)) return;
+		const target = join(destination, relative);
+		if (relative !== '') rmSync(target);
 		mkdirSync(target, { recursive: true });
-		for (const name of readdirSync(directory)) if (name !== except) link(join(directory, name), join(target, name));
+		for (const name of readdirSync(join(repositoryRoot, relative))) symlinkSync(join(repositoryRoot, relative, name), join(target, name));
+		real.add(relative);
 	};
-	linkAllBut(repositoryRoot, destination, 'packages');
-	linkAllBut(join(repositoryRoot, 'packages'), join(destination, 'packages'), 'react');
-	linkAllBut(join(repositoryRoot, 'packages/react'), join(destination, 'packages/react'), 'reference');
+	realize('');
+	realize('packages');
+	realize('packages/react');
+	rmSync(join(destination, 'packages/react/reference'));
 	cpSync(join(repositoryRoot, 'packages/react/reference'), join(destination, 'packages/react/reference'), { recursive: true });
+	const copied = new Set();
+	for (const [path, edit] of edits) {
+		const segments = path.split('/');
+		for (let index = 1; index < segments.length; index += 1) realize(segments.slice(0, index).join('/'));
+		const file = join(destination, path);
+		const before = copied.has(path) ? readFileSync(file, 'utf8') : readFileSync(join(repositoryRoot, path), 'utf8');
+		const after = edit(before);
+		if (after === before) throw new Error(`The source change to ${path} changes nothing.`);
+		if (!copied.has(path)) rmSync(file);
+		writeFileSync(file, after);
+		copied.add(path);
+	}
 	return join(destination, 'packages/react/reference');
 }
+
+// One fact of one source of the Styling section changed in the mirror, and what the real checker must say on the page. A README change reaches
+// every page ('*'); the others are the one family that owns the row, the classification, the read or the role.
+const sourceMutations = [
+	{
+		label: 'change a README paragraph (the layer rule of ordinary declarations)',
+		slug: '*',
+		expect: ['Override rules text differs from README.md at paragraph 2'],
+		edits: [['packages/react/README.md', (text) => text.replace('CSS outside a layer beats CSS inside one', 'CSS inside a layer beats CSS outside one')]],
+	},
+	{
+		label: 'rename a part-map hook (Virtualizer item)',
+		slug: 'virtualizer',
+		expect: ['Hooks part classes are', '.muxui-virtualizer__item'],
+		edits: [['packages/react/test/support/styling-parts.ts', (text) => text.replace("hook: 'muxui-virtualizer__item'", "hook: 'muxui-virtualizer__cell'")]],
+	},
+	{
+		label: 'reclassify a catalog state (drop-target is derived, not a state attribute)',
+		slug: 'drop-zone',
+		expect: ['Hooks row data-muxui-state-drop-target is declared by the catalog and does not say so'],
+		edits: [['packages/react/test/support/styling-parts.ts', (text) => text.replace("'empty', 'drop-target',", "'empty',").replace("'partial', 'zero',", "'partial', 'zero', 'drop-target',")]],
+	},
+	{
+		label: 'strip the only read of a role from the stylesheet (CodeBlock added-background)',
+		slug: 'code-block',
+		expect: ['Tokens row component.codeblock.added-background says it is read "none", the stylesheet makes it "rules"'],
+		edits: [['packages/react/generated/styles.css', (text) => text.replaceAll('var(--muxui-component-codeblock-added-background', 'var(--muxui-component-codeblock-added-absent')]],
+	},
+	{
+		label: 'stop selecting an interaction state in the stylesheet (focus-within, which InputTags and TagSelect style)',
+		slugs: ['input-tags', 'tag-select'],
+		expect: ['Hooks state rows are', 'data-muxui-state-focus-within'],
+		edits: [['packages/react/generated/styles.css', (text) => text.replaceAll('data-muxui-state-focus-within', 'data-muxui-state-focus-inside')]],
+	},
+	{
+		label: 'change the alias of a role in the token record (Tabs vertical-list-border)',
+		slug: 'tabs',
+		expect: ['Tokens row component.tabs.vertical-list-border default reads'],
+		edits: [['catalog/tokens/default-theme.json', (text) => text.replace(/("component\.tabs\.vertical-list-border": \{[^}]*?"alias": )"semantic\.border\.subtle"/u, '$1"semantic.border.default"')]],
+	},
+];
 
 const temp = mkdtempSync(join(tmpdir(), 'muxui-reference-mutations-'));
 try {
 	const mirror = join(temp, 'repository');
-	const reference = mirrorRepository(mirror);
+	const reference = mirrorRepository(mirror, sourceMutations.flatMap(({ edits }) => edits));
 	const edit = (owner, change) => {
 		const path = join(reference, `${owner}.json`);
 		const file = JSON.parse(readFileSync(path, 'utf8'));
@@ -127,7 +191,19 @@ try {
 		const mine = reported.filter((line) => line.startsWith(`- ${routeOf(mutation)}`));
 		for (const fragment of mutation.expect) if (!mine.some((line) => line.includes(fragment))) missed.push(`${mutation.label}: the checker did not report "${fragment}" on ${routeOf(mutation)}`);
 	}
-	const expectedRoutes = new Set(mutations.map((mutation) => `- ${routeOf(mutation)}`));
+	// A change to a source of the Styling section must be named by the page that shows it (the README, by every page).
+	const componentRoutes = readdirSync(join(dist, 'components')).map((slug) => `/components/${slug}/`);
+	const sourceRoutes = (mutation) => (mutation.slug === '*' ? componentRoutes : (mutation.slugs ?? [mutation.slug]).map((slug) => `/components/${slug}/`));
+	for (const mutation of sourceMutations) {
+		for (const route of sourceRoutes(mutation)) {
+			const mine = reported.filter((line) => line.startsWith(`- ${route} `));
+			for (const fragment of mutation.expect) if (!mine.some((line) => line.includes(fragment))) missed.push(`${mutation.label}: the checker did not report "${fragment}" on ${route}`);
+		}
+	}
+	const expectedRoutes = new Set([
+		...mutations.map((mutation) => `- ${routeOf(mutation)}`),
+		...sourceMutations.flatMap((mutation) => sourceRoutes(mutation).map((route) => `- ${route}`)),
+	]);
 	const unrelated = reported.filter((line) => ![...expectedRoutes].some((prefix) => line.startsWith(prefix)));
 
 	const records = run('ledger record pins', [resolve(import.meta.dirname, 'check-reference-records.mjs'), dist]);
@@ -141,7 +217,7 @@ try {
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source, the source of every shared type's module and a package-level value's) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source, the source of every shared type's module and a package-level value's) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact; ${sourceMutations.length} changes to a copy of a source of the Styling section (a README paragraph, a part-map hook, a state classification, an interaction state no rule selects, a stylesheet read, a token alias) each fail it on the page that shows them, the README change on all ${componentRoutes.length} (${reported.length} problems reported, none elsewhere).`);
 } finally {
 	rmSync(temp, { recursive: true, force: true });
 }

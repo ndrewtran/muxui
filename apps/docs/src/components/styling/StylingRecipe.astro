@@ -1,0 +1,63 @@
+---
+import type { FamilyStyling } from '../../../../../packages/react/test/support/styling-reference.mjs';
+import CodeBlock from '../CodeBlock.astro';
+
+interface Props {
+	name: string;
+	styling: Pick<FamilyStyling, 'hooks' | 'tokens' | 'recipe'>;
+}
+
+const { name, styling } = Astro.props;
+const { hooks, tokens, recipe } = styling;
+
+// What this block may say about the recipe it prints is checked here, at build, against the rows the same page prints: a recipe that
+// names a hook, an attribute or a role that the tables above do not list, or a token that is not a theme role some rule reads, fails
+// the build instead of printing a claim the page cannot back.
+const rows = hooks.groups.flatMap(({ rows: list }) => list);
+const hookClasses = new Set(rows.flatMap(({ hook }) => hook === null ? [] : [...hook.matchAll(/\.(muxui-[\w-]+)/gu)].map(([, className]) => className)));
+const hookAttributes = new Set(rows.flatMap(({ hook }) => hook !== null && hook.startsWith('data-muxui-') ? [hook] : []));
+const roles = new Map(tokens.groups.flatMap(({ rows: list }) => list).map((row) => [row.cssVar, row]));
+const classNames = new Set<string>();
+const attributes = new Set<string>();
+const variables = new Set<string>();
+for (const step of recipe.steps) {
+	for (const [, className] of step.selector.matchAll(/\.(muxui-[\w-]+)/gu)) classNames.add(className);
+	for (const [, attribute] of step.selector.matchAll(/\[(data-muxui-[\w-]+)/gu)) attributes.add(attribute);
+	if (step.kind === 'token') variables.add(step.declaration.slice(0, step.declaration.indexOf(':')));
+}
+for (const className of classNames) if (!hookClasses.has(className)) throw new Error(`The ${name} recipe names .${className}, which its Hooks table does not list.`);
+for (const attribute of attributes) if (!hookAttributes.has(attribute)) throw new Error(`The ${name} recipe names ${attribute}, which its Hooks table does not list.`);
+for (const variable of variables) {
+	const role = roles.get(variable);
+	if (role === undefined || role.policy !== 'theme' || role.readBy?.kind !== 'rules') throw new Error(`The ${name} recipe assigns ${variable}, which is not a theme role that a rule reads.`);
+}
+const hasRules = recipe.steps.some(({ kind }) => kind !== 'token');
+if (hasRules && !recipe.rules.includes('@layer muxui.utilities {')) throw new Error(`The ${name} recipe has part or state rules outside muxui.utilities.`);
+if (recipe.css.includes('!important')) throw new Error(`The ${name} recipe uses !important.`);
+const count = (list: Set<string>, one: string, many: string) => `${list.size} ${list.size === 1 ? one : many}`;
+const names = classNames.size + attributes.size + variables.size;
+// The opening sentence counts the changes the recipe makes and names their kinds, so a family with four or five says so.
+const stepKinds = [
+	{ kind: 'token', one: 'a theme role', many: 'theme roles' },
+	{ kind: 'part', one: 'a part rule', many: 'part rules' },
+	{ kind: 'state', one: 'a state rule', many: 'state rules' },
+].flatMap(({ kind, one, many }) => {
+	const total = recipe.steps.filter((step) => step.kind === kind).length;
+	return total === 0 ? [] : [total === 1 ? one : `${total} ${many}`];
+});
+const opening = `Copy this into your own CSS and wrap the component in the scope. ${recipe.steps.length} ${recipe.steps.length === 1 ? 'change' : 'changes'}: ${stepKinds.join(', ')}.`;
+---
+
+<h3 id="styling-recipe">Recipe</h3>
+<p class="styling-note" data-styling-recipe-count>{recipe.steps.length > 0 ? opening : `No change was generated for ${name}.`}</p>
+{recipe.notes.map((note) => <p class="styling-note" data-styling-recipe-note>{note}</p>)}
+<CodeBlock id="styling-recipe-css" code={recipe.css} lang="css" label="app.css" />
+<CodeBlock id="styling-recipe-markup" code={recipe.markup} lang="tsx" label="Component.tsx" />
+{recipe.steps.length > 0 && (
+	<ul class="styling-checks" data-styling-checks>
+		<li>All {names} names the recipe uses ({count(classNames, 'class', 'classes')}, {count(attributes, 'attribute', 'attributes')}, {count(variables, 'token', 'tokens')}) are rows of the tables above.</li>
+		{variables.size > 0 && <li>Every token it assigns has theme policy and is read by a rule.</li>}
+		{hasRules && <li>Part and state rules sit in <code>muxui.utilities</code>, so none needs <code>!important</code>.</li>}
+	</ul>
+)}
+<p class="styling-note" data-styling-ci>A Chromium test in the React package applies every generated recipe to the real stylesheet, in light and dark, and fails when a step does not change the property it names.</p>

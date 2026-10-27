@@ -1,0 +1,101 @@
+---
+import type { FamilyStyling } from '../../../../../packages/react/test/support/styling-reference.mjs';
+import TokenInlineMarkup from '../TokenInlineMarkup.astro';
+
+interface Props {
+	name: string;
+	tokens: FamilyStyling['tokens'];
+}
+
+type Row = FamilyStyling['tokens']['groups'][number]['rows'][number];
+
+const { name, tokens } = Astro.props;
+
+/**
+ * The default of a role: its alias once when both schemes share it, then one line when the schemes agree, else a light and a dark line
+ * (each with its own alias when the dark scheme names another).
+ */
+function defaults(row: Row) {
+	const darkAlias = row.darkAlias ?? row.alias;
+	const sameAlias = darkAlias === row.alias;
+	const lines = row.light === row.dark && sameAlias
+		? [{ scheme: null, alias: null, value: row.light }]
+		: [
+			{ scheme: 'light', alias: sameAlias ? null : row.alias, value: row.light },
+			{ scheme: 'dark', alias: sameAlias ? null : darkAlias, value: row.dark },
+		];
+	return { alias: sameAlias ? row.alias : null, lines };
+}
+
+/** A hexadecimal color has a swatch; a computed value (color-mix over other roles) does not, because it depends on the scheme it is shown in. */
+const swatch = (type: string, value: string) => type === 'color' && /^#[0-9a-f]{3,8}$/iu.test(value);
+const annotation = (row: Row) => row.requirement === 'required' ? null : [row.requirement, ...(row.profiles ?? [])].join(', ');
+---
+
+<h3 id="styling-tokens">Tokens</h3>
+<ul class="styling-legend">
+	<li><strong>theme</strong> assign it on a theme scope or a wrapper that contains the component. <strong>fixed</strong> is Mux UI's own: do not assign it.</li>
+	<li>Whether assigning a role changes pixels depends on the part: a role read in a state, a portal or a closed overlay changes nothing until that part renders.</li>
+</ul>
+{tokens.groups.map((group) => {
+	const table = (
+		<div class="styling-scroll not-content" data-styling-scroll={`${name} ${group.label.toLowerCase()}`}>
+			<table class="styling-table styling-tokens" data-styling-table={`tokens-${group.id}`}>
+				<caption class="visually-hidden">{name} {group.label.toLowerCase()}: {group.rows.length} roles</caption>
+				<thead>
+					<tr><th scope="col">Role</th><th scope="col">Meaning</th><th scope="col">Policy</th><th scope="col">Default</th></tr>
+				</thead>
+				<tbody>
+					{group.rows.map((row) => {
+						const { alias, lines } = defaults(row);
+						return (
+						<tr>
+							<th scope="row">
+								<TokenInlineMarkup><code>{row.token}</code></TokenInlineMarkup>
+								<span class="styling-sub styling-var">{row.cssVar}</span>
+								{annotation(row) !== null && <span class="styling-sub" data-styling-requirement>{annotation(row)}</span>}
+								{row.readBy !== null && (
+									<span class="styling-sub" data-styling-read-by={row.readBy.kind}>
+										{row.readBy.kind === 'rules'
+											? <Fragment>Read by {row.readBy.selectors.map((read, index) => (
+												<Fragment>{index > 0 && '; '}<code>{read.selector}</code>{read.conditions.length > 0 && <Fragment> ({read.conditions.join(' ')})</Fragment>}{!read.public && <span class="styling-hint"> implementation selector, not a public hook</span>}</Fragment>
+											))}.</Fragment>
+											: row.readBy.note}
+									</span>
+								)}
+							</th>
+							<td>{row.meaning}</td>
+							<td class={row.policy === 'fixed' ? 'styling-fixed' : undefined}>{row.policy}</td>
+							<td>
+								{alias !== null && <span class="styling-alias">{alias}</span>}
+								{lines.map((entry) => (
+									<span class="styling-value">
+										{entry.scheme !== null && <span class="styling-scheme">{entry.scheme}</span>}
+										{entry.alias !== null && <span class="styling-alias">{entry.alias}</span>}
+										{swatch(row.type, entry.value) && <i class="styling-swatch" style={`--s:${entry.value}`} />}{entry.value}
+									</span>
+								))}
+							</td>
+						</tr>
+					);})}
+				</tbody>
+			</table>
+		</div>
+	);
+	return group.collapsed ? (
+		<details class="styling-group not-content" data-styling-group={group.id} data-styling-collapsed>
+			<summary>
+				<h4 id={`styling-tokens-${group.id}`}>{group.label}</h4>
+				<span class="styling-hint">{group.rows.length} roles</span>
+			</summary>
+			<p class="styling-caption">{group.caption}</p>
+			{table}
+		</details>
+	) : (
+		<div class="styling-token-group" data-styling-group={group.id}>
+			<h4 id={`styling-tokens-${group.id}`}>{group.label}</h4>
+			<p class="styling-caption">{group.caption}</p>
+			{table}
+		</div>
+	);
+})}
