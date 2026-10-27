@@ -319,7 +319,7 @@ test('the declaration reference is refused when it is not what the inventory pro
 
 // The styling projection (CSS Stage 2 PR 4a). The derivation and its proofs live in @muxui/react (test/styling-reference.test.mjs);
 // these tests are the interface the docs and Storybook consume: opt-in, the legacy fields untouched, the frozen shape, the root.
-const stylingKeys = ['hooks', 'tokens', 'overrides', 'sources'];
+const stylingKeys = ['hooks', 'tokens', 'overrides', 'recipe', 'sources'];
 // The styling facts name real tokens and parts, so these tests use the real Card record, built as the React tests build theirs.
 const repositoryRecord = (slug) => {
   const raw = JSON.parse(readFileSync(resolve(repositoryRoot, `catalog/components/${slug}/artifact.json`), 'utf8'));

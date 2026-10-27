@@ -14,6 +14,21 @@
 // part's hook). `emittedOn` is what a render showed (an element of that part carried the attribute). Observed element tags, companion
 // hooks and the Rendered DOM are observations of the catalog's examples, labelled with their render, and never a contract.
 //
+// The recipe is copyable CSS for the family, from the same facts and the family's Basic example (its first example). Each step names
+// an element that render shows, so the docs preview can measure it. A token step is made only where the rule that reads the role is
+// the one that wins on that element, found by a small model of the cascade over the shipped components layer: a Button whose variant
+// is danger sets its own colors, so none of the Button color roles is a step for it. The model decides each declaration by importance,
+// specificity, order and position. What it cannot decide (a pseudo-class it does not model, a condition it cannot evaluate, a custom
+// property redeclared on the element itself) it leaves unknown, which is never a step; a declaration that may set the property (a
+// logical counterpart, a shorthand it has no table for) competes as if it did, so a step is dropped where it wins.
+//
+// The model is not complete and cannot be: no static reading of a cascade is complete against an arbitrary stylesheet. It is a
+// conservative generator for the stylesheet that ships, and it is not the authority. The authority is the Chromium sweep
+// (test/browser/styling-recipes.test.mjs, in the `browser-chromium-only` group the planner runs for this module), which applies every
+// generated step to the real stylesheet in light and dark, fails when a step does not change its property, and fails when a step that
+// paints text or its surface leaves it under 3:1. The adversarial cases in `cascade-cases.mjs` are hypothetical future stylesheets; a
+// real stylesheet change that breaks a step is caught by the sweep.
+//
 // Every selector, from the stylesheet, the part map or a reader, goes through one parser (`parseSelectorList`), which throws on syntax it
 // does not model, so a selector is read whole or not at all.
 //
@@ -107,6 +122,31 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  */
 
 /**
+ * One change the recipe makes, with where to read its effect in the Basic example's preview.
+ * @typedef {object} RecipeStep
+ * @property {'token' | 'part' | 'state'} kind
+ * @property {string} selector The selector as printed in `rules`: `.my-scope` for a token step, else the rule's selector.
+ * @property {string} declaration As printed in `rules`, without its semicolon.
+ * @property {string} target The element the effect is read on, a selector evaluated inside the scope wrapper.
+ * @property {string} property The computed longhand to compare before and after.
+ * @property {'wrapper' | 'unavailable'} scope `wrapper`: the target is in the Basic example at rest. `unavailable`: it is not, and
+ *   `reason` says what the preview needs (a state step for a state the example does not show).
+ * @property {string} [reason] Why a step is unavailable.
+ * @property {boolean} observedText The target held text in the observation (else the change is computed only).
+ */
+
+/**
+ * The generated recipe: CSS a consumer can copy, the markup it goes with, and the steps it takes.
+ * @typedef {object} Recipe
+ * @property {string} css The whole recipe: the README's layer statement and import, then `rules`.
+ * @property {string} rules The recipe without the layer statement and the import, which the docs stylesheet already provides.
+ * @property {string} markup The wrapper the tokens and rules are scoped to.
+ * @property {'my-scope'} scope
+ * @property {RecipeStep[]} steps
+ * @property {string[]} notes One sentence for each step that has no candidate, and for roles the examples do not reach.
+ */
+
+/**
  * What `stylingFor` adds to `styling` (beside `anatomy`, `states`, `tokenSource` and `tokenGroups`, which the reference already had).
  * @typedef {object} FamilyStyling
  * @property {{ groups: { id: 'root' | 'part' | 'state' | 'reflected', rows: HookRow[] }[], notSet: HookRow[],
@@ -114,6 +154,7 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @property {{ groups: { id: 'component' | 'semantic', label: string, caption: string, collapsed: boolean, rows: TokenRow[] }[] }} tokens
  * @property {{ paragraphs: string[], layerIntro: string, layerCode: string, layerClosing: string, limit: string, motion: string,
  *   whoWins: WhoWinsRow[], important: { total: number, byCause: Record<string, number> } | null }} overrides
+ * @property {Recipe} recipe
  * @property {string[]} sources Tracked paths behind the Styling block.
  */
 
@@ -1341,6 +1382,484 @@ function importantOf({ rows, facts }) {
   return total === 0 ? null : { total, byCause: ordered };
 }
 
+// ---------------------------------------------------------------------------------------------------------------------------
+// The recipe: CSS a consumer can copy for this family, generated from the same facts, with up to three changes (a theme token,
+// a part and a state). Every step names an element the family's Basic example renders, so what it claims is something the preview
+// can show; a step with no such element is dropped and one sentence says why.
+// ---------------------------------------------------------------------------------------------------------------------------
+
+const recipeScope = 'my-scope';
+/**
+ * Colors a token step assigns. What a role paints decides which: a lone color is a mid-tone (relative luminance about 0.17), 3:1 or
+ * more against the near-white and the near-black the shipped sheet paints text and surfaces with, so it reads against the example's own
+ * text and surface in light and in dark. A text color and a surface color that the same example paints one on the other are assigned
+ * together and get a pair that contrasts with each other in either scheme. The generator does not compute contrast: the Chromium sweep
+ * measures it for every step that paints text or its surface, in light and dark, and fails under 3:1.
+ */
+const recipeMidTones = Object.freeze(['#7e62c9', '#287f72', '#a06724']);
+const recipePair = Object.freeze({ surface: '#1e1b4b', text: '#ffffff' });
+const recipeTokenLimit = 3;
+const recipePart = Object.freeze({ declaration: 'letter-spacing: 0.04em', property: 'letter-spacing' });
+const recipeState = Object.freeze({ declaration: 'text-decoration: line-through', property: 'text-decoration-line' });
+/** Roles that are never a step: label-gap is declared and read by no Mux rule, and a duration is not a color or a size. */
+const neverStepped = /^(?:label-gap|motion-duration|transition)(?:-|$)/u;
+/** Catalog states a consumer can set by hand on the Basic example's element, so a state step on one is printed even when it is not shown. */
+const settableStates = new Set(['disabled', 'read-only', 'required', 'invalid', 'selected', 'expanded', 'open']);
+const statePrefix = 'data-muxui-state-';
+
+const mappedLonghands = Object.freeze({
+  background: 'background-color', 'border-radius': 'border-top-left-radius', 'text-decoration': 'text-decoration-line', padding: 'padding-top',
+  'padding-inline': 'padding-inline-start', 'padding-block': 'padding-block-start', gap: 'row-gap',
+});
+const otherShorthands = /^(?:margin(?:-inline|-block)?|inset(?:-inline|-block)?|outline|font|flex|grid(?:-[\w-]+)?|list-style|overflow|columns|mask|offset|place-[\w-]+|animation|transition|border-width|border-style|border-image|scroll-[\w-]+|text-emphasis)$/u;
+
+/**
+ * The longhand to compare for a declared property, or null when there is none: a custom property, or a shorthand that sets many.
+ * A `border` shorthand compares the color of its first side for a color token and the width for a size.
+ */
+function longhandOf(property, type) {
+  if (property.startsWith('--')) return null;
+  const border = /^border(?:-(top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end))?(?:-(color))?$/u.exec(property);
+  if (border) return `border-${{ inline: 'inline-start', block: 'block-start' }[border[1]] ?? border[1] ?? 'top'}-${border[2] === 'color' || type === 'color' ? 'color' : 'width'}`;
+  if (Object.hasOwn(mappedLonghands, property)) return mappedLonghands[property];
+  return otherShorthands.test(property) ? null : property;
+}
+
+// Which declared property competes with a target longhand. A shorthand sets its longhands, so a rule that declares one competes with a
+// rule that declares the other, in order. A physical longhand and its logical counterpart (`padding-top` and `padding-block-start`) are
+// the same property in some writing mode or direction, and the model does not know which, so a declaration of one may be the target
+// itself. A shorthand it has no table for is unknown for every target: unknown never makes a step.
+
+const physicalSides = Object.freeze(['top', 'right', 'bottom', 'left']);
+const borderKinds = Object.freeze(['color', 'style', 'width']);
+/** The longhands of each shorthand whose longhands do not simply start with its name. */
+const expansions = new Map();
+for (const base of ['margin', 'padding', 'scroll-margin', 'scroll-padding']) {
+  expansions.set(base, physicalSides.map((side) => `${base}-${side}`));
+  for (const axis of ['block', 'inline']) expansions.set(`${base}-${axis}`, [`${base}-${axis}-start`, `${base}-${axis}-end`]);
+}
+expansions.set('inset', [...physicalSides]);
+for (const axis of ['block', 'inline']) expansions.set(`inset-${axis}`, [`inset-${axis}-start`, `inset-${axis}-end`]);
+for (const kind of borderKinds) {
+  expansions.set(`border-${kind}`, physicalSides.map((side) => `border-${side}-${kind}`));
+  for (const axis of ['block', 'inline']) expansions.set(`border-${axis}-${kind}`, [`border-${axis}-start-${kind}`, `border-${axis}-end-${kind}`]);
+}
+for (const side of [...physicalSides, 'block-start', 'block-end', 'inline-start', 'inline-end']) expansions.set(`border-${side}`, borderKinds.map((kind) => `border-${side}-${kind}`));
+for (const axis of ['block', 'inline']) expansions.set(`border-${axis}`, borderKinds.flatMap((kind) => [`border-${axis}-start-${kind}`, `border-${axis}-end-${kind}`]));
+expansions.set('border', physicalSides.flatMap((side) => borderKinds.map((kind) => `border-${side}-${kind}`)));
+expansions.set('border-radius', ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius']);
+expansions.set('gap', ['row-gap', 'column-gap']);
+expansions.set('grid-gap', ['row-gap', 'column-gap']);
+expansions.set('columns', ['column-width', 'column-count']);
+expansions.set('flex-flow', ['flex-direction', 'flex-wrap']);
+expansions.set('place-items', ['align-items', 'justify-items']);
+expansions.set('place-content', ['align-content', 'justify-content']);
+expansions.set('place-self', ['align-self', 'justify-self']);
+expansions.set('grid-area', ['grid-row-start', 'grid-row-end', 'grid-column-start', 'grid-column-end']);
+expansions.set('contain-intrinsic-size', ['contain-intrinsic-width', 'contain-intrinsic-height']);
+/** Shorthands whose longhands start with their name (`background-color`, `font-size`, `transition-duration`). */
+const prefixShorthands = new Set([
+  'animation', 'background', 'border-image', 'column-rule', 'container', 'flex', 'font', 'grid', 'grid-column', 'grid-row', 'grid-template', 'list-style', 'mask', 'offset',
+  'outline', 'overflow', 'overscroll-behavior', 'scroll-timeline', 'text-decoration', 'text-emphasis', 'text-wrap', 'transition', 'view-timeline', 'white-space',
+]);
+/** What a prefix shorthand sets beyond its prefix, and what its prefix names that it does not set. */
+const prefixExtras = Object.freeze({ font: ['line-height'], border: ['border-image-source'] });
+const prefixExceptions = Object.freeze({ outline: ['outline-offset'] });
+/** Shorthands this model has no table for: any of them may set any target. */
+const unmodelledShorthands = new Set(['mask-border', 'position-try', 'font-synthesis']);
+/** `all` sets every property but these, and custom properties. */
+const outsideAll = new Set(['direction', 'unicode-bidi']);
+
+/** The family of a physical or logical longhand and which of the two it is, or null: margins, paddings, insets, border sides, radii, sizes. */
+function aliasFamily(property) {
+  let match;
+  if ((match = /^(margin|padding|scroll-margin|scroll-padding)-(?:top|right|bottom|left)$/u.exec(property))) return [match[1], false];
+  if ((match = /^(margin|padding|scroll-margin|scroll-padding)-(?:block|inline)-(?:start|end)$/u.exec(property))) return [match[1], true];
+  if (/^(?:top|right|bottom|left)$/u.test(property)) return ['inset', false];
+  if (/^inset-(?:block|inline)-(?:start|end)$/u.test(property)) return ['inset', true];
+  if ((match = /^border-(?:top|right|bottom|left)-(color|style|width)$/u.exec(property))) return [`border-${match[1]}`, false];
+  if ((match = /^border-(?:block|inline)-(?:start|end)-(color|style|width)$/u.exec(property))) return [`border-${match[1]}`, true];
+  if (/^border-(?:top|bottom)-(?:left|right)-radius$/u.test(property)) return ['radius', false];
+  if (/^border-(?:start|end)-(?:start|end)-radius$/u.test(property)) return ['radius', true];
+  if ((match = /^(min-|max-)?(?:width|height)$/u.exec(property))) return [`${match[1] ?? ''}size`, false];
+  if ((match = /^(min-|max-)?(?:inline-size|block-size)$/u.exec(property))) return [`${match[1] ?? ''}size`, true];
+  return null;
+}
+const mayAlias = (left, right) => {
+  const [one, other] = [aliasFamily(left), aliasFamily(right)];
+  return one !== null && other !== null && one[0] === other[0] && one[1] !== other[1];
+};
+
+const relations = new Map();
+/**
+ * How a declaration of `declared` bears on `target`: `'same'` (it is the target), `'covers'` (a shorthand that sets it), `'maybe'` (it may be
+ * the target or may set it: a logical counterpart, a logical shorthand of a physical target, a shorthand with no table) or false.
+ * @param {string} declared
+ * @param {string} target
+ * @returns {'same' | 'covers' | 'maybe' | false}
+ */
+export function relation(declared, target) {
+  const key = `${declared}|${target}`;
+  const cached = relations.get(key);
+  if (cached !== undefined) return cached;
+  let result = false;
+  if (declared === target) result = 'same';
+  else if (declared.startsWith('--') || target.startsWith('--') || declared.startsWith('-')) result = false;
+  else if (declared === 'all') result = outsideAll.has(target) ? false : 'covers';
+  else if (expansions.has(declared)) {
+    const longhands = expansions.get(declared);
+    result = longhands.includes(target) || (prefixExtras[declared] ?? []).includes(target) ? 'covers' : longhands.some((longhand) => mayAlias(longhand, target)) ? 'maybe' : false;
+  } else if (prefixShorthands.has(declared)) {
+    result = target.startsWith(`${declared}-`) && !(prefixExceptions[declared] ?? []).includes(target) || (prefixExtras[declared] ?? []).includes(target) ? 'covers' : false;
+  } else if (unmodelledShorthands.has(declared)) result = 'maybe';
+  else if (mayAlias(declared, target)) result = 'maybe';
+  relations.set(key, result);
+  return result;
+}
+
+const mediaHolds = new Set(['@media (forced-colors: none)', '@media not (forced-colors: active)']);
+const mediaNever = new Set(['@media (forced-colors: active)', '@media (prefers-reduced-motion: reduce)', '@media (prefers-contrast: more)']);
+/**
+ * What a rule's at-rule chain means for the Basic example at rest: true when it applies, false when a condition is false at rest (a
+ * forced-colors, reduced-motion or contrast preference) and null when it is unknown. The components layer may sit anywhere in the
+ * chain. A second layer, `@scope`, `@supports`, `@container` and every other media query (a viewport width) are unknown.
+ * @param {string[]} chain
+ * @returns {boolean | null}
+ */
+export function conditionAtRest(chain) {
+  let layers = 0;
+  let result = true;
+  for (const prelude of chain) {
+    if (prelude === '@layer muxui.components') { layers += 1; continue; }
+    if (mediaNever.has(prelude)) return false;
+    if (!mediaHolds.has(prelude)) result = null;
+  }
+  return layers === 1 ? result : null;
+}
+/** Pseudo-classes that need an interaction, so they are false on the Basic example at rest. */
+const interactionPseudos = new Set(['hover', 'active', 'focus', 'focus-visible', 'focus-within']);
+
+/**
+ * What a pseudo-class is on an element of the Basic example at rest. `:not()`, `:is()` and `:where()` are decided by their
+ * arguments and an interaction pseudo-class is false. Every other one (`:disabled`, `:first-child`, `:has()`) is unknown, and unknown
+ * stays unknown through `:not()` and `:is()`: a rule that depends on it is never read as not applying.
+ * @returns {boolean | null}
+ */
+function atRest({ name, selectors }, element) {
+  if (name === 'is' || name === 'where') return anyMatches(selectors, element);
+  if (name === 'not') {
+    const found = anyMatches(selectors, element);
+    return found === null ? null : !found;
+  }
+  // The example's elements are inside the body; none is the document element.
+  if (name === 'root') return false;
+  return interactionPseudos.has(name) ? false : null;
+}
+
+/** Whether some selector of a list matches `element` at rest: true, false, or null when none does for sure and one may. */
+function anyMatches(selectors, element) {
+  let result = false;
+  for (const complex of selectors) {
+    const found = matchAtRest(complex, element);
+    if (found === true) return true;
+    if (found === null) result = null;
+  }
+  return result;
+}
+
+/**
+ * Whether a selector of the sheets matches an element of a render at rest: true, false, or null when a pseudo-class it depends on is unknown.
+ * @param {Complex} complex
+ * @param {ObservedElement} element
+ */
+export const matchAtRest = (complex, element) => matchComplex(complex, element, atRest);
+
+/**
+ * The element `querySelector` returns for a selector of the sheets in a render, when the model can say: the first element in
+ * document order that definitely matches it, unless an earlier one may (a pseudo-class it does not model), in which case the browser
+ * may return that one and the target is unknown.
+ */
+function firstMatch(parsed, complex) {
+  for (const element of parsed.elements) {
+    const found = matchAtRest(complex, element);
+    if (found === true) return element;
+    if (found === null) return undefined;
+  }
+  return undefined;
+}
+
+const addPairs = ([left, leftTypes], [right, rightTypes]) => [left + right, leftTypes + rightTypes];
+const higher = (left, right) => (left[0] !== right[0] ? left[0] > right[0] : left[1] > right[1]);
+/** A selector's specificity as [classes, attributes and pseudo-classes; types and pseudo-elements]; the sheets use no ids. */
+function specificityOf(complex) {
+  let total = [0, 0];
+  for (const compound of complex.compounds) {
+    total = addPairs(total, [compound.classes.length + compound.attributes.length, (compound.tag === undefined ? 0 : 1) + (compound.element === null ? 0 : 1)]);
+    for (const { name, selectors } of compound.pseudos) {
+      if (name === 'where') continue;
+      // `:not()`, `:is()` and `:has()` weigh as their most specific argument; any other pseudo-class as one class.
+      total = addPairs(total, selectors ? selectors.map(specificityOf).reduce((best, next) => (higher(next, best) ? next : best), [0, 0]) : [1, 0]);
+    }
+  }
+  return total;
+}
+
+/**
+ * Every declaration of the shipped components layer that can apply at rest, by the property it names, with what the cascade compares:
+ * importance, the selector's specificity, the rule's order and the declaration's position in its block. A rule under a condition
+ * that is false at rest is left out; one under a condition the model cannot decide (a color-scheme `@scope`, a viewport query) is
+ * kept as unknown, so it makes the winner unknown wherever its selector may match.
+ */
+const declarationIndexes = new WeakMap();
+function declarationIndex(facts) {
+  const cached = declarationIndexes.get(facts);
+  if (cached) return cached;
+  const index = new Map();
+  facts.rules.forEach((rule, order) => {
+    const condition = conditionAtRest(rule.chain);
+    if (condition === false) return;
+    for (const complex of rule.selectors) {
+      // A rule on a pseudo-element styles that, not the element.
+      if (complex.compounds.at(-1).element !== null) continue;
+      const specificity = specificityOf(complex);
+      rule.declarations.forEach(({ property, value, important }, position) => {
+        const entries = index.get(property) ?? [];
+        entries.push({ complex, specificity, order, position, value, important, unknown: condition === null });
+        index.set(property, entries);
+      });
+    }
+  });
+  declarationIndexes.set(facts, index);
+  return index;
+}
+
+/** Whether `left` beats `right` in the cascade: importance, specificity, rule order, then position in the block. */
+const beats = (left, right) => (left.important !== right.important ? left.important
+  : left.specificity[0] !== right.specificity[0] || left.specificity[1] !== right.specificity[1] ? higher(left.specificity, right.specificity)
+    : left.order !== right.order ? left.order > right.order : left.position > right.position);
+
+/**
+ * The declaration that wins for `element` among those that set `property`, a shorthand that covers it, or a declaration that may set it
+ * (see `relation`: a logical counterpart, a shorthand with no table). Declarations are compared one by one, so a later shorthand beats an
+ * earlier longhand of the same rule and an `!important` one beats a later normal one, as the browser decides it. One that may set the
+ * property competes as if it did: when it wins the property is not the reader's, and when it loses the reader wins whether or not it
+ * applies. Null when a rule that may apply is unknown (see `atRest`) or is under a condition the model cannot decide, because then the
+ * winner is not known. Undefined when nothing applies.
+ */
+function winnerOf(index, element, property) {
+  let best;
+  for (const [name, entries] of index) {
+    if (relation(name, property) === false) continue;
+    for (const entry of entries) {
+      const found = matchAtRest(entry.complex, element);
+      if (found === false) continue;
+      if (found === null || entry.unknown) return null;
+      if (!best || beats(entry, best)) best = entry;
+    }
+  }
+  return best;
+}
+
+/**
+ * The custom properties a value reads with `var()`: those it reads first (`primary`), and those that only appear in the fallback of
+ * another (`fallback`). A role that is only a fallback is reached by an assignment only if the primary one is unset, which the model
+ * cannot know.
+ */
+export function varReads(value) {
+  const primary = new Set();
+  const fallback = new Set();
+  const scan = (text, inFallback) => {
+    for (let index = 0; index < text.length; index += 1) {
+      if (!text.startsWith('var(', index) || /[\w-]/u.test(text[index - 1] ?? '')) continue;
+      let depth = 1;
+      let end = index + 4;
+      for (; end < text.length && depth > 0; end += 1) depth += text[end] === '(' ? 1 : text[end] === ')' ? -1 : 0;
+      const inner = text.slice(index + 4, end - 1);
+      const comma = inner.indexOf(',');
+      (inFallback ? fallback : primary).add((comma < 0 ? inner : inner.slice(0, comma)).trim());
+      if (comma >= 0) scan(inner.slice(comma + 1), true);
+      index = end - 1;
+    }
+  };
+  scan(value, false);
+  return { primary, fallback };
+}
+const readsVariable = (value, name) => varReads(value).primary.has(name);
+
+/** Whether a declaration of the custom property `name` may reach `element` or an ancestor in the render: it then shadows what a wrapper assigns. */
+function shadowed(index, element, name) {
+  for (let node = element; node && node.tag !== '#root'; node = node.parent) if (winnerOf(index, node, name) !== undefined) return true;
+  return false;
+}
+
+/**
+ * The property a token finally paints on `element`, or null when some other rule wins there. A rule often reads a token into a local
+ * custom property that another rule paints with, so up to two such hops are followed, and at each the declaration that wins for the
+ * element must be the one that reads the name before it. A Button's danger variant sets that custom property itself, so a Button
+ * role never reaches it.
+ */
+function paintedBy({ element, source, property, type, index, facts, hops = 0 }) {
+  const target = property.startsWith('--') ? property : longhandOf(property, type);
+  if (!target) return null;
+  const winner = winnerOf(index, element, target);
+  if (!winner || !readsVariable(winner.value, source)) return null;
+  // The role is assigned on a wrapper and inherited down: a declaration of it on the element or an ancestor of the example wins over that.
+  if (hops === 0 && shadowed(index, element, source)) return null;
+  if (!property.startsWith('--')) return target;
+  if (hops >= 2) return null;
+  for (const next of unique((facts.tokens.reads.get(property) ?? []).map(({ property: painted }) => painted))) {
+    const painted = paintedBy({ element, source: property, property: next, type, index, facts, hops: hops + 1 });
+    if (painted) return painted;
+  }
+  return null;
+}
+
+const hasText = (element) => element.text.trim() !== '';
+/** The first element of a render that a chain of compounds matches, or undefined. */
+const first = (parsed, selector) => selectObserved(parsed, selector)[0];
+
+/** Whether a token row could be a step: a theme color, or a size in a unit a sum can use, that a Mux rule reads and that is not a never-stepped role. */
+const canBeStep = (row) => row.group === 'component' && row.policy === 'theme' && ['color', 'dimension'].includes(row.type) && row.readBy.kind === 'rules'
+  && !neverStepped.test(row.token.split('.').at(-1)) && (row.type === 'color' || /^-?(?:\d+|\d*\.\d+)(?:px|rem|em)$/u.test(row.light));
+
+/** The wrapper-scoped token steps: at most three theme color and size roles that win on the first element the Basic example shows for their rule. */
+function tokenSteps({ tokenRows, basic, rootElements, facts }) {
+  const inRoot = (element) => rootElements.includes(element) || insideAny(element, rootElements);
+  const index = declarationIndex(facts);
+  const candidates = [];
+  for (const row of tokenRows) {
+    if (!canBeStep(row)) continue;
+    // A reader may be qualified by pseudo-classes (`:where(.x):not([data-muxui-state-invalid]) .label`); it counts where the Basic
+    // example definitely matches it, and not where a pseudo-class is unknown.
+    const found = row.readBy.selectors.flatMap((reader) => parseSelectorList(reader.selector).flatMap((complex) => {
+      const element = firstMatch(basic.parsed, complex);
+      const property = element && inRoot(element) && paintedBy({ element, source: row.cssVar, property: reader.property, type: row.type, index, facts });
+      return property ? [{ row, target: complex.text, property, element }] : [];
+    }));
+    // Every element the role paints, for pairing; the first is the step.
+    if (found.length > 0) candidates.push({ ...found[0], paints: found });
+  }
+  // One size when there is one (a radius first), and colors for the rest.
+  const size = candidates.find(({ row, property }) => row.type === 'dimension' && /radius/u.test(property)) ?? candidates.find(({ row }) => row.type === 'dimension');
+  const colors = candidates.filter(({ row }) => row.type === 'color').slice(0, recipeTokenLimit - (size ? 1 : 0));
+  // A text color drawn on a surface color that this recipe also assigns: the two get a pair that contrasts.
+  const paired = new Map();
+  for (const surface of colors) {
+    const surfaces = surface.paints.filter(({ property }) => property === 'background-color').map(({ element }) => element);
+    const text = colors.find((candidate) => candidate !== surface && candidate.property === 'color' && !paired.has(candidate) && surfaces.some((element) => candidate.element === element || insideAny(candidate.element, [element])));
+    if (text && !paired.has(surface)) { paired.set(surface, recipePair.surface); paired.set(text, recipePair.text); }
+  }
+  let single = 0;
+  const colorValue = (candidate) => paired.get(candidate) ?? recipeMidTones[single++];
+  return [...colors, ...(size ? [size] : [])].map((candidate) => {
+    const { row, target, property, element } = candidate;
+    const value = row.type === 'color' ? colorValue(candidate) : /radius/u.test(property) ? '999px' : `calc(${row.light} + 0.5rem)`;
+    return { kind: 'token', selector: `.${recipeScope}`, declaration: `${row.cssVar}: ${value}`, target, property, scope: 'wrapper', observedText: hasText(element) };
+  });
+}
+
+/** The part step: the first part with text inside the root, else the root, else the first part inside the root. */
+function partStep({ classRows, basic, rootElements, observed }) {
+  const inRoot = (element) => rootElements.includes(element) || insideAny(element, rootElements);
+  const rootPart = observed.rootRow?.part;
+  const found = classRows.filter(({ hook }) => hook !== null).flatMap((row) => {
+    const element = first(basic.parsed, row.hook);
+    return element && inRoot(element) ? [{ row, element }] : [];
+  });
+  const pick = found.find(({ row, element }) => row.part !== rootPart && hasText(element)) ?? found.find(({ row }) => row.part === rootPart) ?? found[0];
+  if (!pick) return null;
+  return { kind: 'part', selector: `.${recipeScope} ${pick.row.hook}`, declaration: recipePart.declaration, target: pick.row.hook, property: recipePart.property, scope: 'wrapper', observedText: hasText(pick.element) };
+}
+
+/**
+ * The state step. The first boolean state row, in the order the Hooks block prints them, whose attribute the Basic example shows on an
+ * element inside the root; else the first catalog boolean a consumer can set by hand, marked unavailable because the example does not show it.
+ */
+function stateStep({ stateRowList, classRows, basic, rootElements, facts }) {
+  const inRoot = (element) => rootElements.includes(element) || insideAny(element, rootElements);
+  const hooks = classRows.filter(({ hook }) => hook !== null);
+  const hookOf = (part) => hooks.find((row) => row.part === part)?.hook;
+  // A state is a boolean attribute; an enumerated one (layout, orientation) is always present and shows nothing by being there.
+  const rows = stateRowList.filter(({ origin, hook }) => (origin === 'catalog' || origin === 'observed') && hook.startsWith(statePrefix) && facts.contract.booleanStates.includes(hook.slice(statePrefix.length)));
+  const step = (row, hook, element, extra) => ({
+    kind: 'state', selector: `.${recipeScope} ${hook}[${row.hook}]`, declaration: recipeState.declaration, target: `${hook}[${row.hook}]`,
+    property: recipeState.property, observedText: hasText(element), ...extra,
+  });
+  for (const row of rows) {
+    for (const { hook } of hooks) {
+      const element = first(basic.parsed, `${hook}[${row.hook}]`);
+      if (element && inRoot(element)) return step(row, hook, element, { scope: 'wrapper' });
+    }
+  }
+  for (const row of rows.filter(({ hook }) => settableStates.has(hook.slice(statePrefix.length)))) {
+    for (const part of row.selectedOn) {
+      const hook = hookOf(part);
+      const element = hook && first(basic.parsed, hook);
+      if (element && inRoot(element)) return step(row, hook, element, { scope: 'unavailable', reason: 'needs the state' });
+    }
+  }
+  return null;
+}
+
+/** The layer statement and the stylesheet import, from the README's own code block. */
+function recipeHeader(facts) {
+  const lines = facts.cascade.layerCode.split('\n');
+  const statement = lines[0];
+  const stylesImport = lines.find((line) => /^@import\b.*styles\.css/u.test(line));
+  if (!statement.startsWith('@layer ') || !stylesImport) throw new Error('the README layer code is no longer a layer statement and an import of styles.css');
+  return [statement, stylesImport];
+}
+
+/**
+ * The recipe for one family. Without a render of its Basic example no target is known, so the recipe has no steps and says so.
+ * @param {object} input
+ */
+function recipeFor({ name, tokenRows, classRows, stateRowList, observed, examples, facts }) {
+  const [statement, stylesImport] = recipeHeader(facts);
+  const basicSource = examples[0]?.source.content;
+  const render = observed.renders.find(({ source }) => source === basicSource) ?? observed.renders[0];
+  const notes = [];
+  const noRoot = observed.rootRow?.disposition === 'none';
+  const rootElements = render ? (observed.rootElements.get(render.source) ?? []) : [];
+  const basic = render && { source: render.source, parsed: render.parsed };
+  const steps = [];
+  if (!basic) {
+    notes.push('No steps: no example render was supplied, so the recipe cannot name an element the example shows.');
+  } else {
+    const tokens = rootElements.length > 0 ? tokenSteps({ tokenRows, basic, rootElements, facts }) : [];
+    if (tokens.length === 0) {
+      notes.push(!tokenRows.some(({ group }) => group === 'component') ? `No token step: ${name} has no component roles.`
+        : !tokenRows.some(canBeStep) ? `No token step: ${name} has no color or size role that a Mux rule reads.`
+          : `No token step: no color or size role of ${name} is read by a rule that provably wins on an element its Basic example renders at rest. They can apply inside overlays, in states or in variants the example does not show; assign them on the theme scope that contains the portal container (README, Cascade layers).`);
+    }
+    const part = partStep({ classRows, basic, rootElements, observed });
+    if (!part) notes.push(`No part step: the Basic example renders no element of ${name}'s documented hooks${noRoot ? `, and its root renders no element (${noElementPhrases[observed.rootRow.reason]})` : ''}.`);
+    const state = stateStep({ stateRowList, classRows, basic, rootElements, facts });
+    if (!state) notes.push(`No state step: ${name} declares no state its Basic example shows or that you can set by hand.`);
+    steps.push(...tokens, ...[part, state].filter(Boolean));
+  }
+  const tokenStepList = steps.filter(({ kind }) => kind === 'token');
+  const ruleSteps = steps.filter(({ kind }) => kind !== 'token');
+  const sections = [];
+  const numbered = (title) => `/* ${sections.length + 1}. ${title} */`;
+  if (tokenStepList.length > 0) {
+    sections.push(`${numbered('Tokens: assign on a wrapper that contains the component (theme policy)')}\n.${recipeScope} {\n${tokenStepList.map(({ declaration }) => `  ${declaration};`).join('\n')}\n}`);
+  }
+  if (ruleSteps.length > 0) {
+    const kinds = ruleSteps.map(({ kind }) => `a ${kind} hook`).join(' and ');
+    sections.push(`${numbered(`${kinds.charAt(0).toUpperCase()}${kinds.slice(1)}, in your layer`)}\n@layer muxui.utilities {\n${ruleSteps.map(({ selector, declaration }) => `  ${selector} { ${declaration}; }`).join('\n')}\n}`);
+  }
+  const rules = sections.length > 0 ? `${sections.join('\n\n')}\n` : '';
+  return {
+    css: `${statement}\n${stylesImport}\n${rules === '' ? '' : `\n${rules}`}`,
+    rules,
+    markup: `<div className="${recipeScope}">\n  {/* your ${name}, as in the Basic example */}\n</div>\n`,
+    scope: recipeScope,
+    steps,
+    notes,
+  };
+}
+
 const partMapPath = 'packages/react/test/support/styling-parts.ts';
 const referencePath = 'packages/react/test/support/styling-reference.mjs';
 const tokenRecordPath = 'catalog/tokens/default-theme.json';
@@ -1406,6 +1925,7 @@ export function stylingFor({ slug, artifact, examples = [], facts, observations 
       whoWins: whoWinsRows,
       important: importantOf({ rows, facts }),
     },
+    recipe: recipeFor({ name, tokenRows: tokens.flatMap(({ rows: list }) => list), classRows, stateRowList: states, observed, examples, facts }),
     sources: sourcePaths({ rows, observed, facts }),
   });
 }

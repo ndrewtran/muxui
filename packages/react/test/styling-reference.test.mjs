@@ -943,8 +943,14 @@ test('the object is plain data: deeply frozen, JSON-safe, deterministic, with th
     assert.ok(isFrozen(styling), `${slug} is deeply frozen`);
     assert.deepEqual(JSON.parse(JSON.stringify(styling)), styling, `${slug} survives JSON unchanged (no undefined, no Map)`);
     assert.deepEqual(stylingOf(slug), styling, `${slug} is deterministic`);
-    assert.deepEqual(Object.keys(styling), ['hooks', 'tokens', 'overrides', 'sources']);
+    assert.deepEqual(Object.keys(styling), ['hooks', 'tokens', 'overrides', 'recipe', 'sources']);
     assert.deepEqual(Object.keys(styling.hooks), ['groups', 'notSet', 'renderedDom', 'observationNote']);
+    assert.deepEqual(Object.keys(styling.recipe), ['css', 'rules', 'markup', 'scope', 'steps', 'notes']);
+    for (const step of styling.recipe.steps) {
+      const keys = ['kind', 'selector', 'declaration', 'target', 'property', 'scope', 'observedText'];
+      assert.deepEqual(Object.keys(step).sort(), (step.scope === 'unavailable' ? [...keys, 'reason'] : keys).sort(), `${slug}: ${step.declaration}`);
+      assert.ok(['token', 'part', 'state'].includes(step.kind) && ['wrapper', 'unavailable'].includes(step.scope) && typeof step.observedText === 'boolean', `${slug}: ${step.declaration}`);
+    }
     assert.deepEqual(styling.hooks.groups.map(({ id }) => id), ['root', 'part', 'state', 'reflected'].filter((id) => styling.hooks.groups.some((group) => group.id === id)));
     const parts = new Set(partRows.filter((row) => row.family === slug).map((row) => row.part));
     for (const { id, rows } of styling.hooks.groups) {
@@ -979,6 +985,8 @@ test('every object the reference returns has the keys its typedef declares: none
     ['ReadBy', readByList],
     ['ReadSelector', readByList.flatMap(({ selectors }) => selectors)],
     ['WhoWinsRow', rows((styling) => styling.overrides.whoWins)],
+    ['Recipe', rows((styling) => [styling.recipe])],
+    ['RecipeStep', rows((styling) => styling.recipe.steps)],
   ];
   for (const [typeName, list] of instances) {
     const declared = declaredProperties(typeName);

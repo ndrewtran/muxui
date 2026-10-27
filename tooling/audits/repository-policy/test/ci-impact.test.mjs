@@ -4582,13 +4582,15 @@ test('a change to the part map runs the Storybook anatomy proof, the docs, the F
   const reactTestReferenceSources = await reactTestTexts();
   const result = await plan([partMapPath], { ...edited(partMapPath), reactTestReferenceSources });
   // Only the tests that read it by name, directly or through the styling reference, which names it: the shared styling test, the
-  // emission test and the hookOnly browser test read it; the reference and What-wins tests (static and Chromium) import the
+  // emission test and the hookOnly browser test read it; the reference, recipe and What-wins tests (static and Chromium) import the
   // reference that derives from it. types.test.tsx imports it as `.js` and the test tsconfig does not name it, so the text scan does not
   // follow a tsconfig into the five tests that mention one.
   assert.deepEqual(result.reactTestFiles, [
     'test/browser/hook-only-reach.test.mjs',
     'test/browser/styling-overrides.test.mjs',
+    'test/browser/styling-recipes.test.mjs',
     'test/styling-emission.test.mjs',
+    'test/styling-recipes.test.mjs',
     'test/styling-reference.test.mjs',
     'test/styling-tokens.test.mjs',
   ]);
