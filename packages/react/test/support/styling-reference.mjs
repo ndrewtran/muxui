@@ -1772,10 +1772,47 @@ function partStep({ classRows, basic, rootElements, observed }) {
 }
 
 /**
+ * Why elements that the Basic example renders are not a target. A step is made only for an element inside the family's root, because
+ * the wrapper goes around the root; when the root has no element in the example the generator cannot show that a hook it does render is
+ * inside it (it may be a portal, a sibling or part of the caller's markup).
+ */
+function unreached({ name, seen, rootElements, observed }) {
+  const they = seen.length === 1 ? 'it is' : 'they are';
+  if (rootElements.length > 0) return `${they} outside ${name}'s root element`;
+  const root = observed.rootRow;
+  const why = root?.disposition === 'none' ? `${name}'s root renders no element (${noElementPhrases[root.reason]})` : `${name}'s root renders no element in that example`;
+  return `${why}, so the generator cannot show that ${they} inside the root`;
+}
+
+/** The note for a family with no part step: no documented hook is rendered, or some are and cannot be shown inside the root. */
+function partNote({ name, classRows, basic, rootElements, observed }) {
+  const seen = unique(classRows.map(({ hook }) => hook).filter((hook) => hook !== null && first(basic.parsed, hook)));
+  if (seen.length === 0) return `No part step: the Basic example renders no element of ${name}'s documented hooks.`;
+  return `No part step: the Basic example renders ${seen.join(', ')}, but ${unreached({ name, seen, rootElements, observed })}. A part rule is scoped to a wrapper around the component, so its target has to be inside the component's root to be reached.`;
+}
+
+/**
+ * The note for a family with no token step and no role dropped for contrast: it has no role, none a rule reads, or the rules that read
+ * its roles match nothing the Basic example renders or cannot be shown to win there.
+ */
+function tokenNote({ name, tokenRows, basic }) {
+  if (!tokenRows.some(({ group }) => group === 'component')) return `No token step: ${name} has no component roles.`;
+  const eligible = tokenRows.filter(canBeStep);
+  if (eligible.length === 0) return `No token step: ${name} has no color or size role that a Mux rule reads.`;
+  const readers = eligible.flatMap(({ readBy }) => readBy.selectors.map(({ selector }) => selector));
+  if (readers.some((selector) => parseSelectorList(selector).some((complex) => basic.parsed.elements.some((element) => matchAtRest(complex, element) !== false)))) {
+    return `No token step: rules that read ${name}'s color or size roles match elements its Basic example renders, but the generator cannot show that a role is what paints any of them (another rule may win, or a state it cannot decide may apply).`;
+  }
+  return `No token step: no rule that reads ${name}'s color or size roles matches an element its Basic example renders (for example ${readers[0]}), so a role assigned on a wrapper would change nothing there.`;
+}
+
+/**
  * The state step. The first boolean state row, in the order the Hooks block prints them, whose attribute the Basic example shows on an
  * element inside the root; else the first catalog boolean a consumer can set by hand, marked unavailable because the example does not show it.
+ * Without a step it returns the reason, written from what the example renders (see `unreached`).
+ * @returns {{ step: object } | { note: string }}
  */
-function stateStep({ stateRowList, classRows, basic, rootElements, facts }) {
+function stateStep({ name, states, stateRowList, classRows, basic, rootElements, observed, facts }) {
   const inRoot = (element) => rootElements.includes(element) || insideAny(element, rootElements);
   const hooks = classRows.filter(({ hook }) => hook !== null);
   const hookOf = (part) => hooks.find((row) => row.part === part)?.hook;
@@ -1788,17 +1825,29 @@ function stateStep({ stateRowList, classRows, basic, rootElements, facts }) {
   for (const row of rows) {
     for (const { hook } of hooks) {
       const element = first(basic.parsed, `${hook}[${row.hook}]`);
-      if (element && inRoot(element)) return step(row, hook, element, { scope: 'wrapper' });
+      if (element && inRoot(element)) return { step: step(row, hook, element, { scope: 'wrapper' }) };
     }
   }
-  for (const row of rows.filter(({ hook }) => settableStates.has(hook.slice(statePrefix.length)))) {
+  const settable = rows.filter(({ hook }) => settableStates.has(hook.slice(statePrefix.length)));
+  for (const row of settable) {
     for (const part of row.selectedOn) {
       const hook = hookOf(part);
       const element = hook && first(basic.parsed, hook);
-      if (element && inRoot(element)) return step(row, hook, element, { scope: 'unavailable', reason: 'needs the state' });
+      if (element && inRoot(element)) return { step: step(row, hook, element, { scope: 'unavailable', reason: 'needs the state' }) };
     }
   }
-  return null;
+  const names = (list) => list.map(({ hook }) => hook.slice(statePrefix.length)).join(', ');
+  if (rows.length === 0) return { note: `No state step: none of ${name}'s declared states (${states.join(', ')}) is a boolean data-muxui-state-* attribute, which a state step needs.` };
+  if (settable.length === 0) return { note: `No state step: ${name}'s Basic example shows none of its boolean states (${names(rows)}) on a documented hook inside its root, and none is one a recipe sets by hand (${[...settableStates].join(', ')}).` };
+  // The settable states that a rule selects on a hook of the family: those are the ones a hook could carry.
+  const selected = settable.filter(({ selectedOn }) => selectedOn.some(hookOf));
+  const one = (list, singular, plural) => (list.length === 1 ? singular : plural);
+  if (selected.length === 0) return { note: `No state step: ${names(settable)} ${one(settable, 'is', 'are')} declared, but no Mux rule selects ${one(settable, 'it', 'them')} on a hook of ${name}, so the recipe has no hook to put ${one(settable, 'it', 'them')} on.` };
+  const hookNames = unique(selected.flatMap(({ selectedOn }) => selectedOn).map(hookOf).filter(Boolean));
+  const declared = `${names(selected)} ${one(selected, 'is', 'are')} declared and selected on ${hookNames.join(', ')}`;
+  const seen = hookNames.filter((hook) => first(basic.parsed, hook));
+  if (seen.length === 0) return { note: `No state step: ${declared}, but the Basic example does not render ${one(hookNames, 'that hook', 'any of those hooks')}.` };
+  return { note: `No state step: ${declared}. The Basic example renders ${seen.join(', ')}, but ${unreached({ name, seen, rootElements, observed })}.` };
 }
 
 /** The layer statement and the stylesheet import, from the README's own code block. */
@@ -1814,12 +1863,11 @@ function recipeHeader(facts) {
  * The recipe for one family. Without a render of its Basic example no target is known, so the recipe has no steps and says so.
  * @param {object} input
  */
-function recipeFor({ name, tokenRows, classRows, stateRowList, observed, examples, facts }) {
+function recipeFor({ name, states, tokenRows, classRows, stateRowList, observed, examples, facts }) {
   const [statement, stylesImport] = recipeHeader(facts);
   const basicSource = examples[0]?.source.content;
   const render = observed.renders.find(({ source }) => source === basicSource) ?? observed.renders[0];
   const notes = [];
-  const noRoot = observed.rootRow?.disposition === 'none';
   const rootElements = render ? (observed.rootElements.get(render.source) ?? []) : [];
   const basic = render && { source: render.source, parsed: render.parsed };
   const steps = [];
@@ -1827,15 +1875,11 @@ function recipeFor({ name, tokenRows, classRows, stateRowList, observed, example
     notes.push('No steps: no example render was supplied, so the recipe cannot name an element the example shows.');
   } else {
     const tokens = rootElements.length > 0 ? tokenSteps({ tokenRows, basic, rootElements, facts }) : [];
-    if (tokens.length === 0) {
-      notes.push(!tokenRows.some(({ group }) => group === 'component') ? `No token step: ${name} has no component roles.`
-        : !tokenRows.some(canBeStep) ? `No token step: ${name} has no color or size role that a Mux rule reads.`
-          : `No token step: no color or size role of ${name} is read by a rule that provably wins on an element its Basic example renders at rest. They can apply inside overlays, in states or in variants the example does not show; assign them on the theme scope that contains the portal container (README, Cascade layers).`);
-    }
+    if (tokens.length === 0) notes.push(tokenNote({ name, tokenRows, basic }));
     const part = partStep({ classRows, basic, rootElements, observed });
-    if (!part) notes.push(`No part step: the Basic example renders no element of ${name}'s documented hooks${noRoot ? `, and its root renders no element (${noElementPhrases[observed.rootRow.reason]})` : ''}.`);
-    const state = stateStep({ stateRowList, classRows, basic, rootElements, facts });
-    if (!state) notes.push(`No state step: ${name} declares no state its Basic example shows or that you can set by hand.`);
+    if (!part) notes.push(partNote({ name, classRows, basic, rootElements, observed }));
+    const { step: state, note } = stateStep({ name, states, stateRowList, classRows, basic, rootElements, observed, facts });
+    if (!state) notes.push(note);
     steps.push(...tokens, ...[part, state].filter(Boolean));
   }
   const tokenStepList = steps.filter(({ kind }) => kind === 'token');
@@ -1925,7 +1969,7 @@ export function stylingFor({ slug, artifact, examples = [], facts, observations 
       whoWins: whoWinsRows,
       important: importantOf({ rows, facts }),
     },
-    recipe: recipeFor({ name, tokenRows: tokens.flatMap(({ rows: list }) => list), classRows, stateRowList: states, observed, examples, facts }),
+    recipe: recipeFor({ name, states: artifact.states, tokenRows: tokens.flatMap(({ rows: list }) => list), classRows, stateRowList: states, observed, examples, facts }),
     sources: sourcePaths({ rows, observed, facts }),
   });
 }

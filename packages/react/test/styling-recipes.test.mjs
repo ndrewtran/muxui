@@ -192,7 +192,8 @@ test('the picks: which families get a token step and which of their roles, how m
     'text-field': ['--muxui-component-textfield-label: #7e62c9'],
   });
   // A family with roles and no token step says why, and the reason is the one that holds: Activity's only role is a transition, which is
-  // never a step; the others have color or size roles that only an overlay, a state or a variant the Basic example does not show reads.
+  // never a step; for the others no rule that reads a color or size role matches an element the Basic example renders (checked against
+  // the example by jsdom in the notes test below).
   const reachless = slugs.filter((slug) => all.get(slug).tokens.groups.some(({ id }) => id === 'component') && declarations(slug, 'token').length === 0);
   assert.deepEqual(reachless, ['activity', 'code-block', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar']);
   const tokenNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step'));
@@ -200,7 +201,7 @@ test('the picks: which families get a token step and which of their roles, how m
   const roles = (slug) => all.get(slug).tokens.groups.flatMap(({ id, rows }) => (id === 'component' ? rows : []));
   assert.deepEqual(roles('activity').map(({ type }) => type), ['transition']);
   for (const slug of reachless.filter((candidate) => candidate !== 'activity')) {
-    assert.match(tokenNote(slug), /^No token step: no color or size role of [A-Za-z]+ is read by a rule that provably wins on an element its Basic example renders at rest\. They can apply inside overlays, in states or in variants the example does not show; assign them on the theme scope that contains the portal container \(README, Cascade layers\)\.$/u, slug);
+    assert.match(tokenNote(slug), /^No token step: no rule that reads [A-Za-z]+'s color or size roles matches an element its Basic example renders \(for example .+\), so a role assigned on a wrapper would change nothing there\.$/u, slug);
     assert.ok(roles(slug).some(({ type, policy }) => policy === 'theme' && ['color', 'dimension'].includes(type)), `${slug} has a color or size role to explain`);
   }
   for (const slug of Object.keys(tokens)) assert.equal(tokenNote(slug), undefined, `${slug} has a token step and no such note`);
@@ -223,7 +224,6 @@ test('a closed overlay\'s portal parts are never a target, and a provider with n
     assert.ok(targets(slug).every((target) => !/popover|popup/u.test(target)), slug);
   }
   assert.deepEqual(all.get('alert-dialog').recipe.steps, []);
-  assert.match(all.get('alert-dialog').recipe.notes.join('\n'), /root renders no element \(a provider\)/u);
   assert.deepEqual(all.get('dialog').recipe.steps, []);
 });
 
@@ -329,7 +329,7 @@ test('a pseudo-qualified reader is decided on the Basic example: TextField\'s la
   assert.notEqual(html, basic.html);
   const invalid = stylingOf('text-field', { observations: observations.map((observation) => (observation === basic ? { ...observation, html } : observation)) });
   assert.deepEqual(label(invalid), [], 'the reader needs a TextField that is not invalid');
-  assert.match(invalid.recipe.notes.find((note) => note.startsWith('No token step')), /provably wins on an element its Basic example renders at rest/u);
+  assert.equal(invalid.recipe.notes.find((note) => note.startsWith('No token step')), 'No token step: no rule that reads TextField\'s color or size roles matches an element its Basic example renders (for example :where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label), so a role assigned on a wrapper would change nothing there.');
 });
 
 test('a textarea\'s value is the target\'s text: a part step on it is observed text, and an empty one is computed only', () => {
@@ -341,6 +341,100 @@ test('a textarea\'s value is the target\'s text: a part step on it is observed t
   assert.deepEqual([part(swapped(withoutLabel)).target, part(swapped(withoutLabel)).observedText], ['.muxui-text-area', false], 'with no text anywhere the root is the target and holds none');
   const filled = withoutLabel.replace('></textarea>', '>Saved &amp; ready</textarea>');
   assert.deepEqual([part(swapped(filled)).target, part(swapped(filled)).observedText], ['.muxui-text-area__textarea', true], 'the value is text, so the textarea is the part with text');
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// The notes: each says what the Basic example renders and why that is not a step, and agrees with the example read by jsdom.
+// ---------------------------------------------------------------------------------------------------------------------------
+
+const notesOf = (slug, start, styling = all.get(slug)) => styling.recipe.notes.filter((note) => note.startsWith(start));
+const basicDocument = (slug) => new JSDOM(observations.find(({ family, source }) => family === slug && source.endsWith('/basic.tsx')).html).window.document;
+/** The documented class hooks of a family's Hooks rows, in the order the rows print them. */
+const documentedHooks = (slug) => all.get(slug).hooks.groups.flatMap(({ rows }) => rows).filter(({ kind, hook }) => kind === 'class' && hook !== null).map(({ hook }) => hook);
+const scopedRule = 'A part rule is scoped to a wrapper around the component, so its target has to be inside the component\'s root to be reached.';
+
+test('a missing part step says what the Basic example renders: nothing, or a hook the generator cannot show inside the root', () => {
+  // The generator rejects a candidate for want of the root as an ancestor; it does not say the example lacks the element.
+  assert.deepEqual(notesOf('menu', 'No part step'), [`No part step: the Basic example renders .muxui-menu__item, but Menu's root renders no element in that example, so the generator cannot show that it is inside the root. ${scopedRule}`]);
+  assert.deepEqual(notesOf('alert-dialog', 'No part step'), [`No part step: the Basic example renders .muxui-alert-dialog__trigger, but AlertDialog's root renders no element (a provider), so the generator cannot show that it is inside the root. ${scopedRule}`]);
+  assert.deepEqual(notesOf('dialog', 'No part step'), ['No part step: the Basic example renders no element of Dialog\'s documented hooks.']);
+  // Against the example as jsdom reads it, for every family without a part step, and against the Rendered DOM block the page prints.
+  const without = slugs.filter((slug) => notesOf(slug, 'No part step').length > 0);
+  assert.deepEqual(without, ['alert-dialog', 'dialog', 'menu', 'popover', 'preview-trigger', 'toast', 'tooltip']);
+  for (const slug of without) {
+    const document = basicDocument(slug);
+    const rendered = documentedHooks(slug).filter((hook) => document.querySelector(hook) !== null);
+    const [note] = notesOf(slug, 'No part step');
+    const dom = all.get(slug).hooks.renderedDom?.text ?? '';
+    if (rendered.length === 0) {
+      assert.match(note, /^No part step: the Basic example renders no element of [A-Za-z]+'s documented hooks\.$/u, slug);
+    } else {
+      assert.ok(note.startsWith(`No part step: the Basic example renders ${rendered.join(', ')}, but `), `${slug}: ${note}`);
+      for (const hook of rendered) assert.match(dom, new RegExp(`class="([^"]* )?${hook.slice(1)}( [^"]*)?"`, 'u'), `${slug}: the Rendered DOM shows ${hook}`);
+    }
+  }
+});
+
+test('a missing state step names the reason that holds: no boolean state, none the example shows or you set by hand, no hook to put it on, or a hook it does not render or cannot show inside the root', () => {
+  const note = (slug) => notesOf(slug, 'No state step')[0];
+  const noRule = (list, verb) => `No state step: ${list} ${verb} declared, but no Mux rule selects`;
+  assert.equal(note('avatar'), 'No state step: none of Avatar\'s declared states (loading, loaded, fallback, error, sm, md, lg) is a boolean data-muxui-state-* attribute, which a state step needs.');
+  assert.equal(note('activity'), 'No state step: Activity\'s Basic example shows none of its boolean states (focused) on a documented hook inside its root, and none is one a recipe sets by hand (disabled, read-only, required, invalid, selected, expanded, open).');
+  assert.equal(note('alert-dialog'), 'No state step: open, disabled are declared, but no Mux rule selects them on a hook of AlertDialog, so the recipe has no hook to put them on.');
+  assert.equal(note('virtualizer'), 'No state step: disabled is declared and selected on .muxui-virtualizer__item, but the Basic example does not render that hook.');
+  assert.equal(note('menu'), 'No state step: disabled is declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but Menu\'s root renders no element in that example, so the generator cannot show that it is inside the root.');
+  assert.ok(note('dialog').startsWith(noRule('open', 'is')));
+  // Every state a note names is one the catalog declares and a hook can carry as a boolean attribute, and a hook it says the example
+  // renders (or does not) is one jsdom finds (or does not) in the Basic example. The old sentence, "declares no state", is gone.
+  const without = slugs.filter((slug) => notesOf(slug, 'No state step').length > 0);
+  assert.equal(without.length, 30);
+  for (const slug of without) {
+    const text = note(slug);
+    assert.ok(!/declares no state/u.test(text), slug);
+    const declared = readRecord(repositoryRoot, slug).states;
+    const booleans = declared.filter((name) => booleanStates.includes(name));
+    if (text.startsWith('No state step: none of ')) {
+      assert.deepEqual(booleans, [], `${slug}: no declared state is a boolean attribute`);
+      assert.ok(declared.every((name) => text.includes(name)), slug);
+      continue;
+    }
+    assert.ok(booleans.length > 0, `${slug} declares a boolean state`);
+    const document = basicDocument(slug);
+    const rendered = [...new Set(text.match(/\.muxui-[\w-]+/gu) ?? [])].filter((hook) => document.querySelector(hook) !== null);
+    if (text.includes('. The Basic example renders ')) assert.ok(text.includes(`The Basic example renders ${rendered.join(', ')}, but `), `${slug}: ${text}`);
+    else if (text.includes('but the Basic example does not render')) assert.deepEqual(rendered, [], `${slug}: ${text}`);
+  }
+});
+
+test('a hook the example renders outside the root element is outside it, not unprovable', () => {
+  // Menu's Basic example renders no root element. Put one beside the items: the root now exists and the items are not in it.
+  const basic = observations.find(({ family, source }) => family === 'menu' && source.endsWith('/basic.tsx'));
+  const beside = observations.map((observation) => (observation === basic ? { ...observation, html: `<div class="muxui-menu__root"></div>${basic.html}` } : observation));
+  const styling = stylingOf('menu', { observations: beside });
+  assert.deepEqual(notesOf('menu', 'No state step', styling), ['No state step: disabled is declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but it is outside Menu\'s root element.']);
+});
+
+test('a missing token step says what the rules that read the roles do on the Basic example: they match nothing it renders, or they match and cannot be shown to win', async () => {
+  // jsdom reads the example: no selector of a rule that reads a color or size role matches an element of it.
+  for (const slug of ['code-block', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar']) {
+    const document = basicDocument(slug);
+    const readers = all.get(slug).tokens.groups.flatMap(({ rows }) => rows).filter(({ group, policy, type, readBy }) => group === 'component' && policy === 'theme' && ['color', 'dimension'].includes(type) && readBy.kind === 'rules').flatMap(({ readBy }) => readBy.selectors.map(({ selector }) => selector));
+    assert.ok(readers.length > 0, slug);
+    for (const selector of readers) assert.equal(document.querySelector(selector), null, `${slug}: ${selector} matches nothing in the Basic example`);
+    assert.ok(notesOf(slug, 'No token step')[0].includes(`(for example ${readers[0]})`), slug);
+  }
+  // The other reason: DropZone with the state its reader needs matches, and a rule that wins over the role there leaves no step.
+  const dropZone = observations.find(({ family, source }) => family === 'drop-zone' && source.endsWith('/basic.tsx'));
+  const shown = observations.map((observation) => (observation === dropZone ? { ...observation, html: dropZone.html.replace('class="muxui-drop-zone"', 'class="muxui-drop-zone" data-muxui-state-drop-target=""') } : observation));
+  assert.notEqual(shown, observations);
+  assert.deepEqual(all.get('drop-zone').recipe.steps.filter(({ kind }) => kind === 'token'), []);
+  assert.deepEqual(stylingOf('drop-zone', { observations: shown }).recipe.steps.filter(({ kind }) => kind === 'token').map(({ declaration }) => declaration.split(':')[0]), ['--muxui-component-dropzone-drop-target-background']);
+  const wins = (text) => `${text}\n@layer muxui.components {\n  .muxui-drop-zone[data-muxui-state-drop-target] { background-color: rgb(1, 2, 3) !important; }\n}\n`;
+  await withMirror(repositoryRoot, { 'packages/react/generated/styles.css': wins }, async (directory) => {
+    const changed = stylingOf('drop-zone', { facts: await readStylingFacts(directory), observations: shown });
+    assert.deepEqual(changed.recipe.steps.filter(({ kind }) => kind === 'token'), []);
+    assert.deepEqual(notesOf('drop-zone', 'No token step', changed), ['No token step: rules that read DropZone\'s color or size roles match elements its Basic example renders, but the generator cannot show that a role is what paints any of them (another rule may win, or a state it cannot decide may apply).']);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------
