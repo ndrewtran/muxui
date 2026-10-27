@@ -7,15 +7,16 @@ import { renderToString } from 'react-dom/server';
 import { Button } from '../../generated/index.mjs';
 import { renderCatalogExamples } from '../support/catalog-example-renders.mjs';
 import { cascadeCases, claimsStep } from '../support/cascade-cases.mjs';
+import { contrastRatio, requiredContrast } from '../support/contrast.mjs';
 import { readStylingFacts, stylingFor } from '../support/styling-reference.mjs';
 import { launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 
 // The generated recipe, run in Chromium: the authority for the recipe. The static cascade model that picks the steps cannot be
 // complete against an arbitrary stylesheet, so this file is what holds it to the stylesheet that ships: the sweep at the end applies
 // every step the generator makes, for all 84 families, to the real stylesheet in light and dark, and fails when a step does not change
-// its property or when a step that paints text or its surface leaves it under 3:1. A real stylesheet change that breaks a step is
-// caught here (this file runs in the `browser-chromium-only` group the planner selects for the module); the cascade cases below are
-// hypothetical stylesheets that show the model never claims a step the browser would not bear out.
+// its property or when a step that paints a color leaves what it paints under the contrast guard (below). A real stylesheet change that
+// breaks a step is caught here (this file runs in the `browser-chromium-only` group the planner selects for the module); the cascade
+// cases below are hypothetical stylesheets that show the model never claims a step the browser would not bear out.
 //
 // The static test (test/styling-recipes.test.mjs) proves every recipe is valid for all 84
 // families; this proves that the changes work in a browser, for 18 families chosen by what could go wrong: a role reached from the
@@ -46,32 +47,33 @@ const fixtures = [
       ['state', 'text-decoration: line-through', '.muxui-button[data-muxui-state-disabled]', 'text-decoration-line', 'unavailable'],
     ] },
     { slug: 'icon-button', steps: [
-      ['token', '--muxui-component-button-background: #1e1b4b', ".muxui-button[data-muxui-variant='primary']", 'background-color', 'wrapper'],
+      ['token', '--muxui-component-button-background: #7e62c9', ".muxui-button[data-muxui-variant='primary']", 'background-color', 'wrapper'],
       ['token', '--muxui-component-button-foreground: #ffffff', ".muxui-button[data-muxui-variant='primary']", 'color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-icon-button', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-icon-button[data-muxui-state-disabled]', 'text-decoration-line', 'wrapper'],
     ] },
+    // The box holds a mark and no text: a violet fill that stands apart from the page in light and dark, with a white mark on it.
     { slug: 'checkbox', steps: [
-      ['token', '--muxui-component-checkbox-selected-background: #1e1b4b', '.muxui-checkbox__indicator[data-muxui-state-selected]', 'border-top-color', 'wrapper'],
+      ['token', '--muxui-component-checkbox-selected-background: #7e62c9', '.muxui-checkbox__indicator[data-muxui-state-selected]', 'border-top-color', 'wrapper'],
       ['token', '--muxui-component-checkbox-selected-foreground: #ffffff', '.muxui-checkbox__indicator svg', 'color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-checkbox__label', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-checkbox[data-muxui-state-selected]', 'text-decoration-line', 'wrapper'],
     ] },
+    // The label is text on the page, which no fixed color reads on in light and dark. The thumb is drawn on a track the recipe cannot set
+    // (a pseudo-element's), so no color for it can be shown to stand apart from that: neither role is a token step.
     { slug: 'switch', steps: [
-      ['token', '--muxui-component-switch-label: #7e62c9', '.muxui-switch__label', 'color', 'wrapper'],
-      ['token', '--muxui-component-switch-selected-thumb: #287f72', '.muxui-switch[data-muxui-state-selected] .muxui-switch__indicator', 'background-color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-switch__label', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-switch[data-muxui-state-selected]', 'text-decoration-line', 'wrapper'],
     ] },
+    // The panel's foreground is text on the page: no token step.
     { slug: 'tabs', steps: [
-      ['token', '--muxui-component-tabs-panel-foreground: #7e62c9', '.muxui-tabs__panel', 'color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-tabs__list', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-tabs__tab[data-muxui-state-selected]', 'text-decoration-line', 'wrapper'],
     ] },
   ]],
   ['Collections and shared fields', [
+    // The label is text on the page, so only the tag's surface and the text drawn on it are token steps: navy and white, 16:1 in either scheme.
     { slug: 'tag-group', steps: [
-      ['token', '--muxui-component-taggroup-label: #7e62c9', '.muxui-tag-group .muxui-field-label', 'color', 'wrapper'],
       ['token', '--muxui-component-taggroup-tag-background: #1e1b4b', '.muxui-tag-group__tag', 'background-color', 'wrapper'],
       ['token', '--muxui-component-taggroup-tag-foreground: #ffffff', '.muxui-tag-group__tag', 'color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-tag-group .muxui-field-label', 'letter-spacing', 'wrapper'],
@@ -87,15 +89,16 @@ const fixtures = [
     ] },
   ]],
   ['Roles read through a pseudo-class, a state or a change', [
-    // The label role is read by `:where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label`: the Basic example is not invalid.
+    // The label role is read by `:where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label`, which the Basic example (not
+    // invalid) matches, and the cascade test below shows the role changing that label. It is text on the page, which no single color
+    // reads on in light and dark, so the recipe leaves it out and says so.
     { slug: 'text-field', steps: [
-      ['token', '--muxui-component-textfield-label: #7e62c9', ':where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label', 'color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-text-field .muxui-field-label', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-text-field[data-muxui-state-disabled]', 'text-decoration-line', 'unavailable'],
     ] },
+    // Both roles are surfaces under text, including the + and - that say what changed (1.9:1 and 3.9:1 on the light page before any recipe):
+    // a color lowers one of them in light or in dark, so neither is a token step.
     { slug: 'data-diff', steps: [
-      ['token', '--muxui-component-datadiff-added-background: #7e62c9', ".muxui-data-diff__row[data-muxui-change='added']", 'background-color', 'wrapper'],
-      ['token', '--muxui-component-datadiff-removed-background: #287f72', ".muxui-data-diff__row[data-muxui-change='removed']", 'background-color', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-data-diff__header', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-data-diff__row[data-muxui-state-selected]', 'text-decoration-line', 'wrapper'],
     ] },
@@ -117,8 +120,8 @@ const fixtures = [
     { slug: 'alert-dialog', steps: [] },
   ]],
   ['Motion', [
+    // The background is a surface under text, and the open panel's muted text has 5.7:1 on the light page to start with: only the icon size.
     { slug: 'disclosure-group', steps: [
-      ['token', '--muxui-component-disclosuregroup-background: #7e62c9', '.muxui-disclosure-group > .muxui-disclosure', 'background-color', 'wrapper'],
       ['token', '--muxui-component-disclosuregroup-icon-size: calc(1.5rem + 0.5rem)', '.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger > .muxui-disclosure__trigger-icon', 'width', 'wrapper'],
       ['part', 'letter-spacing: 0.04em', '.muxui-disclosure', 'letter-spacing', 'wrapper'],
       ['state', 'text-decoration: line-through', '.muxui-disclosure[data-muxui-state-expanded]', 'text-decoration-line', 'wrapper'],
@@ -193,18 +196,30 @@ async function measure(page, { html, rules, steps, scheme, css, wrapperStyle }) 
   }, steps.map(({ target, property, scope }) => ({ target, property, scope })));
 }
 
-/** The WCAG contrast the text or icon color at least has to have, and the threshold the sweep holds every step that paints text or its surface to. */
-const minimumContrast = 3;
-
 /**
- * The contrast ratio, in the scoped pane, of each step that paints text or its surface: the target's `color` against the surface it is
- * drawn on (the first opaque background up the tree, composited, over the page canvas), for a `color` step, and for a
- * `background-color` step the same of a target that holds text. Null for every other step. Both colors are the computed ones, so the
- * ratio is what a reader sees.
+ * The contrast guard. For each color step it reads EVERY element the step's target matches (not the first), in the scoped pane and, as
+ * what the recipe changed it from, the same element in the bare pane, and holds it to a bar:
+ * - text: every element under the match that holds text a reader sees, at 1.5x the WCAG rule for its own computed size and weight (4.5:1
+ *   under 24px, or 18.66px when bold; 3:1 above), against the surface it is drawn on. Seen is a visible box of 2px or more; `aria-hidden`
+ *   is not a reason to skip, since DataDiff's + and - are meant to be read by sight (their twins "Added row" are screen-reader text with
+ *   no box, and are not read). No element is exempted as decorative.
+ * - a mark (a `color` step on a match with no text: a check, an icon): 3:1 against the fill it is drawn on.
+ * - a fill (a background or border color on a match with no text: a box, a thumb): 3:1 against what is behind it. A fill that holds no text
+ *   is what shows the control, so it has to stand apart from the page, or the track it is drawn on; a fill that holds text is identified
+ *   by its text and is held to the text rule only.
+ * Non-text parts get the plain 3:1 and no margin: a fill that stands apart from the page in light and dark and carries a white mark has a
+ * luminance window of 0.115 to 0.183, and the violet in it reads between 4.05 and 4.69 in each pairing. And nothing is lowered: an element that
+ * is under its bar before the recipe has to stay at least where it was.
+ * What is drawn on what comes from the ancestors' backgrounds, and from `underlays`: the parts that sit on a box a pseudo-element paints
+ * (the thumb of a Switch sits on the track, which is the label's `::before`, and its label does not). A small reviewed list, because a
+ * pseudo-element is not in the tree and the page cannot say which children it is behind.
+ * Returns, for each step, null (a step that paints no color) or the readings and the text that has no box.
  */
+const underlays = [{ part: '.muxui-switch__indicator', host: '.muxui-switch', pseudo: '::before' }];
+
 async function contrasts(page, { html, rules, steps, scheme }) {
   await page.setContent(documentOf({ html, rules, scheme }));
-  return page.evaluate(async (list) => {
+  return page.evaluate(async ({ list, behind }) => {
     await Promise.race([Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))), new Promise((done) => setTimeout(done, 1000))]);
     await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
     const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
@@ -217,32 +232,72 @@ async function contrasts(page, { html, rules, steps, scheme }) {
       return { r, g, b, a: a / 255 };
     };
     const over = (top, bottom) => ({ r: top.r * top.a + bottom.r * (1 - top.a), g: top.g * top.a + bottom.g * (1 - top.a), b: top.b * top.a + bottom.b * (1 - top.a), a: 1 });
-    const surface = (element) => {
+    const flatten = (layers) => [...layers].reverse().reduce((base, layer) => over(layer, base), { r: 255, g: 255, b: 255, a: 1 });
+    /** What `part` is drawn on, from `element` up: backgrounds up to the first opaque one, translucent layers composited. */
+    const surface = (element, part = element) => {
       const layers = [];
       for (let node = element; node; node = node.parentElement) {
-        const color = parse(getComputedStyle(node).backgroundColor);
-        if (color.a > 0) layers.push(color);
-        if (color.a === 1) break;
+        // A host's pseudo-element is drawn over the host's own background and under its children, for the parts the list names.
+        const painted = [...behind.filter((entry) => part.closest(entry.part) !== null && node.matches(entry.host)).map(({ pseudo }) => getComputedStyle(node, pseudo).backgroundColor), getComputedStyle(node).backgroundColor].map(parse);
+        for (const color of painted) {
+          if (color.a > 0) layers.push(color);
+          if (color.a === 1) return flatten(layers);
+        }
       }
-      return layers.reverse().reduce((base, layer) => over(layer, base), { r: 255, g: 255, b: 255, a: 1 });
+      return flatten(layers);
     };
-    const luminance = ({ r, g, b }) => {
-      const linear = (value) => (value / 255 <= 0.03928 ? value / 255 / 12.92 : ((value / 255 + 0.055) / 1.055) ** 2.4);
-      return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+    const holdsText = (element) => [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '');
+    // An element with `display: contents` has no box of its own (TagGroup's cell): its text is drawn in the nearest box above it.
+    const seen = (element) => {
+      let boxed = element;
+      while (boxed.parentElement && getComputedStyle(boxed).display === 'contents') boxed = boxed.parentElement;
+      const box = boxed.getBoundingClientRect();
+      return box.width >= 2 && box.height >= 2 && getComputedStyle(element).visibility === 'visible';
     };
-    const ratio = (one, other) => {
-      const [high, low] = [luminance(one), luminance(other)].sort((left, right) => right - left);
-      return (high + 0.05) / (low + 0.05);
-    };
+    const label = (element) => `${element.tagName.toLowerCase()}${typeof element.className === 'string' && element.className ? `.${element.className.split(' ')[0]}` : ''} ${JSON.stringify(element.textContent.trim().slice(0, 16))}`;
+    const family = (root) => [root, ...root.querySelectorAll('*')].filter((element) => !['SCRIPT', 'STYLE', 'TEMPLATE'].includes(element.tagName));
     return list.map(({ target, property }) => {
-      const element = document.querySelector(`#scoped ${target}`);
-      if (!element || (property !== 'color' && property !== 'background-color')) return null;
-      if (property === 'background-color' && element.textContent.trim() === '') return null;
-      const background = surface(element);
-      return ratio(over(parse(getComputedStyle(element).color), background), background);
+      if (!property.endsWith('color')) return null;
+      const readings = [];
+      const unseen = [];
+      const bare = [...document.querySelectorAll(`#bare ${target}`)];
+      [...document.querySelectorAll(`#scoped ${target}`)].forEach((match, index) => {
+        // The same markup sits in both panes, so the element at the same place is what this one was before the recipe.
+        const here = family(match);
+        const there = family(bare[index]);
+        const sample = (element, kind) => {
+          const style = getComputedStyle(element);
+          // A fill is the paint the step set, against what is behind the element; text and a mark are drawn on the element's own surface.
+          return kind === 'fill' ? { foreground: parse(style.getPropertyValue(property)), surface: surface(element.parentElement, element) } : { foreground: parse(style.color), surface: surface(element) };
+        };
+        const read = (position, kind) => {
+          const style = getComputedStyle(here[position]);
+          return { match: index, label: label(here[position]), kind, fontSize: Number.parseFloat(style.fontSize), fontWeight: Number(style.fontWeight), after: sample(here[position], kind), before: sample(there[position], kind) };
+        };
+        const holders = here.map((element, position) => position).filter((position) => holdsText(here[position]));
+        for (const position of holders) (seen(here[position]) ? readings.push(read(position, 'text')) : unseen.push(label(here[position])));
+        if (holders.length === 0) readings.push(read(0, property === 'color' ? 'mark' : 'fill'));
+      });
+      return { readings, unseen };
     });
-  }, steps.map(({ target, property }) => ({ target, property })));
+  }, { list: steps.map(({ target, property }) => ({ target, property })), behind: underlays });
 }
+
+/** The room a generated step keeps over the rule for text: the palette is tuned to one theme, and a drift in its colors is caught before a step crosses the rule. */
+const contrastMargin = 1.5;
+
+/** The readings of `contrasts` with their ratio after the recipe, before it, the rule for the element and the bar it is held to. */
+const ratiosOf = (readings) => readings.map((entry) => {
+  const required = requiredContrast({ ...entry, text: entry.kind === 'text' });
+  const ratio = contrastRatio(entry.after.foreground, entry.after.surface);
+  const was = contrastRatio(entry.before.foreground, entry.before.surface);
+  // The rule with the margin for text, the plain rule for a part, and no lower than it was when it was under that already.
+  return { ...entry, ratio, was, required, bar: Math.min(entry.kind === 'text' ? required * contrastMargin : required, was) };
+});
+
+/** The readings that miss their bar, worded for a failure. */
+const shortfalls = (readings, where) => ratiosOf(readings).filter(({ ratio, bar }) => ratio < bar)
+  .map((entry) => `${where}: match ${entry.match}, ${entry.label} (${entry.kind}${entry.kind === 'text' ? ` ${entry.fontSize}px/${entry.fontWeight}` : ''}) reads ${entry.ratio.toFixed(2)}:1, was ${entry.was.toFixed(2)}:1, and has to keep ${entry.bar.toFixed(2)}:1`);
 
 /** What a declaration of `property` computes to on its own, taken from a probe element in the same page. */
 const computedOf = (page, property, value) => page.evaluate(([name, text]) => {
@@ -370,8 +425,8 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
   const all = everything.map(({ family, source, html }) => ({ family, source, html }));
   const unchanged = [];
   const unreadable = [];
+  const kinds = { text: 0, mark: 0, fill: 0 };
   let steps = 0;
-  let contrastSteps = 0;
   const page = await browser.newPage();
   try {
     for (const slug of slugs) {
@@ -386,13 +441,12 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
           const { bare, scoped } = results[index];
           if (bare === null || scoped === null || bare === scoped) unchanged.push(`${slug} ${scheme}: ${step.declaration} on ${step.target} (${JSON.stringify([bare, scoped])})`);
         }
-        // A token step that paints text or its surface must leave that text readable: the contrast guard.
+        // A token step that paints a color must leave everything it paints under the contrast guard.
         const tokenSteps = recipe.steps.filter(({ kind }) => kind === 'token');
-        const ratios = tokenSteps.length > 0 ? await contrasts(page, { html, rules: recipe.rules, steps: tokenSteps, scheme }) : [];
+        const measured = tokenSteps.length > 0 ? await contrasts(page, { html, rules: recipe.rules, steps: tokenSteps, scheme }) : [];
         for (const [index, step] of tokenSteps.entries()) {
-          if (ratios[index] === null) continue;
-          contrastSteps += 1;
-          if (ratios[index] < minimumContrast) unreadable.push(`${slug} ${scheme}: ${step.declaration} on ${step.target} has contrast ${ratios[index].toFixed(2)}`);
+          for (const { kind } of measured[index]?.readings ?? []) kinds[kind] += 1;
+          unreadable.push(...shortfalls(measured[index]?.readings ?? [], `${slug} ${scheme}: ${step.declaration} on ${step.target}`));
         }
       }
     }
@@ -400,27 +454,127 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
     await page.close();
   }
   assert.deepEqual(unchanged, []);
-  assert.deepEqual(unreadable, [], `a step that paints text or its surface leaves it under ${minimumContrast}:1`);
-  assert.ok(contrastSteps > 20, `${contrastSteps} contrast measurements`);
-  assert.equal(steps, 298, 'steps measured: 149 steps in 77 families, each in two color schemes');
+  assert.deepEqual(unreadable, [], `every element a color step paints keeps the contrast guard: text 1.5x the WCAG rule for its size and weight, a mark or a fill that holds no text 3:1, nothing lower than it was`);
+  // The readings: every element each color step paints, in light and in dark.
+  assert.deepEqual(kinds, { text: 12, mark: 6, fill: 6 }, 'readings: TagGroup\'s three tags under both its steps, then the mark and the fill of Checkbox, CheckboxField and IconButton, in two color schemes');
+  assert.equal(steps, 282, 'steps measured: 141 steps in 77 families, each in two color schemes');
 });
 
-test('the contrast guard has teeth: the white rows the generator once assigned DataDiff and navy text on the dark canvas are under 3:1, and what it assigns now is not', { timeout: 120_000 }, async () => {
-  const recipe = await recipeOf('data-diff');
-  const removed = recipe.steps.find(({ declaration }) => declaration.startsWith('--muxui-component-datadiff-removed-background'));
+test('the rule the guard holds text to: 4.5:1 for normal text, 3:1 for large text and for a glyph, by the element\'s own size and weight', () => {
+  const rule = (fontSize, fontWeight, text = true) => requiredContrast({ text, fontSize, fontWeight });
+  assert.deepEqual([rule(13.33, 400), rule(13.33, 500), rule(16, 400), rule(18.65, 700), rule(18.66, 400), rule(23.99, 400), rule(18.66, 699)], [4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5], 'normal text');
+  assert.deepEqual([rule(18.66, 700), rule(19, 700), rule(24, 400), rule(32, 500)], [3, 3, 3, 3], 'large text: 24px, or 18.66px when bold');
+  assert.deepEqual([rule(13.33, 400, false), rule(16, 500, false)], [3, 3], 'a glyph holds no text');
+});
+
+test('the contrast guard has teeth: the colors the recipe once assigned are rejected, on every element they paint, and what it assigns now is not', { timeout: 240_000 }, async () => {
   const page = await browser.newPage();
   try {
-    const ratioOf = async (rules, scheme) => (await contrasts(page, { html: basicHtml('data-diff'), rules, steps: [removed], scheme }))[0];
-    const positional = '.my-scope { --muxui-component-datadiff-removed-background: #ffffff; }';
-    assert.ok((await ratioOf(positional, 'dark')) < minimumContrast, 'white rows under the dark scheme\'s light text');
-    for (const scheme of ['light', 'dark']) assert.ok((await ratioOf(recipe.rules, scheme)) >= minimumContrast, `the generated rows read in ${scheme}`);
+    const readingsOf = async (slug, rules, steps, scheme) => (await contrasts(page, { html: basicHtml(slug), rules, steps, scheme })).map((measured) => ratiosOf(measured.readings));
+    const entriesOf = async (slug, rules, step, scheme) => (await readingsOf(slug, rules, [step], scheme))[0];
+    const lowestOf = (entries) => entries.reduce((lowest, entry) => (entry.ratio < lowest.ratio ? entry : lowest));
+    const round = (entries) => entries.map(({ ratio }) => Number(ratio.toFixed(2)));
+    const missed = (entries) => entries.filter(({ ratio, bar }) => ratio < bar);
+
+    // DataDiff's removed rows in the opaque teal the palette once had: 13.3px text at 3.05:1 on the light page and 3.36:1 on the dark.
+    // The old guard asked 3:1 and passed them; the rule for 13.3px text is 4.5:1.
+    const removed = { target: ".muxui-data-diff__row[data-muxui-change='removed']", property: 'background-color' };
+    const tealRows = '.my-scope { --muxui-component-datadiff-removed-background: #287f72; }';
+    for (const [scheme, expected] of [['light', 3.05], ['dark', 3.36]]) {
+      const cells = (await entriesOf('data-diff', tealRows, removed, scheme)).filter(({ label }) => label.startsWith('td'));
+      assert.equal(cells.length, 4, 'two cells in each of two removed rows');
+      assert.ok(cells.every(({ ratio, required, fontSize }) => required === 4.5 && Math.abs(ratio - expected) < 0.02 && Math.abs(fontSize - 13.3) < 0.05), `${scheme}: 13.3px text at ${expected}:1`);
+      assert.ok(cells.every(({ ratio, required }) => ratio >= 3 && ratio < required), 'a 3:1 guard accepts it and the rule rejects it');
+    }
+    // White rows under the dark scheme's light text (the colors once assigned by position) are under 3:1 too.
+    const white = await entriesOf('data-diff', '.my-scope { --muxui-component-datadiff-removed-background: #ffffff; }', removed, 'dark');
+    assert.ok(lowestOf(white).ratio < 3, 'white rows under the dark scheme\'s light text');
+
+    // DataDiff's tints (the palette's surfaces): the text cells keep their contrast, but the + and - are text a reader sees and are read,
+    // though they are `aria-hidden` (the screen reader has "Added row"). Each is lowered below what the shipped example gives it.
+    const tints = '.my-scope { --muxui-component-datadiff-added-background: #7e62c940; --muxui-component-datadiff-removed-background: #287f7240; }';
+    const rows = [{ target: ".muxui-data-diff__row[data-muxui-change='added']", property: 'background-color' }, removed];
+    for (const [scheme, lowered] of [['light', [[1.55, 1.94], [3.34, 3.94], [3.34, 3.94]]], ['dark', [[6.13, 6.98], [6.44, 7.19], [6.44, 7.19]]]]) {
+      const measured = await contrasts(page, { html: basicHtml('data-diff'), rules: tints, steps: rows, scheme });
+      const entries = measured.flatMap((one) => ratiosOf(one.readings));
+      const glyphs = entries.filter(({ label }) => label.startsWith('span.muxui-data-diff__change'));
+      assert.deepEqual(glyphs.map(({ label }) => label.at(-2)), ['+', '−', '−'], 'the three marks are read');
+      assert.deepEqual(missed(entries), glyphs, `${scheme}: only the marks miss`);
+      assert.deepEqual(glyphs.map(({ ratio, was }) => [Number(ratio.toFixed(2)), Number(was.toFixed(2))]), lowered, `${scheme}: the marks, lowered by the tints`);
+      assert.deepEqual(measured.flatMap(({ unseen }) => unseen).sort(), ['span.muxui-data-diff__sr-only "Added row, Outli"', 'span.muxui-data-diff__sr-only "Removed row, Cor"', 'span.muxui-data-diff__sr-only "Removed row, Gut"'], 'the screen-reader twins have no box, and are not read');
+    }
+
+    // The bar is the rule with its margin, or no lower than the element was when it was under that already. A white tint raises the marks on
+    // the light page (the + from 1.94:1 to 2.17:1, still under the rule, and not a miss); on the dark page it lowers them from 7.0:1 to 3.6:1.
+    const lightening = '.my-scope { --muxui-component-datadiff-added-background: #ffffff40; --muxui-component-datadiff-removed-background: #ffffff40; }';
+    const lightRows = (await contrasts(page, { html: basicHtml('data-diff'), rules: lightening, steps: rows, scheme: 'light' })).flatMap((one) => ratiosOf(one.readings));
+    assert.deepEqual(missed(lightRows), [], 'light: nothing is lowered');
+    const lightMarks = lightRows.filter(({ label }) => label.startsWith('span.muxui-data-diff__change'));
+    assert.ok(lightMarks.every(({ ratio, was }) => ratio > was) && lightMarks[0].ratio < lightMarks[0].required, 'light: the marks are raised, and the + is still under the rule');
+    const darkRows = (await contrasts(page, { html: basicHtml('data-diff'), rules: lightening, steps: rows, scheme: 'dark' })).flatMap((one) => ratiosOf(one.readings));
+    assert.ok(missed(darkRows).some(({ label }) => label.startsWith('span.muxui-data-diff__change')), 'dark: the marks are lowered');
+
+    // DisclosureGroup's tint: every item is read, and only the fourth, whose panel is open, misses (16px text with 5.7:1 on the light page
+    // to start with). A guard that read the first item only would pass it.
+    const item = { target: '.muxui-disclosure-group > .muxui-disclosure', property: 'background-color' };
+    for (const [scheme, shown] of [['light', [4.52, 5.72]], ['dark', [5.89, 7.21]]]) {
+      const entries = await entriesOf('disclosure-group', '.my-scope { --muxui-component-disclosuregroup-background: #7e62c940; }', item, scheme);
+      assert.deepEqual([...new Set(entries.map(({ match }) => match))], [0, 1, 2, 3, 4, 5], 'all six items are read');
+      assert.deepEqual(missed(entries).map(({ match }) => match), [3], `${scheme}: only the open item misses`);
+      assert.deepEqual(missed(entries).map(({ ratio, was }) => [Number(ratio.toFixed(2)), Number(was.toFixed(2))]), [shown]);
+      assert.deepEqual(missed(entries.filter(({ match }) => match === 0)), [], 'the first item passes');
+    }
+
+    // Switch's thumb in the mid-tone the palette once gave a part: 1.7:1 against the light track and 1.3:1 against the dark, where the
+    // thumb it replaces has 7.0:1 and 4.5:1. The track is the label's `::before`, which is why the guard lists it.
+    const thumb = { target: '.muxui-switch[data-muxui-state-selected] .muxui-switch__indicator', property: 'background-color' };
+    for (const [scheme, shown] of [['light', [1.75, 7.05]], ['dark', [1.31, 4.55]]]) {
+      const entries = await entriesOf('switch', '.my-scope { --muxui-component-switch-selected-thumb: #7e62c9; }', thumb, scheme);
+      assert.deepEqual(missed(entries).map(({ kind, ratio, was }) => [kind, Number(ratio.toFixed(2)), Number(was.toFixed(2))]), [['fill', ...shown]], `${scheme}: the thumb on its track`);
+    }
+
+    // Checkbox's box in the navy the pair once had: white on it is 16:1, but the box is 1.19:1 against the dark page, where the box it
+    // replaces has 5.3:1, so a selected Checkbox disappears. The violet pair stands apart from the page and carries the mark.
+    const box = (checkbox) => [checkbox.steps.find(({ property }) => property === 'border-top-color'), checkbox.steps.find(({ property }) => property === 'color')];
+    const navyBox = '.my-scope { --muxui-component-checkbox-selected-background: #1e1b4b; --muxui-component-checkbox-selected-foreground: #ffffff; }';
+    const checkbox = await recipeOf('checkbox');
+    for (const [scheme, navy, violet] of [['light', [14.17, 15.99], [4.16, 4.69]], ['dark', [1.19, 15.99], [4.05, 4.69]]]) {
+      const [fill, mark] = await readingsOf('checkbox', navyBox, box(checkbox), scheme);
+      assert.deepEqual([...round(fill), ...round(mark)], navy, `${scheme}: navy fill, then its mark`);
+      assert.deepEqual(missed([...fill, ...mark]).map(({ kind }) => kind), scheme === 'dark' ? ['fill'] : [], `${scheme}: only the dark page misses`);
+      const [fillNow, markNow] = await readingsOf('checkbox', checkbox.rules, box(checkbox), scheme);
+      assert.deepEqual([...round(fillNow), ...round(markNow)], violet, `${scheme}: what the recipe assigns now`);
+      assert.deepEqual(missed([...fillNow, ...markNow]), []);
+      assert.deepEqual([...fillNow, ...markNow].map(({ kind, required }) => [kind, required]), [['fill', 3], ['mark', 3]], 'a part that holds no text is held to 3:1');
+    }
+
+    // TextField's label in the mid-tone the palette once had: 13.3px at 4.16:1 on the light page and 4.05:1 on the dark, the best any
+    // fixed color can do on both (see the static palette test).
+    const label = { target: ':where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label', property: 'color' };
+    const violet = '.my-scope { --muxui-component-textfield-label: #7e62c9; }';
+    for (const scheme of ['light', 'dark']) {
+      const [entry] = await entriesOf('text-field', violet, label, scheme);
+      assert.ok(entry.required === 4.5 && entry.ratio >= 3 && entry.ratio < 4.5, `${scheme}: ${entry.ratio.toFixed(2)} is under the 4.5:1 rule for ${entry.fontSize}px text and over a 3:1 guard`);
+    }
+    // The rule follows the element's own size and weight: the same color on the same label is enough once the label is large.
+    const sized = async (declaration) => (await entriesOf('text-field', `${violet} .my-scope .muxui-field-label { ${declaration} }`, label, 'light'))[0];
+    assert.equal((await sized('font-size: 24px')).required, 3);
+    assert.equal((await sized('font-size: 19px; font-weight: 700')).required, 3);
+    assert.equal((await sized('font-size: 18px; font-weight: 700')).required, 4.5);
+    assert.equal((await sized('font-size: 23px; font-weight: 400')).required, 4.5);
     // Text drawn on the page's canvas is measured against the scheme's canvas: navy reads on the light one and not on the dark one, so a
     // page that is not themed would let it pass.
-    const label = (await recipeOf('switch')).steps.find(({ declaration }) => declaration.startsWith('--muxui-component-switch-label'));
+    const switchLabel = { target: '.muxui-switch__label', property: 'color' };
     const navy = '.my-scope { --muxui-component-switch-label: #1e1b4b; }';
-    const labelRatio = async (scheme) => (await contrasts(page, { html: basicHtml('switch'), rules: navy, steps: [label], scheme }))[0];
-    assert.ok((await labelRatio('light')) >= minimumContrast, 'navy text on the light canvas');
-    assert.ok((await labelRatio('dark')) < minimumContrast, 'navy text on the dark canvas');
+    assert.ok(lowestOf(await entriesOf('switch', navy, switchLabel, 'light')).ratio >= 4.5, 'navy text on the light canvas');
+    assert.ok(lowestOf(await entriesOf('switch', navy, switchLabel, 'dark')).ratio < 3, 'navy text on the dark canvas');
+    // What the recipe assigns now holds: TagGroup's tags, text on its surface at 16:1.
+    const tags = await recipeOf('tag-group');
+    for (const scheme of ['light', 'dark']) {
+      const entries = (await readingsOf('tag-group', tags.rules, tags.steps.filter(({ kind }) => kind === 'token'), scheme)).flat();
+      assert.deepEqual(missed(entries), []);
+      assert.ok(entries.every(({ kind, ratio }) => kind === 'text' && ratio > 15.9), `${scheme}: white on navy`);
+    }
   } finally {
     await page.close();
   }

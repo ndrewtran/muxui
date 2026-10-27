@@ -6,7 +6,8 @@
 // What this file does not claim: the static cascade model cannot be complete against an arbitrary stylesheet, and the cases below that
 // change the stylesheet (support/cascade-cases.mjs) are hypothetical future ones, checked for the one failure that matters, a step the
 // browser would not bear out. The authority is the Chromium sweep in browser/styling-recipes.test.mjs, which applies every generated
-// step to the real stylesheet in light and dark and fails when a step does not change its property or leaves its text under 3:1.
+// step to the real stylesheet in light and dark and fails when a step does not change its property or leaves its text under the WCAG rule for its
+// size and weight (4.5:1 for normal text, 3:1 for large text and for a glyph).
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -16,7 +17,8 @@ import { cssName } from '@muxui/tokens/core';
 import { renderCatalogExamples } from './support/catalog-example-renders.mjs';
 import { withMirror } from './support/repository-mirror.mjs';
 import { cascadeCases, claimsStep } from './support/cascade-cases.mjs';
-import { conditionAtRest, matchAtRest, parseObservation, parseSelectorList, readStyleRules, readStylingFacts, relation, stylingFor, varReads } from './support/styling-reference.mjs';
+import { contrastRatio, luminance, over, parseHex } from './support/contrast.mjs';
+import { conditionAtRest, matchAtRest, parseObservation, parseSelectorList, readStyleRules, readStylingFacts, recipePalette, relation, stylingFor, varReads } from './support/styling-reference.mjs';
 import { booleanStates } from '../src/styling-contract.ts';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -45,7 +47,7 @@ assert.ok(layerStatement && stylesImport, 'the README still opens its cascade ex
 /** Shorthands whose computed value a step cannot compare. A step's property is a longhand. */
 const shorthands = new Set(['background', 'border', 'border-color', 'border-radius', 'border-width', 'padding', 'padding-inline', 'padding-block', 'margin', 'gap', 'text-decoration', 'transition', 'font', 'flex', 'grid', 'outline', 'inset', 'overflow']);
 const settable = new Set(['disabled', 'read-only', 'required', 'invalid', 'selected', 'expanded', 'open']);
-const colors = ['#7e62c9', '#287f72', '#a06724', '#1e1b4b', '#ffffff'];
+const colors = ['#1e1b4b', '#ffffff', '#7e62c940', '#287f7240', '#a0672440', '#7e62c9', '#287f72', '#a06724'];
 
 /**
  * What is wrong with one family's recipe, as one message per problem. Everything it compares against comes from outside the generator:
@@ -149,6 +151,12 @@ const failuresOf = (slug, styling = all.get(slug), recipe = styling.recipe) => {
   return recipeFailures({ slug, recipe, ...rowsOf(styling), html: observations.find(({ source }) => source === basic)?.html ?? '' });
 };
 
+// The notes of a family that start with `start`, the Basic example it describes read by jsdom, and its documented class hooks.
+const notesOf = (slug, start, styling = all.get(slug)) => styling.recipe.notes.filter((note) => note.startsWith(start));
+const basicDocument = (slug) => new JSDOM(observations.find(({ family, source }) => family === slug && source.endsWith('/basic.tsx')).html).window.document;
+/** The documented class hooks of a family's Hooks rows, in the order the rows print them. */
+const documentedHooks = (slug) => all.get(slug).hooks.groups.flatMap(({ rows }) => rows).filter(({ kind, hook }) => kind === 'class' && hook !== null).map(({ hook }) => hook);
+
 // ---------------------------------------------------------------------------------------------------------------------------
 // All 84 families.
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -176,44 +184,63 @@ test('the picks: which families get a token step and which of their roles, how m
     // The Basic example is a danger Button, which paints its own colors: only the radius reaches it.
     button: ['--muxui-component-button-radius: 999px'],
     // The checked box and its mark, found on the selected indicator the Basic example renders.
-    // A color is chosen by the property its role paints, not by its position: a surface gets the navy that white text reads on, the
-    // white mark gets that surface, and a lone text or background color is a mid-tone the page's own text reads on in both schemes.
-    checkbox: ['--muxui-component-checkbox-selected-background: #1e1b4b', '--muxui-component-checkbox-selected-foreground: #ffffff'],
-    'checkbox-field': ['--muxui-component-checkbox-selected-background: #1e1b4b', '--muxui-component-checkbox-selected-foreground: #ffffff'],
-    // Its Basic example shows added and removed rows, which the change-marked rules read; both are backgrounds behind the page's text.
-    'data-diff': ['--muxui-component-datadiff-added-background: #7e62c9', '--muxui-component-datadiff-removed-background: #287f72'],
-    'disclosure-group': ['--muxui-component-disclosuregroup-background: #7e62c9', '--muxui-component-disclosuregroup-icon-size: calc(1.5rem + 0.5rem)'],
-    // Its Basic example is a primary Button, which the background and foreground roles drive.
-    'icon-button': ['--muxui-component-button-background: #1e1b4b', '--muxui-component-button-foreground: #ffffff'],
-    switch: ['--muxui-component-switch-label: #7e62c9', '--muxui-component-switch-selected-thumb: #287f72'],
-    tabs: ['--muxui-component-tabs-panel-foreground: #7e62c9'],
-    'tag-group': ['--muxui-component-taggroup-label: #7e62c9', '--muxui-component-taggroup-tag-background: #1e1b4b', '--muxui-component-taggroup-tag-foreground: #ffffff'],
-    // Its label role is read by a pseudo-qualified rule, which the Basic example matches: the pseudo-classes are decided, not skipped.
-    'text-field': ['--muxui-component-textfield-label: #7e62c9'],
+    // A color is chosen by the property its role paints, not by its position: a surface and the text drawn on it, when the recipe assigns
+    // both, get a navy and white pair; a fill and the mark drawn on it, when neither holds text, get a violet and white pair that stands
+    // apart from the page in light and dark; and every other color role is left out and says why (see the notes below): text on the
+    // page (no fixed color reads on both pages), a surface under text (it lowers that text in one scheme), and a part drawn on something
+    // the recipe does not set (Switch's thumb is on a track).
+    checkbox: ['--muxui-component-checkbox-selected-background: #7e62c9', '--muxui-component-checkbox-selected-foreground: #ffffff'],
+    'checkbox-field': ['--muxui-component-checkbox-selected-background: #7e62c9', '--muxui-component-checkbox-selected-foreground: #ffffff'],
+    // The background is a surface under text, left out; the size is not a color.
+    'disclosure-group': ['--muxui-component-disclosuregroup-icon-size: calc(1.5rem + 0.5rem)'],
+    // Its Basic example is a primary Button holding an icon, which the background and foreground roles drive.
+    'icon-button': ['--muxui-component-button-background: #7e62c9', '--muxui-component-button-foreground: #ffffff'],
+    'tag-group': ['--muxui-component-taggroup-tag-background: #1e1b4b', '--muxui-component-taggroup-tag-foreground: #ffffff'],
   });
   // A family with roles and no token step says why, and the reason is the one that holds: Activity's only role is a transition, which is
-  // never a step; the others have color or size roles that only an overlay, a state or a variant the Basic example does not show reads.
+  // never a step; for seven others no rule that reads a color or size role matches an element the Basic example renders (checked against
+  // the example by jsdom in the notes test below); and for DataDiff, Switch, Tabs and TextField the roles are ones the recipe leaves out.
   const reachless = slugs.filter((slug) => all.get(slug).tokens.groups.some(({ id }) => id === 'component') && declarations(slug, 'token').length === 0);
-  assert.deepEqual(reachless, ['activity', 'code-block', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar']);
-  const tokenNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step'));
+  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'tabs', 'text-field']);
+  const tokenNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step:'));
+  const droppedNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step for '));
   assert.equal(tokenNote('activity'), 'No token step: Activity has no color or size role that a Mux rule reads.');
   const roles = (slug) => all.get(slug).tokens.groups.flatMap(({ id, rows }) => (id === 'component' ? rows : []));
   assert.deepEqual(roles('activity').map(({ type }) => type), ['transition']);
-  for (const slug of reachless.filter((candidate) => candidate !== 'activity')) {
-    assert.match(tokenNote(slug), /^No token step: no color or size role of [A-Za-z]+ is read by a rule that provably wins on an element its Basic example renders at rest\. They can apply inside overlays, in states or in variants the example does not show; assign them on the theme scope that contains the portal container \(README, Cascade layers\)\.$/u, slug);
+  const leftOut = ['data-diff', 'switch', 'tabs', 'text-field'];
+  for (const slug of reachless.filter((candidate) => !['activity', ...leftOut].includes(candidate))) {
+    assert.match(tokenNote(slug), /^No token step: no rule that reads [A-Za-z]+'s color or size roles matches an element its Basic example renders \(for example .+\), so a role assigned on a wrapper would change nothing there\.$/u, slug);
+    assert.equal(droppedNote(slug), undefined, slug);
     assert.ok(roles(slug).some(({ type, policy }) => policy === 'theme' && ['color', 'dimension'].includes(type)), `${slug} has a color or size role to explain`);
   }
+  for (const slug of leftOut) assert.equal(tokenNote(slug), undefined, `${slug}: the roles it has are left out, and the notes say that and nothing else`);
+  // Each note names the roles it leaves out with the property and element they paint, and gives the reason for that kind of role.
+  const onPage = 'it paints text on the page, and the recipe assigns fixed colors, none of which reads at 4.5:1 on both the light page and the dark page.';
+  assert.equal(droppedNote('text-field'), `No token step for --muxui-component-textfield-label (color of :where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label): ${onPage}`);
+  assert.equal(droppedNote('tabs'), `No token step for --muxui-component-tabs-panel-foreground (color of .muxui-tabs__panel): ${onPage}`);
+  assert.equal(droppedNote('tag-group'), `No token step for --muxui-component-taggroup-label (color of .muxui-tag-group .muxui-field-label): ${onPage}`);
+  // A surface under text: DataDiff's two rows, in one note, and DisclosureGroup's background beside the size step it keeps.
+  const underText = 'the surface under text, and a fixed color for it lowers that text\'s contrast on the light page or the dark page; the generator cannot tell how much the text has to spare, so it assigns none.';
+  assert.equal(droppedNote('data-diff'), `No token step for --muxui-component-datadiff-added-background (background-color of .muxui-data-diff__row[data-muxui-change='added']), --muxui-component-datadiff-removed-background (background-color of .muxui-data-diff__row[data-muxui-change='removed']): they paint ${underText}`);
+  assert.equal(droppedNote('disclosure-group'), `No token step for --muxui-component-disclosuregroup-background (background-color of .muxui-disclosure-group > .muxui-disclosure): it paints ${underText}`);
+  // A part that holds no text and is half of no pair: Switch's thumb, beside its label, which is text on the page. One note for each reason.
+  assert.deepEqual(notesOf('switch', 'No token step for '), [
+    `No token step for --muxui-component-switch-label (color of .muxui-switch__label): ${onPage}`,
+    'No token step for --muxui-component-switch-selected-thumb (background-color of .muxui-switch[data-muxui-state-selected] .muxui-switch__indicator): it paints a part that holds no text, and the generator cannot tell what that part is drawn on (a track, a fill or the page), so it cannot choose a color that stands apart from it in both schemes.',
+  ]);
+  // A family that keeps another step still says which role it left out; the rest say nothing of the kind.
+  assert.deepEqual(slugs.filter((slug) => droppedNote(slug) !== undefined), ['data-diff', 'disclosure-group', 'switch', 'tabs', 'tag-group', 'text-field']);
   for (const slug of Object.keys(tokens)) assert.equal(tokenNote(slug), undefined, `${slug} has a token step and no such note`);
   // Seven families have nothing to target in their Basic example (closed overlays and providers), and each says why in a note.
   const empty = slugs.filter((slug) => all.get(slug).recipe.steps.length === 0);
   assert.deepEqual(empty, ['alert-dialog', 'dialog', 'menu', 'popover', 'preview-trigger', 'toast', 'tooltip']);
   for (const slug of empty) assert.ok(all.get(slug).recipe.notes.length >= 2 && all.get(slug).recipe.rules === '', slug);
-  // Steps by kind: 18 token steps in 10 families, a part step in 77, a state step in 54 of which 41 need the state.
+  // Steps by kind: 10 token steps in 6 families, a part step in 77, a state step in 54 of which 41 need the state.
   const steps = slugs.flatMap((slug) => all.get(slug).recipe.steps);
-  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [18, 77, 54]);
+  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 77, 54]);
   assert.equal(steps.filter((step) => step.scope === 'unavailable').length, 41);
   assert.ok(steps.filter((step) => step.scope === 'unavailable').every((step) => step.kind === 'state'));
-  assert.equal(steps.filter((step) => !step.observedText).length, 27, 'steps whose target holds no text are computed only');
+  assert.equal(steps.filter((step) => !step.observedText).length, 26, 'steps whose target holds no text are computed only');
 });
 
 test('a closed overlay\'s portal parts are never a target, and a provider with no element has no step', () => {
@@ -223,7 +250,6 @@ test('a closed overlay\'s portal parts are never a target, and a provider with n
     assert.ok(targets(slug).every((target) => !/popover|popup/u.test(target)), slug);
   }
   assert.deepEqual(all.get('alert-dialog').recipe.steps, []);
-  assert.match(all.get('alert-dialog').recipe.notes.join('\n'), /root renders no element \(a provider\)/u);
   assert.deepEqual(all.get('dialog').recipe.steps, []);
 });
 
@@ -321,15 +347,78 @@ test('conditionAtRest: the components layer anywhere in a rule\'s chain holds, a
   ]) assert.equal(conditionAtRest(chain), expected, chain.join(' > '));
 });
 
-test('a pseudo-qualified reader is decided on the Basic example: TextField\'s label role is a step at rest, and not once the example is invalid', () => {
-  const label = (styling) => styling.recipe.steps.filter(({ kind }) => kind === 'token').map(({ declaration, target, property }) => [declaration, target, property]);
-  assert.deepEqual(label(all.get('text-field')), [['--muxui-component-textfield-label: #7e62c9', ':where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label', 'color']]);
+test('a pseudo-qualified reader is decided on the Basic example: TextField\'s label role paints it at rest, and not once the example is invalid', () => {
+  // The model finds the label role on the valid field (the generator then leaves it out, since it is text on the page: see the palette
+  // test below), and finds nothing once the field is invalid.
+  const left = 'No token step for --muxui-component-textfield-label (color of :where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label): it paints text on the page, and the recipe assigns fixed colors, none of which reads at 4.5:1 on both the light page and the dark page.';
+  assert.deepEqual(all.get('text-field').recipe.steps.filter(({ kind }) => kind === 'token'), []);
+  assert.deepEqual(notesOf('text-field', 'No token step'), [left]);
   const basic = observations.find(({ family, source }) => family === 'text-field' && source.endsWith('/basic.tsx'));
   const html = basic.html.replace('class="muxui-text-field"', 'class="muxui-text-field" data-muxui-state-invalid=""');
   assert.notEqual(html, basic.html);
   const invalid = stylingOf('text-field', { observations: observations.map((observation) => (observation === basic ? { ...observation, html } : observation)) });
-  assert.deepEqual(label(invalid), [], 'the reader needs a TextField that is not invalid');
-  assert.match(invalid.recipe.notes.find((note) => note.startsWith('No token step')), /provably wins on an element its Basic example renders at rest/u);
+  assert.deepEqual(notesOf('text-field', 'No token step', invalid), ['No token step: no rule that reads TextField\'s color or size roles matches an element its Basic example renders (for example :where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label), so a role assigned on a wrapper would change nothing there.']);
+});
+
+test('the palette against the theme\'s own page colors: pairs read with margin in light and dark, a fill stands apart from both pages, and no fixed color suits text on the page, a surface under text or a lone part', () => {
+  const { core, light, dark } = facts.tokens;
+  const page = (token, scheme) => parseHex(core.cssValue((scheme === 'light' ? light : dark).tokens[token]));
+  const margin = 1.5;
+  const { text: textPair, mark: markPair } = recipePalette.pairs;
+  // Text on its surface: 4.5:1 with the margin, whatever the scheme.
+  assert.ok(contrastRatio(parseHex(textPair.text), parseHex(textPair.surface)) >= 4.5 * margin);
+  // A mark on its fill: 3:1 with room to spare (white on this violet is 4.69:1), and the fill stands apart from the light page and the dark
+  // page at 3:1 too, since a fill that holds no text is what shows the control. That is a narrow window, and the margin does not fit in it.
+  assert.ok(contrastRatio(parseHex(markPair.text), parseHex(markPair.surface)) >= 3 * margin);
+  for (const scheme of ['light', 'dark']) assert.ok(contrastRatio(parseHex(markPair.surface), page('semantic.surface.canvas', scheme)) >= 3, `${scheme}: the fill on the page`);
+  const lightL = luminance(page('semantic.surface.canvas', 'light')) + 0.05;
+  const darkL = luminance(page('semantic.surface.canvas', 'dark')) + 0.05;
+  const fillL = luminance(parseHex(markPair.surface));
+  const window = [3 * darkL - 0.05, 1.05 / (3 * margin) - 0.05];
+  assert.ok(fillL >= window[0] && fillL <= window[1], `the fill's luminance ${fillL.toFixed(3)} is in the window ${window.map((value) => value.toFixed(3)).join(' to ')}`);
+  // The navy of the text pair is not in that window: it is 16:1 under white and 1.19:1 on the dark page, which is why a fill with no text
+  // on it is not navy.
+  assert.ok(contrastRatio(parseHex(textPair.surface), page('semantic.surface.canvas', 'dark')) < 1.2);
+  // Text on the page needs 4.5:1 on the light canvas, which caps the color's luminance, and on the dark one, which floors it. The cap is under
+  // the floor, so no fixed color satisfies both and the palette for such a role is empty. Contrast depends on luminance alone, so this is every
+  // color, and a translucent one only blends toward the page.
+  const cap = lightL / 4.5 - 0.05;
+  const floor = 4.5 * darkL - 0.05;
+  assert.ok(cap < floor, `a color at most ${cap.toFixed(3)} bright on the light page and at least ${floor.toFixed(3)} on the dark one does not exist`);
+  assert.deepEqual(recipePalette.text, []);
+  // The best a single color does on both pages is the geometric mean: below 4.5 on the pages the theme has, which is why TextField's label
+  // read at 4.16:1 and 4.05:1 in the mid-tone it was given.
+  assert.ok(Math.sqrt(lightL / darkL) < 4.5, `${Math.sqrt(lightL / darkL).toFixed(2)}:1 is the most one color reads at on both pages`);
+  // A surface under the page's text: to leave that text as readable on both pages it would have to be at least as light as the light page
+  // (dark text on it) and at most as light as the dark page (light text on it), and the light page is lighter than the dark one. Every
+  // surface lowers the text on it in one scheme, so none is assigned unless the text can spare it, and the generator cannot tell.
+  assert.ok(lightL > darkL);
+  assert.deepEqual(recipePalette.surfaces, []);
+  // A part drawn on something the recipe does not set has to stand apart from that, not from the page. Switch's thumb sits on a track that
+  // is 3.6:1 under white on the dark scheme and 1.7:1 under the mid-tone that once stood for a part, so the palette has none.
+  assert.deepEqual(recipePalette.parts, []);
+});
+
+test('a color role on an element that holds no text and is half of no pair is a part the generator cannot place: it is left out and says so', () => {
+  // TextField's label with its text removed: the role still paints the label's color, but there is no text to read, so it is not text on
+  // the page. It is a part, and the recipe cannot tell what it is drawn on.
+  const basic = observations.find(({ family, source }) => family === 'text-field' && source.endsWith('/basic.tsx'));
+  const html = basic.html.replace('>Name</label>', '></label>');
+  assert.notEqual(html, basic.html);
+  const empty = stylingOf('text-field', { observations: observations.map((observation) => (observation === basic ? { ...observation, html } : observation)) });
+  assert.deepEqual(empty.recipe.steps.filter(({ kind }) => kind === 'token'), []);
+  assert.deepEqual(notesOf('text-field', 'No token step', empty), ['No token step for --muxui-component-textfield-label (color of :where(.muxui-text-field):not([data-muxui-state-invalid]) .muxui-field-label): it paints a part that holds no text, and the generator cannot tell what that part is drawn on (a track, a fill or the page), so it cannot choose a color that stands apart from it in both schemes.']);
+});
+
+test('a surface and its text are taken together or not at all: a second pair does not fill the third slot with half of it', async () => {
+  // TagGroup's tag is a pair. Add a second pair on the cell inside the tag (amber selected background and foreground): the recipe
+  // takes at most three colors, and a pair that does not fit whole is left out, so no surface is assigned without its text.
+  const second = (text) => `${text}\n@layer muxui.components {\n  .muxui-tag-group__tag > div { background-color: var(--muxui-component-taggroup-amber-selected-background); color: var(--muxui-component-taggroup-amber-selected-foreground); }\n}\n`;
+  await withMirror(repositoryRoot, { 'packages/react/generated/styles.css': second }, async (directory) => {
+    const changed = stylingOf('tag-group', { facts: await readStylingFacts(directory) });
+    assert.deepEqual(changed.recipe.steps.filter(({ kind }) => kind === 'token').map(({ declaration }) => declaration.split(':')[0]), ['--muxui-component-taggroup-tag-background', '--muxui-component-taggroup-tag-foreground']);
+    assert.deepEqual(failuresOf('tag-group', changed), []);
+  });
 });
 
 test('a textarea\'s value is the target\'s text: a part step on it is observed text, and an empty one is computed only', () => {
@@ -341,6 +430,101 @@ test('a textarea\'s value is the target\'s text: a part step on it is observed t
   assert.deepEqual([part(swapped(withoutLabel)).target, part(swapped(withoutLabel)).observedText], ['.muxui-text-area', false], 'with no text anywhere the root is the target and holds none');
   const filled = withoutLabel.replace('></textarea>', '>Saved &amp; ready</textarea>');
   assert.deepEqual([part(swapped(filled)).target, part(swapped(filled)).observedText], ['.muxui-text-area__textarea', true], 'the value is text, so the textarea is the part with text');
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// The notes: each says what the Basic example renders and why that is not a step, and agrees with the example read by jsdom.
+// ---------------------------------------------------------------------------------------------------------------------------
+
+const scopedRule = 'A part rule is scoped to a wrapper around the component, so its target has to be inside the component\'s root to be reached.';
+
+test('a missing part step says what the Basic example renders: nothing, or a hook the generator cannot show inside the root', () => {
+  // The generator rejects a candidate for want of the root as an ancestor; it does not say the example lacks the element.
+  assert.deepEqual(notesOf('menu', 'No part step'), [`No part step: the Basic example renders .muxui-menu__item, but Menu's root renders no element in that example, so the generator cannot show that it is inside the root. ${scopedRule}`]);
+  assert.deepEqual(notesOf('alert-dialog', 'No part step'), [`No part step: the Basic example renders .muxui-alert-dialog__trigger, but AlertDialog's root renders no element (a provider), so the generator cannot show that it is inside the root. ${scopedRule}`]);
+  assert.deepEqual(notesOf('dialog', 'No part step'), ['No part step: the Basic example renders no element of Dialog\'s documented hooks.']);
+  // Against the example as jsdom reads it, for every family without a part step, and against the Rendered DOM block the page prints.
+  const without = slugs.filter((slug) => notesOf(slug, 'No part step').length > 0);
+  assert.deepEqual(without, ['alert-dialog', 'dialog', 'menu', 'popover', 'preview-trigger', 'toast', 'tooltip']);
+  for (const slug of without) {
+    const document = basicDocument(slug);
+    const rendered = documentedHooks(slug).filter((hook) => document.querySelector(hook) !== null);
+    const [note] = notesOf(slug, 'No part step');
+    const dom = all.get(slug).hooks.renderedDom?.text ?? '';
+    if (rendered.length === 0) {
+      assert.match(note, /^No part step: the Basic example renders no element of [A-Za-z]+'s documented hooks\.$/u, slug);
+    } else {
+      assert.ok(note.startsWith(`No part step: the Basic example renders ${rendered.join(', ')}, but `), `${slug}: ${note}`);
+      for (const hook of rendered) assert.match(dom, new RegExp(`class="([^"]* )?${hook.slice(1)}( [^"]*)?"`, 'u'), `${slug}: the Rendered DOM shows ${hook}`);
+    }
+  }
+});
+
+test('a missing state step names the reason that holds: no boolean state, none the example shows or you set by hand, no hook to put it on, or a hook it does not render or cannot show inside the root', () => {
+  const note = (slug) => notesOf(slug, 'No state step')[0];
+  const noRule = (list, verb) => `No state step: ${list} ${verb} declared, but no Mux rule selects`;
+  assert.equal(note('avatar'), 'No state step: none of Avatar\'s declared states (loading, loaded, fallback, error, sm, md, lg) is a boolean data-muxui-state-* attribute, which a state step needs.');
+  assert.equal(note('activity'), 'No state step: Activity\'s Basic example shows none of its boolean states (focused) on a documented hook inside its root, and none is one a recipe sets by hand (disabled, read-only, required, invalid, selected, expanded, open).');
+  assert.equal(note('alert-dialog'), 'No state step: open, disabled are declared, but no Mux rule selects them on a hook of AlertDialog, so the recipe has no hook to put them on.');
+  assert.equal(note('virtualizer'), 'No state step: disabled is declared and selected on .muxui-virtualizer__item, but the Basic example does not render that hook.');
+  assert.equal(note('menu'), 'No state step: disabled is declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but Menu\'s root renders no element in that example, so the generator cannot show that it is inside the root.');
+  assert.ok(note('dialog').startsWith(noRule('open', 'is')));
+  // Every state a note names is one the catalog declares and a hook can carry as a boolean attribute, and a hook it says the example
+  // renders (or does not) is one jsdom finds (or does not) in the Basic example. The old sentence, "declares no state", is gone.
+  const without = slugs.filter((slug) => notesOf(slug, 'No state step').length > 0);
+  assert.equal(without.length, 30);
+  for (const slug of without) {
+    const text = note(slug);
+    assert.ok(!/declares no state/u.test(text), slug);
+    const declared = readRecord(repositoryRoot, slug).states;
+    const booleans = declared.filter((name) => booleanStates.includes(name));
+    if (text.startsWith('No state step: none of ')) {
+      assert.deepEqual(booleans, [], `${slug}: no declared state is a boolean attribute`);
+      assert.ok(declared.every((name) => text.includes(name)), slug);
+      continue;
+    }
+    assert.ok(booleans.length > 0, `${slug} declares a boolean state`);
+    const document = basicDocument(slug);
+    const rendered = [...new Set(text.match(/\.muxui-[\w-]+/gu) ?? [])].filter((hook) => document.querySelector(hook) !== null);
+    if (text.includes('. The Basic example renders ')) assert.ok(text.includes(`The Basic example renders ${rendered.join(', ')}, but `), `${slug}: ${text}`);
+    else if (text.includes('but the Basic example does not render')) assert.deepEqual(rendered, [], `${slug}: ${text}`);
+  }
+});
+
+test('a hook the example renders outside the root element is outside it, not unprovable', () => {
+  // Menu's Basic example renders no root element. Put one beside the items: the root now exists and the items are not in it.
+  const basic = observations.find(({ family, source }) => family === 'menu' && source.endsWith('/basic.tsx'));
+  const beside = observations.map((observation) => (observation === basic ? { ...observation, html: `<div class="muxui-menu__root"></div>${basic.html}` } : observation));
+  const styling = stylingOf('menu', { observations: beside });
+  assert.deepEqual(notesOf('menu', 'No state step', styling), ['No state step: disabled is declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but it is outside Menu\'s root element.']);
+});
+
+test('a missing token step says what the rules that read the roles do on the Basic example: they match nothing it renders, or they match and cannot be shown to win', async () => {
+  // jsdom reads the example: no selector of a rule that reads a color or size role matches an element of it.
+  for (const slug of ['code-block', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar']) {
+    const document = basicDocument(slug);
+    const readers = all.get(slug).tokens.groups.flatMap(({ rows }) => rows).filter(({ group, policy, type, readBy }) => group === 'component' && policy === 'theme' && ['color', 'dimension'].includes(type) && readBy.kind === 'rules').flatMap(({ readBy }) => readBy.selectors.map(({ selector }) => selector));
+    assert.ok(readers.length > 0, slug);
+    for (const selector of readers) assert.equal(document.querySelector(selector), null, `${slug}: ${selector} matches nothing in the Basic example`);
+    assert.ok(notesOf(slug, 'No token step')[0].includes(`(for example ${readers[0]})`), slug);
+  }
+  // The other reason: DropZone with the state its reader needs matches, and a rule that wins over the role there leaves no step.
+  const dropZone = observations.find(({ family, source }) => family === 'drop-zone' && source.endsWith('/basic.tsx'));
+  const shown = observations.map((observation) => (observation === dropZone ? { ...observation, html: dropZone.html.replace('class="muxui-drop-zone"', 'class="muxui-drop-zone" data-muxui-state-drop-target=""') } : observation));
+  assert.notEqual(shown, observations);
+  assert.deepEqual(all.get('drop-zone').recipe.steps.filter(({ kind }) => kind === 'token'), []);
+  // The role is then found, and left out as a surface under text: a note that names it, not a missing-step note.
+  const found = stylingOf('drop-zone', { observations: shown });
+  assert.deepEqual(found.recipe.steps.filter(({ kind }) => kind === 'token'), []);
+  const [note, ...more] = notesOf('drop-zone', 'No token step', found);
+  assert.deepEqual(more, []);
+  assert.match(note, /^No token step for --muxui-component-dropzone-drop-target-background \(background-color of \.muxui-drop-zone\[data-muxui-state-drop-target\]\): it paints the surface under text, and/u);
+  const wins = (text) => `${text}\n@layer muxui.components {\n  .muxui-drop-zone[data-muxui-state-drop-target] { background-color: rgb(1, 2, 3) !important; }\n}\n`;
+  await withMirror(repositoryRoot, { 'packages/react/generated/styles.css': wins }, async (directory) => {
+    const changed = stylingOf('drop-zone', { facts: await readStylingFacts(directory), observations: shown });
+    assert.deepEqual(changed.recipe.steps.filter(({ kind }) => kind === 'token'), []);
+    assert.deepEqual(notesOf('drop-zone', 'No token step', changed), ['No token step: rules that read DropZone\'s color or size roles match elements its Basic example renders, but the generator cannot show that a role is what paints any of them (another rule may win, or a state it cannot decide may apply).']);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -392,7 +576,8 @@ test('control: a stylesheet that adds a label-gap reader flips its Tokens row fr
     const labelGap = (styling) => styling.tokens.groups.flatMap(({ rows }) => rows).find(({ token }) => token === 'component.disclosuregroup.label-gap').readBy;
     assert.deepEqual([labelGap(all.get('disclosure-group')).kind, labelGap(changed).kind], ['none', 'rules']);
     assert.match(labelGap(changed).note, /^Read by \.muxui-disclosure-group/u);
-    assert.deepEqual(changed.recipe.steps.filter(({ kind }) => kind === 'token').map(({ declaration }) => declaration), ['--muxui-component-disclosuregroup-background: #7e62c9']);
+    // The background is a surface under text and is left out, so no token step is left: a size step for label-gap would be the only one.
+    assert.deepEqual(changed.recipe.steps.filter(({ kind }) => kind === 'token'), []);
     assert.ok(!JSON.stringify(changed.recipe).includes('label-gap'));
   });
 });
