@@ -576,6 +576,11 @@ export const stylingConsumers = Object.freeze({
   storybookUnitTests: Object.freeze([{ file: 'test/storybook.test.mjs' }]),
 });
 
+// The server-rendered catalog examples: Storybook's generator (apps/react-storybook/src/component-docs.mjs) embeds them in every Docs
+// page entry and the Docs page test re-renders them to cross-check it. Neither is a React test, so `reactTestFilesReferencing` cannot see
+// them. A change to it runs Storybook generation and the Docs page test (addComponentDocsProof); the docs site does not read it.
+export const catalogExampleRendersPath = 'packages/react/test/support/catalog-example-renders.mjs';
+
 // Tracked files outside packages/react/src whose text names `needle`.
 async function trackedReferences(needle) {
   const result = git(['grep', '-l', '-z', '-F', '-e', needle, '--', '.', ':!packages/react/src'], { allowFailure: true });
@@ -1425,7 +1430,7 @@ export async function buildPullRequestImpact({
         plan.reasons.push(`${path} is React type-test input; run the React package check that typechecks it`);
       } else {
         const testFiles = [...new Set([...reactTestFilesReferencing(testPath, reactTestReferenceSources), ...publicSurfaceTestsFor(path)])].sort();
-        // Both explicit routes come before the zero-reference fallback below, whose `continue` would otherwise swallow them.
+        // The explicit routes come before the zero-reference fallback below, whose `continue` would otherwise swallow them.
         if (path === partMapPath) {
           plan.storyTooling = true;
           for (const route of partMapConsumers.storybookUnitTests) addStoryUnitTest(plan, route);
@@ -1437,6 +1442,10 @@ export async function buildPullRequestImpact({
           addComponentDocsProof(plan);
           for (const route of stylingConsumers.storybookUnitTests) addStoryUnitTest(plan, route);
           plan.reasons.push(`${path} feeds the styling projection that the docs and the Storybook Anatomy stories show; run the docs check, the Docs page test and the Anatomy factory test`);
+        }
+        if (path === catalogExampleRendersPath) {
+          addComponentDocsProof(plan);
+          plan.reasons.push(`${path} renders the catalog examples that Storybook's generator and the Docs page test read; run Storybook generation and the Docs page test`);
         }
         if (testFiles.length === 0 && await readHeadText(path) !== null) {
           plan.reactPackageFull = true;
