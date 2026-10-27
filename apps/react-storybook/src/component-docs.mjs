@@ -5,6 +5,8 @@ import { createRequire } from 'node:module';
 import { posix, resolve } from 'node:path';
 import { componentReference, readDeclarationReference, readReactPackageFacts, usageGuideId } from '../../component-reference.mjs';
 import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies, linkedSiteRoutes } from '../../guide-links.mjs';
+import { renderCatalogExamples } from '../../../packages/react/test/support/catalog-example-renders.mjs';
+import { readStylingFacts } from '../../../packages/react/test/support/styling-reference.mjs';
 
 /**
  * The docs entry of every component family: the catalog facts its Storybook
@@ -249,12 +251,16 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
     sections: accessibilitySections,
     links: siteLinks(accessibilitySections, repositoryRoot),
   };
+  // The Anatomy table reads the styling reference's hooks block, which describes the elements the catalog's own examples render.
+  const stylingFacts = await readStylingFacts(repositoryRoot);
+  const observations = (await renderCatalogExamples(componentIds.map((id) => id.slice(id.lastIndexOf(':') + 1))))
+    .map(({ family, source, html }) => ({ family, source, html }));
   const entries = new Map();
   for (const id of componentIds) {
     const { artifact, usedIn = [] } = detail({ id });
     const examples = detail({ id, section: 'examples' }).value ?? [];
     if (examples.length === 0) throw new Error(`The canonical catalog has no React example for ${id}.`);
-    const { declarations: share, ...reference } = componentReference({ artifact, examples, packageFacts, declarations });
+    const { declarations: share, ...reference } = componentReference({ artifact, examples, packageFacts, declarations, stylingFacts, observations });
 
     let guide = null;
     const guideId = usageGuideId(id);
@@ -283,6 +289,7 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
 }
 
 function entryFor({ artifact, reference, typed, guide, accessibilityGuide, installationGuide, examples, usedIn }) {
+  const { anatomy, states, tokenSource, tokenGroups, hooks } = reference.styling;
   return {
     id: artifact.id,
     name: artifact.name,
@@ -294,6 +301,9 @@ function entryFor({ artifact, reference, typed, guide, accessibilityGuide, insta
     guide,
     accessibilityGuide,
     ...reference,
+    // The Docs page reads the four fields styling always had; the Anatomy story reads the hooks block. The rest of the styling
+    // reference (tokens, override rules, recipe) is the docs site's, so it does not ship in every story module.
+    styling: { anatomy, states, tokenSource, tokenGroups, hooks },
     typed,
     // The declarations the typed reference was read from follow the family's other sources.
     sources: [...reference.sources, { label: 'Declarations', paths: [typed.source, ...Object.values(typed.sources)] }],

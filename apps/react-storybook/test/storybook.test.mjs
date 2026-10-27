@@ -25,6 +25,7 @@ import {
   adapterNames,
   AVATAR_LOADED_SRC,
   isLifecycleState,
+  NOT_OBSERVED_IN_CANVAS,
   HISTORICAL_BROWSER_PROOF_FAMILIES,
   BROWSER_PROOF_FAMILIES,
   createAnatomyStory,
@@ -115,6 +116,13 @@ const historicalManifest = {
   count: historicalFamilyNames.size,
   families: descriptor.bindings.map(({ export: name }) => manifestByFamily.get(name)).filter(Boolean),
 };
+// The hooks block of every family's styling reference, as the generator embedded it in the family's story module: the Anatomy
+// story's table is built from it.
+const embeddedHooks = new Map(await Promise.all(manifest.families.map(async ({ family, tranche }) => {
+  const slug = family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  const module = await import(`../.storybook/generated/${tranche.replace('.', '-').toLowerCase()}-${slug}.stories.mjs`);
+  return [family, module.default.parameters.muxuiReference.styling.hooks];
+})));
 
 function installRuntimeDom() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
@@ -476,7 +484,7 @@ test('every family has live controls, events, modes, anatomy, and a hidden brows
     assert.equal(typeof module.BrowserProof?.play, 'function', `${record.family}/BrowserProof play`);
     assert.equal(module.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
     assert.deepEqual(module.BrowserProof.tags, ['!dev', '!autodocs'], `${record.family}/BrowserProof is left out of the sidebar and autodocs`);
-    const proof = { family: record.family, tranche: record.tranche, binding };
+    const proof = { family: record.family, tranche: record.tranche, binding, hooks: embeddedHooks.get(record.family) };
     const story = {
       Controlled: createControlledStory(proof),
       Uncontrolled: createUncontrolledStory(proof),
@@ -552,7 +560,7 @@ test('InputTags controlled and uncontrolled stories render their list values', a
 function currentRecord(family) {
   const binding = descriptorSource.bindings.find(({ export: name }) => name === family);
   assert.ok(binding, `${family} binding`);
-  return { family, tranche: manifestByFamily.get(family).tranche, binding };
+  return { family, tranche: manifestByFamily.get(family).tranche, binding, hooks: embeddedHooks.get(family) };
 }
 
 // MuxUIPlacement is declared by tsc with the overlays that take it; the index only names it.
@@ -2174,30 +2182,83 @@ test('CommandPalette Events story opens from its trigger and closes from its pop
   }
 });
 
-/** Renders a family's anatomy story and returns one `{ part, status, proof, route }` per part row, in the binding's part order. */
-async function renderAnatomyRows(record, binding) {
-  if (!anatomyRowCache.has(record.family)) anatomyRowCache.set(record.family, await renderAnatomyRowsUncached(record, binding));
-  return anatomyRowCache.get(record.family);
+/**
+ * Renders a family's Anatomy story alone in a fresh document and reads its hooks table, with an independent recount of what the
+ * table counts: the elements of the document, which in a document that holds only this story are the story's own and its portals'.
+ * `rows` is one `{ part, status, proof, route }` per part row, in the binding's part order, for the three proofs of the part map.
+ */
+async function renderAnatomy(record, binding) {
+  if (!anatomyCache.has(record.family)) anatomyCache.set(record.family, await renderAnatomyUncached(record, binding));
+  return anatomyCache.get(record.family);
 }
-const anatomyRowCache = new Map();
+const anatomyCache = new Map();
+const renderAnatomyRows = async (record, binding) => (await renderAnatomy(record, binding)).rows;
 
-async function renderAnatomyRowsUncached(record, binding) {
+/** The table's rows, group by group, in the order the hooks block lists them (the "not set by" rows close the reflected group). */
+function expectedHookRows(hooks) {
+  return hooks.groups.map((group) => ({ group: group.id, rows: [...group.rows, ...(group.id === 'reflected' ? hooks.notSet : [])] }));
+}
+
+async function renderAnatomyUncached(record, binding) {
+  const hooks = embeddedHooks.get(record.family);
   const env = installRuntimeDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
   try {
     // Built from the factory so root-only families, whose pages omit Anatomy, still prove their parts.
-    const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding });
+    const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding, hooks });
     await act(async () => root.render(story.render(story.args)));
     // Toast is queued by a declarative effect and rendered by RAC's region on
     // the following task; allow that portal-like queue update to settle.
     await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, record.family === 'Toast' ? 100 : 20)));
-    return [...host.querySelectorAll(`[data-muxui-storybook-api-parts="${record.family}"] > li`)].map((row) => ({
-      part: row.querySelector('code')?.textContent,
-      status: row.getAttribute('data-muxui-storybook-api-part-status'),
-      proof: row.getAttribute('data-muxui-storybook-api-part-proof'),
-      route: row.getAttribute('data-muxui-storybook-api-part-route'),
-    }));
+    const table = host.querySelector(`table[data-muxui-storybook-api-parts="${record.family}"]`);
+    const bodies = [...table.querySelectorAll('tbody')];
+    const cells = (row) => ({
+      hook: row.children[0].textContent, on: row.children[1].textContent, live: row.children[2].textContent, note: row.children[3].textContent,
+      reason: row.querySelector('[data-muxui-storybook-live-reason]')?.getAttribute('data-muxui-storybook-live-reason') ?? null,
+    });
+    const documented = hooks.groups.flatMap((group) => group.rows).filter((row) => row.kind === 'class' && row.hook !== null).map((row) => row.hook);
+    const carriers = documented.length === 0 ? [] : [...document.querySelectorAll(documented.join(', '))];
+    return {
+      headings: [...table.querySelectorAll('thead th')].map((cell) => cell.textContent),
+      groups: bodies.map((body) => ({
+        group: body.getAttribute('data-muxui-storybook-hooks-group'),
+        heading: body.querySelector('th[scope="rowgroup"]').firstChild.textContent,
+        sub: body.querySelector('th[scope="rowgroup"] span').textContent,
+        rows: [...body.querySelectorAll('tr')].filter((row) => !row.querySelector('th[scope="rowgroup"]')).map((row) => ({
+          ...cells(row), kind: row.getAttribute('data-muxui-storybook-hook-kind') ?? 'class', part: row.getAttribute('data-muxui-storybook-hook-part'),
+        })),
+      })),
+      // What each On cell must say, from the document alone: the tags of a class row's elements (in root when each is inside a root element),
+      // and for an attribute the parts with a carrying element, then the parts a rule selects it on that have none, marked styled.
+      expectedOn: Object.fromEntries(hooks.groups.flatMap((group) => group.rows).map((row) => {
+        const classRows = hooks.groups.filter((group) => group.id === 'root' || group.id === 'part').flatMap((group) => group.rows);
+        const rootRow = hooks.groups.find((group) => group.id === 'root').rows[0];
+        let on;
+        if (row.kind === 'class') {
+          const nodes = row.hook === null ? [] : [...document.querySelectorAll(row.hook)];
+          const inRoot = row.part !== rootRow.part && nodes.length > 0 && nodes.every((node) => Boolean(node.parentElement?.closest(rootRow.hook)));
+          on = nodes.length > 0 && row.conditional === undefined ? `${[...new Set(nodes.map((node) => node.localName))].map((tag) => `<${tag}>`).join(', ')}${inRoot ? ' in root' : ''}` : row.on;
+        } else {
+          const shown = classRows.filter((each) => each.hook !== null && [...document.querySelectorAll(each.hook)].some((node) => node.hasAttribute(row.hook))).map((each) => each.part);
+          on = [...shown, ...row.selectedOn.filter((part) => !shown.includes(part)).map((part) => `${part} styled`)].join(', ') || '-';
+        }
+        return [`${row.kind}:${row.hook ?? row.part}`, on];
+      })),
+      // What the table must count, from the document alone: a class row's own selector, and the carriers of an attribute among all the hooks.
+      recount: Object.fromEntries(hooks.groups.flatMap((group) => group.rows).map((row) => [
+        `${row.kind}:${row.hook ?? row.part}`,
+        row.hook === null ? null : row.kind === 'class' ? document.querySelectorAll(row.hook).length : carriers.filter((node) => node.hasAttribute(row.hook)).length,
+      ])),
+      // The stamp the old harness wrote on every matched element, and never read.
+      stamped: document.querySelectorAll('[data-muxui-storybook-api-part]').length,
+      rows: [...table.querySelectorAll('tr[data-muxui-storybook-api-part-status]')].map((row) => ({
+        part: row.getAttribute('data-muxui-storybook-hook-part'),
+        status: row.getAttribute('data-muxui-storybook-api-part-status'),
+        proof: row.getAttribute('data-muxui-storybook-api-part-proof'),
+        route: row.getAttribute('data-muxui-storybook-api-part-route'),
+      })),
+    };
   } finally {
     await act(async () => root.unmount());
     // TextEditor destroys its editor on a timer one tick after unmount, which needs the window still installed.
@@ -2246,7 +2307,7 @@ test('anatomy proof extends to the supplemental bindings; the parts that need in
     const rows = await renderAnatomyRows(record, binding);
     assert.equal(rows.length, binding.api.parts.length, `${record.family} anatomy part rows`);
     assert.ok(rows.every(({ route }) => route), `${record.family} anatomy routes`);
-    const missing = rows.filter((row) => !anatomyResolved(row)).map(({ part }) => part.replace(/^.* \((.*)\)$/u, '$1'));
+    const missing = rows.filter((row) => !anatomyResolved(row)).map(({ part }) => part);
     const named = reactEmissionOnly[record.family] ?? [];
     if (missing.join() !== named.join()) drift.push(`${record.family}: unresolved ${JSON.stringify(missing)}, named ${JSON.stringify(named)}`);
   }
@@ -2262,7 +2323,7 @@ test('anatomy readers take every row from the contract: roots are proven by thei
   // No root fast path: Input's root is the wrapper class, not the control's, and Menu's root is the Menu.Root wrapper.
   for (const [family, selector] of [['Input', '.muxui-input__root'], ['Menu', '.muxui-menu__root']]) {
     const { record, binding } = find(family);
-    const root = (await renderAnatomyRows(record, binding)).find(({ part }) => part.endsWith(' (root)'));
+    const root = (await renderAnatomyRows(record, binding)).find(({ part }) => part === 'root');
     assert.equal(root.route, selector, `${family} root reads its own row`);
   }
   // The contract's 19 none rows are exactly the no-element rows, across the historical and supplemental bindings.
@@ -2277,12 +2338,294 @@ test('anatomy readers take every row from the contract: roots are proven by thei
   const env = installRuntimeDom();
   const root = createRoot(document.querySelector('#root'));
   try {
-    const story = createAnatomyStory({ family: record.family, tranche: record.tranche, binding: { ...binding, api: { ...binding.api, parts: [...binding.api.parts, 'bogus'] } } });
+    const story = createAnatomyStory({ family: record.family, tranche: record.tranche, hooks: embeddedHooks.get(record.family), binding: { ...binding, api: { ...binding.api, parts: [...binding.api.parts, 'bogus'] } } });
     await assert.rejects(async () => { await act(async () => root.render(story.render(story.args))); }, /bogus/u);
   } finally {
     env.resolveAnimations();
     env.restore();
   }
+});
+
+// The Anatomy story's table is the family's hooks block (the styling reference, embedded by the generator) with a Live column.
+// Each family renders alone in a fresh document, so the document's own elements are the story's: the recount below uses no
+// ownership logic of its own, and the two-host test is what proves the table's.
+test('every Anatomy story prints its family\'s hooks block as a table: the same groups, hooks and notes, with a Live column', async () => {
+  for (const record of manifest.families) {
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    const { headings, groups } = await renderAnatomy(record, binding);
+    const hooks = embeddedHooks.get(record.family);
+    const expected = expectedHookRows(hooks);
+    assert.deepEqual(headings, ['Hook', 'On', 'Live', 'Notes'], `${record.family} columns`);
+    assert.deepEqual(groups.map(({ group }) => group), expected.map(({ group }) => group), `${record.family} groups`);
+    const headingsOf = { root: ['Root class', ''], part: ['Part classes', 'from catalog anatomy'], state: ['State attributes', 'presence only'], reflected: ['Reflected prop attributes', 'the value the element carries; composed parts can carry their own'] };
+    assert.deepEqual(groups.map(({ heading, sub }) => [heading, sub]), expected.map(({ group }) => headingsOf[group]), `${record.family} group headings`);
+    for (const [index, { rows }] of expected.entries()) {
+      const shown = groups[index].rows;
+      assert.equal(shown.length, rows.length, `${record.family} ${groups[index].group} rows`);
+      for (const [position, row] of rows.entries()) {
+        // A row with no hook (internal, or no element) names its part in parentheses; the "not set by" rows have no Live.
+        assert.equal(shown[position].hook, row.hook ?? `(${row.part})`, `${record.family} hook ${position}`);
+        assert.ok(shown[position].note.startsWith(row.note), `${record.family} ${row.hook ?? row.part}: the note is the reference module's string`);
+      }
+    }
+  }
+});
+
+test('the Live column counts distinct elements of the story, which a recount of the document reproduces for all 84 families', async () => {
+  let rows = 0;
+  for (const record of manifest.families) {
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    const { groups, recount, stamped } = await renderAnatomy(record, binding);
+    const hooks = embeddedHooks.get(record.family);
+    for (const [index, { rows: listed }] of expectedHookRows(hooks).entries()) {
+      for (const [position, row] of listed.entries()) {
+        const shown = groups[index].rows[position];
+        const wanted = recount[`${row.kind}:${row.hook ?? row.part}`];
+        // A row with no hook has no Live, and neither has a "not set by" row.
+        assert.equal(shown.live, hooks.notSet.includes(row) || wanted === null ? '-' : String(wanted), `${record.family} ${row.hook ?? row.part} Live`);
+        rows += 1;
+      }
+    }
+    assert.equal(stamped, 0, `${record.family}: no element in the canvas carries the retired data-muxui-storybook-api-part stamp`);
+  }
+  // 448 class rows, 264 catalog state and status rows, 84 interaction rows, 15 observed ones, 36 reflected rows and 38 "not set by" rows.
+  assert.equal(rows, 448 + 264 + 84 + 15 + 36 + 38, 'every row of every table was compared');
+});
+
+/** Mounts a family's Anatomy story in each of `hosts` containers of one page and returns the tables they print. */
+async function renderAnatomyHosts(family, hosts) {
+  const record = currentRecord(family);
+  const story = createAnatomyStory(record);
+  const env = installRuntimeDom();
+  const roots = [];
+  try {
+    for (let index = 0; index < hosts; index += 1) {
+      const container = index === 0 ? document.querySelector('#root') : document.body.appendChild(document.createElement('div'));
+      roots.push(createRoot(container));
+    }
+    await act(async () => roots.forEach((root) => root.render(story.render(story.args))));
+    await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, 30)));
+    // One document has one focused element, so a second host takes the first's focus: the focus rows say nothing about ownership.
+    const focus = new Set(['data-muxui-state-focused', 'data-muxui-state-focus-visible']);
+    const live = (table) => Object.fromEntries([...table.querySelectorAll('tbody tr')].filter((row) => !row.querySelector('th[scope="rowgroup"]') && !focus.has(row.children[0].textContent))
+      .map((row) => [row.children[0].textContent, row.children[2].textContent]));
+    return {
+      hosts: [...document.querySelectorAll(`table[data-muxui-storybook-api-parts="${family}"]`)].map(live),
+      documentWide: Object.fromEntries(record.hooks.groups.flatMap(({ rows }) => rows).filter((row) => row.kind === 'class' && row.hook).map((row) => [row.hook, document.querySelectorAll(row.hook).length])),
+    };
+  } finally {
+    await act(async () => roots.forEach((root) => root.unmount()));
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+    env.resolveAnimations();
+    env.restore();
+  }
+}
+
+// Two Anatomy stories on one page: a document-wide lookup doubled every count (each Button host has three roots and read six).
+test('two Anatomy hosts on one page each count their own elements and the overlays they render', async () => {
+  const button = await renderAnatomyHosts('Button', 2);
+  assert.equal(button.hosts.length, 2);
+  assert.equal(button.documentWide['.muxui-button'], 6, 'the page holds six Buttons, three in each host');
+  for (const host of button.hosts) {
+    assert.equal(host['.muxui-button'], '3', 'a host counts its own three roots');
+    assert.equal(host['.muxui-button__label'], '3', 'and its own three labels');
+  }
+  // Select renders its popup, list and options in a portal. The portal is its host's, however many hosts share the page.
+  const [solo] = (await renderAnatomyHosts('Select', 1)).hosts;
+  const pair = await renderAnatomyHosts('Select', 2);
+  assert.ok(Number(solo['.muxui-select__option']) > 0 && Number(solo['.muxui-select__popup']) > 0, 'Select\'s overlay is rendered and counted');
+  assert.equal(pair.documentWide['.muxui-select__option'], 2 * Number(solo['.muxui-select__option']), 'the page holds both hosts\' options');
+  assert.deepEqual(pair.hosts, [solo, solo], 'each host counts its own portal and nothing of the other\'s');
+});
+
+test('a change that only writes an attribute, such as a hover, updates the Live cell', async () => {
+  await withRuntime(async ({ host, root }) => {
+    const story = createAnatomyStory(currentRecord('Button'));
+    await act(async () => root.render(story.render(story.args)));
+    await settleRuntime();
+    const hovered = () => [...host.querySelectorAll('tbody tr')].find((row) => row.children[0].textContent === 'data-muxui-state-hovered').children[2].textContent;
+    assert.equal(hovered(), '0', 'nothing is hovered at rest');
+    const button = host.querySelector('.muxui-button');
+    await act(async () => { button.dispatchEvent(new MouseEvent('pointerover', { bubbles: true, cancelable: true })); });
+    await settleRuntime();
+    assert.equal(button.hasAttribute('data-muxui-state-hovered'), true, 'React Aria writes the hovered state');
+    assert.equal(hovered(), '1', 'the hover changed an attribute and added no node, and the cell followed');
+    await act(async () => { button.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, cancelable: true })); });
+    await settleRuntime();
+    assert.equal(hovered(), '0', 'and followed it back');
+  });
+});
+
+// The On cell says where the canvas shows a hook: the tags of a class row's live nodes, the parts that carry an attribute, and the parts a rule
+// selects it on that the canvas does not show, marked styled. The recount above says nothing about it, so it has its own.
+test('the On cell of every row is what the document shows: its tags, each carrying part once, and the styled fallback', async () => {
+  let cells = 0;
+  for (const record of manifest.families) {
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    const { groups, expectedOn } = await renderAnatomy(record, binding);
+    for (const [index, { rows }] of expectedHookRows(embeddedHooks.get(record.family)).entries()) {
+      for (const [position, row] of rows.entries()) {
+        // A "not set by" row names no element, so its cell is the reference's own text.
+        const wanted = embeddedHooks.get(record.family).notSet.includes(row) ? row.on : expectedOn[`${row.kind}:${row.hook ?? row.part}`];
+        assert.equal(groups[index].rows[position].on, wanted, `${record.family} ${row.hook ?? row.part} On`);
+        cells += 1;
+      }
+    }
+  }
+  assert.equal(cells, 885, 'every row of every table was compared');
+});
+
+// The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
+// portal, several carrying parts listed once each, a part a rule selects that the canvas does not show, an element the caller supplies, and a
+// part with no hook.
+test('the On cell reads as written for fixture families: portal tags, each part once, styled, the caller\'s element and no hook', async () => {
+  const fixtures = {
+    Button: { '.muxui-button': '<button>', '.muxui-button__label': '<span> in root', 'data-muxui-state-pending': 'root', 'data-muxui-state-hovered': 'root styled', 'data-muxui-size': 'root' },
+    Select: { '.muxui-select__popup': '<div>', '.muxui-select__option': '<div>', 'data-muxui-state-open': 'root, trigger styled', 'data-muxui-state-selected': 'option styled', 'data-muxui-size': 'root, popup, list' },
+    Toast: { '.muxui-toast__dismiss': '<button> in root', 'data-muxui-variant': 'toast, dismiss' },
+    TagGroup: { '.muxui-tag-group__list': '<div> in root', 'data-muxui-state-disabled': 'tag, remove styled', 'data-muxui-variant': 'tag, remove' },
+    DatePicker: { '.muxui-date-picker__popover .muxui-calendar': '<div>', 'data-muxui-state-disabled': 'root, calendar styled', 'data-muxui-state-invalid': 'root, calendar' },
+    Popover: { '.muxui-popover__trigger': 'caller\'s element' },
+    FileTrigger: { '.muxui-file-trigger': 'caller\'s element' },
+  };
+  for (const [family, expected] of Object.entries(fixtures)) {
+    const record = manifest.families.find((each) => each.family === family);
+    const { groups } = await renderAnatomy(record, descriptorSource.bindings.find(({ export: name }) => name === family));
+    const shown = Object.fromEntries(groups.flatMap(({ rows }) => rows).map((row) => [row.hook, row.on]));
+    for (const [hook, on] of Object.entries(expected)) assert.equal(shown[hook], on, `${family} ${hook} On`);
+  }
+  const datePicker = (await renderAnatomy(manifest.families.find((each) => each.family === 'DatePicker'), descriptorSource.bindings.find(({ export: name }) => name === 'DatePicker'))).groups;
+  assert.deepEqual(datePicker.flatMap(({ rows }) => rows).filter((row) => row.hook.startsWith('(')).map((row) => [row.hook, row.on, row.live]), [['(input)', '-', '-'], ['(segment)', '-', '-'], ['(trigger)', '-', '-']], 'a part with no hook has no On and no Live');
+});
+
+/** The Live and On cells of the row whose hook cell reads `hook`, in a story rendered into `host`. */
+const hookCells = (host, hook) => {
+  const row = [...host.querySelectorAll('table[data-muxui-storybook-api-parts] tbody tr')].find((each) => each.children[0].textContent === hook);
+  return { on: row.children[1].textContent, live: row.children[2].textContent };
+};
+
+// A prop that only rewrites the class of an element changes which elements a class row matches, without adding or removing a node.
+test('a change that only rewrites a class, with the same elements, updates the Live and On cells', async () => {
+  await withRuntime(async ({ host, root }) => {
+    const story = createAnatomyStory(currentRecord('Button'));
+    await act(async () => root.render(story.render(story.args)));
+    await settleRuntime();
+    assert.deepEqual(hookCells(host, '.muxui-button__label'), { on: '<span> in root', live: '3' }, 'the labels at rest');
+    const buttons = [...host.querySelectorAll('.muxui-button')];
+    await act(async () => root.render(story.render({ ...story.args, className: 'muxui-button__label' })));
+    await settleRuntime();
+    assert.deepEqual([...host.querySelectorAll('.muxui-button')], buttons, 'the same three elements, now also matching the label hook');
+    assert.equal(host.querySelectorAll('.muxui-button__label').length, 6, 'six elements match the label hook');
+    assert.deepEqual(hookCells(host, '.muxui-button__label'), { on: '<button>, <span>', live: '6' }, 'the cell followed the class');
+    await act(async () => root.render(story.render(story.args)));
+    await settleRuntime();
+    assert.deepEqual(hookCells(host, '.muxui-button__label'), { on: '<span> in root', live: '3' }, 'and followed it back');
+  });
+});
+
+// CodeBlock's wrap is a reflected prop: turning it off removes data-muxui-wrap and adds and removes no node.
+test('a prop update that only writes or removes a reflected attribute updates the Live cell', async () => {
+  await withRuntime(async ({ host, root }) => {
+    const story = createAnatomyStory(currentRecord('CodeBlock'));
+    const carriers = () => host.querySelectorAll('[data-muxui-wrap]').length;
+    await act(async () => root.render(story.render({ ...story.args, wrap: true })));
+    await settleRuntime();
+    const blocks = [...host.querySelectorAll('.muxui-code-block')];
+    assert.equal(carriers(), 4, 'wrap is on in the four code blocks');
+    assert.equal(hookCells(host, 'data-muxui-wrap').live, '4');
+    await act(async () => root.render(story.render({ ...story.args, wrap: false })));
+    await settleRuntime();
+    assert.deepEqual([...host.querySelectorAll('.muxui-code-block')], blocks, 'the same code blocks');
+    assert.equal(carriers(), 0, 'turning wrap off removes the attribute');
+    assert.equal(hookCells(host, 'data-muxui-wrap').live, '0', 'the cell followed it');
+    await act(async () => root.render(story.render({ ...story.args, wrap: true })));
+    await settleRuntime();
+    assert.equal(hookCells(host, 'data-muxui-wrap').live, '4', 'and back');
+  });
+});
+
+// The three lists below name every Live of 0 in a catalog state or status row. A row that starts to show, or a new one that does not,
+// fails the list it is in or the one it is missing from. Class parts that exist only after an overlay opens are `reactEmissionOnly`.
+// The catalog states React Aria reports for an interaction, or an overlay while it opens, closes or is open, show only while it happens.
+const interactionAndOverlayZero = Object.freeze([
+  'Activity.focused', 'AlertDialog.open', 'Calendar.focused', 'Card.focused', 'ColorPicker.focused', 'DataDiff.focused', 'Dialog.focused', 'Dialog.open',
+  'HeaderNav.focused', 'IconButton.focus-visible', 'IconButton.hovered', 'IconButton.pressed', 'Lightbox.open', 'Link.pressed', 'Menu.focused', 'Message.focused',
+  'MultiSelect.open', 'Popover.focused', 'Popover.open', 'PreviewTrigger.closing', 'PreviewTrigger.open', 'PreviewTrigger.opening', 'PromptComposer.focused',
+  'RangeCalendar.focused', 'SelectNative.focused', 'TextEditor.focused', 'ToggleButton.pressed', 'Toolbar.focused', 'Tooltip.closing', 'Tooltip.open', 'Tooltip.opening',
+]);
+const interactionNames = new Set(['focused', 'focus-visible', 'focus-within', 'hovered', 'pressed', 'dragging', 'drop-target', 'entering', 'exiting', 'open', 'opening', 'closing']);
+// The 25 catalog states and 6 statuses no documented hook shows in the canvas, each with the reason found by reading the family's source.
+const notObservedInCanvas = Object.freeze([
+  'Avatar data-muxui-loaded not-reached', 'Avatar data-muxui-fallback spelled-differently', 'Avatar data-muxui-error not-reached',
+  'Image data-muxui-fallback not-reached', 'Image data-muxui-error not-reached', 'PromptComposer data-muxui-error spelled-differently',
+  'Calendar data-muxui-state-read-only spelled-differently', 'RangeCalendar data-muxui-state-read-only spelled-differently',
+  'ColorSwatchPicker data-muxui-state-selected not-reached', 'Form data-muxui-state-invalid no-writer-found', 'ListBox data-muxui-state-empty not-reached',
+  'Select data-muxui-state-selected not-reached', 'Separator data-muxui-state-orientation spelled-differently', 'Slider data-muxui-state-selected no-writer-found',
+  'TagGroup data-muxui-state-selected not-reached', 'Virtualizer data-muxui-state-disabled not-reached', 'DataDiff data-muxui-state-empty spelled-differently',
+  'HeaderNav data-muxui-state-current spelled-differently', 'Input data-muxui-state-empty no-writer-found', 'Markdown data-muxui-state-invalid spelled-differently',
+  'MultiSelect data-muxui-state-empty not-reached', 'MultiSelect data-muxui-state-selected not-reached', 'PaymentInput data-muxui-state-empty no-writer-found',
+  'RadioField data-muxui-state-invalid not-reached', 'Resizable data-muxui-state-invalid not-reached', 'SelectNative data-muxui-state-empty no-writer-found',
+  'Sidebar data-muxui-state-current not-reached', 'Sidebar data-muxui-state-expanded spelled-differently', 'TagSelect data-muxui-state-empty not-reached',
+  'TagSelect data-muxui-state-selected spelled-differently', 'TextArea data-muxui-state-empty no-writer-found',
+]);
+// The 19 part-map rows that render no element (the part map's `none` rows), each with its reason.
+const noElementParts = Object.freeze([
+  'AlertDialog.root provider', 'Checkbox.input substrate', 'CheckboxGroup.options children', 'ColorSwatchPicker.selection state', 'CommandPalette.collection children',
+  'DropZone.content children', 'FileTrigger.input substrate', 'Form.content children', 'Group.label children', 'Group.content children', 'Markdown.content children',
+  'Menu.submenu children', 'Popover.content children', 'PreviewTrigger.trigger caller', 'Sidebar.provider provider', 'Switch.input substrate', 'Toolbar.control caller',
+  'Tooltip.trigger caller', 'Tree.children children',
+]);
+
+test('every catalog state and enum is emitted on a family hook in the Anatomy canvas, except three exact lists, each checked both ways', async () => {
+  const states = { live: [], interaction: [], pinned: [] };
+  const statuses = { live: [], pinned: [] };
+  const noElement = [];
+  const reflected = [];
+  const reasons = new Map();
+  for (const record of manifest.families) {
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    const { groups } = await renderAnatomy(record, binding);
+    const hooks = embeddedHooks.get(record.family);
+    for (const [index, { rows }] of expectedHookRows(hooks).entries()) {
+      for (const [position, row] of rows.entries()) {
+        const shown = groups[index].rows[position];
+        if (row.kind === 'class' && row.disposition === 'none') noElement.push(`${record.family}.${row.part} ${row.noElement}`);
+        if (row.kind === 'reflected' && !hooks.notSet.includes(row)) reflected.push({ key: `${record.family} ${row.hook}`, live: shown.live });
+        if (row.kind !== 'state' || row.origin !== 'catalog') continue;
+        const isStatus = !row.hook.startsWith('data-muxui-state-');
+        const bucket = isStatus ? statuses : states;
+        const key = `${record.family} ${row.hook}`;
+        if (shown.live !== '0') {
+          bucket.live.push(key);
+          continue;
+        }
+        reasons.set(key, shown.reason);
+        // The interaction and overlay rule is by catalog name; every other zero must be in the pinned list.
+        const byName = row.catalog.find((name) => interactionNames.has(name));
+        if (byName && !isStatus) states.interaction.push(`${record.family}.${byName}`);
+        else bucket.pinned.push(key);
+      }
+    }
+  }
+  assert.equal(states.live.length + states.interaction.length + states.pinned.length, 258, 'the 258 catalog state and enum pairs');
+  assert.equal(states.live.length, 202, 'emitted on a family hook in the canvas');
+  assert.equal(statuses.live.length + statuses.pinned.length, 6, 'the 6 status rows');
+  assert.deepEqual(statuses.live, [], 'no status is emitted in the canvas');
+  assert.deepEqual([...states.interaction].sort(), [...interactionAndOverlayZero].sort(), 'the interaction and overlay zero rows, both ways');
+  const pinnedKeys = notObservedInCanvas.map((entry) => entry.split(' ').slice(0, 2).join(' '));
+  assert.deepEqual([...states.pinned, ...statuses.pinned].sort(), [...pinnedKeys].sort(), 'the catalog states and statuses not observed in the canvas, both ways');
+  assert.deepEqual(noElement.sort(), [...noElementParts].sort(), 'the part-map rows that render no element, both ways');
+  // The reason a pinned row prints is the one the list holds, in the factory too; no other row prints one.
+  for (const entry of notObservedInCanvas) {
+    const [family, hook, reason] = entry.split(' ');
+    assert.equal(reasons.get(`${family} ${hook}`), reason, `${family} ${hook} prints ${reason}`);
+    assert.equal(NOT_OBSERVED_IN_CANVAS[family][hook][0], reason, `${family} ${hook} is pinned as ${reason} in the factory`);
+  }
+  assert.equal(Object.values(NOT_OBSERVED_IN_CANVAS).reduce((count, hooks) => count + Object.keys(hooks).length, 0), notObservedInCanvas.length, 'the factory pins no row the list lacks');
+  assert.deepEqual([...reasons].filter(([key, reason]) => reason !== null && !pinnedKeys.includes(key)), [], 'no unpinned row prints a reason');
+  // Every reflected prop row, the companion row (IconButton variant) among them, is emitted in its own story.
+  assert.equal(reflected.length, 36, 'the reflected prop rows');
+  assert.deepEqual(reflected.filter(({ live }) => live === '0').map(({ key }) => key), [], 'every reflected prop row is live');
 });
 
 test('control inference and composition adapters preserve canonical values', () => {

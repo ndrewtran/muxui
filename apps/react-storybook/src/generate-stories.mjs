@@ -264,7 +264,9 @@ import { ${canonicalExample.importName} } from './${canonicalExample.helperName}
 const binding = ${JSON.stringify(record.binding, null, 2)};
 // The typed reference of the family's declarations (see src/component-docs.mjs), once: the Docs page lays it out and the Controls take their types from it.
 const typed = ${JSON.stringify(typed)};
-const record = { family: '${record.family}', tranche: '${record.tranche}', binding, typed };
+// The catalog facts the Docs page projects (see .storybook/component-docs-page.mjs), once: the Anatomy story reads the same hooks block.
+const reference = ${JSON.stringify(docs, null, 2)};
+const record = { family: '${record.family}', tranche: '${record.tranche}', binding, typed, hooks: reference.styling.hooks };
 
 export default {
   title: 'Mux UI React/${componentCategory(componentRecordCategory(familySlug(record.family)))}/${record.family}',
@@ -282,8 +284,7 @@ export default {
       states: binding.states,
       controlled: controlledDefaultPairsForBinding(binding),
     },
-    // The catalog facts the Docs page projects (see .storybook/component-docs-page.mjs).
-    muxuiReference: Object.assign(${JSON.stringify(docs, null, 2).replaceAll('\n', '\n    ')}, { typed }),
+    muxuiReference: Object.assign(reference, { typed }),
     docs: {
       description: {
         component: ${stringLiteral(docs.summary)},
