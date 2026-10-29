@@ -79,7 +79,7 @@ async function railVariants(page) {
 	})));
 }
 
-/** Waits until the page's own islands (the rail, the gallery, the block viewer) have hydrated, so its controls respond. */
+/** Waits for Astro to initialize the page's islands; React's first commit can still be pending. */
 const islandsReady = (page) => page.waitForFunction(() => document.querySelector('astro-island[ssr]') === null);
 
 /** Waits until the page's islands have hydrated and the preview document is loaded with its example island hydrated. */
@@ -347,6 +347,9 @@ test('history steps restore the filters in the URL, the search field, the Uses s
 			}, { rows: railRows, query, component, wanted: wanted && [...wanted].sort(), total: blocks.length }, { timeout: 10_000 }).catch(async () => { throw new Error(`${message}: shown ${JSON.stringify(await shown())}, field "${await search.inputValue()}", select "${await uses.inputValue()}", URL ${page.url()}`); });
 		};
 		// Filter, open a block, then clear the filter on that page: the entry the history step returns to keeps its own filters.
+		// selectOption skips the pointer interaction that hydrates the native select before its value changes.
+		await uses.click();
+		await uses.press('Escape');
 		await uses.selectOption(component);
 		await search.fill(slug.split('-')[0]);
 		await expectFilter(slug.split('-')[0], component, null, 'the filter applies');
