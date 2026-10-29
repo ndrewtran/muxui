@@ -16,6 +16,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { chromeExecutable } from './chrome.mjs';
+import { measureIntrinsicHeights, motionOff, previewMargin } from './preview-heights.mjs';
 
 const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
 const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
@@ -48,8 +49,8 @@ async function withSite(run) {
 	const origin = `http://127.0.0.1:${server.address().port}`;
 	const browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
 	const errors = [];
-	const newPage = async ({ width = 1280, height = 900, colorScheme = 'dark' } = {}) => {
-		const page = await (await browser.newContext({ viewport: { width, height }, colorScheme })).newPage();
+	const newPage = async ({ width = 1280, height = 900, colorScheme = 'dark', reducedMotion = 'no-preference' } = {}) => {
+		const page = await (await browser.newContext({ viewport: { width, height }, colorScheme, reducedMotion })).newPage();
 		page.on('pageerror', (error) => errors.push(error.message));
 		return page;
 	};
@@ -492,40 +493,20 @@ test('every family reserves the height of its example: a preview does not grow w
 
 test('a family reserves the intrinsic height of its example plus the fixed margin, not the height of its own reservation', async () => {
 	await withSite(async ({ origin, newPage }) => {
-		// The widths record-preview-heights.mjs looks at. Measured here with the reservation taken off (the demo frame stretches to fill it, so a frame
-		// measured with its reservation reads the reservation back), independently of the recorder, against what the page prints.
-		const widths = [320, 360, 390, 430, 600, 768, 900, 1024, 1180, 1280, 1440, 1700, 1920];
-		const margin = 2;
+		// Measured with the rule record-preview-heights.mjs records with (preview-heights.mjs: the reservation taken off, motion off), against what the
+		// page prints.
 		const off = [];
 		await pool(Object.keys(reserved), 6, async (slug) => {
-			const page = await newPage();
+			const page = await newPage(motionOff);
 			await page.goto(`${origin}/components/${slug}/`);
 			await previewsRendered(page);
 			const printed = await page.evaluate(() => {
 				const style = document.querySelector('#styling [data-styling-compare]').style;
 				return { narrow: Number.parseFloat(style.getPropertyValue('--preview-h-narrow')), wide: Number.parseFloat(style.getPropertyValue('--preview-h-wide')) };
 			});
-			await page.addStyleTag({ content: '.styling-frame { min-height: 0 !important; }' });
-			const intrinsic = { narrow: 0, wide: 0 };
-			for (const width of widths) {
-				await page.setViewportSize({ width, height: 900 });
-				// Where the example settles (a spring overshoots, which the margin is for): the same height twice running, 100ms apart.
-				let last = null;
-				let seen;
-				for (let look = 0; look < 30; look += 1) {
-					await page.waitForTimeout(100);
-					seen = await page.evaluate(() => ({
-						columns: getComputedStyle(document.querySelector('#styling [data-styling-compare]')).gridTemplateColumns.split(' ').length,
-						height: Math.max(...[...document.querySelectorAll('#styling [data-styling-pane] .demo-frame')].map((frame) => frame.getBoundingClientRect().height)),
-					}));
-					if (last !== null && Math.abs(seen.height - last) < 0.5) break;
-					last = seen.height;
-				}
-				const key = seen.columns > 1 ? 'wide' : 'narrow';
-				intrinsic[key] = Math.max(intrinsic[key], Math.ceil(seen.height));
-			}
-			const wanted = { narrow: intrinsic.narrow + margin, wide: (intrinsic.wide === 0 ? intrinsic.narrow : intrinsic.wide) + margin };
-			for (const key of ['narrow', 'wide']) if (Math.abs(printed[key] - wanted[key]) > 1) off.push(`${slug} ${key}: reserves ${printed[key]}px, the example needs ${wanted[key] - margin}px (+${margin}px)`);
+			const intrinsic = await measureIntrinsicHeights(page);
+			const wanted = { narrow: intrinsic.narrow + previewMargin, wide: intrinsic.wide + previewMargin };
+			for (const key of ['narrow', 'wide']) if (Math.abs(printed[key] - wanted[key]) > 1) off.push(`${slug} ${key}: reserves ${printed[key]}px, the example needs ${wanted[key] - previewMargin}px (+${previewMargin}px)`);
 			assert.deepEqual(printed, reserved[slug], `${slug}: the page prints the recorded heights`);
 			await page.context().close();
 		});
