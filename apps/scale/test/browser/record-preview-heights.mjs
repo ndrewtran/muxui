@@ -10,21 +10,19 @@
 // (`narrow`) and once for the two-column layout (`wide`), in whole pixels. `docs-styling.test.mjs` fails when an example is taller than what
 // is recorded for it, so a changed example means running this again.
 //
-// What is recorded is the example's INTRINSIC height: the frame's reservation is taken off while it measures (`min-height: 0`), because the demo
-// frame stretches to fill the reservation, and a frame measured with its own reservation reads that reservation back, so that recording again
-// could only grow it. Recording is therefore repeatable: the same build gives the same file.
+// What is recorded is the example's INTRINSIC height, read with motion off so that a spring is never caught in flight (preview-heights.mjs holds
+// both rules). Recording is therefore repeatable: the same build gives the same file, whatever the load on the machine.
 import { createReadStream, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { access } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { chromeExecutable } from './chrome.mjs';
+import { measureIntrinsicHeights, motionOff, previewMargin } from './preview-heights.mjs';
 
 const docsRoot = resolve(import.meta.dirname, '../../../docs');
 const dist = join(docsRoot, 'dist');
 const output = join(docsRoot, 'src/lib/preview-heights.json');
-const margin = 2;
-const widths = [320, 360, 390, 430, 600, 768, 900, 1024, 1180, 1280, 1440, 1700, 1920];
 const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 
 const server = createServer(async (request, response) => {
@@ -52,34 +50,13 @@ const slugs = readdirSync(join(dist, 'components')).filter((slug) => readFileSyn
 const recorded = {};
 
 async function record(slug) {
-	const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+	const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 }, ...motionOff })).newPage();
 	await page.goto(`${origin}/components/${slug}/`);
 	await page.waitForFunction(() => {
 		const islands = [...document.querySelectorAll('#styling [data-styling-pane] astro-island')];
 		return islands.length === 2 && islands.every((island) => island.firstElementChild !== null && island.querySelector('.example-loading') === null);
 	}, undefined, { timeout: 30000 });
-	await page.evaluate(() => document.fonts.ready);
-	// Without the reservation, so that the demo frame has the height of its example and no more.
-	await page.addStyleTag({ content: '.styling-frame { min-height: 0 !important; }' });
-	const heights = { narrow: 0, wide: 0 };
-	for (const width of widths) {
-		await page.setViewportSize({ width, height: 900 });
-		// An example may settle after it renders or after the window changes (a spring, a measured layout): what it needs is where it settles, and a
-		// spring's overshoot is what the margin is for. Look every 100ms until the height is the same twice running (at most 3s).
-		let previous = null;
-		let seen;
-		for (let look = 0; look < 30; look += 1) {
-			await page.waitForTimeout(100);
-			seen = await page.evaluate(() => {
-				const columns = getComputedStyle(document.querySelector('#styling [data-styling-compare]')).gridTemplateColumns.split(' ').length;
-				return { columns, height: Math.max(...[...document.querySelectorAll('#styling [data-styling-pane] .demo-frame')].map((frame) => frame.getBoundingClientRect().height)) };
-			});
-			if (previous !== null && Math.abs(seen.height - previous) < 0.5) break;
-			previous = seen.height;
-		}
-		const key = seen.columns > 1 ? 'wide' : 'narrow';
-		heights[key] = Math.max(heights[key], Math.ceil(seen.height));
-	}
+	const heights = await measureIntrinsicHeights(page);
 	await page.context().close();
 	return heights;
 }
@@ -89,8 +66,7 @@ const queue = [...slugs];
 await Promise.all(Array.from({ length: 6 }, async () => {
 	for (let slug = queue.shift(); slug !== undefined; slug = queue.shift()) {
 		const { narrow, wide } = await record(slug);
-		// Two pixels over what was seen: a sub-pixel difference of another machine's font must not push the page.
-		recorded[slug] = { narrow: narrow + margin, wide: (wide === 0 ? narrow : wide) + margin };
+		recorded[slug] = { narrow: narrow + previewMargin, wide: wide + previewMargin };
 	}
 }));
 await browser.close();
