@@ -1402,6 +1402,12 @@
   background-color: var(--muxui-semantic-action-neutral-background);
 }
 
+/* The caller's title node is a direct child of the trigger. Its own flex or grid layout takes the label gap between an
+   icon and the label; a plain-text title has no element to match and keeps the trigger's layout. */
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger > :not(.muxui-disclosure__trigger-icon) {
+  gap: var(--muxui-component-disclosuregroup-label-gap);
+}
+
 .muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger > .muxui-disclosure__trigger-icon {
   width: var(--muxui-component-disclosuregroup-icon-size);
   height: var(--muxui-component-disclosuregroup-icon-size);

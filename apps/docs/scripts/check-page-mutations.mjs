@@ -549,19 +549,19 @@ const mutations = [
 		change: (root) => setAllText(elements(stylingOf(root)).find((node) => node.tagName === 'span' && classNames(node).has('styling-hint') && textContent(node).startsWith('a boolean state')), 'presence only'),
 	},
 	{
-		label: 'a role that no rule reads is said to be read by one (DisclosureGroup label-gap)',
+		label: 'a role that a rule reads is said to be read by nothing (DisclosureGroup label-gap)',
 		slug: 'disclosure-group',
-		expect: ['Tokens row component.disclosuregroup.label-gap says it is read "rules", the stylesheet makes it "none"'],
+		expect: ['Tokens row component.disclosuregroup.label-gap says it is read "none", the stylesheet makes it "rules"'],
 		change: (root) => {
 			const note = elements(rowOf(root, 'component.disclosuregroup.label-gap')).find((node) => attributeValue(node, 'data-styling-read-by') !== undefined);
-			setAttribute(note, 'data-styling-read-by', 'rules');
-			setAllText(note, 'Read by .muxui-disclosure-group.');
+			setAttribute(note, 'data-styling-read-by', 'none');
+			setAllText(note, 'Declared. No Mux CSS rule reads this role today.');
 		},
 	},
 	{
-		label: 'a role that no rule reads loses its plain sentence (DisclosureGroup label-gap)',
+		label: 'a role that a rule reads loses its readers (DisclosureGroup label-gap)',
 		slug: 'disclosure-group',
-		expect: ['Tokens row component.disclosuregroup.label-gap reads "Applies to the group.", the stylesheet gives "Declared. No Mux CSS rule reads this role today.'],
+		expect: ['Tokens row component.disclosuregroup.label-gap reads "Applies to the group.", the stylesheet gives "Read by .muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger > :not(.muxui-disclosure__trigger-icon)'],
 		change: (root) => setAllText(elements(rowOf(root, 'component.disclosuregroup.label-gap')).find((node) => attributeValue(node, 'data-styling-read-by') !== undefined), 'Applies to the group.'),
 	},
 	{
@@ -642,9 +642,15 @@ const mutations = [
 		change: (root) => appendText(recipeCode(root, 'styling-recipe-css'), '\\n@layer muxui.utilities { .my-scope .muxui-button__ghost { color: inherit; } }'),
 	},
 	{
-		label: 'the recipe assigns a role that a rule does not read (DisclosureGroup label-gap shown as a recipe step)',
+		label: 'the recipe assigns a role that no rule reads by its own name (DisclosureGroup motion-duration shown as a recipe step)',
 		slug: 'disclosure-group',
-		expect: ['Recipe assigns --muxui-component-disclosuregroup-label-gap, which no rule of the stylesheet reads', 'which is declared or structured and never a recipe step'],
+		expect: ['Recipe assigns --muxui-component-disclosuregroup-motion-duration, which no rule of the stylesheet reads', 'which is structured or sets a caller\'s own node, and is never a recipe step'],
+		change: (root) => appendText(recipeCode(root, 'styling-recipe-css'), '\\n.my-scope { --muxui-component-disclosuregroup-motion-duration: 2s; }'),
+	},
+	{
+		label: 'the recipe assigns a role that a rule reads on the caller\'s own node (DisclosureGroup label-gap shown as a recipe step)',
+		slug: 'disclosure-group',
+		expect: ['Recipe assigns --muxui-component-disclosuregroup-label-gap, which is structured or sets a caller\'s own node, and is never a recipe step'],
 		change: (root) => appendText(recipeCode(root, 'styling-recipe-css'), '\\n.my-scope { --muxui-component-disclosuregroup-label-gap: 2rem; }'),
 	},
 	{
