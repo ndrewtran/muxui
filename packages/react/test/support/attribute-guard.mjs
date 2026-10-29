@@ -367,6 +367,7 @@ export const historicalPaths = Object.freeze({
  */
 export const foreignAttributes = Object.freeze([
   { path: 'apps/docs/', names: ['data-dragging', 'data-mode'], reason: 'the docs block viewer owns them' },
+  { path: 'apps/docs/src/components/CodeBlock.astro', names: ['data-language'], reason: "the plain-text fallback matches the language attribute of Astro's own code blocks" },
   { path: 'apps/react-storybook/.storybook/theme.mjs', names: ['data-selected', 'data-hovered'], reason: "Storybook's manager UI sets them on its own elements" },
   { path: 'apps/react-storybook/.storybook/component-docs-page.mjs', names: ['data-part', 'data-type', 'data-${...}'], reason: "the component docs page marks its own parts, type declarations and closing rows" },
   { path: 'apps/react-storybook/.storybook/preview.css', names: ['data-part'], reason: "the component docs page marks its own parts" },
