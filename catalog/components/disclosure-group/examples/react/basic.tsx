@@ -1,7 +1,7 @@
 import { Disclosure, DisclosureGroup } from '@muxui/react';
 
 function TaskTitle({ label, path }: { label: string; path: string }) {
-  return <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--muxui-component-disclosuregroup-label-gap)' }}>
+  return <span style={{ display: 'flex', alignItems: 'center' }}>
     <span style={{ display: 'grid', placeItems: 'center', width: 'var(--muxui-component-disclosuregroup-icon-size)', flexShrink: 0 }}>
       <svg aria-hidden="true" style={{ width: 'var(--muxui-component-disclosuregroup-icon-size)', height: 'var(--muxui-component-disclosuregroup-icon-size)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d={path} />

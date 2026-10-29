@@ -104,7 +104,7 @@ const bannedPhrases = [
 	/applied in a browser, each row/iu,
 	/muxui-button-content/u,
 ];
-/** Role names a recipe never assigns: they are declared and not read by a rule, or they are structured. */
+/** Role names a recipe never assigns: label-gap's rule sets the gap of the caller's own title node, not of a Mux part, and the others are structured. */
 const neverAssigned = [/label-gap/u, /motion-duration/u, /-transition(?:-|:|\s|$)/u];
 const groupLabels = { root: 'Root class', part: 'Part classes', state: 'State attributes', reflected: 'Reflected prop attributes' };
 /** What each group's heading says beside its name: a boolean state is selected by presence, an enumerated one by its value. */
@@ -407,11 +407,11 @@ function readsByName(rules) {
 /**
  * What a component role's "Read by" cell must say, worked out from the stylesheet alone: the rules that read the role's custom property (or the
  * ones its structured parts declare), each with the at-rules around it and whether every Mux class it names is a documented hook; else the
- * dependent token that is read; else that nothing reads it, with the catalog examples that read it in their own markup.
+ * dependent token that is read; else that nothing reads it.
  * Returns `{ kind, text }`, where `text` is what a reader sees (the rules form is the page's own markup, the others a sentence).
  */
 export function expectedReadBy(sources, id) {
-	const { core, light, reads, partMap, tracked } = sources;
+	const { core, light, reads, partMap } = sources;
 	const base = core.cssName(id);
 	const names = [...core.cssDeclaration(light.tokens[id], light.dependencies).matchAll(/^\s+(--muxui-[\w-]+):/gmu)].map(([, name]) => name);
 	const isRead = (name) => (reads.get(name) ?? []).length > 0;
@@ -434,9 +434,7 @@ export function expectedReadBy(sources, id) {
 	const dependentRead = (token, seen = new Set()) => (seen.has(token) ? [] : (seen.add(token), (dependents.get(token) ?? []).flatMap((next) => (declaredNames(next).some(isRead) ? [next] : dependentRead(next, seen)))));
 	const through = [...new Set(dependentRead(id))];
 	if (through.length > 0) return { kind: 'compiled', text: `Read through ${through.join(', ')}, which depends on it.` };
-	const stripComments = (code) => code.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gmu, '');
-	const examples = [...tracked].filter((path) => /^catalog\/components\/[^/]+\/examples\/react\/[^/]+\.tsx$/u.test(path)).sort().filter((path) => stripComments(sources.read(path)).includes(`var(${base})`));
-	return { kind: 'none', text: `Declared. No Mux CSS rule reads this role today.${examples.length > 0 ? ` ${examples.join(', ')} reads it in its own markup.` : ''}` };
+	return { kind: 'none', text: 'Declared. No Mux CSS rule reads this role today.' };
 }
 
 /** Whether a rule of the stylesheet reads a custom property: `var(--x)` or `var(--x,`. */
@@ -968,7 +966,7 @@ export function checkStyling({ sources, slug, artifact, root, route, measureUrl 
 			if (row === undefined || !variable.startsWith('--muxui-component-')) report(`Recipe assigns ${variable}, which is not a component role of ${slug}.`);
 			else if (row.policy !== 'theme') report(`Recipe assigns ${variable}, whose policy is ${row.policy}.`);
 			else if (!readsDirectly(sources.componentDeclarations, variable)) report(`Recipe assigns ${variable}, which no rule of the stylesheet reads.`);
-			for (const pattern of neverAssigned) if (pattern.test(variable)) report(`Recipe assigns ${variable}, which is declared or structured and never a recipe step.`);
+			for (const pattern of neverAssigned) if (pattern.test(variable)) report(`Recipe assigns ${variable}, which is structured or sets a caller's own node, and is never a recipe step.`);
 		}
 		if (/@layer muxui\.utilities/u.test(rules) !== /\.muxui-[\w-]+/u.test(rules)) report('Recipe has part or state rules outside @layer muxui.utilities, or a layer with no rule.');
 		const claim = recipe.checks.find((line) => /^The recipe uses \d+ names? /u.test(line));

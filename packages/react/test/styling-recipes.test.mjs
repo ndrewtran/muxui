@@ -253,12 +253,12 @@ test('a closed overlay\'s portal parts are never a target, and a provider with n
   assert.deepEqual(all.get('dialog').recipe.steps, []);
 });
 
-test('label-gap, motion-duration and transition are never a step, and DisclosureGroup says label-gap has no reader', () => {
+test('label-gap, motion-duration and transition are never a step, and DisclosureGroup reads label-gap with one rule on the caller\'s title', () => {
   const recipes = slugs.map((slug) => JSON.stringify(all.get(slug).recipe));
   for (const name of ['label-gap', 'motion-duration', 'transition']) assert.ok(recipes.every((text) => !text.includes(name)), name);
   const labelGap = all.get('disclosure-group').tokens.groups.flatMap(({ rows }) => rows).find(({ token }) => token === 'component.disclosuregroup.label-gap');
-  assert.equal(labelGap.readBy.kind, 'none');
-  assert.match(labelGap.readBy.note, /^Declared\. No Mux CSS rule reads this role today\./u);
+  assert.equal(labelGap.readBy.kind, 'rules');
+  assert.match(labelGap.readBy.note, /^Read by \.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure__header > \.muxui-disclosure__trigger > :not\(\.muxui-disclosure__trigger-icon\) \[implementation selector, not a public hook\]\.$/u);
 });
 
 test('without a render there is nothing to target: no steps and one sentence saying so', () => {
@@ -566,16 +566,21 @@ test('a role is a step only where its rule wins: the danger Button of the Basic 
   assert.deepEqual(primary.recipe.steps.filter(({ kind }) => kind === 'token').map(({ declaration }) => declaration.split(':')[0]), ['--muxui-component-button-background', '--muxui-component-button-foreground', '--muxui-component-button-radius']);
 });
 
-test('control: a stylesheet that adds a label-gap reader flips its Tokens row from none to rules, and the role is still not a step', async () => {
-  // Icon-size is the first size role DisclosureGroup would pick, so the changed stylesheet stops reading it: the size slot is then free
-  // for label-gap, which a rule on the root now reads, unless the role is excluded by name.
-  const reads = (text) => `${text.replaceAll('var(--muxui-component-disclosuregroup-icon-size', 'var(--muxui-gone-icon-size')}\n@layer muxui.components {\n  .muxui-disclosure-group { row-gap: var(--muxui-component-disclosuregroup-label-gap); }\n}\n`;
-  await withMirror(repositoryRoot, { 'packages/react/generated/styles.css': reads }, async (directory) => {
-    const mirrored = await readStylingFacts(directory);
-    const changed = stylingOf('disclosure-group', { facts: mirrored });
-    const labelGap = (styling) => styling.tokens.groups.flatMap(({ rows }) => rows).find(({ token }) => token === 'component.disclosuregroup.label-gap').readBy;
-    assert.deepEqual([labelGap(all.get('disclosure-group')).kind, labelGap(changed).kind], ['none', 'rules']);
-    assert.match(labelGap(changed).note, /^Read by \.muxui-disclosure-group/u);
+test('control: a stylesheet that stops reading label-gap makes its Tokens row none, and one that stops reading icon-size still gives label-gap no step', async () => {
+  const labelGap = (styling) => styling.tokens.groups.flatMap(({ rows }) => rows).find(({ token }) => token === 'component.disclosuregroup.label-gap').readBy;
+  assert.equal(labelGap(all.get('disclosure-group')).kind, 'rules');
+  const unread = (text) => text.replaceAll('var(--muxui-component-disclosuregroup-label-gap', 'var(--muxui-gone-label-gap');
+  await withMirror(repositoryRoot, { 'packages/react/generated/styles.css': unread }, async (directory) => {
+    const changed = labelGap(stylingOf('disclosure-group', { facts: await readStylingFacts(directory) }));
+    assert.equal(changed.kind, 'none', 'the changed stylesheet has no reader for the role');
+    assert.equal(changed.note, 'Declared. No Mux CSS rule reads this role today.');
+  });
+  // Icon-size is the first size role DisclosureGroup picks, so the size slot is free for label-gap once the stylesheet stops reading it.
+  // The rule that reads label-gap stays, and the role is excluded by name: it sets the gap of the caller's title node, not of a Mux part.
+  const iconFree = (text) => text.replaceAll('var(--muxui-component-disclosuregroup-icon-size', 'var(--muxui-gone-icon-size');
+  await withMirror(repositoryRoot, { 'packages/react/generated/styles.css': iconFree }, async (directory) => {
+    const changed = stylingOf('disclosure-group', { facts: await readStylingFacts(directory) });
+    assert.equal(labelGap(changed).kind, 'rules');
     // The background is a surface under text and is left out, so no token step is left: a size step for label-gap would be the only one.
     assert.deepEqual(changed.recipe.steps.filter(({ kind }) => kind === 'token'), []);
     assert.ok(!JSON.stringify(changed.recipe).includes('label-gap'));

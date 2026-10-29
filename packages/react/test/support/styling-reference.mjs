@@ -92,7 +92,6 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @property {'rules' | 'parts' | 'compiled' | 'none'} kind
  * @property {ReadSelector[]} selectors The rules that read it (`rules` and `parts`).
  * @property {string[]} through The custom properties read (`parts`) or the dependent token ids that are read (`compiled`).
- * @property {string[]} [examples] For `none`: the catalog example files that read the role in their own markup.
  * @property {string} note The final printed sentence.
  */
 
@@ -890,7 +889,6 @@ export async function readStylingFacts(root = defaultRoot) {
   }
 
   // How each component role is read: by a rule, through its structured parts, through a token that depends on it, or by nothing.
-  // A role nothing reads is searched for in the catalog's own examples, which may read it themselves.
   const documentedHook = (name) => partMap.partRows.some((row) => row.hook === name && ['class', 'root-element', 'field', 'composed'].includes(row.disposition)) || partMap.publicSharedClasses.includes(name);
   const readOf = (name) => (reads.get(name) ?? []).map(({ selector, chain, property }) => ({
     selector,
@@ -899,8 +897,6 @@ export async function readStylingFacts(root = defaultRoot) {
     public: muxClasses(mentionedClasses(parseSelectorList(selector))).every(documentedHook),
   }));
   const isRead = (name) => (reads.get(name) ?? []).length > 0;
-  const exampleFiles = readdirSync(join(root, 'catalog/components'), { recursive: true }).map(String).filter((path) => /^[^/]+\/examples\/react\/[^/]+\.tsx$/u.test(path)).sort();
-  const stripCodeComments = (code) => code.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gmu, '');
   const tokenReads = new Map();
   for (const id of Object.keys(light.tokens).filter((token) => token.startsWith('component.'))) {
     const base = core.cssName(id);
@@ -915,8 +911,7 @@ export async function readStylingFacts(root = defaultRoot) {
     } else if (through.length > 0) {
       readBy = { kind: 'compiled', selectors: [], through };
     } else {
-      const readers = exampleFiles.filter((path) => stripCodeComments(readFileSync(join(root, 'catalog/components', path), 'utf8')).includes(`var(${base})`)).map((path) => `catalog/components/${path}`);
-      readBy = { kind: 'none', selectors: [], through: [], examples: readers };
+      readBy = { kind: 'none', selectors: [], through: [] };
     }
     tokenReads.set(id, readBy);
   }
@@ -1326,8 +1321,7 @@ function readByNote(readBy) {
   if (readBy.kind === 'rules') return `Read by ${readBy.selectors.map(selectorText).join('; ')}.`;
   if (readBy.kind === 'parts') return `Read through its structured parts (${readBy.through.join(', ')}) by ${readBy.selectors.map(selectorText).join('; ')}.`;
   if (readBy.kind === 'compiled') return `Read through ${readBy.through.join(', ')}, which depends on it.`;
-  const own = readBy.examples.length > 0 ? ` ${readBy.examples.join(', ')} reads it in its own markup.` : '';
-  return `Declared. No Mux CSS rule reads this role today.${own}`;
+  return 'Declared. No Mux CSS rule reads this role today.';
 }
 
 function tokenGroups({ artifact, name, facts }) {
@@ -1423,7 +1417,7 @@ export const recipePalette = Object.freeze({
 const recipeTokenLimit = 3;
 const recipePart = Object.freeze({ declaration: 'letter-spacing: 0.04em', property: 'letter-spacing' });
 const recipeState = Object.freeze({ declaration: 'text-decoration: line-through', property: 'text-decoration-line' });
-/** Roles that are never a step: label-gap is declared and read by no Mux rule, and a duration is not a color or a size. */
+/** Roles that are never a step: label-gap's rule sets the gap of the caller's own title node, not of a Mux part, and a duration is not a color or a size. */
 const neverStepped = /^(?:label-gap|motion-duration|transition)(?:-|$)/u;
 /** Catalog states a consumer can set by hand on the Basic example's element, so a state step on one is printed even when it is not shown. */
 const settableStates = new Set(['disabled', 'read-only', 'required', 'invalid', 'selected', 'expanded', 'open']);

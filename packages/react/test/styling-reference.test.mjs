@@ -49,7 +49,7 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2087);
+  assert.equal(read('styles.css').rules.length, 2088);
   assert.equal(read('supplemental.css').rules.length, 518);
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
@@ -724,15 +724,14 @@ test('groups: component roles first, semantic roles second, and only the long se
   assert.equal(slugs.length - noRoles.length, 18);
 });
 
-test('read-by: 193 roles are read by rules, one through structured parts, one through a compiled dependency, and label-gap by nothing', () => {
+test('read-by: 194 roles are read by rules, one through structured parts and one through a compiled dependency, and none by nothing', () => {
   const components = new Map();
   for (const { row } of allRows(tokenRows)) if (row.group === 'component') components.set(row.token, row.readBy);
   assert.equal(components.size, 196);
   const kinds = Object.groupBy([...components], ([, readBy]) => readBy.kind);
-  assert.deepEqual(Object.fromEntries(Object.entries(kinds).map(([name, list]) => [name, list.length])), { rules: 193, parts: 1, compiled: 1, none: 1 });
+  assert.deepEqual(Object.fromEntries(Object.entries(kinds).map(([name, list]) => [name, list.length])), { rules: 194, parts: 1, compiled: 1 });
   assert.deepEqual(kinds.parts.map(([id]) => id), ['component.disclosuregroup.transition']);
   assert.deepEqual(kinds.compiled.map(([id]) => id), ['component.disclosuregroup.motion-duration']);
-  assert.deepEqual(kinds.none.map(([id]) => id), ['component.disclosuregroup.label-gap']);
   // The same classification from the authored sources by the rule the tokens test uses for reachability: a role is read when a rule
   // var()s a custom property it compiles to, or a token that depends on it is read.
   const authored = readdirSync(resolve(packageRoot, 'src'), { recursive: true }).map(String).filter((name) => name.endsWith('.css')).map((name) => readFileSync(resolve(packageRoot, 'src', name), 'utf8')).join('\n');
@@ -742,10 +741,11 @@ test('read-by: 193 roles are read by rules, one through structured parts, one th
   const names = (id) => [...cssDeclaration(lightGraph.tokens[id], lightGraph.dependencies).matchAll(/^\s+(--muxui-[\w-]+):/gmu)].map(([, name]) => name);
   const read = (id, seen = new Set()) => !seen.has(id) && (seen.add(id), names(id).some((name) => reads.has(name)) || (dependents.get(id) ?? []).some((next) => read(next, seen)));
   for (const [id, readBy] of components) assert.equal(readBy.kind !== 'none', read(id), `${id}: read by something`);
-  // label-gap: declared, no Mux CSS reader, the Basic example reads it in its own markup. It is never presented as a working role.
+  // label-gap: one rule reads it into the gap of the caller's title node, and the selector's :not() argument is the chevron, an implementation class.
   const gap = components.get('component.disclosuregroup.label-gap');
-  assert.equal(gap.note, 'Declared. No Mux CSS rule reads this role today. catalog/components/disclosure-group/examples/react/basic.tsx reads it in its own markup.');
-  assert.deepEqual(gap.selectors, []);
+  const gapSelector = '.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger > :not(.muxui-disclosure__trigger-icon)';
+  assert.deepEqual(gap.selectors, [{ selector: gapSelector, conditions: [], property: 'gap', public: false }]);
+  assert.equal(gap.note, `Read by ${gapSelector} [implementation selector, not a public hook].`);
   assert.deepEqual(components.get('component.disclosuregroup.transition').through.every((name) => name.startsWith('--muxui-component-disclosuregroup-transition-')), true);
   assert.match(components.get('component.disclosuregroup.motion-duration').note, /^Read through component\.disclosuregroup\.transition, which depends on it\.$/u);
   // Selectors are verbatim, with their conditions, and a selector naming a class that is not a documented hook says so.
@@ -753,11 +753,11 @@ test('read-by: 193 roles are read by rules, one through structured parts, one th
   const distinct = new Set();
   let entries = 0; const internalTokens = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) { distinct.add(`${id}|${entry.selector}`); entries += 1; if (!entry.public) internalTokens.add(id); }
-  assert.equal(distinct.size, 236, '236 token and selector pairs');
+  assert.equal(distinct.size, 237, '237 token and selector pairs');
   const implementation = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) if (!entry.public) implementation.add(`${id}|${entry.selector}`);
-  assert.equal(implementation.size, 9, '9 of the 236 are implementation selectors');
-  assert.equal(internalTokens.size, 7, 'in 7 tokens');
+  assert.equal(implementation.size, 10, '10 of the 237 are implementation selectors');
+  assert.equal(internalTokens.size, 8, 'in 8 tokens');
   assert.ok(selectors.length >= distinct.size && entries === selectors.length);
   const buttonBackground = components.get('component.button.background');
   assert.deepEqual(buttonBackground.selectors.map(({ selector, property }) => [selector, property]).sort(), [
@@ -997,8 +997,8 @@ test('every object the reference returns has the keys its typedef declares: none
     assert.deepEqual(declared.filter(([name, optional]) => !optional && list.some((value) => !Object.hasOwn(value, name))).map(([name]) => name), [], `${typeName}: a required key a value lacks`);
     assert.deepEqual(declared.filter(([name, optional]) => optional && !used.has(name)).map(([name]) => name), [], `${typeName}: an optional key no value uses`);
   }
-  // The two the review found missing: the dark alias of a token, and the examples that read a role no rule does.
-  assert.ok(declaredProperties('TokenRow').some(([name]) => name === 'darkAlias') && declaredProperties('ReadBy').some(([name, optional]) => name === 'examples' && optional));
+  // The one the review found missing: the dark alias of a token.
+  assert.ok(declaredProperties('TokenRow').some(([name]) => name === 'darkAlias'));
 });
 
 // ---------------------------------------------------------------------------------------------------------------------------

@@ -66,36 +66,19 @@ function unreadComponentTokens(css) {
   return Object.keys(tokenGraph.tokens).filter((id) => id.startsWith('component.') && !read(id));
 }
 
-// The one token no rule reads. A grouped disclosure's icon and label have no Mux element to style, and wiring the gap
-// to the trigger would change its default from 14px to 8px, so the canonical example sets the label gap itself. The
-// example must carry the read as a style declaration, not in a comment.
-const exampleReads = {
-  'component.disclosuregroup.label-gap': {
-    file: '../../catalog/components/disclosure-group/examples/react/basic.tsx',
-    read: /\bgap:\s*'var\(--muxui-component-disclosuregroup-label-gap\)'/u,
-  },
-};
-const stripCodeComments = (code) => code.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gmu, '');
-
-test('every component token is read by an authored rule, by a token that is, or by the canonical example it names', async () => {
+test('every component token is read by an authored rule or by a token that is', () => {
   const authored = styles.map(({ css }) => css).join('\n');
-  const unread = unreadComponentTokens(authored);
-  assert.deepEqual(unread, Object.keys(exampleReads));
-  for (const [id, { file, read }] of Object.entries(exampleReads)) {
-    assert.match(stripCodeComments(await readFile(resolve(packageRoot, file), 'utf8')), read, `${id} is read by ${file}`);
-    const mention = "// gap: 'var(--muxui-component-disclosuregroup-label-gap)'\n/* gap: 'var(--muxui-component-disclosuregroup-label-gap)' */";
-    assert.doesNotMatch(stripCodeComments(mention), read, `a comment is not a read of ${id}`);
-  }
-  // The guard fails when reads go. It reports what a mutant newly leaves unread.
-  const newlyUnread = (css) => unreadComponentTokens(css).filter((id) => !unread.includes(id));
+  assert.deepEqual(unreadComponentTokens(authored), []);
+  // The guard fails when reads go. It reports what a mutant leaves unread.
   const buttonRoles = ['component.button.background', 'component.button.foreground', 'component.button.radius'];
-  assert.deepEqual(newlyUnread(authored.replaceAll(/var\(--muxui-component-button-(?:background|foreground|radius)\b/gu, 'var(--x')), buttonRoles, 'the Button reads removed');
-  assert.deepEqual(newlyUnread(authored.replaceAll(/var\(--muxui-component-disclosuregroup-transition-[\w-]+\)/gu, 'var(--x)')),
+  assert.deepEqual(unreadComponentTokens(authored.replaceAll(/var\(--muxui-component-button-(?:background|foreground|radius)\b/gu, 'var(--x')), buttonRoles, 'the Button reads removed');
+  assert.deepEqual(unreadComponentTokens(authored.replaceAll(/var\(--muxui-component-disclosuregroup-transition-[\w-]+\)/gu, 'var(--x)')),
     ['component.disclosuregroup.motion-duration', 'component.disclosuregroup.transition'], 'the transition part reads removed');
+  assert.deepEqual(unreadComponentTokens(authored.replaceAll('var(--muxui-component-disclosuregroup-label-gap)', 'var(--x)')), ['component.disclosuregroup.label-gap'], 'the label-gap read removed');
   // A comment that names the properties restores nothing: the Button reads back to their fallbacks, plus the comment.
   const fallbacksOnly = authored.replaceAll(/var\(--muxui-component-button-(?:background|foreground|radius), (var\(--muxui-[\w-]+\))\)/gu, '$1');
   assert.notEqual(fallbacksOnly, authored, 'the Button reads exist to remove');
-  assert.deepEqual(newlyUnread(`${fallbacksOnly}\n/* var(--muxui-component-button-background) var(--muxui-component-button-foreground) var(--muxui-component-button-radius) */`), buttonRoles, 'the Button reads replaced by a comment');
+  assert.deepEqual(unreadComponentTokens(`${fallbacksOnly}\n/* var(--muxui-component-button-background) var(--muxui-component-button-foreground) var(--muxui-component-button-radius) */`), buttonRoles, 'the Button reads replaced by a comment');
 });
 
 test('component spacing declarations keep gaps separate from padding and geometry', () => {

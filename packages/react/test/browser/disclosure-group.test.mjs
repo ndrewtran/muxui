@@ -108,3 +108,82 @@ test('DisclosureGroup and Activity follow the motion duration and transition par
     await browser.close();
   }
 });
+
+// The label gap. One rule gives the caller's own title node `gap: var(--muxui-component-disclosuregroup-label-gap)`, so a flex or grid title
+// that sets no gap of its own separates its icon and label by the token (8px). A plain-text title has no element for the rule to match, so the
+// trigger keeps its own action gap and layout, and the token moves nothing there. The rule is in the components layer, so unlayered caller CSS
+// wins on whatever it sets, and the token still supplies the axis it leaves alone. Chromium only, static markup under the published stylesheet.
+const flexTitle = (className) => h('span', { className, style: { display: 'flex', alignItems: 'center' } }, h('span', { className: 'mark' }, 'M'), 'Label');
+const labelGapScope = (id, style, className) => h('div', { id, style }, h(DisclosureGroup, null,
+  h(Disclosure, { id: 'a', title: flexTitle(className) }, 'Body'),
+  h(Disclosure, { id: 'b', title: 'Plain' }, 'Body')));
+const labelGapMarkup = renderToString(h('div', null,
+  labelGapScope('default'),
+  labelGapScope('moved', { '--muxui-component-disclosuregroup-label-gap': '20px' }),
+  labelGapScope('caller', undefined, 'caller-title')));
+// Unlayered, after the published stylesheet: sets one axis only.
+const callerStyles = '.caller-title { column-gap: 3px; }';
+
+// Runs in the page: the flex title's gaps, and the plain-text trigger's gap and box relative to itself.
+function observeLabelGap() {
+  const read = (scope) => {
+    const root = document.getElementById(scope);
+    const title = getComputedStyle(root.querySelector('.muxui-disclosure__trigger > span'));
+    const trigger = root.querySelectorAll('.muxui-disclosure__trigger')[1];
+    const chevron = trigger.querySelector('.muxui-disclosure__trigger-icon').getBoundingClientRect();
+    const box = trigger.getBoundingClientRect();
+    const probe = Object.assign(document.createElement('div'), { style: 'display: flex; gap: var(--muxui-semantic-layout-action-gap)' });
+    root.append(probe);
+    const action = getComputedStyle(probe).columnGap;
+    probe.remove();
+    const round = (value) => Math.round(value * 100) / 100;
+    return {
+      title: { column: title.columnGap, row: title.rowGap },
+      plain: { gap: getComputedStyle(trigger).columnGap, action, layout: [box.width, box.height, chevron.left - box.left, chevron.top - box.top, chevron.width].map(round).join(' ') },
+    };
+  };
+  return { default: read('default'), moved: read('moved'), caller: read('caller') };
+}
+
+// The names of the checks that fail.
+function labelGapFailures({ default: base, moved, caller }) {
+  return [
+    ['flex title takes the default label gap', base.title.column === '8px' && base.title.row === '8px'],
+    ['theme override moves the label gap', moved.title.column === '20px' && moved.title.row === '20px'],
+    ['plain-text trigger keeps its action gap and layout', [base, moved, caller].every(({ plain }) => plain.gap === plain.action) && base.plain.layout === moved.plain.layout && base.plain.layout === caller.plain.layout],
+    ['unlayered caller gap wins', caller.title.column === '3px'],
+    ['label gap still supplies the axis the caller leaves alone', caller.title.row === '8px'],
+  ].filter(([, ok]) => !ok).map(([name]) => name);
+}
+
+test('DisclosureGroup gives the title node the label gap, and a plain-text title keeps the trigger layout', { timeout: 60_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    const run = async (css) => {
+      await page.setContent(`<!doctype html><html data-muxui-color-scheme="light"><head><style>${css}</style><style>${callerStyles}</style></head><body>${labelGapMarkup}</body></html>`);
+      return page.evaluate(observeLabelGap);
+    };
+    const seen = await run(styles);
+    assert.deepEqual(labelGapFailures(seen), [], JSON.stringify(seen));
+    assert.equal(seen.default.plain.gap, seen.default.plain.action, 'the probe reads the action gap');
+    assert.notEqual(seen.default.plain.action, '8px', 'the action gap differs from the label gap, so the plain-text check can tell them apart');
+    // Mutants. Each must fail the checks named for it, and the checks it does not concern must keep passing.
+    const rule = /\.muxui-disclosure-group > [^{}]*> :not\(\.muxui-disclosure__trigger-icon\) \{[^}]*label-gap[^}]*\}/u.exec(styles)?.[0];
+    assert.ok(rule, 'the stylesheet has the label gap rule');
+    const mutants = [
+      // The rule is gone.
+      ['without the rule', styles.replace(rule, ''), ['flex title takes the default label gap', 'theme override moves the label gap', 'label gap still supplies the axis the caller leaves alone']],
+      // The rule is outside the components layer, so its specificity beats the caller's.
+      ['outside the layer', `${styles}\n${rule}`, ['unlayered caller gap wins']],
+      // The rule sets the trigger's gap, which is what the token is not: every plain-text title would take the label gap.
+      ['on the trigger', styles.replace(rule, rule.replace(' > :not(.muxui-disclosure__trigger-icon)', '')), ['flex title takes the default label gap', 'theme override moves the label gap', 'plain-text trigger keeps its action gap and layout', 'label gap still supplies the axis the caller leaves alone']],
+    ];
+    for (const [name, css, expected] of mutants) {
+      assert.notEqual(css, styles, `the "${name}" mutant changes the stylesheet`);
+      assert.deepEqual(labelGapFailures(await run(css)), expected, name);
+    }
+  } finally {
+    await browser.close();
+  }
+});
