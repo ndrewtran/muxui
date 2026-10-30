@@ -828,7 +828,7 @@ test('declarative Toast updates in place across parent renders without re-enqueu
     assert.equal(document.body.querySelector('.muxui-toast'), toast, 'the same toast node stays mounted');
     assert.equal(toast.querySelector('[role="alert"]'), alert);
     assert.equal(document.body.querySelectorAll('.muxui-toast').length, 1);
-    assert.deepEqual(mutations.filter((record) => record.type !== 'attributes'), [], 'unchanged content is not re-announced');
+    assert.deepEqual(mutations.filter((record) => record.type !== 'attributes'), [], 'unchanged content produces no child-list or character-data mutations');
     assert.equal(toastTimers, timersAfterMount, 'the auto-dismiss timer is not reset');
 
     await act(async () => rerender());
