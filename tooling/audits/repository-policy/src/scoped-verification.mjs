@@ -391,7 +391,8 @@ export function generationArgs(plan) {
 // holding back the next dependency level.
 // - React's check runs alone first: its pack tests run React's prepack, which
 //   rewrites the shared generated output every other check reads.
-// - Storybook's long browser audits run in their own lane beside the rest.
+// - Full plans run Storybook's long browser audits alone after React to avoid
+//   resource contention; scoped plans keep them beside the remaining checks.
 // Checks use --no-bail so one run reports every failing package; pnpm still
 // exits non-zero. Generation stays fail-fast because checks depend on it.
 export const isolatedCheckPackages = ['@muxui/react'];
@@ -424,6 +425,7 @@ export function checkStages(plan, { task, workspaceRootName, storybookCommands }
       ? storybookCommands.map(({ args, env = {}, unsetEnv = [] }) => ({ args, env, unsetEnv }))
       : [{ args: checkCommand(1, ['--filter', name], task) }])
     .filter((lane) => lane.length > 0);
+  const storybookLaneCount = shared.length;
   const remaining = plan.checkPackages.filter(({ name }) => !separate.includes(name));
   if (plan.full || remaining.length > 0) {
     const filters = [];
@@ -442,7 +444,10 @@ export function checkStages(plan, { task, workspaceRootName, storybookCommands }
     shared.push([{ args: checkCommand(1, ['--filter', evidencePackage], 'check:evidence') }]);
   }
   // Parallel lanes interleave output, so pnpm prefixes each line with its package.
-  if (shared.length > 1) stages.push(shared.map((lane) => lane.map((step) => ({ ...step, args: ['--stream', ...step.args] }))));
-  else if (shared.length > 0) stages.push(shared);
+  const checkLanes = shared.length > 1
+    ? shared.map((lane) => lane.map((step) => ({ ...step, args: ['--stream', ...step.args] })))
+    : shared;
+  if (plan.full && storybookLaneCount > 0) stages.push(checkLanes.splice(0, storybookLaneCount));
+  if (checkLanes.length > 0) stages.push(checkLanes);
   return stages;
 }
