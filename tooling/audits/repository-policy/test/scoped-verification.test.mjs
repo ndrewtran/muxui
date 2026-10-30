@@ -8,6 +8,7 @@ import {
   checkStages,
   dependencyClosure,
   dependencyOrder,
+  generationArgs,
   parseTaskArguments,
   planScopedTask,
   resolveComponents,
@@ -222,6 +223,26 @@ test('scoped check stages isolate React and run Storybook beside the remaining c
   ]);
 });
 
+test('full checks separate Storybook after React without changing the command multiset or generation order', () => {
+  const plan = planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--full']), packages, policy,
+  });
+  const react = [step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check')];
+  const storybook = [step('--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check')];
+  const remaining = [step(
+    '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
+    '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook', '--filter', '!@muxui/workspace', 'run', 'check',
+  )];
+  const stages = checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace' });
+  assert.deepEqual(stages, [[react], [storybook], [remaining, evidenceLane]]);
+  // The old plan ran these same commands with the last three lanes together.
+  const previousStages = [[react], [storybook, remaining, evidenceLane]];
+  const commands = (value) => value.flat(2).map((command) => JSON.stringify(command)).sort();
+  assert.deepEqual(commands(stages), commands(previousStages));
+  assert.deepEqual(plan.generationPackages, packages);
+  assert.deepEqual(generationArgs(plan), ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
+});
+
 test('selected Storybook commands replace only the Storybook lane and keep their own environment', () => {
   const plan = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--files', 'packages/react/src/fields.ts']),
@@ -260,6 +281,15 @@ test('selected Storybook commands replace only the Storybook lane and keep their
   const without = checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands: [] });
   assert.deepEqual(without.map((stage) => stage.length), [1, 1]);
   assert.match(without[1][0][0].args.join(' '), /--filter @muxui\/docs run check$/u);
+
+  // A full plan normally uses the full check, but separation must still retain
+  // any supplied command substitutions and omit an empty lane.
+  const full = { ...plan, full: true, scope: 'full' };
+  const fullStages = checkStages(full, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands });
+  assert.deepEqual(fullStages[1], [checkStages(plan, { task: 'check', storybookCommands })[1][0]]);
+  assert.deepEqual(checkStages(full, { task: 'check', storybookCommands: [] }).map((stage) => stage.length), [1, 1]);
+  const onlyStorybook = { ...plan, checkPackages: packages.filter(({ name }) => name === '@muxui/react-storybook') };
+  assert.deepEqual(checkStages(onlyStorybook, { task: 'check', storybookCommands: [] }), []);
 });
 
 test('file and affected scopes expose the exact paths whose Storybook selection CI can plan', () => {
@@ -299,10 +329,10 @@ test('workspace check runs add the evidence lane only for runs that include poli
   // Without policy, or for another task, there is nothing to add.
   assert.equal(JSON.stringify(stagesFor(['@muxui/docs'])).includes('check:evidence'), false);
   assert.equal(JSON.stringify(stagesFor(['@muxui/repository-policy'], {}, 'generate')).includes('check:evidence'), false);
-  // The full graph (check:all, and so release:prepare) runs them too, beside Storybook and the remaining checks.
+  // The full graph (check:all, and so release:prepare) runs them beside the remaining checks, after Storybook.
   const fullPlan = planWithoutInheritedStorybookSelection({ options: parseTaskArguments(['check', '--full']), packages, policy });
   const lanes = checkStages(fullPlan, { task: 'check', workspaceRootName: '@muxui/workspace' }).at(-1);
-  assert.equal(lanes.length, 3);
+  assert.equal(lanes.length, 2);
   assert.deepEqual(lanes.at(-1), evidenceLane);
 });
 

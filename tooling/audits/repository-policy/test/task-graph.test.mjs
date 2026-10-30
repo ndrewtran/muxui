@@ -409,6 +409,61 @@ async function runFilesCheck(root, extraEnv = {}, scope = ['--files', 'packages/
   return { result, invocations };
 }
 
+test('full checks finish React and Storybook before remaining and evidence lanes, including after failures', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-task-full-stages-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeStorybookWorkspace(root);
+  for (const [directory, name] of [['app', '@fixture/app'], ['policy', '@muxui/repository-policy']]) {
+    await mkdir(join(root, `packages/${directory}`), { recursive: true });
+    await writeFile(join(root, `packages/${directory}/package.json`), JSON.stringify({ name, version: '0.0.0', private: true }));
+  }
+  await writeFile(join(root, 'bin/pnpm'), [
+    '#!/usr/bin/env node',
+    "import { appendFileSync } from 'node:fs';",
+    'const args = process.argv.slice(2);',
+    "const lane = args.at(-1) === 'check:evidence' ? 'evidence'",
+    "  : args.includes('@muxui/react') ? 'react'",
+    "    : args.includes('@muxui/react-storybook') ? 'storybook' : 'remaining';",
+    "const record = (event) => appendFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ lane, event, args }) + '\\n');",
+    "record('start');",
+    'await new Promise((resolve) => setTimeout(resolve, 100));',
+    "record('end');",
+    'process.exit(Number(JSON.parse(process.env.MUXUI_TASK_FAILURES)[lane] ?? 0));',
+    '',
+  ].join('\n'));
+
+  for (const failures of [{}, { react: 7 }, { storybook: 9 }, { react: 7, storybook: 9 }]) {
+    await t.test(`failure exits ${JSON.stringify(failures)}`, async () => {
+      const logPath = join(root, 'full-stage-events.jsonl');
+      await writeFile(logPath, '');
+      const result = spawnSync(process.execPath, [affectedTaskRunner, 'check', '--full'], {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${join(root, 'bin')}:${process.env.PATH}`,
+          MUXUI_TASK_LOG: logPath,
+          MUXUI_TASK_FAILURES: JSON.stringify(failures),
+          MUXUI_TASK_REPOSITORY_ROOT: root,
+        },
+      });
+      assert.equal(result.status, failures.react ?? failures.storybook ?? 0, result.stdout + result.stderr);
+      const events = (await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
+      const index = (lane, event) => events.findIndex((entry) => entry.lane === lane && entry.event === event);
+      assert.equal(events.length, 8);
+      for (const lane of ['react', 'storybook', 'remaining', 'evidence']) {
+        assert.ok(index(lane, 'start') >= 0, `${lane} ran`);
+        assert.ok(index(lane, 'end') > index(lane, 'start'), `${lane} finished`);
+        assert.ok(events[index(lane, 'start')].args.includes('--no-bail'));
+      }
+      assert.ok(index('react', 'end') < index('storybook', 'start'));
+      assert.ok(index('storybook', 'end') < index('remaining', 'start'));
+      assert.ok(index('storybook', 'end') < index('evidence', 'start'));
+      assert.match(result.stdout, /check stage 3: pnpm .*run check:evidence/u);
+    });
+  }
+});
+
 test('--files runs the Storybook audit CI would plan for those files, with per-command environment', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-story-selection-'));
   await writeStorybookWorkspace(root);
