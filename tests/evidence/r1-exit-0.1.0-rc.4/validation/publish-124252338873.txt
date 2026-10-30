@@ -1,0 +1,279 @@
+# step: Re-verify candidate (raw lines 165-188)
+2026-10-30T18:56:06.6805385Z ##[group]Run set -euo pipefail
+2026-10-30T18:56:06.6847573Z shell: /usr/bin/bash -e {0}
+2026-10-30T18:56:06.6847983Z env:
+2026-10-30T18:56:06.6848318Z   EXPECTED_VERSION: 0.1.0-rc.4
+2026-10-30T18:56:06.6849332Z   EXPECTED_SHA512: sha512-9XRnBRYCvSN7quvfL8nNMtNLRV9NMriSmjjGwP8Ja7w90CycxfKCp4xykxRlrWDLWnQgs8086vJ70KKD7BkVtA==
+2026-10-30T18:56:06.6850424Z ##[endgroup]
+# step: Registry preflight (read-only) (raw lines 189-196)
+2026-10-30T18:56:06.7512023Z ##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs preflight
+2026-10-30T18:56:06.7534310Z shell: /usr/bin/bash -e {0}
+2026-10-30T18:56:06.7534794Z env:
+2026-10-30T18:56:06.7535006Z   VERSION: 0.1.0-rc.4
+2026-10-30T18:56:06.7535253Z ##[endgroup]
+2026-10-30T18:56:07.5228805Z @muxui/react@0.1.0-rc.4: 404 (no collision)
+2026-10-30T18:56:07.5229832Z @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.3
+# step: Publish to next (raw lines 197-446)
+2026-10-30T18:56:07.5689846Z ##[group]Run set -euo pipefail
+2026-10-30T18:56:07.5714028Z shell: /usr/bin/bash -e {0}
+2026-10-30T18:56:07.5714616Z env:
+2026-10-30T18:56:07.5714832Z   VERSION: 0.1.0-rc.4
+2026-10-30T18:56:07.5715212Z   TARBALL: <runner-temp>/muxui-react-0.1.0-rc.4.tgz
+2026-10-30T18:56:07.5715609Z   PRE_KIND: later
+2026-10-30T18:56:07.5715831Z   PRE_LATEST: 0.1.0-rc.1
+2026-10-30T18:56:07.5716066Z   PRE_NEXT: 0.1.0-rc.3
+2026-10-30T18:56:07.5716305Z   npm_config_engine_strict: false
+2026-10-30T18:56:07.5716605Z ##[endgroup]
+2026-10-30T18:56:07.9551870Z No drift since the preflight: @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.3
+2026-10-30T18:56:08.6839081Z npm notice
+2026-10-30T18:56:08.6843318Z npm notice 📦  @muxui/react@0.1.0-rc.4
+2026-10-30T18:56:08.6872434Z npm notice Tarball Contents
+2026-10-30T18:56:08.6879559Z npm notice 1.1kB LICENSE
+2026-10-30T18:56:08.6880171Z npm notice 5.9kB NOTICE
+2026-10-30T18:56:08.6880675Z npm notice 50.1kB README.md
+2026-10-30T18:56:08.6881351Z npm notice 906.6kB assets/fonts/Inter-Italic[opsz,wght].ttf
+2026-10-30T18:56:08.6882167Z npm notice 876.6kB assets/fonts/Inter[opsz,wght].ttf
+2026-10-30T18:56:08.6882791Z npm notice 4.4kB assets/fonts/OFL.txt
+2026-10-30T18:56:08.6883519Z npm notice 278.7kB assets/fonts/PlayfairDisplay-Italic[wght].ttf
+2026-10-30T18:56:08.6884327Z npm notice 300.7kB assets/fonts/PlayfairDisplay[wght].ttf
+2026-10-30T18:56:08.6885311Z npm notice 196.8kB assets/fonts/RobotoMono-Italic[wght].ttf
+2026-10-30T18:56:08.6886071Z npm notice 183.7kB assets/fonts/RobotoMono[wght].ttf
+2026-10-30T18:56:08.6886707Z npm notice 2.3kB generated/activity.d.ts
+2026-10-30T18:56:08.6887347Z npm notice 8.9kB generated/activity.js
+2026-10-30T18:56:08.6887927Z npm notice 3.0kB generated/alert-dialog.d.ts
+2026-10-30T18:56:08.6888517Z npm notice 4.9kB generated/alert-dialog.js
+2026-10-30T18:56:08.6889069Z npm notice 1.4kB generated/avatar.d.ts
+2026-10-30T18:56:08.6889597Z npm notice 8.2kB generated/avatar.js
+2026-10-30T18:56:08.6890205Z npm notice 1.2kB generated/button-group.d.ts
+2026-10-30T18:56:08.6890780Z npm notice 1.4kB generated/button-group.js
+2026-10-30T18:56:08.6891333Z npm notice 2.8kB generated/button.d.ts
+2026-10-30T18:56:08.6891859Z npm notice 5.8kB generated/button.js
+2026-10-30T18:56:08.6892467Z npm notice 3.1kB generated/calendar-height-motion.mjs
+2026-10-30T18:56:08.6893188Z npm notice 4.7kB generated/calendar-selection-motion.mjs
+2026-10-30T18:56:08.6893841Z npm notice 5.6kB generated/calendar.d.ts
+2026-10-30T18:56:08.6894415Z npm notice 14.1kB generated/calendar.js
+2026-10-30T18:56:08.6895227Z npm notice 3.2kB generated/candidate-motion.mjs
+2026-10-30T18:56:08.6895804Z npm notice 2.5kB generated/card.d.ts
+2026-10-30T18:56:08.6896320Z npm notice 2.5kB generated/card.js
+2026-10-30T18:56:08.6896882Z npm notice 2.7kB generated/checkbox-field.d.ts
+2026-10-30T18:56:08.6897495Z npm notice 3.3kB generated/checkbox-field.js
+2026-10-30T18:56:08.6898094Z npm notice 608B generated/choice-context.mjs
+2026-10-30T18:56:08.6898734Z npm notice 5.2kB generated/code-block-highlight.mjs
+2026-10-30T18:56:08.6899358Z npm notice 2.7kB generated/code-block.d.ts
+2026-10-30T18:56:08.6899929Z npm notice 13.6kB generated/code-block.js
+2026-10-30T18:56:08.6900529Z npm notice 1.8kB generated/collection-items.d.ts
+2026-10-30T18:56:08.6901151Z npm notice 1.6kB generated/collection-items.js
+2026-10-30T18:56:08.6901802Z npm notice 880B generated/collection-trigger.d.ts
+2026-10-30T18:56:08.6902445Z npm notice 1.9kB generated/collection-trigger.js
+2026-10-30T18:56:08.6903393Z npm notice 1.2kB generated/collections.mjs
+2026-10-30T18:56:08.6904036Z npm notice 1.8kB generated/color-area.d.ts
+2026-10-30T18:56:08.6904809Z npm notice 5.0kB generated/color-area.js
+2026-10-30T18:56:08.6905391Z npm notice 1.2kB generated/color-context.d.ts
+2026-10-30T18:56:08.6905972Z npm notice 3.6kB generated/color-context.js
+2026-10-30T18:56:08.6906559Z npm notice 2.8kB generated/color-field.d.ts
+2026-10-30T18:56:08.6907121Z npm notice 4.1kB generated/color-field.js
+2026-10-30T18:56:08.6907737Z npm notice 1.2kB generated/color-mode-toggle.d.ts
+2026-10-30T18:56:08.6908410Z npm notice 2.4kB generated/color-mode-toggle.js
+2026-10-30T18:56:08.6909320Z npm notice 1.7kB generated/color-picker.d.ts
+2026-10-30T18:56:08.6909900Z npm notice 2.8kB generated/color-picker.js
+2026-10-30T18:56:08.6910518Z npm notice 7.1kB generated/color-slider-motion.mjs
+2026-10-30T18:56:08.6911145Z npm notice 2.3kB generated/color-slider.d.ts
+2026-10-30T18:56:08.6911712Z npm notice 5.0kB generated/color-slider.js
+2026-10-30T18:56:08.6912355Z npm notice 2.1kB generated/color-swatch-picker.d.ts
+2026-10-30T18:56:08.6913010Z npm notice 5.6kB generated/color-swatch-picker.js
+2026-10-30T18:56:08.6913625Z npm notice 1.5kB generated/color-swatch.d.ts
+2026-10-30T18:56:08.6914191Z npm notice 2.5kB generated/color-swatch.js
+2026-10-30T18:56:08.6915047Z npm notice 4.0kB generated/color-wheel-motion.mjs
+2026-10-30T18:56:08.6915633Z npm notice 1.9kB generated/color-wheel.d.ts
+2026-10-30T18:56:08.6916175Z npm notice 4.7kB generated/color-wheel.js
+2026-10-30T18:56:08.6916744Z npm notice 3.4kB generated/combo-box.d.ts
+2026-10-30T18:56:08.6917310Z npm notice 5.1kB generated/combo-box.js
+2026-10-30T18:56:08.6917921Z npm notice 12.0kB generated/command-palette.d.ts
+2026-10-30T18:56:08.6918571Z npm notice 17.3kB generated/command-palette.js
+2026-10-30T18:56:08.6919210Z npm notice 3.0kB generated/compatibility.mjs
+2026-10-30T18:56:08.6919870Z npm notice 12.2kB generated/components.d.ts
+2026-10-30T18:56:08.6920448Z npm notice 15.8kB generated/components.js
+2026-10-30T18:56:08.6921023Z npm notice 831B generated/control-utils.d.ts
+2026-10-30T18:56:08.6921653Z npm notice 796B generated/control-utils.js
+2026-10-30T18:56:08.6922210Z npm notice 3.5kB generated/data-diff.d.ts
+2026-10-30T18:56:08.6922774Z npm notice 14.7kB generated/data-diff.js
+2026-10-30T18:56:08.6923385Z npm notice 6.0kB generated/date-popover-motion.mjs
+2026-10-30T18:56:08.6924021Z npm notice 518.1kB generated/descriptor.json
+2026-10-30T18:56:08.6924903Z npm notice 289B generated/descriptor.json.provenance
+2026-10-30T18:56:08.6925549Z npm notice 9.9kB generated/dialog-motion.mjs
+2026-10-30T18:56:08.6926156Z npm notice 1.6kB generated/field-root.d.ts
+2026-10-30T18:56:08.6926720Z npm notice 1.9kB generated/field-root.js
+2026-10-30T18:56:08.6927292Z npm notice 969B generated/field-utils.d.ts
+2026-10-30T18:56:08.6927849Z npm notice 757B generated/field-utils.js
+2026-10-30T18:56:08.6928407Z npm notice 31.1kB generated/fields.d.ts
+2026-10-30T18:56:08.6928939Z npm notice 60.5kB generated/fields.js
+2026-10-30T18:56:08.6929569Z npm notice 669B generated/grid-list-item-context.mjs
+2026-10-30T18:56:08.6930234Z npm notice 18.6kB generated/grid-list-motion.mjs
+2026-10-30T18:56:08.6930827Z npm notice 3.4kB generated/grid-list.d.ts
+2026-10-30T18:56:08.6931383Z npm notice 11.6kB generated/grid-list.js
+2026-10-30T18:56:08.6932046Z npm notice 539B generated/grid-virtualizer-context.d.ts
+2026-10-30T18:56:08.6932762Z npm notice 498B generated/grid-virtualizer-context.js
+2026-10-30T18:56:08.6933383Z npm notice 2.0kB generated/header-nav.d.ts
+2026-10-30T18:56:08.6933957Z npm notice 5.4kB generated/header-nav.js
+2026-10-30T18:56:08.6934745Z npm notice 1.8kB generated/icon-button.d.ts
+2026-10-30T18:56:08.6935314Z npm notice 1.7kB generated/icon-button.js
+2026-10-30T18:56:08.6935866Z npm notice 1.7kB generated/image.d.ts
+2026-10-30T18:56:08.6936385Z npm notice 4.4kB generated/image.js
+2026-10-30T18:56:08.6936960Z npm notice 6.0kB generated/index.d.ts
+2026-10-30T18:56:08.6937468Z npm notice 2.0kB generated/index.mjs
+2026-10-30T18:56:08.6938329Z npm notice 2.4kB generated/input-tags.d.ts
+2026-10-30T18:56:08.6938911Z npm notice 7.8kB generated/input-tags.js
+2026-10-30T18:56:08.6939462Z npm notice 2.2kB generated/input.d.ts
+2026-10-30T18:56:08.6939990Z npm notice 3.1kB generated/input.js
+2026-10-30T18:56:08.6940606Z npm notice 708B generated/item-renderer.d.ts
+2026-10-30T18:56:08.6941202Z npm notice 1.5kB generated/item-renderer.js
+2026-10-30T18:56:08.6941764Z npm notice 5.0kB generated/lightbox.d.ts
+2026-10-30T18:56:08.6942298Z npm notice 33.3kB generated/lightbox.js
+2026-10-30T18:56:08.6942838Z npm notice 3.9kB generated/list-box.d.ts
+2026-10-30T18:56:08.6943669Z npm notice 4.9kB generated/list-box.js
+2026-10-30T18:56:08.6944246Z npm notice 6.7kB generated/listbox-motion.mjs
+2026-10-30T18:56:08.6945055Z npm notice 1.8kB generated/markdown.d.ts
+2026-10-30T18:56:08.6945593Z npm notice 10.6kB generated/markdown.js
+2026-10-30T18:56:08.6946143Z npm notice 8.1kB generated/menu-motion.mjs
+2026-10-30T18:56:08.6946703Z npm notice 7.8kB generated/menu.d.ts
+2026-10-30T18:56:08.6947209Z npm notice 13.6kB generated/menu.js
+2026-10-30T18:56:08.6947723Z npm notice 2.5kB generated/message.d.ts
+2026-10-30T18:56:08.6948265Z npm notice 5.0kB generated/message.js
+2026-10-30T18:56:08.6948809Z npm notice 852B generated/modal-parts.d.ts
+2026-10-30T18:56:08.6949376Z npm notice 4.8kB generated/modal-parts.js
+2026-10-30T18:56:08.6949985Z npm notice 24.1kB generated/motion-components.mjs
+2026-10-30T18:56:08.6950627Z npm notice 3.3kB generated/motion-geometry.mjs
+2026-10-30T18:56:08.6951204Z npm notice 6.8kB generated/motion.mjs
+2026-10-30T18:56:08.6951784Z npm notice 3.9kB generated/multi-select.d.ts
+2026-10-30T18:56:08.6952328Z npm notice 10.3kB generated/multi-select.js
+2026-10-30T18:56:08.6952936Z npm notice 1.3kB generated/navigation-drawer.d.ts
+2026-10-30T18:56:08.6953565Z npm notice 2.1kB generated/navigation-drawer.js
+2026-10-30T18:56:08.6954214Z npm notice 1.9kB generated/overlay-positioning.mjs
+2026-10-30T18:56:08.6955028Z npm notice 16.0kB generated/overlays.d.ts
+2026-10-30T18:56:08.6955630Z npm notice 49.6kB generated/overlays.js
+2026-10-30T18:56:08.6956185Z npm notice 1.9kB generated/part-utils.d.ts
+2026-10-30T18:56:08.6956741Z npm notice 1.2kB generated/part-utils.js
+2026-10-30T18:56:08.6957287Z npm notice 3.0kB generated/payment-input.d.ts
+2026-10-30T18:56:08.6957896Z npm notice 4.6kB generated/payment-input.js
+2026-10-30T18:56:08.6958484Z npm notice 3.2kB generated/popover-motion.mjs
+2026-10-30T18:56:08.6959102Z npm notice 1.8kB generated/progress-circle.d.ts
+2026-10-30T18:56:08.6959763Z npm notice 3.3kB generated/progress-circle.js
+2026-10-30T18:56:08.6960382Z npm notice 5.1kB generated/prompt-composer.d.ts
+2026-10-30T18:56:08.6960992Z npm notice 21.2kB generated/prompt-composer.js
+2026-10-30T18:56:08.6961590Z npm notice 257.5kB generated/r1-5-closure.json
+2026-10-30T18:56:08.6962227Z npm notice 291B generated/r1-5-closure.json.provenance
+2026-10-30T18:56:08.6962876Z npm notice 313.9kB generated/r1-6-contract.json
+2026-10-30T18:56:08.6963559Z npm notice 292B generated/r1-6-contract.json.provenance
+2026-10-30T18:56:08.6964198Z npm notice 2.4kB generated/radio-field.d.ts
+2026-10-30T18:56:08.6964996Z npm notice 5.3kB generated/radio-field.js
+2026-10-30T18:56:08.6965568Z npm notice 3.3kB generated/radio-group.d.ts
+2026-10-30T18:56:08.6966128Z npm notice 4.8kB generated/radio-group.js
+2026-10-30T18:56:08.6966690Z npm notice 5.2kB generated/radio-motion.mjs
+2026-10-30T18:56:08.6967328Z npm notice 13.9kB generated/range-selection-motion.mjs
+2026-10-30T18:56:08.6967973Z npm notice 591B generated/read-only-guard.d.ts
+2026-10-30T18:56:08.6968599Z npm notice 3.8kB generated/read-only-guard.js
+2026-10-30T18:56:08.6969158Z npm notice 64.9kB generated/release.json
+2026-10-30T18:56:08.6969764Z npm notice 286B generated/release.json.provenance
+2026-10-30T18:56:08.6970373Z npm notice 3.4kB generated/resizable.d.ts
+2026-10-30T18:56:08.6970933Z npm notice 21.9kB generated/resizable.js
+2026-10-30T18:56:08.6971510Z npm notice 1.8kB generated/select-native.d.ts
+2026-10-30T18:56:08.6972358Z npm notice 5.0kB generated/select-native.js
+2026-10-30T18:56:08.6972926Z npm notice 9.6kB generated/select.d.ts
+2026-10-30T18:56:08.6973460Z npm notice 9.9kB generated/select.js
+2026-10-30T18:56:08.6973989Z npm notice 10.1kB generated/sidebar.d.ts
+2026-10-30T18:56:08.6974743Z npm notice 29.8kB generated/sidebar.js
+2026-10-30T18:56:08.6975303Z npm notice 4.9kB generated/slider-motion.mjs
+2026-10-30T18:56:08.6975864Z npm notice 2.0kB generated/slider.d.ts
+2026-10-30T18:56:08.6976384Z npm notice 3.8kB generated/slider.js
+2026-10-30T18:56:08.6976906Z npm notice 675.2kB generated/styles.css
+2026-10-30T18:56:08.6977699Z npm notice 4.4kB generated/styling-contract.d.ts
+2026-10-30T18:56:08.6978325Z npm notice 4.2kB generated/styling-contract.js
+2026-10-30T18:56:08.6978917Z npm notice 165B generated/substrate.d.ts
+2026-10-30T18:56:08.6979468Z npm notice 12.1kB generated/substrate.js
+2026-10-30T18:56:08.6980040Z npm notice 124.2kB generated/supplemental.css
+2026-10-30T18:56:08.6980660Z npm notice 501B generated/supplemental.d.ts
+2026-10-30T18:56:08.6981241Z npm notice 635B generated/supplemental.js
+2026-10-30T18:56:08.6981817Z npm notice 2.5kB generated/switch-field.d.ts
+2026-10-30T18:56:08.6982402Z npm notice 2.2kB generated/switch-field.js
+2026-10-30T18:56:08.6982946Z npm notice 3.4kB generated/table.d.ts
+2026-10-30T18:56:08.6983455Z npm notice 5.8kB generated/table.js
+2026-10-30T18:56:08.6983995Z npm notice 21.5kB generated/tabs-motion.mjs
+2026-10-30T18:56:08.6984665Z npm notice 1.8kB generated/tabs.d.ts
+2026-10-30T18:56:08.6985176Z npm notice 4.0kB generated/tabs.js
+2026-10-30T18:56:08.6985700Z npm notice 3.3kB generated/tag-group.d.ts
+2026-10-30T18:56:08.6986249Z npm notice 5.7kB generated/tag-group.js
+2026-10-30T18:56:08.6986793Z npm notice 3.1kB generated/tag-select.d.ts
+2026-10-30T18:56:08.6987336Z npm notice 10.7kB generated/tag-select.js
+2026-10-30T18:56:08.6987860Z npm notice 305B generated/testing.mjs
+2026-10-30T18:56:08.6988381Z npm notice 2.2kB generated/text-area.d.ts
+2026-10-30T18:56:08.6988920Z npm notice 1.9kB generated/text-area.js
+2026-10-30T18:56:08.6989474Z npm notice 9.9kB generated/text-editor.d.ts
+2026-10-30T18:56:08.6990029Z npm notice 72.1kB generated/text-editor.js
+2026-10-30T18:56:08.6990541Z npm notice 2.2kB generated/text.d.ts
+2026-10-30T18:56:08.6991039Z npm notice 2.8kB generated/text.js
+2026-10-30T18:56:08.6991543Z npm notice 831.7kB generated/themes.css
+2026-10-30T18:56:08.6992065Z npm notice 1.3kB generated/themes.d.ts
+2026-10-30T18:56:08.6992571Z npm notice 3.8kB generated/themes.mjs
+2026-10-30T18:56:08.6993163Z npm notice 627B generated/toggle-button-context.mjs
+2026-10-30T18:56:08.6993880Z npm notice 13.3kB generated/toggle-button-group-motion.mjs
+2026-10-30T18:56:08.6994722Z npm notice 2.0kB generated/toggle-button-group.d.ts
+2026-10-30T18:56:08.6995378Z npm notice 3.5kB generated/toggle-button-group.js
+2026-10-30T18:56:08.6996070Z npm notice 1.9kB generated/token-field.d.ts
+2026-10-30T18:56:08.6996624Z npm notice 7.3kB generated/token-field.js
+2026-10-30T18:56:08.6997164Z npm notice 868B generated/toolbar.d.ts
+2026-10-30T18:56:08.6997672Z npm notice 906B generated/toolbar.js
+2026-10-30T18:56:08.6998201Z npm notice 16.9kB generated/tree-motion.mjs
+2026-10-30T18:56:08.6998723Z npm notice 3.0kB generated/tree.d.ts
+2026-10-30T18:56:08.6999208Z npm notice 7.9kB generated/tree.js
+2026-10-30T18:56:08.6999728Z npm notice 3.9kB generated/virtualizer.d.ts
+2026-10-30T18:56:08.7000277Z npm notice 14.0kB generated/virtualizer.js
+2026-10-30T18:56:08.7000851Z npm notice 1.1kB licenses/framer-motion.MIT.txt
+2026-10-30T18:56:08.7001590Z npm notice 11.3kB licenses/internationalized-date.Apache-2.0.txt
+2026-10-30T18:56:08.7002308Z npm notice 3.2kB licenses/lucide.ISC-MIT.txt
+2026-10-30T18:56:08.7002858Z npm notice 2.9kB licenses/marked.MIT.txt
+2026-10-30T18:56:08.7003419Z npm notice 1.1kB licenses/motion-dom.MIT.txt
+2026-10-30T18:56:08.7004016Z npm notice 1.1kB licenses/motion-utils.MIT.txt
+2026-10-30T18:56:08.7004744Z npm notice 1.1kB licenses/motion.MIT.txt
+2026-10-30T18:56:08.7005645Z npm notice 11.3kB licenses/react-aria-components.Apache-2.0.txt
+2026-10-30T18:56:08.7006380Z npm notice 11.3kB licenses/react-aria.Apache-2.0.txt
+2026-10-30T18:56:08.7007045Z npm notice 2.3kB licenses/shiki-oniguruma.NOTICES.txt
+2026-10-30T18:56:08.7007739Z npm notice 1.1kB licenses/shiki-vscode-textmate.MIT.txt
+2026-10-30T18:56:08.7008341Z npm notice 1.1kB licenses/shiki.MIT.txt
+2026-10-30T18:56:08.7008881Z npm notice 1.1kB licenses/tiptap.MIT.txt
+2026-10-30T18:56:08.7009414Z npm notice 645B licenses/tslib.0BSD.txt
+2026-10-30T18:56:08.7009896Z npm notice 3.7kB package.json
+2026-10-30T18:56:08.7010578Z npm notice Tarball Details
+2026-10-30T18:56:08.7010997Z npm notice name: @muxui/react
+2026-10-30T18:56:08.7011478Z npm notice version: 0.1.0-rc.4
+2026-10-30T18:56:08.7012010Z npm notice filename: muxui-react-0.1.0-rc.4.tgz
+2026-10-30T18:56:08.7012556Z npm notice package size: 2.1 MB
+2026-10-30T18:56:08.7013008Z npm notice unpacked size: 6.8 MB
+2026-10-30T18:56:08.7013651Z npm notice shasum: 733ed60e6668705d4122e745fb9ae0ebe10c28c8
+2026-10-30T18:56:08.7014424Z npm notice integrity: sha512-9XRnBRYCvSN7q[...]vJ70KKD7BkVtA==
+2026-10-30T18:56:08.7015233Z npm notice total files: 214
+2026-10-30T18:56:08.7015622Z npm notice
+2026-10-30T18:56:09.6846460Z npm notice npm tokens that bypass 2FA are being restricted for account changes and direct publishing. Learn how to prepare: https://gh.io/npm-gat-bypass2fa-deprecation
+2026-10-30T18:56:09.8845771Z npm notice Publishing to https://registry.npmjs.org/ with tag next and public access
+2026-10-30T18:56:20.2883005Z npm notice publish Signed provenance statement with source and build information from GitHub Actions
+2026-10-30T18:56:20.2884391Z npm notice publish Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=3600122308
+2026-10-30T18:56:22.5545666Z npm notice Your package is being processed and may take a few minutes to become available.
+2026-10-30T18:56:22.5548613Z + @muxui/react@0.1.0-rc.4
+# step: Read back registry state (raw lines 447-465)
+2026-10-30T18:56:22.5999130Z ##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs read-back
+2026-10-30T18:56:22.6022437Z shell: /usr/bin/bash -e {0}
+2026-10-30T18:56:22.6022717Z env:
+2026-10-30T18:56:22.6022927Z   VERSION: 0.1.0-rc.4
+2026-10-30T18:56:22.6023496Z   EXPECTED_SHA512: sha512-9XRnBRYCvSN7quvfL8nNMtNLRV9NMriSmjjGwP8Ja7w90CycxfKCp4xykxRlrWDLWnQgs8086vJ70KKD7BkVtA==
+2026-10-30T18:56:22.6024129Z   PRE_KIND: later
+2026-10-30T18:56:22.6024359Z   PRE_LATEST: 0.1.0-rc.1
+2026-10-30T18:56:22.6024841Z   PRE_NEXT: 0.1.0-rc.3
+2026-10-30T18:56:22.6025087Z ##[endgroup]
+2026-10-30T18:56:22.9290269Z Waiting for @muxui/react@0.1.0-rc.4 (attempt 1 of 21)
+2026-10-30T18:56:38.1500204Z Waiting for @muxui/react@0.1.0-rc.4 (attempt 2 of 21)
+2026-10-30T18:56:53.3669713Z Waiting for @muxui/react@0.1.0-rc.4 (attempt 3 of 21)
+2026-10-30T18:57:08.5713212Z Waiting for @muxui/react@0.1.0-rc.4 (attempt 4 of 21)
+2026-10-30T18:57:23.7991535Z Waiting for @muxui/react@0.1.0-rc.4 (attempt 5 of 21)
+2026-10-30T18:57:39.0077208Z Waiting for @muxui/react@0.1.0-rc.4 (attempt 6 of 21)
+2026-10-30T18:57:54.2422306Z dist.integrity: sha512-9XRnBRYCvSN7quvfL8nNMtNLRV9NMriSmjjGwP8Ja7w90CycxfKCp4xykxRlrWDLWnQgs8086vJ70KKD7BkVtA==
+2026-10-30T18:57:54.2423084Z provenance: https://slsa.dev/provenance/v1
+2026-10-30T18:57:54.2423525Z dist-tags: {"latest":"0.1.0-rc.1","next":"0.1.0-rc.4"}
