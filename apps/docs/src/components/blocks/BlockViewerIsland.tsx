@@ -2,6 +2,7 @@ import { Button, Text, ToggleButton, ToggleButtonGroup } from '@muxui/react';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { announce, onSiteThemeChange, setFrameTheme, siteTheme, useSiteTheme } from '../../scripts/blocks-dom.ts';
 import { getView, isMode, MIN_WIDTH, setView, useView } from '../../scripts/blocks-view.ts';
+import { usePaneIsland } from './pane-island.ts';
 
 export interface BlockViewerProps {
 	categoryLabel: string;
@@ -45,6 +46,7 @@ export default function BlockViewerIsland({
 	sourcePath,
 	code,
 }: BlockViewerProps) {
+	const rootRef = usePaneIsland();
 	const view = useView();
 	const site = useSiteTheme();
 	const effectiveTheme = view.theme ?? site;
@@ -142,7 +144,7 @@ export default function BlockViewerIsland({
 
 	return (
 		<>
-			<div className="blocks-bar">
+			<div className="blocks-bar" ref={rootRef}>
 				<div className="blocks-title">
 					<nav aria-label="Breadcrumb">
 						<ol className="blocks-crumbs">

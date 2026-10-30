@@ -2,6 +2,7 @@ import { Text } from '@muxui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useBrowseState } from '../../scripts/blocks-browse.ts';
 import { onSiteThemeChange, setFrameTheme, siteTheme } from '../../scripts/blocks-dom.ts';
+import { usePaneIsland } from './pane-island.ts';
 
 export interface GalleryBlock {
 	slug: string;
@@ -66,6 +67,7 @@ function Thumbnail({ src }: { src: string }) {
 
 /** Every block as a card, narrowed by the rail's filter. Cards hide in place so their previews keep loading. */
 export default function BlocksGalleryIsland({ categories }: BlocksGalleryProps) {
+	const rootRef = usePaneIsland();
 	const { matched } = useBrowseState();
 	const blocks = categories.flatMap((category) => category.blocks);
 	const isShown = (block: GalleryBlock) => matched === null || matched.has(block.slug);
@@ -73,7 +75,7 @@ export default function BlocksGalleryIsland({ categories }: BlocksGalleryProps) 
 	const variants = shown.reduce((sum, block) => sum + block.variantCount, 0);
 
 	return (
-		<div className="blocks-scroll" data-blocks-gallery>
+		<div className="blocks-scroll" data-blocks-gallery ref={rootRef}>
 			<div className="blocks-ohead">
 				<Text as="h1" variant="heading" size="sm">All blocks</Text>
 				<Text as="p" color="muted" role="status" data-gallery-count>{plural(shown.length, 'block')}, {plural(variants, 'variant')}</Text>

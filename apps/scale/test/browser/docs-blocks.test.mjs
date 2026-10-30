@@ -373,6 +373,84 @@ test('history steps restore the filters in the URL, the search field, the Uses s
 	});
 });
 
+test('rapid history navigation disposes gallery and viewer roots after their pending hydration commits', async () => {
+	await withSite(async ({ page, origin }) => {
+		await page.addInitScript(() => {
+			// Hold React's MessageChannel work, without delaying navigation, fetches, or real input.
+			// This makes the gap between Astro's ssr removal and React's first commit deterministic.
+			window.__blocksScheduler = { hold: false, waiting: [], commits: [] };
+			const NativeMessageChannel = window.MessageChannel;
+			window.MessageChannel = class extends NativeMessageChannel {
+				constructor() {
+					super();
+					const port = this.port1;
+					Object.defineProperty(port, 'onmessage', { set(callback) {
+						port.addEventListener('message', (event) => {
+							const run = () => callback.call(port, event);
+							if (window.__blocksScheduler.hold) window.__blocksScheduler.waiting.push(run);
+							else run();
+						});
+						port.start();
+					} });
+				}
+			};
+			// Observe actual commits/disposal through React's DevTools integration; do not replace a root method.
+			window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+				supportsFiber: true,
+				inject: () => 1,
+				onCommitFiberRoot: (_renderer, root) => {
+					window.__blocksScheduler.commits.push({ island: root.containerInfo, mounted: root.current.child !== null });
+				},
+				onCommitFiberUnmount: () => {},
+			};
+		});
+		await page.goto(`${origin}/blocks/`);
+		await page.waitForFunction(() => window.__blocksScheduler.commits.some(({ island, mounted }) => mounted && island.querySelector('[data-blocks-gallery]')));
+		const [first] = await railVariants(page);
+		await page.evaluate(() => { window.__sameDocument = true; });
+		await railVariantLink(page, first.href).click();
+		await page.waitForURL(`**${first.href}`);
+		await page.waitForFunction(() => window.__blocksScheduler.commits.some(({ island, mounted }) => mounted && island.querySelector('[data-stage]')));
+
+		await page.evaluate(() => { window.__blocksScheduler.hold = true; });
+		await page.goBack();
+		await page.locator('[data-blocks-gallery]').waitFor();
+		await islandsReady(page);
+		await page.waitForFunction(() => window.__blocksScheduler.waiting.length > 0);
+		await page.evaluate(() => {
+			window.__pendingGallery = document.querySelector('[data-blocks-gallery]').closest('astro-island');
+		});
+		await page.goForward();
+		await page.locator('[data-blocks-detail] h1').waitFor();
+		await islandsReady(page);
+		await page.evaluate(() => {
+			window.__pendingViewer = document.querySelector('[data-stage]').closest('astro-island');
+		});
+		await page.goBack();
+		await page.locator('[data-blocks-gallery]').waitFor();
+		await islandsReady(page);
+		assert.equal(await page.evaluate(() => window.__sameDocument), true, 'rapid Back/Forward still swaps in place');
+		assert.equal(await page.evaluate(() => [window.__pendingGallery, window.__pendingViewer].every((island) =>
+			!island.isConnected && !island.hasAttribute('ssr') && !window.__blocksScheduler.commits.some((commit) => commit.island === island))), true,
+		'both islands were removed after Astro setup but before React committed, without forcing an early unmount');
+
+		await page.evaluate(() => {
+			window.__blocksScheduler.hold = false;
+			window.__blocksScheduler.waiting.splice(0).forEach((run) => run());
+		});
+		await page.waitForFunction(() => [window.__pendingGallery, window.__pendingViewer].every((island) =>
+			window.__blocksScheduler.commits.some((commit) => commit.island === island && !commit.mounted)));
+		assert.deepEqual(await page.evaluate(() => [window.__pendingGallery, window.__pendingViewer].map((island) =>
+			window.__blocksScheduler.commits.filter((commit) => commit.island === island).map(({ mounted }) => mounted)
+				// Effects and external stores can commit again; require the mounted -> disposed transition, with no remount.
+				.filter((mounted, index, states) => index === 0 || mounted !== states[index - 1]))), [[true, false], [true, false]],
+		'each detached root first commits and is then actually unmounted, with no later remount');
+		await page.getByRole('searchbox', { name: 'Search blocks' }).fill('zzzzqq');
+		await page.waitForFunction(() => document.querySelector('[data-blocks-count]').textContent.startsWith('0 of'));
+		assert.equal(await page.locator('[data-blocks-gallery] li[data-block]:visible').count(), 0, 'the current gallery still follows the rail filter');
+	});
+});
+
 test('pane swaps leave no document listener behind for the islands they remove', async () => {
 	await withSite(async ({ page, origin }) => {
 		// Astro parks a one-shot `astro:after-swap` listener on the document when it removes an island, and it only drops it when that event fires.
