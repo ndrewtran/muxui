@@ -1,5 +1,6 @@
 import { announce, part } from './blocks-dom.ts';
 import { setPathname, syncFilterFromUrl } from './blocks-browse.ts';
+import { preparePaneRemoval } from '../components/blocks/pane-island.ts';
 
 /*
  * In-place navigation. The rail's filters, the gallery, and the block viewer are React islands that
@@ -46,6 +47,7 @@ async function navigate(href: string, push: boolean) {
 		if (!next) throw new Error('The next page has no Blocks pane.');
 		if (current !== navigation) return;
 		const hadFocus = pane.contains(document.activeElement);
+		preparePaneRemoval(pane);
 		pane.replaceChildren(...Array.from(next.childNodes, (node) => document.importNode(node, true)));
 		finishSwap();
 		pane.scrollTop = 0;
