@@ -1379,7 +1379,7 @@ export const Toast: FC<ToastProps> = function Toast({
   const contentRef = React.useRef<ToastContent | null>(null);
   const onDismissRef = React.useRef(onDismiss);
   // Enqueue once; later renders update the same record in place, so inline
-  // callbacks or JSX never re-announce the toast or reset its timer.
+  // callbacks or JSX do not re-enqueue the toast or reset its timer.
   useIsomorphicLayoutEffect(() => {
     onDismissRef.current = onDismiss;
     const content = contentRef.current;
