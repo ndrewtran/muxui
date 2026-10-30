@@ -19,8 +19,15 @@ for (const specifier of plan.exportModules) exportKeys[specifier] = Object.keys(
 const renders = [];
 const failures = [];
 const started = performance.now();
-for (const { file, components, measuredLayout = false } of plan.modules) {
-  const module = await import(pathToFileURL(resolve(file)).href);
+// One entry lets Node load the example graph together instead of awaiting each
+// file separately. Static requests retain plan evaluation order for synchronous
+// modules; all linking/evaluation (including top-level await) stays timed.
+const entry = plan.modules.map(({ file }, index) =>
+  `export * as example${index} from ${JSON.stringify(pathToFileURL(resolve(file)).href)};`,
+).join('\n');
+const modules = await import(`data:text/javascript;base64,${Buffer.from(entry).toString('base64')}`);
+for (const [index, { file, components, measuredLayout = false }] of plan.modules.entries()) {
+  const module = modules[`example${index}`];
   const names = components ?? Object.keys(module).filter((name) => typeof module[name] === 'function');
   if (names.length === 0) failures.push(`${file}: no component export`);
   for (const name of names) {
