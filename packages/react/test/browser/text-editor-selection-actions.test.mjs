@@ -229,9 +229,10 @@ for (const engine of browserEngines()) {
           },
           // Selects a word with a real double click and waits for the bar. ProseMirror re-syncs the DOM
           // selection from its own state in a 20 ms timer queued when the editor takes focus. A pointer
-          // selection made before that timer runs is overwritten before ProseMirror has read it, so wait
-          // behind the timer, which a later timer of the same length always follows.
+          // selection made before that timer runs can be overwritten before ProseMirror has read it.
+          // Focus first, then queue the wait behind that timer; waiting before focus leaves the race open.
           async selectWord(text) {
+            await editor.focus();
             await tab.evaluate(() => new Promise((resolve) => setTimeout(resolve, 20)));
             const word = await api.word(text);
             await tab.mouse.dblclick(word.x, word.y);
