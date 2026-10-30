@@ -226,6 +226,8 @@ function escapeRegExp(value) {
  * anywhere as names; plain words
  * such as `motion` or `marked` match only in specifier form (quoted, `name/x`,
  * or `name@1`) so prose like "typography and motion tokens" stays allowed.
+ * Guidance scanning separately recognizes the complete emitted Shortcut attribute
+ * statement; the matcher itself still includes the transitive `aria-hidden` name.
  */
 export function createUpstreamNameMatcher(packageNames, tokens = ['UNSTABLE_']) {
   const scopes = new Set();
@@ -249,6 +251,20 @@ function jsonPathMatches(path, pattern) {
   return path === pattern || path.startsWith(`${pattern}.`) || path.startsWith(`${pattern}[`);
 }
 
+/**
+ * The emitted Shortcut statement describes the ARIA attribute, not the installed
+ * package of the same name. Recognize that complete statement only at the start
+ * of a guidance string or line (optionally a Markdown bullet). Do not infer an
+ * attribute from a nearby "is", "attribute", or boolean property: those also
+ * occur in dependency descriptions and maps. Other wording stays fail-closed;
+ * declarations and JSON keys use the unchanged strict name matcher.
+ */
+function publicGuidanceMatches(text, matcher) {
+  return [...text.matchAll(matcher)].filter((match) => match[0] !== 'aria-hidden'
+    || !/(?:^|\n)[ \t]*(?:[-*][ \t]+)?Shortcut is $/u.test(text.slice(0, match.index))
+    || !/^ by default\.(?=\s|$)/u.test(text.slice(match.index + match[0].length)));
+}
+
 function collectJsonLeaks(value, path, matcher, allowedPaths, findings, file) {
   if (allowedPaths.some((pattern) => jsonPathMatches(path, pattern))) return;
   if (Array.isArray(value)) {
@@ -265,7 +281,7 @@ function collectJsonLeaks(value, path, matcher, allowedPaths, findings, file) {
     return;
   }
   if (typeof value === 'string') {
-    for (const [match] of value.matchAll(matcher)) findings.push({ file, location: path, match });
+    for (const [match] of publicGuidanceMatches(value, matcher)) findings.push({ file, location: path, match });
   }
 }
 
@@ -301,7 +317,7 @@ export function findPublicSurfaceLeaks({
     }
   }
   for (const { file, text } of texts) {
-    for (const [match] of text.matchAll(matcher)) findings.push({ file, location: 'guidance text', match });
+    for (const [match] of publicGuidanceMatches(text, matcher)) findings.push({ file, location: 'guidance text', match });
   }
   for (const { file, value, allowedJsonPaths = [] } of json) {
     collectJsonLeaks(value, '$', matcher, allowedJsonPaths, findings, file);

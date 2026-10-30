@@ -224,7 +224,9 @@ test('release proof derives the exact generated archive set from the React gener
   assert.throws(() => assertExactArchiveEntries([...packed, packed[0]], expected), /duplicate: /u);
 });
 
-const upstreamNames = ['react-aria', 'react-aria-components', '@react-aria/', 'motion', '@tiptap/', 'marked', 'lucide-react', '@internationalized/', 'prosemirror-view'];
+// aria-hidden is transitive: release preparation scans the installed closure,
+// not just the React manifest's direct runtime dependencies.
+const upstreamNames = ['react-aria', 'react-aria-components', '@react-aria/', 'motion', '@tiptap/', 'marked', 'lucide-react', '@internationalized/', 'prosemirror-view', 'aria-hidden'];
 
 test('public-surface leak scan finds upstream names in declarations, re-exports, and guidance', () => {
   const matcher = createUpstreamNameMatcher(upstreamNames);
@@ -269,6 +271,89 @@ test('the current React declarations and guidance pass the public-surface leak s
     matcher: createUpstreamNameMatcher([...upstreamNames, ...Object.keys(manifest.dependencies)]),
     allowedSpecifiers: ['react', 'react-dom', '@muxui/react'],
   });
+});
+
+test('public-surface leak scan recognizes the emitted Shortcut attribute statement', () => {
+  const matcher = createUpstreamNameMatcher(upstreamNames);
+  for (const text of [
+    'Shortcut is aria-hidden by default.',
+    '- Shortcut is aria-hidden by default.',
+    '* Shortcut is aria-hidden by default.',
+    '# Guidance\r\n\r\n- Shortcut is aria-hidden by default.\r\n',
+  ]) {
+    assert.deepEqual(findPublicSurfaceLeaks({
+      texts: [{ file: 'README.md', text }],
+      json: [{ file: 'descriptor.json', value: { guidance: text } }],
+      matcher,
+    }), [], text);
+  }
+  // A recognized statement must not mask another occurrence on the same line.
+  const mixed = 'Shortcut is aria-hidden by default. Install `aria-hidden` or lucide-react.';
+  assert.deepEqual(findPublicSurfaceLeaks({ texts: [{ file: 'README.md', text: mixed }], matcher }).map(({ match }) => match), ['aria-hidden', 'lucide-react']);
+});
+
+test('public-surface leak scan still rejects aria-hidden package references and unknown contexts', () => {
+  const matcher = createUpstreamNameMatcher(upstreamNames);
+  const references = [
+    'aria-hidden',
+    '`aria-hidden`',
+    'Uses aria-hidden internally.',
+    'The implementation package is aria-hidden by default.',
+    'The implementation package for Shortcut is aria-hidden by default.',
+    'Shortcut is aria-hidden by default.package',
+    'export declare const upstreamDependencies: { "aria-hidden": true };',
+    'export const upstreamDependencies = { "aria-hidden": true };',
+    'export const upstreamDependencies = { "aria-hidden": false };',
+    'The package exposes an aria-hidden attribute API.',
+    'npm install aria-hidden',
+    'pnpm add aria-hidden@1.2.6',
+    'yarn add aria-hidden@latest',
+    'Install `aria-hidden` by default.',
+    'aria-hidden/dist/index.js',
+    'aria-hidden@^1.2.6',
+    'aria-hidden@next',
+    'Use the aria-hidden package.',
+    '"aria-hidden": "1.2.6"',
+    '"aria-hidden": "true"',
+    '"aria-hidden": "false"',
+    "import { hideOthers } from 'aria-hidden';",
+    "import 'aria-hidden';",
+    "const impl = import('aria-hidden/dist/index.js');",
+    "const impl = require('aria-hidden');",
+    "export * from 'aria-hidden';",
+    "export { hideOthers } from 'aria-hidden/dist/index.js';",
+    // Other attribute wording and syntax are not inferred from local tokens.
+    '<span aria-hidden={hidden} />',
+    '<span aria-hidden="true" />',
+    '"aria-hidden": "package"',
+  ];
+  for (const text of references) {
+    for (const surface of [
+      { texts: [{ file: 'README.md', text }] },
+      { texts: [{ file: 'generated/index.mjs', text }] },
+      { declarations: [{ file: 'index.d.ts', text }] },
+      { json: [{ file: 'descriptor.json', value: { guidance: text } }] },
+    ]) {
+      assert.throws(() => assertNoPublicSurfaceLeaks({ ...surface, matcher }), /R1_EXIT_PACK_PUBLIC_LEAK: .*aria-hidden/u, text);
+    }
+  }
+  assert.deepEqual(findPublicSurfaceLeaks({ json: [{ file: 'descriptor.json', value: { 'aria-hidden': '1.2.6' } }], matcher }), [
+    { file: 'descriptor.json', location: '$.aria-hidden (key)', match: 'aria-hidden' },
+  ]);
+  assert.deepEqual(findPublicSurfaceLeaks({ json: [{ file: 'release.json', value: { packageDependencies: { 'aria-hidden': '1.2.6' } }, allowedJsonPaths: ['$.packageDependencies'] }], matcher }), []);
+
+  // Boundary checks do not rely on the name matcher or attribute recognition.
+  const noUpstreamNames = createUpstreamNameMatcher([]);
+  for (const text of [
+    "import type { Hidden } from 'aria-hidden';",
+    "export type Hidden = import('aria-hidden/dist/index.js').Hidden;",
+    '/// <reference types="aria-hidden" />',
+  ]) {
+    assert.deepEqual(findPublicSurfaceLeaks({ declarations: [{ file: 'index.d.ts', text }], matcher: noUpstreamNames }).map(({ location }) => location), ['module specifier'], text);
+  }
+  for (const text of ["export * from 'aria-hidden';", "export { hideOthers } from 'aria-hidden/dist/index.js';", "export * as hidden from 'aria-hidden';"]) {
+    assert.deepEqual(findPublicSurfaceLeaks({ entries: [{ file: 'generated/index.mjs', text }], matcher: noUpstreamNames }).map(({ location }) => location), ['public re-export'], text);
+  }
 });
 
 function writePackage(directory, manifestValue) {
