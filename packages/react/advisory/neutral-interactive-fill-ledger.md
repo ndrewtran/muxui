@@ -5,6 +5,10 @@ fills, historical audit findings, and separate design recommendations. It does
 not set token policy, declare defects, or serve as release evidence or
 authorization for future changes.
 
+The option pages (`neutral-interactive-fill-*.html`) and screenshots (`assets/`) that
+this ledger once linked were removed from the tree. They remain in git history:
+`git log --diff-filter=D --name-only -- packages/react/advisory/`.
+
 Historical audit baseline: branch codex/accept-react-motion, shared worktree on
 2026-09-23, based on 25e273c plus the then-current uncommitted source. Core
 component, field, collection, and overlay style files were already dirty at
@@ -114,17 +118,16 @@ similar/stronger on Option and Virtualizer states. Selected Table/Tree fills did
 not change. That review deferred six dark HeaderNav and Sidebar controls
 because of their foreground/background collisions. NF08 completed those
 repairs on 2026-09-24 with the approved B · Calibrated recipe; the
-[historical comparison](neutral-interactive-fill-navigation-options.html) preserves their previous appearance. The Tree
+historical comparison page preserves their previous appearance. The Tree
 screenshot compared sibling rows; real Mux Tree SSR preflight confirmed
 recursive React children render as flattened sibling `div[role="row"]` elements
 with `aria-level`, so no nested-row overlay or wrapper is needed.
 
-[Light comparison](assets/neutral-medium-light.png) ·
-[Dark comparison](assets/neutral-medium-dark.png)
+Light and dark comparison screenshots accompanied this review.
 
 ## Resolved design decisions · B/C implemented · 2026-09-24
 
-[Review NF22–NF29 in the four-group HTML comparison](neutral-interactive-fill-final-options.html).
+The four-group HTML comparison of NF22–NF29 covered them.
 All eight decisions are resolved. The comparison preserves A’s historical appearance and prior B for NF26–NF28; current component CSS supplies B for NF22–NF25/NF29 and C for NF26–NF28.
 
 These entries originally required a design decision because their fills serve
@@ -228,8 +231,8 @@ In the standard Harbour dark samples, hover foreground contrast rose from
 1.00:1 to 10.20–10.66:1. The account trigger’s resting contrast rose from
 2.08:1 to 4.61:1. Light values, resting backgrounds, native focus styling,
 geometry, safe/current navigation, and forced-colors treatment matched the
-baseline. [Before/A/B/C comparison](neutral-interactive-fill-navigation-options.html)
-now preserves the historical baseline and marks B implemented. Ledger search,
+baseline. The Before/A/B/C comparison page
+preserved the historical baseline and marked B implemented. Ledger search,
 Clear, relative links, and desktop/mobile layout were checked. Local ephemeral
 probe output: `/tmp/nf08-runtime-proof.json`. Focused task proof only, not full release
 evidence or R1.6 acceptance.
@@ -268,7 +271,7 @@ foregrounds and selected option-row feedback were restored, and dark TagGroup
 keeps its opaque rest under the tint. Runtime source stayed frozen during final
 review and checks. Whitespace verification passed.
 
-Final implementation screenshots: [Light](assets/neutral-interactive-fill-medium-implementation-light.png) / [Dark](assets/neutral-interactive-fill-medium-implementation-dark.png). The ledger's search and Clear
+Final implementation screenshots were taken in light and dark. The ledger's search and Clear
 control were checked at desktop and mobile widths. Logs are local and ephemeral:
 `/tmp/muxui-medium-followup-check.log`, `/tmp/muxui-medium-final-probe.log`, and `/tmp/neutral-medium-chip-remove-check.json`. This is focused task proof, not full release
 evidence or R1.6 acceptance.
