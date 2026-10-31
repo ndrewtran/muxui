@@ -1826,6 +1826,92 @@ test('the workflow limits the job, the browser install and the checks separately
   assert.ok(installLimit > 0 && installLimit < firefox.jobTimeoutMinutes - firefox.timeoutMinutes, `install step limit ${installLimit}`);
 });
 
+test('the workflow isolates Playwright caches by runtime image OS and architecture', (t) => {
+  const workflow = readFileSync(resolve(repositoryRoot, '.github/workflows/ci.yml'), 'utf8');
+  const steps = workflow.split('\n      - ');
+  const step = (name) => {
+    const block = steps.find((block) => block.startsWith(`name: ${name}\n`));
+    assert.ok(block, `missing workflow step: ${name}`);
+    return block;
+  };
+  const metadata = step('Read playwright-core version');
+  const cache = step('Cache Playwright browsers');
+  const install = step('Install Playwright browsers');
+  assert.match(metadata, /\n {8}id: playwright\n/u);
+  for (const block of [metadata, cache, install]) {
+    assert.match(block, /\n {8}if: matrix\.group\.reusedFrom == '' && matrix\.group\.browserEngines != ''\n/u);
+  }
+  assert.ok(steps.indexOf(metadata) < steps.indexOf(cache) && steps.indexOf(cache) < steps.indexOf(install));
+  // Even an exact cache hit must install the current runner's system libraries.
+  assert.match(install, /\n {8}run: pnpm --filter @muxui\/react exec playwright-core install --with-deps \$BROWSER_ENGINES\n/u);
+  assert.doesNotMatch(cache, /\brestore-keys:/u);
+
+  const shellBlock = metadata.match(/\n {8}run: \|\n((?: {10}[^\n]*\n)+)/u)?.[1];
+  assert.ok(shellBlock, 'execute the actual metadata shell');
+  const shell = shellBlock.replace(/^ {10}/gmu, '');
+  const directory = mkdtempSync(join(tmpdir(), 'muxui-playwright-metadata-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  let fixture = 0;
+  const runMetadata = (imageOS) => {
+    const output = join(directory, `output-${fixture++}`);
+    const env = { ...process.env, BROWSER_ENGINES: 'webkit', GITHUB_OUTPUT: output };
+    // A developer/runner's inherited value must not mask the absent-identity fixture.
+    delete env.ImageOS;
+    if (imageOS !== undefined) env.ImageOS = imageOS;
+    const result = spawnSync('bash', ['-e', '-c', shell], { cwd: repositoryRoot, env, encoding: 'utf8' });
+    assert.ifError(result.error);
+    const lines = existsSync(output) ? readFileSync(output, 'utf8').trim().split('\n').filter(Boolean) : [];
+    const outputs = Object.fromEntries(lines.map((line) => {
+      const separator = line.indexOf('=');
+      assert.ok(separator > 0, `invalid metadata output: ${line}`);
+      return [line.slice(0, separator), line.slice(separator + 1)];
+    }));
+    return { result, outputs };
+  };
+  const version = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8')).devDependencies['playwright-core'];
+  const successfulOutputs = ['ubuntu24', 'ubuntu26', 'ubuntu26'].map((imageOS) => {
+    const { result, outputs } = runMetadata(imageOS);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(outputs, { 'image-os': imageOS, version, engines: 'webkit' });
+    return outputs;
+  });
+  for (const imageOS of [undefined, '']) {
+    const { result, outputs } = runMetadata(imageOS);
+    assert.notEqual(result.status, 0, `missing/empty ImageOS must fail (${String(imageOS)})`);
+    assert.match(result.stderr, /ImageOS:/u);
+    assert.equal(outputs['image-os'], undefined);
+  }
+
+  const template = cache.match(/\n {10}key: ([^\n]+)\n/u)?.[1];
+  assert.ok(template, 'evaluate the actual cache key');
+  const keyFor = (keyTemplate, outputs, arch = 'X64', os = 'Linux') => {
+    const context = {
+      'runner.os': os, 'runner.arch': arch,
+      ...Object.fromEntries(Object.entries(outputs).map(([name, value]) => [`steps.playwright.outputs.${name}`, value])),
+    };
+    const key = keyTemplate.replace(/\$\{\{\s*([^{}]+?)\s*\}\}/gu, (_, expression) => {
+      assert.ok(Object.hasOwn(context, expression), `unknown cache key expression: ${expression}`);
+      return context[expression];
+    });
+    assert.doesNotMatch(key, /\$\{\{/u);
+    return key;
+  };
+  const [ubuntu24, ubuntu26, repeatedUbuntu26] = successfulOutputs;
+  const assertPlatformIsolation = (keyTemplate) => {
+    assert.notEqual(keyFor(keyTemplate, ubuntu24), keyFor(keyTemplate, ubuntu26), 'image releases must have distinct keys');
+    assert.notEqual(keyFor(keyTemplate, ubuntu26, 'X64'), keyFor(keyTemplate, ubuntu26, 'ARM64'), 'architectures must have distinct keys');
+  };
+  assertPlatformIsolation(template);
+  const key = keyFor(template, ubuntu26);
+  assert.equal(key, keyFor(template, repeatedUbuntu26), 'equal inputs repeat the same key');
+  assert.notEqual(key, keyFor(template, ubuntu26, 'X64', 'Windows'), 'retain the runner OS dimension');
+  assert.notEqual(key, keyFor(template, { ...ubuntu26, version: `${version}-different` }), 'retain the version dimension');
+  assert.notEqual(key, keyFor(template, { ...ubuntu26, engines: 'firefox' }), 'retain the engine dimension');
+  // Prove the collision assertions reject either dimension being dropped, without editing the workflow.
+  assert.throws(() => assertPlatformIsolation(template.replace(/\$\{\{\s*steps\.playwright\.outputs\.image-os\s*\}\}/u, '')), /image releases must have distinct keys/u);
+  assert.throws(() => assertPlatformIsolation(template.replace(/\$\{\{\s*runner\.arch\s*\}\}/u, '')), /architectures must have distinct keys/u);
+});
+
 test('only calls through the harness browserEngines() binding opt a test in', () => {
   const harness = "from './harness.mjs'";
   // Hand-written classification, independent of the planner.
