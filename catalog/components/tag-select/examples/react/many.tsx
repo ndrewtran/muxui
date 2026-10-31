@@ -18,7 +18,7 @@ export function TagSelectManyExample() {
     // The same eight values in a narrow container: tags wrap into rows, and the summary stays one line.
     <div style={{ display: 'grid', gap: 'var(--muxui-reference-dimension-space-m)', inlineSize: '20rem' }}>
       <TagSelect.Root label="Tags" items={technologies} defaultSelectedKeys={new Set(selectedIds)}>
-        {(item) => item.label}
+        {(item) => <TagSelect.Item id={item.id} textValue={item.label}>{item.label}</TagSelect.Item>}
       </TagSelect.Root>
       <MultiSelect.Root label="Summary" items={technologies} defaultSelectedKeys={new Set(selectedIds)}>
         {(item) => <MultiSelect.Item id={item.id} textValue={item.label}>{item.label}</MultiSelect.Item>}

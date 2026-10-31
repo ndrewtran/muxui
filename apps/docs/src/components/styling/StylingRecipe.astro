@@ -47,6 +47,7 @@ const kinds = [
 // The height each preview reserves before its example renders, so the page below does not move when it does (src/lib/preview-heights.json,
 // recorded from the rendered examples by apps/scale/test/browser/record-preview-heights.mjs; the docs check holds it to the families that have previews).
 const reserved = (previewHeights as Record<string, { narrow: number; wide: number }>)[slug] ?? { narrow: 0, wide: 0 };
+const hasPreview = recipe.preview && Object.hasOwn(previewHeights, slug);
 const names = classNames.size + attributes.size + variables.size;
 // The opening sentence counts the changes the recipe makes and names their kinds, so a family with four or five says so.
 const stepKinds = [
@@ -57,7 +58,7 @@ const stepKinds = [
 	const total = recipe.steps.filter((step) => step.kind === kind).length;
 	return total === 0 ? [] : [total === 1 ? one : `${total} ${many}`];
 });
-const opening = `Copy this into your own CSS and wrap the component in the scope. ${recipe.steps.length} ${recipe.steps.length === 1 ? 'change' : 'changes'}: ${stepKinds.join(', ')}.`;
+const opening = `${recipe.preview ? 'Copy this into your own CSS and wrap the component in the scope.' : 'Copy this into your own CSS. This is a document-wide family rule; open or show the content first.'} ${recipe.steps.length} ${recipe.steps.length === 1 ? 'change' : 'changes'}: ${stepKinds.join(', ')}.`;
 const nameKinds = kinds.filter(({ list }) => list.size > 0).map(({ list, one, many }) => `${list.size} ${list.size === 1 ? one : many}`).join(', ');
 ---
 
@@ -66,7 +67,7 @@ const nameKinds = kinds.filter(({ list }) => list.size > 0).map(({ list, one, ma
 {recipe.notes.map((note) => <p class="styling-note" data-styling-recipe-note>{note}</p>)}
 <CodeBlock id="styling-recipe-css" code={recipe.css} lang="css" label="app.css" />
 <CodeBlock id="styling-recipe-markup" code={recipe.markup} lang="tsx" label="Component.tsx" plain />
-{recipe.steps.length > 0 && (
+{hasPreview && (
 	<Fragment>
 		<div class="styling-compare not-content" data-styling-compare style={`--preview-h-narrow:${reserved.narrow}px;--preview-h-wide:${reserved.wide}px`}>
 			<div role="group" aria-labelledby="styling-pane-default" data-styling-pane="default">

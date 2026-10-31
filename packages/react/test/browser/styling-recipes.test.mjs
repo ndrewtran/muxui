@@ -114,10 +114,10 @@ const fixtures = [
       ['state', 'text-decoration: line-through', '.muxui-date-range-picker[data-muxui-state-disabled]', 'text-decoration-line', 'unavailable'],
     ] },
     // A closed dialog renders only its trigger's markup, none of it Dialog's own, so there is nothing to target.
-    { slug: 'dialog', steps: [] },
+    { slug: 'dialog', steps: [['part', 'letter-spacing: 0.04em', '.muxui-dialog__title', 'letter-spacing', 'document']] },
   ]],
   ['A root that renders no element', [
-    { slug: 'alert-dialog', steps: [] },
+    { slug: 'alert-dialog', steps: [['part', 'letter-spacing: 0.04em', '.muxui-alert-dialog__trigger', 'letter-spacing', 'wrapper']] },
   ]],
   ['Motion', [
     // The background is a surface under text, and the open panel's muted text has 5.7:1 on the light page to start with: only the icon size.
@@ -318,6 +318,10 @@ for (const [category, list] of fixtures) {
         const recipe = await recipeOf(fixture.slug);
         // The generated recipe is the fixture's: kind, declaration, target, property and scope of every step, in order.
         assert.deepEqual(recipe.steps.map((step) => [step.kind, step.declaration, step.target, step.property, step.scope]), fixture.steps, `${fixture.slug}: the generated steps are the fixture`);
+        if (!recipe.preview) {
+          assert.ok(recipe.steps.every(({ scope }) => scope === 'document'));
+          continue;
+        }
         if (fixture.steps.length === 0) {
           assert.equal(recipe.rules, '', `${fixture.slug}: no steps, no rules`);
           assert.ok(recipe.notes.length > 0, `${fixture.slug}: it says why`);
@@ -432,7 +436,8 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
     for (const slug of slugs) {
       const examples = all.filter(({ family }) => family === slug).map(({ source }) => ({ source: { content: source } }));
       const recipe = stylingFor({ slug, artifact: await readRecord(slug), examples, facts, observations: all }).recipe;
-      if (recipe.steps.length === 0) continue;
+      assert.ok(recipe.steps.length > 0, `${slug}: nonempty recipe`);
+      if (!recipe.preview) continue; // Visible portal targets are proved by the dedicated live test below.
       const html = all.find(({ source }) => source === examples[0].source.content).html;
       for (const scheme of ['light', 'dark']) {
         const results = await measure(page, { html, rules: recipe.rules, steps: recipe.steps, scheme });
@@ -457,7 +462,7 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
   assert.deepEqual(unreadable, [], `every element a color step paints keeps the contrast guard: text 1.5x the WCAG rule for its size and weight, a mark or a fill that holds no text 3:1, nothing lower than it was`);
   // The readings: every element each color step paints, in light and in dark.
   assert.deepEqual(kinds, { text: 12, mark: 6, fill: 6 }, 'readings: TagGroup\'s three tags under both its steps, then the mark and the fill of Checkbox, CheckboxField and IconButton, in two color schemes');
-  assert.equal(steps, 282, 'steps measured: 141 steps in 77 families, each in two color schemes');
+  assert.equal(steps, 288, 'steps measured in 80 Basic examples, each in two color schemes; four visible portal recipes have live proof');
 });
 
 test('the rule the guard holds text to: 4.5:1 for normal text, 3:1 for large text and for a glyph, by the element\'s own size and weight', () => {
@@ -634,4 +639,52 @@ test('portals: the DatePicker and DateRangePicker popups render outside the wrap
     await context.close();
     await close();
   }
+});
+
+test('previously empty recipes: three reachable wrapper targets and four visible document-wide targets, including real portals', { timeout: 180_000 }, async () => {
+  const seven = ['alert-dialog', 'dialog', 'menu', 'popover', 'preview-trigger', 'toast', 'tooltip'];
+  const rendered = await renderCatalogExamples(seven);
+  const all = rendered.map(({ family, source, html }) => ({ family, source, html }));
+  const recipeFor = async (slug) => stylingFor({ slug, artifact: await readRecord(slug), examples: all.filter(({ family }) => family === slug).map(({ source }) => ({ source: { content: source } })), facts, observations: all }).recipe;
+  const page = await browser.newPage();
+  try {
+    for (const slug of ['alert-dialog', 'menu', 'popover']) {
+      const recipe = await recipeFor(slug);
+      assert.ok(recipe.steps.length > 0);
+      for (const scheme of ['light', 'dark']) {
+        const [result] = await measure(page, { html: all.find(({ family }) => family === slug).html, rules: recipe.rules, steps: recipe.steps, scheme });
+        assert.ok(result.bare !== null && result.scoped !== null);
+        assert.notEqual(result.bare, result.scoped, `${slug}: public target reached through consumer wrapper`);
+      }
+    }
+  } finally { await page.close(); }
+  const entry = `import React from 'react';
+    import {createRoot} from 'react-dom/client';
+    import * as M from '/generated/index.mjs';
+    import {clientFixtures} from '/test/support/styling-fixtures.mjs';
+    const fixture = clientFixtures.find(({family}) => family === new URL(location.href).searchParams.get('family'));
+    createRoot(document.getElementById('scope')).render(fixture.element({h: React.createElement, M}));`;
+  const { url, close } = await startServer({ entries: ['generated/index.mjs'], pages: { '/recipe.html': pageShell({ head: '<link rel="stylesheet" href="/generated/styles.css">', body: '<div id="scope" class="my-scope"></div>', entry: '/recipe-entry.mjs' }) }, modules: { '/recipe-entry.mjs': entry } });
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    for (const slug of ['dialog', 'preview-trigger', 'toast', 'tooltip']) {
+      const recipe = await recipeFor(slug);
+      const [step] = recipe.steps;
+      assert.equal(step.scope, 'document');
+      await page.goto(`${url}/recipe.html?family=${slug}`, { waitUntil: 'networkidle' });
+      if (slug === 'toast') await page.getByRole('button', { name: 'Save' }).click();
+      await page.locator(step.target).waitFor();
+      if (['preview-trigger', 'tooltip'].includes(slug)) assert.ok(['top', 'bottom', 'left', 'right'].includes(await page.locator(step.target).getAttribute('data-muxui-state-placement')), `${slug}: adapter emits the resolved placement hook after browser layout`);
+      assert.equal(await page.locator(step.target).evaluate((node) => document.getElementById('scope').contains(node)), false, `${slug}: actual portal is outside the trigger wrapper`);
+      for (const scheme of ['light', 'dark']) {
+        await page.locator('html').evaluate((node, scheme) => node.setAttribute('data-muxui-color-scheme', scheme), scheme);
+        const read = () => page.locator(step.target).evaluate((node, property) => getComputedStyle(node).getPropertyValue(property), step.property);
+        const before = await read();
+        const css = await page.addStyleTag({ content: recipe.rules });
+        assert.notEqual(await read(), before, `${slug} ${scheme}: copied document-wide rule changes real visible content`);
+        await css.evaluate((node) => node.remove());
+      }
+    }
+  } finally { await context.close(); await close(); }
 });

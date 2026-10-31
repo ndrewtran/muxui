@@ -352,7 +352,7 @@ function expectedHooks({ sources, slug, artifact, binding, classRows, exampleNod
 	const states = [
 		...[...declared].map(([attribute, { kind, names }]) => ({ attribute, origin: 'catalog', kind, names })),
 		...interactionStates.map((name) => `data-muxui-state-${name}`).filter((attribute) => styledOwn.includes(attribute) && !declared.has(attribute)).map((attribute) => ({ attribute, origin: 'interaction' })),
-		...styledWide.filter((attribute) => !declared.has(attribute) && !interactionStates.includes(stateName(attribute)) && emittedOf(attribute).length > 0).sort().map((attribute) => ({ attribute, origin: 'observed' })),
+		...styledWide.filter((attribute) => !declared.has(attribute) && !interactionStates.includes(stateName(attribute))).sort().map((attribute) => ({ attribute, origin: emittedOf(attribute).length > 0 ? 'observed' : 'selected' })),
 	].map((entry) => ({ ...entry, selected: selectedOf(entry.attribute), emitted: emittedOf(entry.attribute) }));
 
 	const props = new Set(binding.api.props ?? []);
@@ -465,7 +465,7 @@ export function expectedStylingSources(sources, { slug, root: pageRoot }) {
 	const rows = expectedClassRows(sources, slug);
 	const hooks = new Set([...rows.filter(({ row }) => documentedDispositions.includes(row.disposition) && row.hook !== undefined).map(({ row }) => row.hook), ...companionClasses(sources, slug, rows, exampleNodes)]);
 	const styles = sources.authored.filter(({ rules }) => rules.some(({ selector }) => subjectClasses(selector).some((name) => hooks.has(name) || [...hooks].some((hook) => name.startsWith(`${hook}--`))))).map(({ path }) => path);
-	return [partMapPath, referencePath, ...styles, tokenRecordPath, readmePath];
+	return [partMapPath, referencePath, ...styles, tokenRecordPath, readmePath, 'catalog/guides/foundations-component-tokens.md'];
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -578,7 +578,7 @@ export function recipeChanges(css) {
 	const rules = css.slice(css.indexOf('\n\n') + 2);
 	return [
 		...[...rules.matchAll(/(--muxui-[\w-]+)\s*:\s*([^;}]+)/gu)].map(([, name, value]) => ({ kind: 'token', selector: '.my-scope', property: name, value: collapse(value), declaration: `${name}: ${collapse(value)}` })),
-		...[...rules.matchAll(/(?:^|\s)(\.my-scope [^{]+?)\s*\{\s*([a-z-]+)\s*:\s*([^;}]+)/gu)].map(([, selector, property, value]) => ({ kind: /\[data-muxui-/u.test(selector) ? 'state' : 'part', selector: collapse(selector), property, value: collapse(value), declaration: `${property}: ${collapse(value)}` })),
+		...[...rules.matchAll(/(?:^|\s)(\.(?:my-scope [^{]+?|muxui-[\w-]+))\s*\{\s*([a-z-]+)\s*:\s*([^;}]+)/gu)].map(([, selector, property, value]) => ({ kind: /\[data-muxui-/u.test(selector) ? 'state' : 'part', selector: collapse(selector), property, value: collapse(value), declaration: `${property}: ${collapse(value)}` })),
 	];
 }
 
@@ -778,6 +778,12 @@ export function checkStyling({ sources, slug, artifact, root, route, measureUrl 
 			}
 			const saysCatalog = /^(?:Catalog states? |Status row from the catalog)/u.test(row.notes);
 			if ((state.origin === 'catalog') !== saysCatalog) report(`Hooks row ${state.attribute} ${state.origin === 'catalog' ? 'is declared by the catalog and does not say so' : 'says the catalog declares it, and the catalog does not'}.`);
+			const noWriter = sources.partMap.nonEmittedStates[slug]?.[state.attribute.replace('data-muxui-state-', '')];
+			if (noWriter) {
+				if (!row.notes.includes(`No emitted CSS state hook. ${noWriter}`)) report(`Hooks row ${state.attribute} omits its no-emitted-hook disposition.`);
+				continue;
+			}
+			if (state.origin === 'selected' && !row.notes.includes('Supported CSS state hook')) report(`Hooks row ${state.attribute} omits its supported but unobserved disposition.`);
 			if (state.origin === 'catalog' && state.kind !== 'status') {
 				const label = `Catalog state${state.names.length > 1 ? 's' : ''} ${state.names.join(', ')}.`;
 				if (!row.notes.startsWith(label)) report(`Hooks row ${state.attribute} names the catalog states differently from "${label}": ${JSON.stringify(row.notes.slice(0, 80))}.`);
@@ -847,6 +853,10 @@ export function checkStyling({ sources, slug, artifact, root, route, measureUrl 
 	} else if (rendered.dom === null && basicHasHooks(root)) {
 		report('has no Rendered DOM block although its Basic example renders elements with a hook.');
 	}
+
+	const scopeText = sources.read('catalog/guides/foundations-component-tokens.md').split('\n\n').find((paragraph) => paragraph.includes('Component roles resolve at the scheme or theme scope'));
+	const scopeNode = byAttribute(root, 'data-styling-alias-scope')[0];
+	if (!scopeNode || !collapse(textContent(scopeNode)).includes(collapse(scopeText))) report('Tokens omit the canonical alias declaration-scope caveat.');
 
 	// Tokens.
 	const requirements = binding.tokenRecipe.requirements;
@@ -940,11 +950,14 @@ export function checkStyling({ sources, slug, artifact, root, route, measureUrl 
 			const total = changes.filter((change) => change.kind === kind).length;
 			return total === 0 ? [] : [total === 1 ? one : `${total} ${many}`];
 		});
-		const opening = changes.length === 0 ? `No change was generated for ${artifact.name}.` : `Copy this into your own CSS and wrap the component in the scope. ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}: ${kindsText.join(', ')}.`;
+		const documentRule = changes.some(({ selector }) => selector.startsWith('.muxui-'));
+		const opening = changes.length === 0 ? `No change was generated for ${artifact.name}.` : `${documentRule ? 'Copy this into your own CSS. This is a document-wide family rule; open or show the content first.' : 'Copy this into your own CSS and wrap the component in the scope.'} ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}: ${kindsText.join(', ')}.`;
 		if (!same(recipe.opening, [opening])) report(`Recipe opens with ${JSON.stringify(recipe.opening)}, the recipe makes ${changes.length} ${changes.length === 1 ? 'change' : 'changes'} and its opening sentence reads ${JSON.stringify(opening)}.`);
+		if (changes.length === 0) report('Recipe has no actionable customization step.');
+		if (documentRule && (!recipe.notes.some((note) => note.includes('document-wide') && note.includes('portaled content')) || !recipe.markup.includes('no wrapper scope is required'))) report('Recipe omits its document-wide scope or visible-content prerequisite.');
 		const [statement, importLine] = cascade.code.split('\n');
 		if (!recipe.css.startsWith(`${statement}\n${importLine}\n`)) report('Recipe does not start with the README\'s layer statement and styles import.');
-		if (!/className="my-scope"/u.test(recipe.markup)) report('Recipe markup does not wrap the component in the my-scope wrapper.');
+		if (!documentRule && !/className="my-scope"/u.test(recipe.markup)) report('Recipe markup does not wrap the component in the my-scope wrapper.');
 		if (recipe.css.includes('!important')) report('Recipe uses !important.');
 		const printedHooks = new Set((hooks ?? []).flatMap(({ rows }) => rows.map(({ hook }) => hook)));
 		const printedClasses = new Set([...printedHooks].flatMap((hook) => [...hook.matchAll(/\.(muxui-[\w-]+)/gu)].map(([, name]) => name)));
@@ -985,7 +998,7 @@ export function checkStyling({ sources, slug, artifact, root, route, measureUrl 
 	const changes = recipe.css === null ? [] : recipeChanges(recipe.css);
 	const basicSection = elements(root).find((node) => node.tagName === 'section' && attributeValue(node, 'id') === 'basic');
 	const basicSources = unique(basicSection === undefined ? [] : byTag(basicSection, 'astro-island').map((island) => { try { return JSON.parse(attributeValue(island, 'props') ?? '{}').source?.[1] ?? null; } catch { return null; } }));
-	if (changes.length === 0) {
+	if (changes.length === 0 || changes.some(({ selector }) => selector.startsWith('.muxui-')) || !Object.hasOwn(sources.previewHeights, slug)) {
 		if (previews.panes.length > 0 || previews.computed !== null) report('shows previews or a computed-change table although the recipe makes no change.');
 		if (rendered.scopeClasses !== 0) report('has a my-scope wrapper although the recipe makes no change.');
 	} else {

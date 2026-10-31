@@ -13,6 +13,7 @@ import { blocksPath } from '../src/lib/block-paths.ts';
 import { componentsPath, sectionOf } from '../src/lib/site-sections.ts';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 import { groupComponentNavigation } from '../../component-navigation.mjs';
+import { SELECTED_GUIDE_ROUTES } from '../src/lib/selected-guide-routes.ts';
 import { componentRecordCategory } from '../src/lib/component-categories.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -53,8 +54,10 @@ function currentTabs(tree) {
 		.map((node) => textContent(node).trim());
 }
 
+const navigationCache = new Map();
 /** The sidebar links and groups, the prev/next links, and the current tab of one built Starlight page. */
 function readNavigation(route) {
+	if (navigationCache.has(route)) return navigationCache.get(route);
 	const file = resolve(docsDist, route.replace(/^\//u, ''), 'index.html');
 	assert(existsSync(file), `Built route is missing: ${route}.`);
 	const tree = elements(parseFragment(readFileSync(file, 'utf8')));
@@ -65,13 +68,16 @@ function readNavigation(route) {
 		const link = tree.find((node) => node.tagName === 'a' && attributeValue(node, 'rel') === rel);
 		return link && attributeValue(link, 'href');
 	};
-	return {
+	const navigation = {
+		guideIds: tree.filter((node) => attributeValue(node, 'data-guide-id') !== undefined).map((node) => attributeValue(node, 'data-guide-id')),
 		tabs: currentTabs(tree),
 		links: sidebarElements.filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href')),
 		groups: sidebarElements.filter((node) => node.tagName === 'summary').map((node) => textContent(node).trim()),
 		prev: paginationHref('prev'),
 		next: paginationHref('next'),
 	};
+	navigationCache.set(route, navigation);
+	return navigation;
 }
 
 function assertCurrentTab(route, tabs, label) {
@@ -90,6 +96,16 @@ for (const route of docsRoutes) {
 	const component = [...links, prev, next].find((href) => href?.startsWith(componentsPath));
 	assert(component === undefined, `${route} links to the component page ${component}.`);
 	assertCurrentTab(route, tabs, 'Docs');
+}
+
+// A route is selected by the same source the shared production route consumes, plus the
+// existing foundation selection. Do not require standalone routes for every catalog guide.
+for (const { route, id } of SELECTED_GUIDE_ROUTES) {
+	const { guideIds } = readNavigation(route);
+	assert(guideIds.length === 1 && guideIds[0] === id, `${route} must project selected guide ${id}; found ${guideIds.join(', ') || 'none'}.`);
+	for (const source of docsRoutes) {
+		assert(readNavigation(source).links.includes(route), `${source} sidebar cannot reach selected guide ${id} at ${route}.`);
+	}
 }
 
 // Sidebar order lists the AI Agent group first, so its first component follows the last guide.
@@ -115,4 +131,4 @@ const blocksFile = resolve(docsDist, blocksPath.replace(/^\//u, ''), 'index.html
 assert(existsSync(blocksFile), `Built route is missing: ${blocksPath}.`);
 assertCurrentTab(blocksPath, currentTabs(elements(parseFragment(readFileSync(blocksFile, 'utf8')))), 'Blocks');
 
-console.log(`Navigation contract passed: ${docsRoutes.length} Docs pages list only guides, ${componentRoutes.length} component pages list only the components in ${groupLabels.length} groups, prev/next stays inside each section, and the current header tab matches.`);
+console.log(`Navigation contract passed: ${SELECTED_GUIDE_ROUTES.length} selected guides have their expected identity and are reachable from every Docs sidebar; ${docsRoutes.length} Docs pages list only guides, ${componentRoutes.length} component pages list only the components in ${groupLabels.length} groups, prev/next stays inside each section, and the current header tab matches.`);

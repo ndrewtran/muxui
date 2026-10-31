@@ -289,7 +289,7 @@ export async function readComponentDocs({ repositoryRoot, componentIds, docsPage
 }
 
 function entryFor({ artifact, reference, typed, guide, accessibilityGuide, installationGuide, examples, usedIn }) {
-  const { anatomy, states, tokenSource, tokenGroups, hooks } = reference.styling;
+  const { tokenGroups: _legacyTokenGroups, ...styling } = reference.styling;
   return {
     id: artifact.id,
     name: artifact.name,
@@ -301,9 +301,7 @@ function entryFor({ artifact, reference, typed, guide, accessibilityGuide, insta
     guide,
     accessibilityGuide,
     ...reference,
-    // The Docs page reads the four fields styling always had; the Anatomy story reads the hooks block. The rest of the styling
-    // reference (tokens, override rules, recipe) is the docs site's, so it does not ship in every story module.
-    styling: { anatomy, states, tokenSource, tokenGroups, hooks },
+    styling,
     typed,
     // The declarations the typed reference was read from follow the family's other sources.
     sources: [...reference.sources, { label: 'Declarations', paths: [typed.source, ...Object.values(typed.sources)] }],

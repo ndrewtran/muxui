@@ -56,10 +56,11 @@ const colors = ['#1e1b4b', '#ffffff', '#7e62c940', '#287f7240', '#a0672440', '#7
 function recipeFailures({ slug, recipe, tokenRows, hookRows, html }) {
   const failures = [];
   const fail = (message) => failures.push(`${slug}: ${message}`);
+  if (recipe.steps.length === 0) fail('no actionable customization step');
   const lines = recipe.css.split('\n');
   if (lines[0] !== layerStatement) fail(`opens with ${lines[0]}, not the README's layer statement`);
   if (lines[1] !== stylesImport) fail(`its second line is ${lines[1]}, not the README's styles import`);
-  if (recipe.scope !== 'my-scope' || !recipe.markup.includes('className="my-scope"')) fail('the wrapper is not my-scope');
+  if (recipe.scope !== 'my-scope' || (recipe.preview && !recipe.markup.includes('className="my-scope"'))) fail('the wrapper is not my-scope');
   if (recipe.rules !== '' && !recipe.css.endsWith(recipe.rules)) fail('rules is not the end of css');
   let parsed;
   try {
@@ -72,7 +73,7 @@ function recipeFailures({ slug, recipe, tokenRows, hookRows, html }) {
   for (const rule of parsed.rules) {
     if (rule.chain.length === 0) {
       if (rule.selector !== '.my-scope' || rule.declarations.some(({ property }) => !property.startsWith('--muxui-component-'))) fail(`an unlayered rule that is not the wrapper's component roles: ${rule.selector}`);
-    } else if (rule.chain.join('|') !== '@layer muxui.utilities' || !rule.selector.startsWith('.my-scope ')) {
+    } else if (rule.chain.join('|') !== '@layer muxui.utilities' || (!rule.selector.startsWith('.my-scope ') && !recipe.steps.some((step) => step.scope === 'document' && step.selector === rule.selector))) {
       fail(`${rule.selector} is not a wrapper-scoped rule in muxui.utilities`);
     }
   }
@@ -81,7 +82,7 @@ function recipeFailures({ slug, recipe, tokenRows, hookRows, html }) {
 
   const document = new JSDOM(html).window.document;
   const roots = [...document.querySelectorAll(hookRows.find(({ part }) => part === hookRows.rootPart)?.hook ?? ':not(*)')];
-  const inRoot = (element) => roots.some((root) => root === element || root.contains(element));
+  const inRoot = (element) => roots.length === 0 || roots.some((root) => root === element || root.contains(element));
   const elementsOf = (selector) => [...document.querySelectorAll(selector)].filter(inRoot);
   const hookClasses = new Set(hookRows.class.flatMap(({ hook }) => (hook ?? '').match(/muxui-[\w-]+/gu) ?? []));
   const hookAttributes = new Set(hookRows.attribute);
@@ -94,7 +95,7 @@ function recipeFailures({ slug, recipe, tokenRows, hookRows, html }) {
     if (!step.target || !step.property) fail(`${label} has no target or property`);
     if (shorthands.has(step.property) || step.property.startsWith('--')) fail(`${label} compares ${step.property}, which is not a longhand`);
     if (/label-gap|motion-duration|transition/u.test(`${step.selector} ${step.declaration} ${step.target} ${step.property}`)) fail(`${label} is one of the roles and properties a recipe never uses`);
-    if ((step.scope === 'unavailable') !== (step.reason !== undefined)) fail(`${label}: a reason goes with an unavailable step and only with one`);
+    if ((['unavailable', 'document'].includes(step.scope)) !== (step.reason !== undefined)) fail(`${label}: a reason goes with an unavailable step and only with one`);
     if (step.kind === 'token') {
       const [name, value] = step.declaration.split(': ');
       const row = tokenRows.find(({ cssVar }) => cssVar === name);
@@ -108,7 +109,7 @@ function recipeFailures({ slug, recipe, tokenRows, hookRows, html }) {
       if (found.length === 0) fail(`${label}: ${step.target} matches nothing inside the root of the Basic example`);
       if (step.observedText !== found.some((element) => element.textContent.trim() !== '')) fail(`${label}: observedText disagrees with the example`);
     } else {
-      const withoutScope = step.selector.slice('.my-scope '.length);
+      const withoutScope = step.scope === 'document' ? step.selector : step.selector.slice('.my-scope '.length);
       for (const [, name] of withoutScope.matchAll(/\.(muxui-[\w-]+)/gu)) if (!hookClasses.has(name)) fail(`${label}: .${name} is not a row of the family's Hooks`);
       for (const [, name] of withoutScope.matchAll(/\[([\w-]+)\]/gu)) if (!hookAttributes.has(name)) fail(`${label}: [${name}] is not a state or reflected row of the family's Hooks`);
       const attribute = /\[([\w-]+)\]$/u.exec(step.target)?.[1];
@@ -120,8 +121,12 @@ function recipeFailures({ slug, recipe, tokenRows, hookRows, html }) {
         if (!settable.has(attribute.replace(/^data-muxui-state-/u, ''))) fail(`${label}: ${attribute} is not a state you can set by hand`);
         if (step.reason !== 'needs the state') fail(`${label} has the reason ${step.reason}`);
         if (elementsOf(step.target).length > 0) fail(`${label}: the example already shows ${attribute}, so it is not unavailable`);
-      } else if (elementsOf(step.target).length === 0) {
+      } else if (step.scope !== 'document' && elementsOf(step.target).length === 0) {
         fail(`${label}: ${step.target} matches nothing inside the root of the Basic example`);
+      }
+      if (step.scope === 'document') {
+        if (step.kind !== 'part' || recipe.preview || !recipe.notes.some((note) => note.includes('document-wide') && note.includes(step.target)) || !recipe.markup.includes('no wrapper scope is required')) fail(`${label}: missing document scope/prerequisite disclosure`);
+        continue;
       }
       const found = elementsOf(base);
       if (found.length === 0) fail(`${label}: ${base} matches nothing inside the root of the Basic example`);
@@ -231,26 +236,21 @@ test('the picks: which families get a token step and which of their roles, how m
   // A family that keeps another step still says which role it left out; the rest say nothing of the kind.
   assert.deepEqual(slugs.filter((slug) => droppedNote(slug) !== undefined), ['data-diff', 'disclosure-group', 'switch', 'tabs', 'tag-group', 'text-field']);
   for (const slug of Object.keys(tokens)) assert.equal(tokenNote(slug), undefined, `${slug} has a token step and no such note`);
-  // Seven families have nothing to target in their Basic example (closed overlays and providers), and each says why in a note.
-  const empty = slugs.filter((slug) => all.get(slug).recipe.steps.length === 0);
-  assert.deepEqual(empty, ['alert-dialog', 'dialog', 'menu', 'popover', 'preview-trigger', 'toast', 'tooltip']);
-  for (const slug of empty) assert.ok(all.get(slug).recipe.notes.length >= 2 && all.get(slug).recipe.rules === '', slug);
-  // Steps by kind: 10 token steps in 6 families, a part step in 77, a state step in 54 of which 41 need the state.
+  assert.deepEqual(slugs.filter((slug) => all.get(slug).recipe.steps.length === 0), [], 'every family has a nonempty recipe');
   const steps = slugs.flatMap((slug) => all.get(slug).recipe.steps);
-  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 77, 54]);
+  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 84, 54]);
   assert.equal(steps.filter((step) => step.scope === 'unavailable').length, 41);
-  assert.ok(steps.filter((step) => step.scope === 'unavailable').every((step) => step.kind === 'state'));
-  assert.equal(steps.filter((step) => !step.observedText).length, 26, 'steps whose target holds no text are computed only');
+  assert.deepEqual(slugs.filter((slug) => !all.get(slug).recipe.preview), ['dialog', 'preview-trigger', 'toast', 'tooltip']);
 });
 
-test('a closed overlay\'s portal parts are never a target, and a provider with no element has no step', () => {
+test('wrapper recipes exclude unreachable portals; providers and standalone compositions may target reachable public parts', () => {
   const targets = (slug) => all.get(slug).recipe.steps.map(({ target }) => target);
   for (const slug of ['date-picker', 'date-range-picker']) {
     assert.deepEqual(all.get(slug).recipe.steps.filter(({ kind }) => kind === 'token'), [], `${slug}: its popover role is read by a rule on the portal, not inside the wrapper`);
     assert.ok(targets(slug).every((target) => !/popover|popup/u.test(target)), slug);
   }
-  assert.deepEqual(all.get('alert-dialog').recipe.steps, []);
-  assert.deepEqual(all.get('dialog').recipe.steps, []);
+  assert.equal(all.get('alert-dialog').recipe.steps[0].target, '.muxui-alert-dialog__trigger');
+  assert.equal(all.get('dialog').recipe.steps[0].scope, 'document');
 });
 
 test('label-gap, motion-duration and transition are never a step, and DisclosureGroup reads label-gap with one rule on the caller\'s title', () => {
@@ -263,7 +263,7 @@ test('label-gap, motion-duration and transition are never a step, and Disclosure
 
 test('without a render there is nothing to target: no steps and one sentence saying so', () => {
   const bare = stylingOf('button', { observations: [], examples: [] });
-  assert.deepEqual(bare.recipe.steps, []);
+  assert.deepEqual(bare.recipe.steps, []); // No supplied render is not an admitted all-family recipe.
   assert.equal(bare.recipe.rules, '');
   assert.deepEqual(bare.recipe.notes, ['No steps: no example render was supplied, so the recipe cannot name an element the example shows.']);
   assert.equal(bare.recipe.css, `${layerStatement}\n${stylesImport}\n`);
@@ -438,26 +438,21 @@ test('a textarea\'s value is the target\'s text: a part step on it is observed t
 
 const scopedRule = 'A part rule is scoped to a wrapper around the component, so its target has to be inside the component\'s root to be reached.';
 
-test('a missing part step says what the Basic example renders: nothing, or a hook the generator cannot show inside the root', () => {
-  // The generator rejects a candidate for want of the root as an ancestor; it does not say the example lacks the element.
-  assert.deepEqual(notesOf('menu', 'No part step'), [`No part step: the Basic example renders .muxui-menu__item, but Menu's root renders no element in that example, so the generator cannot show that it is inside the root. ${scopedRule}`]);
-  assert.deepEqual(notesOf('alert-dialog', 'No part step'), [`No part step: the Basic example renders .muxui-alert-dialog__trigger, but AlertDialog's root renders no element (a provider), so the generator cannot show that it is inside the root. ${scopedRule}`]);
-  assert.deepEqual(notesOf('dialog', 'No part step'), ['No part step: the Basic example renders no element of Dialog\'s documented hooks.']);
-  // Against the example as jsdom reads it, for every family without a part step, and against the Rendered DOM block the page prints.
-  const without = slugs.filter((slug) => notesOf(slug, 'No part step').length > 0);
-  assert.deepEqual(without, ['alert-dialog', 'dialog', 'menu', 'popover', 'preview-trigger', 'toast', 'tooltip']);
-  for (const slug of without) {
-    const document = basicDocument(slug);
-    const rendered = documentedHooks(slug).filter((hook) => document.querySelector(hook) !== null);
-    const [note] = notesOf(slug, 'No part step');
-    const dom = all.get(slug).hooks.renderedDom?.text ?? '';
-    if (rendered.length === 0) {
-      assert.match(note, /^No part step: the Basic example renders no element of [A-Za-z]+'s documented hooks\.$/u, slug);
-    } else {
-      assert.ok(note.startsWith(`No part step: the Basic example renders ${rendered.join(', ')}, but `), `${slug}: ${note}`);
-      for (const hook of rendered) assert.match(dom, new RegExp(`class="([^"]* )?${hook.slice(1)}( [^"]*)?"`, 'u'), `${slug}: the Rendered DOM shows ${hook}`);
-    }
+test('reachable public targets need a consumer wrapper, not a provider DOM root; closed content recipes disclose document scope', () => {
+  for (const slug of ['alert-dialog', 'menu', 'popover']) {
+    const step = all.get(slug).recipe.steps.find(({ kind }) => kind === 'part');
+    assert.equal(step.scope, 'wrapper');
+    assert.ok(basicDocument(slug).querySelector(step.target), `${slug}: consumer wrapper can contain the rendered public target`);
   }
+  for (const slug of ['dialog', 'preview-trigger', 'toast', 'tooltip']) {
+    const recipe = all.get(slug).recipe;
+    assert.equal(recipe.steps.length, 1);
+    assert.equal(recipe.steps[0].scope, 'document');
+    assert.match(recipe.notes.join(' '), /document-wide.*portaled content/u);
+    assert.equal(recipe.preview, false);
+  }
+  const empty = { ...all.get('button').recipe, steps: [], rules: '', css: `${layerStatement}\n${stylesImport}\n` };
+  assert.ok(failuresOf('button', all.get('button'), empty).some((failure) => failure.includes('no actionable')));
 });
 
 test('a missing state step names the reason that holds: no boolean state, none the example shows or you set by hand, no hook to put it on, or a hook it does not render or cannot show inside the root', () => {

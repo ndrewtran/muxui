@@ -2,8 +2,8 @@
   "schemaVersion": "1.0.0",
   "id": "muxui:example:radio-field-options-react",
   "kind": "example",
-  "name": "RadioField options with descriptions and a group error",
-  "summary": "Give a RadioGroup the selected value and one error message for the whole group, and give each RadioField option a description and a disabled state.",
+  "name": "RadioField options with descriptions and validation",
+  "summary": "Keep selection and the missing-plan error on RadioGroup, show an option-specific billing error on Yearly, and retain the disabled Invoice option.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:radio-field#web.react",

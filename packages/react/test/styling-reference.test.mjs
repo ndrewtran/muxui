@@ -92,7 +92,7 @@ test('the observation reader agrees with jsdom on every element of the 217 rende
     assert.deepEqual(mine.map((element) => element.text), theirs.map((element) => domText(element)), `${name}: the same text in every element`);
     elements += mine.length;
   }
-  assert.equal(elements, 3752);
+  assert.equal(elements, 3758); // Sidebar's grouping example adds six elements with its newly demonstrated public parts.
   // A <template> holds React Aria's collection and is inert: the template is an element, its content is not.
   const inert = parseObservation('<template><b class="muxui-x">in</b></template><i>out</i>');
   assert.deepEqual(inert.elements.map(({ tag }) => tag), ['template', 'i']);
@@ -475,7 +475,7 @@ test('catalog state rows: one per attribute and family, in catalog order, with t
   assert.deepEqual(pairs.filter(({ row }) => row.selectedOn.length > 0).length - own.length, 12, 'selected only through a shared field hook, a composed root or a companion');
   // Each pair that no documented hook selects says so exactly: either only an internal part does, or nothing does.
   for (const { slug, row } of pairs.filter(({ row: candidate }) => candidate.selectedOn.length === 0)) {
-    assert.match(row.note, /No Mux rule selects this attribute on a documented hook\.|only on an internal part/u, `${slug} ${row.hook}`);
+    assert.match(row.note, /No Mux rule selects this attribute on a documented hook\.|only on an internal part|No emitted CSS state hook/u, `${slug} ${row.hook}`);
   }
   assert.deepEqual(pairs.filter(({ row }) => /only on an internal part/u.test(row.note)).map(({ slug, row }) => `${slug} ${row.hook}`), [
     'date-field data-muxui-state-read-only', 'date-picker data-muxui-state-read-only', 'time-field data-muxui-state-read-only',
@@ -545,26 +545,33 @@ test('selectedOn and emittedOn are separate facts: a render shows what the CSS d
   assert.ok(emittedRows > 50, `${emittedRows} emitted attributes were checked against jsdom`);
 });
 
-test('undeclared styled states are interaction rows, observed rows, or findings: the catalog and the CSS disagree about 27 pairs', () => {
-  const observed = allRows(stateRowsOf).filter(({ row }) => row.origin === 'observed');
-  assert.deepEqual(observed.map(({ slug, row }) => `${slug}:${row.hook.replace('data-muxui-state-', '')}`), [
-    'checkbox-field:selected', 'checkbox-group:orientation', 'grid-list:layout', 'grid-list:orientation', 'list-box:layout', 'list-box:orientation', 'radio-group:orientation',
-    'select:placeholder', 'slider:orientation', 'switch-field:selected', 'table:allows-sorting', 'table:sort-direction', 'tabs:orientation', 'toggle-button-group:orientation', 'tree:has-child-items',
-  ]);
-  for (const { row } of observed) {
-    assert.ok(row.emittedOn.length > 0 && row.provenance.length > 0);
-    assert.match(row.note, /^Styled by Mux and observed in catalog\/components\/[a-z-]+\/examples\/react\/[a-z-]+\.tsx(?:, [^;]+)*; not declared in the catalog\.$/u);
+test('all CSS-selected noninteraction candidates have a disposition, including supported states absent from SSR', () => {
+  const candidates = slugs.flatMap((slug) => undeclaredUnobservedStates({ slug, artifact: records.get(slug), facts, observations }).map((attribute) => ({ slug, attribute })));
+  assert.equal(candidates.length, 27);
+  for (const { slug, attribute } of candidates) {
+    const row = stateRowsOf(all.get(slug)).find(({ hook }) => hook === attribute);
+    assert.ok(row, `${slug}:${attribute} omitted from Hooks`);
+    assert.ok(row.selectedOn.length > 0);
+    const noWriter = facts.parts.nonEmittedStates[slug]?.[attribute.replace('data-muxui-state-', '')];
+    assert.equal(row.note.includes('No emitted CSS state hook.'), Boolean(noWriter));
+    assert.ok(noWriter || row.note.includes('Supported CSS state hook'), `${slug}:${attribute} has no supported or selector-only disposition`);
   }
-  // The rest are not printed. They are drift between the catalog and the CSS, reported here and not hidden.
-  const findings = slugs.flatMap((slug) => undeclaredUnobservedStates({ slug, artifact: records.get(slug), facts, observations }).map((attribute) => `${slug}:${attribute.replace('data-muxui-state-', '')}`));
-  assert.deepEqual(findings, [
-    'calendar:outside-month', 'calendar:today', 'calendar:unavailable', 'color-mode-toggle:selected', 'color-picker:invalid', 'color-picker:required', 'color-slider:invalid', 'color-slider:required',
-    'combo-box:required', 'combo-box:selected', 'command-palette:invalid', 'command-palette:selected', 'disclosure:pending', 'markdown:current', 'markdown:disabled',
-    'menu:selected', 'preview-trigger:placement', 'prompt-composer:invalid', 'range-calendar:outside-month', 'range-calendar:selection-end', 'range-calendar:selection-start', 'range-calendar:today',
-    'range-calendar:unavailable', 'select:required', 'slider:invalid', 'slider:required', 'tooltip:placement',
-  ]);
-  // With no render, every undeclared non-interaction state is a finding, and none is printed.
-  assert.equal(slugs.flatMap((slug) => undeclaredUnobservedStates({ slug, artifact: records.get(slug), facts, observations: [] })).length, findings.length + observed.length);
+  for (const slug of slugs) {
+    const withoutObservations = stylingOf(slug, { observations: [] });
+    const required = undeclaredUnobservedStates({ slug, artifact: records.get(slug), facts });
+    for (const attribute of required) assert.ok(stateRowsOf(withoutObservations).some(({ hook }) => hook === attribute), `${slug}:${attribute} must survive missing SSR evidence`);
+  }
+  // Omission control over the resolved supported set, independent of any exception-list count.
+  const supported = candidates.filter(({ slug, attribute }) => !facts.parts.nonEmittedStates[slug]?.[attribute.replace('data-muxui-state-', '')]);
+  assert.equal(supported.length, 18);
+  const omitted = (rows) => supported.filter(({ slug, attribute }) => !rows.get(slug).some(({ hook }) => hook === attribute));
+  const rows = new Map(slugs.map((slug) => [slug, stateRowsOf(all.get(slug))]));
+  assert.deepEqual(omitted(rows), []);
+  for (const candidate of supported) {
+    const mutated = new Map(rows);
+    mutated.set(candidate.slug, rows.get(candidate.slug).filter(({ hook }) => hook !== candidate.attribute));
+    assert.deepEqual(omitted(mutated), [candidate]);
+  }
 });
 
 test('status rows print the catalog row and claim nothing about who writes it', () => {
@@ -884,10 +891,10 @@ test('sources are tracked files: the part map, this module, the authored sheets 
   const tracked = new Set(execFileSync('git', ['ls-files', '-z'], { cwd: repositoryRoot, encoding: 'utf8', maxBuffer: 1 << 28 }).split('\0').filter(Boolean));
   for (const slug of slugs) {
     const { sources } = all.get(slug);
-    assert.deepEqual([sources[0], sources[1], sources.at(-2), sources.at(-1)], ['packages/react/test/support/styling-parts.ts', 'packages/react/test/support/styling-reference.mjs', 'catalog/tokens/default-theme.json', 'packages/react/README.md']);
+    assert.deepEqual([sources[0], sources[1], sources.at(-3), sources.at(-2)], ['packages/react/test/support/styling-parts.ts', 'packages/react/test/support/styling-reference.mjs', 'catalog/tokens/default-theme.json', 'packages/react/README.md']);
     for (const path of sources) assert.ok(tracked.has(path), `${slug}: ${path} is tracked`);
-    assert.ok(sources.slice(2, -2).length > 0 && sources.slice(2, -2).every((path) => /^packages\/react\/src\/.+\.css$/u.test(path)), `${slug}: at least one authored sheet`);
-    assert.deepEqual(sources.slice(2, -2), [...sources.slice(2, -2)].sort());
+    assert.ok(sources.slice(2, -3).length > 0 && sources.slice(2, -3).every((path) => /^packages\/react\/src\/.+\.css$/u.test(path)), `${slug}: at least one authored sheet`);
+    assert.deepEqual(sources.slice(2, -3), [...sources.slice(2, -3)].sort());
   }
   assert.ok(all.get('button').sources.includes('packages/react/src/styles/components.css'));
   assert.ok(all.get('code-block').sources.includes('packages/react/src/supplemental/code-block.css'));
@@ -945,11 +952,11 @@ test('the object is plain data: deeply frozen, JSON-safe, deterministic, with th
     assert.deepEqual(stylingOf(slug), styling, `${slug} is deterministic`);
     assert.deepEqual(Object.keys(styling), ['hooks', 'tokens', 'overrides', 'recipe', 'sources']);
     assert.deepEqual(Object.keys(styling.hooks), ['groups', 'notSet', 'renderedDom', 'observationNote']);
-    assert.deepEqual(Object.keys(styling.recipe), ['css', 'rules', 'markup', 'scope', 'steps', 'notes']);
+    assert.deepEqual(Object.keys(styling.recipe), ['css', 'rules', 'preview', 'markup', 'scope', 'steps', 'notes']);
     for (const step of styling.recipe.steps) {
       const keys = ['kind', 'selector', 'declaration', 'target', 'property', 'scope', 'observedText'];
-      assert.deepEqual(Object.keys(step).sort(), (step.scope === 'unavailable' ? [...keys, 'reason'] : keys).sort(), `${slug}: ${step.declaration}`);
-      assert.ok(['token', 'part', 'state'].includes(step.kind) && ['wrapper', 'unavailable'].includes(step.scope) && typeof step.observedText === 'boolean', `${slug}: ${step.declaration}`);
+      assert.deepEqual(Object.keys(step).sort(), (['unavailable', 'document'].includes(step.scope) ? [...keys, 'reason'] : keys).sort(), `${slug}: ${step.declaration}`);
+      assert.ok(['token', 'part', 'state'].includes(step.kind) && ['wrapper', 'unavailable', 'document'].includes(step.scope) && typeof step.observedText === 'boolean', `${slug}: ${step.declaration}`);
     }
     assert.deepEqual(styling.hooks.groups.map(({ id }) => id), ['root', 'part', 'state', 'reflected'].filter((id) => styling.hooks.groups.some((group) => group.id === id)));
     const parts = new Set(partRows.filter((row) => row.family === slug).map((row) => row.part));
@@ -959,7 +966,7 @@ test('the object is plain data: deeply frozen, JSON-safe, deterministic, with th
         for (const key of ['selectedOn', 'emittedOn', 'tags', 'provenance']) assert.ok(Array.isArray(row[key]), `${slug} ${row.hook}: ${key}`);
         assert.ok(typeof row.note === 'string' && row.note.length > 0 && typeof row.on === 'string' && typeof row.inRoot === 'boolean');
         assert.ok([...row.selectedOn, ...row.emittedOn].every((part) => parts.has(part)), `${slug} ${row.hook}: selectedOn and emittedOn name parts`);
-        assert.ok(['part', 'catalog', 'interaction', 'observed', 'prop'].includes(row.origin));
+        assert.ok(['part', 'catalog', 'interaction', 'observed', 'selected', 'prop'].includes(row.origin));
         if (row.kind !== 'class') assert.match(row.hook, /^data-muxui-/u);
       }
     }

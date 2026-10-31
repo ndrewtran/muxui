@@ -68,6 +68,23 @@ export type PartRow = {
   readonly reason?: NoElementReason;
 };
 
+/** Family-specific concept/selector states with no emitted public state hook. Runtime remains the behavior owner.
+ * A closed vocabulary entry or a CSS selector alone does not establish a writer for a family.
+ */
+export const nonEmittedStates: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  form: { invalid: 'Form forwards validation context; invalid belongs to individual fields, with no combined form attribute.' },
+  slider: { selected: 'Slider exposes a value and thumb interaction, not selected items.', invalid: 'Slider has no invalid state writer.', required: 'Slider has no required state writer.' },
+  input: { empty: 'Input does not emit an empty state attribute.' },
+  'payment-input': { empty: 'PaymentInput formats its value without an empty state attribute.' },
+  'select-native': { empty: 'SelectNative emits disabled, required and invalid, but no empty state attribute.' },
+  'text-area': { empty: 'TextArea does not emit an empty state attribute.' },
+  'color-slider': { invalid: 'ColorSlider exposes channel value and interaction, not validation states.', required: 'ColorSlider exposes channel value and interaction, not validation states.' },
+  menu: { selected: 'Menu and Menu.List expose actions, not selection props; substrate selection props are outside their public API.' },
+  'command-palette': { selected: 'CommandPalette.ListBox exposes items and children, not selection props; substrate selection props are outside its public API.' },
+  disclosure: { pending: 'Disclosure has no pending state writer.' },
+  markdown: { current: 'Markdown renders links without a current state writer.', disabled: 'Markdown renders links without a disabled state writer.' },
+};
+
 /** Every catalog anatomy entry, in catalog order. */
 export const partRows: readonly PartRow[] = [
   { family: 'activity', part: 'root', disposition: 'class', hook: 'muxui-activity' },

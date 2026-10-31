@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { SELECTED_GUIDE_ROUTES } from '../src/lib/selected-guide-routes.ts';
+import { groupComponentNavigation } from '../../component-navigation.mjs';
+import { componentRecordCategory } from '../src/lib/component-categories.ts';
 import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies, linkedSiteRoutes } from '../../guide-links.mjs';
 import { reactCompatibilityProfile } from '../src/lib/compatibility-profile.ts';
 
@@ -202,4 +207,66 @@ test('the accessibility guide names the existing automated proof and its limits 
   const projected = accessibilityGuideSections(guide).map(({ markdown }) => flat(markdown)).join(' ');
   assert.match(projected, /makes no assistive-technology support claim/u);
   assert.doesNotMatch(projected, /\b(?:fully|WCAG|compliant|conforms?|certified|guarantees?)\b/iu);
+});
+
+
+// Exercise the production command rather than a test-only route assertion. Fixture HTML
+// isolates navigation from layout; a real build remains the projection proof.
+test('the navigation command requires every selected guide route, identity and sidebar destination', () => {
+  const catalog = createRequire(import.meta.url)('@muxui/catalog');
+  const items = [];
+  let cursor;
+  do {
+    const response = catalog.listArtifacts({ kind: 'component', platform: 'web.react', detail: 'brief', limit: 100, ...(cursor ? { cursor } : {}) });
+    assert.equal(response.type, 'artifact.list');
+    items.push(...response.data.items);
+    cursor = response.meta.nextCursor;
+  } while (cursor);
+  const groups = groupComponentNavigation(items, ({ id }) => componentRecordCategory(id.slice(id.lastIndexOf(':') + 1))).filter(({ items }) => items.length);
+  const componentRoutes = groups.flatMap(({ items }) => items.map(({ id }) => `/components/${id.slice(id.lastIndexOf(':') + 1)}/`));
+  // These existing nonguide pages are deliberately outside the guide identity assertion.
+  const docsRoutes = ['/', '/installation/', '/package-exports/', '/scale/', ...SELECTED_GUIDE_ROUTES.map(({ route }) => route)];
+  const docsRoot = resolve(import.meta.dirname, '..');
+  const directory = mkdtempSync(resolve(docsRoot, '.navigation-test-'));
+  const pathOf = (route) => resolve(directory, route.slice(1), 'index.html');
+  const links = (routes) => routes.map((route) => `<a href="${route}">Page</a>`).join('');
+  const header = (label) => `<nav class="mux-site-nav"><a aria-current="page">${label}</a></nav>`;
+  const pages = new Map();
+  for (const route of docsRoutes) {
+    const selected = SELECTED_GUIDE_ROUTES.find((item) => item.route === route);
+    pages.set(route, `${header('Docs')}<aside class="mux-sidebar-content">${links(docsRoutes)}</aside>${selected ? `<div data-guide-id="${selected.id}"></div>` : ''}`);
+  }
+  for (const route of componentRoutes) pages.set(route, `${header('Components')}<aside class="mux-sidebar-content">${groups.map(({ label }) => `<summary>${label}</summary>`).join('')}${links(componentRoutes)}</aside>`);
+  pages.set('/blocks/', header('Blocks'));
+  const write = (route, html) => { mkdirSync(resolve(pathOf(route), '..'), { recursive: true }); writeFileSync(pathOf(route), html); };
+  const run = () => spawnSync(process.execPath, [resolve(docsRoot, 'scripts/check-navigation.mjs'), directory], { encoding: 'utf8' });
+  try {
+    for (const [route, html] of pages) write(route, html);
+    const positive = run();
+    assert.equal(positive.status, 0, positive.stderr);
+    assert.match(positive.stdout, /Navigation contract passed/u);
+    for (const route of ['/discovery/', '/foundations/colour/']) {
+      rmSync(pathOf(route));
+      const result = run();
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Built route is missing/u);
+      write(route, pages.get(route));
+    }
+    for (const [route, before, after, message] of [
+      ['/', '<a href="/themes/">Page</a>', '', /sidebar cannot reach selected guide muxui:guide:themes/u],
+      ['/', 'href="/discovery/"', 'href="/themes/"', /sidebar cannot reach selected guide muxui:guide:discovery/u],
+      ['/token-migration/', 'data-guide-id="muxui:guide:token-migration"', 'data-guide-id="muxui:guide:themes"', /must project selected guide muxui:guide:token-migration/u],
+      ['/foundations/colour/', 'data-guide-id="muxui:guide:foundations-colour"', 'data-guide-id="muxui:guide:foundations-shape"', /must project selected guide muxui:guide:foundations-colour/u],
+    ]) {
+      assert.ok(pages.get(route).includes(before), 'mutation precondition');
+      write(route, pages.get(route).replace(before, after));
+      const result = run();
+      assert.equal(result.status, 1, result.stdout);
+      assert.match(result.stderr, message);
+      write(route, pages.get(route));
+    }
+    assert.equal(run().status, 0, 'restored unmodified navigation passes');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

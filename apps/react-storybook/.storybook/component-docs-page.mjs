@@ -40,6 +40,43 @@ function SourceLink({ path, children = path }) {
   return h('a', { href: sourceUrl(path), target: '_blank', rel: 'noreferrer' }, children);
 }
 
+/** Styling is the shared React reference, rendered in the existing continuous Docs section. */
+function StylingReference({ styling }) {
+  const { hooks, tokens, overrides, recipe } = styling;
+  const table = (headers, rows, fact) => h('table', { className: 'muxui-docs-table', 'data-styling-table': fact },
+    h('thead', null, h('tr', null, headers.map((label) => h('th', { key: label, scope: 'col' }, label)))),
+    h('tbody', null, rows));
+  const code = (text, key) => h('pre', { key, 'data-styling-code': key }, h('code', null, text));
+  return h(React.Fragment, null,
+    h('h3', null, 'Hooks'),
+    h('p', null, hooks.observationNote),
+    ...hooks.groups.map((group) => table(['Hook', 'On', 'Notes'], group.rows.map((row, index) => h('tr', { key: index },
+      h('th', { scope: 'row' }, h('code', null, row.hook ?? row.part)), h('td', null, row.on), h('td', null, row.note))), `hooks-${group.id}`)),
+    hooks.renderedDom && h(React.Fragment, null, h('h4', null, 'Rendered DOM'), code(hooks.renderedDom.text, 'rendered-dom'), h('p', null, hooks.renderedDom.note)),
+    h(List, { items: hooks.notSet.map(({ note }) => note), fact: 'styling.notSet' }),
+    h('h3', null, 'Tokens'),
+    h('p', null, 'Theme roles may be assigned on a theme scope. Fixed roles are Mux UI’s own: do not assign them. State and portal roles take effect only where their targets render.'),
+    h('p', { 'data-styling-alias-scope': true }, tokens.scopeNote, ' ', h(SourceLink, { path: tokens.scopeSource }, 'Component token scope')),
+    ...tokens.groups.map((group) => h(React.Fragment, { key: group.id },
+      h('h4', null, group.label), h('p', null, group.caption),
+      table(['Role', 'Meaning', 'Policy', 'Default'], group.rows.map((row) => h('tr', { key: row.token, 'data-styling-token': row.token },
+        h('th', { scope: 'row' }, h('code', null, row.token), h('br'), h('code', null, row.cssVar),
+          row.requirement !== 'required' && h('p', null, [row.requirement, ...(row.profiles ?? [])].join(', ')),
+          row.readBy && h('p', { 'data-styling-reader': row.readBy.kind }, row.readBy.note)),
+        h('td', { 'data-styling-meaning': true }, row.meaning), h('td', { 'data-styling-policy': true }, row.policy),
+        h('td', null, row.alias && h('p', null, row.alias), row.darkAlias && row.darkAlias !== row.alias && h('p', null, `dark alias: ${row.darkAlias}`),
+          `light: ${row.light}; dark: ${row.dark}`))), `tokens-${group.id}`))),
+    h('h3', null, 'Override rules'),
+    h('div', { 'data-styling-overrides': true }, ...overrides.paragraphs.map((text, index) => h('p', { key: index }, text)),
+      h('p', null, overrides.layerIntro), code(overrides.layerCode, 'layers'), h('p', null, overrides.layerClosing), h('p', null, overrides.motion)),
+    table(['Your declaration', 'Against', 'Winner'], overrides.whoWins.map((row) => h('tr', { key: row.id }, h('th', { scope: 'row' }, row.declaration), h('td', null, row.against), h('td', null, row.winner))), 'who-wins'),
+    h('p', null, overrides.limit), overrides.important && h('p', null, `Mux marks ${overrides.important.total} declarations !important on this family’s hooks: ${Object.entries(overrides.important.byCause).map(([cause, count]) => `${count} ${cause}`).join(', ')}.`),
+    h('h3', null, 'Recipe'),
+    h('p', null, recipe.preview ? 'Wrap the component as shown and copy the CSS.' : 'Copy the document-wide family rule; open or show the content first. This recipe has no Basic preview.'),
+    h(List, { items: recipe.notes, fact: 'styling.recipe.notes' }), code(recipe.css, 'recipe-css'), code(recipe.markup, 'recipe-markup'),
+    h('p', { className: 'muxui-docs-caption' }, 'Styling sources: ', ...styling.sources.map((path) => h(React.Fragment, { key: path }, h(SourceLink, { path }), ' '))));
+}
+
 /** True when a Storybook manager hosts this frame, so it can open another page. A server render has no frame and assumes one. */
 function hasManager() {
   if (typeof window === 'undefined') return true;
@@ -518,13 +555,8 @@ export function ComponentDocs({ entry, blocks }) {
       h(Codes, { key: 'anatomy', items: styling.anatomy, fact: 'anatomy' }),
       h('h3', { key: 'states-title' }, 'States'),
       h(Codes, { key: 'states', items: styling.states, fact: 'states' }),
-      h('h3', { key: 'tokens-title' }, 'Token requirements'),
       h('p', { key: 'source', 'data-fact': 'tokenRecipe.source' }, 'Token source: ', h('code', null, styling.tokenSource)),
-      ...styling.tokenGroups.map((group) => h(React.Fragment, { key: group.prefix ?? 'tokens' },
-        group.prefix && h('h4', { className: 'muxui-docs-token-group' }, group.prefix),
-        h('ul', { className: 'muxui-docs-tokens', 'data-fact': 'tokenRecipe.requirements' }, group.tokens.map(({ token, requirement, profiles }) => h('li', { key: token },
-          h('code', null, token),
-          requirement !== 'required' && h('span', { className: 'muxui-docs-token-requirement' }, [requirement, ...(profiles ?? [])].join(', '))))))),
+      h(StylingReference, { key: 'styling', styling }),
     ],
     sources: () => h('dl', { className: 'muxui-docs-sources' }, entry.sources.map(({ label, paths }) => h(React.Fragment, { key: label },
       h('dt', null, label),
