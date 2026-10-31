@@ -1315,9 +1315,12 @@ async function runColourWorker({ browser, schemes, workerId }) {
     async function hoverAndFocus(scheme, label, locator) {
       await locator.hover();
       await snapshot(scheme, `${label}/hover`);
-      await page.keyboard.press('Tab');
+      // Establish keyboard modality without moving focus: Tab can scroll the sidebar
+      // to its skip link, removing hover and hiding a context trigger before focus().
+      await page.keyboard.press('Shift');
       await locator.focus();
       assert.equal(await locator.evaluate((element) => document.activeElement === element), true, `${label}: focus target`);
+      assert.equal(await locator.evaluate((element) => element.matches(':focus-visible')), true, `${label}: keyboard focus-visible`);
       await snapshot(scheme, `${label}/focus`);
     }
     async function tokenPaint(scheme, locator, property, tokenId) {
@@ -1662,6 +1665,88 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await openStory(scheme, 'muxui-react-r1-2-number-field--default');
       await page.getByRole('tab', { name: /^Controls/u }).click();
       await snapshot(scheme, 'controls/optional/default');
+      // Exercise ArgValue's direct complex type and nested Summary badges with
+      // and without ArgRow's optional description, without recolouring prose.
+      const typeCell = (name) => page.getByRole('row').filter({
+        has: page.getByRole('cell', { name, exact: true }),
+      }).locator('td').nth(1);
+      const labelType = typeCell('label');
+      const disabledType = typeCell('disabled');
+      const complexBadge = labelType.locator(':scope > div:last-of-type > span');
+      const summaryBadge = disabledType.locator(':scope > div > div > span');
+      const badgeRoles = {
+        backgroundColor: 'semantic.surface.hover', color: 'semantic.content.strong',
+        borderTopColor: 'semantic.border.subtle', borderRightColor: 'semantic.border.subtle',
+        borderBottomColor: 'semantic.border.subtle', borderLeftColor: 'semantic.border.subtle',
+      };
+      async function assertTypeBadge(locator, layout) {
+        assert.equal(await locator.count(), 1, `${scheme}/${layout}: one type badge`);
+        for (const [property, tokenId] of Object.entries(badgeRoles)) await tokenPaint(scheme, locator, property, tokenId);
+        return { layout, ...await locator.evaluate((element, properties) => ({
+          text: element.textContent,
+          paints: Object.fromEntries(properties.map((property) => [property, getComputedStyle(element)[property]])),
+        }), Object.keys(badgeRoles)) };
+      }
+      assert.equal(await complexBadge.textContent(), 'Exclude<React.ReactNode, null | undefined | boolean>');
+      const badgeProof = { roles: badgeRoles, layouts: [
+        await assertTypeBadge(complexBadge, 'complex/without-description'),
+        await assertTypeBadge(summaryBadge, 'summary/with-description'),
+      ] };
+      const description = await disabledType.locator(':scope > div:first-child > span').elementHandle();
+      assert.ok(description, `${scheme}: real description span must remain present`);
+      await tokenPaint(scheme, disabledType.locator(':scope > div:first-child > span'), 'color', 'semantic.content.muted');
+      const prosePaints = await description.evaluate((element) => ({
+        color: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor,
+        borderWidth: getComputedStyle(element).borderWidth,
+      }));
+      try {
+        // Move the real description between rows to cover both remaining
+        // renderer layouts; keep its span outside the badge projection.
+        await labelType.evaluate((cell, span) => cell.prepend(span.parentElement), description);
+        badgeProof.layouts.push(await assertTypeBadge(complexBadge, 'complex/with-description'));
+        badgeProof.layouts.push(await assertTypeBadge(summaryBadge, 'summary/without-description'));
+        assert.deepEqual(await description.evaluate((element) => ({
+          color: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor,
+          borderWidth: getComputedStyle(element).borderWidth,
+        })), prosePaints, `${scheme}: type projection must leave description prose unchanged`);
+        badgeProof.prose = prosePaints;
+      } finally {
+        await disabledType.evaluate((cell, span) => cell.prepend(span.parentElement), description);
+        await description.dispose();
+      }
+      // Remove only the matching badge projection, retaining the rest of the
+      // manager theme. The real paint collector must reject its stock fills
+      // and all four borders, then the restored badge must regain its roles.
+      const badgeProjection = await complexBadge.evaluate((element) => {
+        const rules = [...document.querySelector('#muxui-storybook-theme').sheet.cssRules];
+        return rules.flatMap((rule, index) => {
+          if (!rule.selectorText || !element.matches(rule.selectorText)
+            || !/var\(--muxui-storybook-(surface-hover|border-subtle|content-strong)\)/u.test(rule.style.cssText)) return [];
+          const cssText = rule.style.cssText;
+          rule.style.cssText = '';
+          return [{ index, cssText }];
+        });
+      });
+      try {
+        assert.ok(badgeProjection.length > 0, `${scheme}: type badge projection must be removable`);
+        const negative = await page.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'manager' });
+        badgeProof.stockPaints = await complexBadge.evaluate((element) => Object.fromEntries([
+          'background-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+        ].map((property) => [property, getComputedStyle(element).getPropertyValue(property)])));
+        // Paints aggregate repeated values and retain only three examples, so
+        // match the actual badge's values rather than its position in that list.
+        badgeProof.rejectedPaints = negative.nonToken.filter(({ property, value }) => badgeProof.stockPaints[property] === value);
+        assert.deepEqual(badgeProof.rejectedPaints.map(({ property }) => property).sort(), [
+          'background-color', 'border-bottom-color', 'border-left-color', 'border-right-color', 'border-top-color',
+        ], `${scheme}: audit must catch the stock type badge fill and every border without its projection`);
+      } finally {
+        await page.evaluate((projection) => {
+          const rules = document.querySelector('#muxui-storybook-theme').sheet.cssRules;
+          for (const { index, cssText } of projection) rules[index].style.cssText = cssText;
+        }, badgeProjection);
+      }
+      badgeProof.restored = await assertTypeBadge(complexBadge, 'complex/restored');
+      report.states.at(-1).typeBadgeProof = badgeProof;
       await hoverAndFocus(scheme, 'controls/number', page.locator('#control-step'));
       const setString = page.getByRole('button', { name: 'Set string', exact: true }).first();
       await hoverAndFocus(scheme, 'controls/set-string', setString);

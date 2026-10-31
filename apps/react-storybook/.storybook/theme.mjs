@@ -1024,7 +1024,10 @@ body > div:has(> [role='listbox']) {
   color: var(--muxui-storybook-content-muted);
 }
 
-#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] tr > td:nth-child(2) > div:nth-child(2) > div > span,
+/* ArgRow's final div is Type (description is optional); ArgValue renders
+   complex types directly and simple/union types inside a Summary div. */
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] tr > td:nth-child(2) > div:last-of-type > span,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] tr > td:nth-child(2) > div:last-of-type > div > span,
 #storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] tr > td:nth-child(3) > div > span {
   background: var(--muxui-storybook-surface-hover);
   border: 1px solid var(--muxui-storybook-border-subtle);
@@ -1034,6 +1037,11 @@ body > div:has(> [role='listbox']) {
 #storybook-panel-region [id$='tabpanel-addon-controls'] td > span,
 #storybook-panel-region [id$='tabpanel-addon-controls'] td > div > span {
   color: var(--muxui-storybook-content-muted) !important;
+}
+
+/* Direct type badges share the description's span depth, but keep badge ink. */
+#storybook-panel-region [id$='tabpanel-addon-controls'] td:nth-child(2) > div:last-of-type > span {
+  color: var(--muxui-storybook-content-strong) !important;
 }
 
 #storybook-panel-region [id$='tabpanel-addon-controls'] button[aria-label$=' as JSON'] {
