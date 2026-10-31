@@ -146,8 +146,9 @@ jobs:
       # Playwright engines it names (browser-firefox installs Firefox,
       # browser-webkit WebKit) with their system libraries. Other groups,
       # including browser-chromium, use Chrome. The browser builds are cached
-      # per playwright-core version and engine set; the system libraries
-      # install every time, from the runner image's apt mirror, which can crawl.
+      # per runner OS, architecture, image OS, playwright-core version and engine
+      # set; the system libraries install every time, from the runner image's
+      # apt mirror, which can crawl.
       # So the install has its own step limit inside the job's setup allowance,
       # and the checks step keeps the group's own limit.
       - name: Read playwright-core version
@@ -156,6 +157,8 @@ jobs:
         env:
           BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
         run: |
+          : "${ImageOS:?runner image OS identity is required for the browser cache}"
+          echo "image-os=$ImageOS" >> "$GITHUB_OUTPUT"
           echo "version=$(node -p "require('./packages/react/package.json').devDependencies['playwright-core']")" >> "$GITHUB_OUTPUT"
           echo "engines=${BROWSER_ENGINES// /-}" >> "$GITHUB_OUTPUT"
 
@@ -164,7 +167,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ steps.playwright.outputs.engines }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image-os }}-${{ steps.playwright.outputs.version }}-${{ steps.playwright.outputs.engines }}
 
       - name: Install Playwright browsers
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
