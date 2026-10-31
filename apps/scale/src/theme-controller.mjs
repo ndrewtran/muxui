@@ -2,8 +2,8 @@ import { compileThemeAuthoringDocument } from '@muxui/tokens/authoring';
 import defaultThemeSource from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { validateScaleDocument } from './theme-contract.mjs';
 
-export const APPLIED_THEME_KEY = 'muxui-scale:applied:v1';
-export const APPLIED_THEME_STYLE_ID = 'muxui-applied-theme';
+const APPLIED_THEME_KEY = 'muxui-scale:applied:v1';
+const APPLIED_THEME_STYLE_ID = 'muxui-applied-theme';
 export const THEME_STATUS_EVENT = 'muxui:theme-status';
 const THEME_STATUS_GLOBAL = '__muxuiThemeStatus';
 const THEME_STATE_GLOBAL = '__muxuiThemeState';

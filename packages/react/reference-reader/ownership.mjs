@@ -19,12 +19,12 @@ import { ReferenceReadError } from './errors.mjs';
 /** The owner of types several families share. */
 export const SHARED = 'shared';
 /** The owner of exports that belong to the package and to no component. */
-export const PACKAGE_LEVEL = 'package-level';
+const PACKAGE_LEVEL = 'package-level';
 
 const group = (owner, reason, ...names) => Object.fromEntries(names.map((name) => [name, { owner, reason }]));
 
 /** Items no rule above settles, by entry point and export name. */
-export const OWNER_EXCEPTIONS = Object.freeze({
+const OWNER_EXCEPTIONS = Object.freeze({
   '.': Object.freeze({
     ...group(SHARED, 'the field families share these control, label and validation types', 'ControlSize', 'FieldInputProps', 'FieldValidationProps', 'NamedFieldProps', 'MuxUIAccessibleName', 'MuxUIAriaAccessibleName', 'MuxUIAriaLabel', 'MuxUIDateRange', 'MuxUIDateValue', 'MuxUITimeValue', 'MuxUIValidationErrors'),
     ...group(SHARED, 'the collection families share these item and selection types', 'MuxUICollectionItem', 'MuxUIItems', 'MuxUISelection', 'CollectionProps'),

@@ -22,13 +22,13 @@ export interface Segment {
 	href?: string;
 }
 
-export interface ApiDefault {
+interface ApiDefault {
 	text: string;
 	/** Written in the component record by hand, not read from the code that runs: its family has not moved to TypeScript yet. */
 	authored: boolean;
 }
 
-export interface ApiRow {
+interface ApiRow {
 	name: string;
 	/** `always` for a member every alternative shares, otherwise the label of the group the row sits in. */
 	appliesWhen: string;
@@ -43,17 +43,17 @@ export interface ApiRow {
 }
 
 /** A closing row of a group: members it declares `never` ("not allowed"), or that a sibling alternative declares and it does not ("not declared"). */
-export interface ApiClosing {
+interface ApiClosing {
 	state: 'not allowed' | 'not declared';
 	names: readonly string[];
 }
 
-export interface ApiNative {
+interface ApiNative {
 	type: string;
 	omit: readonly string[];
 }
 
-export interface ApiGroup {
+interface ApiGroup {
 	/** Null for the only group of a part with no alternatives. */
 	label: string | null;
 	appliesWhen: string;
@@ -110,13 +110,13 @@ export interface ApiType {
 	source?: string;
 }
 
-export interface ApiEvent {
+interface ApiEvent {
 	channel: string;
 	handler: string;
 	signatures: readonly { segments: readonly Segment[]; text: string; declaredBy: readonly string[] }[];
 }
 
-export interface ApiEventGroup {
+interface ApiEventGroup {
 	/** The anatomy part the catalog lists the events under; null for the root's. */
 	part: string | null;
 	owner: string | null;
@@ -142,7 +142,7 @@ export interface ApiReference {
 	catalogOnly: readonly { owner: string | null; names: readonly string[] }[];
 }
 
-export const packageExportsPath = '/package-exports/';
+const packageExportsPath = '/package-exports/';
 
 /** A page with more parts than this opens only its first part; every part stays listed and reachable by its anchor. */
 export const collapsePartsAbove = 8;
@@ -161,7 +161,7 @@ export function slugify(value: string): string {
 	return value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
 }
 
-export function partHeading(exportName: string, part: DeclarationPart): string {
+function partHeading(exportName: string, part: DeclarationPart): string {
 	return part.member === null ? exportName : `${exportName}.${part.member}`;
 }
 
@@ -188,7 +188,7 @@ function declaredNames(part: DeclarationPart): ReadonlySet<string> {
 const handlerOf = (channel: string) => `on${channel[0].toUpperCase()}${channel.slice(1)}`;
 
 /** Where a link to a type goes: its own page's section, or the page or section of the owner that exports it. */
-export function typeHref(type: DeclarationType, owner: string): string | undefined {
+function typeHref(type: DeclarationType, owner: string): string | undefined {
 	if (type.public === undefined || type.owner === undefined) return undefined;
 	const anchor = `#${typeAnchor(type.name)}`;
 	if (type.owner === owner) return anchor;
@@ -543,7 +543,7 @@ function exportView(item: DeclarationExport, packageName: string, parts: readonl
  * The types a file exports under one owner, with the import of each public name. `sources`, the file's source of each
  * declaration module, adds the file each type is declared in.
  */
-export function typesView(types: readonly DeclarationType[], owner: string, packageName: string, reasons: ReadonlyMap<string, string> | undefined, context: Context, sources?: Readonly<Record<string, string>>): readonly ApiType[] {
+function typesView(types: readonly DeclarationType[], owner: string, packageName: string, reasons: ReadonlyMap<string, string> | undefined, context: Context, sources?: Readonly<Record<string, string>>): readonly ApiType[] {
 	return types.filter((type) => type.public !== undefined && type.owner === owner).map((type) => {
 		const source = sources?.[type.module];
 		return {
@@ -558,7 +558,7 @@ export function typesView(types: readonly DeclarationType[], owner: string, pack
 	});
 }
 
-export interface PackageExportEntry {
+interface PackageExportEntry {
 	key: string;
 	specifier: string;
 	/** Why the entry carries no declarations, for an untyped one. */

@@ -12,7 +12,7 @@ import { selectorFor } from './anatomy.mjs';
 import { DEFAULT_MODE } from './measure.mjs';
 import { comparable, RELATIVE_LENGTH } from './audit.mjs';
 
-export const SPEC_FORMAT = 'muxui-figma-components-v1';
+const SPEC_FORMAT = 'muxui-figma-components-v1';
 const ROOT_FONT_SIZE_PX = 16;
 const FULL_RADIUS = 9999;
 const FONT_STYLES = Object.freeze({
@@ -20,10 +20,10 @@ const FONT_STYLES = Object.freeze({
 });
 
 /** Reasons a painted colour may stay literal. Anything else fails binding coverage. */
-export const LITERAL_PAINT_REASONS = Object.freeze({});
+const LITERAL_PAINT_REASONS = Object.freeze({});
 
 /** Token facts the spec compiler needs from the canonical source and the token export. */
-export function tokenContext(source) {
+function tokenContext(source) {
   const exported = compileFigmaExport({ source });
   const graph = compileTokenGraph(source);
   return {

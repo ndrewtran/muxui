@@ -1,6 +1,6 @@
 import type { CatalogGuide } from '../lib/catalog.ts';
 
-export type GuideHeading = {
+type GuideHeading = {
 	depth: number;
 	slug: string;
 	text: string;

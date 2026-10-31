@@ -1,4 +1,4 @@
-export function sortJson(value) {
+function sortJson(value) {
   if (Array.isArray(value)) return value.map(sortJson);
   if (value && typeof value === 'object') {
     return Object.fromEntries(

@@ -34,21 +34,21 @@ interface CatalogIntent {
 	avoidWhen?: readonly string[];
 }
 
-export interface CatalogTokenRequirement {
+interface CatalogTokenRequirement {
 	token: string;
 	requirement: string;
 	profiles?: readonly string[];
 }
 
 /** One non-root part's Mux UI-owned API, such as ListBox.Item's, derived beside the root's. */
-export interface CatalogPartApi {
+interface CatalogPartApi {
 	member: string;
 	props: readonly string[];
 	events: readonly string[];
 	defaults: Readonly<Record<string, unknown>>;
 }
 
-export interface CatalogBinding {
+interface CatalogBinding {
 	api: {
 		/** Its defaults are executed (the family's API is derived from its TypeScript source); otherwise they are authored in the record. */
 		derived: boolean;
@@ -68,7 +68,7 @@ export interface CatalogBinding {
 	strategy: string;
 }
 
-export interface CatalogArtifact extends CatalogSummary {
+interface CatalogArtifact extends CatalogSummary {
 	intent?: CatalogIntent;
 	states: readonly string[];
 	anatomy: readonly string[];
@@ -76,7 +76,7 @@ export interface CatalogArtifact extends CatalogSummary {
 	bindings: Readonly<Record<string, CatalogBinding>>;
 }
 
-export interface CatalogExample {
+interface CatalogExample {
 	id: string;
 	kind: 'example';
 	name: string;
@@ -482,7 +482,7 @@ const guideItems: readonly Omit<CatalogGuide, 'keywords' | 'content'>[] = Object
 	})(),
 );
 
-export const guideSummaries: readonly CatalogGuide[] = Object.freeze(guideItems.map((summary) => {
+const guideSummaries: readonly CatalogGuide[] = Object.freeze(guideItems.map((summary) => {
 		const response = detailResponse(catalog.getArtifact({
 			id: summary.id,
 			platform: 'web.react',

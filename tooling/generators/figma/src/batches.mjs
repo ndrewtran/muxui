@@ -8,14 +8,14 @@
 import { applyComponentBatch } from './applier.mjs';
 
 /** Default per-script budget, matching the token export's `use_figma` budget. */
-export const COMPONENT_BATCH_BUDGET_BYTES = 40_000;
-export const COMPONENTS_PAGE = 'Components';
+const COMPONENT_BATCH_BUDGET_BYTES = 40_000;
+const COMPONENTS_PAGE = 'Components';
 
 /**
  * Preview rows: explicit modes per token-export collection tag, by mode name.
  * Each row paints the canvas token so Dark reads as the app does.
  */
-export const PREVIEW = Object.freeze({
+const PREVIEW = Object.freeze({
   canvas: 'semantic.surface.canvas',
   rows: [
     { name: 'Light', modes: { 'collection:semantic-color': 'Light', 'collection:semantic-dimension': 'Comfortable' } },

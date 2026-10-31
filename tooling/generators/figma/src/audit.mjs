@@ -13,7 +13,7 @@ export const RELATIVE_LENGTH = /^-?\d*\.?\d+(?:em|ex|ch|lh)$/u;
  * expressions and relative lengths. Their computed value must then match
  * across modes too, or Figma would show the default mode's pixels everywhere.
  */
-export function usesComputed(measured) {
+function usesComputed(measured) {
   return measured.kind === 'expression' || (measured.kind === 'literal' && RELATIVE_LENGTH.test(measured.value));
 }
 

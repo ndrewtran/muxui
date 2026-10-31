@@ -258,7 +258,7 @@ function assertArguments(application, entry) {
  * application of a host generic with its type arguments in order. Returns the bare names
  * and the applications, the latter keyed by `hostEntryKey`.
  */
-export function assertHostAllowlist(hostAllowlist) {
+function assertHostAllowlist(hostAllowlist) {
   const names = new Set();
   const applications = new Set();
   for (const entry of hostAllowlist) {

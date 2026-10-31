@@ -81,8 +81,8 @@ export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
  *   shows, in order.
  */
 
-export const NODE_KINDS = Object.freeze(['FRAME', 'TEXT', 'GLYPH']);
-export const BIND_GROUPS = Object.freeze(['fill', 'overlay', 'stroke', 'radius', 'padding', 'gap', 'size', 'shadow', 'text', 'inset']);
+const NODE_KINDS = Object.freeze(['FRAME', 'TEXT', 'GLYPH']);
+const BIND_GROUPS = Object.freeze(['fill', 'overlay', 'stroke', 'radius', 'padding', 'gap', 'size', 'shadow', 'text', 'inset']);
 
 /** How each state is produced on the state target: forced pseudo-classes, React Aria data attributes, or props. */
 export const STATE_EFFECTS = Object.freeze({
@@ -95,7 +95,7 @@ export const STATE_EFFECTS = Object.freeze({
 });
 
 /** CSS longhands measured for each bind group. */
-export const BIND_LONGHANDS = Object.freeze({
+const BIND_LONGHANDS = Object.freeze({
   fill: ['background-color'],
   overlay: ['background-image'],
   stroke: [
@@ -309,7 +309,7 @@ export async function loadAnatomySources(anatomy) {
 }
 
 /** Stable variant key, for example `variant=primary,size=md,state=hover`. */
-export function variantKey(anatomy, variant) {
+function variantKey(anatomy, variant) {
   const parts = anatomy.axes.map((axis) => `${axis}=${variant.axes[axis]}`);
   if (anatomy.selection) parts.push(`${anatomy.selection.name.toLowerCase()}=${variant.selection}`);
   parts.push(`state=${variant.state}`);

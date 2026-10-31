@@ -4,7 +4,7 @@ import { formatJson } from './json.mjs';
 import { readReference } from './read.mjs';
 
 /** The declarations among the generator's outputs: exactly the files a consumer's compiler reads. */
-export const declarationOutputs = (outputs) => Object.fromEntries([...outputs]
+const declarationOutputs = (outputs) => Object.fromEntries([...outputs]
   .filter(([name]) => name.endsWith('.d.ts'))
   .sort(([left], [right]) => (left < right ? -1 : 1)));
 

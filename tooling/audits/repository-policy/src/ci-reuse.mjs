@@ -7,8 +7,8 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-export const reuseArtifactName = 'ci-reuse-record';
-export const reuseRecordFile = 'ci-reuse-record.json';
+const reuseArtifactName = 'ci-reuse-record';
+const reuseRecordFile = 'ci-reuse-record.json';
 const earlierRunLimit = 5;
 const commitPattern = /^[0-9a-f]{40}$/u;
 const signaturePattern = /^[0-9a-f]{64}$/u;
@@ -97,7 +97,7 @@ export function createGitHubClient({ repository, workflow, gh = runGh }) {
   };
 }
 
-export function validRecord(record) {
+function validRecord(record) {
   return record?.version === 1 && commitPattern.test(record.testedCommit ?? '') && commitPattern.test(record.headCommit ?? '')
     && Array.isArray(record.groups)
     && record.groups.every((group) => typeof group?.id === 'string'
